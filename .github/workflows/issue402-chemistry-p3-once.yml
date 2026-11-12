@@ -1,0 +1,121 @@
+name: Issue 402 Chemistry S6 P3 Operator Authorized Once
+# Exact-head 417/941 P3 operator approval, SCIENCE_HOLD, no PR merge.
+# One-shot only: creation of this file on main is the sole allowed trigger.
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue402-chemistry-p3-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue402-chemistry-p3-approved-once
+  cancel-in-progress: false
+
+jobs:
+  chemistry-s6-p3:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: ['417', '941']
+    env:
+      CANDIDATE_SHA: cc3a06fe5d17f9771ff8d2f034dcc60d40b3420d
+      HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+
+    steps:
+      - name: Checkout exact P2-passed unmerged Chemistry PR revision
+        uses: actions/checkout@v4
+        with:
+          ref: cc3a06fe5d17f9771ff8d2f034dcc60d40b3420d
+          path: control
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout pinned immutable historical public S6 inputs
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact source, protected-data exclusion and public provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C control rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git -C historical rev-parse HEAD)" = "$HISTORICAL_SHA"
+          test ! -e historical/"$CHEM"/private_rates
+          grep -Fq "$OCI" control/physics_app/dependencies.lock
+          python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py --control control --mode preflight
+          python3 control/experiments/Issue402_plasma_dsl_g1/p3_chemistry_preflight.py > "$RUNNER_TEMP/chemistry_p3_static_readiness.json"
+
+      - name: Set up pinned public S6 mesh preparation Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pinned public numerical packages
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+
+      - name: Prepare public 400 W historical S6 mesh only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$SRC" | cut -d ' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA="$HISTORICAL_SHA"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          test ! -e "$CHEM/private_rates"
+
+      - name: Recheck P0, build exact-head Native P1 and smoke P2
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          EXPECTED_SOURCE_HEAD="$CANDIDATE_SHA" bash experiments/Issue402_plasma_dsl_g1/preflight_public_option_s6.sh
+          bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+
+      - name: Execute authorized 100 us Chemistry P3 after same-binary P2
+        shell: bash
+        env:
+          S6_CASE: ${{ matrix.case }}
+        run: |
+          set -euo pipefail
+          cd control
+          python3 experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p3_once.py \
+            --case "$S6_CASE" \
+            --historical ../historical \
+            --expected-head "$CANDIDATE_SHA" \
+            --output "$RUNNER_TEMP/issue402_S6_${S6_CASE}_Chemistry_P3" \
+            --timeout-seconds 19800 \
+            --authorize-p3
+
+      - name: Upload full P3 results and source-bound logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-chemistry-S6-${{ matrix.case }}-P3-cc3a06fe5d17f9771ff8d2f034dcc60d40b3420d
+          path: |
+            ${{ runner.temp }}/issue402_S6_${{ matrix.case }}_Chemistry_P3/results/**
+            ${{ runner.temp }}/issue402_S6_${{ matrix.case }}_Chemistry_P3/native_P2.log
+            ${{ runner.temp }}/issue402_S6_${{ matrix.case }}_Chemistry_P3/native_P3.log
+            ${{ runner.temp }}/chemistry_p3_static_readiness.json
+          if-no-files-found: warn
+          retention-days: 90
