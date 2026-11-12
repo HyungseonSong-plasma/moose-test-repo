@@ -45,7 +45,7 @@ No P3 dispatched, no original S6 input changed. `SCIENCE_HOLD`.
 
 ## Canonical Material naming update
 
-JSON `model=constants` contains no explicit source keys. The material
+JSON `model=functor` contains no explicit source keys. The material
 looks for `O2p_mobility`/`O2p_diffusivity`,
 `Om_mobility`/`Om_diffusivity`, and
 `Op_mobility`/`Op_diffusivity` from an upstream producer. New

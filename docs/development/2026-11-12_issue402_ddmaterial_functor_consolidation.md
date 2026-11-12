@@ -12,7 +12,7 @@ modes and directly self-referential source names. The entire
 `SpeciesTransportAliasMaterial.h/.C` implementation is retired.
 
 For the S6 417 and 941 **review JSON**, three ion entries use
-`{"model":"constants"}` and are automatically mapped to the internal
+`{"model":"functor"}` and are parsed directly into the internal
 `DDMaterial model=functor` implementation. This means **existing
 species-named AD Functors** from Native providers; it does not imply
 spatially constant numerical values. The old manual DDMaterial blocks
@@ -21,7 +21,7 @@ are absent from the new review and run-input overlays.
 The same mode is usable directly from ordered JSON:
 ```json
 {"transport_coefficients":{"drift_diffusion":{
-  "O2p":{"model":"constants"}
+  "O2p":{"model":"functor"}
 }}}
 ```
 Do not define an explicit DDMaterial block for the same species at the
@@ -34,8 +34,8 @@ before use.
 auto-binding input, full S6 417 and 941 input construction, and future
 numerical/AD parity are independent gates. No P3 or science acceptance.
 
-**Current JSON contract:** A `model=constants` entry is exactly
-`{"model":"constants"}`. The keys `mobility_source` and
+**Current JSON contract:** A `model=functor` entry is exactly
+`{"model":"functor"}`. The keys `mobility_source` and
 `diffusivity_source` are rejected by the JSON parser. The upstream
 producer (e.g. `PlasmaChargeTransportMaterial`) must publish the
 canonical species names first. Legacy direct `.i` Material blocks
