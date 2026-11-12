@@ -159,9 +159,9 @@ COMMON_MATERIALS = f'''[FunctorMaterials]
     block = plasma
   []
   [electron_transport]
-    type = PhysicsElectronTransportLookupMaterial
-    property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
-    mean_energy = mean_en_solved
+    type = DDMaterial
+    model = lookup
+    table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
     pressure = p_fixed
     gas_temperature = T_g_fixed
     bounds_policy = clamp
