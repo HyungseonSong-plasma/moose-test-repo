@@ -61,12 +61,12 @@
     state_form = physical_eV
     electron_density = electron_number_density_physical
     electron_energy_density = electron_energy_density_physical
-    mean_energy_output = electron_mean_energy_eV
+    mean_energy_output = mean_en_solved
   []
   [electron_temperature]
     type = ADParsedFunctorMaterial
     property_name = electron_temperature_K
-    functor_names = 'electron_mean_energy_eV'
+    functor_names = 'mean_en_solved'
     functor_symbols = 'mean_eV'
     expression = '(2/3)*mean_eV*1.602176634e-19/1.380649e-23'
   []
@@ -75,7 +75,6 @@
     type = DDMaterial
     species_id = e
     model = lookup
-    mean_energy = electron_mean_energy_eV
     pressure = gas_pressure
     gas_temperature = gas_temperature
     table_file = plasma_closures_transport_table.txt
@@ -83,7 +82,7 @@
   [reaction_A]
     type = PhysicsElectronImpactRateMaterial
     rate_table_file = plasma_closures_rate_a.txt
-    mean_energy = electron_mean_energy_eV
+    mean_energy = mean_en_solved
     electron_number_density = electron_number_density_physical
     target_molar_concentration = target_A_molar_concentration
     reaction_progress = electron_reaction_A
@@ -91,7 +90,7 @@
   [reaction_B]
     type = PhysicsElectronImpactRateMaterial
     rate_table_file = plasma_closures_rate_b.txt
-    mean_energy = electron_mean_energy_eV
+    mean_energy = mean_en_solved
     electron_number_density = electron_number_density_physical
     target_molar_concentration = target_B_molar_concentration
     reaction_progress = electron_reaction_B
@@ -118,7 +117,7 @@
 [Postprocessors]
   [mean_energy]
     type = ElementAverageFunctorPostprocessor
-    functor = electron_mean_energy_eV
+    functor = mean_en_solved
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [electron_temperature]

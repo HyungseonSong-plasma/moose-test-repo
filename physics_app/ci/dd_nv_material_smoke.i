@@ -11,7 +11,7 @@
 [FunctorMaterials]
   [controlled_fields]
     type = ADGenericFunctorMaterial
-    prop_names = 'lookup_x T_g p Y_A Y_B'
+    prop_names = 'mean_en_solved T_g p Y_A Y_B'
     prop_values = '3 300 100 0.5 0.5'
   []
   [electron_constant]
@@ -26,7 +26,6 @@
     species_id = O2p
     model = lookup
     table_file = electron_energy_lookup_response_smoke_table.txt
-    coordinate = lookup_x
     table_units = physical
     bounds_policy = error
   []
