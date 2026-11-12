@@ -42,7 +42,8 @@ def test_dd_constant_lookup_units_naming_and_energy_projection():
     assert '_constant_mobility < 0.0 || _constant_diffusivity < 0.0' in dd
     assert 'Mobility and diffusivity must be finite and nonnegative' in dd
     assert 'Specify exactly one table_file or property_table_file' in dd
-    assert 'Specify exactly one coordinate or mean_energy' in dd
+    assert "Specify at most one legacy coordinate or mean_energy" in dd
+    assert 'getFunctorByName<ADReal>("mean_en_solved")' in dd
 
 
 def test_nv_retains_unmodified_collision_integral_and_mixture_model():
@@ -79,7 +80,12 @@ def test_redundant_composite_retired_but_needed_ion_functor_bridge_remains():
     # pass-through name bridge; replacing them by constants would alter physics.
     dd = (SRC / "DDMaterial.C").read_text()
     header = (INC / "DDMaterial.h").read_text()
-    assert '"model", "Functor mode requires mobility_source and diffusivity_source."' in dd
+    assert 'const bool explicit_mu = isParamValid("mobility_source")' in dd
+    assert 'const bool explicit_D = isParamValid("diffusivity_source")' in dd
+    assert '_species + "_mobility"' in dd
+    assert '_species + "_diffusivity"' in dd
+    assert 'getFunctorByName<ADReal>(mu)' in dd
+    assert 'getFunctorByName<ADReal>(diffusion)' in dd
     assert 'getFunctor<ADReal>("mobility_source")' in dd
     assert 'getFunctor<ADReal>("diffusivity_source")' in dd
     assert 'return (*_mobility_source)(r, state);' in header
