@@ -34,19 +34,14 @@ def test_user_drift_diffusion_transport_coefficient_options_are_removed():
     assert '"fem_charge_numbers"' not in src and '"fvm_charge_numbers"' not in src
 
 
-def test_electron_closure_keeps_old_and_new_functors_same_numeric_closure():
-    src = text("physics_app/src/materials/ElectronClosureMaterial.C")
-    for old in ('"electron_mobility_output"', '"electron_diffusion_output"'):
-        assert old in src
-    assert 'addFunctorProperty<ADReal>("e_mobility", particle_mobility)' in src
-    assert 'addFunctorProperty<ADReal>("e_diffusivity", particle_diffusivity)' in src
-    assert 'addFunctorProperty<ADReal>(legacy_mobility, particle_mobility)' in src
-    assert 'addFunctorProperty<ADReal>(legacy_diffusivity, particle_diffusivity)' in src
-    assert 'legacy_mobility != "e_mobility"' in src
-    assert 'legacy_diffusivity != "e_diffusivity"' in src
-    assert "interpolate(mean_energy(r, state), 0) / neutral_density(r, state)" in src
-    assert "interpolate(mean_energy(r, state), 1) / neutral_density(r, state)" in src
-
+def test_mean_energy_bridge_and_dd_transport_are_distinct_providers():
+    mean = text("physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C")
+    dd = text("physics_app/src/materials/DDMaterial.C")
+    assert 'getParam<MooseFunctorName>("mean_energy_output")' in mean
+    assert "electron_energy_density" in mean and "electron_density" in mean
+    assert 'addFunctorProperty<ADReal>("electron_mobility", particle_mu)' in dd
+    assert '"electron_energy_mobility"' in dd
+    assert not (ROOT / "physics_app/src/materials/ElectronClosureMaterial.C").exists()
 
 def test_dd_material_unifies_constant_and_lookup_with_electron_energy_projection():
     src = text("physics_app/src/materials/DDMaterial.C")

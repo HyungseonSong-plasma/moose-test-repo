@@ -69,15 +69,14 @@ def test_native_p2_input_exercises_both_new_models():
     assert "PLASMA_DD_NV_MATERIALS_P2_PASS" in runner
 
 
-def test_legacy_composition_material_retained_only_for_current_dependent_inputs():
-    # ElectronClosureMaterial couples normalized/physical state creation and a
-    # table. Its pinned direct-existing-Material input still requires it.
-    old = (SRC / "ElectronClosureMaterial.C").read_text()
+def test_redundant_composite_retired_but_needed_ion_functor_bridge_remains():
     inp = (ROOT / "physics_app/ci/plasma_direct_existing_materials_smoke.i").read_text()
-    assert 'registerMooseObject("PhysicsApp", ElectronClosureMaterial);' in old
-    assert "type = ElectronClosureMaterial" in inp
-    # SpeciesTransportAliasMaterial remains for ion coefficients provided by
-    # existing live Functors that cannot be replaced by constants without drift.
+    assert not (SRC / "ElectronClosureMaterial.C").exists()
+    assert not (INC / "ElectronClosureMaterial.h").exists()
+    assert "type = PhysicsElectronMeanEnergyMaterial" in inp
+    assert "type = DDMaterial" in inp
+    # Existing nonconstant heavy-ion coefficient Functors still require a
+    # pass-through name bridge; replacing them by constants would alter physics.
     alias = (SRC / "SpeciesTransportAliasMaterial.C").read_text()
-    assert "(*" not in alias or '"mobility_source"' in alias
     assert 'getFunctor<ADReal>("mobility_source")' in alias
+    assert 'getFunctor<ADReal>("diffusivity_source")' in alias

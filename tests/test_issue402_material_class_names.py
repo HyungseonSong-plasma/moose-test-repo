@@ -11,7 +11,6 @@ import hashlib
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "physics_app"
 MAPPINGS = (
-    ("PhysicsElectronClosureMaterial", "ElectronClosureMaterial"),
     ("PhysicsElectronTransportLookupMaterial", "DDMaterial"),
     ("ElectronTransportLookupMaterial", "DDMaterial"),
     ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
@@ -47,10 +46,10 @@ def test_retired_plasma_closures_action_preserves_material_factories():
     app = (BASE / "src/base/PhysicsApp.C").read_text()
     assert "PlasmaClosuresAction" not in app
     assert "PlasmaClosures/*" not in app
-    # ElectronClosureMaterial and its old Factory alias remain independently registered.
-    closure = (BASE / "src/materials/ElectronClosureMaterial.C").read_text()
-    assert 'registerMooseObject("PhysicsApp", ElectronClosureMaterial);' in closure
-    assert 'registerMooseObjectAliased("PhysicsApp", ElectronClosureMaterial, "PhysicsElectronClosureMaterial");' in closure
+    # Legacy combined electron lookup/state implementation is retired.
+    assert not (BASE / "src/materials/ElectronClosureMaterial.C").exists()
+    assert not (BASE / "include/materials/ElectronClosureMaterial.h").exists()
+    assert "type = DDMaterial" in (BASE / "ci/plasma_direct_existing_materials_smoke.i").read_text()
 
 
 def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
