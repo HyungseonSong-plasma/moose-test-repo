@@ -8,7 +8,7 @@ Use `OPERATING_CORE.md` for always-active invariants and `PROTOCOL_INDEX.md` for
 
 Named operating-system identity/version lifecycle is centrally owned by `HyungseonSong-plasma/chatgpt-operation`. The exact consumer pin is `docs/operating_system/README.md`; MOOSE/Physics domain rules, scientific meaning, and repository-specific acceptance remain locally owned.
 
-The active central operating system is **Paul = Rule-Minimal / Skill-Optimized**. Generic operating invariants and deterministic mechanics are loaded from the exact Paul pin; MOOSE/Physics scientific meaning, validation semantics, and repository-specific acceptance remain locally owned. Calvin operating metrics are historical archives only.
+The active central operating system is **Samuel (Controller-Native / Skill-Optimized)**, pinned to `HyungseonSong-plasma/chatgpt-operation@9b335e3fbb9c5e8e323e382daeec56fa25336822`. Samuel retains Paul's minimal-rule/skill-delegation approach and adds durable controller state, explicit capability routing, and trusted exact-head validation. Generic operating invariants and deterministic mechanics are loaded from this exact Samuel pin; MOOSE/Physics scientific meaning, validation semantics, and repository-specific acceptance remain locally owned. Paul and Calvin operating materials are historical, not the active operating system.
 
 For multi-issue capability delivery, use `docs/protocols/milestone_delivery.md`.
 
