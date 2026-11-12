@@ -78,3 +78,48 @@ Inventory all production and scratch-only new-run BCs, FV Kernels, and
 postprocessor consumers. Replace only new-run value bindings (including
 selected electron wall providers); keep historical input names as evidence.
 Native/physics acceptance remains separated by P0 -> P1 -> P2 -> P3.
+
+
+## #524: New S6 D scratch-only Wall producer/consumer cutover
+
+The active Chemistry staging owner is
+\`experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py\`.
+The path operates on the ten disposable S6 D layers and overwrites the
+scratch \`migrated_continuity.i\` overlay only after prewrite validation.
+The original historical S6 archive, B/C controls and preserved evidence
+are immutable. No new wall law, state equation or boundary is generated.
+
+After the existing Chemistry and electron-state renames, the Wall cutover:
+
+1. Inventories registered \`PhysicsIonWallFluxMaterial\`,
+   \`PhysicsIonWallTotalFluxMaterial\`, \`PhysicsElectronWallFluxMaterial\`,
+   and \`PhysicsElectronAdjacentSheathWallFluxMaterial\` providers in staged
+   \`[FunctorMaterials]\`. Unrecognized or unsupported original wall factories
+   do not receive guessed canonical identities.
+2. Checks output-prefix and physical species source: \`ion_wall_flux\`
+   maps to \`O2p\` only with a predeclared O2p density name and charge +1;
+   \`atomic_positive_\` to \`Op\` (charge +1); \`negative_\` to \`Om\`
+   (charge -1). Only the recognized \`electron_wall_flux\` maps to \`e\`.
+3. Rejects duplicate producers for an old output and any consumer of a
+   legacy wall output whose producer cannot be proven. No partial file write
+   occurs when an owner fails the gate.
+4. Adds \`species_id\` to each verified staged source, removes a verified
+   legacy \`output_prefix\` only when required, and rewrites references in
+   BCs, charge ledgers and postprocessors across the ten D scratch layers.
+5. Returns producer identity, renamed consumer counts and
+   \`P3=NOT_RUN\` / \`SCIENCE_HOLD\` in
+   \`scratch_wall_functor_cutover\`. A zero-owner no-op is reported
+   explicitly rather than claiming an S6 migration.
+
+This is an **opt-in new-run staging cutover**. It does not rename the
+historically accepted Issue #3, #27 or #395 producers in their committed
+source inputs. An archival upstream type/alias not supported by the current
+Wall Material classes must be classified and separately resolved; the
+script must HOLD rather than accepting an unsafe string-only migration.
+
+P0 cases cover two positive ions, one negative ion, electron sheath,
+shared charge-ledger and BC consumers, duplicate source identity, source
+charge/density mismatch, unsupported QPX producer, and unknown prefixes.
+The synthetic P0 test is not full archival S6 P2. The prior inherited
+S6-417/941 P2 issue remains open until its separate exact-head construction
+gate passes. No P3 was requested or authorized.
