@@ -16,7 +16,7 @@
       []
     []
     [Poisson]
-      potential_variable = log_e
+      fem_potential = log_e
     []
     [Maxwell]
       field_real = log_e

@@ -15,8 +15,11 @@ public:
   explicit DDEnergyEq(const InputParameters & parameters);
 
 private:
+  void addSolverVariables() override;
+  void addInitialConditions() override;
   void checkIntegrity() const override;
   void addFEKernels() override;
+  bool _created_energy_variable = false;
 };
 
 }

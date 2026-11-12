@@ -1,6 +1,8 @@
 #include "DDEnergyEq.h"
 #include "Chemistry.h"
 
+#include <cmath>
+
 namespace Plasma
 {
 namespace
@@ -19,13 +21,16 @@ DDEnergyEq::validParams()
 {
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
-      "Checks existing energy inputs without creating or modifying solver equations.");
+      "Create or reuse the FEM electron log-molar energy state.");
   params.addParam<std::vector<std::string>>(
       "fem_species", {}, "Electron species solved with finite-element variables.");
   params.addParam<std::vector<std::string>>(
       "fvm_species", {}, "Electron species solved with finite-volume variables.");
   params.addParam<MaterialPropertyName>(
       "rf_heating_material", "Existing electron-energy heating source in the equation's units.");
+  params.addParam<Real>(
+      "initial_molar_energy_density_eV",
+      "Required when auto-creating log_e_energy: exp(log_e_energy) [eV mol/m^3], >0.");
   return params;
 }
 
@@ -44,6 +49,57 @@ DDEnergyEq::DDEnergyEq(const InputParameters & parameters)
   validateSpeciesInputs(finite_element_species,
                         finite_volume_species,
                         {energyStateName(finite_element_species.front())});
+  if (isParamValid("initial_molar_energy_density_eV"))
+  {
+    const Real initial = getParam<Real>("initial_molar_energy_density_eV");
+    if (!std::isfinite(initial) || initial <= 0.0)
+      paramError("initial_molar_energy_density_eV",
+                 "Initial molar energy density must be finite and strictly positive.");
+  }
+  saveSolverVariableName(energyStateName("e"));
+  addRequiredPhysicsTask("add_variables_physics");
+  addRequiredPhysicsTask("add_ics_physics");
+}
+
+void
+DDEnergyEq::addSolverVariables()
+{
+  const auto variable = energyStateName("e");
+  if (variableExists(variable, /*error_if_aux=*/true))
+  {
+    if (isParamValid("initial_molar_energy_density_eV"))
+      paramError("initial_molar_energy_density_eV",
+                 "An externally declared log_e_energy retains its own initial condition.");
+    return;
+  }
+  if (!isParamValid("initial_molar_energy_density_eV"))
+    paramError("initial_molar_energy_density_eV",
+               "Auto-created log_e_energy requires an explicit positive initial molar "
+               "energy density [eV mol/m^3].");
+
+  const std::string type = "MooseVariable";
+  auto params = getFactory().getValidParams(type);
+  assignBlocks(params, _blocks);
+  params.set<SolverSystemName>("solver_sys") = getSolverSystem(variable);
+  getProblem().addVariable(type, variable, params);
+  _created_energy_variable = true;
+}
+
+void
+DDEnergyEq::addInitialConditions()
+{
+  if (!_created_energy_variable)
+    return;
+  const auto variable = energyStateName("e");
+  if (!shouldCreateIC(variable, _blocks, /*default IC*/ false, /*duplicate error*/ true))
+    return;
+  const std::string type = "ConstantIC";
+  auto params = getFactory().getValidParams(type);
+  params.set<VariableName>("variable") = variable;
+  // The solved state is log of molar energy density, not log(number density).
+  params.set<Real>("value") = std::log(getParam<Real>("initial_molar_energy_density_eV"));
+  assignBlocks(params, _blocks);
+  getProblem().addInitialCondition(type, name() + "_initial_energy", params);
 }
 
 void
@@ -97,5 +153,7 @@ DDEnergyEq::addFEKernels()
 
 using Plasma::DDEnergyEq;
 registerPhysicsBaseTasks("PhysicsApp", DDEnergyEq);
+registerMooseAction("PhysicsApp", DDEnergyEq, "add_variables_physics");
+registerMooseAction("PhysicsApp", DDEnergyEq, "add_ics_physics");
 registerMooseAction("PhysicsApp", DDEnergyEq, "check_integrity");
 registerMooseAction("PhysicsApp", DDEnergyEq, "add_kernel");

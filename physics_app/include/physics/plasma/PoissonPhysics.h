@@ -15,9 +15,12 @@ public:
   explicit PoissonPhysics(const InputParameters & parameters);
 
 private:
+  void addSolverVariables() override;
+  void addInitialConditions() override;
   void checkIntegrity() const override;
   void addFEKernels() override;
   void addFEBCs() override;
+  bool _created_potential_variable = false;
 };
 
 }

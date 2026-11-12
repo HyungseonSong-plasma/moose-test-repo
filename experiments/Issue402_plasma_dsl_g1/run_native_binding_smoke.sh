@@ -120,6 +120,26 @@ echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
 native --check-input -i "$PILOT/species_density_pairs_p2.i" \
   2>&1 | tee "$EVIDENCE/species_density_pairs_p2.log"
 echo "PLASMA_SPECIES_DENSITY_PAIRS_P2_PASS"
+# Physics-generated energy/potential states, exact-head P2 check only.
+native --check-input -i "$PILOT/auto_energy_potential_p2.i" \
+  2>&1 | tee "$EVIDENCE/auto_energy_potential_p2.log"
+echo "PLASMA_AUTO_ENERGY_POTENTIAL_P2_PASS"
+for entry in "invalid_auto_energy_missing_initial_p2:requires an explicit positive initial molar" \
+             "invalid_auto_energy_zero_initial_p2:must be finite and strictly positive" \
+             "invalid_auto_poisson_nan_initial_p2:Initial potential must be finite"; do
+  item="${entry%%:*}"
+  expected="${entry#*:}"
+  set +e
+  native --check-input -i "$PILOT/$item.i" > "$EVIDENCE/$item.log" 2>&1
+  result=$?
+  set -e
+  if [[ "$result" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
+    echo "::error::Invalid auto-created energy/Poisson initial value accepted: $item" >&2
+    cat "$EVIDENCE/$item.log" >&2
+    exit 26
+  fi
+done
+echo "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED"
 
 for entry in "invalid_species_density_zero_p2:requires a finite, strictly positive" \
              "invalid_species_density_odd_p2:expected species_name initial_number_density pairs" \
@@ -193,7 +213,7 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
-    invalid_poisson_variable) expected='Electric potential variable was not found' ;;
+    invalid_poisson_variable) expected='Poisson fem_potential requires an FEM solver variable' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
     invalid_missing_variable) expected='was not found' ;;
     invalid_legacy_variables) expected='variables' ;;
