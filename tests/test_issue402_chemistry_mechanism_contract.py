@@ -123,8 +123,11 @@ def test_s6_uses_canonical_progress_providers_without_alias_materials():
             contents = (PILOT / name).read_text()
             for legacy in ("R_elastic_O2", "R_elastic_O", "R_ion_O2"):
                 assert legacy not in contents
-            for expected in ("R_EI02", "R_EI17", "R_EI415"):
-                assert expected in contents
+            # Full S6 overlays consume progress Functors from the renamed
+            # staged native layers; synthetic P2 fixtures declare them here.
+            if name.endswith("_catalogue_p2.i"):
+                for expected in ("R_EI02", "R_EI17", "R_EI415"):
+                    assert expected in contents
             assert "_progress_alias" not in contents
 
     stage = text("experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py")
@@ -149,7 +152,10 @@ def test_active_energy_state_binding_is_canonical_across_bc_and_readers():
     for path in paths:
         source = text(path)
         assert "log_energy" not in source
-        assert "log_e_energy" in source
+        if path.endswith("DDEnergyEq.C"):
+            assert 'return "log_" + species + "_energy";' in source
+        else:
+            assert "log_e_energy" in source
     assert '"log_e_energy"' in text("physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C")
 
 
