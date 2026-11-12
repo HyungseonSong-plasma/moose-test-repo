@@ -25,22 +25,22 @@ EXPECTED = {
     "417": {
         "EI-02": ("R_EI02", "functor"),
         "EI-17": ("R_EI17", "functor"),
-        "EI-415": ("R_EI415", -12.06),
+        "EI-415": ("R_EI415", 12.06),
         "EI-401": ("R_EI401", 0),
-        "EI-407": ("R_EI407", -0.977),
-        "EI-2069": ("R_EI2069", -5.02),
+        "EI-407": ("R_EI407", 0.977),
+        "EI-2069": ("R_EI2069", 5.02),
         "H25": ("R_H25", "none"),
-        "EI-417": ("R_EI417", -17.0),
+        "EI-417": ("R_EI417", 17.0),
     },
     "941": {
         "EI-02": ("R_EI02", "functor"),
         "EI-17": ("R_EI17", "functor"),
-        "EI-415": ("R_EI415", -12.06),
+        "EI-415": ("R_EI415", 12.06),
         "EI-401": ("R_EI401", 0),
-        "EI-407": ("R_EI407", -0.977),
-        "EI-2069": ("R_EI2069", -5.02),
+        "EI-407": ("R_EI407", 0.977),
+        "EI-2069": ("R_EI2069", 5.02),
         "H25": ("R_H25", "none"),
-        "EI-941": ("R_EI941", -13.62),
+        "EI-941": ("R_EI941", 13.62),
     }
 }
 
@@ -82,7 +82,7 @@ def test_s6_channel_id_equation_atom_charge_energy_and_ownership(variant):
     assert set(equations) == {r["id"] for r in reactions}
     assert catalogue["e"] == {"elements": {}, "charge_number": -1}
     for r in reactions:
-        assert r["progress_units"] == "mol/(m^3 s)"
+        assert r["units"] == "mol/(m^3 s)"
         assert progress_from_id(r["id"]) == EXPECTED[variant][r["id"]][0]
         assert r.get("provenance", {}).get("archive_layer", "").endswith(".i")
         reactants, products = (parse_side(s) for s in equations[r["id"]].split("->"))
@@ -97,11 +97,11 @@ def test_s6_channel_id_equation_atom_charge_energy_and_ownership(variant):
                            for s,n in products.items())
         assert sum(catalogue[s]["charge_number"]*n for s,n in reactants.items()) == sum(
             catalogue[s]["charge_number"]*n for s,n in products.items())
-        delta = r["electron_energy_change_eV"]
+        delta = r["energy_loss_eV"]
         expected = EXPECTED[variant][r["id"]][1]
         if expected == "functor":
             assert delta["model"] == "functor"
-            assert delta["name"] == f"signed_delta_epsilon_{r['id'].replace('-', '')}_eV"
+            assert delta["name"] == f"delta_epsilon_{r['id'].replace('-', '')}_eV"
         elif expected == "none":
             assert delta == {"model": "none"}
         else:
@@ -113,14 +113,14 @@ def test_s6_channel_id_equation_atom_charge_energy_and_ownership(variant):
     assert sources["EI-415"] == 1 and sources["EI-401"] == -1
     assert sources[f"EI-{variant}"] == 1
     assert sum(sources.values()) == 1
-    assert sum(r["electron_energy_change_eV"] for r in reactions
-               if isinstance(r["electron_energy_change_eV"], (int,float))) == pytest.approx(
-                   -35.057 if variant == "417" else -31.677
+    assert sum(r["energy_loss_eV"] for r in reactions
+               if isinstance(r["energy_loss_eV"], (int,float))) == pytest.approx(
+                   35.057 if variant == "417" else 31.677
                )
 
 
 @pytest.mark.parametrize("variant", ["417", "941"])
-def test_template_uses_single_chemistry_energy_owner_and_signed_elastic_functors(variant):
+def test_template_uses_single_chemistry_energy_owner_without_manual_materials(variant):
     text = (PILOT / f"s6_{variant}_chemistry_run.template.i").read_text()
     assert f"oxygen_s6_{variant}.json" in text
     assert "oxygen_s6_common.json" in text
@@ -137,9 +137,10 @@ def test_template_uses_single_chemistry_energy_owner_and_signed_elastic_functors
     assert "block = plasma" in text
     assert "fem_charge_numbers" not in text
     assert "fvm_charge_numbers" not in text
-    for tag in ("EI02", "EI17"):
-        assert f"property_name = signed_delta_epsilon_{tag}_eV" in text
-    assert text.count("expression = '-loss'") == 2
+    assert "[FunctorMaterials]" not in text
+    assert "signed_delta_epsilon" not in text
+    assert "mobility_source" not in text
+    assert "diffusivity_source" not in text
     assert "rf_heating_material" not in text  # Existing Native RF owner remains
     fixture = (PILOT / f"chemistry_s6_{variant}_catalogue_p2.i").read_text()
     assert "SYNTHETIC" in fixture

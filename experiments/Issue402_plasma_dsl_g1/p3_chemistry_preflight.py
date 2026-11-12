@@ -17,8 +17,6 @@ PILOT = ROOT / "experiments/Issue402_plasma_dsl_g1"
 COMMON = PILOT / "chemistry/oxygen_s6_common.json"
 CASES = ("417", "941")
 COMMON_IDS = {"EI-02", "EI-17", "EI-415", "EI-401", "EI-407", "EI-2069", "H25"}
-RETAINED_BRIDGES = ("O2p_species_transport_alias", "Om_species_transport_alias",
-                    "Op_species_transport_alias")
 
 
 def sha256(path: Path) -> str:
@@ -46,7 +44,7 @@ def audit(root: Path = ROOT) -> dict:
         ids = [r["id"] for r in reactions]
         if set(ids) != COMMON_IDS | {"EI-" + case} or len(ids) != 8 or len(set(ids)) != 8:
             raise ValueError(f"P3_REACTION_SET_MISMATCH_{case}")
-        if any("progress" in r or r.get("progress_units") != "mol/(m^3 s)"
+        if any("progress" in r or r.get("units") != "mol/(m^3 s)"
                for r in reactions):
             raise ValueError(f"P3_PROGRESS_OR_UNIT_MISMATCH_{case}")
         if any("provenance" not in r for r in reactions):
@@ -73,11 +71,13 @@ def audit(root: Path = ROOT) -> dict:
                                           "R_elastic_O2", "R_elastic_O",
                                           "R_ion_O2")):
             raise ValueError(f"P3_UNVERIFIED_SOURCE_OR_IC_OVERRIDE_{case}")
-        for name in RETAINED_BRIDGES:
-            if text.count(f"[{name}]") != 1:
-                raise ValueError(f"P3_REQUIRED_ION_BRIDGE_MISSING_{case}")
-        if text.count("expression = '-loss'") != 2:
-            raise ValueError(f"P3_SIGNED_ELASTIC_ENERGY_MISMATCH_{case}")
+        # Physics-owned material generation replaces the explicit S6 overlay.
+        # Original Native ion and electron-rate Functors remain upstream.
+        if "[FunctorMaterials]" in text or "signed_delta_epsilon" in text:
+            raise ValueError(f"P3_MANUAL_FUNCTOR_MATERIAL_REMAINS_{case}")
+        if any("energy_loss_eV" not in rx or "electron_energy_change_eV" in rx
+               for rx in reactions):
+            raise ValueError(f"P3_ENERGY_LOSS_SCHEMA_MISMATCH_{case}")
         files[f"chemistry/oxygen_s6_{case}.json"] = sha256(mechanism)
         files[template.name] = sha256(template)
         cases[case] = {

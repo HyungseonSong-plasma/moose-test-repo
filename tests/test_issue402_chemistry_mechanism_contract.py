@@ -54,10 +54,10 @@ def test_same_equation_different_id_different_energy_channels_are_not_collapsed(
     assert [r["id"] for r in reactions] == ["EI-405", "EI-406"]
     assert len({r["id"] for r in reactions}) == 2
     assert len({mechanism["equations"][r["id"]] for r in reactions}) == 1
-    assert [r["electron_energy_change_eV"] for r in reactions] == [-12.4, -17.0]
+    assert [r["energy_loss_eV"] for r in reactions] == [12.4, 17.0]
     assert all("progress" not in r for r in reactions)
     assert [progress_from_id(r["id"]) for r in reactions] == ["R_EI405", "R_EI406"]
-    assert all(r["progress_units"] == "mol/(m^3 s)" for r in reactions)
+    assert all(r["units"] == "mol/(m^3 s)" for r in reactions)
 
     source = {}
     for reaction in reactions:
@@ -71,7 +71,7 @@ def test_same_equation_different_id_different_energy_channels_are_not_collapsed(
 
     # Distinct progress values must yield the independent signed projection.
     progress = {"R_EI405": 1.0, "R_EI406": 2.0}
-    energy = sum(r["electron_energy_change_eV"] * progress[progress_from_id(r["id"])]
+    energy = -sum(r["energy_loss_eV"] * progress[progress_from_id(r["id"])]
                  for r in reactions)
     assert abs(energy - (-12.4 * 1.0 - 17.0 * 2.0)) < 1e-12
 
@@ -100,12 +100,13 @@ def test_compiled_catalogue_checks_and_signed_functor_sources_exist():
     for marker in ("charge conservation failed", "elemental balance failed",
                    "equation text and structured stoichiometry differ",
                    "duplicate reaction ID or generated progress owner",
-                   "missing explicit electron energy policy", "nonfinite electron energy change"):
+                   "missing explicit electron energy policy", "electron energy loss must be finite and nonnegative"):
         assert marker in parser
 
     assert "std::set<std::string> touched;" in chemistry
     assert "reaction.net(id)" in chemistry
-    assert "realLiteral(reaction.electron_energy_change_eV)" in chemistry
+    assert "realLiteral(reaction.energy_loss_eV)" in chemistry
+    assert 'energy.parts.push_back("(-1.0)*("' in chemistry
     assert '"Q_e_molar_eV"' in chemistry
     assert '"S_" + id + "_molar"' in chemistry
     assert "getProblem().addFunctorMaterial" in chemistry
