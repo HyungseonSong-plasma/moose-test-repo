@@ -22,11 +22,13 @@ def text(path: str) -> str:
 
 def test_mechanism_is_the_only_high_level_charge_owner():
     app = text("physics_app/src/base/PhysicsApp.C")
-    parent = text("physics_app/src/physics/plasma/ChemistryAction.C")
+    parent = text("physics_app/src/physics/plasma/Chemistry.C")
     shared = text("physics_app/src/physics/plasma/PlasmaInterface.C")
     continuity = text("physics_app/src/physics/plasma/DDContinuityEq.C")
 
-    assert 'registerSyntax("ChemistryAction", "Physics/Plasmas")' in app
+    assert 'registerSyntax("PlasmasAction", "Physics/Plasmas")' in app
+    assert "class PlasmasAction : public Action" in text("physics_app/include/physics/plasma/Chemistry.h")
+    assert 'registerMooseAction("PhysicsApp", PlasmasAction, "check_integrity");' in parent
     assert '"files"' in parent and 'getParam<std::vector<FileName>>("files")' in parent
     assert "chemistryData()" in shared
     assert "mechanism.species(species[i]).charge_number" in continuity

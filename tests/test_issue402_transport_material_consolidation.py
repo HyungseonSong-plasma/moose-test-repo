@@ -27,7 +27,7 @@ def test_dd_and_nv_canonical_materials_and_retired_implementations():
 def test_dd_constant_lookup_units_naming_and_energy_projection():
     dd = (SRC / "DDMaterial.C").read_text()
     hd = (INC / "DDMaterial.h").read_text()
-    for token in ('"species_id"', '"model"', '"lookup constant"', '"table_file"',
+    for token in ('"species_id"', '"model"', '"lookup constant functor"', '"table_file"',
                   '"mobility"', '"diffusivity"', '"table_units"', '"pressure"',
                   '"gas_temperature"'):
         assert token in dd
@@ -77,6 +77,12 @@ def test_redundant_composite_retired_but_needed_ion_functor_bridge_remains():
     assert "type = DDMaterial" in inp
     # Existing nonconstant heavy-ion coefficient Functors still require a
     # pass-through name bridge; replacing them by constants would alter physics.
-    alias = (SRC / "SpeciesTransportAliasMaterial.C").read_text()
-    assert 'getFunctor<ADReal>("mobility_source")' in alias
-    assert 'getFunctor<ADReal>("diffusivity_source")' in alias
+    dd = (SRC / "DDMaterial.C").read_text()
+    header = (INC / "DDMaterial.h").read_text()
+    assert '"model", "Functor mode requires mobility_source and diffusivity_source."' in dd
+    assert 'getFunctor<ADReal>("mobility_source")' in dd
+    assert 'getFunctor<ADReal>("diffusivity_source")' in dd
+    assert 'return (*_mobility_source)(r, state);' in header
+    assert 'return (*_diffusivity_source)(r, state);' in header
+    assert not (SRC / "SpeciesTransportAliasMaterial.C").exists()
+    assert not (INC / "SpeciesTransportAliasMaterial.h").exists()

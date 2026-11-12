@@ -16,7 +16,7 @@ def test_energy_autogeneration_requires_positive_molar_energy():
 
 
 def test_poisson_name_and_fem_type():
-    code = (APP / "PoissonPhysics.C").read_text()
+    code = (APP / "PoissonEq.C").read_text()
     for token in ('"fem_potential"', '"initial_potential_V"',
                   "std::isfinite(", "variableExists(variable",
                   "getProblem().addVariable(", "getProblem().addInitialCondition(",
