@@ -233,7 +233,7 @@ def test_public_s6_c_input_wall_producers_and_consumers(case):
             if member.name.startswith(case + "/C/"):
                 extracted = archive.extractfile(member)
                 assert extracted is not None
-                staged[Path(member.name).name] = extracted.read().decode("utf-8")
+                staged[Path(member.name).relative_to(Path(case) / "C")] = extracted.read().decode("utf-8")
             elif member.name.startswith(case + "/B/"):
                 extracted = archive.extractfile(member)
                 assert extracted is not None
