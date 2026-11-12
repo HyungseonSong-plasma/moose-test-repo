@@ -123,6 +123,7 @@ PhysicsElectronAdjacentSheathWallFluxMaterial::validParams()
   params.addRequiredParam<MooseFunctorName>("electron_density", "Electron number density n_e [1/m^3].");
   params.addRequiredParam<MooseFunctorName>("mean_energy", "Mean electron energy [eV].");
   params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");
+  params.addParam<std::string>("species_id", "", "Optional canonical electron species ID 'e'; absent preserves legacy electron_* outputs.");
   params.addParam<Real>("sticking", 1.0, "Electron wall absorption probability.");
   params.addParam<bool>(
       "use_element_gradient_for_potential",
@@ -140,11 +141,14 @@ PhysicsElectronAdjacentSheathWallFluxMaterial::PhysicsElectronAdjacentSheathWall
     _sticking(getParam<Real>("sticking")),
     _use_element_gradient_for_potential(getParam<bool>("use_element_gradient_for_potential"))
 {
+  const auto species_id = getParam<std::string>("species_id");
+  if (!species_id.empty() && species_id != "e")
+    paramError("species_id", "Electron wall species_id must be 'e'.");
   if (_sticking < 0.0 || _sticking > 1.0)
     paramError("sticking", "Electron sticking must be in [0,1].");
 
   addFunctorProperty<ADReal>(
-      "electron_mean_speed",
+      species_id.empty() ? "electron_mean_speed" : "e_mean_speed",
       [this](const auto & r, const auto & state) -> ADReal
       {
         const ADReal eps_bar = _mean_energy(r, state);
@@ -154,7 +158,7 @@ PhysicsElectronAdjacentSheathWallFluxMaterial::PhysicsElectronAdjacentSheathWall
       });
 
   addFunctorProperty<ADReal>(
-      "electron_sheath_drop_V",
+      species_id.empty() ? "electron_sheath_drop_V" : "e_wall_sheath_drop_V",
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -165,7 +169,7 @@ PhysicsElectronAdjacentSheathWallFluxMaterial::PhysicsElectronAdjacentSheathWall
       });
 
   addFunctorProperty<ADReal>(
-      "electron_wall_number_flux",
+      species_id.empty() ? "electron_wall_number_flux" : "e_wall_number_flux",
       [this](const auto & r, const auto & state) -> ADReal
       {
         const ADReal n_e = _electron_density(r, state);
