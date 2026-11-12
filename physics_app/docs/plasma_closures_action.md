@@ -1,3 +1,16 @@
+> **2026-11-12 retirement notice (Issue #402):** The historical
+> `ElectronClosureMaterial`, `ElectronTransportLookupMaterial`,
+> `PhysicsThermalDiffusionMaterial` and
+> `PhysicsElectronTransportCoefficients` C++ source implementations have
+> been removed in Draft PR #523. New coefficient inputs use `DDMaterial`
+> (constant or lookup) and `NVMaterial` (heavy mixture/collision transport).
+> Mean energy is computed separately by `PhysicsElectronMeanEnergyMaterial`.
+> Historical lookup/heavy MOOSE factory tokens remain aliases to DD/NV,
+> but the combined ElectronClosureMaterial token is retired. The following
+> older sections describe the original archived contract, **not the current
+> executable input API**. See
+> `docs/development/2026-11-12_issue402_dd_nv_material_consolidation.md`.
+>
 # PlasmaClosures Action — archived legacy contract
 
 > **Archived / not executable on current PhysicsApp.** The `[PlasmaClosures]`
