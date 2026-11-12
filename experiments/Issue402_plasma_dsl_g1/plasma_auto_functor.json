@@ -1,16 +1,22 @@
 {
   "species": {
-    "e": {"elements": {}, "charge_number": -1},
-    "O2p": {"elements": {"O": 2}, "charge_number": 1}
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1
+    }
   },
   "equations": {},
   "reactions": [],
   "transport_coefficients": {
     "drift_diffusion": {
       "O2p": {
-        "model": "functor",
-        "mobility_source": "ion_mobility",
-        "diffusivity_source": "ion_diffusion"
+        "model": "functor"
       }
     }
   }

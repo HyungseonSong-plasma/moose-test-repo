@@ -30,7 +30,6 @@
       "e": {
         "model": "lookup",
         "table_file": "chemistry/e_transport.txt",
-        "coordinate": "mean_en_solved",
         "table_units": "reduced",
         "pressure": "p",
         "gas_temperature": "T_g",
