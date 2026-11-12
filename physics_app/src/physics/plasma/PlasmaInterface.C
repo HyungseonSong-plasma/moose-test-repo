@@ -25,7 +25,7 @@ PlasmaInterface::PlasmaInterface(const InputParameters & parameters)
 const Plasma::ChemistryData &
 PlasmaInterface::chemistryData() const
 {
-  const auto actions = _awh.getActions<ChemistryAction>();
+  const auto actions = _awh.getActions<PlasmasAction>();
   if (actions.size() != 1)
     mooseError("Exactly one [Physics]/[Plasmas] mechanism owner is required");
   return actions.front()->data();

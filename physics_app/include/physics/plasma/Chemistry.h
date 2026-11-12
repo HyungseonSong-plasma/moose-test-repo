@@ -99,11 +99,11 @@ private:
 } // namespace Plasma
 
 /** Root [Plasmas] Action; one validated mechanism owner shared by child Physics. */
-class ChemistryAction : public Action
+class PlasmasAction : public Action
 {
 public:
   static InputParameters validParams();
-  explicit ChemistryAction(const InputParameters & params);
+  explicit PlasmasAction(const InputParameters & params);
   void act() override {}
 
   const Plasma::ChemistryData & data() const { return _data; }

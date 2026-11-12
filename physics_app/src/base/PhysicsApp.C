@@ -48,7 +48,7 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   syntax.registerActionSyntax("AddPeriodicRelativeNodalDifference", "PeriodicRelativeNodalDifference/*");
 
   // One shared [Plasmas]/files mechanism catalogue per application/FEProblem.
-  registerSyntax("ChemistryAction", "Physics/Plasmas");
+  registerSyntax("PlasmasAction", "Physics/Plasmas");
 
   // The continuity input checks the species variables before solving.
   registerSyntax("DDContinuityEq",

@@ -612,7 +612,7 @@ registerMooseAction("PhysicsApp", Chemistry, "add_functor_material");
 
 // The [Plasmas] mechanism owner is implemented beside its Chemistry data model.
 InputParameters
-ChemistryAction::validParams()
+PlasmasAction::validParams()
 {
   InputParameters params = Action::validParams();
   params.addParam<std::vector<FileName>>(
@@ -620,7 +620,7 @@ ChemistryAction::validParams()
   return params;
 }
 
-ChemistryAction::ChemistryAction(const InputParameters & params)
+PlasmasAction::PlasmasAction(const InputParameters & params)
   : Action(params),
     _data([this]() {
       std::vector<std::string> paths;
@@ -631,4 +631,4 @@ ChemistryAction::ChemistryAction(const InputParameters & params)
 {
 }
 
-registerMooseAction("PhysicsApp", ChemistryAction, "check_integrity");
+registerMooseAction("PhysicsApp", PlasmasAction, "check_integrity");
