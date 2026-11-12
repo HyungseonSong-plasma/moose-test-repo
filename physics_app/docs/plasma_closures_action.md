@@ -5,8 +5,10 @@
 > been removed in Draft PR #523. New coefficient inputs use `DDMaterial`
 > (constant or lookup) and `NVMaterial` (heavy mixture/collision transport).
 > Mean energy is computed separately by `PhysicsElectronMeanEnergyMaterial`.
-> Historical lookup/heavy MOOSE factory tokens remain aliases to DD/NV,
-> but the combined ElectronClosureMaterial token is retired. The following
+> Electron-lookup MOOSE factory aliases are removed; only the separate
+> thermal-diffusion alias remains mapped to NVMaterial. The combined
+> ElectronClosureMaterial token is retired. DDMaterial reads lookup energy
+> exclusively from mean_en_solved (no coordinate/mean_energy input). The following
 > older sections describe the original archived contract, **not the current
 > executable input API**. See
 > `docs/development/2026-11-12_issue402_dd_nv_material_consolidation.md`.

@@ -18,11 +18,11 @@ DDMaterial::validParams()
                              "Transport source: lookup table, physical constants or existing AD Functors.");
   params.addParam<MooseFunctorName>(
       "mobility_source",
-      "Optional direct-input legacy override; by default model=functor reads "
+      "Optional upstream Native coefficient source; otherwise model=functor reads "
       "<species>_mobility from another Material.");
   params.addParam<MooseFunctorName>(
       "diffusivity_source",
-      "Optional direct-input legacy override; by default model=functor reads "
+      "Optional upstream Native coefficient source; otherwise model=functor reads "
       "<species>_diffusivity from another Material.");
   params.addParam<Real>("mobility", "Constant species mobility [m^2/(V s)].");
   params.addParam<Real>("diffusivity", "Constant species diffusivity [m^2/s].");
@@ -34,8 +34,7 @@ DDMaterial::validParams()
       "fluid_energy",
       true,
       "Enable 5/3 electron energy transport from the same particle mobility "
-      "and diffusivity. Direct Material inputs retain historical true; "
-      "Physics/JSON sets this from e_energy.type=fluid.");
+      "and diffusivity. Physics/JSON sets this from e_energy.type=fluid.");
   params.addParam<MooseEnum>("table_units", MooseEnum("reduced physical", "reduced"),
                              "Reduced values mu*N_n/D*N_n or physical mu/D.");
   params.addParam<MooseFunctorName>("pressure", "Neutral-gas pressure [Pa] for reduced tables.");

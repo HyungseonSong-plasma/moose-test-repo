@@ -5,7 +5,7 @@ The two canonical **transport-coefficient** calculator classes are:
 
 - `DDMaterial`: one species at a time, explicit `model=constant` for
   physical `mobility`/`diffusivity`, or `model=lookup` with a verified
-  three-column table, coordinate, bounds policy and reduced/physical units.
+  three-column table on the fixed `mean_en_solved` axis, bounds policy and reduced/physical units.
   Produces `<species>_mobility` and `<species>_diffusivity` and, for e,
   the unchanged Maxwellian 5/3 electron energy transport projection.
 - `NVMaterial`: heavy-species NavierStokes mixture diffusion and thermal
@@ -14,9 +14,11 @@ The two canonical **transport-coefficient** calculator classes are:
 
 Retired C++ implementations: `ElectronTransportLookupMaterial`,
 `PhysicsThermalDiffusionMaterial`, `PhysicsElectronTransportCoefficients`,
-and the overlapping `ElectronClosureMaterial`. Old MOOSE *type tokens*
-for electron lookup and thermal diffusion remain aliases to the new C++
-classes. The old combined `ElectronClosureMaterial` type is retired.
+and the overlapping `ElectronClosureMaterial`. Both old electron-lookup
+MOOSE factory aliases are now **removed** (including the Physics-prefixed
+spelling); use `DDMaterial` directly. The thermal-diffusion-to-`NVMaterial`
+alias remains a separate contract. The old combined ElectronClosureMaterial
+type is retired.
 Electron state and mean-energy calculation is now separately owned by
 `PhysicsElectronMeanEnergyMaterial` when needed.
 
@@ -238,10 +240,11 @@ species identifier, with case preserved: `e_mobility` / `e_diffusivity`,
 `Om_diffusivity`, `Op_mobility` / `Op_diffusivity`.
 Neither list order nor user-specified coefficient strings define these names.
 
-`ElectronClosureMaterial` and `ElectronTransportLookupMaterial`
-publish canonical electron names using the **same AD table closure** that
-produces the existing `electron_mobility` and `electron_diffusion` outputs.
-The historical electron aliases are preserved. The new DDMaterial supplies canonical ion mobility/diffusivity aliases from existing Native AD Functors when explicit raw source names are bound. PlasmaChargeTransportMaterial no longer publishes these coefficient aliases; its separate rho_diffusivity_<id> diagnostic is density-weighted and not a physical D coefficient. See the DDMaterial charged-FV consumer trace document for the remaining original Native input and P3 gates.
+`DDMaterial` publishes canonical electron coefficients using one AD lookup
+closure, including `electron_mobility` and `electron_diffusion` outputs
+still consumed by Native transport kernels. These are live Functor interfaces,
+not factory aliases. Lookup energy is always `mean_en_solved`; input options
+`coordinate`, `mean_energy`, and `property_table_file` are removed. The new DDMaterial supplies canonical ion mobility/diffusivity aliases from existing Native AD Functors when explicit raw source names are bound. PlasmaChargeTransportMaterial no longer publishes these coefficient aliases; its separate rho_diffusivity_<id> diagnostic is density-weighted and not a physical D coefficient. See the DDMaterial charged-FV consumer trace document for the remaining original Native input and P3 gates.
 
 An input must still provide actual coefficient producers. Never fabricate a
 missing Functor, silently choose a legacy provider by species name, replace
@@ -485,6 +488,12 @@ Original S6 P3 decks, Material/Functor producers and workflow credentials
 remain untouched.
 
 ## Material/Functor class and filename rename (2026-11-10)
+
+> **Superseded by 2026-11-12 DDMaterial cleanup:** historical notes below about
+> electron lookup class aliases no longer describe executable factory inputs.
+> Use only `DDMaterial model=lookup table_file=...`; lookup energy is fixed
+> to `mean_en_solved`.
+
 
 > **Historical snapshot, superseded:** the subsequent 2026-11-10
 > statements about a `PlasmaChargeTransportMaterial` factory alias
