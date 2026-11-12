@@ -258,7 +258,7 @@ namespace
 {
 struct SourceExpression
 {
-  std::vector<MooseFunctorName> names;
+  std::vector<std::string> names;
   std::vector<std::string> symbols;
   std::vector<std::string> parts;
 
@@ -270,7 +270,7 @@ struct SourceExpression
     return result;
   }
 
-  std::string symbol(const MooseFunctorName & name)
+  std::string symbol(const std::string & name)
   {
     const auto result = "f" + std::to_string(names.size());
     names.push_back(name);
@@ -359,7 +359,7 @@ Chemistry::addFunctorMaterials()
   {
     auto params = getFactory().getValidParams(type);
     params.set<std::string>("property_name") = "S_" + id + "_molar";
-    params.set<std::vector<MooseFunctorName>>("functor_names") = source.names;
+    params.set<std::vector<std::string>>("functor_names") = source.names;
     params.set<std::vector<std::string>>("functor_symbols") = source.symbols;
     params.set<std::string>("expression") = source.expression();
     assignBlocks(params, _blocks);
@@ -370,7 +370,7 @@ Chemistry::addFunctorMaterials()
   {
     auto params = getFactory().getValidParams(type);
     params.set<std::string>("property_name") = "Q_e_molar_eV";
-    params.set<std::vector<MooseFunctorName>>("functor_names") = energy.names;
+    params.set<std::vector<std::string>>("functor_names") = energy.names;
     params.set<std::vector<std::string>>("functor_symbols") = energy.symbols;
     params.set<std::string>("expression") = energy.expression();
     assignBlocks(params, _blocks);
