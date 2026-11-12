@@ -47,6 +47,9 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   syntax.registerActionSyntax("AddDriftDiffusionAction", "DriftDiffusionAction/*");
   syntax.registerActionSyntax("AddPeriodicRelativeNodalDifference", "PeriodicRelativeNodalDifference/*");
 
+  // One shared [Plasmas]/files mechanism catalogue per application/FEProblem.
+  registerSyntax("PlasmaMechanismAction", "Physics/Plasmas");
+
   // The continuity input checks the species variables before solving.
   registerSyntax("ContinuityEq",
                  "Physics/Plasmas/Transport/DriftDiffusion/Continuity");

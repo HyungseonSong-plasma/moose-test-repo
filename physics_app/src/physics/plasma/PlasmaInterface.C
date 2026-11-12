@@ -1,4 +1,7 @@
 #include "PlasmaInterface.h"
+#include "ActionWarehouse.h"
+#include "ChemistryPhysics.h"
+#include "PlasmaMechanismAction.h"
 
 #include "KernelBase.h"
 #include "NonlinearSystemBase.h"
@@ -17,6 +20,22 @@ PlasmaInterface::validParams()
 PlasmaInterface::PlasmaInterface(const InputParameters & parameters)
   : PhysicsBase(parameters)
 {
+}
+
+
+const Plasma::PlasmaMechanism &
+PlasmaInterface::plasmaMechanism() const
+{
+  const auto actions = _awh.getActions<PlasmaMechanismAction>();
+  if (actions.size() != 1)
+    mooseError("Exactly one [Physics]/[Plasmas] mechanism owner is required");
+  return actions.front()->mechanism();
+}
+
+bool
+PlasmaInterface::chemistryEnabled() const
+{
+  return !_awh.getActions<Plasma::ChemistryPhysics>().empty();
 }
 
 // Validate species identities and resolved variable ordering before building kernels.
