@@ -1,4 +1,5 @@
 name: Issue 402 Canonical S6 D Native P3 Once
+# Issue #518 replay: operator-authorized exact-main validation after #513/#516/#517/#519.
 on:
   push:
     branches: [main]
