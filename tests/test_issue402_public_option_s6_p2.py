@@ -335,6 +335,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         ),
         "run_one": lambda *_args: {"P2": "PASS", "exit_code": 0, "syntax_ok": True},
         "tempfile": SimpleNamespace(TemporaryDirectory=lambda **_kwargs: CleanupFault()),
+        "shutil": SimpleNamespace(copy2=lambda _src, dst: Path(dst).write_text("{}")),
     }
     exec(compile(module, str(PILOT / "public_option_s6_p2.py"), "exec"), options)
     report = options["execute"](tmp_path, tmp_path / "physics-opt", source, evidence)
