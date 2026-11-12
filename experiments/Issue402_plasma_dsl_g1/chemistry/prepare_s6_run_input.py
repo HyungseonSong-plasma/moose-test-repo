@@ -124,11 +124,27 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
     # internally resolved DDEnergyEq state: log_e_energy.
     # Rename all ten staged layers, not only the nine edited sources,
     # so native RF/Joule and Material couplings resolve the same state.
+    canonical_names = {
+        "log_energy": "log_e_energy",
+        "R_elastic_O2": "R_EI02",
+        "R_elastic_O": "R_EI17",
+        "R_ion_O2": "R_EI415",
+    }
+    renamed = {name: 0 for name in canonical_names}
     for item in ordered[:-1]:
         target = staged_chem_dir / Path(item).name
         source = edits.get(target, target.read_text(encoding="utf-8"))
-        edits[target] = re.sub(r"(?<![A-Za-z0-9_])log_energy(?![A-Za-z0-9_])",
-                               "log_e_energy", source)
+        for old, new in canonical_names.items():
+            pattern = r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])"
+            source, count = re.subn(pattern, new, source)
+            renamed[old] += count
+        edits[target] = source
+    # The new run must use canonical names from the actual rate producers,
+    # not alias Materials. Reject a missing legacy owner before writing scratch.
+    missing = [name for name in ("R_elastic_O2", "R_elastic_O", "R_ion_O2")
+               if renamed[name] == 0]
+    if missing:
+        raise ValueError("Expected original S6 progress providers: " + ", ".join(missing))
     template = (PILOT / f"s6_{variant}_chemistry_run.template.i").read_text()
     common = COMMON.read_bytes()
     selected = (PILOT / f"chemistry/oxygen_s6_{variant}.json").read_bytes()
@@ -153,6 +169,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         "variant": variant,
         "removed_legacy_kernel_names": sorted(retired),
         "removed_count": len(retired),
+        "canonical_name_replacements": renamed,
         "overlay_sha256": sha(template.encode()),
         "common_mechanism_sha256": sha(common),
         "variant_mechanism_sha256": sha(selected),

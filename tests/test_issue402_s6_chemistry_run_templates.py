@@ -129,8 +129,11 @@ def test_template_uses_single_chemistry_energy_owner_and_signed_elastic_functors
     assert text.count("[Energy]") == 1
     assert "variable = log_energy" not in text
     assert "variable = log_e_energy" not in text
-    for canonical in ("R_EI02", "R_EI17", "R_EI415"):
-        assert f"property_name = {canonical}" in text
+    for legacy in ("ei02_progress_alias", "ei17_progress_alias", "ei415_progress_alias"):
+        assert legacy not in text
+    assert "R_elastic_O2" not in text
+    assert "R_elastic_O" not in text
+    assert "R_ion_O2" not in text
     assert "block = plasma" in text
     assert "fem_charge_numbers" not in text
     assert "fvm_charge_numbers" not in text
@@ -146,7 +149,12 @@ def test_template_uses_single_chemistry_energy_owner_and_signed_elastic_functors
 
 
 def fake_layer(removals):
-    text = "[FunctorMaterials]\n"
+    text = ("[FunctorMaterials]\n"
+            "  [legacy_progress]\n"
+            "    type = ADGenericFunctorMaterial\n"
+            "    prop_names = 'R_elastic_O2 R_elastic_O R_ion_O2'\n"
+            "    prop_values = '1 1 1'\n"
+            "  []\n")
     # Deliberately reuse a name as a FunctorMaterial, matching the EI17 archive.
     for name, (_variable, _fn) in removals.items():
         text += f"  [{name}]\n    type = ADParsedFunctorMaterial\n    property_name = dummy_{name}\n  []\n"
@@ -170,6 +178,8 @@ def test_guarded_scratch_cutover_retains_native_nonchem_operators(tmp_path, vari
     overlay.write_text("ORIGINAL OVERLAY - DO NOT USE")
     result = helper.prepare(tmp_path, ordered, variant)
     assert result["removed_count"] == 9
+    for old in ("R_elastic_O2", "R_elastic_O", "R_ion_O2"):
+        assert result["canonical_name_replacements"][old] >= 1
     assert result["status"] == "P2_INPUT_PREPARED"
     assert result["native_check_input"] == "NOT_RUN"
     assert result["run"] == "NOT_RUN"
@@ -180,6 +190,10 @@ def test_guarded_scratch_cutover_retains_native_nonchem_operators(tmp_path, vari
         assert "retain_joule_probe" in text
         assert "variable = log_e_energy" in text
         assert "variable = log_energy" not in text
+        assert "R_elastic_O2" not in text
+        assert "R_elastic_O" not in text
+        assert "R_ion_O2" not in text
+        assert all(name in text for name in ("R_EI02", "R_EI17", "R_EI415"))
         for name in items:
             assert f"type = ADParsedFunctorMaterial\n    property_name = dummy_{name}" in text
             assert not any(

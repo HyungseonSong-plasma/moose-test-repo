@@ -27,31 +27,6 @@
 [FunctorMaterials]
   # Native EI-02/EI-17 delta_epsilon_* give a POSITIVE loss magnitude;
   # the Chemistry JSON functor contract requires signed energy change.
-  # Transitional aliases: archived progress names -> ID-derived names.
-  [ei02_progress_alias]
-    type = ADParsedFunctorMaterial
-    property_name = R_EI02
-    functor_names = 'R_elastic_O2'
-    functor_symbols = 'r'
-    expression = 'r'
-    block = plasma
-  []
-  [ei17_progress_alias]
-    type = ADParsedFunctorMaterial
-    property_name = R_EI17
-    functor_names = 'R_elastic_O'
-    functor_symbols = 'r'
-    expression = 'r'
-    block = plasma
-  []
-  [ei415_progress_alias]
-    type = ADParsedFunctorMaterial
-    property_name = R_EI415
-    functor_names = 'R_ion_O2'
-    functor_symbols = 'r'
-    expression = 'r'
-    block = plasma
-  []
   [ei02_signed_energy_change]
     type = ADParsedFunctorMaterial
     property_name = signed_delta_epsilon_EI02_eV
