@@ -1,0 +1,108 @@
+name: Issue402 S6 Wall naming P0 P1 P2 one-shot
+on:
+  push:
+    branches:
+      - issue-402-species-functor-naming
+    paths:
+      - .github/workflows/issue402-s6-wall-cutover-p012-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  species-wall-p012:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PINNED_BASE: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact one-shot source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Confirm source and forbid P3
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "EXACT_SOURCE_SHA=$GITHUB_SHA"
+          echo 'P3=NOT_RUN SCIENCE=SCIENCE_HOLD'
+      - name: P0 species-first Wall migration and Chemistry source tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check 'pytest>=8,<9'
+          python3 -m py_compile experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py
+          python3 -m pytest -q \
+            tests/test_issue402_species_functor_naming.py \
+            tests/test_issue402_s6_wall_naming_staging.py \
+            tests/test_issue402_s6_chemistry_run_templates.py \
+            tests/test_issue402_full_s6_p2_only.py
+          echo 'ISSUE402_S6_WALL_P0_PASS'
+      - name: P0 inventory public archived S6 wall owners without P3
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64,hashlib,io,json,tarfile
+          from pathlib import Path
+          path=Path("experiments/Issue493_s6_boltzmann/public_p2_decks.tar.xz.b64")
+          packed=base64.b64decode(path.read_text(encoding="utf-8").encode("ascii"))
+          assert hashlib.sha256(packed).hexdigest()=="9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240"
+          selected=(
+              "ion_wall_number_flux","atomic_positive_ion_wall_number_flux",
+              "negative_ion_wall_number_flux","electron_wall_number_flux",
+              "PhysicsIonWallFluxMaterial","PhysicsIonWallTotalFluxMaterial",
+              "QPXIonWallFluxMaterial","PhysicsElectronWallFluxMaterial",
+              "PhysicsElectronAdjacentSheathWallFluxMaterial",
+              "ion_number_density =","output_prefix =",
+          )
+          found=[]
+          with tarfile.open(fileobj=io.BytesIO(packed),mode="r:xz") as archive:
+              for member in archive.getmembers():
+                  if not member.isfile() or not member.name.endswith(".i"):
+                      continue
+                  f=archive.extractfile(member)
+                  assert f is not None
+                  for i,line in enumerate(f.read().decode("utf-8").splitlines(),1):
+                      if any(word in line for word in selected):
+                          found.append({"file":member.name,"line":i,"text":line.strip()[:220]})
+          print("ISSUE402_S6_PUBLIC_WALL_INVENTORY="+json.dumps(found[:200],sort_keys=True))
+          print("ISSUE402_S6_PUBLIC_WALL_INVENTORY_MATCHES="+str(len(found)))
+          PY
+      - name: P1 Native PhysicsApp build on exact source HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$PINNED_BASE"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$PINNED_BASE" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            export MOOSE_DIR=/opt/physics_vendor/moose
+            export CRANE_DIR=/opt/physics_vendor/crane
+            export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+            export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+            export METHOD=opt
+            make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            test -x physics_app/physics-opt
+          '
+          echo 'ISSUE402_S6_WALL_P1_PASS'
+      - name: P2 Native source-binding check only - no solver timesteps
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x physics_app/physics-opt
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$PINNED_BASE" -lc '
+            set -euo pipefail
+            source /environment
+            export MOOSE_DIR=/opt/physics_vendor/moose
+            export CRANE_DIR=/opt/physics_vendor/crane
+            export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+            export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+            physics_app/physics-opt --check-input -i physics_app/ci/species_wall_functor_naming_smoke.i
+          '
+          echo 'ISSUE402_S6_WALL_P2_PASS'
+          echo 'P3=NOT_RUN SCIENCE=SCIENCE_HOLD'
