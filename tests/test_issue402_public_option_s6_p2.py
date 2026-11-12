@@ -14,7 +14,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 PILOT = ROOT / "experiments" / "Issue402_plasma_dsl_g1"
 PUBLIC = ROOT / "experiments" / "Issue493_s6_boltzmann"
-EXPECTED_OVERLAY = "30b436b80e716aa0fb65b555fafa953088070f2d3a1023e30a0806720cb5ba1e"
+EXPECTED_OVERLAY = "14288d9f0686f26cde86888824babc468016ece99188114ded31b8e5bd360d9a"
 
 
 def extract_overlay():
@@ -39,7 +39,7 @@ def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     assert overlay.count("type = SpeciesTransportAliasMaterial") == 3
     assert "mobility_source = ion_mobility" in overlay
     assert "diffusivity_source = ion_diffusion" in overlay
-    assert "files = experiments/Issue402_plasma_dsl_g1/plasma_species_only.json" in overlay
+    assert "files = plasma_species_only.json" in overlay
     assert "fem_charge_numbers" not in overlay and "fvm_charge_numbers" not in overlay
     # Provider names are derived in ContinuityEq, not user input.
     assert "fem_potential = potential" in overlay

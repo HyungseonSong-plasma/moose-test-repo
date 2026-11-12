@@ -96,7 +96,7 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
         assert f"mobility_source = {source}_mobility" in overlay
         assert f"diffusivity_source = {source}_diffusion" in overlay
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "30b436b80e716aa0fb65b555fafa953088070f2d3a1023e30a0806720cb5ba1e"
+        "14288d9f0686f26cde86888824babc468016ece99188114ded31b8e5bd360d9a"
     )
     # Protected original P3 inputs and their native old provider spelling
     # remain outside this migration PR.

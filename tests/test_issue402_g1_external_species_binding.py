@@ -169,7 +169,7 @@ def test_native_build_and_comparison_script():
     assert "prop_names = 'legacy_mu legacy_D'" in positive
     assert "prop_values = '1 1'" in positive
     assert "mobility =" not in positive and "diffusivity =" not in positive
-    assert "files = experiments/Issue402_plasma_dsl_g1/plasma_species_only.json" in positive
+    assert "files = plasma_species_only.json" in positive
     assert "fem_charge_numbers" not in positive
     assert "fem_kernel_names" not in positive and "variables =" not in positive
     assert "sha256sum" in runner

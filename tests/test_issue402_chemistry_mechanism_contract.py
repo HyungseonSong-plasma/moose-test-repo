@@ -35,7 +35,7 @@ def test_mechanism_is_the_only_high_level_charge_owner():
     assert '"fvm_charge_numbers"' not in continuity
 
     full_s6 = text("experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py")
-    assert "files = experiments/Issue402_plasma_dsl_g1/plasma_species_only.json" in full_s6
+    assert "files = plasma_species_only.json" in full_s6
 
 
 def test_same_equation_different_id_different_energy_channels_are_not_collapsed():
@@ -110,7 +110,7 @@ def test_compiled_catalogue_checks_and_signed_functor_sources_exist():
 def test_native_positive_and_negative_fixtures_are_wired():
     input_file = (PILOT / "chemistry_two_channels.i").read_text()
     runner = (PILOT / "run_native_binding_smoke.sh").read_text()
-    assert "files = experiments/Issue402_plasma_dsl_g1/plasma_two_channels.json" in input_file
+    assert "files = plasma_two_channels.json" in input_file
     assert "[Chemistry]" in input_file
     assert "[Continuity]" in input_file
     assert "[Energy]" in input_file
