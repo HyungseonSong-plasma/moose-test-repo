@@ -68,8 +68,12 @@ DDEnergyEq::addFEKernels()
 
   if (chemistryEnabled() && chemistryData().hasElectronEnergySource())
   {
-    // Chemistry's Q_e_molar_eV is already signed: -12.4*R405 - 17*R406.
-    // Do not change this sign or add an implicit electron-energy unit factor.
+    // Chemistry first collects all reaction channels from [Plasmas]/files,
+    // preserving a separate progress R_k and signed electron energy change
+    // delta_epsilon_k for each reaction ID (including identical equations).
+    // It sums delta_epsilon_k * R_k into the single Q_e_molar_eV Functor.
+    // Connect that total once on the RHS: never create per-reaction Kernels,
+    // reverse its sign, or apply an implicit energy-unit conversion here.
     const std::string type = "FunctorKernel";
     auto params = getFactory().getValidParams(type);
     params.set<NonlinearVariableName>("variable") = variable;

@@ -321,6 +321,12 @@ Chemistry::addFunctorMaterials()
   std::map<std::string, SourceExpression> particle;
   SourceExpression energy;
 
+  // The shared mechanism merges reactions from every [Plasmas]/files entry.
+  // For each reaction ID, project its independently owned progress R_k onto
+  // species production (nu_s,k * R_k) and signed electron energy transfer
+  // (delta_epsilon_k * R_k). Even identical equations remain separate channels.
+  // After this loop, all electron contributions form ONE Q_e_molar_eV Functor;
+  // DDEnergyEq inserts that aggregate as ONE RHS Kernel, not one per reaction.
   for (const auto & reaction : mechanism.reactions())
   {
     std::set<std::string> touched;
