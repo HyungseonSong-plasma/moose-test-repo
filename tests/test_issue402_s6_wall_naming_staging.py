@@ -152,6 +152,28 @@ def test_unowned_s6_legacy_functor_fails_before_any_rewrite():
     assert original[Path("consumers.i")] == CONSUMERS
 
 
+
+def test_ion_species_density_mismatch_fails_closed():
+    source = ION_PRODUCER.replace(
+        "ion_number_density = n_Op", "ion_number_density = n_O2p", 1)
+    original = _staged(source)
+    with pytest.raises(ValueError, match="S6_WALL_DENSITY_IDENTITY_UNPROVED"):
+        stage.canonicalize_staged_wall_inputs(original)
+    assert original[Path("native.i")] == source
+
+
+def test_ion_species_charge_mismatch_fails_closed():
+    source = ION_PRODUCER.replace(
+        "ion_number_density = n_Om\n    potential = potential\n    mobility = Om_mobility\n    gas_temperature = T_g\n    charge_number = -1",
+        "ion_number_density = n_Om\n    potential = potential\n    mobility = Om_mobility\n    gas_temperature = T_g\n    charge_number = 1",
+        1)
+    original = _staged(source)
+    with pytest.raises(ValueError, match="S6_WALL_CHARGE_IDENTITY_UNPROVED"):
+        stage.canonicalize_staged_wall_inputs(original)
+    assert original[Path("native.i")] == source
+
+
+
 def test_ambiguous_wall_prefix_fails_closed():
     source = ION_PRODUCER.replace("output_prefix = atomic_positive_",
                                   "output_prefix = some_other_ion_", 1)
