@@ -121,7 +121,7 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
 
             pairs: dict[str, str] = {}
             prefix_match = _WALL_PREFIX.search(body)
-            prefix = prefix_match.group("value").strip().strip("'\\"") if prefix_match else ""
+            prefix = prefix_match.group("value").strip().strip(chr(39) + chr(34)) if prefix_match else ""
             if material_type == "PhysicsIonWallFluxMaterial":
                 if m.group("name") not in ("ion_wall_flux", "O2p_wall_flux"):
                     raise ValueError("S6_WALL_ION_OWNER_AMBIGUOUS: " + m.group("name"))
