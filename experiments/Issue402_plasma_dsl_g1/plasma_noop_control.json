@@ -18,11 +18,11 @@
     }
   },
   "equations": {
-    "TEST-NOOP": "e + O2 -> e + O2"
+    "EI-000": "e + O2 -> e + O2"
   },
   "reactions": [
     {
-      "id": "TEST-NOOP",
+      "id": "EI-000",
       "reactants": {
         "e": 1,
         "O2": 1
