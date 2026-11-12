@@ -1,6 +1,7 @@
 # Deliberately invalid Continuity option contract; check-input must fail closed.
 [Physics]
   [Plasmas]
+    files = plasma_species_only.json
     [Transport]
       [DriftDiffusion]
         [Continuity]
