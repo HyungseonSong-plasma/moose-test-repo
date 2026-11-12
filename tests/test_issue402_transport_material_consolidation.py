@@ -1,8 +1,8 @@
 """Two-model transport-coefficient ownership contract for Issue #402.
 
 Exact-head Native compilation/P2 and physical result parity are separate gates.
-Historical model input aliases are intentionally accepted, but no duplicate
-old C++ table/thermal implementations may survive.
+Historical electron lookup aliases are retired; the separate NV thermal
+alias remains. Frozen source archives are not modified.
 """
 from pathlib import Path
 
@@ -32,7 +32,7 @@ def test_dd_constant_lookup_units_naming_and_energy_projection():
                   '"gas_temperature"'):
         assert token in dd
     for token in ('"ElectronTransportLookupMaterial"', '"PhysicsElectronTransportLookupMaterial"'):
-        assert token in dd  # legacy factory input maps to one implementation
+        assert token not in dd  # removed factory aliases
     assert 'std::make_unique<PhysicsLookupTable1D>' in dd
     assert '_species + "_mobility"' in dd
     assert '_species + "_diffusivity"' in dd
@@ -41,8 +41,9 @@ def test_dd_constant_lookup_units_naming_and_energy_projection():
     assert 'return pressure / (PHYSICS_CONSTANTS::k_boltz * T_g);' in hd
     assert '_constant_mobility < 0.0 || _constant_diffusivity < 0.0' in dd
     assert 'Mobility and diffusivity must be finite and nonnegative' in dd
-    assert 'Specify exactly one table_file or property_table_file' in dd
-    assert "Specify at most one legacy coordinate or mean_energy" in dd
+    for removed in ('"property_table_file"', '"coordinate"', '"mean_energy"'):
+        assert removed not in dd
+    assert 'Lookup transport requires table_file.' in dd
     assert 'getFunctorByName<ADReal>("mean_en_solved")' in dd
 
 
