@@ -28,17 +28,18 @@ strictly increasing **finite** coordinates and **finite nonnegative**
 coefficient columns. Out-of-range coordinates error by default; explicit
 `bounds_policy=clamp` is allowed.
 
-New flag: `require_json_transport = true` in `[Continuity]` ensures
-**every** selected FEM and FVM species has a JSON DD record; missing entries
-fail input validation before a solver step. Default `false` retains the
-original Native-owned coefficient providers for old S6 stages without JSON
-transport entries; no constants or lookup files are ever fabricated.
+No front-end toggle is used. When the merged JSON declares any
+`transport_coefficients.drift_diffusion` species, every selected FEM/FVM
+species must have a JSON DD record. Partial records fail before a solver step.
+When the DD section is completely absent, historical Native coefficients
+remain owned by Native S6 Materials without invented lookup values or constants.
 The JSON species list does not by itself trigger Material construction:
 only the Continuity FEM/FVM selection does.
 
 Test-only standalone input:
 `experiments/Issue402_plasma_dsl_g1/valid_json_dd_fem_fvm_mixed_p2.i`
-references `json_dd_fem_fvm_mixed_p2.json`: e uses a reduced table,
+references `json_dd_fem_fvm_mixed_p2.json`: e uses the provisional
+`chemistry/e_transport.txt` reduced table,
 Om uses a physical table, O2p and Op constants. All coefficients, rate
 state and thermal coordinate values are synthetic P2 fixtures, NOT validated
 S6 physical values.
