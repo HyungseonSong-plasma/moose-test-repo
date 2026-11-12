@@ -25,5 +25,5 @@ for path in ("src/actions/PlasmaClosuresAction.C",
 # Independent MOOSE capabilities must remain available.
 assert (ROOT / "src/convergence/DeltaPhiMultiAppConvergence.C").is_file()
 assert (ROOT / "include/convergence/DeltaPhiMultiAppConvergence.h").is_file()
-assert 'registerSyntax("ContinuityEq",' in app
+assert 'registerSyntax("DDContinuityEq",' in app
 print("RETIRED_GUMMEL_ACTION_CONTRACT: PASS")

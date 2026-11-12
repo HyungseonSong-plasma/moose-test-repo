@@ -22,13 +22,13 @@ def text(path: str) -> str:
 
 def test_mechanism_is_the_only_high_level_charge_owner():
     app = text("physics_app/src/base/PhysicsApp.C")
-    parent = text("physics_app/src/physics/plasma/PlasmaMechanismAction.C")
+    parent = text("physics_app/src/physics/plasma/ChemistryAction.C")
     shared = text("physics_app/src/physics/plasma/PlasmaInterface.C")
-    continuity = text("physics_app/src/physics/plasma/ContinuityEq.C")
+    continuity = text("physics_app/src/physics/plasma/DDContinuityEq.C")
 
-    assert 'registerSyntax("PlasmaMechanismAction", "Physics/Plasmas")' in app
+    assert 'registerSyntax("ChemistryAction", "Physics/Plasmas")' in app
     assert '"files"' in parent and 'getParam<std::vector<FileName>>("files")' in parent
-    assert "plasmaMechanism()" in shared
+    assert "chemistryData()" in shared
     assert "mechanism.species(species[i]).charge_number" in continuity
     assert 'params.set<Real>("charge_number")' in continuity
     assert '"fem_charge_numbers"' not in continuity
@@ -81,10 +81,10 @@ def test_json_equation_stoichiometry_and_species_charge_are_consistent():
 
 
 def test_compiled_catalogue_checks_and_signed_functor_sources_exist():
-    parser = text("physics_app/src/physics/plasma/PlasmaMechanism.C")
-    chemistry = text("physics_app/src/physics/plasma/ChemistryPhysics.C")
-    continuity = text("physics_app/src/physics/plasma/ContinuityEq.C")
-    energy = text("physics_app/src/physics/plasma/EnergyPhysics.C")
+    parser = text("physics_app/src/physics/plasma/Chemistry.C")
+    chemistry = parser
+    continuity = text("physics_app/src/physics/plasma/DDContinuityEq.C")
+    energy = text("physics_app/src/physics/plasma/DDEnergyEq.C")
 
     for marker in ("charge conservation failed", "elemental balance failed",
                    "equation text and structured stoichiometry differ",

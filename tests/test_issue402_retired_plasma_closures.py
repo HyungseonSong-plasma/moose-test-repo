@@ -1,7 +1,7 @@
 """Retirement guard for the legacy PlasmaClosures input Action.
 
 S6-417/941 D stages the SHA-pinned public C decks, rewrites solver state
-tokens only in scratch, and adds a ContinuityEq-only overlay. The old
+tokens only in scratch, and adds a DDContinuityEq-only overlay. The old
 PlasmaClosures composition Action must not be a dependency of those runs.
 This test does not execute a native solver or claim scientific parity.
 """
@@ -73,8 +73,8 @@ def test_retired_action_is_absent_independent_material_objects_remain():
         header = APP / "include/materials" / (material + ".h")
         assert source.is_file() and header.is_file()
         assert f'registerMooseObject("PhysicsApp", {material});' in source.read_text()
-    assert 'registerSyntax("ContinuityEq",' in app
-    assert 'registerSyntax("EnergyPhysics",' in app
+    assert 'registerSyntax("DDContinuityEq",' in app
+    assert 'registerSyntax("DDEnergyEq",' in app
 
 
 def test_existing_native_smoke_uses_direct_materials_without_code_generation():

@@ -15,8 +15,8 @@ CASE = ROOT / "experiments/Issue402_plasma_dsl_g1"
 def sources():
     base_header = (APP / "include/physics/plasma/PlasmaInterface.h").read_text()
     base_source = (APP / "src/physics/plasma/PlasmaInterface.C").read_text()
-    header = (APP / "include/physics/plasma/ContinuityEq.h").read_text()
-    source = (APP / "src/physics/plasma/ContinuityEq.C").read_text()
+    header = (APP / "include/physics/plasma/DDContinuityEq.h").read_text()
+    source = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
     app = (APP / "src/base/PhysicsApp.C").read_text()
     return base_header, base_source, header, source, app
 
@@ -24,17 +24,17 @@ def sources():
 def test_continuity_uses_shared_plasma_validation():
     base_header, base_source, header, source, app = sources()
     assert "class PlasmaInterface : public PhysicsBase" in base_header
-    assert "class ContinuityEq : public PlasmaInterface" in header
+    assert "class DDContinuityEq : public PlasmaInterface" in header
     assert "namespace Plasma" in header
     assert "void checkIntegrity() const override;" in header
     assert "validateSpeciesInputs(" in base_source
     assert "validateExistingSpeciesVariables(" in base_source
     assert "validateSpeciesInputs(" in source
     assert "validateExistingSpeciesVariables(" in source
-    assert "using Plasma::ContinuityEq;" in source
-    assert 'registerPhysicsBaseTasks("PhysicsApp", ContinuityEq);' in source
-    assert 'registerMooseAction("PhysicsApp", ContinuityEq, "check_integrity");' in source
-    assert 'registerSyntax("ContinuityEq",' in app
+    assert "using Plasma::DDContinuityEq;" in source
+    assert 'registerPhysicsBaseTasks("PhysicsApp", DDContinuityEq);' in source
+    assert 'registerMooseAction("PhysicsApp", DDContinuityEq, "check_integrity");' in source
+    assert 'registerSyntax("DDContinuityEq",' in app
     assert '"Physics/Plasmas/Transport/DriftDiffusion/Continuity"' in app
     assert "PlasmaClosuresAction" not in app
     assert "PlasmaClosures/*" not in app
@@ -174,7 +174,7 @@ def test_native_build_and_comparison_script():
     assert "fem_kernel_names" not in positive and "variables =" not in positive
     assert "sha256sum" in runner
     assert "physics_app/src/physics/plasma/PlasmaInterface.C" in runner
-    assert "physics_app/src/physics/plasma/ContinuityEq.C" in runner
+    assert "physics_app/src/physics/plasma/DDContinuityEq.C" in runner
     assert "generic_four_species.i" in runner
     assert "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS" in runner
     generic = (CASE / "generic_four_species.i").read_text()
@@ -182,7 +182,7 @@ def test_native_build_and_comparison_script():
         assert f"[{state}]" in generic
     assert "legacy_s6_state_names" not in generic
     assert "legacy_s6_state_names" not in (CASE / "s6_external_bindings.i").read_text()
-    for name in ("EnergyPhysics", "ChemistryPhysics", "PoissonPhysics", "MaxwellPhysics"):
+    for name in ("DDEnergyEq", "Chemistry", "PoissonPhysics", "MaxwellPhysics"):
         header = (APP / f"include/physics/plasma/{name}.h").read_text()
         source = (APP / f"src/physics/plasma/{name}.C").read_text()
         assert f"class {name} : public PlasmaInterface" in header
@@ -202,9 +202,9 @@ def test_native_build_and_comparison_script():
 
 def test_real_solver_object_wiring():
     for name, markers in {
-        "ContinuityEq": ["addFEKernels", "FEMLogMolarDriftDiffusion"],
-        "EnergyPhysics": ["addFEKernels", "MatBodyForce"],
-        "ChemistryPhysics": ["addFunctorMaterials", "ADParsedFunctorMaterial"],
+        "DDContinuityEq": ["addFEKernels", "FEMLogMolarDriftDiffusion"],
+        "DDEnergyEq": ["addFEKernels", "MatBodyForce"],
+        "Chemistry": ["addFunctorMaterials", "ADParsedFunctorMaterial"],
         "PoissonPhysics": ["addFEKernels", "Diffusion", "MatBodyForce", "addFEBCs"],
         "MaxwellPhysics": ["addFEKernels", "MatReaction", "MatCoupledForce", "addFEBCs"],
     }.items():
@@ -218,20 +218,20 @@ def test_real_solver_object_wiring():
 def test_generated_physics_requires_explicit_inputs():
     source_dir = APP / "src/physics/plasma"
     activating_parameters = {
-        "ContinuityEq": '"fem_potential"',
-        "EnergyPhysics": '"rf_heating_material"',
+        "DDContinuityEq": '"fem_potential"',
+        "DDEnergyEq": '"rf_heating_material"',
         "PoissonPhysics": '"charge_source_material"',
         "MaxwellPhysics": '"reaction_material"',
     }
     for name, parameter in activating_parameters.items():
         source = (source_dir / f"{name}.C").read_text()
         assert parameter in source
-        if name != "EnergyPhysics":
+        if name != "DDEnergyEq":
             assert "if (!isParamValid(" in source
         else:
             assert 'if (isParamValid("rf_heating_material"))' in source
-    chemistry = (source_dir / "ChemistryPhysics.C").read_text()
-    assert "plasmaMechanism().reactions().empty()" in chemistry
+    chemistry = (source_dir / "Chemistry.C").read_text()
+    assert "chemistryData().reactions().empty()" in chemistry
     assert '"Q_e_molar_eV"' in chemistry
     maxwell = (source_dir / "MaxwellPhysics.C").read_text()
     assert "variable == real ? 1.0 : -1.0" in maxwell
@@ -241,7 +241,7 @@ def test_generated_physics_requires_explicit_inputs():
 
 def test_duplicate_kernel_protection_and_s6_preparer():
     shared = (APP / "src/physics/plasma/PlasmaInterface.C").read_text()
-    continuity = (APP / "src/physics/plasma/ContinuityEq.C").read_text()
+    continuity = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
     assert "requireUniqueFEKernel" in shared
     assert "getKernelWarehouse().getObjects()" in shared

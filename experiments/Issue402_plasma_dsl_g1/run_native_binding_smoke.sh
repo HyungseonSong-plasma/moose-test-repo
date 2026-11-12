@@ -21,10 +21,14 @@ test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
   printf 'build_base_ref=%s\n' "$PINNED_BASE"
   sha256sum "$PILOT"/*.i "$PILOT"/*.json physics_app/include/physics/plasma/PlasmaInterface.h \
     physics_app/src/physics/plasma/PlasmaInterface.C \
-    physics_app/include/physics/plasma/ContinuityEq.h \
-    physics_app/src/physics/plasma/ContinuityEq.C \
-    physics_app/src/physics/plasma/EnergyPhysics.C \
-    physics_app/src/physics/plasma/ChemistryPhysics.C \
+    physics_app/include/physics/plasma/DDContinuityEq.h \
+    physics_app/src/physics/plasma/DDContinuityEq.C \
+    physics_app/include/physics/plasma/DDEnergyEq.h \
+    physics_app/src/physics/plasma/DDEnergyEq.C \
+    physics_app/src/physics/plasma/Chemistry.C \
+    physics_app/include/physics/plasma/Chemistry.h \
+    physics_app/src/physics/plasma/ChemistryAction.C \
+    physics_app/include/physics/plasma/ChemistryAction.h \
     physics_app/src/physics/plasma/PoissonPhysics.C \
     physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
     physics_app/src/materials/ElectronClosureMaterial.C \
