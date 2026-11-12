@@ -112,7 +112,7 @@ native --check-input -i "$PILOT/baseline.i" \
 duplicate_time_exit=$?
 set -e
 if [[ "$duplicate_time_exit" -eq 0 ]] ||
-   ! grep -Fq "PhysicsFEMLogMolarTimeDerivative" "$EVIDENCE/duplicate_e_time.log" ||
+   ! grep -Fq "FEMLogMolarTimeDerivative" "$EVIDENCE/duplicate_e_time.log" ||
    ! grep -Fq "must have exactly one owner" "$EVIDENCE/duplicate_e_time.log"; then
   echo "::error::A Native and Physics-generated electron time operator were both accepted" >&2
   cat "$EVIDENCE/duplicate_e_time.log" >&2

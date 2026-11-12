@@ -133,8 +133,8 @@ ContinuityEq::checkIntegrity() const
   if (isParamValid("fem_potential"))
     for (std::size_t i = 0; i < fem.size(); ++i)
     {
-      requireUniqueFEKernel("PhysicsFEMLogMolarTimeDerivative", variables[i]);
-      requireUniqueFEKernel("PhysicsFEMLogMolarDriftDiffusion", variables[i]);
+      requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);
+      requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);
     }
 }
 
@@ -147,8 +147,8 @@ ContinuityEq::addFEKernels()
   const auto variables = resolvedContinuityVariables(
       species, getParam<std::vector<std::string>>("fvm_species"));
   const auto & charges = getParam<std::vector<Real>>("fem_charge_numbers");
-  const std::string type = "PhysicsFEMLogMolarDriftDiffusion";
-  const std::string time_type = "PhysicsFEMLogMolarTimeDerivative";
+  const std::string type = "FEMLogMolarDriftDiffusion";
+  const std::string time_type = "FEMLogMolarTimeDerivative";
   for (std::size_t i = 0; i < species.size(); ++i)
   {
     // Retain the exact Native log-molar backward-Euler operator, state and region;

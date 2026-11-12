@@ -1,14 +1,14 @@
-#include "PhysicsFEMPlasmaTransport.h"
+#include "FEMPlasmaTransport.h"
 #include "MooseFunctorArguments.h"
 
 #include <cmath>
 
-registerMooseObject("PhysicsApp", PhysicsFEMLogMolarTimeDerivative);
-registerMooseObject("PhysicsApp", PhysicsFEMLogMolarDriftDiffusion);
-registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronJouleHeating);
+registerMooseObject("PhysicsApp", FEMLogMolarTimeDerivative);
+registerMooseObject("PhysicsApp", FEMLogMolarDriftDiffusion);
+registerMooseObject("PhysicsApp", FEMLogMolarElectronJouleHeating);
 
 InputParameters
-PhysicsFEMLogMolarTimeDerivative::validParams()
+FEMLogMolarTimeDerivative::validParams()
 {
   auto params = ADTimeKernel::validParams();
   params.addClassDescription(
@@ -16,26 +16,26 @@ PhysicsFEMLogMolarTimeDerivative::validParams()
   return params;
 }
 
-PhysicsFEMLogMolarTimeDerivative::PhysicsFEMLogMolarTimeDerivative(
+FEMLogMolarTimeDerivative::FEMLogMolarTimeDerivative(
     const InputParameters & parameters)
   : ADTimeKernel(parameters), _u_old(_var.slnOld())
 {
 }
 
 ADReal
-PhysicsFEMLogMolarTimeDerivative::computeQpResidual()
+FEMLogMolarTimeDerivative::computeQpResidual()
 {
   if (!_subproblem.isTransient())
-    mooseError("PhysicsFEMLogMolarTimeDerivative requires transient execution.");
+    mooseError("FEMLogMolarTimeDerivative requires transient execution.");
   if (_dt <= 0.0)
-    mooseError("PhysicsFEMLogMolarTimeDerivative requires dt > 0.");
+    mooseError("FEMLogMolarTimeDerivative requires dt > 0.");
 
   using std::exp;
   return _test[_i][_qp] * (exp(_u[_qp]) - exp(_u_old[_qp])) / _dt;
 }
 
 InputParameters
-PhysicsFEMLogMolarDriftDiffusion::validParams()
+FEMLogMolarDriftDiffusion::validParams()
 {
   auto params = ADKernel::validParams();
   params.addClassDescription(
@@ -47,7 +47,7 @@ PhysicsFEMLogMolarDriftDiffusion::validParams()
   return params;
 }
 
-PhysicsFEMLogMolarDriftDiffusion::PhysicsFEMLogMolarDriftDiffusion(
+FEMLogMolarDriftDiffusion::FEMLogMolarDriftDiffusion(
     const InputParameters & parameters)
   : ADKernel(parameters),
     _grad_potential(adCoupledGradient("potential")),
@@ -60,7 +60,7 @@ PhysicsFEMLogMolarDriftDiffusion::PhysicsFEMLogMolarDriftDiffusion(
 }
 
 ADReal
-PhysicsFEMLogMolarDriftDiffusion::computeQpResidual()
+FEMLogMolarDriftDiffusion::computeQpResidual()
 {
   using std::exp;
 
@@ -78,7 +78,7 @@ PhysicsFEMLogMolarDriftDiffusion::computeQpResidual()
 }
 
 InputParameters
-PhysicsFEMLogMolarElectronJouleHeating::validParams()
+FEMLogMolarElectronJouleHeating::validParams()
 {
   auto params = ADKernel::validParams();
   params.addClassDescription(
@@ -91,7 +91,7 @@ PhysicsFEMLogMolarElectronJouleHeating::validParams()
   return params;
 }
 
-PhysicsFEMLogMolarElectronJouleHeating::PhysicsFEMLogMolarElectronJouleHeating(
+FEMLogMolarElectronJouleHeating::FEMLogMolarElectronJouleHeating(
     const InputParameters & parameters)
   : ADKernel(parameters),
     _log_electron_density(adCoupledValue("electron_log_density")),
@@ -103,7 +103,7 @@ PhysicsFEMLogMolarElectronJouleHeating::PhysicsFEMLogMolarElectronJouleHeating(
 }
 
 ADReal
-PhysicsFEMLogMolarElectronJouleHeating::computeQpResidual()
+FEMLogMolarElectronJouleHeating::computeQpResidual()
 {
   using std::exp;
 

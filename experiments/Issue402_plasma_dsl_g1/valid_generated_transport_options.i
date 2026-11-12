@@ -28,3 +28,10 @@
     diffusivity_source = legacy_D
   []
 []
+
+# P2-only TimeKernel needs the TIME vector tag. Keep baseline/production untouched.
+[Executioner]
+  type = Transient
+  dt = 1e-6
+  num_steps = 1
+[]

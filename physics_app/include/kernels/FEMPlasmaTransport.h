@@ -7,11 +7,11 @@
 /**
  * Conservative backward-Euler time derivative of c=exp(u), where u is a log-molar state.
  */
-class PhysicsFEMLogMolarTimeDerivative : public ADTimeKernel
+class FEMLogMolarTimeDerivative : public ADTimeKernel
 {
 public:
   static InputParameters validParams();
-  PhysicsFEMLogMolarTimeDerivative(const InputParameters & parameters);
+  FEMLogMolarTimeDerivative(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;
@@ -26,11 +26,11 @@ protected:
  *
  * The volume residual is grad(test).[D grad(c) + z mu c grad(phi)].
  */
-class PhysicsFEMLogMolarDriftDiffusion : public ADKernel
+class FEMLogMolarDriftDiffusion : public ADKernel
 {
 public:
   static InputParameters validParams();
-  PhysicsFEMLogMolarDriftDiffusion(const InputParameters & parameters);
+  FEMLogMolarDriftDiffusion(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;
@@ -45,11 +45,11 @@ protected:
  * Electron Joule-work term for log-molar electron density and log-molar energy states.
  * The residual units are eV mol/(m^3 s), matching exp(log_energy).
  */
-class PhysicsFEMLogMolarElectronJouleHeating : public ADKernel
+class FEMLogMolarElectronJouleHeating : public ADKernel
 {
 public:
   static InputParameters validParams();
-  PhysicsFEMLogMolarElectronJouleHeating(const InputParameters & parameters);
+  FEMLogMolarElectronJouleHeating(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

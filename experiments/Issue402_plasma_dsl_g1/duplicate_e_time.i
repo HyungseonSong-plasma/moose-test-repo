@@ -2,7 +2,7 @@
 # Layer after baseline.i and valid_generated_transport_options.i.
 [Kernels]
   [native_duplicate_e_time]
-    type = PhysicsFEMLogMolarTimeDerivative
+    type = FEMLogMolarTimeDerivative
     variable = log_e
   []
 []
