@@ -1,3 +1,38 @@
+## 2026-11-12 canonical transport Materials — current contract
+
+**Supersedes earlier 2026-11-10 electron lookup/closure Material prose below.**
+The two canonical **transport-coefficient** calculator classes are:
+
+- `DDMaterial`: one species at a time, explicit `model=constant` for
+  physical `mobility`/`diffusivity`, or `model=lookup` with a verified
+  three-column table, coordinate, bounds policy and reduced/physical units.
+  Produces `<species>_mobility` and `<species>_diffusivity` and, for e,
+  the unchanged Maxwellian 5/3 electron energy transport projection.
+- `NVMaterial`: heavy-species NavierStokes mixture diffusion and thermal
+  diffusion using the unchanged `PhysicsThermalDiffusionMaterial` binary
+  collision/charged-pair computation.
+
+Retired C++ implementations: `ElectronTransportLookupMaterial`,
+`PhysicsThermalDiffusionMaterial`, `PhysicsElectronTransportCoefficients`,
+and the overlapping `ElectronClosureMaterial`. Old MOOSE *type tokens*
+for electron lookup and thermal diffusion remain aliases to the new C++
+classes. The old combined `ElectronClosureMaterial` type is retired.
+Electron state and mean-energy calculation is now separately owned by
+`PhysicsElectronMeanEnergyMaterial` when needed.
+
+`SpeciesTransportAliasMaterial` remains only for **existing nonconstant ion
+Functor providers** in pinned S6 C/D inputs until an independently verified
+lookup/constant replacement exists; it does not calculate coefficients.
+`PlasmaChargeTransportMaterial` remains a charged transport assembler,
+not an alternate DD coefficient calculator. Do not change physical heavy-ion
+coefficient values or silently introduce an Einstein relation.
+
+See `docs/development/2026-11-12_issue402_dd_nv_material_consolidation.md`
+for source deletion audit, units, example inputs and Native/science gates.
+No P3, no merge, `SCIENCE_HOLD`.
+
+---
+
 ## 2026-11-12 canonical S6 provider and energy state names
 
 The active #402 Chemistry S6-417 and S6-941 templates no longer create
