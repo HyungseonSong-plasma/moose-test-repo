@@ -136,6 +136,27 @@ if [[ "$retired_charge_status" -eq 0 ]] || \
   exit 30
 fi
 echo "PLASMA_RETIRED_CHARGE_ASSEMBLER_REJECTED"
+
+# FEM Poisson must consume charge_density / epsilon_0 as an AD Functor
+# with an RHS FunctorKernel, without requiring a FE MaterialProperty adapter.
+native --check-input -i "$PILOT/valid_fem_poisson_charge_functor_p2.i" \
+  2>&1 | tee "$EVIDENCE/fem_poisson_charge_functor_p2.log"
+echo "PLASMA_FEM_POISSON_CHARGE_FUNCTOR_P2_PASS"
+
+# The existing FE MaterialProperty path must never be combined with the
+# Functor path, because it would count the charge density twice.
+set +e
+native --check-input -i "$PILOT/invalid_fem_poisson_dual_source_p2.i" \
+  > "$EVIDENCE/invalid_fem_poisson_dual_source_p2.log" 2>&1
+poisson_dual_status=$?
+set -e
+if [[ "$poisson_dual_status" -eq 0 ]] || \
+   ! grep -Fq "Poisson may have only one charge RHS owner" "$EVIDENCE/invalid_fem_poisson_dual_source_p2.log"; then
+  echo "::error::FEM Poisson allowed duplicate charge source owners" >&2
+  cat "$EVIDENCE/invalid_fem_poisson_dual_source_p2.log" >&2
+  exit 31
+fi
+echo "PLASMA_FEM_POISSON_DUAL_SOURCE_REJECTED"
 # Only Material logic may derive canonical mobility/diffusivity names.
 set +e
 native --check-input -i "$PILOT/invalid_json_functor_name_override_p2.i" \
