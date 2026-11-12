@@ -1,4 +1,4 @@
-#include "PoissonPhysics.h"
+#include "PoissonEq.h"
 
 #include <cmath>
 
@@ -6,7 +6,7 @@ namespace Plasma
 {
 
 InputParameters
-PoissonPhysics::validParams()
+PoissonEq::validParams()
 {
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
@@ -23,7 +23,7 @@ PoissonPhysics::validParams()
   return params;
 }
 
-PoissonPhysics::PoissonPhysics(const InputParameters & parameters)
+PoissonEq::PoissonEq(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
   if (getParam<VariableName>("fem_potential").empty())
@@ -39,7 +39,7 @@ PoissonPhysics::PoissonPhysics(const InputParameters & parameters)
 }
 
 void
-PoissonPhysics::addSolverVariables()
+PoissonEq::addSolverVariables()
 {
   const auto & variable = getParam<VariableName>("fem_potential");
   if (variableExists(variable, /*error_if_aux=*/true))
@@ -59,7 +59,7 @@ PoissonPhysics::addSolverVariables()
 }
 
 void
-PoissonPhysics::addInitialConditions()
+PoissonEq::addInitialConditions()
 {
   if (!_created_potential_variable)
     return;
@@ -77,7 +77,7 @@ PoissonPhysics::addInitialConditions()
 }
 
 void
-PoissonPhysics::checkIntegrity() const
+PoissonEq::checkIntegrity() const
 {
   const auto & potential = getParam<VariableName>("fem_potential");
   if (!solverVariableExists(potential))
@@ -93,7 +93,7 @@ PoissonPhysics::checkIntegrity() const
 }
 
 void
-PoissonPhysics::addFEKernels()
+PoissonEq::addFEKernels()
 {
   if (!isParamValid("charge_source_material"))
     return;
@@ -117,7 +117,7 @@ PoissonPhysics::addFEKernels()
 }
 
 void
-PoissonPhysics::addFEBCs()
+PoissonEq::addFEBCs()
 {
   if (!isParamValid("charge_source_material"))
     return;
@@ -135,10 +135,10 @@ PoissonPhysics::addFEBCs()
 
 }
 
-using Plasma::PoissonPhysics;
-registerPhysicsBaseTasks("PhysicsApp", PoissonPhysics);
-registerMooseAction("PhysicsApp", PoissonPhysics, "add_variables_physics");
-registerMooseAction("PhysicsApp", PoissonPhysics, "add_ics_physics");
-registerMooseAction("PhysicsApp", PoissonPhysics, "check_integrity");
-registerMooseAction("PhysicsApp", PoissonPhysics, "add_kernel");
-registerMooseAction("PhysicsApp", PoissonPhysics, "add_bc");
+using Plasma::PoissonEq;
+registerPhysicsBaseTasks("PhysicsApp", PoissonEq);
+registerMooseAction("PhysicsApp", PoissonEq, "add_variables_physics");
+registerMooseAction("PhysicsApp", PoissonEq, "add_ics_physics");
+registerMooseAction("PhysicsApp", PoissonEq, "check_integrity");
+registerMooseAction("PhysicsApp", PoissonEq, "add_kernel");
+registerMooseAction("PhysicsApp", PoissonEq, "add_bc");

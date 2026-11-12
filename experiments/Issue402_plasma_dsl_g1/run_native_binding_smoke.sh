@@ -27,9 +27,7 @@ test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
     physics_app/src/physics/plasma/DDEnergyEq.C \
     physics_app/src/physics/plasma/Chemistry.C \
     physics_app/include/physics/plasma/Chemistry.h \
-    physics_app/src/physics/plasma/ChemistryAction.C \
-    physics_app/include/physics/plasma/ChemistryAction.h \
-    physics_app/src/physics/plasma/PoissonPhysics.C \
+            physics_app/src/physics/plasma/PoissonEq.C \
     physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
     physics_app/src/materials/DDMaterial.C \
     physics_app/include/materials/DDMaterial.h \

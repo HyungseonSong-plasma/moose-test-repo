@@ -6,13 +6,13 @@ namespace Plasma
 {
 
 /**
- * Validates existing poisson simulation inputs without adding solver objects.
+ * Owns or reuses an FEM potential state and generates activated Poisson operators.
  */
-class PoissonPhysics : public PlasmaInterface
+class PoissonEq : public PlasmaInterface
 {
 public:
   static InputParameters validParams();
-  explicit PoissonPhysics(const InputParameters & parameters);
+  explicit PoissonEq(const InputParameters & parameters);
 
 private:
   void addSolverVariables() override;

@@ -182,7 +182,7 @@ def test_native_build_and_comparison_script():
         assert f"[{state}]" in generic
     assert "legacy_s6_state_names" not in generic
     assert "legacy_s6_state_names" not in (CASE / "s6_external_bindings.i").read_text()
-    for name in ("DDEnergyEq", "Chemistry", "PoissonPhysics", "MaxwellPhysics"):
+    for name in ("DDEnergyEq", "Chemistry", "PoissonEq", "MaxwellPhysics"):
         header = (APP / f"include/physics/plasma/{name}.h").read_text()
         source = (APP / f"src/physics/plasma/{name}.C").read_text()
         assert f"class {name} : public PlasmaInterface" in header
@@ -205,7 +205,7 @@ def test_real_solver_object_wiring():
         "DDContinuityEq": ["addFEKernels", "FEMLogMolarDriftDiffusion"],
         "DDEnergyEq": ["addFEKernels", "MatBodyForce"],
         "Chemistry": ["addFunctorMaterials", "ADParsedFunctorMaterial"],
-        "PoissonPhysics": ["addFEKernels", "Diffusion", "MatBodyForce", "addFEBCs"],
+        "PoissonEq": ["addFEKernels", "Diffusion", "MatBodyForce", "addFEBCs"],
         "MaxwellPhysics": ["addFEKernels", "MatReaction", "MatCoupledForce", "addFEBCs"],
     }.items():
         source = (APP / f"src/physics/plasma/{name}.C").read_text()
@@ -220,7 +220,7 @@ def test_generated_physics_requires_explicit_inputs():
     activating_parameters = {
         "DDContinuityEq": '"fem_potential"',
         "DDEnergyEq": '"rf_heating_material"',
-        "PoissonPhysics": '"charge_source_material"',
+        "PoissonEq": '"charge_source_material"',
         "MaxwellPhysics": '"reaction_material"',
     }
     for name, parameter in activating_parameters.items():

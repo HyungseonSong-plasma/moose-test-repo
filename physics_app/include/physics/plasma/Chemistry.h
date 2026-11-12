@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PlasmaInterface.h"
+#include "Action.h"
 
 #include <map>
 #include <memory>
@@ -94,3 +95,17 @@ private:
 };
 
 } // namespace Plasma
+
+/** Root [Plasmas] Action; one validated mechanism owner shared by child Physics. */
+class ChemistryAction : public Action
+{
+public:
+  static InputParameters validParams();
+  explicit ChemistryAction(const InputParameters & params);
+  void act() override {}
+
+  const Plasma::ChemistryData & data() const { return _data; }
+
+private:
+  const Plasma::ChemistryData _data;
+};
