@@ -16,7 +16,7 @@
   "transport_coefficients": {
     "drift_diffusion": {
       "O2p": {
-        "model": "functor"
+        "model": "constants"
       }
     }
   }

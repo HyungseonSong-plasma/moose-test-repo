@@ -57,9 +57,11 @@ def test_json_and_lookup_data_are_validated_fail_closed():
     assert "std::isfinite(result.mobility)" in parser
     assert "std::isfinite(result.diffusivity)" in parser
     assert "DDMaterial lookup coefficients must be finite and nonnegative" in provider
-    assert "functor transport accepts only model" in parser
+    assert "constants transport accepts only model" in parser
+    assert "config->model == \"constants\" ? \"functor\" : config->model" in (
+        ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
     functor_json = json.loads((PILOT / "plasma_auto_functor.json").read_text())
-    assert functor_json["transport_coefficients"]["drift_diffusion"]["O2p"] == {"model": "functor"}
+    assert functor_json["transport_coefficients"]["drift_diffusion"]["O2p"] == {"model": "constants"}
     negative_functor = json.loads((PILOT / "invalid_json_functor_name_override_p2.json").read_text())
     assert "mobility_source" in negative_functor["transport_coefficients"]["drift_diffusion"]["O2p"]
     assert 'std::isfinite(coordinate)' in provider
