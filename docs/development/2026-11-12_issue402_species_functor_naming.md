@@ -196,3 +196,57 @@ At parent HEAD `ed608a23f79fe25e31041b184fa27edb21ba7385`, the duplicate `Physic
 - Full **S6 Native P2** source/rate/mesh construction is still separate
   and was **not run** by the Wall naming workflow. No P3 science solve,
   numerical parity, merge, or promotion. `SCIENCE_HOLD` stays active.
+
+
+## Independent review and full S6 native P2 closeout
+
+- CodeRabbit independent review of Draft PR #524: [review
+  #5883798421](https://github.com/HyungseonSong-plasma/moose-test-repo/pull/524#pullrequestreview-5883798421).
+  **Major** electron wall source-identity weakness was fixed by validating
+  `electron_density` against predeclared electron Functor names
+  `n_e_physical`, `n_e`, and `e_number_density` before any scratch
+  rewrite. Negative tests reject `n_Om`, `n_m_physical`, and unknown
+  electron densities. The exact code P0 run
+  [#43331778712](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43331778712)
+  passed **573 tests** at source
+  `ab72bacf98a1c20b5c90e8853095a677c4869253`.
+- The review's one-shot CI trigger concern is resolved operationally by
+  removing the one-shot workflows after their bounded runs. They are not
+  continuous validation, and any later code revision requires a fresh
+  exact-head check. The review also identifies a significant *unverified*
+  semantic gate: Python-only analytical equivalence does **not** evaluate
+  the C++ Functor at native face arguments. Both ion charge signs and
+  oriented normals need a true native regression or independent review
+  before authorizing a merge that requires full semantic compatibility.
+- [Real public S6-417/941 Native P2 run
+  #43330062471](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43330062471)
+  at `7ef837c29e4587418ab5975f1323db2372ab7d85`:
+  P0 570 PASS, public 400 W mesh preparation PASS, Native P1 PASS,
+  both actual eleven-layer S6 `--check-input` **HOLD**
+  (`NATIVE_CHECK_INPUT_REJECTED`, exit 1). Original B/C archives
+  were never modified; P3/P4 NOT_RUN.
+- [Raw-log diagnostic retry
+  #43331410674](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43331410674)
+  at `8abe68eeccfbe44d78c3cbddf554c472800a7ac9`
+  reproduced both failures. The *first actual native parser error in both*
+  was `A 'PhysicsElectronTransportLookupMaterial' is not a registered object.`
+  The original archived name's factory alias is intentionally retired by
+  `physics_app/ci/check_plasma_closures_contract.py`; it is no longer
+  a live C++ Material. `DDMaterial` now owns lookup coefficients, but
+  its `model=lookup` / `table_file` / `mean_en_solved` contract
+  requires separately verified input/physics ownership and is **not**
+  assumed identical to the retired old factory. Do not restore the alias
+  or silently substitute a new transport law.
+  Exact Native logs + sanitized P2 status are preserved in
+  [artifact #13994449104](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43331410674/artifacts/13994449104).
+- The controller handoff was admitted as central
+  [Samuel Issue #315](https://github.com/HyungseonSong-plasma/chatgpt-operation/issues/315).
+  Its requested merge is strictly **PR #524 into parent branch
+  `issue-402-chemistry-json-energy-charge`**, not into `main`. It is
+  conditional on independent review, actual native semantic parity,
+  exact-head P0/P1 and full S6 Native P2, plus registered cross-repository
+  merge authority. Controller must fail closed if any gate remains open.
+- No one-shot workflow is retained in the branch. Source work performed
+  in this turn is confined to a safeguarded electron density ownership
+  check, its negative tests and this evidence note.
+  **No merge; `SCIENCE_HOLD`; P3/P4 NOT_RUN.**
