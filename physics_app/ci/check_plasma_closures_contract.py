@@ -74,7 +74,6 @@ for old_type, new_type in (
     ("PhysicsElectronTransportLookupMaterial", "DDMaterial"),
     ("ElectronTransportLookupMaterial", "DDMaterial"),
     ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
-    ("PhysicsPlasmaChargeTransportMaterial", "PlasmaChargeTransportMaterial"),
 ):
     source = ROOT / "src/materials" / (new_type + ".C")
     header = ROOT / "include/materials" / (new_type + ".h")
@@ -84,6 +83,15 @@ for old_type, new_type in (
     content = source.read_text()
     assert f'registerMooseObject("PhysicsApp", {new_type});' in content
     assert f'registerMooseObjectAliased("PhysicsApp", {new_type}, "{old_type}");' in content
+
+# The old charged transport assembler is now redundant: DDMaterial owns
+# per-species mu/D, standalone charge density retains Poisson/FV sources,
+# and the FV/FEM transport kernels evaluate their actual face/volume fluxes.
+for name in ("PlasmaChargeTransportMaterial", "PhysicsPlasmaChargeTransportMaterial"):
+    assert not (ROOT / "src/materials" / (name + ".C")).exists()
+    assert not (ROOT / "include/materials" / (name + ".h")).exists()
+assert 'registerMooseObject("PhysicsApp", PhysicsPlasmaChargeDensityMaterial);' in (
+    ROOT / "src/materials/PhysicsPlasmaChargeDensityMaterial.C").read_text()
 
 print("RETIRED_PLASMA_CLOSURES_MATERIAL_CONTRACT: PASS")
 

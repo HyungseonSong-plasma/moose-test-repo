@@ -14,7 +14,6 @@ MAPPINGS = (
     ("PhysicsElectronTransportLookupMaterial", "DDMaterial"),
     ("ElectronTransportLookupMaterial", "DDMaterial"),
     ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
-    ("PhysicsPlasmaChargeTransportMaterial", "PlasmaChargeTransportMaterial"),
 )
 
 
@@ -73,6 +72,8 @@ def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
     assert "type = PhysicsElectronTransportLookupMaterial" in old_lookup
     assert "type = DDMaterial" in new_lookup
     assert "model = lookup" in new_lookup
+    assert not (BASE / "src/materials/PlasmaChargeTransportMaterial.C").exists()
+    assert not (BASE / "include/materials/PlasmaChargeTransportMaterial.h").exists()
     assert (BASE / "src/materials/NVMaterial.C").is_file()
     assert not (BASE / "src/materials/SpeciesTransportAliasMaterial.C").exists()
     assert not (BASE / "include/materials/SpeciesTransportAliasMaterial.h").exists()
