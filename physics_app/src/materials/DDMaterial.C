@@ -19,10 +19,14 @@ DDMaterial::validParams()
   params.addParam<std::string>("species_id", "e", "Solver-safe species identifier.");
   params.addParam<MooseEnum>("model", MooseEnum("lookup constant functor", "lookup"),
                              "Transport source: lookup table, physical constants or existing AD Functors.");
-  params.addParam<MooseFunctorName>("mobility_source",
-                                    "Existing mobility [m^2/(V s)] for model=functor.");
-  params.addParam<MooseFunctorName>("diffusivity_source",
-                                    "Existing diffusivity [m^2/s] for model=functor.");
+  params.addParam<MooseFunctorName>(
+      "mobility_source",
+      "Optional direct-input legacy override; by default model=functor reads "
+      "<species>_mobility from another Material.");
+  params.addParam<MooseFunctorName>(
+      "diffusivity_source",
+      "Optional direct-input legacy override; by default model=functor reads "
+      "<species>_diffusivity from another Material.");
   params.addParam<Real>("mobility", "Constant species mobility [m^2/(V s)].");
   params.addParam<Real>("diffusivity", "Constant species diffusivity [m^2/s].");
   params.addParam<FileName>("table_file", "Three-column lookup table: x, mobility, diffusivity.");
@@ -70,10 +74,17 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
 
   if (_functor)
   {
-    if (!isParamValid("mobility_source") || !isParamValid("diffusivity_source"))
-      paramError("model", "Functor mode requires mobility_source and diffusivity_source.");
-    const auto mu = getParam<MooseFunctorName>("mobility_source");
-    const auto diffusion = getParam<MooseFunctorName>("diffusivity_source");
+    // Canonical inputs are already supplied by the upstream Native/Plasma
+    // Material; do not accidentally create an alias to our own output.
+    // Explicit sources remain supported only for legacy direct .i inputs.
+    const bool explicit_mu = isParamValid("mobility_source");
+    const bool explicit_D = isParamValid("diffusivity_source");
+    const MooseFunctorName mu = explicit_mu
+                                   ? getParam<MooseFunctorName>("mobility_source")
+                                   : _species + "_mobility";
+    const MooseFunctorName diffusion = explicit_D
+                                          ? getParam<MooseFunctorName>("diffusivity_source")
+                                          : _species + "_diffusivity";
     // Canonical external source names are supported, but the same name must
     // never be published again by this Material: Native keeps ownership.
     // Legacy electron_* output aliases are always produced here and cannot
@@ -87,8 +98,10 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
         paramError("model", "Functor mode forbids unrelated coefficient input: ", name);
     if (isParamSetByUser("table_units") || isParamSetByUser("bounds_policy"))
       paramError("model", "Functor mode must not set lookup units or bounds policy.");
-    _mobility_source = &getFunctor<ADReal>("mobility_source");
-    _diffusivity_source = &getFunctor<ADReal>("diffusivity_source");
+    _mobility_source = explicit_mu ? &getFunctor<ADReal>("mobility_source")
+                                   : &getFunctorByName<ADReal>(mu);
+    _diffusivity_source = explicit_D ? &getFunctor<ADReal>("diffusivity_source")
+                                     : &getFunctorByName<ADReal>(diffusion);
   }
   else if (_lookup)
   {
@@ -151,9 +164,11 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
   // Native producer retains ownership; re-registering it would duplicate
   // a Functor name or form a self-reference cycle.
   const bool external_mobility =
-      _functor && getParam<MooseFunctorName>("mobility_source") == _species + "_mobility";
+      _functor && (!isParamValid("mobility_source") ||
+                   getParam<MooseFunctorName>("mobility_source") == _species + "_mobility");
   const bool external_diffusivity =
-      _functor && getParam<MooseFunctorName>("diffusivity_source") == _species + "_diffusivity";
+      _functor && (!isParamValid("diffusivity_source") ||
+                   getParam<MooseFunctorName>("diffusivity_source") == _species + "_diffusivity");
   if (!external_mobility)
     addFunctorProperty<ADReal>(_species + "_mobility", particle_mu);
   if (!external_diffusivity)

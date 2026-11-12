@@ -17,8 +17,6 @@ struct DDTransportRecord
   double mobility = 0.0;
   double diffusivity = 0.0;
   std::string table_file;
-  std::string mobility_source;
-  std::string diffusivity_source;
   std::string table_units;
   std::string pressure;
   std::string gas_temperature;

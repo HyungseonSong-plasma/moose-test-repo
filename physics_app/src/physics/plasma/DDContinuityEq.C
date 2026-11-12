@@ -352,8 +352,8 @@ DDContinuityEq::addFunctorMaterials()
     }
     else if (config->model == "functor")
     {
-      params.set<MooseFunctorName>("mobility_source") = config->mobility_source;
-      params.set<MooseFunctorName>("diffusivity_source") = config->diffusivity_source;
+      // DDMaterial derives the existing canonical species Functor names.
+      // No source-name overrides are passed from the generated JSON.
     }
     else
     {

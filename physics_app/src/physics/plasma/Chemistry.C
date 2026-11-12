@@ -187,14 +187,11 @@ parseDDTransport(const Json & value, const std::string & file)
   }
   else if (result.model == "functor")
   {
-    result.mobility_source = requiredText(value, "mobility_source", file);
-    result.diffusivity_source = requiredText(value, "diffusivity_source", file);
-    for (const auto * excluded : {"mobility", "diffusivity", "table_file", "coordinate",
-                                   "mean_energy",
-                                   "table_units", "pressure", "gas_temperature",
-                                   "bounds_policy"})
-      if (value.contains(excluded))
-        fail(file, std::string("functor transport forbids ") + excluded);
+    // model=functor uses existing species-owned provider names only.
+    // Source override keys are intentionally not part of the JSON contract.
+    if (value.size() != 1)
+      fail(file, "functor transport accepts only model; DDMaterial derives "
+                 "<species>_mobility and <species>_diffusivity.");
   }
   else if (result.model == "lookup")
   {
@@ -256,7 +253,6 @@ bool
 DDTransportRecord::equals(const DDTransportRecord & rhs) const
 {
   return model == rhs.model && mobility == rhs.mobility && diffusivity == rhs.diffusivity &&
-         mobility_source == rhs.mobility_source && diffusivity_source == rhs.diffusivity_source &&
          table_file == rhs.table_file &&
          table_units == rhs.table_units && pressure == rhs.pressure &&
          gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;
