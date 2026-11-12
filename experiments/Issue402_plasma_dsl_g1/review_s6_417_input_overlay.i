@@ -1,3 +1,6 @@
+# [DriftDiffusion]/[Continuity] builds DDMaterial for JSON species coefficients.
+# Chemistry applies the minus sign to positive energy_loss_eV and native
+# delta_epsilon_EI02/EI17 Functors. No extra [FunctorMaterials] block.
 # Issue #402 S6-417 Chemistry cutover overlay; use ONLY with the staged S6
 # native layers after the listed legacy electron-particle and energy Kernels
 # have been removed in scratch. See chemistry/README.md; not a standalone deck.
@@ -26,25 +29,5 @@
         []
       []
     []
-  []
-[]
-[FunctorMaterials]
-  # Native EI-02/EI-17 delta_epsilon_* give a POSITIVE loss magnitude;
-  # the Chemistry JSON functor contract requires signed energy change.
-  [ei02_signed_energy_change]
-    type = ADParsedFunctorMaterial
-    property_name = signed_delta_epsilon_EI02_eV
-    functor_names = 'delta_epsilon_EI02_eV'
-    functor_symbols = 'loss'
-    expression = '-loss'
-    block = plasma
-  []
-  [ei17_signed_energy_change]
-    type = ADParsedFunctorMaterial
-    property_name = signed_delta_epsilon_EI17_eV
-    functor_names = 'delta_epsilon_EI17_eV'
-    functor_symbols = 'loss'
-    expression = '-loss'
-    block = plasma
   []
 []
