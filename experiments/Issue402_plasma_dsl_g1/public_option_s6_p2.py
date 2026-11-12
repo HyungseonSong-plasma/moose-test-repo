@@ -120,15 +120,30 @@ _STATE_TOKEN = re.compile(
 
 
 def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
-    """Rewrite ONLY staged D .i copies; original artifact/source stays immutable.
+    """Modify only disposable D copies, never immutable B/C or source archives.
 
-    Source hashes are retained separately from candidate hashes to avoid
-    conflating syntax-only P2 migration with physical B/D equivalence.
+    In the same bounded migration as ne_transport -> generated e_transport,
+    remove the one original ne_time; ContinuityEq now generates e_time with
+    the identical PhysicsFEMLogMolarTimeDerivative equation and block.
     """
-    changes: dict[str, dict] = {}
-    total = 0
     if len(ordered) != 11 or Path(ordered[-1]).name != "migrated_continuity.i":
         raise ValueError("Unexpected staged D input layer order")
+
+    time_pattern = re.compile(
+        r"(?m)^  \[ne_time\][ \t]*\r?\n"
+        r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+        r"^  \[\][ \t]*(?:\r?\n|$)"
+    )
+    expected_time = {
+        "type": "PhysicsFEMLogMolarTimeDerivative",
+        "variable": "log_ne",
+        "block": "plasma",
+    }
+    first_layer = Path(ordered[0]).name
+    changes: dict[str, dict] = {}
+    pending: list[tuple[Path, str]] = []
+    removed_time: list[dict] = []
+    total = 0
     for relative in ordered[:-1]:
         name = Path(relative).name
         if name != relative.split("/")[-1] or not name.endswith(".i"):
@@ -136,28 +151,67 @@ def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
         path = chemistry / name
         before = path.read_bytes()
         source = before.decode("utf-8")
+
+        # The native-to-DSL substitution is exactly one known operator,
+        # declared in the original base layer, with no extra parameters.
+        matches = list(time_pattern.finditer(source))
+        if len(matches) > 1 or ("[ne_time]" in source and not matches):
+            raise ValueError("Ambiguous or malformed original ne_time block")
+        if matches:
+            if name != first_layer:
+                raise ValueError("Original ne_time owner must reside in the first layer")
+            match = matches[0]
+            pairs = re.findall(
+                r"(?m)^    ([a-z_]+)[ \t]*=[ \t]*([^\r\n]+)$",
+                match.group("body"),
+            )
+            if len(pairs) != 3 or {key: value.strip() for key, value in pairs} != expected_time:
+                raise ValueError("Original ne_time parameters differ from pinned Native S6")
+            removed_time.append({
+                "source_layer": name,
+                "old_name": "ne_time",
+                "generated_name": "e_time",
+                "kernel_type": expected_time["type"],
+                "original_block_sha256": hashlib.sha256(
+                    match.group(0).encode("utf-8")).hexdigest(),
+            })
+            source = source[:match.start()] + source[match.end():]
+
+        # D's C-derived base must have removed ne_transport already.
+        if re.search(r"(?m)^[ \t]*\[ne_transport\][ \t]*$", source):
+            raise ValueError("Staged D input still contains the original ne_transport")
+
         observed = {old: len(re.findall(
             r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])", source))
             for old in CANONICAL_STATE_NAMES}
         converted = _STATE_TOKEN.sub(
             lambda match: CANONICAL_STATE_NAMES[match.group()], source)
-        if _STATE_TOKEN.search(converted):
-            raise ValueError("Staged D input retains noncanonical solver states")
-        if converted != source:
-            path.write_text(converted, encoding="utf-8")
+        if _STATE_TOKEN.search(converted) or "[ne_time]" in converted:
+            raise ValueError("Staged D retains a legacy state or time owner")
+
         total += sum(observed.values())
+        pending.append((path, converted))
         changes[name] = {
             "original_sha256": hashlib.sha256(before).hexdigest(),
-            "staged_sha256": sha_file(path),
+            "staged_sha256": hashlib.sha256(converted.encode("utf-8")).hexdigest(),
             "state_name_substitutions": {k: v for k, v in observed.items() if v},
         }
+
+    # Fail before writing any copy if ownership or source identity is unclear.
+    if len(removed_time) != 1:
+        raise ValueError("Expected exactly one original ne_time in staged S6 D")
     if total == 0:
         raise ValueError("No archived S6 solver states found in staged D input")
+    for path, converted in pending:
+        if path.read_text(encoding="utf-8") != converted:
+            path.write_text(converted, encoding="utf-8")
     return {
-        "status": "SCRATCH_ONLY_CANONICAL_STATE_REWRITE",
+        "status": "SCRATCH_ONLY_CANONICAL_STATE_AND_TIME_OWNER_REWRITE",
         "changed_reference_count": total,
+        "removed_native_time": removed_time[0],
         "files": changes,
     }
+
 
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
     if git_head(ROOT) != expected_head or git_head(historical) != HISTORICAL_SHA:
