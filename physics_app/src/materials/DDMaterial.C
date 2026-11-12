@@ -1,0 +1,191 @@
+#include "DDMaterial.h"
+#include "Physics.h"
+
+#include <cctype>
+#include <cmath>
+#include <stdexcept>
+
+registerMooseObject("PhysicsApp", DDMaterial);
+// Factory-input compatibility only; the old C++ lookup class is removed.
+registerMooseObjectAliased("PhysicsApp", DDMaterial, "ElectronTransportLookupMaterial");
+registerMooseObjectAliased("PhysicsApp", DDMaterial, "PhysicsElectronTransportLookupMaterial");
+
+InputParameters
+DDMaterial::validParams()
+{
+  auto params = FunctorMaterial::validParams();
+  params.addClassDescription("Species-owned drift-diffusion mobility and diffusivity "
+                             "from physical constants or a one-dimensional lookup.");
+  params.addParam<std::string>("species_id", "e", "Solver-safe species identifier.");
+  params.addParam<MooseEnum>("model", MooseEnum("lookup constant", "lookup"),
+                             "Transport source: lookup table or physical constants.");
+  params.addParam<Real>("mobility", "Constant species mobility [m^2/(V s)].");
+  params.addParam<Real>("diffusivity", "Constant species diffusivity [m^2/s].");
+  params.addParam<FileName>("table_file", "Three-column lookup table: x, mobility, diffusivity.");
+  params.addParam<FileName>("property_table_file",
+                            "Deprecated lookup filename accepted for historical MOOSE inputs.");
+  params.addParam<MooseFunctorName>("coordinate", "Lookup coordinate Functor.");
+  params.addParam<MooseFunctorName>("mean_energy",
+                                    "Historical lookup coordinate; mean electron energy [eV].");
+  params.addParam<MooseEnum>("table_units", MooseEnum("reduced physical", "reduced"),
+                             "Reduced values mu*N_n/D*N_n or physical mu/D.");
+  params.addParam<MooseFunctorName>("pressure", "Neutral-gas pressure [Pa] for reduced tables.");
+  params.addParam<MooseFunctorName>("gas_temperature",
+                                    "Neutral-gas temperature [K] for reduced tables.");
+  params.addParam<std::string>("bounds_policy", "error",
+                               "Outside table: fail closed or clamp ('error'/'clamp').");
+  return params;
+}
+
+DDMaterial::DDMaterial(const InputParameters & parameters)
+  : FunctorMaterial(parameters),
+    _species(getParam<std::string>("species_id")),
+    _lookup(getParam<MooseEnum>("model") == "lookup"),
+    _reduced(getParam<MooseEnum>("table_units") == "reduced"),
+    _constant_mobility(isParamValid("mobility") ? getParam<Real>("mobility") : 0.0),
+    _constant_diffusivity(isParamValid("diffusivity") ? getParam<Real>("diffusivity") : 0.0),
+    _bounds_policy(getParam<std::string>("bounds_policy") == "clamp" ?
+                   BoundsPolicy::Clamp : BoundsPolicy::Error)
+{
+  if (_species.empty() || !std::isalpha(static_cast<unsigned char>(_species.front())))
+    paramError("species_id", "Species ID must start with a letter.");
+  for (const char c : _species)
+    if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_')
+      paramError("species_id", "Species ID must be alphanumeric or underscore.");
+
+  const auto & bounds = getParam<std::string>("bounds_policy");
+  if (bounds != "error" && bounds != "clamp")
+    paramError("bounds_policy", "Expected 'error' or 'clamp'.");
+
+  if (_lookup)
+  {
+    const bool new_file = isParamValid("table_file");
+    const bool old_file = isParamValid("property_table_file");
+    if (new_file == old_file)
+      paramError("table_file", "Specify exactly one table_file or property_table_file.");
+    const bool coordinate = isParamValid("coordinate");
+    const bool mean_energy = isParamValid("mean_energy");
+    if (coordinate == mean_energy)
+      paramError("coordinate", "Specify exactly one coordinate or mean_energy Functor.");
+    _coordinate = &getFunctor<ADReal>(coordinate ? "coordinate" : "mean_energy");
+    const auto & filename = new_file ? getParam<FileName>("table_file") :
+                                       getParam<FileName>("property_table_file");
+    _table = std::make_unique<PhysicsLookupTable1D>(filename, 1, std::vector<std::size_t>{2, 3});
+    if (_reduced)
+    {
+      if (!isParamValid("pressure") || !isParamValid("gas_temperature"))
+        paramError("table_units", "Reduced transport requires pressure and gas_temperature.");
+      _pressure = &getFunctor<ADReal>("pressure");
+      _gas_temperature = &getFunctor<ADReal>("gas_temperature");
+    }
+  }
+  else
+  {
+    if (!isParamValid("mobility") || !isParamValid("diffusivity"))
+      paramError("model", "Constant transport requires mobility and diffusivity.");
+    if (!std::isfinite(_constant_mobility) || !std::isfinite(_constant_diffusivity) ||
+        _constant_mobility < 0.0 || _constant_diffusivity < 0.0)
+      paramError("model", "Mobility and diffusivity must be finite and nonnegative.");
+    for (const char * name : {"table_file", "property_table_file", "coordinate", "mean_energy"})
+      if (isParamValid(name))
+        paramError("model", "Constant mode must not also specify lookup inputs: ", name);
+  }
+
+  const auto particle_mu = [this](const auto & r, const auto & state) -> ADReal
+  { return mobility(r, state); };
+  const auto particle_D = [this](const auto & r, const auto & state) -> ADReal
+  { return diffusivity(r, state); };
+
+  addFunctorProperty<ADReal>(_species + "_mobility", particle_mu);
+  addFunctorProperty<ADReal>(_species + "_diffusivity", particle_D);
+
+  if (_species == "e")
+  {
+    // Historical electron_* consumers and modern species-ID consumers share one
+    // numerical closure, never an independently interpolated/coefficient source.
+    addFunctorProperty<ADReal>("electron_mobility", particle_mu);
+    addFunctorProperty<ADReal>("electron_diffusion", particle_D);
+    constexpr Real energy_factor = 5.0 / 3.0;
+    addFunctorProperty<ADReal>(
+        "electron_energy_mobility",
+        [this, energy_factor](const auto & r, const auto & state) -> ADReal
+        { return energy_factor * mobility(r, state); });
+    addFunctorProperty<ADReal>(
+        "electron_energy_diffusion",
+        [this, energy_factor](const auto & r, const auto & state) -> ADReal
+        { return energy_factor * diffusivity(r, state); });
+
+    if (_lookup && _reduced)
+    {
+      addFunctorProperty<ADReal>(
+          "neutral_number_density",
+          [this](const auto & r, const auto & state) -> ADReal
+          { return neutralNumberDensity(r, state); });
+      addFunctorProperty<ADReal>(
+          "electron_reduced_mobility",
+          [this](const auto & r, const auto & state) -> ADReal
+          { return interpolate((*_coordinate)(r, state), 0); });
+      addFunctorProperty<ADReal>(
+          "electron_reduced_diffusion",
+          [this](const auto & r, const auto & state) -> ADReal
+          { return interpolate((*_coordinate)(r, state), 1); });
+    }
+  }
+}
+
+ADReal
+DDMaterial::neutralNumberDensity(const auto & r, const auto & state) const
+{
+  const ADReal T_g = (*_gas_temperature)(r, state);
+  const ADReal pressure = (*_pressure)(r, state);
+  if (!std::isfinite(T_g.value()) || T_g.value() <= 0.0 ||
+      !std::isfinite(pressure.value()) || pressure.value() <= 0.0)
+    mooseError("DDMaterial reduced table requires gas_temperature > 0 K and pressure > 0 Pa.");
+  return pressure / (PHYSICS_CONSTANTS::k_boltz * T_g);
+}
+
+ADReal
+DDMaterial::mobility(const auto & r, const auto & state) const
+{
+  if (!_lookup)
+    return _constant_mobility;
+  const ADReal raw = interpolate((*_coordinate)(r, state), 0);
+  return _reduced ? raw / neutralNumberDensity(r, state) : raw;
+}
+
+ADReal
+DDMaterial::diffusivity(const auto & r, const auto & state) const
+{
+  if (!_lookup)
+    return _constant_diffusivity;
+  const ADReal raw = interpolate((*_coordinate)(r, state), 1);
+  return _reduced ? raw / neutralNumberDensity(r, state) : raw;
+}
+
+ADReal
+DDMaterial::interpolate(const ADReal & coordinate, std::size_t value_index) const
+{
+  const auto & x = _table->coordinate();
+  const auto & y = _table->values(value_index);
+  const Real raw = coordinate.value();
+
+  if (!std::isfinite(raw))
+    mooseError("DDMaterial lookup coordinate must be finite.");
+  if (raw < x.front())
+  {
+    if (_bounds_policy == BoundsPolicy::Error)
+      mooseError("DDMaterial lookup coordinate ", raw, " is below ", x.front(), ".");
+    return y.front();
+  }
+  if (raw > x.back())
+  {
+    if (_bounds_policy == BoundsPolicy::Error)
+      mooseError("DDMaterial lookup coordinate ", raw, " is above ", x.back(), ".");
+    return y.back();
+  }
+  if (raw == x.front()) return y.front();
+  if (raw == x.back()) return y.back();
+
+  const std::size_t i = _table->lowerBracket(raw);
+  return y[i] + (coordinate - x[i]) * (y[i+1] - y[i]) / (x[i+1] - x[i]);
+}
