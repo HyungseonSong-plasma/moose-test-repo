@@ -163,6 +163,22 @@ jobs:
           sys.exit(0 if out["P2"]=="PASS" else 3)
           PY
           echo 'ISSUE402_PR524_FULL_S6_NATIVE_P2_PASS'
+      - name: Diagnose real public S6 P2 rejection from raw native check-input log
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          for case in 417 941; do
+            file="$RUNNER_TEMP/pr524_full_s6_$case/S6-$case/native_P2.log"
+            echo "ISSUE402_NATIVE_P2_DIAG_CASE=$case"
+            if test -f "$file"; then
+              sha256sum "$file"
+              grep -E -A 8 -B 3 -i 'error|exception|unknown|not found|failed|unrecognized|Syntax OK|unused' "$file" | tail -90 || true
+              echo "ISSUE402_NATIVE_P2_DIAG_LOG_PRESENT_$case"
+            else
+              echo "ISSUE402_NATIVE_P2_DIAG_LOG_MISSING_$case"
+            fi
+          done
       - name: Preserve sanitized P2 statuses, not source/mesh/rates
         if: always()
         uses: actions/upload-artifact@v4
@@ -172,8 +188,8 @@ jobs:
             ${{ runner.temp }}/pr524_s6_p2_summary.json
             ${{ runner.temp }}/pr524_full_s6_417/readiness.json
             ${{ runner.temp }}/pr524_full_s6_941/readiness.json
-            ${{ runner.temp }}/pr524_full_s6_417/native_P2.log
-            ${{ runner.temp }}/pr524_full_s6_941/native_P2.log
+            ${{ runner.temp }}/pr524_full_s6_417/S6-417/native_P2.log
+            ${{ runner.temp }}/pr524_full_s6_941/S6-941/native_P2.log
             ${{ runner.temp }}/pr524_417_driver.log
             ${{ runner.temp }}/pr524_941_driver.log
           if-no-files-found: warn
