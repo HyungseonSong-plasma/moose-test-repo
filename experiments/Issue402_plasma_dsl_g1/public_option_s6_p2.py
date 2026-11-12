@@ -223,9 +223,9 @@ RENAMED_FEM_KERNEL_TYPES = {
     "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
 }
 _FEM_TYPE_LINE = re.compile(
-    r"(?m)^(?P<indent>[ \\t]*type[ \\t]*=[ \\t]*)(?P<name>"
+    r"(?m)^(?P<indent>[ \t]*type[ \t]*=[ \t]*)(?P<name>"
     + "|".join(map(re.escape, RENAMED_FEM_KERNEL_TYPES))
-    + r")(?P<end>[ \\t]*\\r?$)"
+    + r")(?P<end>[ \t]*\r?$)"
 )
 
 
