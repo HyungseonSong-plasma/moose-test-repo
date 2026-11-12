@@ -103,11 +103,6 @@ DDContinuityEq::validParams()
       "fvm_species", {}, "Species names, optionally followed by positive initial_number_density [1/m^3] for each species.");
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
-  params.addParam<bool>(
-      "require_json_transport",
-      false,
-      "Require one drift_diffusion transport_coefficients JSON record for every "
-      "fem_species and fvm_species. When false, absent records remain Native-owned.");
   return params;
 }
 
@@ -162,9 +157,10 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
         paramError("fvm_species", "Invalid species ID for automatic naming: ", species);
   }
 
-  // Strict JSON ownership is opt-in during S6 Native-to-Physics migration.
-  // Enforce FEM and FVM coverage alike, never substitute arbitrary coefficients.
-  if (getParam<bool>("require_json_transport"))
+  // JSON automatically owns all selected DD species when any DD record exists.
+  // A fully absent section preserves historical Native coefficients.
+  // No front-end transport switch or implicit partial JSON fallback.
+  if (chemistryData().hasDDTransport())
   {
     const auto & mechanism = chemistryData();
     const auto validate = [this, &mechanism](const std::vector<std::string> & ids,

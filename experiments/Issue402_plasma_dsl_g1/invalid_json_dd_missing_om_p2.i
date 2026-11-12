@@ -34,7 +34,6 @@
           fem_species = 'e 1e16'
           fvm_species = 'O2p 1e16 Om 1e14 Op 1e15'
           fem_potential = potential
-          require_json_transport = true
         []
       []
     []

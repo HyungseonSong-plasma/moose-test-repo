@@ -1,0 +1,5 @@
+# PROVISIONAL P2 TABLE ONLY. Copied from physics_app/ci/electron_energy_lookup_response_smoke_table.txt
+# NOT a verified Boltzmann electron mobility/diffusion table or accepted S6 P3 coefficients.
+# columns: electron_mean_energy_eV mu_times_N D_times_N
+1.0 1.0e24 2.0e24
+10.0 4.0e24 8.0e24

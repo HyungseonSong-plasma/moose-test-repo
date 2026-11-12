@@ -29,7 +29,7 @@
     "drift_diffusion": {
       "e": {
         "model": "lookup",
-        "table_file": "../../physics_app/ci/electron_energy_lookup_response_smoke_table.txt",
+        "table_file": "chemistry/e_transport.txt",
         "coordinate": "mean_en_solved",
         "table_units": "reduced",
         "pressure": "p",

@@ -27,7 +27,7 @@ def test_json_drives_species_transport_without_i_material_blocks():
     assert (PILOT / owners["Om"]["table_file"]).exists()
     assert "fem_species = 'e 1e16'" in deck
     assert "fvm_species = 'O2p 1e16 Om 1e14 Op 1e15'" in deck
-    assert "require_json_transport = true" in deck
+    assert "require_json_transport" not in deck
     assert "[DDMaterial]" not in deck
     assert "type = DDMaterial" not in deck
     assert "electron_energy_mobility" not in deck
@@ -35,7 +35,8 @@ def test_json_drives_species_transport_without_i_material_blocks():
 
 def test_continuity_maps_both_species_families_to_ddmaterial():
     code = (ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
-    assert 'getParam<bool>("require_json_transport")' in code
+    assert '"require_json_transport"' not in code
+    assert "chemistryData().hasDDTransport()" in code
     assert "validate(_fem_species, \"fem_species\", \"FEM\")" in code
     assert "validate(_fvm_species, \"fvm_species\", \"FVM\")" in code
     assert 'const auto * config = mechanism.ddTransport(id)' in code
@@ -58,7 +59,7 @@ def test_json_and_lookup_data_are_validated_fail_closed():
     missing = json.loads((PILOT / "invalid_json_dd_missing_om_p2.json").read_text())
     assert "Om" not in missing["transport_coefficients"]["drift_diffusion"]
     assert "Om" in json.loads((PILOT / "json_dd_fem_fvm_mixed_p2.json").read_text())["transport_coefficients"]["drift_diffusion"]
-    assert "require_json_transport = true" in (
+    assert "require_json_transport" not in (
         PILOT / "invalid_json_dd_missing_om_p2.i").read_text()
     assert "lookup_om_invalid_p2.txt" in (
         PILOT / "invalid_json_dd_bad_lookup_p2.json").read_text()

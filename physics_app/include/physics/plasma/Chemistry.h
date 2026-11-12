@@ -75,6 +75,7 @@ public:
   bool hasSpeciesSource(const std::string & id) const;
   bool hasElectronEnergySource() const;
   const DDTransportRecord * ddTransport(const std::string & id) const;
+  bool hasDDTransport() const { return !_dd_transport.empty(); }
   const NVTransportRecord * nvTransport() const;
 
 private:
