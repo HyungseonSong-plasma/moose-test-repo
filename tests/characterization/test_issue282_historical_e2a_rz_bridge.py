@@ -155,7 +155,7 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
         # PhysicsElectronTransportLookupMaterial input type. In the current
         # source, it resolves through an explicit MOOSE factory alias.
         canonical = (
-            "ElectronTransportLookupMaterial"
+            "DDMaterial"
             if current == "PhysicsElectronTransportLookupMaterial" else current
         )
         candidate = ROOT / "physics_app" / "src" / dirname / f"{canonical}.C"

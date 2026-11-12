@@ -167,7 +167,8 @@ def test_native_build_and_comparison_script():
     assert "species_id = e" in positive
     assert "mobility = 1" in positive
     assert "diffusivity = 1" in positive
-    assert "prop_values = '1 1'" in positive
+    assert "model = constant" in positive
+    assert "mobility = 1" in positive and "diffusivity = 1" in positive
     assert "mobility =" not in positive and "diffusivity =" not in positive
     assert "files = plasma_species_only.json" in positive
     assert "fem_charge_numbers" not in positive
