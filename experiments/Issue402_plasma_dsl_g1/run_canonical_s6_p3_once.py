@@ -89,6 +89,9 @@ def run(case: str, historical: Path, expected_head: str,
         ordered = option.p2.stage(ROOT, historical, case, "C", staged, manifest)
         migration = option.canonicalize_staged_D_inputs(staged / option.p2.CHEM, ordered)
         sidecar = staged / option.p2.CHEM / "migrated_continuity.i"
+        # Same deterministic disposable mechanism copy used by public P2.
+        shutil.copy2(ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
+                     staged / option.p2.CHEM / "plasma_species_only.json")
         sidecar.write_text(option.OVERLAY, encoding="utf-8")
         if sha(sidecar) != option.OVERLAY_SHA256:
             raise ValueError("P3_CANONICAL_OVERLAY_SHA_MISMATCH")

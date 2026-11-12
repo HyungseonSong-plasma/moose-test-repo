@@ -3,7 +3,7 @@
 # test-only coefficient providers. Not an accepted plasma model or P3 input.
 [Physics]
   [Plasmas]
-    files = experiments/Issue402_plasma_dsl_g1/plasma_species_only.json
+    files = plasma_species_only.json
     [Transport]
       [DriftDiffusion]
         [Continuity]

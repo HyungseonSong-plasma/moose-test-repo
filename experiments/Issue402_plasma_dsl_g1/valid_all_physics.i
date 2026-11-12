@@ -1,7 +1,7 @@
 # These inputs validate objects from the small example; they do not add equations.
 [Physics]
   [Plasmas]
-    files = experiments/Issue402_plasma_dsl_g1/plasma_noop_control.json
+    files = plasma_noop_control.json
     [Transport]
       [Chemistry]
       []

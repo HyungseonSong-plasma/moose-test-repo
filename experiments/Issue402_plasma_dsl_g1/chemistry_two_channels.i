@@ -30,7 +30,7 @@
 []
 [Physics]
   [Plasmas]
-    files = experiments/Issue402_plasma_dsl_g1/plasma_two_channels.json
+    files = plasma_two_channels.json
     [Transport]
       [Chemistry]
       []

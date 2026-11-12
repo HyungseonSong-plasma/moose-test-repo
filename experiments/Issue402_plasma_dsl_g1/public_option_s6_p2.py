@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -35,7 +36,7 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
 # No Material/Functor name is modified.
 [Physics]
   [Plasmas]
-    files = experiments/Issue402_plasma_dsl_g1/plasma_species_only.json
+    files = plasma_species_only.json
     [Transport]
       [DriftDiffusion]
         [Continuity]
@@ -69,7 +70,7 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
   []
 []
 """
-OVERLAY_SHA256 = "30b436b80e716aa0fb65b555fafa953088070f2d3a1023e30a0806720cb5ba1e"
+OVERLAY_SHA256 = "14288d9f0686f26cde86888824babc468016ece99188114ded31b8e5bd360d9a"
 CASES = ("417", "941")
 VARIANTS = ("B", "D")
 
@@ -96,7 +97,7 @@ def validate_overlay() -> None:
             raise ValueError(f"Unexpected option/provider migration: {forbidden}")
     expected = {
         "fem_species": "'e'", "fvm_species": "'O2p Om Op'",
-        "files": "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
+        "files": "plasma_species_only.json",
         "fem_potential": "potential",
     }
     for k, v in expected.items():
@@ -408,6 +409,10 @@ def execute(historical: Path, binary: Path, expected_head: str,
                                 raise ValueError("Expected original C migration sidecar is missing")
                             scratch_migration = canonicalize_staged_D_inputs(
                                 staged / p2.CHEM, ordered)
+                            # The FileName parameter is resolved from the staged input directory.
+                            # Only a disposable JSON copy is created; the repository file is immutable.
+                            shutil.copy2(ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
+                                         staged / p2.CHEM / "plasma_species_only.json")
                             overlay.write_text(OVERLAY, encoding="utf-8")
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
