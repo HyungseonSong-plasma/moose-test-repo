@@ -134,35 +134,6 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
 }
 
 ADReal
-DDMaterial::neutralNumberDensity(const auto & r, const auto & state) const
-{
-  const ADReal T_g = (*_gas_temperature)(r, state);
-  const ADReal pressure = (*_pressure)(r, state);
-  if (!std::isfinite(T_g.value()) || T_g.value() <= 0.0 ||
-      !std::isfinite(pressure.value()) || pressure.value() <= 0.0)
-    mooseError("DDMaterial reduced table requires gas_temperature > 0 K and pressure > 0 Pa.");
-  return pressure / (PHYSICS_CONSTANTS::k_boltz * T_g);
-}
-
-ADReal
-DDMaterial::mobility(const auto & r, const auto & state) const
-{
-  if (!_lookup)
-    return _constant_mobility;
-  const ADReal raw = interpolate((*_coordinate)(r, state), 0);
-  return _reduced ? raw / neutralNumberDensity(r, state) : raw;
-}
-
-ADReal
-DDMaterial::diffusivity(const auto & r, const auto & state) const
-{
-  if (!_lookup)
-    return _constant_diffusivity;
-  const ADReal raw = interpolate((*_coordinate)(r, state), 1);
-  return _reduced ? raw / neutralNumberDensity(r, state) : raw;
-}
-
-ADReal
 DDMaterial::interpolate(const ADReal & coordinate, std::size_t value_index) const
 {
   const auto & x = _table->coordinate();
