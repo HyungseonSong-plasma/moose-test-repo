@@ -58,8 +58,7 @@ for type_name in ("DDMaterial", "PhysicsElectronImpactRateMaterial",
     assert "type = " + type_name in fixture
 assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
 
-# Backward compatibility: legacy *factory type names* remain registered;
-# source filenames and C++ class identifiers now use the shorter canonical form.
+# Keep the separate NV alias while retiring electron-lookup factory spellings.
 for legacy in (
     "PhysicsElectronMeanEnergyMaterial.C",
     "DDMaterial.C",
@@ -69,10 +68,8 @@ for legacy in (
     assert (ROOT / "src/materials" / legacy).is_file(), legacy
 
 
-# MOOSE object-factory aliases keep immutable historical input decks valid.
+# Only the independent NV legacy name remains an active factory alias.
 for old_type, new_type in (
-    ("PhysicsElectronTransportLookupMaterial", "DDMaterial"),
-    ("ElectronTransportLookupMaterial", "DDMaterial"),
     ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
 ):
     source = ROOT / "src/materials" / (new_type + ".C")
@@ -83,6 +80,13 @@ for old_type, new_type in (
     content = source.read_text()
     assert f'registerMooseObject("PhysicsApp", {new_type});' in content
     assert f'registerMooseObjectAliased("PhysicsApp", {new_type}, "{old_type}");' in content
+
+# Electron lookup factory aliases and direct axis overrides are retired.
+for old_type in ("ElectronTransportLookupMaterial", "PhysicsElectronTransportLookupMaterial"):
+    assert f'registerMooseObjectAliased("PhysicsApp", DDMaterial, "{old_type}");' not in drift
+for retired_option in ('"property_table_file"', '"coordinate"', '"mean_energy"'):
+    assert retired_option not in drift
+assert 'getFunctorByName<ADReal>("mean_en_solved")' in drift
 
 # The old charged transport assembler is now redundant: DDMaterial owns
 # per-species mu/D, standalone charge density retains Poisson/FV sources,

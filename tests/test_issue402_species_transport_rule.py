@@ -44,6 +44,19 @@ def test_mean_energy_bridge_and_dd_transport_are_distinct_providers():
     assert '"electron_energy_mobility"' in dd
     assert not (ROOT / "physics_app/src/materials/ElectronClosureMaterial.C").exists()
 
+def test_lookup_axis_is_fixed_to_solved_mean_energy_and_aliases_are_removed():
+    src = text("physics_app/src/materials/DDMaterial.C")
+    header = text("physics_app/include/materials/DDMaterial.h")
+    assert 'getFunctorByName<ADReal>("mean_en_solved")' in src
+    assert 'const Moose::Functor<ADReal> * _mean_energy = nullptr;' in header
+    assert '(*_mean_energy)(r, state)' in header
+    for obsolete in ("ElectronTransportLookupMaterial", "PhysicsElectronTransportLookupMaterial",
+                     '"coordinate"', '"mean_energy"', '"property_table_file"'):
+        assert obsolete not in src
+    assert '"table_file"' in src
+    assert "Specify exactly one table_file or property_table_file." not in src
+
+
 def test_dd_material_unifies_constant_and_lookup_with_electron_energy_projection():
     src = text("physics_app/src/materials/DDMaterial.C")
     header = text("physics_app/include/materials/DDMaterial.h")
