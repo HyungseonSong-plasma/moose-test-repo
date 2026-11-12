@@ -187,6 +187,16 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
                 if canonical in owners.values():
                     raise ValueError("S6_WALL_DUPLICATE_CANONICAL_OUTPUT: " + canonical)
                 owners[old] = canonical
+            # The old total-flux class was retired upstream (#523). Its
+            # surface+migration total number/mass law and all input parameters
+            # are implemented by PhysicsIonWallFluxMaterial. This is only a
+            # staged *type/identity* migration, never a new wall equation.
+            # Validate the known old factory before installing its replacement.
+            if material_type == "PhysicsIonWallTotalFluxMaterial":
+                body, converted = _WALL_TYPE.subn(
+                    "    type = PhysicsIonWallFluxMaterial", body, count=1)
+                if converted != 1:
+                    raise ValueError("S6_WALL_RETIRED_TYPE_CUTOVER_FAILED")
             # Add only the output-selector option; no physical input is altered.
             type_line = _WALL_TYPE.search(body)
             assert type_line is not None
@@ -194,7 +204,10 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
             contents = contents[:m.start("body")] + body + contents[m.end("body"):]
             owner_records.append({
                 "source_layer": path.name, "block": m.group("name"),
-                "type": material_type, "species_id": species,
+                "source_type": material_type,
+                "type": "PhysicsIonWallFluxMaterial"
+                if material_type == "PhysicsIonWallTotalFluxMaterial" else material_type,
+                "species_id": species,
                 "outputs": dict(sorted(pairs.items())),
             })
         updated[path] = contents
@@ -218,6 +231,11 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
             contents, number = re.subn(pattern, canonical, contents)
             substitutions[old] += number
         updated[path] = contents
+    # No scratch input may retain the retired total-flux factory type.
+    if any(re.search(
+            r"(?m)^    type[ \t]*=[ \t]*PhysicsIonWallTotalFluxMaterial[ \t]*$",
+            contents) for contents in updated.values()):
+        raise ValueError("S6_WALL_RETIRED_TYPE_STILL_PRESENT")
     # Stage one can be a no-op only if no old wall outputs are actually used.
     return updated, {
         "status": "SCRATCH_ONLY_SPECIES_WALL_NAMES" if owners else "NO_LEGACY_WALL_OUTPUTS",
