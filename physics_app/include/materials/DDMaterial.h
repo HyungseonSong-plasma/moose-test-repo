@@ -13,8 +13,9 @@
  *
  * model=constant: physical mu [m^2/(V s)] and D [m^2/s].
  * model=functor: source-preserving AD Functor forwarding.
- * model=lookup: 1D table (coordinate, mobility, diffusivity), interpreted
- * as reduced mu*Nn and D*Nn or as physical values via table_units.
+ * model=lookup: 1D table (mean_en_solved [eV], mobility, diffusivity),
+ * interpreted as reduced mu*Nn and D*Nn or as physical values via table_units.
+ * The lookup axis is always mean_en_solved; it is not configurable.
  *
  * For species=e, the same closure publishes the 5/3 electron energy
  * mobility/diffusion projection. It does not calculate Chemistry rates.
@@ -47,7 +48,7 @@ protected:
       return (*_mobility_source)(r, state);
     if (!_lookup)
       return _constant_mobility;
-    const ADReal raw = interpolate((*_coordinate)(r, state), 0);
+    const ADReal raw = interpolate((*_mean_energy)(r, state), 0);
     return _reduced ? raw / neutralNumberDensity(r, state) : raw;
   }
 
@@ -58,7 +59,7 @@ protected:
       return (*_diffusivity_source)(r, state);
     if (!_lookup)
       return _constant_diffusivity;
-    const ADReal raw = interpolate((*_coordinate)(r, state), 1);
+    const ADReal raw = interpolate((*_mean_energy)(r, state), 1);
     return _reduced ? raw / neutralNumberDensity(r, state) : raw;
   }
 
@@ -70,7 +71,7 @@ protected:
   const Real _constant_diffusivity;
   const Moose::Functor<ADReal> * _mobility_source = nullptr;
   const Moose::Functor<ADReal> * _diffusivity_source = nullptr;
-  const Moose::Functor<ADReal> * _coordinate = nullptr;
+  const Moose::Functor<ADReal> * _mean_energy = nullptr;
   const Moose::Functor<ADReal> * _pressure = nullptr;
   const Moose::Functor<ADReal> * _gas_temperature = nullptr;
   std::unique_ptr<PhysicsLookupTable1D> _table;

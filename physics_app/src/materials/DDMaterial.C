@@ -6,9 +6,6 @@
 #include <stdexcept>
 
 registerMooseObject("PhysicsApp", DDMaterial);
-// Factory-input compatibility only; the old C++ lookup class is removed.
-registerMooseObjectAliased("PhysicsApp", DDMaterial, "ElectronTransportLookupMaterial");
-registerMooseObjectAliased("PhysicsApp", DDMaterial, "PhysicsElectronTransportLookupMaterial");
 
 InputParameters
 DDMaterial::validParams()
@@ -29,12 +26,10 @@ DDMaterial::validParams()
       "<species>_diffusivity from another Material.");
   params.addParam<Real>("mobility", "Constant species mobility [m^2/(V s)].");
   params.addParam<Real>("diffusivity", "Constant species diffusivity [m^2/s].");
-  params.addParam<FileName>("table_file", "Three-column lookup table: x, mobility, diffusivity.");
-  params.addParam<FileName>("property_table_file",
-                            "Deprecated lookup filename accepted for historical MOOSE inputs.");
-  params.addParam<MooseFunctorName>("coordinate", "Lookup coordinate Functor.");
-  params.addParam<MooseFunctorName>("mean_energy",
-                                    "Legacy direct-input coordinate alias; JSON always uses mean_en_solved.");
+  params.addParam<FileName>(
+      "table_file",
+      "Three-column lookup table: mean_en_solved [eV], mobility, diffusivity. "
+      "Lookup energy is fixed to the solved electron mean energy.");
   params.addParam<bool>(
       "fluid_energy",
       true,
@@ -76,7 +71,7 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
   {
     // Canonical inputs are already supplied by the upstream Native/Plasma
     // Material; do not accidentally create an alias to our own output.
-    // Explicit sources remain supported only for legacy direct .i inputs.
+    // Explicit source names bridge the currently used Native ion coefficient providers.
     const bool explicit_mu = isParamValid("mobility_source");
     const bool explicit_D = isParamValid("diffusivity_source");
     const MooseFunctorName mu = explicit_mu
@@ -85,15 +80,14 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
     const MooseFunctorName diffusion = explicit_D
                                           ? getParam<MooseFunctorName>("diffusivity_source")
                                           : MooseFunctorName(_species + "_diffusivity");
-    // Canonical external source names are supported, but the same name must
-    // never be published again by this Material: Native keeps ownership.
-    // Legacy electron_* output aliases are always produced here and cannot
-    // be used as their own inputs.
+    // Canonical external names must not be republished, preventing cycles.
+    // Existing electron_* outputs are live transport-kernel interfaces and
+    // cannot be used as their own source inputs.
     if (_species == "e" && (mu == "electron_mobility" ||
                             diffusion == "electron_diffusion"))
       paramError("model", "Functor mode may not consume its own electron aliases.");
-    for (const char * name : {"mobility", "diffusivity", "table_file", "property_table_file",
-                              "coordinate", "mean_energy", "pressure", "gas_temperature"})
+    for (const char * name : {"mobility", "diffusivity", "table_file",
+                              "pressure", "gas_temperature"})
       if (isParamValid(name))
         paramError("model", "Functor mode forbids unrelated coefficient input: ", name);
     if (isParamSetByUser("table_units") || isParamSetByUser("bounds_policy"))
@@ -107,22 +101,12 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
   {
     if (isParamValid("mobility_source") || isParamValid("diffusivity_source"))
       paramError("model", "Lookup mode forbids mobility_source or diffusivity_source.");
-    const bool new_file = isParamValid("table_file");
-    const bool old_file = isParamValid("property_table_file");
-    if (new_file == old_file)
-      paramError("table_file", "Specify exactly one table_file or property_table_file.");
-    const bool coordinate = isParamValid("coordinate");
-    const bool mean_energy = isParamValid("mean_energy");
-    if (coordinate && mean_energy)
-      paramError("coordinate", "Specify at most one legacy coordinate or mean_energy Functor.");
-    // The stable backend JSON convention uses solved mean energy without a
-    // user-configurable coordinate field. Historical direct .i inputs may
-    // still provide an explicit coordinate for backward compatibility.
-    _coordinate = coordinate ? &getFunctor<ADReal>("coordinate") :
-                  mean_energy ? &getFunctor<ADReal>("mean_energy") :
-                                &getFunctorByName<ADReal>("mean_en_solved");
-    const auto & filename = new_file ? getParam<FileName>("table_file") :
-                                       getParam<FileName>("property_table_file");
+    if (!isParamValid("table_file"))
+      paramError("table_file", "Lookup transport requires table_file.");
+    // All lookup coefficients are indexed by solved mean electron energy.
+    // No user-provided coordinate or alternate state name is accepted.
+    _mean_energy = &getFunctorByName<ADReal>("mean_en_solved");
+    const auto & filename = getParam<FileName>("table_file");
     _table = std::make_unique<PhysicsLookupTable1D>(filename, 1, std::vector<std::size_t>{2, 3});
     // Do not silently propagate NaN, infinity or negative transport data
     // through mobility/diffusivity Functors, especially with table_units=reduced.
@@ -149,8 +133,7 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
     if (!std::isfinite(_constant_mobility) || !std::isfinite(_constant_diffusivity) ||
         _constant_mobility < 0.0 || _constant_diffusivity < 0.0)
       paramError("model", "Mobility and diffusivity must be finite and nonnegative.");
-    for (const char * name : {"table_file", "property_table_file", "coordinate",
-                              "mean_energy", "mobility_source", "diffusivity_source"})
+    for (const char * name : {"table_file", "mobility_source", "diffusivity_source"})
       if (isParamValid(name))
         paramError("model", "Constant mode must not also specify lookup inputs: ", name);
   }
@@ -210,11 +193,11 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
       addFunctorProperty<ADReal>(
           "electron_reduced_mobility",
           [this](const auto & r, const auto & state) -> ADReal
-          { return interpolate((*_coordinate)(r, state), 0); });
+          { return interpolate((*_mean_energy)(r, state), 0); });
       addFunctorProperty<ADReal>(
           "electron_reduced_diffusion",
           [this](const auto & r, const auto & state) -> ADReal
-          { return interpolate((*_coordinate)(r, state), 1); });
+          { return interpolate((*_mean_energy)(r, state), 1); });
     }
   }
 }
