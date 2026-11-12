@@ -8,8 +8,8 @@ required = [
     ROOT / "src/materials/ElectronClosureMaterial.C",
     ROOT / "include/materials/PhysicsElectronImpactRateMaterial.h",
     ROOT / "src/materials/PhysicsElectronImpactRateMaterial.C",
-    ROOT / "include/materials/PhysicsThermalDiffusionMaterial.h",
-    ROOT / "src/materials/PhysicsThermalDiffusionMaterial.C",
+    ROOT / "include/materials/NVMaterial.h",
+    ROOT / "src/materials/NVMaterial.C",
     ROOT / "include/materials/PhysicsPlasmaChargeDensityMaterial.h",
     ROOT / "src/materials/PhysicsPlasmaChargeDensityMaterial.C",
 ]
@@ -23,7 +23,8 @@ assert not (ROOT / "include/actions/PlasmaClosuresAction.h").exists()
 assert not (ROOT / "src/actions/PlasmaClosuresAction.C").exists()
 electron = (ROOT / "src/materials/ElectronClosureMaterial.C").read_text()
 single_ei = (ROOT / "src/materials/PhysicsElectronImpactRateMaterial.C").read_text()
-heavy = (ROOT / "src/materials/PhysicsThermalDiffusionMaterial.C").read_text()
+heavy = (ROOT / "src/materials/NVMaterial.C").read_text()
+drift = (ROOT / "src/materials/DDMaterial.C").read_text()
 
 # The unused composition wrapper and its two dedicated Material classes are retired.
 # Keep existing registered physics implementations, not generated C++ sources.
@@ -41,14 +42,15 @@ assert "rate_table_file" in single_ei
 assert "reaction_progress" in single_ei
 assert 'registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);' in single_ei
 # Existing heavy diffusion implementation outlives its retired naming wrapper.
-assert 'registerMooseObject("PhysicsApp", PhysicsThermalDiffusionMaterial);' in heavy
+assert 'registerMooseObject("PhysicsApp", NVMaterial);' in heavy
+assert 'registerMooseObject("PhysicsApp", DDMaterial);' in drift
 
 # Native input explicitly uses existing classes; no source-code generation.
 fixture = (ROOT / "ci/plasma_direct_existing_materials_smoke.i").read_text()
 for old_type in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
     assert "type = " + old_type not in fixture
 for type_name in ("ElectronClosureMaterial", "PhysicsElectronImpactRateMaterial",
-                  "PhysicsThermalDiffusionMaterial", "PhysicsPlasmaChargeDensityMaterial"):
+                  "NVMaterial", "PhysicsPlasmaChargeDensityMaterial"):
     assert "type = " + type_name in fixture
 assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
 
@@ -56,9 +58,9 @@ assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
 # source filenames and C++ class identifiers now use the shorter canonical form.
 for legacy in (
     "PhysicsElectronMeanEnergyMaterial.C",
-    "ElectronTransportLookupMaterial.C",
+    "DDMaterial.C",
     "PhysicsElectronImpactRateMaterial.C",
-    "PhysicsThermalDiffusionMaterial.C",
+    "NVMaterial.C",
 ):
     assert (ROOT / "src/materials" / legacy).is_file(), legacy
 
@@ -66,7 +68,9 @@ for legacy in (
 # MOOSE object-factory aliases keep immutable historical input decks valid.
 for old_type, new_type in (
     ("PhysicsElectronClosureMaterial", "ElectronClosureMaterial"),
-    ("PhysicsElectronTransportLookupMaterial", "ElectronTransportLookupMaterial"),
+    ("PhysicsElectronTransportLookupMaterial", "DDMaterial"),
+    ("ElectronTransportLookupMaterial", "DDMaterial"),
+    ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
     ("PhysicsPlasmaChargeTransportMaterial", "PlasmaChargeTransportMaterial"),
     ("PhysicsSpeciesTransportAliasMaterial", "SpeciesTransportAliasMaterial"),
 ):
@@ -80,3 +84,9 @@ for old_type, new_type in (
     assert f'registerMooseObjectAliased("PhysicsApp", {new_type}, "{old_type}");' in content
 
 print("RETIRED_PLASMA_CLOSURES_MATERIAL_CONTRACT: PASS")
+
+# The 6 retired transport-coefficient .h/.C implementations must not reappear.
+for old_name in ("ElectronTransportLookupMaterial", "PhysicsThermalDiffusionMaterial",
+                 "PhysicsElectronTransportCoefficients"):
+    assert not (ROOT / "src/materials" / (old_name + ".C")).exists()
+    assert not (ROOT / "include/materials" / (old_name + ".h")).exists()

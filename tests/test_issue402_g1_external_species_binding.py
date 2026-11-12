@@ -162,11 +162,11 @@ def test_native_build_and_comparison_script():
     assert "invalid_incomplete_coefficients invalid_wrong_charge_sign" in runner
     assert "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS" in runner
     positive = (CASE / "valid_generated_transport_options.i").read_text()
-    assert "type = PhysicsSpeciesTransportAliasMaterial" in positive
+    assert "type = DDMaterial" in positive
+    assert "model = constant" in positive
     assert "species_id = e" in positive
-    assert "mobility_source = legacy_mu" in positive
-    assert "diffusivity_source = legacy_D" in positive
-    assert "prop_names = 'legacy_mu legacy_D'" in positive
+    assert "mobility = 1" in positive
+    assert "diffusivity = 1" in positive
     assert "prop_values = '1 1'" in positive
     assert "mobility =" not in positive and "diffusivity =" not in positive
     assert "files = plasma_species_only.json" in positive

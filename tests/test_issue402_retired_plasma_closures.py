@@ -68,7 +68,7 @@ def test_retired_action_is_absent_independent_material_objects_remain():
         assert not (APP / "src/materials" / (retired + ".C")).exists()
         assert not (APP / "include/materials" / (retired + ".h")).exists()
     for material in ("ElectronClosureMaterial", "PhysicsElectronImpactRateMaterial",
-                     "PhysicsThermalDiffusionMaterial", "PhysicsPlasmaChargeDensityMaterial"):
+                     "NVMaterial", "PhysicsPlasmaChargeDensityMaterial"):
         source = APP / "src/materials" / (material + ".C")
         header = APP / "include/materials" / (material + ".h")
         assert source.is_file() and header.is_file()
@@ -83,7 +83,7 @@ def test_existing_native_smoke_uses_direct_materials_without_code_generation():
     assert "PhysicsElectronKineticsMaterial" not in fixture
     assert "PhysicsHeavyTransportMaterial" not in fixture
     assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
-    assert "type = PhysicsThermalDiffusionMaterial" in fixture
+    assert "type = NVMaterial" in fixture
     assert "type = ElectronClosureMaterial" in fixture
     assert "type = PhysicsPlasmaChargeDensityMaterial" in fixture
     runner = (PILOT / "run_native_binding_smoke.sh").read_text()

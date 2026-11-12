@@ -12,7 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "physics_app"
 MAPPINGS = (
     ("PhysicsElectronClosureMaterial", "ElectronClosureMaterial"),
-    ("PhysicsElectronTransportLookupMaterial", "ElectronTransportLookupMaterial"),
+    ("PhysicsElectronTransportLookupMaterial", "DDMaterial"),
+    ("ElectronTransportLookupMaterial", "DDMaterial"),
+    ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
     ("PhysicsPlasmaChargeTransportMaterial", "PlasmaChargeTransportMaterial"),
     ("PhysicsSpeciesTransportAliasMaterial", "SpeciesTransportAliasMaterial"),
 )
@@ -68,7 +70,9 @@ def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
     old_lookup = (BASE / "ci/electron_energy_transport_smoke.i").read_text()
     new_lookup = (BASE / "ci/electron_energy_lookup_response_smoke.i").read_text()
     assert "type = PhysicsElectronTransportLookupMaterial" in old_lookup
-    assert "type = ElectronTransportLookupMaterial" in new_lookup
+    assert "type = DDMaterial" in new_lookup
+    assert "model = lookup" in new_lookup
+    assert (BASE / "src/materials/NVMaterial.C").is_file()
 
 
 def test_moose_physics_action_and_immutability_boundary_stay_separate():

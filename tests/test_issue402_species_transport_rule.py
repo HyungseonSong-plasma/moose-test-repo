@@ -48,14 +48,22 @@ def test_electron_closure_keeps_old_and_new_functors_same_numeric_closure():
     assert "interpolate(mean_energy(r, state), 1) / neutral_density(r, state)" in src
 
 
-def test_electron_lookup_keeps_old_and_new_functors_same_numeric_closure():
-    src = text("physics_app/src/materials/ElectronTransportLookupMaterial.C")
-    assert 'addFunctorProperty<ADReal>("electron_mobility", particle_mobility)' in src
-    assert 'addFunctorProperty<ADReal>("electron_diffusion", particle_diffusivity)' in src
-    assert 'addFunctorProperty<ADReal>("e_mobility", particle_mobility)' in src
-    assert 'addFunctorProperty<ADReal>("e_diffusivity", particle_diffusivity)' in src
-    assert "interpolate(_mean_energy(r, state), 0) / N_n" in src
-    assert "interpolate(_mean_energy(r, state), 1) / N_n" in src
+def test_dd_material_unifies_constant_and_lookup_with_electron_energy_projection():
+    src = text("physics_app/src/materials/DDMaterial.C")
+    header = text("physics_app/include/materials/DDMaterial.h")
+    assert 'registerMooseObject("PhysicsApp", DDMaterial);' in src
+    assert '"lookup constant"' in src
+    assert '"mobility"' in src and '"diffusivity"' in src
+    assert 'std::make_unique<PhysicsLookupTable1D>' in src
+    assert '_species + "_mobility"' in src
+    assert '_species + "_diffusivity"' in src
+    assert 'addFunctorProperty<ADReal>("electron_mobility", particle_mu)' in src
+    assert 'addFunctorProperty<ADReal>("electron_diffusion", particle_D)' in src
+    assert '"electron_energy_mobility"' in src and '"electron_energy_diffusion"' in src
+    assert 'constexpr Real energy_factor = 5.0 / 3.0' in src
+    assert 'return _reduced ? raw / neutralNumberDensity(r, state) : raw;' in header
+    assert not (ROOT / "physics_app/src/materials/ElectronTransportLookupMaterial.C").exists()
+    assert not (ROOT / "physics_app/src/materials/PhysicsElectronTransportCoefficients.C").exists()
 
 
 def test_ion_aliases_are_unscaled_ad_functors_and_do_not_replace_rho_diffusion():
@@ -71,15 +79,12 @@ def test_ion_aliases_are_unscaled_ad_functors_and_do_not_replace_rho_diffusion()
 
 def test_native_control_and_public_417_941_are_user_coefficient_free():
     positive = text("experiments/Issue402_plasma_dsl_g1/valid_generated_transport_options.i")
-    # The small P1/P2 fixture verifies the historical factory type alias.
-    # New canonical type usage is tested separately in the S6 D overlay.
-    assert "type = PhysicsSpeciesTransportAliasMaterial" in positive
+    # Constant species transport now comes from the sole DD coefficient owner.
+    assert "type = DDMaterial" in positive
+    assert "model = constant" in positive
     assert "species_id = e" in positive
-    assert "mobility_source = legacy_mu" in positive
-    assert "diffusivity_source = legacy_D" in positive
-    assert "prop_names = 'legacy_mu legacy_D'" in positive
-    assert "prop_values = '1 1'" in positive
-    assert "mobility =" not in positive and "diffusivity =" not in positive
+    assert "mobility = 1" in positive and "diffusivity = 1" in positive
+    assert "SpeciesTransportAliasMaterial" not in positive
     py = text("experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py")
     tree = ast.parse(py)
     overlay = next(ast.literal_eval(node.value) for node in tree.body
