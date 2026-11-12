@@ -198,6 +198,23 @@ echo "PLASMA_INVALID_SPECIES_DENSITY_PAIRS_REJECTED"
 native --check-input -i "$PILOT/chemistry_two_channels.i" \
   2>&1 | tee "$EVIDENCE/chemistry_two_channels.log"
 echo "PLASMA_CHEMISTRY_TWO_CHANNELS_P2_PASS"
+# Schema renames must fail closed; a negative energy_loss_eV must not turn
+# physical electron loss into spurious heating.
+for entry in "plasma_negative_energy_loss_p2:electron energy loss must be finite and nonnegative" \
+             "plasma_legacy_energy_schema_p2:legacy reaction keys progress_units/electron_energy_change_eV"; do
+  item="${entry%%:*}"
+  expected="${entry#*:}"
+  set +e
+  native --check-input -i "$PILOT/$item.i" > "$EVIDENCE/$item.log" 2>&1
+  result=$?
+  set -e
+  if [[ "$result" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
+    echo "::error::Reaction schema/sign guard failed: $item" >&2
+    cat "$EVIDENCE/$item.log" >&2
+    exit 29
+  fi
+done
+echo "PLASMA_ENERGY_LOSS_AND_LEGACY_SCHEMA_REJECTED"
 
 # Check S6 archival channel catalogues against synthetic-only kinetic providers.
 # This is a parser/build P2 gate; original physical rate tables are not replayed.
