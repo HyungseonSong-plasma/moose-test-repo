@@ -112,6 +112,14 @@ native --check-input -i "$PILOT/chemistry_two_channels.i" \
   2>&1 | tee "$EVIDENCE/chemistry_two_channels.log"
 echo "PLASMA_CHEMISTRY_TWO_CHANNELS_P2_PASS"
 
+# Check S6 archival channel catalogues against synthetic-only kinetic providers.
+# This is a parser/build P2 gate; original physical rate tables are not replayed.
+for channel in 417 941; do
+  native --check-input -i "$PILOT/chemistry_s6_${channel}_catalogue_p2.i" \
+    2>&1 | tee "$EVIDENCE/chemistry_s6_${channel}_catalogue_p2.log"
+  echo "PLASMA_CHEMISTRY_S6_${channel}_CATALOGUE_P2_PASS"
+done
+
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
