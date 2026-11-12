@@ -81,7 +81,7 @@ def test_existing_variables_only():
     assert 'resolved.push_back(continuityStateName(species));' in source
     assert '"fem_charge_numbers"' in source
     assert "getProblem().addKernel(" in source
-    assert "PhysicsFEMLogMolarDriftDiffusion" in source
+    assert "FEMLogMolarDriftDiffusion" in source
     assert "schema_version" not in base_source + source
     assert '"discretization"' not in base_source + source
 
@@ -90,19 +90,21 @@ def test_existing_variables_only():
 def test_continuity_e_time_is_generated_from_existing_species_without_new_options():
     """Generated e_time must reuse the exact Native conservative time operator."""
     _, _, _, source, _ = sources()
-    kernel = (APP / "src/kernels/PhysicsFEMPlasmaTransport.C").read_text()
+    kernel = (APP / "src/kernels/FEMPlasmaTransport.C").read_text()
     pilot = (CASE / "public_option_s6_p2.py").read_text()
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
 
-    assert 'const std::string time_type = "PhysicsFEMLogMolarTimeDerivative";' in source
+    assert 'const std::string time_type = "FEMLogMolarTimeDerivative";' in source
     assert 'time_params.set<NonlinearVariableName>("variable") = variables[i];' in source
     assert 'assignBlocks(time_params, _blocks);' in source
     assert 'getProblem().addKernel(time_type, species[i] + "_time", time_params);' in source
-    assert 'requireUniqueFEKernel("PhysicsFEMLogMolarTimeDerivative", variables[i]);' in source
-    assert 'requireUniqueFEKernel("PhysicsFEMLogMolarDriftDiffusion", variables[i]);' in source
+    assert 'requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);' in source
+    assert 'requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);' in source
     assert 'if (!isParamValid("fem_potential"))' in source
     assert 'params.addParam<bool>("generate_time"' not in source
-    assert "PhysicsFEMLogMolarTimeDerivative::computeQpResidual()" in kernel
+    assert "FEMLogMolarTimeDerivative::computeQpResidual()" in kernel
+    for old in ("PhysicsFEMLogMolarTimeDerivative", "PhysicsFEMLogMolarDriftDiffusion", "PhysicsFEMLogMolarElectronJouleHeating"):
+        assert old not in kernel
     assert "(exp(_u[_qp]) - exp(_u_old[_qp])) / _dt" in kernel
 
     assert "Original ne_time parameters differ from pinned Native S6" in pilot
@@ -111,7 +113,7 @@ def test_continuity_e_time_is_generated_from_existing_species_without_new_option
     assert "SCRATCH_ONLY_CANONICAL_STATE_AND_TIME_OWNER_REWRITE" in pilot
 
     duplicate = (CASE / "duplicate_e_time.i").read_text()
-    assert "type = PhysicsFEMLogMolarTimeDerivative" in duplicate
+    assert "type = FEMLogMolarTimeDerivative" in duplicate
     assert "variable = log_e" in duplicate
     assert "duplicate_e_time.i" in runner
     assert "PLASMA_DUPLICATE_E_TIME_REJECTED" in runner
@@ -197,7 +199,7 @@ def test_native_build_and_comparison_script():
 
 def test_real_solver_object_wiring():
     for name, markers in {
-        "ContinuityEq": ["addFEKernels", "PhysicsFEMLogMolarDriftDiffusion"],
+        "ContinuityEq": ["addFEKernels", "FEMLogMolarDriftDiffusion"],
         "EnergyPhysics": ["addFEKernels", "MatBodyForce"],
         "ChemistryPhysics": ["addFunctorMaterials", "PhysicsElectronImpactRateMaterial"],
         "PoissonPhysics": ["addFEKernels", "Diffusion", "MatBodyForce", "addFEBCs"],

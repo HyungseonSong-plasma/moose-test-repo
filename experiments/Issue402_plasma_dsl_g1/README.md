@@ -50,7 +50,7 @@ whether supported solver operators are generated. A validation-only block
 without activating parameters does not add terms.
 
 - **Continuity:** `fem_potential` and matched signed charge vectors enable
-  `PhysicsFEMLogMolarTimeDerivative` **and** `PhysicsFEMLogMolarDriftDiffusion`
+  `FEMLogMolarTimeDerivative` **and** `FEMLogMolarDriftDiffusion`
   for each FEM species. Generated names use `<species_id>_time` and
   `<species_id>_transport` (for the S6 electron, `e_time` and `e_transport`). The lower-level
   Kernel's `mobility` and `diffusion` Functors are resolved automatically to
@@ -84,23 +84,38 @@ the physics. The `rf_generated.i` versus `rf_explicit.i` comparison
 checks that the Maxwell action generates the same solver operator as
 explicit MOOSE objects. This is not full S6 scientific parity.
 
+## 2026-11-12 canonical FEM Kernel naming (no factory aliases)
+
+The active header/source are `FEMPlasmaTransport.h/.C`. Registered class/type
+names are `FEMLogMolarTimeDerivative`, `FEMLogMolarDriftDiffusion` and
+`FEMLogMolarElectronJouleHeating`. The original `PhysicsFEM...` types are
+**not** registered and do not have compatibility aliases. The transient
+and positive-`dt` guards and conservative time residual remain unchanged.
+
+Original archived S6 source decks retain historical `type` declarations.
+The public B/D runners will translate only **disposable staged copies**
+to the new type names with separate per-file SHA and conversion counts;
+this is not a solver-side alias or production input modification.
+The generated-TimeKernel P2 fixture uses `Transient`, since MOOSE does
+not provide a `TIME` vector tag to a `Steady` executioner.
+
 ## 2026-11-12 e_time completion candidate — scoped change, not scientific acceptance
 
 The source-backed active `ContinuityEq` implementation now generates two
 existing FEM operators under the **same** `fem_potential` plus signed-charge
 activation contract, with no new user-facing input option:
 
-- `e_time`: `PhysicsFEMLogMolarTimeDerivative` for `log_e`, assigned the
+- `e_time`: `FEMLogMolarTimeDerivative` for `log_e`, assigned the
   exact `plasma` block. Its original Native `ne_time` type computes
   `(exp(u_new) - exp(u_old))/dt` (backward-Euler conservative molar density).
 - `e_transport`: the existing
-  `PhysicsFEMLogMolarDriftDiffusion` generator with the same verified
+  `FEMLogMolarDriftDiffusion` generator with the same verified
   mobility/diffusivity functors, charge sign and potential.
 - `check_integrity` rejects more than one **same-type FEM time** Kernel
   or more than one drift-diffusion Kernel for each generated variable; this
   protects against accidental simultaneous Native and Physics ownership.
 - The public `S6-417/D` / `S6-941/D` staging program requires **exactly one**
-  source `[ne_time]` with `type = PhysicsFEMLogMolarTimeDerivative`,
+  source `[ne_time]` with `type = FEMLogMolarTimeDerivative`,
   `variable = log_ne`, `block = plasma`. Only its disposable candidate
   input deletes this block, canonicalizes `log_ne → log_e`, and leaves the
   immutable archived B/C evidence, RF/PID, chemistry, FV ions, wall BCs,
@@ -270,7 +285,7 @@ Keep `SCIENCE_HOLD` even after numerical parity is proven.
 This experiment changes only the `ContinuityEq` **input contract** and
 internal names, not any Material or Functor registration, source code or
 physical coefficient values. The generated lower-level
-`PhysicsFEMLogMolarDriftDiffusion` parameter remains named `diffusion`.
+`FEMLogMolarDriftDiffusion` parameter remains named `diffusion`.
 The user-visible **Physics option** is now `diffusivity`; it can still point
 to the existing `electron_diffusion` functor. Changing that provider to
 `electron_diffusivity` is deliberately deferred.
