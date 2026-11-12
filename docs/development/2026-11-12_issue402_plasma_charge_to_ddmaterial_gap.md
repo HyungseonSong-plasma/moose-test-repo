@@ -1,8 +1,6 @@
 # Issue #402 — PlasmaChargeTransportMaterial → DDMaterial replacement gap
 
-**Status: NOT_COMPLETE (2026-11-12).** Draft PR #523 has not
-retired `PlasmaChargeTransportMaterial.C/.h`. Do not report class
-replacement or full Native input migration as complete.
+**Status: ION COEFFICIENT ALIASES MOVED; WHOLE CLASS REPLACEMENT NOT COMPLETE (2026-11-12).** DDMaterial is now the canonical alias publisher, and PlasmaChargeTransportMaterial no longer registers mobility/diffusivity outputs. The original charge-core class still provides separate derived diagnostics. Full S6-417/941 Native P3 activation and scientific parity remain open.
 
 ## Already implemented
 
@@ -58,3 +56,5 @@ drift and diagnostics) cannot simply lose the original Material.
 
 No physical input, numerical coefficient or original archived deck is
 changed by this gap analysis. **SCIENCE_HOLD; P3 NOT_RUN.**
+
+See `2026-11-12_issue402_ddmaterial_charge_flux_consumer_trace.md` for the source-to-FV usage trace. The new `charge_core_ddmaterial_owner_p2.i` fixture proves a three-ion raw-source bridge with the legacy charge Material present; it does not replace full S6 exact-head P2.

@@ -236,12 +236,7 @@ Neither list order nor user-specified coefficient strings define these names.
 `ElectronClosureMaterial` and `ElectronTransportLookupMaterial`
 publish canonical electron names using the **same AD table closure** that
 produces the existing `electron_mobility` and `electron_diffusion` outputs.
-The latter are preserved for old native S6 and other inputs. The
-`PlasmaChargeTransportMaterial` publishes species-keyed ion aliases
-from its **already supplied** ion-mobility and ion-diffusion Functors when
-it owns those species. These aliases are unscaled; `rho_diffusivity_<id>`
-remains the separate density-weighted FV coefficient and must not be
-substituted for `<id>_diffusivity`.
+The historical electron aliases are preserved. The new DDMaterial supplies canonical ion mobility/diffusivity aliases from existing Native AD Functors when explicit raw source names are bound. PlasmaChargeTransportMaterial no longer publishes these coefficient aliases; its separate rho_diffusivity_<id> diagnostic is density-weighted and not a physical D coefficient. See the DDMaterial charged-FV consumer trace document for the remaining original Native input and P3 gates.
 
 An input must still provide actual coefficient producers. Never fabricate a
 missing Functor, silently choose a legacy provider by species name, replace

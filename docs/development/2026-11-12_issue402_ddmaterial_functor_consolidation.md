@@ -37,6 +37,5 @@ numerical/AD parity are independent gates. No P3 or science acceptance.
 **Current JSON contract:** A `model=functor` entry is exactly
 `{"model":"functor"}`. The keys `mobility_source` and
 `diffusivity_source` are rejected by the JSON parser. The upstream
-producer (e.g. `PlasmaChargeTransportMaterial`) must publish the
-canonical species names first. Legacy direct `.i` Material blocks
+upstream original Native coefficient producer or a separate DDMaterial bridge must publish the canonical species names first. PlasmaChargeTransportMaterial no longer registers those aliases. Legacy direct `.i` Material blocks
 may still use explicit source parameters, outside the JSON contract.
