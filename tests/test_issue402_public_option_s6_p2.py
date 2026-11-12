@@ -81,9 +81,14 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     archived.mkdir()
     staged.mkdir()
     ordered = []
-    sample = ("variable = log_ne\\n"
-              "coupled = 'log_ni log_nm log_nop'\\n"
-              "similar_name = log_ne_custom\\n")
+    sample = ("variable = log_ne\n"
+              "coupled = 'log_ni log_nm log_nop'\n"
+              "similar_name = log_ne_custom\n"
+              "  [ne_time]\n"
+              "    type = PhysicsFEMLogMolarTimeDerivative\n"
+              "    variable = log_ne\n"
+              "    block = plasma\n"
+              "  []\n")
     for index in range(10):
         name = f"layer_{index}.i"
         content = sample if index == 0 else f"# original {index}\\n"
@@ -94,7 +99,11 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     ordered.append("chem/migrated_continuity.i")
 
     report = namespace["canonicalize_staged_D_inputs"](staged, ordered)
-    assert report["status"] == "SCRATCH_ONLY_CANONICAL_STATE_REWRITE"
+    assert report["status"] == "SCRATCH_ONLY_CANONICAL_STATE_AND_TIME_OWNER_REWRITE"
+    assert report["removed_native_time"]["source_layer"] == "layer_0.i"
+    assert report["removed_native_time"]["old_name"] == "ne_time"
+    assert report["removed_native_time"]["generated_name"] == "e_time"
+    assert report["removed_native_time"]["kernel_type"] == "PhysicsFEMLogMolarTimeDerivative"
     assert report["changed_reference_count"] == 4
     assert report["files"]["layer_0.i"]["original_sha256"] == (
         hashlib.sha256(sample.encode()).hexdigest())
@@ -104,8 +113,37 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     assert "variable = log_e" in migrated
     assert "coupled = 'log_O2p log_Om log_Op'" in migrated
     assert "similar_name = log_ne_custom" in migrated
+    assert "[ne_time]" not in migrated
+    assert "PhysicsFEMLogMolarTimeDerivative" not in migrated
     assert report["files"]["layer_0.i"]["staged_sha256"] == (
         hashlib.sha256(migrated.encode()).hexdigest())
+    # A malformed, absent, or duplicated Native time term must fail BEFORE
+    # any scratch file is rewritten. Never turn an ambiguous input into PASS.
+    from pytest import raises
+    time_block = ("  [ne_time]\n"
+                  "    type = PhysicsFEMLogMolarTimeDerivative\n"
+                  "    variable = log_ne\n"
+                  "    block = plasma\n"
+                  "  []\n")
+    for fault, defective, extra in (
+        ("missing", sample.replace(time_block, ""), ""),
+        ("changed", sample.replace("    block = plasma\n", "    block = other\n"), ""),
+        ("duplicate", sample, time_block),
+    ):
+        damaged = tmp_path / fault
+        damaged.mkdir()
+        for index in range(10):
+            name = f"layer_{index}.i"
+            body = defective if index == 0 else f"# original {index}\n"
+            if index == 1:
+                body += extra
+            (damaged / name).write_text(body)
+        (damaged / "migrated_continuity.i").write_text("PINNED_SIDECAR")
+        snapshot = {name.name: name.read_bytes() for name in damaged.iterdir()}
+        with raises(ValueError):
+            namespace["canonicalize_staged_D_inputs"](damaged, ordered)
+        assert snapshot == {name.name: name.read_bytes() for name in damaged.iterdir()}
+
     # The original decks are still byte-identical and cannot be confused
     # with the scratch-only canonical migration.
     assert all((archived / f"layer_{i}.i").read_text() ==
