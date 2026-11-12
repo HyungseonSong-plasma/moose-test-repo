@@ -3,6 +3,7 @@
 #include "MooseFunctorArguments.h"
 #include "Physics.h"
 
+#include <cctype>
 #include <cmath>
 #include <type_traits>
 
@@ -116,7 +117,8 @@ PhysicsIonWallTotalFluxMaterial::validParams()
   params.addParam<Real>("ion_temperature_eV", 0.0, "Optional ion temperature [eV].");
   params.addParam<Real>("migration_gate_smoothing_width", 0.0, "Outward migration gate smoothing width [V/m].");
   params.addParam<bool>("use_element_gradient_for_potential", false, "Use the sided adjacent element gradient for continuous FEM potential.");
-  params.addParam<std::string>("output_prefix", "", "Prefix prepended to ion_wall_number_flux and ion_wall_mass_flux.");
+  params.addParam<std::string>("output_prefix", "", "Legacy prefix prepended to ion_wall_number_flux and ion_wall_mass_flux; cannot be used with species_id.");
+  params.addParam<std::string>("species_id", "", "Optional solver-safe species identifier; publishes <species>_wall_number_flux and <species>_wall_mass_flux.");
   return params;
 }
 
@@ -145,8 +147,21 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
   if (_migration_gate_smoothing_width < 0.0)
     paramError("migration_gate_smoothing_width", "migration_gate_smoothing_width must be nonnegative.");
 
-  const auto number_name = _output_prefix + "ion_wall_number_flux";
-  const auto mass_name = _output_prefix + "ion_wall_mass_flux";
+  const auto species_id = getParam<std::string>("species_id");
+  if (!species_id.empty())
+  {
+    if (!std::isalpha(static_cast<unsigned char>(species_id.front())))
+      paramError("species_id", "Species ID must start with a letter.");
+    for (const auto ch : species_id)
+      if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_')
+        paramError("species_id", "Species ID must be alphanumeric or underscore.");
+    if (!_output_prefix.empty())
+      paramError("output_prefix", "Do not combine output_prefix with species_id.");
+  }
+  const auto number_name = species_id.empty() ? _output_prefix + "ion_wall_number_flux"
+                                            : species_id + "_wall_number_flux";
+  const auto mass_name = species_id.empty() ? _output_prefix + "ion_wall_mass_flux"
+                                          : species_id + "_wall_mass_flux";
 
   addFunctorProperty<ADReal>(
       number_name,
