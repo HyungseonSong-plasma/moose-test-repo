@@ -28,10 +28,10 @@ def test_user_drift_diffusion_transport_coefficient_options_are_removed():
     assert 'species[i] + "_diffusivity"' in src
     assert 'params.set<MooseFunctorName>("mobility") = species[i] + "_mobility"' in src
     assert 'params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity"' in src
-    assert "The current generated transport Kernel requires FEM species." in src
+    assert "Generated FEM transport requires FEM species." in src
     assert "if (!isParamValid(\"fem_potential\"))" in src
-    assert "No verified charged-species identity for:" in src
-    assert "Charge does not match verified species identity:" in src
+    assert "mechanism.species(species[i]).charge_number" in src
+    assert '"fem_charge_numbers"' not in src and '"fvm_charge_numbers"' not in src
 
 
 def test_electron_closure_keeps_old_and_new_functors_same_numeric_closure():
@@ -96,7 +96,7 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
         assert f"mobility_source = {source}_mobility" in overlay
         assert f"diffusivity_source = {source}_diffusion" in overlay
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
+        "30b436b80e716aa0fb65b555fafa953088070f2d3a1023e30a0806720cb5ba1e"
     )
     # Protected original P3 inputs and their native old provider spelling
     # remain outside this migration PR.

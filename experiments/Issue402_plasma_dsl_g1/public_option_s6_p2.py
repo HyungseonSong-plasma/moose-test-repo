@@ -35,6 +35,7 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
 # No Material/Functor name is modified.
 [Physics]
   [Plasmas]
+    files = experiments/Issue402_plasma_dsl_g1/plasma_species_only.json
     [Transport]
       [DriftDiffusion]
         [Continuity]
@@ -42,8 +43,6 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
           fem_species = 'e'
           fvm_species = 'O2p Om Op'
           fem_potential = potential
-          fem_charge_numbers = '-1'
-          fvm_charge_numbers = '1 -1 1'
         []
       []
     []
@@ -70,7 +69,7 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
   []
 []
 """
-OVERLAY_SHA256 = "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
+OVERLAY_SHA256 = "30b436b80e716aa0fb65b555fafa953088070f2d3a1023e30a0806720cb5ba1e"
 CASES = ("417", "941")
 VARIANTS = ("B", "D")
 
@@ -97,7 +96,7 @@ def validate_overlay() -> None:
             raise ValueError(f"Unexpected option/provider migration: {forbidden}")
     expected = {
         "fem_species": "'e'", "fvm_species": "'O2p Om Op'",
-        "fem_charge_numbers": "'-1'", "fvm_charge_numbers": "'1 -1 1'",
+        "files": "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
         "fem_potential": "potential",
     }
     for k, v in expected.items():
