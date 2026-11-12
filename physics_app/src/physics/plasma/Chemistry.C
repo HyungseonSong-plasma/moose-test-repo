@@ -24,6 +24,21 @@ fail(const std::string & file, const std::string & detail)
   throw std::runtime_error("Plasma mechanism '" + file + "': " + detail);
 }
 
+// Single naming contract for every channel: EI-2069 -> R_EI2069,
+// EI-02 -> R_EI02, H25 -> R_H25. Never accept a JSON progress override.
+std::string
+progressFromReactionId(const std::string & id, const std::string & file)
+{
+  static const std::regex electron_impact(R"(^EI-([0-9]+)$)");
+  static const std::regex heavy(R"(^H([0-9]+)$)");
+  std::smatch match;
+  if (std::regex_match(id, match, electron_impact))
+    return "R_EI" + match[1].str();
+  if (std::regex_match(id, match, heavy))
+    return "R_H" + match[1].str();
+  fail(file, "unsupported reaction ID for automatic progress naming: " + id);
+}
+
 Coefficients
 readCoefficients(const Json & data, const std::string & file)
 {
@@ -173,17 +188,17 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     for (const auto & entry : root["reactions"])
     {
       if (!entry.is_object() || !entry.contains("id") || !entry["id"].is_string() ||
-          !entry.contains("progress") || !entry["progress"].is_string() ||
           !entry.contains("progress_units") || !entry["progress_units"].is_string() ||
           !entry.contains("reactants") || !entry.contains("products"))
-        fail(file, "reaction needs id, progress, progress_units, reactants and products");
+        fail(file, "reaction needs id, progress_units, reactants and products");
+      if (entry.contains("progress"))
+        fail(file, "progress is derived from reaction ID; remove the JSON progress field");
       ReactionRecord reaction;
       reaction.id = entry["id"].get<std::string>();
-      reaction.progress = entry["progress"].get<std::string>();
-      if (reaction.id.empty() || reaction.progress.empty() ||
-          !reaction_ids.insert(reaction.id).second ||
+      reaction.progress = progressFromReactionId(reaction.id, file);
+      if (!reaction_ids.insert(reaction.id).second ||
           !progresses.insert(reaction.progress).second)
-        fail(file, "duplicate/empty reaction ID or progress owner: " + reaction.id);
+        fail(file, "duplicate reaction ID or generated progress owner: " + reaction.id);
       if (entry["progress_units"].get<std::string>() != "mol/(m^3 s)")
         fail(file, reaction.id + ": progress must have mol/(m^3 s) units");
       if (!equation_ids.erase(reaction.id))

@@ -3,6 +3,16 @@
 
 namespace Plasma
 {
+namespace
+{
+// Every drift-diffusion species uses one internally resolved energy state.
+// The MOOSE [Energy] block deliberately exposes no "variable" option.
+VariableName
+energyStateName(const std::string & species)
+{
+  return "log_" + species + "_energy";
+}
+} // namespace
 
 InputParameters
 DDEnergyEq::validParams()
@@ -14,9 +24,6 @@ DDEnergyEq::validParams()
       "fem_species", {}, "Electron species solved with finite-element variables.");
   params.addParam<std::vector<std::string>>(
       "fvm_species", {}, "Electron species solved with finite-volume variables.");
-  params.addRequiredParam<VariableName>(
-      "variable", "Existing solver variable for the electron energy equation.");
-
   params.addParam<MaterialPropertyName>(
       "rf_heating_material", "Existing electron-energy heating source in the equation's units.");
   return params;
@@ -36,25 +43,26 @@ DDEnergyEq::DDEnergyEq(const InputParameters & parameters)
 
   validateSpeciesInputs(finite_element_species,
                         finite_volume_species,
-                        {getParam<VariableName>("variable")});
+                        {energyStateName(finite_element_species.front())});
 }
 
 void
 DDEnergyEq::checkIntegrity() const
 {
+  const auto variable = energyStateName(getParam<std::vector<std::string>>("fem_species").front());
   validateExistingSpeciesVariables(getParam<std::vector<std::string>>("fem_species"),
                                    getParam<std::vector<std::string>>("fvm_species"),
-                                   {getParam<VariableName>("variable")});
+                                   {variable});
   if (isParamValid("rf_heating_material"))
-    requireUniqueFEKernel("MatBodyForce", getParam<VariableName>("variable"));
+    requireUniqueFEKernel("MatBodyForce", variable);
   if (chemistryEnabled() && chemistryData().hasElectronEnergySource())
-    requireUniqueFEKernel("FunctorKernel", getParam<VariableName>("variable"));
+    requireUniqueFEKernel("FunctorKernel", variable);
 }
 
 void
 DDEnergyEq::addFEKernels()
 {
-  const auto variable = getParam<VariableName>("variable");
+  const auto variable = energyStateName(getParam<std::vector<std::string>>("fem_species").front());
   if (isParamValid("rf_heating_material"))
   {
     const std::string type = "MatBodyForce";
