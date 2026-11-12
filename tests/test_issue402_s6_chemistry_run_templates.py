@@ -23,9 +23,9 @@ spec.loader.exec_module(helper)
 
 EXPECTED = {
     "417": {
-        "EI-02": ("R_elastic_O2", "functor"),
-        "EI-17": ("R_elastic_O", "functor"),
-        "EI-415": ("R_ion_O2", -12.06),
+        "EI-02": ("R_EI02", "functor"),
+        "EI-17": ("R_EI17", "functor"),
+        "EI-415": ("R_EI415", -12.06),
         "EI-401": ("R_EI401", 0),
         "EI-407": ("R_EI407", -0.977),
         "EI-2069": ("R_EI2069", -5.02),
@@ -33,9 +33,9 @@ EXPECTED = {
         "EI-417": ("R_EI417", -17.0),
     },
     "941": {
-        "EI-02": ("R_elastic_O2", "functor"),
-        "EI-17": ("R_elastic_O", "functor"),
-        "EI-415": ("R_ion_O2", -12.06),
+        "EI-02": ("R_EI02", "functor"),
+        "EI-17": ("R_EI17", "functor"),
+        "EI-415": ("R_EI415", -12.06),
         "EI-401": ("R_EI401", 0),
         "EI-407": ("R_EI407", -0.977),
         "EI-2069": ("R_EI2069", -5.02),
@@ -43,6 +43,14 @@ EXPECTED = {
         "EI-941": ("R_EI941", -13.62),
     }
 }
+
+
+def progress_from_id(reaction_id):
+    if reaction_id.startswith("EI-") and reaction_id[3:].isdigit():
+        return "R_EI" + reaction_id[3:]
+    if reaction_id.startswith("H") and reaction_id[1:].isdigit():
+        return "R_H" + reaction_id[1:]
+    raise ValueError(reaction_id)
 
 
 def load(variant):
@@ -69,12 +77,13 @@ def test_s6_channel_id_equation_atom_charge_energy_and_ownership(variant):
     reactions = common["reactions"] + chosen["reactions"]
     assert len(reactions) == 8
     assert {r["id"] for r in reactions} == set(EXPECTED[variant])
-    assert len({r["progress"] for r in reactions}) == 8
+    assert all("progress" not in r for r in reactions)
+    assert len({progress_from_id(r["id"]) for r in reactions}) == 8
     assert set(equations) == {r["id"] for r in reactions}
     assert catalogue["e"] == {"elements": {}, "charge_number": -1}
     for r in reactions:
         assert r["progress_units"] == "mol/(m^3 s)"
-        assert r["progress"] == EXPECTED[variant][r["id"]][0]
+        assert progress_from_id(r["id"]) == EXPECTED[variant][r["id"]][0]
         assert r.get("provenance", {}).get("archive_layer", "").endswith(".i")
         reactants, products = (parse_side(s) for s in equations[r["id"]].split("->"))
         assert reactants == r["reactants"]
@@ -118,7 +127,10 @@ def test_template_uses_single_chemistry_energy_owner_and_signed_elastic_functors
     assert text.count("[Chemistry]") == 1
     assert text.count("[Continuity]") == 1
     assert text.count("[Energy]") == 1
-    assert "variable = log_energy" in text
+    assert "variable = log_energy" not in text
+    assert "variable = log_e_energy" not in text
+    for canonical in ("R_EI02", "R_EI17", "R_EI415"):
+        assert f"property_name = {canonical}" in text
     assert "block = plasma" in text
     assert "fem_charge_numbers" not in text
     assert "fvm_charge_numbers" not in text
@@ -166,6 +178,8 @@ def test_guarded_scratch_cutover_retains_native_nonchem_operators(tmp_path, vari
     for basename, items in removals.items():
         text = (tmp_path / basename).read_text()
         assert "retain_joule_probe" in text
+        assert "variable = log_e_energy" in text
+        assert "variable = log_energy" not in text
         for name in items:
             assert f"type = ADParsedFunctorMaterial\n    property_name = dummy_{name}" in text
             assert not any(

@@ -38,6 +38,14 @@ def test_mechanism_is_the_only_high_level_charge_owner():
     assert "files = plasma_species_only.json" in full_s6
 
 
+def progress_from_id(reaction_id):
+    if reaction_id.startswith("EI-") and reaction_id[3:].isdigit():
+        return "R_EI" + reaction_id[3:]
+    if reaction_id.startswith("H") and reaction_id[1:].isdigit():
+        return "R_H" + reaction_id[1:]
+    raise ValueError(reaction_id)
+
+
 def test_same_equation_different_id_different_energy_channels_are_not_collapsed():
     mechanism = json.loads((PILOT / "plasma_two_channels.json").read_text())
     reactions = mechanism["reactions"]
@@ -45,7 +53,8 @@ def test_same_equation_different_id_different_energy_channels_are_not_collapsed(
     assert len({r["id"] for r in reactions}) == 2
     assert len({mechanism["equations"][r["id"]] for r in reactions}) == 1
     assert [r["electron_energy_change_eV"] for r in reactions] == [-12.4, -17.0]
-    assert [r["progress"] for r in reactions] == ["R_EI405", "R_EI406"]
+    assert all("progress" not in r for r in reactions)
+    assert [progress_from_id(r["id"]) for r in reactions] == ["R_EI405", "R_EI406"]
     assert all(r["progress_units"] == "mol/(m^3 s)" for r in reactions)
 
     source = {}
@@ -53,14 +62,14 @@ def test_same_equation_different_id_different_energy_channels_are_not_collapsed(
         for species in set(reaction["reactants"]) | set(reaction["products"]):
             net = reaction["products"].get(species, 0) - reaction["reactants"].get(species, 0)
             if net:
-                source.setdefault(species, []).append((net, reaction["progress"]))
+                source.setdefault(species, []).append((net, progress_from_id(reaction["id"])))
     assert source["e"] == [(1, "R_EI405"), (1, "R_EI406")]
     assert source["O2"] == [(-1, "R_EI405"), (-1, "R_EI406")]
     assert source["O2p"] == [(1, "R_EI405"), (1, "R_EI406")]
 
     # Distinct progress values must yield the independent signed projection.
     progress = {"R_EI405": 1.0, "R_EI406": 2.0}
-    energy = sum(r["electron_energy_change_eV"] * progress[r["progress"]]
+    energy = sum(r["electron_energy_change_eV"] * progress[progress_from_id(r["id"])]
                  for r in reactions)
     assert abs(energy - (-12.4 * 1.0 - 17.0 * 2.0)) < 1e-12
 
@@ -120,4 +129,17 @@ def test_native_positive_and_negative_fixtures_are_wired():
 
     negative = json.loads((PILOT / "plasma_duplicate_id.json").read_text())
     assert [r["id"] for r in negative["reactions"]] == ["EI-405", "EI-405"]
-    assert negative["reactions"][0]["progress"] != negative["reactions"][1]["progress"]
+    assert all("progress" not in r for r in negative["reactions"])
+    assert progress_from_id(negative["reactions"][0]["id"]) == progress_from_id(negative["reactions"][1]["id"])
+
+
+def test_derived_progress_and_hidden_energy_rule_are_enforced_in_cpp():
+    chem = text("physics_app/src/physics/plasma/Chemistry.C")
+    energy = text("physics_app/src/physics/plasma/DDEnergyEq.C")
+    assert "progressFromReactionId(reaction.id, file)" in chem
+    assert "if (entry.contains(\"progress\"))" in chem
+    assert "return \"R_EI\" + match[1].str();" in chem
+    assert "return \"R_H\" + match[1].str();" in chem
+    assert "log_\" + species + \"_energy" in energy
+    assert 'addRequiredParam<VariableName>("variable"' not in energy
+    assert 'getParam<VariableName>("variable")' not in energy

@@ -11,7 +11,7 @@
   `migrated_continuity.i` when a full archival S6 stack has been scratch-staged.
 - `prepare_s6_run_input.py`: strictly bounded scratch-only source-owner cutover.
 
-The original pinned source of channel equations, progress Functor names and
+The original pinned source of channel equations, historical rate Functor names and
 electron-energy loss data is the archived S6-417/941 input sequence from Issue
 #477. The input files are unchanged. Kinetic rate tables and any private data
 are **not** embedded here. Their original progress Functor providers must
@@ -20,7 +20,12 @@ still be supplied by the staged S6 native input layers.
 ## Inputs and source signs
 
 Each selected S6 mechanism contains **8** reaction IDs. All reaction progress
-Functors have `mol/(m^3 s)` units. A negative
+Functors have `mol/(m^3 s)` units. The JSON no longer repeats `progress`:
+`Chemistry.C` derives `EI-02 → R_EI02`, `EI-415 → R_EI415`,
+`EI-2069 → R_EI2069`, `H25 → R_H25` deterministically from the ID.
+Three disposable S6 input aliases bridge legacy names (`R_elastic_O2`,
+`R_elastic_O`, `R_ion_O2`) to those canonical names. This is purely a
+compatibility adapter; the underlying rate providers are unchanged. A negative
 `electron_energy_change_eV` represents electron energy lost.
 
 - EI-02 and EI-17: source-defined **variable** elastic loss magnitude
@@ -32,6 +37,12 @@ Functors have `mol/(m^3 s)` units. A negative
 - H25: `model: none` for **electron-energy** exchange. Its unresolved
   ion-neutral energy partition remains under `SCIENCE_HOLD`; do not interpret
   `none` as an accepted complete energy model.
+
+The `[Energy]` DSL has no `variable` option. `DDEnergyEq` resolves
+`log_<species>_energy`, i.e. `log_e_energy`, internally. The scratch cutover
+renames all existing `log_energy` variable references to `log_e_energy` in
+disposable layers; this does **not** mean the solver variable is auto-created.
+It still must exist in the staged input variables.
 
 The `Chemistry` Physics builds **one** aggregate `Q_e_molar_eV` from all
 channels; `DDEnergyEq` applies it once on the RHS.
@@ -79,3 +90,12 @@ numerical B-vs-D parity require independent checks.
    **separately** before the migrated S6 deck is used for production.
 
 **Status: TEMPLATE / P2 PREPARATION. P3 NOT RUN. SCIENCE_HOLD.**
+
+## Temporary metadata and deprecation policy
+
+The `provenance.archive_layer` / `alternate_archive_layer` objects in these
+reaction JSONs are **temporary audit metadata**. They are retained while the
+S6 scientific source/parity verification is open and are slated for removal
+once the external provenance record is pinned. They are not needed at runtime.
+The JSON `progress` field, unlike provenance, has already been **removed**;
+rate Functor names are generated deterministically by the C++ ID rule.
