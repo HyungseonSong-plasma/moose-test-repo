@@ -4,7 +4,9 @@
 > syntax and `GummelIterationAction` C++ implementation were removed from the
 > current PhysicsApp. Examples below describe **past experiments** and will not
 > parse with the current binary. They are kept as provenance, not as a supported API.
-> Native `MultiApps` and independently registered convergence objects remain available.
+> Native `MultiApps` and standard MOOSE convergence objects remain available.
+> The independent `DeltaPhiMultiAppConvergence` C++ class was subsequently retired
+> on 2026-11-12 (Issue #402 cleanup); the delta-phi examples below are historical only.
 
 
 `GummelIterationAction` supports two orchestration modes.

@@ -2,7 +2,8 @@
 
 > **HISTORICAL SNAPSHOT.** This qualification describes the former
 > `GummelIterationAction` and its smoke tests at the pinned historical revision.
-> The Action has been retired from current PhysicsApp (2026-11-11).
+> The Action was retired on 2026-11-11; the custom
+> `DeltaPhiMultiAppConvergence` owner was retired on 2026-11-12.
 > Commands and examples below are **not** active current-main CI instructions.
 
 
