@@ -185,12 +185,13 @@ parseDDTransport(const Json & value, const std::string & file)
       if (value.contains(excluded))
         fail(file, std::string("constant transport forbids ") + excluded);
   }
-  else if (result.model == "functor")
+  else if (result.model == "constants")
   {
-    // model=functor uses existing species-owned provider names only.
-    // Source override keys are intentionally not part of the JSON contract.
+    // JSON model=constants reuses the canonical, existing species coefficient
+    // Functors published upstream. It is NOT the numerical constant mode;
+    // model=constant with explicit values is distinct.
     if (value.size() != 1)
-      fail(file, "functor transport accepts only model; DDMaterial derives "
+      fail(file, "constants transport accepts only model; DDMaterial derives "
                  "<species>_mobility and <species>_diffusivity.");
   }
   else if (result.model == "lookup")
@@ -219,7 +220,7 @@ parseDDTransport(const Json & value, const std::string & file)
       fail(file, "physical transport does not accept reduced-table density inputs");
   }
   else
-    fail(file, "transport model must be 'lookup', 'constant' or 'functor'");
+    fail(file, "transport model must be 'lookup', 'constant' or 'constants'");
   return result;
 }
 
@@ -387,9 +388,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     for (const auto & entry : root["reactions"])
     {
       if (!entry.is_object() || !entry.contains("id") || !entry["id"].is_string() ||
-          !entry.contains("progress_units") || !entry["progress_units"].is_string() ||
+          !entry.contains("units") || !entry["units"].is_string() ||
           !entry.contains("reactants") || !entry.contains("products"))
-        fail(file, "reaction needs id, progress_units, reactants and products");
+        fail(file, "reaction needs id, units, reactants and products");
       if (entry.contains("progress"))
         fail(file, "progress is derived from reaction ID; remove the JSON progress field");
       ReactionRecord reaction;
@@ -398,7 +399,7 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       if (!reaction_ids.insert(reaction.id).second ||
           !progresses.insert(reaction.progress).second)
         fail(file, "duplicate reaction ID or generated progress owner: " + reaction.id);
-      if (entry["progress_units"].get<std::string>() != "mol/(m^3 s)")
+      if (entry["units"].get<std::string>() != "mol/(m^3 s)")
         fail(file, reaction.id + ": progress must have mol/(m^3 s) units");
       if (!equation_ids.erase(reaction.id))
         fail(file, reaction.id + ": missing equation mapping");
@@ -406,26 +407,26 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       reaction.reactants = readCoefficients(entry["reactants"], file);
       reaction.products = readCoefficients(entry["products"], file);
 
-      if (!entry.contains("electron_energy_change_eV"))
+      if (!entry.contains("energy_loss_eV"))
         fail(file, reaction.id + ": missing explicit electron energy policy");
-      const auto & energy = entry["electron_energy_change_eV"];
+      const auto & energy = entry["energy_loss_eV"];
       if (energy.is_number())
       {
-        reaction.electron_energy_change_eV = energy.get<double>();
-        if (!std::isfinite(reaction.electron_energy_change_eV))
-          fail(file, reaction.id + ": nonfinite electron energy change");
-        reaction.contributes_electron_energy = reaction.electron_energy_change_eV != 0.0;
+        reaction.energy_loss_eV = energy.get<double>();
+        if (!std::isfinite(reaction.energy_loss_eV) || reaction.energy_loss_eV < 0.0)
+          fail(file, reaction.id + ": electron energy loss must be finite and nonnegative");
+        reaction.contributes_electron_energy = reaction.energy_loss_eV != 0.0;
       }
       else if (energy.is_object() && energy.value("model", std::string()) == "functor" &&
                energy.contains("name") && energy["name"].is_string())
       {
-        reaction.electron_energy_change_functor = energy["name"].get<std::string>();
-        if (reaction.electron_energy_change_functor.empty())
-          fail(file, reaction.id + ": empty energy-change functor");
+        reaction.energy_loss_functor = energy["name"].get<std::string>();
+        if (reaction.energy_loss_functor.empty())
+          fail(file, reaction.id + ": empty energy-loss functor");
         reaction.contributes_electron_energy = true;
       }
       else if (!(energy.is_object() && energy.value("model", std::string()) == "none"))
-        fail(file, reaction.id + ": energy change needs number, signed functor or model none");
+        fail(file, reaction.id + ": energy loss needs a nonnegative number, positive-loss functor or model none");
       validateReaction(reaction, _species, file);
       _reactions.push_back(std::move(reaction));
     }
@@ -585,14 +586,15 @@ Chemistry::addFunctorMaterials()
     if (reaction.contributes_electron_energy)
     {
       const auto progress = energy.symbol(reaction.progress);
-      if (!reaction.electron_energy_change_functor.empty())
+      if (!reaction.energy_loss_functor.empty())
       {
-        // The energy-change functor itself has the signed eV/event contract.
-        const auto delta = energy.symbol(reaction.electron_energy_change_functor);
-        energy.parts.push_back("(" + delta + ")*" + progress);
+        // The source Functor is a POSITIVE energy-loss magnitude [eV/event].
+        // One negative sign is applied at the aggregate electron RHS only.
+        const auto loss = energy.symbol(reaction.energy_loss_functor);
+        energy.parts.push_back("(-1.0)*(" + loss + ")*" + progress);
       }
       else
-        energy.parts.push_back("(" + realLiteral(reaction.electron_energy_change_eV) +
+        energy.parts.push_back("(-1.0)*(" + realLiteral(reaction.energy_loss_eV) +
                                ")*" + progress);
     }
   }

@@ -51,10 +51,10 @@ struct ReactionRecord
   std::map<std::string, int> reactants;
   std::map<std::string, int> products;
   std::string progress;
-  // A negative signed energy change removes energy from the electron equation.
-  // A functor is an alternative *signed* energy change in eV/event.
-  double electron_energy_change_eV = 0;
-  std::string electron_energy_change_functor;
+  // Positive energy_loss_eV removes electron energy (one minus sign at RHS).
+  // A functor is an alternative positive-loss magnitude in eV/event.
+  double energy_loss_eV = 0;
+  std::string energy_loss_functor;
   bool contributes_electron_energy = false;
 
   int net(const std::string & species) const;
