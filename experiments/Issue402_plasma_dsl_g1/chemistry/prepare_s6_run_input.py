@@ -187,7 +187,7 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
                     raise ValueError("S6_WALL_CHARGE_IDENTITY_UNPROVED: " + species)
             else:
                 electron_density_field = re.search(
-                    r"(?m)^    electron_density[ \\t]*=[ \\t]*([A-Za-z0-9_]+)[ \\t]*$",
+                    r"(?m)^    electron_density[ \t]*=[ \t]*([A-Za-z0-9_]+)[ \t]*$",
                     body)
                 observed_electron_density = (
                     electron_density_field.group(1) if electron_density_field else "")
