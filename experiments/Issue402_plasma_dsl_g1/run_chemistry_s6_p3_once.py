@@ -12,6 +12,7 @@ import sys
 
 from run_canonical_s6_p3_once import run
 from p3_chemistry_preflight import audit
+from verify_chemistry_p3_evidence import verify
 
 
 def main() -> int:
@@ -31,7 +32,11 @@ def main() -> int:
         parser.error("P3_STATIC_READINESS_NOT_PASSED")
     result = run(args.case, args.historical.resolve(), args.expected_head,
                  args.output.resolve(), args.timeout_seconds, chemistry_mode=True)
-    return 0 if result["P3"] == "PASS" else 3
+
+    if result["P3"] != "PASS":
+        return 3
+    verified = verify(args.output.resolve() / "results", args.expected_head, args.case)
+    return 0 if verified["artifact_rest_receipt"] == "PENDING" else 3
 
 
 if __name__ == "__main__":

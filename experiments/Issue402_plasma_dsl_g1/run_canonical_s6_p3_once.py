@@ -55,9 +55,12 @@ def verify_canonical_exodus(exodus: Path, *, require_energy: bool = False) -> di
         times = np.asarray(handle.variables["time_whole"][:], dtype=float)
         if len(times) != 461 or abs(float(times[-1]) - 1e-4) > 1e-9:
             raise ValueError("P3_EXODUS_TIMEGRID_MISMATCH")
-        return {"nodal_electron": "log_e",
-                "elemental_ions": ["log_O2p", "log_Om", "log_Op"],
-                "frames": len(times)}
+        result = {"nodal_electron": "log_e",
+                  "elemental_ions": ["log_O2p", "log_Om", "log_Op"],
+                  "frames": len(times)}
+        if require_energy:
+            result["electron_energy"] = "log_e_energy"
+        return result
 
 
 def run(case: str, historical: Path, expected_head: str,
