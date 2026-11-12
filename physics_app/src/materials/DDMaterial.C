@@ -97,6 +97,16 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
     const auto & filename = new_file ? getParam<FileName>("table_file") :
                                        getParam<FileName>("property_table_file");
     _table = std::make_unique<PhysicsLookupTable1D>(filename, 1, std::vector<std::size_t>{2, 3});
+    // Do not silently propagate NaN, infinity or negative transport data
+    // through mobility/diffusivity Functors, especially with table_units=reduced.
+    for (const Real coordinate : _table->coordinate())
+      if (!std::isfinite(coordinate))
+        paramError("table_file", "DDMaterial lookup coordinate must be finite.");
+    for (std::size_t column = 0; column < 2; ++column)
+      for (const Real coefficient : _table->values(column))
+        if (!std::isfinite(coefficient) || coefficient < 0.0)
+          paramError("table_file",
+                     "DDMaterial lookup coefficients must be finite and nonnegative.");
     if (_reduced)
     {
       if (!isParamValid("pressure") || !isParamValid("gas_temperature"))

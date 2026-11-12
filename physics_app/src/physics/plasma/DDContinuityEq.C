@@ -103,6 +103,11 @@ DDContinuityEq::validParams()
       "fvm_species", {}, "Species names, optionally followed by positive initial_number_density [1/m^3] for each species.");
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
+  params.addParam<bool>(
+      "require_json_transport",
+      false,
+      "Require one drift_diffusion transport_coefficients JSON record for every "
+      "fem_species and fvm_species. When false, absent records remain Native-owned.");
   return params;
 }
 
@@ -155,6 +160,31 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
     for (const auto ch : species)
       if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_')
         paramError("fvm_species", "Invalid species ID for automatic naming: ", species);
+  }
+
+  // Strict JSON ownership is opt-in during S6 Native-to-Physics migration.
+  // Enforce FEM and FVM coverage alike, never substitute arbitrary coefficients.
+  if (getParam<bool>("require_json_transport"))
+  {
+    const auto & mechanism = chemistryData();
+    const auto validate = [this, &mechanism](const std::vector<std::string> & ids,
+                                              const std::string & option,
+                                              const std::string & family)
+    {
+      for (const auto & id : ids)
+      {
+        (void)mechanism.species(id);
+        if (!mechanism.ddTransport(id))
+          paramError(option,
+                     "Missing drift-diffusion transport JSON record for ",
+                     family,
+                     " species '",
+                     id,
+                     "'. Specify model=constant, lookup, or functor.");
+      }
+    };
+    validate(_fem_species, "fem_species", "FEM");
+    validate(_fvm_species, "fvm_species", "FVM");
   }
 
   // Charges are specified once in [Plasmas]/files, not by parallel per-species
@@ -298,9 +328,11 @@ DDContinuityEq::addFEKernels()
 void
 DDContinuityEq::addFunctorMaterials()
 {
-  // Material ownership follows the active species list, not an extra
-  // user-authored [FunctorMaterials] block. JSON file paths are pre-resolved
-  // and checked by the one shared ChemistryData catalogue.
+  // Material ownership follows exactly the FEM and FVM species listed by
+  // Continuity, not a second species list or per-species .i Material blocks.
+  // PlasmasAction loads JSON and resolves table_file relative to its JSON file.
+  // Native FV equations remain external; generated coefficient Functors are
+  // available to those FV operators without creating a duplicate equation.
   const auto & mechanism = chemistryData();
   std::vector<std::string> species = _fem_species;
   const auto & fvm = _fvm_species;
