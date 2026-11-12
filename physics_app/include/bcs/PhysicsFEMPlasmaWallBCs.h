@@ -52,7 +52,7 @@ public:
 
 protected:
   ADReal computeQpResidual() override;
-  const ADVariableValue & _log_energy;
+  const ADVariableValue & _log_e_energy;
   const ADVariableValue & _potential;
 };
 

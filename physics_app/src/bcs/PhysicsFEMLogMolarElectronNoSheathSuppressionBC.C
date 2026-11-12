@@ -12,7 +12,7 @@ public:
 protected:
   ADReal computeQpResidual() override;
 
-  const ADVariableValue & _log_energy;
+  const ADVariableValue & _log_e_energy;
 };
 
 registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronNoSheathSuppressionBC);
@@ -24,14 +24,14 @@ PhysicsFEMLogMolarElectronNoSheathSuppressionBC::validParams()
   params.addClassDescription(
       "FEM log-molar electron wall collection using only the thermal half-Maxwellian flux, "
       "with exp(-Delta phi/T_e) sheath suppression disabled.");
-  params.addRequiredCoupledVar("log_energy", "Solved log-molar electron energy density.");
+  params.addRequiredCoupledVar("log_e_energy", "Solved log-molar electron energy density.");
   return params;
 }
 
 PhysicsFEMLogMolarElectronNoSheathSuppressionBC::
 PhysicsFEMLogMolarElectronNoSheathSuppressionBC(const InputParameters & parameters)
   : ADIntegratedBC(parameters),
-    _log_energy(adCoupledValue("log_energy"))
+    _log_e_energy(adCoupledValue("log_e_energy"))
 {
 }
 
@@ -41,7 +41,7 @@ PhysicsFEMLogMolarElectronNoSheathSuppressionBC::computeQpResidual()
   using std::exp;
 
   const ADReal c_e = exp(_u[_qp]);
-  const ADReal mean_energy = exp(_log_energy[_qp] - _u[_qp]);
+  const ADReal mean_energy = exp(_log_e_energy[_qp] - _u[_qp]);
   const ADReal Te = PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy);
 
   // Thermal collection only: deliberately omit exp(-Delta phi / T_e).

@@ -43,7 +43,7 @@ protected:
 
 /**
  * Electron Joule-work term for log-molar electron density and log-molar energy states.
- * The residual units are eV mol/(m^3 s), matching exp(log_energy).
+ * The residual units are eV mol/(m^3 s), matching exp(log_e_energy).
  */
 class FEMLogMolarElectronJouleHeating : public ADKernel
 {

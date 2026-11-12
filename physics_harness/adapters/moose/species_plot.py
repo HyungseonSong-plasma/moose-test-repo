@@ -258,22 +258,22 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
         sources["potential"] = "native nodal potential [V]; linear color"
     else:
         unavailable_observables["potential"] = "native nodal potential absent"
-    if electron_field is not None and "log_energy" in nodal_values:
+    if electron_field is not None and "log_e_energy" in nodal_values:
         with np.errstate(over="ignore", under="ignore", invalid="ignore"):
             te = (2.0 / 3.0) * np.exp(
-                np.asarray(nodal_values["log_energy"], dtype=float)
+                np.asarray(nodal_values["log_e_energy"], dtype=float)
                 - np.asarray(nodal_values[electron_field], dtype=float)
             )
         if not np.all(np.isfinite(te[plasma_nodes])) or np.any(te[plasma_nodes] < 0):
             raise DefaultPlotError("nonfinite native electron-temperature conversion")
         observables["T_e"] = ("nodal", te)
         sources["T_e"] = (
-            f"native nodal log_energy and {electron_field}; "
-            f"T_e=(2/3) exp(log_energy-{electron_field}) [eV]"
+            f"native nodal log_e_energy and {electron_field}; "
+            f"T_e=(2/3) exp(log_e_energy-{electron_field}) [eV]"
         )
     else:
         unavailable_observables["T_e"] = (
-            f"requires nodal {LOG_NAMES['e-']} (or archived field) and log_energy"
+            f"requires nodal {LOG_NAMES['e-']} (or archived field) and log_e_energy"
         )
 
     return {

@@ -9,7 +9,7 @@ public:
   static InputParameters validParams();
   PhysicsFEMLogMolarElectronEnergyDielectricBC(const InputParameters & parameters);
 
-  // Both log_energy and log_electron_density intentionally live only in the
+  // Both log_e_energy and log_electron_density intentionally live only in the
   // plasma block while this sideset is internal to plasma|dielectric. The mesh
   // may carry the internal sideset on both adjacent elements, so suppress the
   // generic whole-sideset coverage check and skip non-plasma invocations below.

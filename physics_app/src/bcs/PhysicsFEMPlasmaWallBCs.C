@@ -151,7 +151,7 @@ PhysicsFEMLogMolarElectronGroundedSheathBC::validParams()
   auto params = ADIntegratedBC::validParams();
   params.addClassDescription(
       "Grounded-electron collection for a FEM log-molar electron concentration.");
-  params.addRequiredCoupledVar("log_energy", "Solved log-molar electron energy density.");
+  params.addRequiredCoupledVar("log_e_energy", "Solved log-molar electron energy density.");
   params.addRequiredCoupledVar("potential", "Plasma potential [V].");
   return params;
 }
@@ -159,7 +159,7 @@ PhysicsFEMLogMolarElectronGroundedSheathBC::validParams()
 PhysicsFEMLogMolarElectronGroundedSheathBC::
 PhysicsFEMLogMolarElectronGroundedSheathBC(const InputParameters & parameters)
   : ADIntegratedBC(parameters),
-    _log_energy(adCoupledValue("log_energy")),
+    _log_e_energy(adCoupledValue("log_e_energy")),
     _potential(adCoupledValue("potential"))
 {
 }
@@ -170,7 +170,7 @@ PhysicsFEMLogMolarElectronGroundedSheathBC::computeQpResidual()
   using std::exp;
 
   const ADReal c_e = exp(_u[_qp]);
-  const ADReal mean_energy = exp(_log_energy[_qp] - _u[_qp]);
+  const ADReal mean_energy = exp(_log_e_energy[_qp] - _u[_qp]);
   const ADReal drop = PhysicsGroundedElectronSheath::smoothPositiveDropV(_potential[_qp]);
   const ADReal molar_flux =
       PhysicsGroundedElectronSheath::primaryParticleFluxHat(c_e, mean_energy, drop);
