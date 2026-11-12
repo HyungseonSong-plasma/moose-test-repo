@@ -11,6 +11,7 @@ from pathlib import Path
 import sys
 
 from run_canonical_s6_p3_once import run
+from p3_chemistry_preflight import audit
 
 
 def main() -> int:
@@ -25,6 +26,9 @@ def main() -> int:
     args = parser.parse_args()
     if not args.authorize_p3:
         parser.error("P3_NOT_AUTHORIZED: --authorize-p3 must be explicit")
+    readiness = audit()
+    if readiness["status"] != "STATIC_INPUTS_READY_P3_NOT_AUTHORIZED":
+        parser.error("P3_STATIC_READINESS_NOT_PASSED")
     result = run(args.case, args.historical.resolve(), args.expected_head,
                  args.output.resolve(), args.timeout_seconds, chemistry_mode=True)
     return 0 if result["P3"] == "PASS" else 3
