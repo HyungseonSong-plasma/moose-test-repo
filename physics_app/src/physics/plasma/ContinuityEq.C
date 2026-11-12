@@ -37,7 +37,8 @@ ContinuityEq::validParams()
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
       "Bind plasma continuity species to deterministic internal state and kernel names. "
-      "Only the supported FEM drift-diffusion slice currently creates a solver Kernel.");
+      "Supported FEM continuity generation creates the conservative log-molar time " 
+      "derivative and drift-diffusion Kernels; FV transport stays Native.");
   params.addParam<std::vector<std::string>>(
       "fem_species", {}, "Species using finite-element variables.");
   params.addParam<std::vector<std::string>>(
@@ -131,7 +132,10 @@ ContinuityEq::checkIntegrity() const
   validateExistingSpeciesVariables(fem, fvm, variables);
   if (isParamValid("fem_potential"))
     for (std::size_t i = 0; i < fem.size(); ++i)
+    {
+      requireUniqueFEKernel("PhysicsFEMLogMolarTimeDerivative", variables[i]);
       requireUniqueFEKernel("PhysicsFEMLogMolarDriftDiffusion", variables[i]);
+    }
 }
 
 void
@@ -144,8 +148,16 @@ ContinuityEq::addFEKernels()
       species, getParam<std::vector<std::string>>("fvm_species"));
   const auto & charges = getParam<std::vector<Real>>("fem_charge_numbers");
   const std::string type = "PhysicsFEMLogMolarDriftDiffusion";
+  const std::string time_type = "PhysicsFEMLogMolarTimeDerivative";
   for (std::size_t i = 0; i < species.size(); ++i)
   {
+    // Retain the exact Native log-molar backward-Euler operator, state and region;
+    // no new time convention, rate coefficient or user option is introduced.
+    auto time_params = getFactory().getValidParams(time_type);
+    time_params.set<NonlinearVariableName>("variable") = variables[i];
+    assignBlocks(time_params, _blocks);
+    getProblem().addKernel(time_type, species[i] + "_time", time_params);
+
     auto params = getFactory().getValidParams(type);
     params.set<NonlinearVariableName>("variable") = variables[i];
     params.set<std::vector<VariableName>>("potential") =
