@@ -109,6 +109,12 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_op
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
+# Automatic species-based DDMaterial and JSON-sourced NVMaterial.
+# No transport-coefficient [FunctorMaterials] declarations in this deck.
+native --check-input -i "$PILOT/valid_json_generated_transport.i" \
+  2>&1 | tee "$EVIDENCE/json_generated_transport_check.log"
+echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
+
 # Synthetic equal-equation channels must create separate signed electron energy contributions.
 native --check-input -i "$PILOT/chemistry_two_channels.i" \
   2>&1 | tee "$EVIDENCE/chemistry_two_channels.log"

@@ -6,6 +6,7 @@ assertions do not claim that a provider has correct physical coefficients.
 from pathlib import Path
 import ast
 import hashlib
+import json
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -74,12 +75,12 @@ def test_ion_aliases_are_unscaled_ad_functors_and_do_not_replace_rho_diffusion()
 
 def test_native_control_and_public_417_941_are_user_coefficient_free():
     positive = text("experiments/Issue402_plasma_dsl_g1/valid_generated_transport_options.i")
-    # Constant species transport now comes from the sole DD coefficient owner.
-    assert "type = DDMaterial" in positive
-    assert "model = constant" in positive
-    assert "species_id = e" in positive
-    assert "mobility = 1" in positive and "diffusivity = 1" in positive
-    assert "SpeciesTransportAliasMaterial" not in positive
+    # Species IDs trigger Material generation from the JSON, not user blocks.
+    assert "files = plasma_auto_constant.json" in positive
+    assert "[FunctorMaterials]" not in positive
+    payload = json.loads(text("experiments/Issue402_plasma_dsl_g1/plasma_auto_constant.json"))
+    coefficient = payload["transport_coefficients"]["drift_diffusion"]["e"]
+    assert coefficient == {"model": "constant", "mobility": 1, "diffusivity": 1}
     py = text("experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py")
     tree = ast.parse(py)
     overlay = next(ast.literal_eval(node.value) for node in tree.body

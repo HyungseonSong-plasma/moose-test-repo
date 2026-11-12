@@ -162,17 +162,13 @@ def test_native_build_and_comparison_script():
     assert "invalid_incomplete_coefficients invalid_wrong_charge_sign" in runner
     assert "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS" in runner
     positive = (CASE / "valid_generated_transport_options.i").read_text()
-    assert "type = DDMaterial" in positive
-    assert "model = constant" in positive
-    assert "species_id = e" in positive
-    assert "mobility = 1" in positive
-    assert "diffusivity = 1" in positive
-    assert "model = constant" in positive
-    assert "mobility = 1" in positive and "diffusivity = 1" in positive
-    # Coefficients belong to DDMaterial, never to the Physics Continuity block.
-    physics_section = positive.split("[FunctorMaterials]", 1)[0]
-    assert "mobility =" not in physics_section and "diffusivity =" not in physics_section
-    assert "files = plasma_species_only.json" in positive
+    assert "[FunctorMaterials]" not in positive
+    assert "mobility =" not in positive and "diffusivity =" not in positive
+    assert "files = plasma_auto_constant.json" in positive
+    json_config = json.loads((CASE / "plasma_auto_constant.json").read_text())
+    assert json_config["transport_coefficients"]["drift_diffusion"]["e"] == {
+        "model": "constant", "mobility": 1, "diffusivity": 1
+    }
     assert "fem_charge_numbers" not in positive
     assert "fem_kernel_names" not in positive and "variables =" not in positive
     assert "sha256sum" in runner
