@@ -81,10 +81,10 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
     const bool explicit_D = isParamValid("diffusivity_source");
     const MooseFunctorName mu = explicit_mu
                                    ? getParam<MooseFunctorName>("mobility_source")
-                                   : _species + "_mobility";
+                                   : MooseFunctorName(_species + "_mobility");
     const MooseFunctorName diffusion = explicit_D
                                           ? getParam<MooseFunctorName>("diffusivity_source")
-                                          : _species + "_diffusivity";
+                                          : MooseFunctorName(_species + "_diffusivity");
     // Canonical external source names are supported, but the same name must
     // never be published again by this Material: Native keeps ownership.
     // Legacy electron_* output aliases are always produced here and cannot

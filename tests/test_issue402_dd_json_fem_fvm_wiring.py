@@ -44,7 +44,7 @@ def test_continuity_maps_both_species_families_to_ddmaterial():
     assert 'const auto * config = mechanism.ddTransport(id)' in code
     assert "species.insert(species.end(), fvm.begin(), fvm.end())" in code
     assert 'getProblem().addFunctorMaterial(type, name() + "_" + id + "_transport_coefficients", params)' in code
-    assert 'params.set<MooseEnum>("model") = config->model' in code
+    assert 'config->model == "constants" ? "functor" : config->model' in code
     assert 'params.set<FileName>("table_file") = config->table_file' in code
     assert 'params.set<Real>("mobility") = config->mobility' in code
     assert 'params.set<Real>("diffusivity") = config->diffusivity' in code
