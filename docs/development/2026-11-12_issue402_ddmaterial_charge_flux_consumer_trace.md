@@ -1,93 +1,78 @@
-# Issue #402 — DDMaterial ion coefficient ownership / FV flux consumer trace
+# Issue #402 — Charge and FV consumer trace after Material retirement
 
-**Scope:** Draft PR #523, scratch/S6 P2 validation only. No P3 or
-scientific B/D parity accepted. `SCIENCE_HOLD`.
+**Scope:** current unmerged Draft PR #523. P1/P2 pending exact-head
+validation; `SCIENCE_HOLD`, P3 NOT_RUN.
 
-## Code refactor: one canonical species mobility / diffusivity publisher
+## Coefficient / charge output ownership
 
-`physics_app/src/materials/PlasmaChargeTransportMaterial.C` no longer calls
-`addFunctorProperty` for `<ion>_mobility` or `<ion>_diffusivity`.
-It still takes its original `ion_mobilities` and `ion_diffusions`
-input vectors and evaluates those source Functors in derived charge/flow
-diagnostics. These inputs must not be removed until all dependent features
-have a new owner.
-
-`physics_app/src/materials/DDMaterial.C` now is the **only class in this
-pair** that publishes canonical per-species mobility and diffusivity.
-For legacy S6 raw sources, a DDMaterial in `model=functor` with
-`mobility_source`/`diffusivity_source` set to the original Native Functors
-publishes the canonical species aliases with unchanged AD derivatives and
-**no numerical conversion**. For future backend JSON `{"model":"functor"}`,
-those source names are *not* carried in the JSON; the existing Native
-producer must supply the canonical names or the scratch input must
-provide the DDMaterial raw-to-canonical bindings. Default canonical
-`functor` mode consumes existing names and deliberately does not
-register duplicate aliases. `model=lookup` and numerical
-`model=constant` still publish coefficient Functors directly.
-
-New synthetic input:
-`experiments/Issue402_plasma_dsl_g1/charge_core_ddmaterial_owner_p2.i`
-checks that all three canonical O2p/Om/Op pairs are published by
-DDMaterial while a legacy `PlasmaChargeTransportMaterial` still
-supplies derived charge/flux diagnostics. P2 uses artificial coefficient
-values; no physical S6 data are replaced.
-
-**Outstanding runtime gate:** the committed full S6-417/941 review JSONs
-declare `model=functor`, but the actual Native ten-layer P3 staging
-still uses common+variant Chemistry JSON without DD transport records.
-The future backend-generated input must bind the original Native
-coefficient Functor names exactly once (e.g. through a generated
-DriftDiffusion-owned DDMaterial bridge) or rename their producer names
-to canonical. Blindly activating the review JSON without a raw-source
-bridge may leave unresolved `O2p_mobility`/etc. Do not mark full
-S6 P2/P3 ready on the synthetic ownership smoke alone.
-
-## Consumer trace
-
-| Functor / derived quantity | Producer | What actual FV flux consumes |
+| Functor | Live owner after migration | Actual consumer |
 | --- | --- | --- |
-| `E = -grad(phi)` / `electric_field` | Legacy charged transport Material | `PhysicsFVElectrostaticDrift::computeQpResidual()` and `PhysicsFVHeavyMassElectromigrationCorrection::computeQpResidual()` each evaluate `-_potential.gradient(centered_face, state)` themselves, **not** `electric_field`. Preserve face interpolation / AD stencil. |
-| `<ion>_mobility`, `<ion>_diffusivity` | DDMaterial after migration | Generated FEM log-molar Kernel consumes canonical coefficients; Native heavy FV kernels consume their own declared mobility/D Functor names, which still need input rewiring if canonical names change. |
-| `ion_number_density_<ion>` | Legacy charged transport Material; separately `PhysicsPlasmaChargeDensityMaterial` can produce it | `n_i = rho*w_i*N_A/M_i`; no direct reference found in tracked heavy FV flux implementations. The charge source is recomputed in the charged-density Material, not derived by reading this published Functor. Never instantiate both producers on the same scope. |
-| `rho_diffusivity_<ion>` | Legacy charged transport Material | `PhysicsFVMixtureAveragedDiffusion` evaluates `rho` and `diffusivity` separately and constructs `rho*D` at each FV face, including its interpolation options. It **does not** consume the named `rho_diffusivity_<ion>` Functor. |
-| `ion_drift_velocity_<ion>` | Legacy charged transport Material | `PhysicsFVElectrostaticDrift` calculates `z_i*mu_i*(E.dot(normal))` at a centered face and chooses upwind state for the transported fraction; it **does not** consume this derived vector Functor. |
-| `electron_drift_velocity` | Legacy charged transport Material | No direct consumer found in the tracked FV ion/heavy correction kernels; the electron equation has separate FEM drift operators. |
-| `heavy_mass_correction_velocity` | Legacy charged transport Material | **Not consumed** by the accepted #15 Path-B FV flux path. That path explicitly forbids this name as a slip velocity and instead constructs a conservative correction at the face. |
+| `<ion>_mobility`, `<ion>_diffusivity` | `DDMaterial` via Native raw source forwarding, lookup, or numerical constants | `FEMLogMolarDriftDiffusion` references canonical species names. Native FV flux Kernels still read names explicitly specified in their original `.i` and must be rewired separately if needed |
+| `ion_number_density_<ion>` | `PhysicsPlasmaChargeDensityMaterial` | Charge bookkeeping, diagnostics, possibly ion-wall-flux components given explicit input binding; heavy FV transport does not consume the old output |
+| `charge_number_density`, `charge_density`, `poisson_charge_source` | `PhysicsPlasmaChargeDensityMaterial` | FV Poisson `FVCoupledForce` can consume `poisson_charge_source`; `PoissonEq` FEM has different MaterialProperty interface |
 
-## Are neutral species corrected?
+No C++ `PlasmaChargeTransportMaterial` implementation or factory alias
+remains. The three-ion positive P2 input
+`experiments/Issue402_plasma_dsl_g1/charge_core_ddmaterial_owner_p2.i`
+constructs three DDMaterial Functor forwarders and one separate
+PhysicsPlasmaChargeDensityMaterial. The original raw S6 ion sources
+must be bridged to canonical names **once**; JSON `model=functor`
+deliberately does not carry arbitrary source names.
 
-**Yes, in the accepted #15 Path-B heavy FV flux implementation.** The
-`experiments/Issue15_charged_heavy_migration/prepare.py` source contract
-requires exactly three direct charged-ion migration Kernels (O2p, Om, Op)
-and **six** `PhysicsFVHeavyMassElectromigrationCorrection` Kernels
-for independent solved heavy species `w_O2s, w_O2p, w_O, w_Om, w_Op, w_Os`.
-That includes neutral `w_O2s, w_O, w_Os`.
-The constrained O2 remainder is **not** a seventh independent equation.
-The FV correction calculates a negative provisional charged-heavy
-mass flux normal and multiplies by each corrected species face mass fraction.
-Thus the *correction physics* applies to neutrals but the old
-`heavy_mass_correction_velocity` *Functor* is not the numerical
-implementation of that flux. This is a statement about the #15
-accepted Path-B source; the S6-417/941 archived Native flux arrangement
-requires its own exact staged-input check, not an inference from #15.
+## Redundant derived outputs and actual FV execution
 
-## Why retain the old Material at this stage?
+- **Electric field**: `PhysicsFVElectrostaticDrift` and
+  `PhysicsFVHeavyMassElectromigrationCorrection` evaluate
+  `E=-_potential.gradient(centered_face, state)` independently;
+  FEM `FEMLogMolarDriftDiffusion` couples the potential gradient.
+  `electric_field` and `electric_field_magnitude` outputs are not
+  needed as intermediate Material Functors.
+- **Ion drift velocity**: `PhysicsFVElectrostaticDrift` forms
+  `z*mu*(E dot n)` and uses its sign for upwind interpolation.
+  The deleted `ion_drift_velocity_<id>` vector was not read.
+  `electron_drift_velocity` is similarly unnecessary:
+  `FEMPlasmaTransport.C` consumes electron mu/D and gradient of phi.
+- **Diffusion**: `PhysicsFVMixtureAveragedDiffusion` evaluates `rho`
+  and `D` separately on each side/face to construct `rho*D`;
+  the deleted cell/space Functor `rho_diffusivity_<id>` was not used.
+- **Mass correction**: `PhysicsFVHeavyMassElectromigrationCorrection`
+  reconstructs the *face normal* charged-ion mass flux and subtracts it
+  from every corrected heavy-species equation. It does not read the old
+  `heavy_mass_correction_velocity` vector; substituting a cell-based
+  slip velocity would change upwind/interpolation semantics.
+- **Other removed diagnostics**: `rho_w_<id>`,
+  `ion_mass_fraction_sum`, `neutral_remainder_mass_fraction`
+  were not required as named providers in tracked production FV flux
+  implementations. The conserved mass/mixture closures are computed
+  by their dedicated kernels or existing Native Functors.
 
-It still publishes `electric_field`, `electric_field_magnitude`,
-`rho_w_<ion>`, `ion_number_density_<ion>`,
-`rho_diffusivity_<ion>`, `ion_drift_velocity_<ion>`,
-`electron_drift_velocity`, `heavy_mass_correction_velocity`,
-`charge_number_density`, `charge_density`, and mixture mass-fraction
-diagnostics. Other charged-density Materials also publish some of these;
-source exclusivity must be proven before moving or deleting them.
-A second migration may eliminate unused diagnostics or relocate them,
-but **do not** equate that with a successful flux-owner migration.
+## Neutral-species correction in accepted #15 Path-B
 
-## Safety gates
+The immutable accepted #15 heavy FV input has three **direct** drift
+Kernels (O2p, Om, Op) and six **mass correction** Kernels for
+w_O2s, w_O2p, w_O, w_Om, w_Op, w_Os. Neutrals O2s, O, Os therefore
+receive the conservative mass correction; O2 is a constrained remainder
+rather than a seventh independently solved equation.
+This is confirmed by
+`tests/test_issue402_species_transport_rule.py`, **not** assumed
+to establish S6-417/941 physical equivalence.
 
-- P1 exact-head compile and the new three-ion P2 smoke.
-- P2 of the complete staged 417 and 941 inputs with canonical source
-  bindings, no duplicate aliases, no missing raw Native Functors.
-- FV face-by-face drift, diffusion and heavy correction equivalence,
-  mass/charge conservation, and AD Jacobian comparison.
-- No P3 dispatch, merge, or scientific promotion without separate approval.
+## Poisson interface distinction
+
+`physics_app/src/materials/PhysicsPlasmaChargeDensityMaterial.C`
+publishes the AD Functor `poisson_charge_source` =
+`charge_density / eps_0`. The historical
+`experiments/Issue1_reactor_o2plus_integration/self_consistent_2d/self_consistent_2d.i`
+FV Poisson input explicitly sets `v = poisson_charge_source` on
+`FVCoupledForce`.
+
+`physics_app/src/physics/plasma/PoissonEq.C` instead accepts
+`charge_source_material` as `MaterialPropertyName`, with
+`MatBodyForce.material_property` and a FEM `Diffusion` Kernel.
+It does **not** build an adapter from the charge AD Functor, and
+omission of `charge_source_material` means no generated Poisson RHS.
+Retiring the old charge assembler cannot and does not close this gap.
+
+**Validation still required:** complete staged Native S6 P2; matching
+RHS signs/scaling and avoiding duplicate charge producers; FV face/AD
+parity; no P3 or merge without explicit operator authorization.

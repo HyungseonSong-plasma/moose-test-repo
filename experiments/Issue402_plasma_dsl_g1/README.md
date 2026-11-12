@@ -23,9 +23,13 @@ Electron state and mean-energy calculation is now separately owned by
 `DDMaterial (model=functor)` remains only for **existing nonconstant ion
 Functor providers** in pinned S6 C/D inputs until an independently verified
 lookup/constant replacement exists; it does not calculate coefficients.
-`PlasmaChargeTransportMaterial` remains a charged transport assembler,
-not an alternate DD coefficient calculator. Do not change physical heavy-ion
-coefficient values or silently introduce an Einstein relation.
+The redundant `PlasmaChargeTransportMaterial` is now retired;
+`PhysicsPlasmaChargeDensityMaterial` owns charge density and FV Poisson
+Functors, while the FV/FEM Kernels own face/volume drift and correction.
+Current `PoissonEq` FEM requires a separate `charge_source_material`
+Material Property and is **not** automatically wired to the FV charge
+Functor. Do not change original heavy-ion coefficients, invent an Einstein
+relation, or assume historical S6 P3 inputs are ready.
 
 See `docs/development/2026-11-12_issue402_dd_nv_material_consolidation.md`
 for source deletion audit, units, example inputs and Native/science gates.
@@ -480,6 +484,12 @@ Original S6 P3 decks, Material/Functor producers and workflow credentials
 remain untouched.
 
 ## Material/Functor class and filename rename (2026-11-10)
+
+> **Historical snapshot, superseded:** the subsequent 2026-11-10
+> statements about a `PlasmaChargeTransportMaterial` factory alias
+> are no longer current. The class and its alias have now been retired
+> in Draft PR #523; charged transport and Poisson charge have separate
+> owners. This does not alter immutable archived S6 inputs.
 
 The canonical C++ Material classes and their corresponding `.h` / `.C`
 files no longer carry the redundant `Physics` prefix:
