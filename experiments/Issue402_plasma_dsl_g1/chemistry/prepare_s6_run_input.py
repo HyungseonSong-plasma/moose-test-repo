@@ -63,14 +63,20 @@ def sha(contents: bytes) -> str:
 
 
 def remove_one(text: str, name: str, variable: str, functor: str) -> str:
-    match_list = [m for m in KERNEL.finditer(text) if m.group("name") == name]
+    # Native layer names may be reused by a FunctorMaterial and its Kernel.
+    # Match ONLY the old FunctorKernel owner in the [Kernels] root section.
+    match_list = [
+        m for m in KERNEL.finditer(text)
+        if m.group("name") == name and
+        re.search(r"(?m)^\s*type\s*=\s*FunctorKernel\s*$", m.group("body"))
+    ]
     if len(match_list) != 1:
-        raise ValueError(f"{name}: expected one original Kernel, found {len(match_list)}")
+        raise ValueError(f"{name}: expected one old FunctorKernel, found {len(match_list)}")
     m = match_list[0]
     prefix = text[:m.start()]
-    # Require the specific Kernels block to be active at this position.
-    if not re.search(r"(?m)^\[Kernels\][ \t]*\r?$", prefix):
-        raise ValueError(f"{name}: missing enclosing Kernels block")
+    sections = re.findall(r"(?m)^\[([A-Za-z0-9_]+)\][ \t]*$", prefix)
+    if not sections or sections[-1] != "Kernels":
+        raise ValueError(f"{name}: owner not inside [Kernels]")
     body = m.group("body")
     required = (
         "type = FunctorKernel",
