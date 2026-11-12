@@ -39,3 +39,17 @@
     variable = log_e_energy
   []
 []
+[BCs]
+  [energy_integrity_left]
+    type = DirichletBC
+    variable = log_e_energy
+    boundary = left
+    value = 0
+  []
+  [energy_integrity_right]
+    type = DirichletBC
+    variable = log_e_energy
+    boundary = right
+    value = 0
+  []
+[]
