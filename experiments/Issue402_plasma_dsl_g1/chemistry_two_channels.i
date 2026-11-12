@@ -49,14 +49,8 @@
 [FunctorMaterials]
   [synthetic_progress_and_transport]
     type = ADGenericFunctorMaterial
-    prop_names = 'R_EI405 R_EI406 mu_test D_test'
-    prop_values = '1 2 1 1'
-  []
-  [electron_coefficients]
-    type = SpeciesTransportAliasMaterial
-    species_id = e
-    mobility_source = mu_test
-    diffusivity_source = D_test
+    prop_names = 'R_EI405 R_EI406'
+    prop_values = '1 2'
   []
 []
 [Executioner]

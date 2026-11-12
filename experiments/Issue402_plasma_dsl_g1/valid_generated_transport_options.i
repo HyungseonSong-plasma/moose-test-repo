@@ -3,7 +3,7 @@
 # test-only coefficient providers. Not an accepted plasma model or P3 input.
 [Physics]
   [Plasmas]
-    files = plasma_species_only.json
+    files = plasma_auto_constant.json
     [Transport]
       [DriftDiffusion]
         [Continuity]
@@ -15,15 +15,6 @@
   []
 []
 
-[FunctorMaterials]
-  [electron_coefficients]
-    type = DDMaterial
-    species_id = e
-    model = constant
-    mobility = 1
-    diffusivity = 1
-  []
-[]
 
 # P2-only TimeKernel needs the TIME vector tag. Keep baseline/production untouched.
 [Executioner]

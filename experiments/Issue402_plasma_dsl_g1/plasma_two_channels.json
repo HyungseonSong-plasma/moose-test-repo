@@ -66,5 +66,14 @@
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": -17
     }
-  ]
+  ],
+  "transport_coefficients": {
+    "drift_diffusion": {
+      "e": {
+        "model": "constant",
+        "mobility": 1,
+        "diffusivity": 1
+      }
+    }
+  }
 }

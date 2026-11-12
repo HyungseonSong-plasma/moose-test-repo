@@ -1,0 +1,49 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1
+    }
+  },
+  "equations": {},
+  "reactions": [],
+  "transport_coefficients": {
+    "drift_diffusion": {
+      "e": {
+        "model": "constant",
+        "mobility": 1,
+        "diffusivity": 1
+      }
+    }
+  }
+}
