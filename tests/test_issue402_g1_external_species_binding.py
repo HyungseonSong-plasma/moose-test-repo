@@ -169,7 +169,9 @@ def test_native_build_and_comparison_script():
     assert "diffusivity = 1" in positive
     assert "model = constant" in positive
     assert "mobility = 1" in positive and "diffusivity = 1" in positive
-    assert "mobility =" not in positive and "diffusivity =" not in positive
+    # Coefficients belong to DDMaterial, never to the Physics Continuity block.
+    physics_section = positive.split("[FunctorMaterials]", 1)[0]
+    assert "mobility =" not in physics_section and "diffusivity =" not in physics_section
     assert "files = plasma_species_only.json" in positive
     assert "fem_charge_numbers" not in positive
     assert "fem_kernel_names" not in positive and "variables =" not in positive
