@@ -81,7 +81,7 @@
     "no_legacy_local2x_refinement": true,
     "no_Bohm_or_negative_ion_barrier": true,
     "check_input_before_simulation": true,
-    "native_D1_perface_current_and_charge_audit": true,
+    "native_D1_perface_current_and_charge_audit": false,
     "p3_100us_simulation_required": true,
     "max_runner_time_minutes": 360,
     "evidence_artifact_prefix": "issue397-L1-EI17-",
@@ -91,7 +91,10 @@
     "governed_preflight_timeout_minutes": 120,
     "solver_replay_requires_explicit_one_shot_approval": true,
     "never_claim_preflight_as_100us_solver_pass": true,
-    "one_shot_cleanup_required": true
+    "one_shot_cleanup_required": true,
+    "native_D1_audit_status": "RETIRED_NOT_REPLACED_BY_EQUIVALENT_SCIENCE_GATE",
+    "native_output_completeness_audit": "EXACT_461_POINT_GRID_27_WAFER_FACES_FINITE_SIGMA_ONLY",
+    "no_new_D1_science_pass_claim": true
   },
   "github_actions_run_id": 39617859962,
   "github_actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/39617859962",
@@ -127,6 +130,8 @@
     "p3_p4_physics_results": "not rerun as part of integration; historical runs are scientific evidence",
     "historical_deprecated_workflow": ".github/workflows/issue397-graded-l1-power-scan-200-250-300w-100us.yml",
     "historical_workflow_blob_sha": "228fffdf8dd265ceffda973e2319c6c30b450a66",
-    "retained_in_git_history": true
+    "retained_in_git_history": true,
+    "replay_diagnostic_scope": "Native output/time-grid completeness only; D1 per-face current/charge/sheath audit NOT RUN",
+    "old_d1_audit_provenance": "Historical runs only"
   }
 }

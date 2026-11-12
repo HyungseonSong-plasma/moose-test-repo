@@ -1,0 +1,62 @@
+"""Guard retired, unconsumed PhysicsApp implementation classes.
+
+This contract is scoped to source ownership. It is not a substitute for
+native MOOSE compilation or scientific regression acceptance.
+"""
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+APP = ROOT / "physics_app"
+
+RETIRED_FILES = (
+    "src/functormaterials/PhysicsIonWallTotalFluxMaterial.C",
+    "src/materials/PhysicsElectronDiffusionSurfaceCharge.C",
+    "include/materials/PhysicsElectronDiffusionSurfaceCharge.h",
+    "src/materials/PhysicsIonDriftSurfaceCharge.C",
+    "include/materials/PhysicsIonDriftSurfaceCharge.h",
+    "src/materials/PhysicsElectronSurfaceChargeMaterial.C",
+    "include/materials/PhysicsElectronSurfaceChargeMaterial.h",
+    "src/materials/PhysicsInverseCrossSection.C",
+    "include/materials/PhysicsInverseCrossSection.h",
+    "src/materials/PhysicsTotalCrossSection.C",
+    "include/materials/PhysicsTotalCrossSection.h",
+    "src/utils/PhysicsUtils.C",
+    "include/utils/PhysicsUtils.h",
+)
+RETIRED_BCS = (
+    "PhysicsFEMElectronGroundedSheathBC",
+    "PhysicsFEMElectronGroundedSheathEnergyBC",
+    "PhysicsFEMIonWallBC",
+)
+ACTIVE_BCS = (
+    "PhysicsFEMLogMolarElectronGroundedSheathBC",
+    "PhysicsFEMLogMolarElectronGroundedSheathEnergyBC",
+    "PhysicsFEMLogMolarIonWallBC",
+)
+
+
+def test_unused_legacy_files_stay_absent():
+    for rel in RETIRED_FILES:
+        assert not (APP / rel).exists(), f"Retired object was reintroduced: {rel}"
+
+
+def test_active_log_molar_wall_boundary_conditions_remain():
+    source = (APP / "src/bcs/PhysicsFEMPlasmaWallBCs.C").read_text(encoding="utf-8")
+    header = (APP / "include/bcs/PhysicsFEMPlasmaWallBCs.h").read_text(encoding="utf-8")
+    for name in RETIRED_BCS:
+        assert name not in source
+        assert name not in header
+    for name in ACTIVE_BCS:
+        assert f'class {name} : public ADIntegratedBC' in header
+        assert f'registerMooseObject("PhysicsApp", {name});' in source
+        assert f'{name}::computeQpResidual()' in source
+
+
+def test_active_wall_and_surface_charge_owners_remain():
+    for rel in (
+        "src/functormaterials/PhysicsIonWallFluxMaterial.C",
+        "src/kernels/PhysicsLowerDSurfaceCurrent.C",
+        "src/bcs/PhysicsADSurfaceChargePoissonBC.C",
+        "src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+    ):
+        assert (APP / rel).is_file(), f"Active physics owner missing: {rel}"

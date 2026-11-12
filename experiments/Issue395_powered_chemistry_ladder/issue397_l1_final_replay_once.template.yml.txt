@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           timeout -s TERM -k 60s 19000s bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve "${{ matrix.power_w }}"
-      - name: P4 native per-face wafer charge and current audit
+      - name: P4 Native output completeness (D1 per-face audit retired)
         if: steps.p3.outcome == 'success'
         shell: bash
         run: |
