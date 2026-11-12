@@ -44,7 +44,7 @@ def test_continuity_maps_both_species_families_to_ddmaterial():
     assert 'const auto * config = mechanism.ddTransport(id)' in code
     assert "species.insert(species.end(), fvm.begin(), fvm.end())" in code
     assert 'getProblem().addFunctorMaterial(type, name() + "_" + id + "_transport_coefficients", params)' in code
-    assert 'config->model == "constants" ? "functor" : config->model' in code
+    assert 'params.set<MooseEnum>("model") = config->model' in code
     assert 'params.set<FileName>("table_file") = config->table_file' in code
     assert 'params.set<Real>("mobility") = config->mobility' in code
     assert 'params.set<Real>("diffusivity") = config->diffusivity' in code
@@ -57,11 +57,11 @@ def test_json_and_lookup_data_are_validated_fail_closed():
     assert "std::isfinite(result.mobility)" in parser
     assert "std::isfinite(result.diffusivity)" in parser
     assert "DDMaterial lookup coefficients must be finite and nonnegative" in provider
-    assert "constants transport accepts only model" in parser
+    assert "functor transport accepts only model" in parser
     assert "config->model == \"constants\" ? \"functor\" : config->model" in (
         ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
     functor_json = json.loads((PILOT / "plasma_auto_functor.json").read_text())
-    assert functor_json["transport_coefficients"]["drift_diffusion"]["O2p"] == {"model": "constants"}
+    assert functor_json["transport_coefficients"]["drift_diffusion"]["O2p"] == {"model": "functor"}
     negative_functor = json.loads((PILOT / "invalid_json_functor_name_override_p2.json").read_text())
     assert "mobility_source" in negative_functor["transport_coefficients"]["drift_diffusion"]["O2p"]
     assert 'std::isfinite(coordinate)' in provider

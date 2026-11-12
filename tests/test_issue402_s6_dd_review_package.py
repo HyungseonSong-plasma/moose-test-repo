@@ -21,7 +21,7 @@ def test_review_json_all_reactions_and_transport_bindings():
         assert dd["e"]["table_file"]=="e_transport.txt"
         assert (PILOT/"chemistry"/dd["e"]["table_file"]).is_file()
         for name in ("O2p","Om","Op"):
-            assert dd[name]=={"model":"constants"}
+            assert dd[name]=={"model":"functor"}
         text=(PILOT/f"review_s6_{variant}_input_overlay.i").read_text()
         assert f"files = 'chemistry/review_s6_{variant}_full.json'" in text
         assert "fem_species = 'e'" in text and "fvm_species = 'O2p Om Op'" in text
