@@ -21,6 +21,9 @@ PhysicsElectronWallFluxMaterial::validParams()
   params.addRequiredParam<MooseFunctorName>(
       "mean_energy", "Mean electron energy [eV].");
 
+  params.addParam<std::string>(
+      "species_id", "", "Optional canonical electron species ID 'e'; absent preserves legacy electron_* outputs.");
+
   params.addParam<Real>(
       "sticking",
       1.0,
@@ -36,11 +39,14 @@ PhysicsElectronWallFluxMaterial::PhysicsElectronWallFluxMaterial(
     _mean_energy(getFunctor<ADReal>("mean_energy")),
     _sticking(getParam<Real>("sticking"))
 {
+  const auto species_id = getParam<std::string>("species_id");
+  if (!species_id.empty() && species_id != "e")
+    paramError("species_id", "Electron wall species_id must be 'e'.");
   if (_sticking < 0.0 || _sticking > 1.0)
     paramError("sticking", "Electron sticking must be in [0,1].");
 
   addFunctorProperty<ADReal>(
-      "electron_mean_speed",
+      species_id.empty() ? "electron_mean_speed" : "e_mean_speed",
       [this](const auto & r, const auto & state) -> ADReal
       {
         const ADReal eps_bar = _mean_energy(r, state);
@@ -52,7 +58,7 @@ PhysicsElectronWallFluxMaterial::PhysicsElectronWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "electron_wall_number_flux",
+      species_id.empty() ? "electron_wall_number_flux" : "e_wall_number_flux",
       [this](const auto & r, const auto & state) -> ADReal
       {
         const ADReal eps_bar = _mean_energy(r, state);
