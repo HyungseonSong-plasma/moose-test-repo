@@ -23,13 +23,13 @@
 [FunctorMaterials]
   [controlled_inputs]
     type = ADGenericFunctorMaterial
-    prop_names = 'rho n_e w_O2p w_Op phi T_g mean_en_solved'
+    prop_names = 'rho e_number_density w_O2p w_Op potential T_g mean_en_solved'
     prop_values = '1 1e15 1e-6 1e-6 0 300 4'
   []
   [charged_species_density]
     type = PhysicsPlasmaChargeDensityMaterial
     density = rho
-    electron_density = n_e
+    electron_density = e_number_density
     ion_ids = 'O2p Op'
     ion_mass_fractions = 'w_O2p w_Op'
     ion_molar_masses = '0.032 0.016'
@@ -54,7 +54,7 @@
     type = PhysicsIonWallFluxMaterial
     species_id = O2p
     ion_number_density = O2p_number_density
-    potential = phi
+    potential = potential
     mobility = O2p_mobility
     gas_temperature = T_g
     charge_number = 1
@@ -65,7 +65,7 @@
     type = PhysicsIonWallFluxMaterial
     species_id = Op
     ion_number_density = Op_number_density
-    potential = phi
+    potential = potential
     mobility = Op_mobility
     gas_temperature = T_g
     charge_number = 1
@@ -75,7 +75,7 @@
   [electron_wall]
     type = PhysicsElectronWallFluxMaterial
     species_id = e
-    electron_density = n_e
+    electron_density = e_number_density
     mean_energy = mean_en_solved
     sticking = 1
   []
