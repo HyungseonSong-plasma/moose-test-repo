@@ -40,9 +40,11 @@ by the wall-transport naming change.
 - `PhysicsIonWallFluxMaterial`: providing `species_id = O2p` switches
   all six wall Functors to canonical names; absent `species_id` preserves all
   six existing legacy names and equations.
-- `PhysicsIonWallTotalFluxMaterial`: `species_id` switches the two outputs
-  to canonical names; `output_prefix` is a legacy-only option and is
-  rejected in combination with `species_id` to avoid unpredictable names.
+- `PhysicsIonWallTotalFluxMaterial` was **removed by parent PR #523**.
+  It must not be restored to PhysicsApp. The scratch S6 D cutover migrates
+  verified legacy total-only instances to active `PhysicsIonWallFluxMaterial`
+  with `species_id`, replacing the old prefixed output names. Physics
+  parameters are retained; numerical parity is a separate science gate.
 - `PhysicsElectronWallFluxMaterial` and
   `PhysicsElectronAdjacentSheathWallFluxMaterial`: `species_id = e` opts
   into canonical electron names; absent preserves legacy names. Any other
@@ -50,8 +52,8 @@ by the wall-transport naming change.
 - `PhysicsPlasmaChargeDensityMaterial`: `canonical_species_names = true`
   selects `<species>_number_density` instead of
   `ion_number_density_<species>`; default false preserves old consumers.
-- One producer of each public Functor name per active scope. Do not instantiate
-  both ion wall Material variants for the **same** canonical species/output.
+- Only one producer for each public Functor. The retired total-only owner
+  must not be instantiated in current Native inputs.
 - BC object blocks may be named `[O2p_wall]` or `[e_wall]`, but each BC's
   `functor` input must select `<species>_wall_number_flux` and the
   corresponding `log_<species>` equation; no inference from BC block name.
@@ -103,9 +105,10 @@ After the existing Chemistry and electron-state renames, the Wall cutover:
 3. Rejects duplicate producers for an old output and any consumer of a
    legacy wall output whose producer cannot be proven. No partial file write
    occurs when an owner fails the gate.
-4. Adds \`species_id\` to each verified staged source, removes a verified
-   legacy \`output_prefix\` only when required, and rewrites references in
-   BCs, charge ledgers and postprocessors across the ten D scratch layers.
+4. Replaces the retired total-only ion Material type with the active
+   `PhysicsIonWallFluxMaterial` **in scratch only**, adds `species_id`,
+   removes verified legacy `output_prefix` and rewrites BC, ledger and
+   postprocessor references in all ten staged D layers.
 5. Returns producer identity, renamed consumer counts and
    \`P3=NOT_RUN\` / \`SCIENCE_HOLD\` in
    \`scratch_wall_functor_cutover\`. A zero-owner no-op is reported
@@ -161,3 +164,7 @@ workflow files have since been removed without changing the production
 C++ or staging logic. Neither run establishes full **S6-417/941 Native
 P2** acceptance or physical parity; the inherited P2 HOLD and
 `SCIENCE_HOLD` remain. No full S6 timestep/P3 has been run.
+
+## Parent PR #523 retirement reconciliation
+
+At parent HEAD `ed608a23f79fe25e31041b184fa27edb21ba7385`, the duplicate `PhysicsIonWallTotalFluxMaterial.C` was removed. Parent test `tests/test_retired_legacy_physics_owners_contract.py` requires it to remain absent. The active six-output `PhysicsIonWallFluxMaterial` already implements thermal surface + migration total number and mass fluxes with corresponding input roles and defaults. This cutover changes *only* disposable S6 D scratch type declarations and canonically owned output names, with density/charge/prefix guards. The B/C archives stay immutable. Source-level mathematical equivalence must be independently verified before scientific acceptance; construction P2 does not prove numerical parity.
