@@ -64,10 +64,11 @@
     expression = '-loss'
   []
   [electron_transport]
-    type = SpeciesTransportAliasMaterial
+    type = DDMaterial
     species_id = e
-    mobility_source = mu_test
-    diffusivity_source = D_test
+    model = constant
+    mobility = 1
+    diffusivity = 1
   []
 []
 [Executioner]

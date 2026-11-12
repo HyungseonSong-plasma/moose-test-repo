@@ -81,7 +81,7 @@
     reaction_progress = electron_reaction_B
   []
   [heavy]
-    type = PhysicsThermalDiffusionMaterial
+    type = NVMaterial
     temperature = gas_temperature
     pressure = gas_pressure
     transport_data_file = plasma_closures_heavy_transport.txt

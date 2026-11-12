@@ -32,7 +32,10 @@ test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
     physics_app/src/physics/plasma/PoissonPhysics.C \
     physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
     physics_app/src/materials/ElectronClosureMaterial.C \
-    physics_app/src/materials/ElectronTransportLookupMaterial.C \
+    physics_app/src/materials/DDMaterial.C \
+    physics_app/include/materials/DDMaterial.h \
+    physics_app/src/materials/NVMaterial.C \
+    physics_app/include/materials/NVMaterial.h \
     physics_app/src/materials/PlasmaChargeTransportMaterial.C \
     physics_app/include/materials/SpeciesTransportAliasMaterial.h \
     physics_app/src/materials/SpeciesTransportAliasMaterial.C

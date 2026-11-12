@@ -37,8 +37,9 @@
     state_form = physical_eV
   []
   [electron_transport]
-    type = ElectronTransportLookupMaterial
-    property_table_file = electron_energy_lookup_response_smoke_table.txt
+    type = DDMaterial
+    model = lookup
+    table_file = electron_energy_lookup_response_smoke_table.txt
     mean_energy = mean_en_solved
     pressure = p
     gas_temperature = T_g
