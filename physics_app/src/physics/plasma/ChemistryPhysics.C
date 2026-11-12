@@ -1,102 +1,137 @@
 #include "ChemistryPhysics.h"
+#include "PlasmaMechanism.h"
+
+#include <iomanip>
+#include <map>
 #include <set>
+#include <sstream>
 
 namespace Plasma
 {
+namespace
+{
+struct SourceExpression
+{
+  std::vector<MooseFunctorName> names;
+  std::vector<std::string> symbols;
+  std::vector<std::string> parts;
+
+  std::string expression() const
+  {
+    std::string result;
+    for (const auto & part : parts)
+      result += (result.empty() ? "" : "+") + part;
+    return result;
+  }
+
+  std::string symbol(const MooseFunctorName & name)
+  {
+    const auto result = "f" + std::to_string(names.size());
+    names.push_back(name);
+    symbols.push_back(result);
+    return result;
+  }
+};
+
+std::string
+realLiteral(double value)
+{
+  std::ostringstream stream;
+  stream << std::setprecision(17) << value;
+  return stream.str();
+}
+
+} // namespace
 
 InputParameters
 ChemistryPhysics::validParams()
 {
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
-      "Checks existing chemistry inputs without creating or modifying solver equations.");
-  params.addRequiredParam<std::vector<std::string>>(
-      "reaction_ids", "Names of the reactions already configured in the simulation.");
-  params.addRequiredParam<std::vector<MooseFunctorName>>(
-      "reaction_progress", "Existing reaction progress names in reaction_ids order.");
-
-  params.addParam<std::vector<FileName>>(
-      "rate_table_files", "Electron-impact rate tables, one per reaction.");
-  params.addParam<MooseFunctorName>("mean_energy", "Mean electron energy in eV.");
-  params.addParam<MooseFunctorName>(
-      "electron_number_density", "Physical electron number density [1/m^3].");
-  params.addParam<std::vector<MooseFunctorName>>(
-      "target_molar_concentrations", "Target concentration [mol/m^3], one per reaction.");
+      "Generates one source Functor per species and one electron-energy source "
+      "from validated [Plasmas]/files reaction channels; kinetic progress remains separately owned.");
   return params;
 }
 
 ChemistryPhysics::ChemistryPhysics(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
-  const auto & reaction_ids = getParam<std::vector<std::string>>("reaction_ids");
-  const auto & reaction_progress = getParam<std::vector<MooseFunctorName>>("reaction_progress");
-  if (reaction_ids.empty())
-    paramError("reaction_ids", "List at least one chemical reaction.");
-  if (reaction_ids.size() != reaction_progress.size())
-    paramError("reaction_progress", "Provide one reaction progress name per reaction.");
-
-  std::set<std::string> unique_reactions;
-  std::set<MooseFunctorName> unique_progress;
-  for (std::size_t index = 0; index < reaction_ids.size(); ++index)
-  {
-    if (reaction_ids[index].empty() || !unique_reactions.insert(reaction_ids[index]).second)
-      paramError("reaction_ids", "Repeated or empty reaction name: ", reaction_ids[index]);
-    if (reaction_progress[index].empty() ||
-        !unique_progress.insert(reaction_progress[index]).second)
-      paramError("reaction_progress",
-                 "Repeated or empty reaction progress name: ",
-                 reaction_progress[index]);
-  }
-  const bool tables = isParamValid("rate_table_files");
-  const bool energy = isParamValid("mean_energy");
-  const bool density = isParamValid("electron_number_density");
-  const bool targets = isParamValid("target_molar_concentrations");
-  if (tables || energy || density || targets)
-  {
-    if (!tables || !energy || !density || !targets)
-      paramError("rate_table_files",
-                 "Provide rate tables, mean energy, electron density and target concentrations.");
-    if (getParam<std::vector<FileName>>("rate_table_files").size() != reaction_ids.size() ||
-        getParam<std::vector<MooseFunctorName>>("target_molar_concentrations").size() !=
-            reaction_ids.size())
-      paramError("rate_table_files", "Provide one rate table and target concentration per reaction.");
-  }
+  if (plasmaMechanism().reactions().empty())
+    mooseError("Activated [Transport]/[Chemistry] requires reactions in [Plasmas]/files");
 }
 
 void
 ChemistryPhysics::checkIntegrity() const
 {
-  // Reaction rates and source terms remain defined by existing simulation objects.
-  // This action checks reaction names without creating or modifying those objects.
+  // The shared PlasmaMechanism constructor validates all ID <-> equation,
+  // elemental and charge conservation, unique rate owners, signed energy
+  // changes, and referenced species before any generated source is used.
 }
 
 void
 ChemistryPhysics::addFunctorMaterials()
 {
-  if (!isParamValid("rate_table_files"))
-    return;
-  const auto & reactions = getParam<std::vector<std::string>>("reaction_ids");
-  const auto & tables = getParam<std::vector<FileName>>("rate_table_files");
-  const auto & targets =
-      getParam<std::vector<MooseFunctorName>>("target_molar_concentrations");
-  const auto & outputs = getParam<std::vector<MooseFunctorName>>("reaction_progress");
-  const std::string type = "PhysicsElectronImpactRateMaterial";
-  for (std::size_t i = 0; i < reactions.size(); ++i)
+  const auto & mechanism = plasmaMechanism();
+  std::map<std::string, SourceExpression> particle;
+  SourceExpression energy;
+
+  for (const auto & reaction : mechanism.reactions())
+  {
+    std::set<std::string> touched;
+    for (const auto & [id, coefficient] : reaction.reactants)
+      touched.insert(id);
+    for (const auto & [id, coefficient] : reaction.products)
+      touched.insert(id);
+
+    for (const auto & id : touched)
+    {
+      const auto coefficient = reaction.net(id);
+      if (coefficient == 0)
+        continue;
+      auto & source = particle[id];
+      const auto symbol = source.symbol(reaction.progress);
+      source.parts.push_back("(" + std::to_string(coefficient) + ")*" + symbol);
+    }
+
+    if (reaction.contributes_electron_energy)
+    {
+      const auto progress = energy.symbol(reaction.progress);
+      if (!reaction.electron_energy_change_functor.empty())
+      {
+        // The energy-change functor itself has the signed eV/event contract.
+        const auto delta = energy.symbol(reaction.electron_energy_change_functor);
+        energy.parts.push_back("(" + delta + ")*" + progress);
+      }
+      else
+        energy.parts.push_back("(" + realLiteral(reaction.electron_energy_change_eV) +
+                               ")*" + progress);
+    }
+  }
+
+  const std::string type = "ADParsedFunctorMaterial";
+  for (const auto & [id, source] : particle)
   {
     auto params = getFactory().getValidParams(type);
-    params.set<FileName>("rate_table_file") = tables[i];
-    params.set<MooseFunctorName>("mean_energy") =
-        getParam<MooseFunctorName>("mean_energy");
-    params.set<MooseFunctorName>("electron_number_density") =
-        getParam<MooseFunctorName>("electron_number_density");
-    params.set<MooseFunctorName>("target_molar_concentration") = targets[i];
-    params.set<std::string>("reaction_progress") = outputs[i];
+    params.set<MooseFunctorName>("property_name") = "S_" + id + "_molar";
+    params.set<std::vector<MooseFunctorName>>("functor_names") = source.names;
+    params.set<std::vector<std::string>>("functor_symbols") = source.symbols;
+    params.set<std::string>("expression") = source.expression();
     assignBlocks(params, _blocks);
-    getProblem().addFunctorMaterial(type, name() + "_" + reactions[i] + "_rate", params);
+    getProblem().addFunctorMaterial(type, "chemistry_" + id + "_source", params);
+  }
+
+  if (!energy.parts.empty())
+  {
+    auto params = getFactory().getValidParams(type);
+    params.set<MooseFunctorName>("property_name") = "Q_e_molar_eV";
+    params.set<std::vector<MooseFunctorName>>("functor_names") = energy.names;
+    params.set<std::vector<std::string>>("functor_symbols") = energy.symbols;
+    params.set<std::string>("expression") = energy.expression();
+    assignBlocks(params, _blocks);
+    getProblem().addFunctorMaterial(type, "chemistry_e_energy_source", params);
   }
 }
-
-}
+} // namespace Plasma
 
 using Plasma::ChemistryPhysics;
 registerPhysicsBaseTasks("PhysicsApp", ChemistryPhysics);
