@@ -123,3 +123,41 @@ charge/density mismatch, unsupported QPX producer, and unknown prefixes.
 The synthetic P0 test is not full archival S6 P2. The prior inherited
 S6-417/941 P2 issue remains open until its separate exact-head construction
 gate passes. No P3 was requested or authorized.
+
+
+## Verified public S6 input replay (P0 evidence; no Native full S6 acceptance)
+
+The checked public S6 archive at
+`experiments/Issue493_s6_boltzmann/public_p2_decks.tar.xz.b64`
+(pack SHA-256 `9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240`)
+was examined across both B/C variants for S6-417 and S6-941. The C
+candidate base layers contain exactly four compatible Wall FunctorMaterials:
+
+- `PhysicsIonWallTotalFluxMaterial` for O2p (existing
+  `n_i_physical`), Om (`output_prefix = negative_` and
+  `n_m_physical`), and Op (`output_prefix = atomic_positive_` and
+  `n_op_physical`);
+- `PhysicsElectronAdjacentSheathWallFluxMaterial` for electron
+  collection, preserving the original physical sheath formula.
+
+The associated consumer interfaces include `functor`,
+`wall_number_flux`, `signed_number_flux`, `surface_current_density`
+and multi-input `functor_names`. Their *values* are rewritten along with
+the owning source. Diagnostic object identifiers such as
+`d1_electron_mean_speed_m_s` are not equivalent to the public Functor
+`electron_mean_speed` and must remain untouched.
+
+P0 reproduced the naming cutover **in memory on all 11 public C input
+layers per case**, verified four unique species-owned sources,
+checked the expected renamed BC/surface references and left the B and C
+archive bytes unchanged. The replay test and eight synthetic cases
+passed [Actions #43311612385](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43311612385)
+(10 tests PASS). The earlier exact-head P0/P1/P2-only construction job
+passed [Actions #43309999844](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43309999844)
+(22 P0 tests PASS, native P1 PASS, synthetic wall P2 PASS).
+
+These two run heads are pre-cleanup evidence identities. Their one-shot
+workflow files have since been removed without changing the production
+C++ or staging logic. Neither run establishes full **S6-417/941 Native
+P2** acceptance or physical parity; the inherited P2 HOLD and
+`SCIENCE_HOLD` remain. No full S6 timestep/P3 has been run.
