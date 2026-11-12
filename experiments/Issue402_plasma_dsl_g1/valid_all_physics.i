@@ -12,7 +12,6 @@
         []
         [Energy]
           fem_species = 'e'
-          variable = log_e
         []
       []
     []
@@ -24,5 +23,13 @@
       field_imag = u_rf_imag
       frequency_hz = 13560000
     []
+  []
+[]
+
+# DDEnergyEq resolves this variable internally from fem_species = 'e'.
+[Variables]
+  [log_e_energy]
+    family = LAGRANGE
+    order = FIRST
   []
 []

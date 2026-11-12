@@ -11,7 +11,7 @@
     order = FIRST
     initial_condition = 0
   []
-  [log_energy]
+  [log_e_energy]
     family = LAGRANGE
     order = FIRST
     initial_condition = 0
@@ -41,7 +41,6 @@
         []
         [Energy]
           fem_species = 'e'
-          variable = log_energy
         []
       []
     []

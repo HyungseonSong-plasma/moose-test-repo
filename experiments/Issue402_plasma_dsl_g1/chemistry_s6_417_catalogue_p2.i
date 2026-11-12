@@ -10,7 +10,7 @@
     family = LAGRANGE
     order = FIRST
   []
-  [log_energy]
+  [log_e_energy]
     family = LAGRANGE
     order = FIRST
   []
@@ -38,7 +38,6 @@
         []
         [Energy]
           fem_species = 'e'
-          variable = log_energy
         []
       []
     []
@@ -49,6 +48,28 @@
     type = ADGenericFunctorMaterial
     prop_names = 'R_elastic_O2 R_elastic_O R_ion_O2 R_EI401 R_EI407 R_EI2069 R_H25 R_EI417 delta_epsilon_EI02_eV delta_epsilon_EI17_eV mu_test D_test'
     prop_values = '1 1 1 1 1 1 1 1 0.2 0.1 1 1'
+  []
+  # Transitional aliases: archived progress names -> ID-derived names.
+  [ei02_progress_alias]
+    type = ADParsedFunctorMaterial
+    property_name = R_EI02
+    functor_names = 'R_elastic_O2'
+    functor_symbols = 'r'
+    expression = 'r'
+  []
+  [ei17_progress_alias]
+    type = ADParsedFunctorMaterial
+    property_name = R_EI17
+    functor_names = 'R_elastic_O'
+    functor_symbols = 'r'
+    expression = 'r'
+  []
+  [ei415_progress_alias]
+    type = ADParsedFunctorMaterial
+    property_name = R_EI415
+    functor_names = 'R_ion_O2'
+    functor_symbols = 'r'
+    expression = 'r'
   []
   [ei02_signed_energy_change]
     type = ADParsedFunctorMaterial
