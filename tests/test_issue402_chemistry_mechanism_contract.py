@@ -116,6 +116,43 @@ def test_compiled_catalogue_checks_and_signed_functor_sources_exist():
     assert "getProblem().addKernel" in continuity
 
 
+def test_s6_uses_canonical_progress_providers_without_alias_materials():
+    for variant in ("417", "941"):
+        for name in (f"s6_{variant}_chemistry_run.template.i",
+                     f"chemistry_s6_{variant}_catalogue_p2.i"):
+            contents = (PILOT / name).read_text()
+            for legacy in ("R_elastic_O2", "R_elastic_O", "R_ion_O2"):
+                assert legacy not in contents
+            for expected in ("R_EI02", "R_EI17", "R_EI415"):
+                assert expected in contents
+            assert "_progress_alias" not in contents
+
+    stage = text("experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py")
+    for before, after in (("R_elastic_O2", "R_EI02"),
+                          ("R_elastic_O", "R_EI17"),
+                          ("R_ion_O2", "R_EI415"),
+                          ("log_energy", "log_e_energy")):
+        assert f'"{before}": "{after}"' in stage
+    # Old names only appear in the safeguarded historical conversion, never
+    # as rate sources/consumers within the new runtime overlay.
+
+
+def test_active_energy_state_binding_is_canonical_across_bc_and_readers():
+    paths = (
+        "physics_app/src/physics/plasma/DDEnergyEq.C",
+        "physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C",
+        "physics_app/src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C",
+        "physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C",
+        "physics_harness/adapters/moose/species_plot.py",
+        "physics_harness/adapters/moose/time_trace.py",
+    )
+    for path in paths:
+        source = text(path)
+        assert "log_energy" not in source
+        assert "log_e_energy" in source
+    assert '"log_e_energy"' in text("physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C")
+
+
 def test_native_positive_and_negative_fixtures_are_wired():
     input_file = (PILOT / "chemistry_two_channels.i").read_text()
     runner = (PILOT / "run_native_binding_smoke.sh").read_text()
