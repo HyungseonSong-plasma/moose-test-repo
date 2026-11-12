@@ -15,10 +15,14 @@ DDMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription("Species-owned drift-diffusion mobility and diffusivity "
-                             "from physical constants or a one-dimensional lookup.");
+                             "from physical constants, existing AD Functors or a one-dimensional lookup.");
   params.addParam<std::string>("species_id", "e", "Solver-safe species identifier.");
-  params.addParam<MooseEnum>("model", MooseEnum("lookup constant", "lookup"),
-                             "Transport source: lookup table or physical constants.");
+  params.addParam<MooseEnum>("model", MooseEnum("lookup constant functor", "lookup"),
+                             "Transport source: lookup table, physical constants or existing AD Functors.");
+  params.addParam<MooseFunctorName>("mobility_source",
+                                    "Existing mobility [m^2/(V s)] for model=functor.");
+  params.addParam<MooseFunctorName>("diffusivity_source",
+                                    "Existing diffusivity [m^2/s] for model=functor.");
   params.addParam<Real>("mobility", "Constant species mobility [m^2/(V s)].");
   params.addParam<Real>("diffusivity", "Constant species diffusivity [m^2/s].");
   params.addParam<FileName>("table_file", "Three-column lookup table: x, mobility, diffusivity.");
@@ -41,6 +45,7 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _species(getParam<std::string>("species_id")),
     _lookup(getParam<MooseEnum>("model") == "lookup"),
+    _functor(getParam<MooseEnum>("model") == "functor"),
     _reduced(getParam<MooseEnum>("table_units") == "reduced"),
     _constant_mobility(isParamValid("mobility") ? getParam<Real>("mobility") : 0.0),
     _constant_diffusivity(isParamValid("diffusivity") ? getParam<Real>("diffusivity") : 0.0),
@@ -57,8 +62,29 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
   if (bounds != "error" && bounds != "clamp")
     paramError("bounds_policy", "Expected 'error' or 'clamp'.");
 
-  if (_lookup)
+  if (_functor)
   {
+    if (!isParamValid("mobility_source") || !isParamValid("diffusivity_source"))
+      paramError("model", "Functor mode requires mobility_source and diffusivity_source.");
+    const auto mu = getParam<MooseFunctorName>("mobility_source");
+    const auto diffusion = getParam<MooseFunctorName>("diffusivity_source");
+    if (mu == _species + "_mobility" || diffusion == _species + "_diffusivity" ||
+        (_species == "e" && (mu == "electron_mobility" ||
+                             diffusion == "electron_diffusion")))
+      paramError("model", "Functor mode may not consume its own published coefficients.");
+    for (const char * name : {"mobility", "diffusivity", "table_file", "property_table_file",
+                              "coordinate", "mean_energy", "pressure", "gas_temperature"})
+      if (isParamValid(name))
+        paramError("model", "Functor mode forbids unrelated coefficient input: ", name);
+    if (isParamSetByUser("table_units") || isParamSetByUser("bounds_policy"))
+      paramError("model", "Functor mode must not set lookup units or bounds policy.");
+    _mobility_source = &getFunctor<ADReal>("mobility_source");
+    _diffusivity_source = &getFunctor<ADReal>("diffusivity_source");
+  }
+  else if (_lookup)
+  {
+    if (isParamValid("mobility_source") || isParamValid("diffusivity_source"))
+      paramError("model", "Lookup mode forbids mobility_source or diffusivity_source.");
     const bool new_file = isParamValid("table_file");
     const bool old_file = isParamValid("property_table_file");
     if (new_file == old_file)
@@ -86,7 +112,8 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
     if (!std::isfinite(_constant_mobility) || !std::isfinite(_constant_diffusivity) ||
         _constant_mobility < 0.0 || _constant_diffusivity < 0.0)
       paramError("model", "Mobility and diffusivity must be finite and nonnegative.");
-    for (const char * name : {"table_file", "property_table_file", "coordinate", "mean_energy"})
+    for (const char * name : {"table_file", "property_table_file", "coordinate",
+                              "mean_energy", "mobility_source", "diffusivity_source"})
       if (isParamValid(name))
         paramError("model", "Constant mode must not also specify lookup inputs: ", name);
   }

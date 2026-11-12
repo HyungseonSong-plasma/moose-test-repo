@@ -180,14 +180,26 @@ parseDDTransport(const Json & value, const std::string & file)
         result.mobility < 0.0 || result.diffusivity < 0.0)
       fail(file, "constant mobility/diffusivity must be finite and nonnegative");
     for (const auto * excluded : {"table_file", "coordinate", "table_units",
-                                   "pressure", "gas_temperature", "bounds_policy"})
+                                   "pressure", "gas_temperature", "bounds_policy",
+                                   "mobility_source", "diffusivity_source"})
       if (value.contains(excluded))
         fail(file, std::string("constant transport forbids ") + excluded);
   }
+  else if (result.model == "functor")
+  {
+    result.mobility_source = requiredText(value, "mobility_source", file);
+    result.diffusivity_source = requiredText(value, "diffusivity_source", file);
+    for (const auto * excluded : {"mobility", "diffusivity", "table_file", "coordinate",
+                                   "table_units", "pressure", "gas_temperature",
+                                   "bounds_policy"})
+      if (value.contains(excluded))
+        fail(file, std::string("functor transport forbids ") + excluded);
+  }
   else if (result.model == "lookup")
   {
-    if (value.contains("mobility") || value.contains("diffusivity"))
-      fail(file, "lookup transport forbids constant mobility/diffusivity");
+    if (value.contains("mobility") || value.contains("diffusivity") ||
+        value.contains("mobility_source") || value.contains("diffusivity_source"))
+      fail(file, "lookup transport forbids constant or Functor coefficient inputs");
     result.table_file = resolveDataFile(requiredText(value, "table_file", file), file);
     result.coordinate = requiredText(value, "coordinate", file);
     result.table_units = requiredText(value, "table_units", file);
@@ -206,7 +218,7 @@ parseDDTransport(const Json & value, const std::string & file)
       fail(file, "physical transport does not accept reduced-table density inputs");
   }
   else
-    fail(file, "transport model must be 'lookup' or 'constant'");
+    fail(file, "transport model must be 'lookup', 'constant' or 'functor'");
   return result;
 }
 
@@ -240,6 +252,7 @@ bool
 DDTransportRecord::equals(const DDTransportRecord & rhs) const
 {
   return model == rhs.model && mobility == rhs.mobility && diffusivity == rhs.diffusivity &&
+         mobility_source == rhs.mobility_source && diffusivity_source == rhs.diffusivity_source &&
          table_file == rhs.table_file && coordinate == rhs.coordinate &&
          table_units == rhs.table_units && pressure == rhs.pressure &&
          gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;

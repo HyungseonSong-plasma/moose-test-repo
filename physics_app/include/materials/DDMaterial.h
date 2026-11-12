@@ -12,6 +12,7 @@
  * Drift-diffusion transport coefficients for one species.
  *
  * model=constant: physical mu [m^2/(V s)] and D [m^2/s].
+ * model=functor: source-preserving AD Functor forwarding.
  * model=lookup: 1D table (coordinate, mobility, diffusivity), interpreted
  * as reduced mu*Nn and D*Nn or as physical values via table_units.
  *
@@ -42,6 +43,8 @@ protected:
   template <typename Arg, typename State>
   ADReal mobility(const Arg & r, const State & state) const
   {
+    if (_functor)
+      return (*_mobility_source)(r, state);
     if (!_lookup)
       return _constant_mobility;
     const ADReal raw = interpolate((*_coordinate)(r, state), 0);
@@ -51,6 +54,8 @@ protected:
   template <typename Arg, typename State>
   ADReal diffusivity(const Arg & r, const State & state) const
   {
+    if (_functor)
+      return (*_diffusivity_source)(r, state);
     if (!_lookup)
       return _constant_diffusivity;
     const ADReal raw = interpolate((*_coordinate)(r, state), 1);
@@ -59,9 +64,12 @@ protected:
 
   const std::string _species;
   const bool _lookup;
+  const bool _functor;
   const bool _reduced;
   const Real _constant_mobility;
   const Real _constant_diffusivity;
+  const Moose::Functor<ADReal> * _mobility_source = nullptr;
+  const Moose::Functor<ADReal> * _diffusivity_source = nullptr;
   const Moose::Functor<ADReal> * _coordinate = nullptr;
   const Moose::Functor<ADReal> * _pressure = nullptr;
   const Moose::Functor<ADReal> * _gas_temperature = nullptr;

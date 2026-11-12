@@ -320,6 +320,11 @@ DDContinuityEq::addFunctorMaterials()
       params.set<Real>("mobility") = config->mobility;
       params.set<Real>("diffusivity") = config->diffusivity;
     }
+    else if (config->model == "functor")
+    {
+      params.set<MooseFunctorName>("mobility_source") = config->mobility_source;
+      params.set<MooseFunctorName>("diffusivity_source") = config->diffusivity_source;
+    }
     else
     {
       params.set<FileName>("table_file") = config->table_file;
