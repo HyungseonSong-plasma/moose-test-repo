@@ -11,11 +11,11 @@ namespace Plasma
  * Generates supported FEM drift-diffusion kernels; FV kernels remain external.
  * Shares species and duplicate-operator checks with other plasma Physics.
  */
-class ContinuityEq : public PlasmaInterface
+class DDContinuityEq : public PlasmaInterface
 {
 public:
   static InputParameters validParams();
-  explicit ContinuityEq(const InputParameters & parameters);
+  explicit DDContinuityEq(const InputParameters & parameters);
 
 private:
   void checkIntegrity() const override;

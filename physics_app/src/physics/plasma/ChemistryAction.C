@@ -1,7 +1,7 @@
-#include "PlasmaMechanismAction.h"
+#include "ChemistryAction.h"
 
 InputParameters
-PlasmaMechanismAction::validParams()
+ChemistryAction::validParams()
 {
   InputParameters params = Action::validParams();
   params.addParam<std::vector<FileName>>(
@@ -9,9 +9,9 @@ PlasmaMechanismAction::validParams()
   return params;
 }
 
-PlasmaMechanismAction::PlasmaMechanismAction(const InputParameters & params)
+ChemistryAction::ChemistryAction(const InputParameters & params)
   : Action(params),
-    _mechanism([this]() {
+    _data([this]() {
       std::vector<std::string> paths;
       for (const auto & filename : getParam<std::vector<FileName>>("files"))
         paths.emplace_back(filename);
@@ -20,4 +20,4 @@ PlasmaMechanismAction::PlasmaMechanismAction(const InputParameters & params)
 {
 }
 
-registerMooseAction("PhysicsApp", PlasmaMechanismAction, "check_integrity");
+registerMooseAction("PhysicsApp", ChemistryAction, "check_integrity");

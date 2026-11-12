@@ -1,11 +1,11 @@
-#include "EnergyPhysics.h"
+#include "DDEnergyEq.h"
 #include "PlasmaMechanism.h"
 
 namespace Plasma
 {
 
 InputParameters
-EnergyPhysics::validParams()
+DDEnergyEq::validParams()
 {
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
@@ -22,7 +22,7 @@ EnergyPhysics::validParams()
   return params;
 }
 
-EnergyPhysics::EnergyPhysics(const InputParameters & parameters)
+DDEnergyEq::DDEnergyEq(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
   const auto & finite_element_species = getParam<std::vector<std::string>>("fem_species");
@@ -40,19 +40,19 @@ EnergyPhysics::EnergyPhysics(const InputParameters & parameters)
 }
 
 void
-EnergyPhysics::checkIntegrity() const
+DDEnergyEq::checkIntegrity() const
 {
   validateExistingSpeciesVariables(getParam<std::vector<std::string>>("fem_species"),
                                    getParam<std::vector<std::string>>("fvm_species"),
                                    {getParam<VariableName>("variable")});
   if (isParamValid("rf_heating_material"))
     requireUniqueFEKernel("MatBodyForce", getParam<VariableName>("variable"));
-  if (chemistryEnabled() && plasmaMechanism().hasElectronEnergySource())
+  if (chemistryEnabled() && chemistryData().hasElectronEnergySource())
     requireUniqueFEKernel("FunctorKernel", getParam<VariableName>("variable"));
 }
 
 void
-EnergyPhysics::addFEKernels()
+DDEnergyEq::addFEKernels()
 {
   const auto variable = getParam<VariableName>("variable");
   if (isParamValid("rf_heating_material"))
@@ -66,7 +66,7 @@ EnergyPhysics::addFEKernels()
     getProblem().addKernel(type, name() + "_rf_heating", params);
   }
 
-  if (chemistryEnabled() && plasmaMechanism().hasElectronEnergySource())
+  if (chemistryEnabled() && chemistryData().hasElectronEnergySource())
   {
     // Chemistry's Q_e_molar_eV is already signed: -12.4*R405 - 17*R406.
     // Do not change this sign or add an implicit electron-energy unit factor.
@@ -83,7 +83,7 @@ EnergyPhysics::addFEKernels()
 
 }
 
-using Plasma::EnergyPhysics;
-registerPhysicsBaseTasks("PhysicsApp", EnergyPhysics);
-registerMooseAction("PhysicsApp", EnergyPhysics, "check_integrity");
-registerMooseAction("PhysicsApp", EnergyPhysics, "add_kernel");
+using Plasma::DDEnergyEq;
+registerPhysicsBaseTasks("PhysicsApp", DDEnergyEq);
+registerMooseAction("PhysicsApp", DDEnergyEq, "check_integrity");
+registerMooseAction("PhysicsApp", DDEnergyEq, "add_kernel");

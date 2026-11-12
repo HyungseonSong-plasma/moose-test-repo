@@ -1,4 +1,4 @@
-#include "ContinuityEq.h"
+#include "DDContinuityEq.h"
 #include "PlasmaMechanism.h"
 
 #include <cctype>
@@ -33,7 +33,7 @@ resolvedContinuityVariables(const std::vector<std::string> & fem,
 } // namespace
 
 InputParameters
-ContinuityEq::validParams()
+DDContinuityEq::validParams()
 {
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
@@ -49,7 +49,7 @@ ContinuityEq::validParams()
   return params;
 }
 
-ContinuityEq::ContinuityEq(const InputParameters & parameters)
+DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
   const auto & fem = getParam<std::vector<std::string>>("fem_species");
@@ -81,7 +81,7 @@ ContinuityEq::ContinuityEq(const InputParameters & parameters)
   {
     if (fem.empty())
       paramError("fem_species", "Generated FEM transport requires FEM species.");
-    const auto & mechanism = plasmaMechanism();
+    const auto & mechanism = chemistryData();
     for (const auto & id : fem)
       (void)mechanism.species(id);
     for (const auto & id : fvm)
@@ -90,7 +90,7 @@ ContinuityEq::ContinuityEq(const InputParameters & parameters)
 }
 
 void
-ContinuityEq::checkIntegrity() const
+DDContinuityEq::checkIntegrity() const
 {
   const auto & fem = getParam<std::vector<std::string>>("fem_species");
   const auto & fvm = getParam<std::vector<std::string>>("fvm_species");
@@ -101,20 +101,20 @@ ContinuityEq::checkIntegrity() const
     {
       requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);
       requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);
-      if (chemistryEnabled() && plasmaMechanism().hasSpeciesSource(fem[i]))
+      if (chemistryEnabled() && chemistryData().hasSpeciesSource(fem[i]))
         requireUniqueFEKernel("FunctorKernel", variables[i]);
     }
 }
 
 void
-ContinuityEq::addFEKernels()
+DDContinuityEq::addFEKernels()
 {
   if (!isParamValid("fem_potential"))
     return;
   const auto & species = getParam<std::vector<std::string>>("fem_species");
   const auto variables = resolvedContinuityVariables(
       species, getParam<std::vector<std::string>>("fvm_species"));
-  const auto & mechanism = plasmaMechanism();
+  const auto & mechanism = chemistryData();
   const std::string type = "FEMLogMolarDriftDiffusion";
   const std::string time_type = "FEMLogMolarTimeDerivative";
   for (std::size_t i = 0; i < species.size(); ++i)
@@ -157,7 +157,7 @@ ContinuityEq::addFEKernels()
 
 } // namespace Plasma
 
-using Plasma::ContinuityEq;
-registerPhysicsBaseTasks("PhysicsApp", ContinuityEq);
-registerMooseAction("PhysicsApp", ContinuityEq, "check_integrity");
-registerMooseAction("PhysicsApp", ContinuityEq, "add_kernel");
+using Plasma::DDContinuityEq;
+registerPhysicsBaseTasks("PhysicsApp", DDContinuityEq);
+registerMooseAction("PhysicsApp", DDContinuityEq, "check_integrity");
+registerMooseAction("PhysicsApp", DDContinuityEq, "add_kernel");

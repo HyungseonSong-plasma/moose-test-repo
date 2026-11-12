@@ -2,7 +2,7 @@
 
 #include "PhysicsBase.h"
 
-namespace Plasma { class PlasmaMechanism; }
+namespace Plasma { class ChemistryData; }
 
 #include <string>
 #include <vector>
@@ -20,7 +20,7 @@ public:
 protected:
   explicit PlasmaInterface(const InputParameters & parameters);
 
-  const Plasma::PlasmaMechanism & plasmaMechanism() const;
+  const Plasma::ChemistryData & chemistryData() const;
   bool chemistryEnabled() const;
 
   void validateSpeciesInputs(const std::vector<std::string> & finite_element_species,

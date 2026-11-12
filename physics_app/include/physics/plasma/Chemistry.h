@@ -1,5 +1,7 @@
 #pragma once
 
+#include "PlasmaInterface.h"
+
 #include <map>
 #include <string>
 #include <vector>
@@ -30,11 +32,11 @@ struct ReactionRecord
 };
 
 /** Immutable validated, shared plasma species and chemistry input contract. */
-class PlasmaMechanism
+class ChemistryData
 {
 public:
-  PlasmaMechanism() = default;
-  explicit PlasmaMechanism(const std::vector<std::string> & files);
+  ChemistryData() = default;
+  explicit ChemistryData(const std::vector<std::string> & files);
 
   const SpeciesRecord & species(const std::string & id) const;
   const std::vector<ReactionRecord> & reactions() const { return _reactions; }
@@ -44,6 +46,18 @@ public:
 private:
   std::map<std::string, SpeciesRecord> _species;
   std::vector<ReactionRecord> _reactions;
+};
+
+// Chemistry owns the Physics source projector and the validated JSON data model.
+class Chemistry : public PlasmaInterface
+{
+public:
+  static InputParameters validParams();
+  explicit Chemistry(const InputParameters & parameters);
+
+private:
+  void checkIntegrity() const override;
+  void addFunctorMaterials() override;
 };
 
 } // namespace Plasma
