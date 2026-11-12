@@ -1,4 +1,4 @@
-# exact-source retry after immutable public deck Path-key test correction
+# exact-source third check: whole-token legacy names; unrelated d1 diagnostics unchanged
 name: Issue402 real public S6 Wall cutover P0 one-shot
 on:
   push:
