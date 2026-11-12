@@ -49,20 +49,6 @@
     prop_names = 'R_EI02 R_EI17 R_EI415 R_EI401 R_EI407 R_EI2069 R_H25 R_EI941 delta_epsilon_EI02_eV delta_epsilon_EI17_eV'
     prop_values = '1 1 1 1 1 1 1 1 0.2 0.1'
   []
-  [ei02_signed_energy_change]
-    type = ADParsedFunctorMaterial
-    property_name = signed_delta_epsilon_EI02_eV
-    functor_names = 'delta_epsilon_EI02_eV'
-    functor_symbols = 'loss'
-    expression = '-loss'
-  []
-  [ei17_signed_energy_change]
-    type = ADParsedFunctorMaterial
-    property_name = signed_delta_epsilon_EI17_eV
-    functor_names = 'delta_epsilon_EI17_eV'
-    functor_symbols = 'loss'
-    expression = '-loss'
-  []
 []
 [Executioner]
   type = Transient
