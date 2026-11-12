@@ -60,14 +60,13 @@ def test_existing_variables_only():
     # Shared input validation never creates solver objects.
     assert "getProblem().add" not in base_source
 
-    # Continuity can add drift-diffusion only when a valid potential and
-    # signed species charges are supplied; coefficient Functors are derived.
+    # Continuity uses the shared JSON species charges, and derived coefficient Functors.
     assert 'if (!isParamValid("fem_potential"))' in source
     assert '"mobility", "Species-ordered' not in source
     assert '"diffusivity", "Species-ordered' not in source
     assert 'species[i] + "_mobility"' in source
     assert 'species[i] + "_diffusivity"' in source
-    assert '"fvm_charge_numbers"' in source
+    assert '"fvm_charge_numbers"' not in source
     assert '"fem_mobility"' not in source
     assert '"fem_diffusion"' not in source
     assert '"fem_kernel_names"' not in source
@@ -79,7 +78,7 @@ def test_existing_variables_only():
     assert 'legacyS6StateName' not in source
     assert 'return "log_" + species;' in source
     assert 'resolved.push_back(continuityStateName(species));' in source
-    assert '"fem_charge_numbers"' in source
+    assert '"fem_charge_numbers"' not in source
     assert "getProblem().addKernel(" in source
     assert "FEMLogMolarDriftDiffusion" in source
     assert "schema_version" not in base_source + source
@@ -170,7 +169,8 @@ def test_native_build_and_comparison_script():
     assert "prop_names = 'legacy_mu legacy_D'" in positive
     assert "prop_values = '1 1'" in positive
     assert "mobility =" not in positive and "diffusivity =" not in positive
-    assert "fem_charge_numbers = '-1'" in positive
+    assert "files = experiments/Issue402_plasma_dsl_g1/plasma_species_only.json" in positive
+    assert "fem_charge_numbers" not in positive
     assert "fem_kernel_names" not in positive and "variables =" not in positive
     assert "sha256sum" in runner
     assert "physics_app/src/physics/plasma/PlasmaInterface.C" in runner
@@ -204,7 +204,7 @@ def test_real_solver_object_wiring():
     for name, markers in {
         "ContinuityEq": ["addFEKernels", "FEMLogMolarDriftDiffusion"],
         "EnergyPhysics": ["addFEKernels", "MatBodyForce"],
-        "ChemistryPhysics": ["addFunctorMaterials", "PhysicsElectronImpactRateMaterial"],
+        "ChemistryPhysics": ["addFunctorMaterials", "ADParsedFunctorMaterial"],
         "PoissonPhysics": ["addFEKernels", "Diffusion", "MatBodyForce", "addFEBCs"],
         "MaxwellPhysics": ["addFEKernels", "MatReaction", "MatCoupledForce", "addFEBCs"],
     }.items():
@@ -220,7 +220,6 @@ def test_generated_physics_requires_explicit_inputs():
     activating_parameters = {
         "ContinuityEq": '"fem_potential"',
         "EnergyPhysics": '"rf_heating_material"',
-        "ChemistryPhysics": '"rate_table_files"',
         "PoissonPhysics": '"charge_source_material"',
         "MaxwellPhysics": '"reaction_material"',
     }
@@ -228,6 +227,9 @@ def test_generated_physics_requires_explicit_inputs():
         source = (source_dir / f"{name}.C").read_text()
         assert parameter in source
         assert "if (!isParamValid(" in source
+    chemistry = (source_dir / "ChemistryPhysics.C").read_text()
+    assert "plasmaMechanism().reactions().empty()" in chemistry
+    assert '"Q_e_molar_eV"' in chemistry
     maxwell = (source_dir / "MaxwellPhysics.C").read_text()
     assert "variable == real ? 1.0 : -1.0" in maxwell
     assert "getProblem().addBoundaryCondition" in maxwell
@@ -389,8 +391,8 @@ def test_continuity_option_contract_rejects_legacy_keys():
                 '"fem_mobility"', '"fem_diffusion"', '"fvm_mobility"',
                 '"fvm_diffusion"'):
         assert old not in source
-    for active in ('"fem_charge_numbers"', '"fvm_charge_numbers"'):
-        assert active in source
+    for retired in ('"fem_charge_numbers"', '"fvm_charge_numbers"'):
+        assert retired not in source
     assert 'params.set<MooseFunctorName>("mobility") = species[i] + "_mobility"' in source
     assert 'params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity"' in source
     assert 'const std::string kernel_name = species[i] + "_transport";' in source

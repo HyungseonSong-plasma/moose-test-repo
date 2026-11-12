@@ -63,7 +63,7 @@ def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
     assert overlay.count("type = SpeciesTransportAliasMaterial") == 3
     assert "type = PhysicsSpeciesTransportAliasMaterial" not in overlay
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
+        "30b436b80e716aa0fb65b555fafa953088070f2d3a1023e30a0806720cb5ba1e"
     )
     old_lookup = (BASE / "ci/electron_energy_transport_smoke.i").read_text()
     new_lookup = (BASE / "ci/electron_energy_lookup_response_smoke.i").read_text()

@@ -1,3 +1,27 @@
+## 2026-11-12 stacked Chemistry JSON source + energy implementation candidate
+
+This **separate unmerged candidate** uses `[Physics]/[Plasmas]/files` as the
+shared species/reaction catalogue. The high-level `fem_charge_numbers` and
+`fvm_charge_numbers` parameters are removed from `ContinuityEq`; its existing
+low-level drift-diffusion `charge_number` receives the JSON value. Each
+reaction has a stable ID, equation/structured stoichiometry, unique progress
+name, and required signed `electron_energy_change_eV`. Duplicate equations
+are allowed (different IDs); duplicate IDs/progress owners are rejected.
+
+`ChemistryPhysics` now generates aggregate `S_<species>_molar` and
+`Q_e_molar_eV` AD Functors from **already owned** progress Functors; it does
+not create new kinetic reaction rates. `ContinuityEq` and `EnergyPhysics`
+consume these as RHS `FunctorKernel` terms when Chemistry is enabled.
+Two *synthetic, not physically assigned* EI-405/EI-406 ionization channels
+show `+R_EI405 + R_EI406` in electron particle Source and
+`-12.4*R_EI405 - 17.0*R_EI406` in electron energy Source.
+Old S6 B/C artifacts and the independent `prepare_s6_single_kernel_migration.py`
+are unchanged. S6 D remains **no chemistry generation** until complete
+all-species/energy parity and owner-gate verification. This is not a P3 or
+scientific acceptance. Native P1/P2 is required before approval.
+
+---
+
 # Plasma input checks
 
 MOOSE parses five plasma Physics actions. Some actions now generate
