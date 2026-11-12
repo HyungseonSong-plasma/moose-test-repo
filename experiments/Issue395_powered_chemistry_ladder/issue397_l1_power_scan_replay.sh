@@ -2,7 +2,7 @@
 # Canonical Issue 397 graded coarse L1 replay; migrated from historical
 # GitHub Actions workflow to a Samuel-governed experiment stage script.
 # No workflow file is installed by this script. The source case commands,
-# Maxwell exact-change audit, native D1 gates and archive provenance are retained.
+# Maxwell exact-change audit, wafer-current ownership and archive provenance are retained; retired D1 probes are not used.
 set -euo pipefail
 PHASE="${1:?usage: bash issue397_l1_power_scan_replay.sh prepare|build|check|solve|audit 200|250|300}"
 POWER_W="${2:?RF target 200, 250, 300, 600 or 1000 W is required}"
@@ -19,7 +19,7 @@ fi
 # Canonical experiment.yml checks out control/ and target/ separately: mount the
 # actual pinned target Git root, never the parent Actions workspace.
 export GITHUB_WORKSPACE="$PWD"
-export MODE=B DT_NS=1000
+export DT_NS=1000
 export BUILD_BASE_REF=ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
 export CHEM=experiments/Issue395_powered_chemistry_ladder
 export DIEL=experiments/Issue3_dielectric_surface_charge
@@ -40,9 +40,8 @@ echo "ISSUE397_REPLAY_PHASE=$PHASE TARGET_W=$POWER_W SOURCE_SHA=$(git rev-parse 
 case "$PHASE" in
   prepare)
 set -euo pipefail
-python3 -m py_compile "$CHEM/issue397_d1_instrument.py" "$CHEM/issue397_d1_analyze.py" "$CHEM/issue397_materialize_l1_baseline.py" "$CHEM/issue397_build_graded_mesh.py" "$CHEM/issue397_graded_mesh_geometry.py" "$CHEM/issue397_graded_mesh_quality.py"
-python3 "$CHEM/issue397_d1_instrument.py" --self-test
-python3 "$CHEM/issue397_d1_analyze.py" --self-test
+python3 -m py_compile "$CHEM/issue397_replay_output_audit.py" "$CHEM/issue397_materialize_l1_baseline.py" "$CHEM/issue397_build_graded_mesh.py" "$CHEM/issue397_graded_mesh_geometry.py" "$CHEM/issue397_graded_mesh_quality.py"
+python3 "$CHEM/issue397_replay_output_audit.py" --self-test
 rm -rf "$RESULT"
 mkdir -p "$RESULT/prep" "$RESULT/run"
 
@@ -175,15 +174,29 @@ python3 "$CHEM/build_o_elastic_overlay.py" \
   --source-table physics_app/data/electron_impact/o_elastic.txt \
   | tee "$RESULT/prep/o_elastic_ei17_overlay.log"
 
-python3 "$CHEM/check_wafer_checkerboard_ab.py" "$INPUT" --mode "$MODE" \
-  | tee "$RESULT/prep/wafer_checkerboard_AB.log"
-python3 "$CHEM/issue397_d1_instrument.py" --self-test | tee "$RESULT/prep/d1_instrument_selftest.log"
-python3 "$CHEM/issue397_d1_analyze.py" --self-test | tee "$RESULT/prep/d1_analyzer_selftest.log"
-python3 "$CHEM/issue397_d1_instrument.py" "$INPUT" | tee "$RESULT/prep/d1_native_instrument.log"
-# Case B reference: wafer O2+, O+, O- all keep original thermal+migration.
-# Electron retains the canonical adjacent-electrode sheath law.
-# Rebuild the *canonical* 100-us / 460-step grid: historical B/D1
-# instrumentation intentionally truncated it to 60/2 us before this step.
+# Verify original signed wafer-current owner without injecting any AuxKernels.
+python3 - "$INPUT" <<'PY' | tee "$RESULT/prep/wafer_original_current.log"
+from pathlib import Path
+import re, sys
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+blocks = list(re.finditer(r"(?ms)^  \[wafer_surface_current\]\n(?P<body>.*?)^  \[\]\n", text))
+if len(blocks) != 1:
+    raise SystemExit("Expected exactly one wafer_surface_current owner")
+body = blocks[0].group("body")
+for required in (
+    "type = ADParsedFunctorMaterial",
+    "property_name = wafer_net_surface_current_density",
+    "expression = '1.602176634e-19*(gi+gop-gm-ge)'",
+    "block = plasma",
+):
+    if required not in body:
+        raise SystemExit("Physical wafer current owner changed: " + required)
+if re.search(r"(?m)^\s*type = Physics\w*ProbeAux\s*$", text):
+    raise SystemExit("Retired probe AuxKernel found in native input")
+print("ISSUE397_ORIGINAL_WAFER_CURRENT_OWNER_PASS")
+PY
+# Original thermal+migration and adjacent-cell sheath laws are preserved.
+# Verify the complete 100-us grid idempotently: no D1 early stop is inserted.
 python3 "$CHEM/set_timegrid_100us_460steps.py" "$INPUT" \
   | tee "$RESULT/prep/final_100us_timegrid.log"
 grep -q "ISSUE395_TIMEGRID_100US_460STEPS_PASS" "$RESULT/prep/final_100us_timegrid.log"
@@ -199,18 +212,15 @@ grep -q "ISSUE397_BASELINE_L1_MESH_PASS" "$RESULT/prep/graded_L1_baseline_verify
 grep -q "negative_ion_wall_number_flux" "$INPUT"
 grep -q "atomic_positive_ion_wall_number_flux" "$INPUT"
 grep -q "ion_wall_number_flux" "$INPUT"
-grep -q 'ISSUE397_D1_NATIVE_DIAGNOSTICS_INPUT_PASS' "$RESULT/prep/d1_native_instrument.log"
-grep -q 'type = PhysicsWaferD1GeometryProbeAux' "$INPUT"
-grep -q 'type = PhysicsLowerDSurfaceCurrentProbeAux' "$INPUT"
+grep -q 'ISSUE397_ORIGINAL_WAFER_CURRENT_OWNER_PASS' "$RESULT/prep/wafer_original_current.log"
+! grep -Eq '^ *type = Physics[A-Za-z0-9_]*ProbeAux *$' "$INPUT"
 
 python3 -m py_compile \
-  "$CHEM/issue397_d1_instrument.py" \
+  "$CHEM/issue397_replay_output_audit.py" \
   "$CHEM/issue397_materialize_l1_baseline.py" \
   "$CHEM/issue397_graded_mesh_geometry.py" \
   "$CHEM/issue397_graded_mesh_quality.py" \
   "$CHEM/issue397_build_graded_mesh.py" \
-  "$CHEM/issue397_d1_analyze.py" \
-  "$CHEM/check_wafer_checkerboard_ab.py" \
   "$CHEM/set_timegrid_100us_460steps.py" \
   "$CHEM/build_o_elastic_overlay.py" \
   "$CHEM/enable_electron_adjacent_sheath_wall.py" \
@@ -228,8 +238,7 @@ grep -q 'segment_100_to_2000_ns_dt=10ns_steps=190' "$RESULT/prep/timegrid_460.lo
 grep -q 'segment_2000_to_10000_ns_dt=100ns_steps=80' "$RESULT/prep/timegrid_460.log"
 grep -q "segment_10000_to_100000_ns_dt=1000ns_steps=90" "$RESULT/prep/timegrid_460.log"
 grep -q "total_steps=$EXPECTED_STEPS" "$RESULT/prep/timegrid_460.log"
-grep -q "ISSUE395_WAFER_CHECKERBOARD_TEST_${MODE}_INPUT_PASS" "$RESULT/prep/wafer_checkerboard_AB.log"
-grep -q 'type = PhysicsLowerDSurfaceCurrentProbeAux' "$INPUT"
+grep -q 'ISSUE397_ORIGINAL_WAFER_CURRENT_OWNER_PASS' "$RESULT/prep/wafer_original_current.log"
 if [ "$MODE" = A ]; then
   grep -A5 '^  \[wafer_surface_current\]' "$INPUT" | grep -q "expression = '0.25'"
 else
@@ -328,11 +337,12 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
     ;;
   audit)
 set -euo pipefail
-python3 "$CHEM/issue397_d1_analyze.py" \
+python3 "$CHEM/issue397_replay_output_audit.py" \
   --input "$RESULT/run/plasma.e" \
-  --output "$RESULT/d1_native" \
-  | tee "$RESULT/d1_native_analysis.log"
-grep -q "D1_NATIVE_DIAGNOSTIC_INTEGRITY_PASS" "$RESULT/d1_native_analysis.log"
+  --output "$RESULT/native_output_completeness.json" \
+  | tee "$RESULT/native_output_completeness.log"
+grep -q "ISSUE397_NATIVE_OUTPUT_COMPLETENESS_PASS" "$RESULT/native_output_completeness.log"
+# Retired D1 current/charge/sheath checks are NOT performed.
     ;;
 esac
 echo "ISSUE397_REPLAY_PHASE_PASS=$PHASE TARGET_W=$POWER_W"
