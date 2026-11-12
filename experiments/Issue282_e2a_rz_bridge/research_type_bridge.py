@@ -1,10 +1,12 @@
 """Experimental *type-registration* projection for archived E2a inputs.
 
-The current PhysicsApp registers Physics* C++ object types where the frozen
+The current PhysicsApp registers canonical C++ object types where the frozen
 historical Issue26 E2a builder emits seven QPX* type names. This module is
-a strict, reversible research-only bridge to execute the historical geometry
-under the modern application. It is NOT proof of parameter/algorithm/physics
-equivalence and is NEVER the canonical SOL adapter contract.
+a strict reversible **type-token-only** research projection; after removal of
+the electron lookup's legacy factory aliases and configurable coordinate,
+its output is not guaranteed runnable without a separate, audited parameter
+migration. It is NOT proof of parameter/algorithm/physics equivalence and is
+NEVER the canonical SOL adapter contract.
 
 No blocks, values, units, equations, boundaries, or initial conditions may
 change. Both SHA256 versions are retained with the runtime evidence.
@@ -17,7 +19,7 @@ import re
 # artifact #13507825610, with corresponding registered PhysicsApp C++ classes.
 # Do not infer an alias from a prefix or auto-add new mappings.
 HISTORICAL_TO_CURRENT_TYPE = {
-    "QPXElectronTransportLookupMaterial": "PhysicsElectronTransportLookupMaterial",
+    "QPXElectronTransportLookupMaterial": "DDMaterial",
     "QPXFVConservativeMassFractionTimeDerivative": "PhysicsFVConservativeMassFractionTimeDerivative",
     "QPXFVElectrostaticDrift": "PhysicsFVElectrostaticDrift",
     "QPXFVHeavyMassElectromigrationCorrection": "PhysicsFVHeavyMassElectromigrationCorrection",

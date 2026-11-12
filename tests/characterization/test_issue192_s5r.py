@@ -51,12 +51,12 @@ def test_s5r_preserves_solved_poisson_and_adds_solved_energy() -> None:
     )
     assert (
         mp.get_parameter(text, "FunctorMaterials/electron_transport", "type")
-        == "PhysicsElectronTransportLookupMaterial"
+        == "DDMaterial"
     )
-    assert (
-        mp.get_parameter(text, "FunctorMaterials/electron_transport", "mean_energy")
-        == "mean_en_solved"
-    )
+    assert mp.get_parameter(text, "FunctorMaterials/electron_transport", "model") == "lookup"
+    assert mp.get_parameter(text, "FunctorMaterials/electron_transport", "table_file")
+    assert mp.get_parameter(text, "FunctorMaterials/electron_transport", "mean_energy") is None
+    assert mp.get_parameter(text, "FunctorMaterials/electron_transport", "property_table_file") is None
     assert (
         mp.get_parameter(text, "FunctorMaterials/electron_transport", "bounds_policy")
         == "error"
