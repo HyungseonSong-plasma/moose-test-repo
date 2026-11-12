@@ -47,11 +47,15 @@ def test_species_first_wall_functors_and_duplicate_owner_prevention():
     assert 'species_id.empty() ? std::string(legacy) : species_id + "_wall_" + suffix' in ion
     assert 'std::isalnum(static_cast<unsigned char>(ch))' in ion
 
-    total = source("physics_app/src/functormaterials/PhysicsIonWallTotalFluxMaterial.C")
-    assert 'species_id + "_wall_number_flux"' in total
-    assert 'species_id + "_wall_mass_flux"' in total
-    assert 'Do not combine output_prefix with species_id' in total
-    assert 'species_id.empty() ? _output_prefix + "ion_wall_number_flux"' in total
+    # Parent PR #523 retired the duplicate total-only owner. Its functionality
+    # is now supplied by the active six-output species Wall Material.
+    assert not (ROOT / "physics_app/src/functormaterials/"
+                "PhysicsIonWallTotalFluxMaterial.C").exists()
+    staged = source(
+        "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py")
+    assert 'if material_type == "PhysicsIonWallTotalFluxMaterial":' in staged
+    assert '"    type = PhysicsIonWallFluxMaterial"' in staged
+    assert "S6_WALL_RETIRED_TYPE_STILL_PRESENT" in staged
 
 
 def test_electron_wall_names_and_opt_in_legacy_compatibility():
