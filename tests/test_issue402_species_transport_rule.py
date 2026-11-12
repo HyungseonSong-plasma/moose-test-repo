@@ -62,23 +62,24 @@ def test_dd_material_unifies_constant_and_lookup_with_electron_energy_projection
     assert not (ROOT / "physics_app/src/materials/PhysicsElectronTransportCoefficients.C").exists()
 
 
-def test_ddmaterial_is_the_only_species_coefficient_alias_publisher():
+def test_ddmaterial_is_only_canonical_species_coefficient_publisher():
     dd = text("physics_app/src/materials/DDMaterial.C")
-    charge = text("physics_app/src/materials/PlasmaChargeTransportMaterial.C")
+    retired = ROOT / "physics_app/src/materials/PlasmaChargeTransportMaterial.C"
+    assert not retired.exists()
+    assert not (ROOT / "physics_app/include/materials/PlasmaChargeTransportMaterial.h").exists()
     assert 'addFunctorProperty<ADReal>(_species + "_mobility", particle_mu)' in dd
     assert 'addFunctorProperty<ADReal>(_species + "_diffusivity", particle_D)' in dd
     assert 'getFunctor<ADReal>("mobility_source")' in dd
     assert 'getFunctor<ADReal>("diffusivity_source")' in dd
-    # The legacy charged-transport assembler must not compete for aliases.
-    assert 'addFunctorProperty<ADReal>(id + "_mobility"' not in charge
-    assert 'addFunctorProperty<ADReal>(id + "_diffusivity"' not in charge
-    assert 'id + "_mobility",' not in charge
-    assert 'id + "_diffusivity",' not in charge
-    assert "(*_ion_mobilities[i])(r, state)" in charge
-    assert "(*_ion_diffusions[i])(r, state)" in charge
-    # D [m²/s] must not silently become rho*D [kg/(m s)].
-    assert '"rho_diffusivity_" + id' in charge
-    assert "_density(r, state) * (*_ion_diffusions[i])(r, state)" in charge
+    fixture = text("experiments/Issue402_plasma_dsl_g1/charge_core_ddmaterial_owner_p2.i")
+    assert fixture.count("type = DDMaterial") == 3
+    assert "type = PlasmaChargeTransportMaterial" not in fixture
+    assert "type = PhysicsPlasmaChargeDensityMaterial" in fixture
+    for sp in ("O2p", "Om", "Op"):
+        assert f"functor = {sp}_mobility" in fixture
+        assert f"functor = {sp}_diffusivity" in fixture
+    assert "functor = poisson_charge_source" in fixture
+
 
 def test_fv_ion_and_heavy_mass_correction_do_not_consume_derived_velocities():
     drift = text("physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C")

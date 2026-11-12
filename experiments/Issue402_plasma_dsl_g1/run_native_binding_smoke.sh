@@ -33,7 +33,8 @@ test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
     physics_app/include/materials/DDMaterial.h \
     physics_app/src/materials/NVMaterial.C \
     physics_app/include/materials/NVMaterial.h \
-    physics_app/src/materials/PlasmaChargeTransportMaterial.C \
+    physics_app/src/materials/PhysicsPlasmaChargeDensityMaterial.C \
+    physics_app/include/materials/PhysicsPlasmaChargeDensityMaterial.h
 
 } > "$EVIDENCE/provenance.txt"
 
@@ -115,9 +116,9 @@ echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
 native --check-input -i "$PILOT/valid_json_generated_functor.i" \
   2>&1 | tee "$EVIDENCE/json_generated_functor_check.log"
 echo "PLASMA_JSON_FUNCTOR_TRANSPORT_GENERATION_P2_PASS"
-# One strict owner per canonical ion coefficient: DDMaterial provides all
-# species aliases, legacy charged-transport Material retains derived rho*D,
-# number density, E and drift diagnostics but cannot republish mu/D.
+# Single-provider checks: DDMaterial creates canonical ion mu/D; the
+# separate charge-density Material owns n_i and Poisson-source Functors.
+# The retired charge-transport assembler is not instantiated.
 native --check-input -i "$PILOT/charge_core_ddmaterial_owner_p2.i" \
   2>&1 | tee "$EVIDENCE/charge_core_ddmaterial_owner_p2.log"
 echo "PLASMA_DDMATERIAL_ION_COEFFICIENT_SINGLE_OWNER_P2_PASS"
