@@ -425,9 +425,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     if (root.contains("gas_state"))
       fail(file, "top-level gas_state is retired; put initial composition on each species");
 
-    // JSON owns the mesh sideset names AND physical role. The .i only selects
-    // whether the optional DriftDiffusion wall Action consumes this catalogue.
-    // No sidesets, wall chemistry, or open-boundary behavior are inferred.
+    // JSON only relocates the EXISTING named [BCs] declarations.
+    // An absent drift_diffusion_boundary means no generated electron BCs.
+    // No wall law, 'open' role, or additional implicit BC is invented.
     if (root.contains("drift_diffusion_boundary"))
     {
       if (_has_dd_boundary)
@@ -436,32 +436,68 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       if (!catalogue.is_object() || catalogue.empty())
         fail(file, "drift_diffusion_boundary must be a nonempty object");
 
-      std::set<std::string> sidesets;
-      static const std::regex safe_alias(R"(^[A-Za-z_][A-Za-z_0-9]*$)");
-      for (auto entry = catalogue.begin(); entry != catalogue.end(); ++entry)
+      static const std::regex identifier(R"(^[A-Za-z_][A-Za-z_0-9]*$)");
+      std::set<std::string> used_mesh_boundaries;
+      std::set<std::string> used_bc_names;
+      std::set<std::string> operator_owners;
+      for (auto group = catalogue.begin(); group != catalogue.end(); ++group)
       {
-        const auto & item = entry.value();
-        if (!std::regex_match(entry.key(), safe_alias))
-          fail(file, "invalid drift_diffusion_boundary alias: " + entry.key());
+        if (!std::regex_match(group.key(), identifier))
+          fail(file, "invalid drift_diffusion_boundary group: " + group.key());
+        const auto & item = group.value();
         if (!item.is_object() || item.size() != 2 ||
-            !item.contains("mesh_boundary") || !item.contains("electron_model") ||
-            !item.at("mesh_boundary").is_string() ||
-            !item.at("electron_model").is_string())
-          fail(file, "drift_diffusion_boundary." + entry.key() +
-                         " requires exactly mesh_boundary and electron_model strings");
-        const auto mesh_name = item.at("mesh_boundary").get<std::string>();
-        const auto model = item.at("electron_model").get<std::string>();
-        if (!std::regex_match(mesh_name, safe_alias) ||
-            !sidesets.insert(mesh_name).second)
+            !item.contains("mesh_boundary") || !item.contains("bcs") ||
+            !item.at("mesh_boundary").is_string() || !item.at("bcs").is_object())
+          fail(file, "drift_diffusion_boundary." + group.key() +
+                         " needs exactly mesh_boundary string and bcs object");
+
+        DDBoundaryRecord record;
+        record.mesh_boundary = item.at("mesh_boundary").get<std::string>();
+        if (!std::regex_match(record.mesh_boundary, identifier) ||
+            !used_mesh_boundaries.insert(record.mesh_boundary).second)
           fail(file, "invalid or duplicate mesh_boundary in drift_diffusion_boundary: " +
-                         mesh_name);
-        if (model != "open" && model != "adjacent_sheath" && model != "external")
-          fail(file, "invalid electron_model for " + entry.key() + ": " + model);
-        if (model == "adjacent_sheath" &&
-            (entry.key() == "inlet" || entry.key() == "outlet" ||
-             mesh_name == "inlet" || mesh_name == "outlet"))
-          fail(file, "inlet/outlet cannot select the solid adjacent_sheath electron BC");
-        _dd_boundaries.emplace(entry.key(), DDBoundaryRecord{mesh_name, model});
+                         record.mesh_boundary);
+
+        for (auto bc = item.at("bcs").begin(); bc != item.at("bcs").end(); ++bc)
+        {
+          const auto & spec = bc.value();
+          if (!std::regex_match(bc.key(), identifier) ||
+              !used_bc_names.insert(bc.key()).second)
+            fail(file, "invalid or duplicate DriftDiffusion BC name: " + bc.key());
+          if (!spec.is_object() || !spec.contains("type") || !spec.contains("variable") ||
+              !spec.contains("wall_number_flux") || !spec.at("type").is_string() ||
+              !spec.at("variable").is_string() ||
+              !spec.at("wall_number_flux").is_string())
+            fail(file, "drift_diffusion_boundary BC " + bc.key() +
+                           " requires type, variable, and wall_number_flux strings");
+
+          DDBoundaryBCRecord entry;
+          entry.type = spec.at("type").get<std::string>();
+          entry.variable = spec.at("variable").get<std::string>();
+          entry.wall_number_flux = spec.at("wall_number_flux").get<std::string>();
+          const bool particle = entry.type == "FEMElectronSheathBC";
+          const bool energy = entry.type == "FEMElectronEnergySheathBC";
+          if (!particle && !energy)
+            fail(file, "drift_diffusion_boundary BC type is not yet supported: " +
+                           entry.type + " for " + bc.key());
+          if (spec.size() != (particle ? 3 : 4) ||
+              (energy && (!spec.contains("mean_energy") ||
+                          !spec.at("mean_energy").is_string())))
+            fail(file, "wrong named arguments in drift_diffusion_boundary BC " + bc.key());
+          if (energy)
+            entry.mean_energy = spec.at("mean_energy").get<std::string>();
+          if (entry.variable.empty() || entry.wall_number_flux.empty() ||
+              (energy && entry.mean_energy.empty()))
+            fail(file, "empty parameter value in drift_diffusion_boundary BC " + bc.key());
+
+          // Do not double-own a physical residual under two different labels.
+          const std::string key = entry.type + "/" + entry.variable + "/" +
+                                  record.mesh_boundary;
+          if (!operator_owners.insert(key).second)
+            fail(file, "duplicate DriftDiffusion BC operator owner: " + key);
+          record.bcs.emplace(bc.key(), std::move(entry));
+        }
+        _dd_boundaries.emplace(group.key(), std::move(record));
       }
       _has_dd_boundary = true;
     }
