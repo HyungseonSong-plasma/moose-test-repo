@@ -14,7 +14,11 @@ DATA = json.loads((APP / "ci/dd_plasma_boundary_json_p2.json").read_text())
 NEW = (APP / "ci/dd_plasma_boundary_json_p2.i").read_text()
 LEGACY = (APP / "ci/dd_plasma_boundary_legacy_p2.i").read_text()
 MEAN = (APP / "src/materials/PhysicsElectronMeanEnergyMaterial.C").read_text()
-FLUX = (APP / "src/materials/ElectronWallFluxMaterial.C").read_text()
+FLUX = (APP / "src/materials/ESWallFluxMaterial.C").read_text()
+ES_H = (APP / "include/materials/ESWallFluxMaterial.h").read_text()
+MID_ALIAS = (APP / "src/materials/ElectronWallFluxMaterial.C").read_text()
+MID_H = (APP / "include/materials/ElectronWallFluxMaterial.h").read_text()
+ENERGY_ACTION = (APP / "src/physics/plasma/DDEnergyEq.C").read_text()
 COMPAT = (APP / "src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C").read_text()
 COMPAT_H = (APP / "include/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.h").read_text()
 THERMAL = (APP / "src/materials/PhysicsElectronWallFluxMaterial.C").read_text()
@@ -69,17 +73,27 @@ def test_only_json_presence_controls_bc_emission():
 
 def test_existing_mean_energy_and_sheath_laws_untouched():
     assert "type = PhysicsElectronMeanEnergyMaterial" in NEW
-    assert "type = ElectronWallFluxMaterial" in NEW
+    assert "type = ESWallFluxMaterial" in NEW
     assert "type = PhysicsElectronMeanEnergyMaterial" in LEGACY
     assert "type = PhysicsElectronAdjacentSheathWallFluxMaterial" in LEGACY
-    assert 'registerMooseObject("PhysicsApp", ElectronWallFluxMaterial);' in FLUX
+    assert 'registerMooseObject("PhysicsApp", ESWallFluxMaterial);' in FLUX
+    assert 'registerMooseObject("PhysicsApp", ElectronWallFluxMaterial);' in MID_ALIAS
+    assert "public ESWallFluxMaterial" in MID_H
+    assert "class ESWallFluxMaterial : public FunctorMaterial" in ES_H
     assert 'registerMooseObject("PhysicsApp", PhysicsElectronAdjacentSheathWallFluxMaterial);' in COMPAT
-    assert "public ElectronWallFluxMaterial" in COMPAT_H
+    assert "public ESWallFluxMaterial" in COMPAT_H
     assert 'registerMooseObject("PhysicsApp", PhysicsElectronWallFluxMaterial);' in THERMAL
-    assert "mean_energy_output = e_mean_energy" in NEW
-    assert "mean_energy_output = e_mean_energy" in LEGACY
-    assert DATA["boundaries"]["left"]["bcs"]["electron_energy_wafer"]["mean_energy"] == "e_mean_energy"
+    assert "mean_energy_output = e_energy_eV" in NEW
+    assert "mean_energy_output = e_energy_eV" in LEGACY
+    assert DATA["boundaries"]["left"]["bcs"]["electron_energy_wafer"]["mean_energy"] == "e_energy_eV"
     assert "mean_energy = exp(energy_state - density_state);" in MEAN
+    assert '"e_energy_eV",' in MEAN
+    assert 'addFunctorProperty<ADReal>("mean_en_solved", mean_energy_functor)' in MEAN
+    assert 'if (!isParamSetByUser("mean_energy_output"))' in MEAN
+    assert 'return "log_" + species + "_energy";' in ENERGY_ACTION
+    assert 'saveSolverVariableName(energyStateName("e"));' in ENERGY_ACTION
+    assert "log_e_energy" in ENERGY_ACTION
+    assert 'MooseEnum("normalized physical_eV log_molar_eV", "normalized")' in MEAN
     assert "primaryParticleFluxHat(n_e, eps_bar, drop)" in FLUX
     assert 'entry.type == "FEMElectronSheathBC"' in CHEM
     assert 'entry.type == "FEMElectronEnergySheathBC"' in CHEM
