@@ -11,12 +11,11 @@
 []
 [Physics]
   [Plasmas]
-    files = plasma_auto_constant.json
+    files = plasma_species_initial_p2.json
     [Transport]
       [DriftDiffusion]
         [Continuity]
-          # Format: species_name initial_number_density ... [1/m^3]
-          fem_species = 'e 1e16'
+          fem_species = e
           fem_potential = potential
         []
         [Energy]
