@@ -250,3 +250,34 @@ At parent HEAD `ed608a23f79fe25e31041b184fa27edb21ba7385`, the duplicate `Physic
   in this turn is confined to a safeguarded electron density ownership
   check, its negative tests and this evidence note.
   **No merge; `SCIENCE_HOLD`; P3/P4 NOT_RUN.**
+
+
+## 2026-11-13 operator scope update: D1 observation is obsolete
+
+The user confirmed Issue397 lower-D D1 face-current and geometry AuxKernels
+were **temporary debugging instrumentation** and are no longer needed now
+that the issue they were introduced to diagnose has been identified.
+This explicit operator decision supersedes prior PR #524 D1-only blocking
+language about 14-probe FaceArg/oriented-normal/field reproduction, diagnostic
+numerical parity and optional independent review of D1 retirement.
+None of these *obsolete diagnostic* criteria is a current acceptance gate.
+
+The disposable D scratch input permanently retires only the 14 archived D1
+AuxKernel owners and their 14 self-contained AuxVariables after strict
+exact-signature/external-consumer checks. Archived B/C files stay immutable.
+The actual supported physics Kernel `PhysicsLowerDSurfaceCurrent` and all
+Wall, RF, charge, electron-transport and Chemistry ownership remains active.
+No debug observer is re-registered or silently emulated.
+
+[Earlier core Native run #43407079646](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43407079646)
+had 638 P0 passes, fresh Native P1 PASS and S6-417/941
+`physics-opt --check-input` both `Syntax OK`; it was labelled
+`CORE_INPUT_P2=PASS` at the time because debug reproduction was still
+pending. Now the intended *active S6 physics input* explicitly excludes
+the obsolete D1 diagnostics, so this existing P2 evidence applies to that
+selected input scope. The historical run and its receipts are not changed.
+
+This scope update does **not** waive actual physical Native face-value
+numerical parity or approval requirements imposed by repository protections,
+and does not authorize P3, merge or any science acceptance. Keep
+`SCIENCE_HOLD` and Draft PR status pending those distinct gates.
