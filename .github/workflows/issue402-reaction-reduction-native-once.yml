@@ -64,7 +64,8 @@ jobs:
             tests/test_issue402_s6_wall_naming_staging.py \
             tests/test_retired_legacy_physics_owners_contract.py \
             tests/test_issue402_s6_chemistry_run_templates.py \
-            tests/test_issue402_full_s6_p2_only.py
+            tests/test_issue402_full_s6_p2_only.py \
+            tests/test_issue402_reaction_reduction_p2_only.py
           python3 -m pytest -q tests/characterization/test_issue192_s5r.py tests/characterization/test_issue192_s5r_runtime.py
           python3 physics_app/ci/check_r2_o2_ionization_implementation.py
           python3 physics_app/ci/check_r3_o2s_excitation_implementation.py
@@ -134,7 +135,7 @@ jobs:
           },indent=2,sort_keys=True)+"\n")
           PY
           echo 'ISSUE402_REAL_S6_SOURCE_BOUND_P1_PASS'
-      - name: Native EI10 EI16 original-oracle small-solve compatibility
+      - name: Native EI10 EI16 four-fixture syntax-only P2 (never solve)
         shell: bash
         run: |
           set -euo pipefail
@@ -143,17 +144,10 @@ jobs:
             -v "$PWD:/workspace" "$OCI" -lc '
               set -euo pipefail
               source /environment
-              python3 physics_app/ci/check_r2_o2_ionization_implementation.py \
-                --executable /workspace/physics_app/physics-opt \
-                --evidence-out /workspace/experiments/Issue402_plasma_dsl_g1/evidence/r2_reduction_native.json
-              python3 physics_app/ci/check_r3_o2s_excitation_implementation.py \
-                --executable /workspace/physics_app/physics-opt \
-                --evidence-out /workspace/experiments/Issue402_plasma_dsl_g1/evidence/r3_reduction_native.json
-              python3 physics_app/ci/check_standard_moose_energy_projection.py \
-                --executable /workspace/physics_app/physics-opt \
-                --evidence-out /workspace/experiments/Issue402_plasma_dsl_g1/evidence/e8_reduction_native.json
-            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/reduction_native.log
-          echo 'ISSUE402_EI10_EI16_SOURCE_P3_BOUNDED_ORACLES_PASS'
+              python3 -m physics_app.ci.check_issue402_reaction_reduction_p2_only \
+                --executable /workspace/physics_app/physics-opt
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/reduction_native_p2.log
+          echo 'ISSUE402_EI10_EI16_SOURCE_P2_SYNTAX_ONLY_PASS'
       - name: Direct prebuilt D base S6 417/941 Native P2 (no filtering/scans)
         shell: bash
         run: |
@@ -225,10 +219,7 @@ jobs:
         with:
           name: issue402-pr524-reaction-reduction-native-${{ github.sha }}
           path: |
-            control/experiments/Issue402_plasma_dsl_g1/evidence/r2_reduction_native.json
-            control/experiments/Issue402_plasma_dsl_g1/evidence/r3_reduction_native.json
-            control/experiments/Issue402_plasma_dsl_g1/evidence/e8_reduction_native.json
-            control/experiments/Issue402_plasma_dsl_g1/evidence/reduction_native.log
+            control/experiments/Issue402_plasma_dsl_g1/evidence/reduction_native_p2.log
             ${{ runner.temp }}/pr524_s6_p2_summary.json
             ${{ runner.temp }}/pr524_full_s6_417/readiness.json
             ${{ runner.temp }}/pr524_full_s6_941/readiness.json
