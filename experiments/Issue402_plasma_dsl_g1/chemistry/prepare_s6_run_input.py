@@ -266,6 +266,92 @@ def sha(contents: bytes) -> str:
     return hashlib.sha256(contents).hexdigest()
 
 
+
+# Archived S6-417/941 B/C use this one electron lookup Material in the first
+# (shared) input layer. Fail-closed conversion applies to ephemeral D scratch
+# only: the historical B/C archive, lookup table, mean-energy Functor and
+# 5/3 energy projection all remain the same.
+_ARCHIVED_ELECTRON_LOOKUP = {
+    "type": "PhysicsElectronTransportLookupMaterial",
+    "property_table_file": "'../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
+    "mean_energy": "mean_en_solved",
+    "pressure": "p",
+    "gas_temperature": "T_g_fixed",
+    "bounds_policy": "clamp",
+    "block": "plasma",
+}
+
+
+def canonicalize_staged_electron_lookup(
+        edits: dict[Path, str]) -> tuple[dict[Path, str], dict]:
+    """Migrate exactly one verified historical electron closure, with no physics edits."""
+    candidates = []
+    for path, source in edits.items():
+        for m in _WALL_BLOCK.finditer(source):
+            body = m.group("body")
+            typed = _WALL_TYPE.search(body)
+            material_type = typed.group("type") if typed else ""
+            if m.group("name") != "electron_transport" and (
+                    material_type != "PhysicsElectronTransportLookupMaterial"):
+                continue
+            headings = re.findall(
+                r"(?m)^\[([A-Za-z0-9_]+)\][ \t]*$", source[:m.start()])
+            if not headings or headings[-1] != "FunctorMaterials":
+                raise ValueError("S6_ELECTRON_LOOKUP_NOT_FUNCTORMATERIAL")
+            pairs = re.findall(
+                r"(?m)^    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)$",
+                body)
+            values = {key: val.strip() for key, val in pairs}
+            if len(values) != len(pairs) or values != _ARCHIVED_ELECTRON_LOOKUP:
+                raise ValueError(
+                    "S6_ELECTRON_LOOKUP_IDENTITY_UNPROVED: " + path.name +
+                    " " + repr(values))
+            candidates.append((path, source, m))
+    if len(candidates) != 1:
+        raise ValueError(
+            "S6_ELECTRON_LOOKUP_OWNER_COUNT_UNPROVED: " + str(len(candidates)))
+    path, source, m = candidates[0]
+    table_path = _ARCHIVED_ELECTRON_LOOKUP["property_table_file"]
+    # Exactly the same table/pressure/temperature, same 'clamp' policy, and
+    # DDMaterial's hardwired mean_en_solved lookup axis. No synthetic values.
+    new_body = (
+        "    type = DDMaterial\n"
+        "    species_id = e\n"
+        "    model = lookup\n"
+        "    table_file = " + table_path + "\n"
+        "    table_units = reduced\n"
+        "    pressure = p\n"
+        "    gas_temperature = T_g_fixed\n"
+        "    bounds_policy = clamp\n"
+        "    fluid_energy = true\n"
+        "    block = plasma\n"
+    )
+    revised = source[:m.start("body")] + new_body + source[m.end("body"):]
+    results = dict(edits)
+    results[path] = revised
+    return results, {
+        "status": "SCRATCH_ONLY_EXACT_ELECTRON_LOOKUP_CUTOVER",
+        "source_layer": path.name,
+        "owner": "electron_transport",
+        "from_type": "PhysicsElectronTransportLookupMaterial",
+        "to_type": "DDMaterial",
+        "table_file": table_path,
+        "coordinate": "mean_en_solved",
+        "pressure": "p",
+        "gas_temperature": "T_g_fixed",
+        "table_units": "reduced",
+        "bounds_policy": "clamp",
+        "fluid_energy": True,
+        "original_block_sha256": sha(m.group(0).encode("utf-8")),
+        "migrated_block_sha256": sha(
+            (m.group(0)[:m.start("body") - m.start()] + new_body +
+             m.group(0)[m.end("body") - m.start():]).encode("utf-8")),
+        "P2": "NOT_RUN",
+        "P3": "NOT_RUN",
+        "science": "SCIENCE_HOLD",
+    }
+
+
 def remove_one(text: str, name: str, variable: str, functor: str) -> str:
     # Native layer names may be reused by a FunctorMaterial and its Kernel.
     # Match ONLY the old FunctorKernel owner in the [Kernels] root section.
@@ -363,6 +449,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
     # New-run Wall names are cut over only when every legacy output has a
     # verified, uniquely identified FunctorMaterial producer. Fail before
     # mutating any scratch file if an old/unknown wall owner is still present.
+    edits, lookup_cutover = canonicalize_staged_electron_lookup(edits)
     edits, wall_cutover = canonicalize_staged_wall_inputs(edits)
     # Only after every owner check passes, modify disposable scratch.
     dest = staged_chem_dir / "chemistry"
@@ -378,6 +465,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         "removed_legacy_kernel_names": sorted(retired),
         "removed_count": len(retired),
         "canonical_name_replacements": renamed,
+        "scratch_electron_lookup_cutover": lookup_cutover,
         "scratch_wall_functor_cutover": wall_cutover,
         "overlay_sha256": sha(template.encode()),
         "common_mechanism_sha256": sha(common),
