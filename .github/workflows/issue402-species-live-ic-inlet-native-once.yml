@@ -1,5 +1,5 @@
 name: Issue402 Live Species Y IC Inlet P0 P1 P2
-# Final source-bound rerun for generated NV ownership, live-Y all-four P2, and derived species.
+# Source-bound rerun: charged NV n_e/T_e now wired in all-four Y_i P2 fixture.
 on:
   push:
     branches: [issue-402-species-live-ic-inlet]
