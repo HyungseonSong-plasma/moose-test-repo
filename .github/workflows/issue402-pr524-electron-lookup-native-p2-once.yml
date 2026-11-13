@@ -65,7 +65,7 @@ jobs:
             tests/test_issue402_s6_chemistry_run_templates.py \
             tests/test_issue402_full_s6_p2_only.py
           echo 'ISSUE402_ELECTRON_LOOKUP_AND_WALL_P0_PASS'
-          echo 'RETRY=fix_fixture_path_keys_and_synthetic_archived_owner'
+          echo 'RETRY=fix_real_fixture_newlines_and_exact_electron_block_assertions'
       - name: Materialize pinned public historical 400W mesh
         shell: bash
         run: |
