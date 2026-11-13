@@ -51,15 +51,15 @@ first relocation intentionally preserves them as explicit external
 FV input and does not try to convert them into FEM BCs.
 
 The wall flux `electron_wall_number_flux` is already provided by
-`ElectronWallFluxMaterial.C` (renamed from
-`PhysicsElectronAdjacentSheathWallFluxMaterial.C`), using a plasma-sided
+`ESWallFluxMaterial.C` (canonical name; moved without changing the
+adjacent-cell sheath flux equation from the historical implementation), using a plasma-sided
 `FaceArg` and `PhysicsGroundedElectronSheath::primaryParticleFluxHat`.
 `PhysicsElectronMeanEnergyMaterial.C` reads the solved log-molar states
 and publishes a configurable mean-energy Functor
-(e.g., `e_mean_energy = exp(log_energy - log_ne)` [eV]) as a
+(e.g., `e_energy_eV = exp(log_energy - log_ne)` [eV]) as a
 **derived AD Functor**; it is not an independent solver variable.
 `FEMElectronEnergySheathBC.C` uses this Functor for
-`T_e=(2/3) e_mean_energy` for the new fixture and the existing outgoing energy flux
+`T_e=(2/3) e_energy_eV` for the new fixture and the existing outgoing energy flux
 `(Gamma_e/N_A)*(5/2)*T_e`.
 
 The `MeanEnergyMaterial` guard is **demand-driven**: it detects invalid
@@ -73,18 +73,20 @@ can still occur. These guards provide a local error message but cannot
 guarantee prevention of an earlier solver failure elsewhere. No
 mean-energy error policy or physical formula is changed here.
 The physical constitutive formula and error policies are unchanged. The
-new fixture sets `mean_energy_output=e_mean_energy` explicitly. The old
-`mean_en_solved` default remains valid for historical files. **Do not
+new fixture sets `mean_energy_output=e_energy_eV` explicitly. When the output name is omitted, both canonical `e_energy_eV` and legacy
+`mean_en_solved` are exported by the same single evaluation lambda to
+preserve old inputs. An explicit `mean_energy_output` exports only the
+selected name. **Do not
 rename mean energy to `e_energy_density`:** mean energy is in eV per
 electron, while electron energy density is in eV/m3. The
 `PhysicsElectronMeanEnergyMaterial` supports normalized, physical_eV
 and log_molar_eV state representations and does *not* output an energy
 density, so calling it `EEDConvertorMaterial` would be misleading.
 
-`ElectronWallFluxMaterial` is now the canonical **sheath-suppressed**
-wall flux source. Historical
-`PhysicsElectronAdjacentSheathWallFluxMaterial` is a thin compatibility
-subclass, with no separate wall law. The older
+`ESWallFluxMaterial` is now the canonical **sheath-suppressed**
+wall flux source. Both the transitional `ElectronWallFluxMaterial` spelling
+and historical `PhysicsElectronAdjacentSheathWallFluxMaterial` are thin
+registered compatibility subclasses with **no duplicated physics**. The older
 `PhysicsElectronWallFluxMaterial` **remains a separate thermal-only
 absorbing-wall model** used by Issue #3 dielectric surface charge
 experiments (`d3_combined_primary.i`, `d5_fv_wall_current_feedback.i`,
@@ -117,7 +119,7 @@ with left/bottom/right/top rather than production QVT sideset names):
           "type": "FEMElectronEnergySheathBC",
           "variable": "log_energy",
           "wall_number_flux": "electron_wall_number_flux",
-          "mean_energy": "e_mean_energy"
+          "mean_energy": "e_energy_eV"
         }
       }
     },
@@ -165,9 +167,9 @@ JSON entry nor this Action removes old explicit BCs automatically.
   BC lists remain explicit until their own exact parameter inventories
   and P2 migration oracles are performed.
 - `physics_app/ci/dd_plasma_boundary_json_p2.i` uses the canonical
-  `ElectronWallFluxMaterial`; the explicit-BC control uses the legacy
+  `ESWallFluxMaterial`; the explicit-BC control uses the legacy
   alias class. Both use the exact same wall law and name the derived
-  mean energy `e_mean_energy` explicitly.
+  mean energy `e_energy_eV` explicitly.
 - `physics_app/ci/dd_plasma_boundary_json_p2.i` is new JSON-owned
   synthetic control; `dd_plasma_boundary_legacy_p2.i` retains the
   exact same four named MOOSE BC declarations. The P0 test checks
@@ -180,3 +182,64 @@ JSON entry nor this Action removes old explicit BCs automatically.
   with the original powered Issue #395 source is **not verified**.
   **SCIENCE_HOLD** until an exact historical input is available
   and independently checked.
+
+## Current solver variable names and format-branch audit
+
+The new `Physics/Plasmas/Transport/DriftDiffusion/Energy` Action in
+`physics_app/src/physics/plasma/DDEnergyEq.C` calls
+`energyStateName("e") = "log_" + "e" + "_energy"`, giving
+**`log_e_energy`**, not `log_energy`. The related new Continuity
+Action uses **`log_e`**. Older Issue #395 production inputs solve
+`log_energy` and `log_ne` instead; these are distinct interfaces.
+Never substitute the old pair into an Action-generated new pair without
+explicit source mapping. Example new log-molar mean-energy bridge:
+```ini
+[FunctorMaterials]
+  [electron_mean_energy]
+    type = PhysicsElectronMeanEnergyMaterial
+    state_form = log_molar_eV
+    electron_energy_density = log_e_energy
+    electron_density = log_e
+    mean_energy_output = e_energy_eV
+  []
+[]
+```
+For historical inputs, retain `log_energy/log_ne` and set
+`mean_energy_output=e_energy_eV` only when all consuming Functors are
+also mapped to the canonical name.
+
+`PhysicsElectronMeanEnergyMaterial.C` presently supports three *input*
+representations, not three unrelated physical outputs:
+
+- `log_molar_eV`: `exp(log_energy_state - log_density_state)`
+  [eV], actively consumed by existing FEM log-molar inputs and
+  compatible with the new `log_e_energy/log_e` states.
+- `physical_eV`: physical electron energy density [eV/m^3]
+  divided by physical number density [1/m^3], actively referenced by
+  `physics_app/ci/electron_energy_transport_smoke.i`,
+  `electron_energy_lookup_response_smoke.i` and several runtime
+  verification generators; **not retired**.
+- `normalized`: historical dimensionless energy and number density
+  ratio multiplied by `energy_reference_eV`. It remains a
+  backward-compatibility branch pending a complete inventory of
+  historical generators and exact numerical regression.
+
+All three calculations *can* be expressed as AD Functors, for example
+using `ADParsedFunctorMaterial`: `exp(log_energy-log_density)`,
+`energy_density/number_density`, or
+`epsilon_ref*normalized_energy/normalized_density`, respectively.
+**However**, a pure parsed expression does not preserve the present
+fail-fast finiteness, positivity, exact parameter/normalization checks.
+We have not migrated or removed these format branches or proven AD
+derivative parity for an alternative implementation.
+This remains a scoped investigation, **not** an authorization to
+delete old solver compatibility modes.
+
+The thermal-only `PhysicsElectronWallFluxMaterial` remains a live
+dependency of `experiments/Issue3_dielectric_surface_charge/` native
+input files and a literal pre-conversion type consumed by the
+`experiments/Issue395_powered_chemistry_ladder/enable_electron_adjacent_sheath_wall.py`
+script. It cannot be retired/deleted on a claim of disuse. The
+thermal-only and sheath-corrected constitutive laws are physically
+different. They are never simultaneous providers of the same output
+`electron_wall_number_flux` in one block.
