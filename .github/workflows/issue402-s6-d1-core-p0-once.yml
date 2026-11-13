@@ -29,5 +29,5 @@ jobs:
             tests/test_issue402_s6_wall_naming_staging.py \
             tests/test_issue402_s6_chemistry_run_templates.py \
             tests/test_issue402_wall_semantic_parity.py
-          echo "ISSUE402_CORE_P2_D1_P0_PASS SOURCE=$GITHUB_SHA"
+          echo "ISSUE402_CORE_P2_D1_P0_PASS RETRY=EXACT_OWNER_NEGATIVE_CONTROLS SOURCE=$GITHUB_SHA"
           echo 'FULL_S6_P2=HOLD DIAGNOSTIC_PARITY=HOLD P3=NOT_RUN SCIENCE=SCIENCE_HOLD'
