@@ -61,11 +61,26 @@ def test_surface_input_is_real_ideal_gas_wiring_and_composition():
     assert "model = ideal_gas" in sample
     assert "temperature = T" in sample
     assert "density = rho_g" in sample
-    assert data["gas_state"] == {
-        "species": ["O2", "O"],
-        "mass_fractions": ["Y_O2", "Y_O"],
-    }
-    assert sum((1.0, 0.0)) == 1.0
+    assert "gas_state" not in data
+    assert "prop_names = 'Y_O2 Y_O'" not in sample
+    assert data["species"]["O2"]["initial_vol_mass_fraction"] == 0.9
+    assert data["species"]["O2"]["initial_inlet_mass_fraction"] == 1.0
+    assert data["species"]["O"]["initial_vol_mass_fraction"] == 0.1
+    assert data["species"]["O"]["initial_inlet_mass_fraction"] == 0.0
+    assert "functor = Y_O2_initial_vol" in sample
+    assert "functor = Y_O2_inlet" in sample
+    assert "functor = Y_O_inlet" in sample
+    assert sum(s["initial_vol_mass_fraction"] for s in data["species"].values()) == 1.0
+    assert sum(s["initial_inlet_mass_fraction"] for s in data["species"].values()) == 1.0
+    parser = (SRC / "physics/plasma/Chemistry.C").read_text()
+    assert 'if (root.contains("gas_state"))' in parser
+    assert "initial_vol_mass_fraction" in parser
+    assert "initial_inlet_mass_fraction" in parser
+    assert "conflicting species identity for " in parser
+    assert 'add("Y_" + id + "_initial_vol"' in parser
+    assert 'add("Y_" + id + "_inlet"' in parser
+    assert "const auto * nv = _data.nvTransport();" in parser
+    assert "Initial volume and inlet heavy-species mass fractions must each" in parser
 
 
 def test_ideal_gas_mixture_molar_mass_and_density_oracle():
