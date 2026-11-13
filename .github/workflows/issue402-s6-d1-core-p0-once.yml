@@ -1,0 +1,33 @@
+name: Issue402 D1 diagnostic core-only P0 once
+on:
+  push:
+    branches: [issue-402-species-functor-naming]
+    paths: [.github/workflows/issue402-s6-d1-core-p0-once.yml]
+permissions:
+  contents: read
+jobs:
+  verify-public-s6-archived-d1-suspension:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Immutable B/C Aux ownership, source preservation and negative controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m pip install --quiet --disable-pip-version-check 'pytest>=8,<9'
+          python3 -m py_compile experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py
+          python3 -m pytest -q \
+            tests/test_issue402_s6_d1_aux_scope.py \
+            tests/test_issue402_s6_electron_transport_compatibility.py \
+            tests/test_issue402_s6_wall_naming_staging.py \
+            tests/test_issue402_s6_chemistry_run_templates.py \
+            tests/test_issue402_wall_semantic_parity.py
+          echo "ISSUE402_CORE_P2_D1_P0_PASS SOURCE=$GITHUB_SHA"
+          echo 'FULL_S6_P2=HOLD DIAGNOSTIC_PARITY=HOLD P3=NOT_RUN SCIENCE=SCIENCE_HOLD'
