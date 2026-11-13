@@ -21,10 +21,9 @@
     files = json_surface_rate_p2.json
     pressure = 1.333223684
     temperature = 300
-    model = ideal_gas
-    initialize_species_mass_fractions = true
+    state_model = ideal_gas
     inlet_boundaries = left
-    inlet_bc_model = dirichlet
+    sccm = 100
   []
 []
 [FunctorMaterials]
