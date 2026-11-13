@@ -1,0 +1,57 @@
+{
+  "species": {
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.032
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.016
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1,
+      "molar_mass_kg_mol": 0.016
+    },
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    }
+  },
+  "equations": {
+    "H05": "Om + O -> O2 + e"
+  },
+  "reactions": [
+    {
+      "id": "H05",
+      "domain": "volume",
+      "reactants": {
+        "Om": 1,
+        "O": 1
+      },
+      "products": {
+        "O2": 1,
+        "e": 1
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      },
+      "rate": {
+        "model": "power_law",
+        "A": 3e-16,
+        "basis": "particle",
+        "T_ref": 300,
+        "exponent": 0
+      }
+    }
+  ]
+}
