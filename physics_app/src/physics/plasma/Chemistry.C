@@ -929,6 +929,16 @@ PlasmasAction::act()
     paramError("files", "Initial volume and inlet heavy-species mass fractions must each "
                         "sum to 1; received volume=", volume_sum, ", inlet=", inlet_sum);
 
+  if (const auto * nv = _data.nvTransport())
+  {
+    std::set<std::string> active(nv->species.begin(), nv->species.end());
+    std::set<std::string> catalogue(species.begin(), species.end());
+    if (active != catalogue)
+      paramError("files",
+                 "Root ideal_gas requires NV transport species to match the complete "
+                 "heavy gas composition; no implicit renormalization or silent omission.");
+  }
+
   // A solved variable is the only source allowed to receive an FV IC or BC;
   // derived/constraint Functors are read-only and inherit the mixture closure.
   if (_current_task == "add_ics_physics")
