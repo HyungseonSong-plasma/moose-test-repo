@@ -64,13 +64,14 @@ stored fractions and root p/T. `rho_g_inlet` is a feed-side EOS value;
 
 ## Explicitly NOT automated
 
-1. **Initial state ICs**: JSON contains default initial values, but does not
-   guess whether solver variables are `w_O2`, `w_O2_constraint`, or another
-   implementation. IC owner still maps each field to the correct solved variable.
-2. **Inlet BCs**: JSON contains feed fractions, but has no inlet boundary name,
-   flux direction, or SCCM mass-flow policy. The BC owner must bind
-   `Y_<id>_inlet` to its actual inlet flux/Dirichlet operator; wall sticking
-   and inlet mass flow have different semantics.
+1. **Initial state ICs**: The optional `mass_fraction_variable` owner now gives an explicit IC mapping.
+   Enable `initialize_species_mass_fractions = true` to create an FVConstantIC
+   for solved states. Derived Functors receive no independent IC.
+2. **Inlet BCs**: Root `inlet_boundaries` plus `inlet_bc_model = dirichlet` now supports
+   generated FVDirichletBC on solved mass-fraction variables. Existing WCNS
+   mass-flux/SCCM feed operators still own their flow-boundary conditions;
+   the metadata must be converted into their species mass flux without
+   introducing a second Dirichlet BC.
 3. **Live normalization**: Stored initial compositions are sum-checked; evolving
    `Y_i(t,x)` are not normalized by their initial values. Solver owns
    positivity and mixture continuity.
