@@ -123,6 +123,24 @@ def test_d1_observation_input_mutation_rejected_without_file_change(
         mod.suspend_staged_retired_d1_observations(inputs)
     assert inputs[Path(BASE)] == edited
 
+@pytest.mark.parametrize("hidden", [
+    "      unknown = value",
+    "    unknown = value",
+    "      block = plasma",
+    "    unrelated text",
+])
+def test_hidden_aux_assignment_rejected_before_suspension(hidden):
+    layers = _layers("941", "C")
+    base = layers[Path(BASE)]
+    anchor = "  [d1_normal_z_kernel]\n"
+    assert base.count(anchor) == 1
+    amended = base.replace(anchor, anchor + hidden + "\n", 1)
+    source = {**layers, Path(BASE): amended}
+    with pytest.raises(ValueError, match="S6_OWNER_|S6_D1_PROBE_"):
+        mod.suspend_staged_retired_d1_observations(source)
+    assert source[Path(BASE)] == amended
+
+
 @pytest.mark.parametrize("change", ["delete_variable", "delete_kernel", "duplicate", "external_use"])
 def test_d1_incomplete_duplicate_or_externally_used_probes_fail_closed(change):
     layers = _layers("941", "B")
