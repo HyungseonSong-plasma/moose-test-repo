@@ -510,6 +510,40 @@ def suspend_staged_retired_d1_observations(
     }
 
 
+
+def audit_final_native_d1_debug_absence(inputs: dict[Path, str]) -> dict:
+    """Reject retired D1 Aux anywhere in the final 11-layer Native input.
+
+    This guards both the in-memory assembly and the files actually handed to
+    physics-opt. Immutable B/C archived sources are not modified.
+    """
+    debug_vars = set(_S6_D1_CURRENT_PROBES) | set(_S6_D1_GEOMETRY_PROBES)
+    names = debug_vars | {name + "_kernel" for name in debug_vars}
+    heading = re.compile(
+        r"(?m)^[ \t]*\[(" + "|".join(sorted(map(re.escape, names))) +
+        r")\][ \t]*$")
+    retired_type = re.compile(
+        r"(?m)^[ \t]*type[ \t]*=[ \t]*(?:"
+        r"PhysicsLowerDSurfaceCurrentProbeAux|PhysicsWaferD1GeometryProbeAux)"
+        r"[ \t]*(?:#.*)?$")
+    for path, source in inputs.items():
+        if path.suffix != ".i":
+            raise ValueError("S6_NATIVE_D1_AUDIT_UNEXPECTED_INPUT: " + path.name)
+        bad_headers = [m.group(1) for m in heading.finditer(source)]
+        bad_types = retired_type.findall(source)
+        if bad_headers or bad_types:
+            raise ValueError(
+                "S6_NATIVE_D1_DEBUG_STILL_PRESENT: " + path.name +
+                " headers=" + repr(bad_headers) +
+                " retired_type_count=" + str(len(bad_types)))
+    return {
+        "status": "PASS_OBSOLETE_D1_DIAGNOSTICS_ABSENT_FROM_NATIVE_INPUT",
+        "layers_checked": len(inputs),
+        "retired_auxkernels_remaining": 0,
+        "retired_auxvariables_remaining": 0,
+        "retired_factory_types_remaining": 0,
+    }
+
 def remove_one(text: str, name: str, variable: str, functor: str) -> str:
     # Native layer names may be reused by a FunctorMaterial and its Kernel.
     # Match ONLY the old FunctorKernel owner in the [Kernels] root section.
@@ -610,6 +644,17 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
     edits, d1_scope = suspend_staged_retired_d1_observations(edits)
     edits, lookup_cutover = canonicalize_staged_electron_lookup(edits)
     edits, wall_cutover = canonicalize_staged_wall_inputs(edits)
+    # Scan all final Native layers (including untouched ones) before writes.
+    native_inputs = {
+        staged_chem_dir / Path(item).name:
+            edits.get(staged_chem_dir / Path(item).name,
+                      (staged_chem_dir / Path(item).name).read_text(encoding="utf-8"))
+        for item in ordered[:-1]
+    }
+    native_inputs[overlay] = template
+    native_debug_scan = audit_final_native_d1_debug_absence(native_inputs)
+    if native_debug_scan["layers_checked"] != 11:
+        raise ValueError("S6_NATIVE_D1_AUDIT_WRONG_LAYER_COUNT")
     # Only after every owner check passes, modify disposable scratch.
     dest = staged_chem_dir / "chemistry"
     dest.mkdir(parents=True, exist_ok=True)
@@ -618,6 +663,14 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
     overlay.write_text(template, encoding="utf-8")
     (dest / "oxygen_s6_common.json").write_bytes(common)
     (dest / f"oxygen_s6_{variant}.json").write_bytes(selected)
+    # Independently inspect the bytes actually consumed by Native, not just
+    # the in-memory cutover report.
+    persisted = {
+        target: target.read_text(encoding="utf-8") for target in native_inputs
+    }
+    persisted_scan = audit_final_native_d1_debug_absence(persisted)
+    if persisted_scan != native_debug_scan:
+        raise ValueError("S6_NATIVE_D1_AUDIT_DISK_CONTENT_MISMATCH")
     return {
         "status": "P2_INPUT_PREPARED",
         "variant": variant,
@@ -625,6 +678,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         "removed_count": len(retired),
         "canonical_name_replacements": renamed,
         "scratch_d1_observation_scope": d1_scope,
+        "final_native_d1_debug_absence": persisted_scan,
         "scratch_electron_lookup_cutover": lookup_cutover,
         "scratch_wall_functor_cutover": wall_cutover,
         "overlay_sha256": sha(template.encode()),
