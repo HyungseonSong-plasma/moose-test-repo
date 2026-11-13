@@ -829,32 +829,55 @@ PlasmasAction::act()
   if (_current_task != "add_functor_material" || !gasStateEnabled())
     return;
 
-  const auto * config = _data.gasState();
+  // No redundant top-level gas_state list. Composition is owned by each
+  // Chemistry species, including explicitly zero heavy fractions.
   std::vector<std::string> species;
   std::vector<std::string> fractions;
-  if (config)
+  std::vector<Real> masses;
+  double volume_sum = 0.0;
+  double inlet_sum = 0.0;
+  for (const auto & [id, record] : _data.speciesRecords())
   {
-    species = config->species;
-    fractions = config->mass_fractions;
+    if (id == "e")
+      continue;
+    if (record.molar_mass_kg_mol <= 0.0 ||
+        !record.initial_vol_mass_fraction ||
+        !record.initial_inlet_mass_fraction)
+      paramError("files",
+                 "Root ideal_gas requires molar_mass_kg_mol, initial_vol_mass_fraction "
+                 "and initial_inlet_mass_fraction for every heavy species: ", id);
+
+    species.push_back(id);
+    masses.push_back(record.molar_mass_kg_mol);
+    volume_sum += *record.initial_vol_mass_fraction;
+    inlet_sum += *record.initial_inlet_mass_fraction;
   }
-  else if (_data.nvTransport())
+  if (species.empty())
+    paramError("files", "Root ideal_gas requires at least one heavy Chemistry species.");
+  if (std::abs(volume_sum - 1.0) > 1e-8 || std::abs(inlet_sum - 1.0) > 1e-8)
+    paramError("files", "Initial volume and inlet heavy-species mass fractions must each "
+                        "sum to 1; received volume=", volume_sum, ", inlet=", inlet_sum);
+
+  // Navier–Stokes owns the LIVE mass-fraction names when present.
+  // In a no-NV static gas, the JSON volume fractions define constant Y_i.
+  const auto * nv = _data.nvTransport();
+  if (nv)
   {
-    species = _data.nvTransport()->species;
-    fractions = _data.nvTransport()->mass_fractions;
+    std::set<std::string> active(nv->species.begin(), nv->species.end());
+    std::set<std::string> catalogue(species.begin(), species.end());
+    if (active != catalogue)
+      paramError("files",
+                 "Root ideal_gas requires NV transport species to match the complete "
+                 "heavy gas composition; no implicit species renormalization.");
+    for (const auto & id : species)
+    {
+      const auto it = std::find(nv->species.begin(), nv->species.end(), id);
+      fractions.push_back(nv->mass_fractions[std::distance(nv->species.begin(), it)]);
+    }
   }
   else
-    paramError("files",
-               "Gas State needs a gas_state {species, mass_fractions} composition in "
-               "[Plasmas]/files, or an existing navier_stokes transport composition.");
-
-  std::vector<Real> masses;
-  for (const auto & id : species)
-  {
-    const auto & record = _data.species(id);
-    if (id == "e" || record.molar_mass_kg_mol <= 0.0)
-      paramError("files", "Gas State requires a heavy molar_mass_kg_mol for ", id);
-    masses.push_back(record.molar_mass_kg_mol);
-  }
+    for (const auto & id : species)
+      fractions.push_back("Y_" + id);
 
   // No custom GasStateMaterial: publish canonical p/T and ideal-gas
   // derived state via existing ADParsedFunctorMaterial Functors.
@@ -881,7 +904,29 @@ PlasmasAction::act()
   add("p", pressure_literal.str(), {}, {});
   add("T", temperature_literal.str(), {}, {});
 
-  // Composition is a live field: changing Y_i updates rho_g via AD.
+  // These constant Functors are initial and feed boundary DATA, not solver IC/BC
+  // operators: boundaries and flow ownership remain with the active Physics.
+  // A statically specified (no NV) mixture uses its volume fraction as Y_i;
+  // with NV, the real, evolving mass-fraction Functors remain the sole owners.
+  auto literal = [](double value)
+  {
+    std::ostringstream stream;
+    stream << std::setprecision(17) << value;
+    return stream.str();
+  };
+  for (const auto & id : species)
+  {
+    const auto & record = _data.species(id);
+    add("Y_" + id + "_initial_vol",
+        literal(*record.initial_vol_mass_fraction), {}, {});
+    add("Y_" + id + "_inlet",
+        literal(*record.initial_inlet_mass_fraction), {}, {});
+    if (!nv)
+      add("Y_" + id, literal(*record.initial_vol_mass_fraction), {}, {});
+  }
+
+  // The equation of state consumes live Y_i when NV is activated; otherwise
+  // this is a constant-composition, non-evolving gas-state closure.
   std::vector<std::string> names = {"p", "T"};
   std::vector<std::string> symbols = {"pressure", "temp"};
   std::string denominator;
