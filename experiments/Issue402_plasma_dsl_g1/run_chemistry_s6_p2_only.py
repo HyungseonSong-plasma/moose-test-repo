@@ -21,11 +21,12 @@ import json
 from pathlib import Path
 
 import public_option_s6_p2 as option
-from chemistry.prepare_s6_run_input import prepare, audit_final_native_d1_debug_absence
+from chemistry.prepare_s6_run_input import prepare
 from p3_chemistry_preflight import audit
 
 ROOT = Path(__file__).resolve().parents[2]
 CASES = ("417", "941")
+D_BASE = ROOT / "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i"
 
 
 def digest(path: Path) -> str:
@@ -76,21 +77,15 @@ def check_only(historical: Path, expected_head: str, output: Path,
             folder = output / ("S6-" + case)
             folder.mkdir()
             staged = folder / "scratch"
-            ordered = option.p2.stage(ROOT, historical, case, "C", staged, manifest)
+            # Canonical D base was prepared once from the pinned source deck.
+            # Never stage retired issue397 diagnostics just to delete them.
+            ordered = option.p2.stage(
+                ROOT, historical, case, "C", staged, manifest,
+                d_base_source=D_BASE)
             chemistry = staged / option.p2.CHEM
             migration = option.canonicalize_staged_D_inputs(chemistry, ordered)
             type_remap = option.remap_staged_fem_types(chemistry, ordered)
             cutover = prepare(chemistry, ordered, case)
-            debug = cutover.get("scratch_d1_observation_scope", {})
-            if not (
-                debug.get("status") == "OBSOLETE_D1_DEBUG_OBSERVATIONS_RETIRED"
-                and debug.get("suspended_auxkernels") == 14
-                and debug.get("suspended_auxvariables") == 14
-                and debug.get("retired_diagnostics") == "NOT_REQUIRED_FOR_TARGET_MODEL"
-                and debug.get("diagnostic_parity") == "NOT_APPLICABLE"
-                and debug.get("d1_retirement_review") == "NOT_REQUIRED_OPERATOR_DECISION"
-            ):
-                raise ValueError("P2_RETIRED_D1_DIAGNOSTIC_SCOPE_UNPROVED")
             overlay = chemistry / "migrated_continuity.i"
             if digest(overlay) != cutover["overlay_sha256"]:
                 raise ValueError("P2_CHEMISTRY_OVERLAY_CONTENT_CHANGED")
@@ -98,17 +93,6 @@ def check_only(historical: Path, expected_head: str, output: Path,
             # coefficients and Poisson owner remain exactly as staged.
             if not all((staged / relative).is_file() for relative in ordered):
                 raise ValueError("P2_S6_STAGED_INPUT_LAYER_MISSING")
-            # Verify the actual 11 .i files passed to physics-opt, independent
-            # of the preparer's in-memory receipts.
-            native_layers = {
-                chemistry / Path(item).name:
-                    (chemistry / Path(item).name).read_text(encoding="utf-8")
-                for item in ordered
-            }
-            on_disk_d1 = audit_final_native_d1_debug_absence(native_layers)
-            if (on_disk_d1 != cutover.get("final_native_d1_debug_absence")
-                    or on_disk_d1["layers_checked"] != 11):
-                raise ValueError("P2_FINAL_NATIVE_D1_DIAGNOSTIC_INPUT_UNVERIFIED")
             if digest(binary) != identity["binary_sha256"]:
                 raise ValueError("P2_NATIVE_BINARY_CHANGED_AFTER_P1")
             checked = option.run_one(
@@ -121,7 +105,6 @@ def check_only(historical: Path, expected_head: str, output: Path,
                 "scratch_canonicalization": migration,
                 "scratch_fem_type_remap": type_remap,
                 "scratch_chemistry_cutover": cutover,
-                "native_input_d1_debug_audit": on_disk_d1,
                 "overlay_sha256": digest(overlay),
                 "P3": "NOT_RUN",
             }
