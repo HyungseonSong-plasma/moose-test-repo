@@ -21,7 +21,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python -m pip install -q 'pytest>=8,<9'
+          python -m pip install -q 'pydantic>=2,<3' 'pytest>=8,<9' \
+            'numpy>=1.26,<3' 'scipy>=1.14,<2' 'matplotlib>=3.8,<4' \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
           python -m pytest -q
           python physics_app/ci/check_r2_o2_ionization_implementation.py
           python physics_app/ci/check_r3_o2s_excitation_implementation.py
