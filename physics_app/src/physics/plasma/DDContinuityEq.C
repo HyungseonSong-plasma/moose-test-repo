@@ -2,13 +2,10 @@
 #include "Chemistry.h"
 #include "Physics.h"
 
-#include <cerrno>
 #include <cctype>
 #include <cmath>
-#include <cstdlib>
 #include <map>
 #include <set>
-#include <stdexcept>
 
 namespace Plasma
 {
@@ -21,57 +18,6 @@ continuityStateName(const std::string & species)
 {
   // All new solver states use one deterministic species-based naming rule.
   return "log_" + species;
-}
-
-struct ParsedSpeciesInput
-{
-  std::vector<std::string> names;
-  std::map<std::string, Real> initial_number_densities;
-};
-
-bool
-startsNumber(const std::string & token)
-{
-  if (token.empty())
-    return false;
-  char * end = nullptr;
-  (void)std::strtod(token.c_str(), &end);
-  return end != token.c_str() || token[0] == '+' || token[0] == '-' || token[0] == '.';
-}
-
-// Legacy names-only form remains external-variable binding. New form alternates
-// species_name and initial_number_density [1/m^3], with no arbitrary floor.
-ParsedSpeciesInput
-parseSpeciesInput(const std::vector<std::string> & tokens, const std::string & option)
-{
-  ParsedSpeciesInput result;
-  if (tokens.empty())
-    return result;
-  const bool paired = tokens.size() > 1 && startsNumber(tokens[1]);
-  if (!paired)
-  {
-    result.names = tokens;
-    return result;
-  }
-  if (tokens.size() % 2 != 0)
-    throw std::invalid_argument(option + ": expected species_name initial_number_density pairs");
-
-  for (std::size_t i = 0; i < tokens.size(); i += 2)
-  {
-    const auto & species = tokens[i];
-    const auto & density_token = tokens[i + 1];
-    char * end = nullptr;
-    errno = 0;
-    const Real number_density = std::strtod(density_token.c_str(), &end);
-    if (end == density_token.c_str() || *end != '\0' || errno == ERANGE ||
-        !std::isfinite(number_density) || !(number_density > 0.0))
-      throw std::invalid_argument(option + ": " + species +
-                                  " requires a finite, strictly positive "
-                                  "initial_number_density [1/m^3]");
-    result.names.push_back(species);
-    result.initial_number_densities.emplace(species, number_density);
-  }
-  return result;
 }
 
 std::vector<VariableName>
@@ -98,9 +44,9 @@ DDContinuityEq::validParams()
       "Supported FEM continuity generation creates the conservative log-molar time " 
       "derivative and drift-diffusion Kernels; FV transport stays Native.");
   params.addParam<std::vector<std::string>>(
-      "fem_species", {}, "Species names, optionally followed by positive initial_number_density [1/m^3] for each species.");
+      "fem_species", {}, "FEM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<std::vector<std::string>>(
-      "fvm_species", {}, "Species names, optionally followed by positive initial_number_density [1/m^3] for each species.");
+      "fvm_species", {}, "FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
   return params;
@@ -109,34 +55,13 @@ DDContinuityEq::validParams()
 DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
-  try
-  {
-    const auto fem_input = parseSpeciesInput(
-        getParam<std::vector<std::string>>("fem_species"), "fem_species");
-    const auto fvm_input = parseSpeciesInput(
-        getParam<std::vector<std::string>>("fvm_species"), "fvm_species");
-    _fem_species = fem_input.names;
-    _fvm_species = fvm_input.names;
-    _fem_initial_number_densities = fem_input.initial_number_densities;
-    _fvm_initial_number_densities = fvm_input.initial_number_densities;
-  }
-  catch (const std::invalid_argument & error)
-  {
-    paramError("fem_species", error.what());
-  }
+  // fem_species/fvm_species select species only. Initial values live in
+  // Chemistry JSON and must not be duplicated as positional .i numbers.
+  _fem_species = getParam<std::vector<std::string>>("fem_species");
+  _fvm_species = getParam<std::vector<std::string>>("fvm_species");
   const auto & fem = _fem_species;
   const auto & fvm = _fvm_species;
   const auto variables = resolvedContinuityVariables(fem, fvm);
-  for (const auto & [id, density] : _fem_initial_number_densities)
-    saveSolverVariableName(continuityStateName(id));
-  for (const auto & [id, density] : _fvm_initial_number_densities)
-    saveSolverVariableName(continuityStateName(id));
-
-  if (!_fem_initial_number_densities.empty() || !_fvm_initial_number_densities.empty())
-  {
-    addRequiredPhysicsTask("add_variables_physics");
-    addRequiredPhysicsTask("add_ics_physics");
-  }
   validateSpeciesInputs(fem, fvm, variables);
 
   // A species ID becomes part of a generated object name and must be safe.
@@ -155,6 +80,31 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
     for (const auto ch : species)
       if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_')
         paramError("fvm_species", "Invalid species ID for automatic naming: ", species);
+  }
+
+  // A JSON initial_number_density activates automatic FEM/FVM log-state
+  // variable and IC construction. Missing metadata preserves explicitly
+  // declared Native solver variables and their independently owned ICs.
+  const auto & records = chemistryData().speciesRecords();
+  const auto bind_json_initial = [this, &records](
+      const std::vector<std::string> & selected,
+      std::map<std::string, Real> & destinations)
+  {
+    for (const auto & id : selected)
+    {
+      const auto found = records.find(id);
+      if (found == records.end() || !found->second.initial_number_density)
+        continue;
+      destinations.emplace(id, *found->second.initial_number_density);
+      saveSolverVariableName(continuityStateName(id));
+    }
+  };
+  bind_json_initial(fem, _fem_initial_number_densities);
+  bind_json_initial(fvm, _fvm_initial_number_densities);
+  if (!_fem_initial_number_densities.empty() || !_fvm_initial_number_densities.empty())
+  {
+    addRequiredPhysicsTask("add_variables_physics");
+    addRequiredPhysicsTask("add_ics_physics");
   }
 
   // JSON automatically owns all selected DD species when any DD record exists.
@@ -200,8 +150,7 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
 void
 DDContinuityEq::addSolverVariables()
 {
-  // This task runs after user-authored [Variables], so an explicitly supplied
-  // number density cannot silently override a Native variable or its IC.
+  // JSON-owned ICs cannot silently override an explicit Native variable or IC.
   const auto generate = [this](const std::map<std::string, Real> & densities,
                                const bool finite_volume,
                                const std::string & option) {
@@ -210,10 +159,9 @@ DDContinuityEq::addSolverVariables()
       const auto variable = continuityStateName(species);
       if (variableExists(variable, /*error_if_aux=*/true))
         paramError(option,
-                   "Density-paired species '", species,
-                   "' already has a solver variable '", variable,
-                   "'. Remove its [Variables] declaration, or use the legacy "
-                   "species-name-only form with externally owned initial conditions.");
+                   "Species '", species, "' has JSON initial_number_density and an "
+                   "existing solver variable '", variable,
+                   "'. Choose JSON auto-generation OR external [Variables]/IC ownership.");
       const std::string type = finite_volume ? "MooseVariableFVReal" : "MooseVariable";
       auto params = getFactory().getValidParams(type);
       assignBlocks(params, _blocks);
