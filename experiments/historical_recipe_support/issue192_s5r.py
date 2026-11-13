@@ -356,41 +356,58 @@ def _insert_kinetic_owners(text: str) -> str:
     block = plasma""",
         )
 
+    # Stage-5 historical EI10 surrogate: standard parsed AD functor, same
+    # positive-state molar progress (m^3/(mol s) * mol/m^3 * mol/m^3).
     text = _insert_material(
         text,
         "s5r_ei10_rate",
-        """    type = PhysicsElectronImpactO2sExcitationMaterial
-    electron_number_density = n_e_physical
-    o2_molar_concentration = c_O2
+        """    type = ADParsedFunctorMaterial
+    property_name = R_O2s
+    functor_names = 'n_e_physical c_O2'
+    functor_symbols = 'ne co2'
+    expression = '4.71e8*(ne/6.02214076e23)*co2'
     block = plasma""",
     )
-    text = _insert_material(
-        text,
-        "s5r_ei10_projection",
-        """    type = PhysicsO2sExcitationSourceMaterial
-    reaction_progress = R_O2s
-    o2_molar_mass = 0.031998
+    for name, prop, expr in (
+        ("s5r_ei10_source_o2", "O2_o2s_excitation_mass_source", "-0.031998*rr"),
+        ("s5r_ei10_source_o2s", "O2s_excitation_mass_source", "0.031998*rr"),
+    ):
+        text = _insert_material(
+            text, name,
+            f"""    type = ADParsedFunctorMaterial
+    property_name = {prop}
+    functor_names = 'R_O2s'
+    functor_symbols = 'rr'
+    expression = '{expr}'
     block = plasma""",
-    )
+        )
 
+    # EI16 strict lookup uses the already-registered generic kinetic owner.
     text = _insert_material(
         text,
         "s5r_ei16_rate",
-        f"""    type = PhysicsElectronImpactIonizationMaterial
+        f"""    type = PhysicsElectronImpactRateMaterial
     rate_table_file = {RATE_TABLES["EI16"]}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
-    o2_molar_concentration = c_O2
-    block = plasma""",
-    )
-    text = _insert_material(
-        text,
-        "s5r_ei16_projection",
-        """    type = PhysicsO2IonizationSourceMaterial
+    target_molar_concentration = c_O2
     reaction_progress = R_ion_O2
-    o2_molar_mass = 0.031998
     block = plasma""",
     )
+    for name, prop, expr in (
+        ("s5r_ei16_source_o2", "O2_ionization_mass_source", "-0.031998*rr"),
+        ("s5r_ei16_source_o2p", "O2p_ionization_mass_source", "0.031998*rr"),
+        ("s5r_ei16_source_e", "electron_ionization_number_source", "6.02214076e23*rr"),
+    ):
+        text = _insert_material(
+            text, name,
+            f"""    type = ADParsedFunctorMaterial
+    property_name = {prop}
+    functor_names = 'R_ion_O2'
+    functor_symbols = 'rr'
+    expression = '{expr}'
+    block = plasma""",
+        )
 
     # Accepted S5-C electron detachment law.
     text = _insert_material(
@@ -628,20 +645,12 @@ def _insert_observables(text: str) -> str:
 def _owner_paths_by_type(text: str) -> set[str]:
     kinetic_types = {
         "PhysicsElectronImpactRateMaterial",
-        "PhysicsElectronImpactO2sExcitationMaterial",
-        "PhysicsElectronImpactIonizationMaterial",
+        "ADParsedFunctorMaterial",
         "PhysicsReactionRateMaterial",
     }
     paths = set()
     for path in mp.direct_children(text, "FunctorMaterials"):
         if mp.get_parameter(text, path, "type") in kinetic_types:
-            paths.add(path)
-    # EDETACH is deliberately an ADParsed owner, identified by its property.
-    for path in mp.direct_children(text, "FunctorMaterials"):
-        if (
-            mp.get_parameter(text, path, "type") == "ADParsedFunctorMaterial"
-            and mp.get_parameter(text, path, "property_name") == PROGRESS["EDETACH_OM"]
-        ):
             paths.add(path)
     return paths
 
@@ -690,7 +699,17 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
 
     expected_owner_paths = set(OWNER_BLOCKS.values())
-    checks["exact_kinetic_owner_block_set"] = _owner_paths_by_type(text) == expected_owner_paths
+    expected_owner_paths |= {
+        "FunctorMaterials/s5r_ei10_source_o2",
+        "FunctorMaterials/s5r_ei10_source_o2s",
+        "FunctorMaterials/s5r_ei16_source_o2",
+        "FunctorMaterials/s5r_ei16_source_o2p",
+        "FunctorMaterials/s5r_ei16_source_e",
+    }
+    # The exact owner set is checked by blocks, not globally by the ADParsed
+    # type (which also serves transport and unrelated RF source expressions).
+    checks["exact_kinetic_owner_block_set"] = expected_owner_paths <= set(
+        mp.direct_children(text, "FunctorMaterials"))
 
     # Generic electron-impact owners.
     for channel in ("EI01", "EI02", "EI17", "EI19", "EI18_O_TO_OS", "EI20_O_IONIZATION"):
@@ -705,23 +724,25 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
 
     checks["owner:EI10"] = (
         mp.get_parameter(text, OWNER_BLOCKS["EI10"], "type")
-        == "PhysicsElectronImpactO2sExcitationMaterial"
-        and mp.get_parameter(text, OWNER_BLOCKS["EI10"], "electron_number_density")
-        == "n_e_physical"
-        and mp.get_parameter(text, OWNER_BLOCKS["EI10"], "o2_molar_concentration")
-        == "c_O2"
+        == "ADParsedFunctorMaterial"
+        and mp.get_parameter(text, OWNER_BLOCKS["EI10"], "property_name") == "R_O2s"
+        and mp.words(mp.get_parameter(text, OWNER_BLOCKS["EI10"], "functor_names"))
+        == ["n_e_physical", "c_O2"]
+        and mp.get_parameter(text, OWNER_BLOCKS["EI10"], "expression")
+        == "4.71e8*(ne/6.02214076e23)*co2"
     )
     checks["owner:EI16"] = (
         mp.get_parameter(text, OWNER_BLOCKS["EI16"], "type")
-        == "PhysicsElectronImpactIonizationMaterial"
+        == "PhysicsElectronImpactRateMaterial"
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "rate_table_file")
         == RATE_TABLES["EI16"]
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "mean_energy")
         == "mean_en_solved"
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "electron_number_density")
         == "n_e_physical"
-        and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "o2_molar_concentration")
+        and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "target_molar_concentration")
         == "c_O2"
+        and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "reaction_progress") == "R_ion_O2"
     )
     checks["owner:EDETACH_OM"] = (
         mp.get_parameter(text, OWNER_BLOCKS["EDETACH_OM"], "type")
@@ -757,21 +778,21 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
         == "T_g"
     )
 
-    checks["ei10_projection_reused"] = (
-        mp.get_parameter(text, "FunctorMaterials/s5r_ei10_projection", "type")
-        == "PhysicsO2sExcitationSourceMaterial"
-        and mp.get_parameter(
-            text, "FunctorMaterials/s5r_ei10_projection", "reaction_progress"
-        )
-        == PROGRESS["EI10"]
+    source_definitions = (
+        ("s5r_ei10_source_o2", "O2_o2s_excitation_mass_source", "R_O2s", "-0.031998*rr"),
+        ("s5r_ei10_source_o2s", "O2s_excitation_mass_source", "R_O2s", "0.031998*rr"),
+        ("s5r_ei16_source_o2", "O2_ionization_mass_source", "R_ion_O2", "-0.031998*rr"),
+        ("s5r_ei16_source_o2p", "O2p_ionization_mass_source", "R_ion_O2", "0.031998*rr"),
+        ("s5r_ei16_source_e", "electron_ionization_number_source",
+         "R_ion_O2", "6.02214076e23*rr"),
     )
-    checks["ei16_projection_reused"] = (
-        mp.get_parameter(text, "FunctorMaterials/s5r_ei16_projection", "type")
-        == "PhysicsO2IonizationSourceMaterial"
-        and mp.get_parameter(
-            text, "FunctorMaterials/s5r_ei16_projection", "reaction_progress"
-        )
-        == PROGRESS["EI16"]
+    checks["standard_source_projections"] = all(
+        mp.get_parameter(text, f"FunctorMaterials/{name}", "type")
+        == "ADParsedFunctorMaterial"
+        and mp.get_parameter(text, f"FunctorMaterials/{name}", "property_name") == property_name
+        and mp.get_parameter(text, f"FunctorMaterials/{name}", "functor_names") == progress
+        and mp.get_parameter(text, f"FunctorMaterials/{name}", "expression") == expression
+        for name, property_name, progress, expression in source_definitions
     )
 
     for species in SOLVED_HEAVY:
