@@ -11,7 +11,9 @@ def test_s6_full_p2_cli_is_explicit_and_never_calls_p3():
     ast.parse(script)
     assert 'option.p2.preflight(ROOT)' in script
     assert 'option.check_source(expected_head, historical, binary)' in script
-    assert 'option.p2.stage(ROOT, historical, case, "C", staged, manifest)' in script
+    assert 'ordered = option.p2.stage(' in script
+    assert 'd_base_source=D_BASE' in script
+    assert 'native/s6_c0_physics_base_no_d1.i' in script
     assert 'option.canonicalize_staged_D_inputs(chemistry, ordered)' in script
     assert 'option.remap_staged_fem_types(chemistry, ordered)' in script
     assert 'cutover = prepare(chemistry, ordered, case)' in script
