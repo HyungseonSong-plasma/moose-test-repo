@@ -23,7 +23,7 @@ state, and the inlet data must never be substituted for initial volume data.
 
 | Path | Information consumed | Current ownership and use | Work remaining or boundary |
 | --- | --- | --- | --- |
-| `physics_app/src/physics/plasma/Chemistry.C` / `Chemistry.h` | All species attributes / merged JSON | Parse, validate, merge, normalize initial volume and inlet, publish `Y_<id>_initial_vol` and `Y_<id>_inlet` | Implemented |
+| `physics_app/src/physics/plasma/Chemistry.C` / `Chemistry.h` | All species attributes / merged JSON | Parse, validate, merge, normalize initial volume and inlet, publish `Y_<id>_initial_vol`, `Y_<id>_inlet`, `rho_g_initial`, `rho_g_inlet`, `M_mix_initial`, and `M_mix_inlet` | Implemented |
 | `physics_app/src/physics/plasma/PlasmaInterface.C` | Root `[Plasmas]` ownership | Shares one JSON mechanism among Physics | Implemented |
 | `physics_app/src/physics/plasma/NVTransport.C` and `NVTransportMaterial.C` | `p`, `T`, **live** mass fractions and molar masses | Mixture transport and thermal diffusion; root EOS reads NV live mass-fraction Functors when NV is configured | **Molar masses are still separately read from transport TXT**; add consistency gate before science acceptance |
 | `physics_app/src/physics/plasma/DDContinuityEq.C` / `DDTransportMaterial.C` | `p`, `T` for reduced coefficients; species name and initial **number** density | Uses common root gas Functors, but existing `fem_species`/`fvm_species` pair syntax initializes charged number-density state | Number density is not mass fraction; do not silently remap |
@@ -57,6 +57,10 @@ YES Navier–Stokes live mixture: Y_i(t,x) from NV mass_fractions Functor names
 
 Formula: `M_mix = 1/sum(Y_i/M_i)`,
 `rho_g = p*M_mix/(R*T)`, `n_g = p/(k_B*T)`.
+
+The inlet and volume mixture densities are separately calculated from the
+stored fractions and root p/T. `rho_g_inlet` is a feed-side EOS value;
+`rho_g` remains the evolving bulk EOS value when NV is active.
 
 ## Explicitly NOT automated
 
