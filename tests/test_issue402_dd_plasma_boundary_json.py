@@ -18,7 +18,7 @@ FLUX = (APP / "src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C").r
 
 
 def _legacy_bc_definitions(text):
-    section = text.split("[BCs]", 1)[1].split("[Executioner]", 1)[0]
+    section = text.split("\n[BCs]\n", 1)[1].split("\n[Executioner]\n", 1)[0]
     pattern = re.compile(
         r"(?ms)^  \[(?P<name>[^\]\n]+)\]\n(?P<body>.*?)^  \[\]\s*$"
     )
