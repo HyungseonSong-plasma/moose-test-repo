@@ -7,7 +7,8 @@
       "charge_number": 0,
       "molar_mass_kg_mol": 0.032,
       "initial_vol_mass_fraction": 0.9,
-      "initial_inlet_mass_fraction": 1
+      "initial_inlet_mass_fraction": 1,
+      "mass_fraction_variable": "w_O2"
     },
     "O": {
       "elements": {
@@ -16,7 +17,8 @@
       "charge_number": 0,
       "molar_mass_kg_mol": 0.016,
       "initial_vol_mass_fraction": 0.1,
-      "initial_inlet_mass_fraction": 0
+      "initial_inlet_mass_fraction": 0,
+      "mass_fraction_variable": "w_O"
     }
   },
   "equations": {
