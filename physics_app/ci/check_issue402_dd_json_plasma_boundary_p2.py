@@ -15,6 +15,7 @@ CI = Path(__file__).resolve().parent
 DATA = json.loads((CI / "dd_plasma_boundary_json_p2.json").read_text())
 JSON_INPUT = (CI / "dd_plasma_boundary_json_p2.i").read_text()
 LEGACY_INPUT = (CI / "dd_plasma_boundary_legacy_p2.i").read_text()
+LEGACY_ENERGY_ALIAS = (CI / "dd_plasma_boundary_legacy_energy_alias_p2.i").read_text()
 LEGACY_DATA = (CI / "json_surface_rate_p2.json").read_text()
 
 
@@ -52,6 +53,7 @@ def main(exe: Path):
         multiside["boundaries"].pop("bottom")
         check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", JSON_INPUT, multiside, True)
         check(exe, root, "LEGACY_EXPLICIT_BCS", LEGACY_INPUT, DATA, True)
+        check(exe, root, "LEGACY_MEAN_EN_SOLVED_ALIAS", LEGACY_ENERGY_ALIAS, DATA, True)
         no_registry = copy.deepcopy(DATA)
         no_registry.pop("boundaries")
         check(exe, root, "JSON_ABSENT_NO_GENERATED_BC", JSON_INPUT, no_registry, True)
