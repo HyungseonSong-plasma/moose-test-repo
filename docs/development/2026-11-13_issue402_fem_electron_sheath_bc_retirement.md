@@ -19,13 +19,13 @@
 
 ## Dielectric energy BC classification
 
-`PhysicsFEMLogMolarElectronEnergyDielectricBC` is **not retired globally**. Its direct uses in Issue #3 cover/wafer/focus-ring dielectric pilots remain. Latest S6 uses the canonical `FEMElectronEnergySheathBC` instead; the Issue #395 scratch preparer replaces its old dielectric energy BC only in those S6 wall inputs. Source and registrations for independent Issue #3 are preserved.
+`PhysicsFEMLogMolarElectronEnergyDielectricBC` is **RETIRED / UNREGISTERED / SOURCE DELETED** on user approval following the historical Issue #3 no-effect conclusion. Source-defined physical law is not silently redirected to a different BC. Four active Issue #3 input generators now fail closed with `RETIRED_ISSUE3_DIELECTRIC_ENERGY_BC`. Historical Issue #3 analysis scripts and existing output/provenance remain read-only evidence, not permission to re-execute the retired object. Historical dielectric-energy wall type tokens remain as conversion *source markers* in the active Issue #395 S6 scratch preparer; it translates the obsolete input to `FEMElectronEnergySheathBC` before running the supported S6 case. That source-marker parsing is **not a registered alias** and does not revive the retired class.
 
 ## Validation and migration limits
 
-- P0: assert exactly one registration for each canonical class and no GroundedSheath source registration; assert equations and the plasma-side Functor evaluation are source-preserving; assert retired FEM generators fail closed; assert explicit S6 generated input class names; keep dielectric energy implementation.
+- P0: assert exactly one registration for each canonical class and no GroundedSheath source registration; assert equations and the plasma-side Functor evaluation are source-preserving; assert retired FEM generators fail closed; assert explicit S6 generated input class names; reject retired dielectric energy registration and require Issue #3 generator fail-closed.
 - P1: compile pinned native PhysicsApp with both split source files.
-- P2: `physics-opt --check-input` for actual staged 417/941 S6 and representative independent dielectric case; prior historical frozen input is not a valid new-source P2 claim.
+- P2: `physics-opt --check-input` for actual staged 417/941 S6 and ensure retired Issue #3 deck rejection (not a success case); prior historical frozen input is not a valid new-source P2 claim.
 - P3: no re-execution or scientific acceptance under this naming-only change. Existing published S6/Issue #3 evidence retains its exact original source/runtime identity.
 
 **Parent:** Draft PR #528 (Issue #402); no merge into parent or main until matching source-bound checks and review.

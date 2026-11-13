@@ -52,6 +52,11 @@ def update_boundary(text: str, name: str, *, remove=(), add=()) -> str:
 
 
 def main() -> None:
+    raise RuntimeError(
+        "RETIRED_ISSUE3_DIELECTRIC_ENERGY_BC: prior Issue #3 energy wall law was "
+        "retired after no-effect assessment. Preserve old results as immutable "
+        "historical evidence; do not emit input decks with removed BC types."
+    )
     ap = argparse.ArgumentParser()
     ap.add_argument("input", type=Path)
     args = ap.parse_args()

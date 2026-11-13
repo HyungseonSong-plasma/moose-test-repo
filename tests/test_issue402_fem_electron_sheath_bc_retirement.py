@@ -43,7 +43,10 @@ def test_retired_grounded_sheath_has_no_live_cpp_registration():
         active = path.read_text()
         assert all(f'registerMooseObject("PhysicsApp", {name});' not in active
                    for name in OLD_CLASSES)
-    assert (BCS / "PhysicsFEMLogMolarElectronEnergyDielectricBC.C").is_file()
+    assert not (BCS / "PhysicsFEMLogMolarElectronEnergyDielectricBC.C").exists()
+    assert "PhysicsFEMLogMolarElectronEnergyDielectricBC" not in "\n".join(
+        p.read_text() for p in BCS.glob("*.C")
+    )
 
 
 def test_retired_fem_generator_rejects_unreviewed_physics_substitution():
@@ -66,3 +69,18 @@ def test_current_s6_preparer_only_emits_canonical_sheath_classes():
     assert "PhysicsFEMLogMolarElectronEnergyDielectricBC" in generator  # input migration, not deletion
     for old in OLD_CLASSES:
         assert old not in generator
+
+def test_retired_issue3_generators_fail_closed_before_creating_decks():
+    import ast
+    cases = (
+        "expand_full_dielectric_pilot.py",
+        "promote_cover_wafer_15us.py",
+        "promote_focus_ring_15us.py",
+        "finalize_baseline_cover_pilot.py",
+    )
+    for name in cases:
+        source = ROOT / "experiments/Issue3_dielectric_surface_charge" / name
+        module = ast.parse(source.read_text())
+        main = next(n for n in module.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+        assert isinstance(main.body[0], ast.Raise)
+        assert "RETIRED_ISSUE3_DIELECTRIC_ENERGY_BC" in source.read_text()
