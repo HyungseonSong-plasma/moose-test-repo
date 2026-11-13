@@ -1,0 +1,56 @@
+name: Issue402 S6 original electron lookup provenance P0 one-shot
+on:
+  push:
+    branches: [issue-402-species-functor-naming]
+    paths: [.github/workflows/issue402-s6-electron-transport-audit-once.yml]
+permissions:
+  contents: read
+jobs:
+  inspect-original-public-s6-decks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read exact public archive 417 941 source blocks with hash guards (no Native run)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64,hashlib,io,json,pathlib,re,tarfile
+          archive=pathlib.Path("experiments/Issue493_s6_boltzmann/public_p2_decks.tar.xz.b64")
+          raw=base64.b64decode(archive.read_text(),validate=False)
+          expect="9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240"
+          assert hashlib.sha256(raw).hexdigest()==expect
+          with tarfile.open(fileobj=io.BytesIO(raw),mode="r:xz") as tar:
+              files={x.name:tar.extractfile(x).read() for x in tar.getmembers() if x.isfile()}
+          manifest=json.loads(files["manifest.json"])
+          print("SOURCE_SHA="+__import__("os").environ["GITHUB_SHA"])
+          for case in ("417","941"):
+              name=f"S6-{case}-407-2069-H25"
+              order=manifest["cases"][case]["input_order"]
+              print(f"CASE={case} ORDER={json.dumps(order)}")
+              for variant in ("B","C"):
+                  material_blocks=[]
+                  named_sources=[]
+                  for layer in order+(["migrated_continuity.i"] if variant=="C" else []):
+                      b=files[f"{name}/{variant}/{layer}"]
+                      assert hashlib.sha256(b).hexdigest()==manifest["cases"][case]["files_sha256"][variant][layer]
+                      txt=b.decode()
+                      for m in re.finditer(r"(?ms)^  \[(?P<name>[^\]\r\n]+)\]\s*\n(?P<body>.*?)(?=^  \[\]\s*$)",txt):
+                          blockname,body=m.group("name"),m.group("body")
+                          if ("TransportLookupMaterial" in body or blockname=="electron_transport" or
+                              re.search(r"(?m)^    (?:property_table_file|table_file|mean_energy|pressure|gas_temperature|bounds_policy)\s*=",body)
+                              and ("electron" in blockname.lower() or "transport" in blockname.lower())):
+                              props=dict(re.findall(r"(?m)^    ([A-Za-z_]+)\s*=\s*([^\r\n#]+)",body))
+                              material_blocks.append({"layer":layer,"name":blockname,"params":props})
+                      if "mean_en_solved" in txt or "property_table_file" in txt:
+                          named_sources.append({"layer":layer,"lookup_mentions":txt.count("PhysicsElectronTransportLookupMaterial"),
+                            "mean_en_solved":txt.count("mean_en_solved"),"electron_transport":txt.count("electron_transport")})
+                  print("VARIANT="+variant+" ELECTRON_MATERIAL_BLOCKS="+json.dumps(material_blocks,sort_keys=True))
+                  print("VARIANT="+variant+" OTHER_SOURCES="+json.dumps(named_sources,sort_keys=True))
+                  assert material_blocks, "No captured archived electron transport block"
+          print("ISSUE402_ORIGINAL_S6_LOOKUP_AUDIT_P0_PASS")
+          print("P3=NOT_RUN SCIENCE=SCIENCE_HOLD")
+          PY
