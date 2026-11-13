@@ -44,7 +44,7 @@ struct NVTransportRecord
 // A verbatim supported MOOSE BC declaration moved from an existing .i
 // [BCs] block. Its name, type, variable, and material Functor links are
 // retained, with the mesh boundary supplied by its enclosing JSON record.
-struct DDBoundaryBCRecord
+struct BoundaryBCRecord
 {
   std::string type;
   std::string variable;
@@ -52,12 +52,12 @@ struct DDBoundaryBCRecord
   std::string mean_energy;
 };
 
-struct DDBoundaryRecord
+struct BoundaryRecord
 {
-  // One original BC may own several mesh sidesets. Never split that
+  // A single existing BC may own multiple mesh sidesets. Never split that
   // original operator into separate objects during JSON relocation.
   std::vector<std::string> mesh_boundaries;
-  std::map<std::string, DDBoundaryBCRecord> bcs;
+  std::map<std::string, BoundaryBCRecord> bcs;
 };
 
 struct SpeciesRecord
@@ -124,10 +124,10 @@ public:
   bool hasDDTransport() const { return !_dd_transport.empty(); }
   bool fluidElectronEnergyTransport() const { return _fluid_electron_energy_transport; }
   const NVTransportRecord * nvTransport() const;
-  bool hasDriftDiffusionBoundary() const { return _has_dd_boundary; }
-  const std::map<std::string, DDBoundaryRecord> & driftDiffusionBoundaries() const
+  bool hasBoundaries() const { return _has_boundaries; }
+  const std::map<std::string, BoundaryRecord> & boundaries() const
   {
-    return _dd_boundaries;
+    return _boundaries;
   }
   // Scenario-specific heavy-species composition is stored directly in speciesRecords().
 
@@ -137,8 +137,8 @@ private:
   std::map<std::string, DDTransportRecord> _dd_transport;
   bool _fluid_electron_energy_transport = false;
   std::unique_ptr<NVTransportRecord> _nv_transport;
-  bool _has_dd_boundary = false;
-  std::map<std::string, DDBoundaryRecord> _dd_boundaries;
+  bool _has_boundaries = false;
+  std::map<std::string, BoundaryRecord> _boundaries;
 };
 
 // Chemistry owns the Physics source projector and the validated JSON data model.
