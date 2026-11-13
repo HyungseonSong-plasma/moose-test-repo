@@ -14,7 +14,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = (ROOT / "experiments/Issue402_plasma_dsl_g1/native/"
            "s6_c0_physics_base_no_d1.i")
-FIXTURE_SHA = "c9686adb669cc115556860c00438fcfdd93a438751e9f99825b4ddb6ebf65088"
+FIXTURE_SHA = "e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd"
 MODULE = ROOT / "experiments/Issue493_s6_boltzmann/public_p2_check.py"
 spec = importlib.util.spec_from_file_location("issue402_public_s6_stage", MODULE)
 assert spec and spec.loader
