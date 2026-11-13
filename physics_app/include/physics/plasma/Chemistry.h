@@ -41,10 +41,21 @@ struct NVTransportRecord
 
 // One explicitly declared mesh sideset and its electron boundary owner.
 // Aliases such as wafer and inlet are labels, not inferred mesh names.
+// A verbatim supported MOOSE BC declaration moved from an existing .i
+// [BCs] block. Its name, type, variable, and material Functor links are
+// retained, with the mesh boundary supplied by its enclosing JSON record.
+struct DDBoundaryBCRecord
+{
+  std::string type;
+  std::string variable;
+  std::string wall_number_flux;
+  std::string mean_energy;
+};
+
 struct DDBoundaryRecord
 {
   std::string mesh_boundary;
-  std::string electron_model; // open | adjacent_sheath | external
+  std::map<std::string, DDBoundaryBCRecord> bcs;
 };
 
 struct SpeciesRecord
