@@ -1069,3 +1069,5 @@ PlasmasAction::act()
 
 registerMooseAction("PhysicsApp", PlasmasAction, "check_integrity");
 registerMooseAction("PhysicsApp", PlasmasAction, "add_functor_material");
+registerMooseAction("PhysicsApp", PlasmasAction, "add_ics_physics");
+registerMooseAction("PhysicsApp", PlasmasAction, "add_bc");
