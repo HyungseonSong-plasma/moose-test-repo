@@ -1,5 +1,5 @@
 # Bounded branch-specific source-bound Native P0/P1/P2 only.
-# Source-bound canonical ESWallFluxMaterial and e_energy_eV plus historical aliases P0/P1/P2; P3 SCIENCE_HOLD.
+# Exact-source final: ESWallFlux, log state naming, e_energy_eV compatibility and ADParsed candidate P0/P1/P2; P3 SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
 on:
@@ -80,6 +80,8 @@ jobs:
               cd /workspace/physics_app/ci
               /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_json_p2.i
               /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_legacy_p2.i
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_legacy_energy_alias_p2.i
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_parsed_mean_p2.i
               cd /workspace
               python3 physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py \
                 /workspace/physics_app/physics-opt
