@@ -9,7 +9,7 @@ Canonical Chemistry JSON `species.<id>` owns `charge_number`,
 `molar_mass_kg_mol`, `initial_vol_mass_fraction`, and
 `initial_inlet_mass_fraction`. No `gas_state` object. Both initial fractions
 are optional on legacy non-gas mechanisms but BOTH required for every heavy
-species when `[Plasmas] pressure/temperature/model=ideal_gas` is enabled.
+species when `[Plasmas] pressure/temperature/state_model=ideal_gas` is enabled.
 Fractions must be finite within [0,1]. The independent volume and inlet totals
 each equal one (absolute tolerance 1e-8), including explicitly zero species.
 Electrons cannot have heavy mass fractions. Conflicting duplicate species
@@ -65,9 +65,9 @@ stored fractions and root p/T. `rho_g_inlet` is a feed-side EOS value;
 ## Explicitly NOT automated
 
 1. **Initial state ICs**: The optional `mass_fraction_variable` owner now gives an explicit IC mapping.
-   Enable `initialize_species_mass_fractions = true` to create an FVConstantIC
+   Every solved species receives an FVConstantIC from JSON
    for solved states. Derived Functors receive no independent IC.
-2. **Inlet BCs**: Root `inlet_boundaries` plus `inlet_bc_model = dirichlet` now supports
+2. **Inlet BCs**: Root `inlet_boundaries` plus `sccm > 0` now supports
    generated FVDirichletBC on solved mass-fraction variables. Existing WCNS
    mass-flux/SCCM feed operators still own their flow-boundary conditions;
    the metadata must be converted into their species mass flux without
@@ -105,3 +105,7 @@ Separate species initial and inlet mass-fraction ownership is approved by the
 request. Automatically generating solver ICs, inlet BCs, and rewriting
 published scientific scenarios are NOT authorized by these metadata changes.
 Maintain `SCIENCE_HOLD` until physical integration and P3 parity are shown.
+
+### Root-state option migration (2026-11-13)
+
+`[Physics]/[Plasmas]` uses `state_model = ideal_gas` (not `model`). Every solved heavy `mass_fraction_variable` receives its JSON `initial_vol_mass_fraction` as an FVConstantIC, without an enable switch. An explicitly positive `sccm` plus named `inlet_boundaries` activates the JSON fraction FVDirichletBC on solved species; omitting `sccm` omits that inlet BC, but not the IC. The SCCM *number* currently does not determine a flow flux/velocity and must not be interpreted as a full feed-flow implementation. See the dedicated live-species IC/inlet ownership document for the separate DriftDiffusion Continuity/Energy BC survey.
