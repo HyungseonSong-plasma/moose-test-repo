@@ -47,6 +47,16 @@ def main(exe: Path):
         check(exe, root, "JSON_PRESENT", JSON_INPUT, DATA, True)
         check(exe, root, "PHYSICS_AUTO_LOG_E_ENERGY_AND_BCS",
               PHYSICS_AUTO_INPUT, DATA, True)
+        # The complete Physics path must not infer missing electron transport
+        # or a missing electron-fluid energy closure from parser defaults.
+        no_e_transport = copy.deepcopy(DATA)
+        del no_e_transport["transport_coefficients"]["drift_diffusion"]["e"]
+        check(exe, root, "FULL_PHYSICS_MISSING_E_TRANSPORT",
+              PHYSICS_AUTO_INPUT, no_e_transport, False)
+        no_fluid_energy = copy.deepcopy(DATA)
+        del no_fluid_energy["transport_coefficients"]["drift_diffusion"]["e_energy"]
+        check(exe, root, "FULL_PHYSICS_MISSING_E_ENERGY_FLUID",
+              PHYSICS_AUTO_INPUT, no_fluid_energy, False)
         check(exe, root, "PARSED_MEAN_FUNCTOR_CONSTRUCTION",
               PARSED_MEAN_INPUT, DATA, True)
         # One original BC block can own several sidesets. The JSON path
@@ -71,6 +81,9 @@ def main(exe: Path):
         check(exe, root, "RETIRED_NORMALIZED_MEAN_STATE",
               LEGACY_INPUT.replace("state_form = log_molar_eV",
                                    "state_form = normalized"), DATA, False)
+        check(exe, root, "RETIRED_PHYSICAL_EV_MEAN_STATE",
+              LEGACY_INPUT.replace("state_form = log_molar_eV",
+                                   "state_form = physical_eV"), DATA, False)
         check(exe, root, "RETIRED_MEAN_OUTPUT_PARAM",
               LEGACY_INPUT.replace("    state_form = log_molar_eV",
                                    "    state_form = log_molar_eV\n    mean_energy_output = e_energy_eV"),
