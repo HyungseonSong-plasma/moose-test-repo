@@ -1,5 +1,5 @@
 # Bounded branch-specific source-bound Native P0/P1/P2 only.
-# Exact FEM BC parameter migration, no .i toggle or wall roles. No P3; SCIENCE_HOLD.
+# Exact FEM BC parameter migration retry 1: guard uses existing PlasmasAction. No P3; SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
 on:
@@ -25,7 +25,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test -f physics_app/src/physics/plasma/PlasmaDriftDiffusionBoundaryAction.C
+          test -f physics_app/src/physics/plasma/Chemistry.C
+          test ! -e physics_app/src/physics/plasma/PlasmaDriftDiffusionBoundaryAction.C
+          grep -Fq "driftDiffusionBoundaries()" physics_app/src/physics/plasma/Chemistry.C
           test -f physics_app/src/bcs/FEMElectronSheathBC.C
           test -f physics_app/src/bcs/FEMElectronEnergySheathBC.C
           test -f physics_app/src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C
