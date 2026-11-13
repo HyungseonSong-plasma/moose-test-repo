@@ -1,27 +1,24 @@
-"""Issue #402: exact FEM [BCs] mapping to JSON without new Physics options.
+"""Issue #402 canonical FEM electron BCs and source-name retirement guards.
 
-The legacy .i fixture is the control. Every generated BC's name, MOOSE
-class, solver variable, boundary, and Functor wiring must be identical.
+P0 is a source/contract check only. P2 uses real physics-opt --check-input;
+neither gate proves time-dependent physics parity.
 """
 import json
 import re
 from pathlib import Path
 
-APP = Path(__file__).resolve().parents[1] / "physics_app"
+ROOT = Path(__file__).resolve().parents[1]
+APP = ROOT / "physics_app"
 CHEM = (APP / "src/physics/plasma/Chemistry.C").read_text()
 SYN = (APP / "src/base/PhysicsApp.C").read_text()
 DATA = json.loads((APP / "ci/dd_plasma_boundary_json_p2.json").read_text())
 NEW = (APP / "ci/dd_plasma_boundary_json_p2.i").read_text()
 LEGACY = (APP / "ci/dd_plasma_boundary_legacy_p2.i").read_text()
-MEAN = (APP / "src/materials/PhysicsElectronMeanEnergyMaterial.C").read_text()
+MEAN = (APP / "src/materials/ElectronEnergyMaterial.C").read_text()
+MEAN_H = (APP / "include/materials/ElectronEnergyMaterial.h").read_text()
 FLUX = (APP / "src/materials/ESWallFluxMaterial.C").read_text()
-ES_H = (APP / "include/materials/ESWallFluxMaterial.h").read_text()
-MID_ALIAS = (APP / "src/materials/ElectronWallFluxMaterial.C").read_text()
-MID_H = (APP / "include/materials/ElectronWallFluxMaterial.h").read_text()
+TRANSPORT = (APP / "src/materials/DDTransportMaterial.C").read_text()
 ENERGY_ACTION = (APP / "src/physics/plasma/DDEnergyEq.C").read_text()
-COMPAT = (APP / "src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C").read_text()
-COMPAT_H = (APP / "include/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.h").read_text()
-THERMAL = (APP / "src/materials/PhysicsElectronWallFluxMaterial.C").read_text()
 
 
 def _legacy_bc_definitions(text):
@@ -41,77 +38,76 @@ def _legacy_bc_definitions(text):
     return out
 
 
-def test_json_is_a_literal_registry_of_existing_bc_blocks():
+def test_boundaries_json_is_literal_one_to_one_bc_relocation():
     catalog = DATA["boundaries"]
-    # The object key is the physical GeneratedMesh sideset. No alias or
-    # duplicate mesh_boundary field is stored in JSON.
     assert set(catalog) == {"left", "bottom", "right", "top"}
-    assert catalog["right"]["bcs"] == {}
-    assert catalog["top"]["bcs"] == {}
     assert all(set(spec) == {"bcs"} for spec in catalog.values())
-    original = _legacy_bc_definitions(LEGACY)
-    relocated = {}
-    for mesh_sideset, spec in catalog.items():
-        for name, bc in spec["bcs"].items():
-            relocated[name] = {**bc, "boundary": mesh_sideset}
-    assert relocated == original
+    assert catalog["right"]["bcs"] == {} and catalog["top"]["bcs"] == {}
+    relocated = {
+        name: {**bc, "boundary": sideset}
+        for sideset, group in catalog.items()
+        for name, bc in group["bcs"].items()
+    }
+    assert relocated == _legacy_bc_definitions(LEGACY)
     assert len(relocated) == 4
+    assert {x["variable"] for x in relocated.values()} == {"log_e", "log_e_energy"}
+    assert {x["mean_energy"] for x in relocated.values() if "mean_energy" in x} == {"e_energy_eV"}
 
 
-def test_only_json_presence_controls_bc_emission():
+def test_exact_json_presence_owns_bc_creation():
+    assert 'if (_current_task == "add_bc" && _data.hasBoundaries())' in CHEM
+    assert "_problem->addBoundaryCondition(bc.type, name, params);" in CHEM
     assert "PlasmaDriftDiffusionBoundaryAction" not in SYN
     assert "PlasmaDriftDiffusionBoundaryAction" not in CHEM
-    assert 'if (_current_task == "add_bc" && _data.hasBoundaries())' in CHEM
-    assert '_problem->addBoundaryCondition(bc.type, name, params);' in CHEM
-    assert "getFactory" not in NEW
-    assert "plasma_boundary = " not in NEW
-    assert "plasma_boundary = " not in LEGACY
+    assert '"plasma_boundary"' not in CHEM
+    assert "drift_diffusion_boundary" not in DATA
+    assert "[BCs]" not in NEW and "[BCs]" in LEGACY
     assert "files = dd_plasma_boundary_json_p2.json" in NEW
     assert "files = json_surface_rate_p2.json" in LEGACY
-    assert "[BCs]" not in NEW and "[BCs]" in LEGACY
+    assert "The JSON object key IS the physical mesh sideset name" in CHEM
 
 
-def test_existing_mean_energy_and_sheath_laws_untouched():
-    assert "type = PhysicsElectronMeanEnergyMaterial" in NEW
-    assert "type = ESWallFluxMaterial" in NEW
-    assert "type = PhysicsElectronMeanEnergyMaterial" in LEGACY
-    assert "type = PhysicsElectronAdjacentSheathWallFluxMaterial" in LEGACY
+def test_only_new_energy_material_and_sheath_names_are_registered():
+    assert 'registerMooseObject("PhysicsApp", ElectronEnergyMaterial);' in MEAN
     assert 'registerMooseObject("PhysicsApp", ESWallFluxMaterial);' in FLUX
-    assert 'registerMooseObject("PhysicsApp", ElectronWallFluxMaterial);' in MID_ALIAS
-    assert "public ESWallFluxMaterial" in MID_H
-    assert "class ESWallFluxMaterial : public FunctorMaterial" in ES_H
-    assert 'registerMooseObject("PhysicsApp", PhysicsElectronAdjacentSheathWallFluxMaterial);' in COMPAT
-    assert "public ESWallFluxMaterial" in COMPAT_H
-    assert 'registerMooseObject("PhysicsApp", PhysicsElectronWallFluxMaterial);' in THERMAL
-    assert "mean_energy_output = e_energy_eV" in NEW
-    assert "mean_energy_output = e_energy_eV" in LEGACY
-    assert DATA["boundaries"]["left"]["bcs"]["electron_energy_wafer"]["mean_energy"] == "e_energy_eV"
+    assert "class ElectronEnergyMaterial : public FunctorMaterial" in MEAN_H
+    assert "type = ElectronEnergyMaterial" in NEW and "type = ElectronEnergyMaterial" in LEGACY
+    assert "type = ESWallFluxMaterial" in NEW and "type = ESWallFluxMaterial" in LEGACY
+    for obsolete in (
+        "PhysicsElectronMeanEnergyMaterial", "ElectronWallFluxMaterial",
+        "PhysicsElectronAdjacentSheathWallFluxMaterial", "PhysicsElectronWallFluxMaterial"
+    ):
+        assert not (APP / "src/materials" / (obsolete + ".C")).exists()
+        assert not (APP / "include/materials" / (obsolete + ".h")).exists()
+
+
+def test_single_e_energy_eV_output_two_noninterchangeable_input_representations():
+    assert 'MooseEnum("log_molar_eV physical_eV", "log_molar_eV")' in MEAN
+    assert 'addFunctorProperty<ADReal>(\n      "e_energy_eV"' in MEAN
     assert "mean_energy = exp(energy_state - density_state);" in MEAN
-    assert '"e_energy_eV",' in MEAN
-    assert 'addFunctorProperty<ADReal>("mean_en_solved", mean_energy_functor)' in MEAN
-    assert 'if (!isParamSetByUser("mean_energy_output"))' in MEAN
+    assert "mean_energy = energy_state / density_state;" in MEAN
+    assert "normalized" not in MEAN and "normalized" not in MEAN_H
+    assert "mean_en_solved" not in MEAN and "mean_en_solved" not in MEAN_H
+    assert "mean_energy_output" not in MEAN and "mean_energy_output" not in MEAN_H
+    assert "mean_energy_output" not in NEW and "mean_energy_output" not in LEGACY
+    assert 'getFunctorByName<ADReal>("e_energy_eV")' in TRANSPORT
+
+
+def test_canonical_physics_action_resolves_log_e_energy_not_old_log_energy():
     assert 'return "log_" + species + "_energy";' in ENERGY_ACTION
     assert 'saveSolverVariableName(energyStateName("e"));' in ENERGY_ACTION
     assert "log_e_energy" in ENERGY_ACTION
-    assert 'MooseEnum("normalized physical_eV log_molar_eV", "normalized")' in MEAN
-    assert "primaryParticleFluxHat(n_e, eps_bar, drop)" in FLUX
-    assert 'entry.type == "FEMElectronSheathBC"' in CHEM
-    assert 'entry.type == "FEMElectronEnergySheathBC"' in CHEM
+    assert "log_energy" not in NEW and "log_energy" not in LEGACY
+    assert "log_ne" not in NEW and "log_ne" not in LEGACY
 
 
-def test_fail_closed_schema_and_duplicate_owners():
+def test_fail_closed_catalogue_and_duplicate_operators():
     for fragment in (
         "duplicate boundaries owner across JSON files",
         "invalid or duplicate boundaries mesh sideset",
         "duplicate DriftDiffusion BC operator owner",
         "boundaries BC type is not yet supported",
         "wrong named arguments in boundaries BC",
+        "drift_diffusion_boundary is retired; use boundaries",
     ):
         assert fragment in CHEM
-    assert "electron_model" not in CHEM
-    assert "drift_diffusion_boundary is retired; use boundaries" in CHEM
-    assert '"boundaries"' in CHEM
-    assert "drift_diffusion_boundary" not in DATA
-    assert '"plasma_boundary"' not in CHEM
-    assert 'item.contains("mesh_boundary")' not in CHEM
-    assert "The JSON object key IS the physical mesh sideset name" in CHEM
