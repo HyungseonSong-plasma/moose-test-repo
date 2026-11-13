@@ -374,7 +374,10 @@ def canonicalize_staged_electron_lookup(
 
 # 14 observational D1 AuxKernels from issue397_d1_instrument.py are retired
 # upstream. No registered replacement provides identical higher-D FaceArg.
-# Suspend ONLY in disposable D core-P2 input. Diagnostic parity remains HOLD.
+# Retire ONLY in disposable D input; historical archived B/C preserved.
+# Operator decision: these were temporary debug probes for an already-diagnosed
+# issue. Their numerical parity and independent D1 retirement review are
+# deliberately NOT REQUIRED; physical and scientific gates remain separate.
 _S6_D1_CURRENT_PROBES = {
     "wafer_net_current_probe": "wafer_net_surface_current_density",
     "d1_gamma_o2_positive": "ion_wall_number_flux",
@@ -397,10 +400,11 @@ _S6_D1_GEOMETRY_PROBES = {
 
 def suspend_staged_retired_d1_observations(
         edits: dict[Path, str]) -> tuple[dict[Path, str], dict]:
-    """Audit and suspend only unconsumed D1 output probes in scratch core-P2.
+    """Retire verified obsolete debug-only D1 outputs from disposable D input.
 
-    All physical residuals, rate sources, wall current Functors and RF Aux
-    remain. Full S6 Native P2 and exact diagnostic equivalence stay HOLD.
+    Audit every original owner and reject any consumer, so no physical equation
+    or live diagnostic dependency is silently removed. Do not infer P3 science
+    acceptance or numerical parity of transport/Wall physics from input P2.
     """
     expected = {
         **{key: {
@@ -457,8 +461,9 @@ def suspend_staged_retired_d1_observations(
         return dict(edits), {
             "status": "NO_D1_OBSERVATION_PROBES",
             "suspended_auxkernels": 0, "suspended_auxvariables": 0,
-            "diagnostic_parity": "NOT_VERIFIED", "P3": "NOT_RUN",
-            "science": "SCIENCE_HOLD",
+            "diagnostic_parity": "NOT_APPLICABLE",
+            "d1_retirement_review": "NOT_REQUIRED_OPERATOR_DECISION",
+            "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
         }
     count = len(expected)
     if len(records) != count * 2:
@@ -489,7 +494,7 @@ def suspend_staged_retired_d1_observations(
             for source in updated.values()):
         raise ValueError("S6_D1_RETIRED_AUX_OWNER_STILL_PRESENT")
     return updated, {
-        "status": "CORE_P2_ONLY_D1_OBSERVATION_SUSPENDED",
+        "status": "OBSOLETE_D1_DEBUG_OBSERVATIONS_RETIRED",
         "suspended_auxkernels": count,
         "suspended_auxvariables": count,
         "observed_fields": sorted(expected),
@@ -497,8 +502,10 @@ def suspend_staged_retired_d1_observations(
             kind + ":" + var: digest for _, _, _, kind, var, digest in records
         },
         "input_physics": "UNCHANGED",
-        "diagnostic_parity": "HOLD",
-        "full_native_p2": "HOLD",
+        "retired_diagnostics": "NOT_REQUIRED_FOR_TARGET_MODEL",
+        "diagnostic_parity": "NOT_APPLICABLE",
+        "d1_retirement_review": "NOT_REQUIRED_OPERATOR_DECISION",
+        "native_p2": "NOT_RUN_BY_PREPARER",
         "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
     }
 
