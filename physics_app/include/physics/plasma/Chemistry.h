@@ -38,6 +38,16 @@ struct NVTransportRecord
   bool equals(const NVTransportRecord & rhs) const;
 };
 
+// Functor names for the heavy-mixture composition. Values live in the solver;
+// species identities and molar masses live in the canonical Chemistry JSON.
+struct GasStateRecord
+{
+  std::vector<std::string> species;
+  std::vector<std::string> mass_fractions;
+
+  bool equals(const GasStateRecord & rhs) const;
+};
+
 struct SpeciesRecord
 {
   std::map<std::string, int> elements;
@@ -93,6 +103,7 @@ public:
   bool hasDDTransport() const { return !_dd_transport.empty(); }
   bool fluidElectronEnergyTransport() const { return _fluid_electron_energy_transport; }
   const NVTransportRecord * nvTransport() const;
+  const GasStateRecord * gasState() const;
 
 private:
   std::map<std::string, SpeciesRecord> _species;
@@ -100,6 +111,7 @@ private:
   std::map<std::string, DDTransportRecord> _dd_transport;
   bool _fluid_electron_energy_transport = false;
   std::unique_ptr<NVTransportRecord> _nv_transport;
+  std::unique_ptr<GasStateRecord> _gas_state;
 };
 
 // Chemistry owns the Physics source projector and the validated JSON data model.
@@ -122,7 +134,9 @@ class PlasmasAction : public Action
 public:
   static InputParameters validParams();
   explicit PlasmasAction(const InputParameters & params);
-  void act() override {}
+  void act() override;
+
+  bool gasStateEnabled() const { return isParamValid("pressure") && isParamValid("temperature"); }
 
   const Plasma::ChemistryData & data() const { return _data; }
 
