@@ -198,7 +198,15 @@ def check() -> None:
     progress_names = []
     for channel, (progress, owner) in EXPECTED_STAGE5.items():
         row = owner_map[channel]
-        if row.get("progress") != progress or row.get("owner") != owner:
+        if channel.startswith("H0"):
+            # Frozen Stage-5 provenance records the retired TXT owner and
+            # progress spelling. The active Chemistry JSON route is R_Hnn.
+            historical_id = channel.split("_", 1)[0]
+            if (row.get("owner") != "PhysicsReactionRateMaterial" or
+                    not row.get("progress", "").startswith("reaction_rate_" + historical_id + "_") or
+                    progress != "R_" + historical_id or owner != "HeavyReactionRateMaterial"):
+                raise AssertionError(f"historical/new Chemistry owner mismatch for {channel}")
+        elif row.get("progress") != progress or row.get("owner") != owner:
             raise AssertionError(f"owner-map mismatch for {channel}")
         progress_names.append(progress)
     if len(set(progress_names)) != len(progress_names):
