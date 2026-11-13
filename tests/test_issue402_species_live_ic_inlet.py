@@ -46,9 +46,12 @@ def test_root_ic_and_bc_create_only_for_solved_species():
     assert 'params.set<Real>("value") = *record.initial_vol_mass_fraction;' in c
     assert 'params.set<Real>("value") = *record.initial_inlet_mass_fraction;' in c
     assert 'if (record.mass_fraction_variable.empty())' in c
-    assert 'initialize_species_mass_fractions = true' in i
+    assert 'sccm = 100' in i
+    assert "initialize_species_mass_fractions" not in c
+    assert "inlet_bc_model" not in c
+    assert 'if (_current_task == "add_ics_physics")' in c
     assert 'inlet_boundaries = left' in i
-    assert 'inlet_bc_model = dirichlet' in i
+    assert 'sccm = 100' in i
     assert i.count('type = MooseVariableFVReal') == 2
 
 
@@ -71,10 +74,10 @@ def test_material_consumers_resolve_functor_at_evaluation_not_at_setup():
 
 def test_metadata_is_not_inferred_for_a_flux_boundary():
     c=CODE.read_text()
-    assert 'MooseEnum("none dirichlet", "none")' in c
+    assert 'params.addParam<Real>("sccm"' in c
     assert 'getParam<std::vector<BoundaryName>>("inlet_boundaries")' in c
-    assert '"mass-flux inlets remain explicitly owned by their flow BCs."' in c
-    assert 'if (getParam<MooseEnum>("inlet_bc_model") == "dirichlet")' in c
+    assert '"Does not prescribe mixture mass flux, velocity, or inlet area."' in c
+    assert 'if (isParamValid("sccm"))' in c
 
 
 def test_all_four_materials_share_y_i_of_solver_state_in_native_fixture():
@@ -105,5 +108,5 @@ def test_all_four_materials_share_y_i_of_solver_state_in_native_fixture():
     assert "prop_names = 'n_e T_e'" in source
     assert "active_reactions = 'H91'" in source
     assert "active_reactions = 'H90'" in source
-    assert "inlet_bc_model = dirichlet" in source
-    assert "initialize_species_mass_fractions = true" in source
+    assert "sccm = 100" in source
+    assert "sccm = 100" in source
