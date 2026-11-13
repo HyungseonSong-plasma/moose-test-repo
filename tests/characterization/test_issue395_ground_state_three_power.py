@@ -110,7 +110,11 @@ def test_corrected_fem_wall_owners_registered_and_share_plasma_sided_functor():
         assert 'getFunctor<ADReal>("wall_number_flux")' in content
         assert "hasFaceSide(*fi, true)" in content
         assert "hasFaceSide(*fi, false)" in content
-        assert "plasma_side != _current_elem" in content
+        # The particle helper accepts `elem`; the energy BC uses `_current_elem`.
+        if name == "FEMElectronSheathBC":
+            assert "plasma_side != elem" in content
+        else:
+            assert "plasma_side != _current_elem" in content
         assert "Moose::FaceArg face_arg" in content
         assert "PHYSICS_CONSTANTS::N_A" in content
         assert "Moose::ElemQpArg" not in content
