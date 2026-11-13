@@ -1687,10 +1687,7 @@
   []
 
 []
-[AuxVariables]
-[]
-[AuxKernels]
-[]
+
 [Executioner]
   type = Transient
   scheme = implicit-euler
