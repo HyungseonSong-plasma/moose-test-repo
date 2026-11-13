@@ -927,6 +927,28 @@ PlasmasAction::act()
       add("Y_" + id, literal(*record.initial_vol_mass_fraction), {}, {});
   }
 
+  // Distinct inlet/volume EOS values: do not use the evolving bulk rho_g
+  // as the fixed inlet density when inlet and volume compositions differ.
+  std::string initial_inverse_molar_mass;
+  std::string inlet_inverse_molar_mass;
+  for (const auto & id : species)
+  {
+    const auto & record = _data.species(id);
+    const std::string mass = literal(record.molar_mass_kg_mol);
+    initial_inverse_molar_mass += (initial_inverse_molar_mass.empty() ? "" : "+") +
+                                  literal(*record.initial_vol_mass_fraction) + "/" + mass;
+    inlet_inverse_molar_mass += (inlet_inverse_molar_mass.empty() ? "" : "+") +
+                                literal(*record.initial_inlet_mass_fraction) + "/" + mass;
+  }
+  add("M_mix_initial", "1/(" + initial_inverse_molar_mass + ")", {}, {});
+  add("M_mix_inlet", "1/(" + inlet_inverse_molar_mass + ")", {}, {});
+  add("rho_g_initial",
+      "pressure/(8.31446261815324*temp*(" + initial_inverse_molar_mass + "))",
+      {"p", "T"}, {"pressure", "temp"});
+  add("rho_g_inlet",
+      "pressure/(8.31446261815324*temp*(" + inlet_inverse_molar_mass + "))",
+      {"p", "T"}, {"pressure", "temp"});
+
   // The equation of state consumes live Y_i when NV is activated; otherwise
   // this is a constant-composition, non-evolving gas-state closure.
   std::vector<std::string> names = {"p", "T"};
