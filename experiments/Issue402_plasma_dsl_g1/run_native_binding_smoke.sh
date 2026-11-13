@@ -192,11 +192,11 @@ for entry in "invalid_json_dd_missing_om_p2:Missing drift-diffusion transport JS
 done
 echo "PLASMA_JSON_DD_MISSING_AND_INVALID_LOOKUP_REJECTED"
 
-# Density-paired species create their own FEM/FV variables and log-molar ICs.
+# JSON species initial_number_density generates FEM/FV variables and log-molar ICs.
 # These are parser/P2 checks only; no P3 or physical S6 run.
 native --check-input -i "$PILOT/species_density_pairs_p2.i" \
   2>&1 | tee "$EVIDENCE/species_density_pairs_p2.log"
-echo "PLASMA_SPECIES_DENSITY_PAIRS_P2_PASS"
+echo "PLASMA_JSON_SPECIES_INITIAL_P2_PASS"
 # Physics-generated energy/potential states, exact-head P2 check only.
 native --check-input -i "$PILOT/auto_energy_potential_p2.i" \
   2>&1 | tee "$EVIDENCE/auto_energy_potential_p2.log"
@@ -218,9 +218,9 @@ for entry in "invalid_auto_energy_missing_initial_p2:requires an explicit positi
 done
 echo "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED"
 
-for entry in "invalid_species_density_zero_p2:requires a finite, strictly positive" \
-             "invalid_species_density_odd_p2:expected species_name initial_number_density pairs" \
-             "invalid_species_density_nan_p2:requires a finite, strictly positive"; do
+for entry in "invalid_species_density_zero_p2:Invalid species ID for automatic naming: 0" \
+             "invalid_species_density_odd_p2:Invalid species ID for automatic naming: 1e16" \
+             "invalid_species_density_nan_p2:Species 'nan' is absent from"; do
   item="${entry%%:*}"
   expected="${entry#*:}"
   set +e
@@ -228,12 +228,12 @@ for entry in "invalid_species_density_zero_p2:requires a finite, strictly positi
   result=$?
   set -e
   if [[ "$result" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
-    echo "::error::Invalid species/density pairing accepted: $item" >&2
+    echo "::error::Retired positional species initial or missing JSON species was accepted: $item" >&2
     cat "$EVIDENCE/$item.log" >&2
     exit 25
   fi
 done
-echo "PLASMA_INVALID_SPECIES_DENSITY_PAIRS_REJECTED"
+echo "PLASMA_RETIRED_POSITIONAL_SPECIES_INITIAL_REJECTED"
 
 
 # Synthetic equal-equation channels must create separate signed electron energy contributions.
