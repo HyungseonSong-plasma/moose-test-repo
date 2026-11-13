@@ -1,5 +1,6 @@
-# Bounded branch-specific source-bound Native P0/P1/P2 only.
-# Final source gates: no old factory aliases, physics auto-e-energy BC construction and current e_energy_eV; P3 SCIENCE_HOLD.
+# Bounded branch-specific exact-head Native P0/P1/P2 only.
+# 2026-11-13 canonical log_molar_eV-only mean energy and full JSON + .i electron equation construction.
+# No new sheath flux formula or executable class; P3 and scientific parity remain SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
 on:
@@ -40,6 +41,11 @@ jobs:
           test ! -e physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
           test ! -e physics_app/src/materials/PhysicsElectronWallFluxMaterial.C
           grep -Fq 'registerMooseObject("PhysicsApp", ElectronEnergyMaterial);' physics_app/src/materials/ElectronEnergyMaterial.C
+          grep -Fq 'MooseEnum("log_molar_eV", "log_molar_eV")' physics_app/src/materials/ElectronEnergyMaterial.C
+          grep -Fq 'registerMooseAction("PhysicsApp", DDEnergyEq, "add_functor_material");' physics_app/src/physics/plasma/DDEnergyEq.C
+          ! grep -Fq 'physical_eV' physics_app/src/materials/ElectronEnergyMaterial.C
+          ! grep -Fq 'physical_eV' physics_app/include/materials/ElectronEnergyMaterial.h
+          ! grep -Fq '[FunctorMaterials]' physics_app/ci/dd_plasma_boundary_json_physics_auto_p2.i
           grep -Fq 'getFunctorByName<ADReal>("e_energy_eV")' physics_app/src/materials/DDTransportMaterial.C
           echo "DD_JSON_BOUNDARY_SOURCE=$GITHUB_SHA SCIENCE_HOLD P3_NOT_RUN"
       - name: P0 JSON boundary catalogue and existing Physics source contracts
@@ -53,7 +59,7 @@ jobs:
             tests/test_issue402_species_initial_composition.py \
             tests/test_issue402_species_live_ic_inlet.py \
             2>&1 | tee /tmp/issue402_dd_json_boundary_p0.log
-          echo DD_JSON_BOUNDARY_P0_PASS
+          echo DD_JSON_BOUNDARY_FULL_ELECTRON_ACTION_P0_PASS
       - name: Native P1 Physics application build (immutable Physics vendor image)
         shell: bash
         run: |
