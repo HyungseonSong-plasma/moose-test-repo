@@ -8,8 +8,8 @@ required = [
     ROOT / "src/materials/DDTransportMaterial.C",
     ROOT / "include/materials/PhysicsElectronMeanEnergyMaterial.h",
     ROOT / "src/materials/PhysicsElectronMeanEnergyMaterial.C",
-    ROOT / "include/materials/RateCoeffMaterial.h",
-    ROOT / "src/materials/RateCoeffMaterial.C",
+    ROOT / "include/materials/EIRateCoefMaterial.h",
+    ROOT / "src/materials/EIRateCoefMaterial.C",
     ROOT / "include/materials/NVTransportMaterial.h",
     ROOT / "src/materials/NVTransportMaterial.C",
     ROOT / "include/materials/PhysicsPlasmaChargeDensityMaterial.h",
@@ -24,7 +24,7 @@ assert 'PlasmaClosures/*' not in app
 assert not (ROOT / "include/actions/PlasmaClosuresAction.h").exists()
 assert not (ROOT / "src/actions/PlasmaClosuresAction.C").exists()
 electron = (ROOT / "src/materials/PhysicsElectronMeanEnergyMaterial.C").read_text()
-single_ei = (ROOT / "src/materials/RateCoeffMaterial.C").read_text()
+single_ei = (ROOT / "src/materials/EIRateCoefMaterial.C").read_text()
 heavy = (ROOT / "src/materials/NVTransportMaterial.C").read_text()
 drift = (ROOT / "src/materials/DDTransportMaterial.C").read_text()
 
@@ -44,7 +44,7 @@ for name in ('"electron_energy_mobility"', '"electron_energy_diffusion"',
 # Current EI progresses use an existing one-reaction-per-material owner.
 assert "rate_table_file" in single_ei
 assert "reaction_progress" in single_ei
-assert 'registerMooseObject("PhysicsApp", RateCoeffMaterial);' in single_ei
+assert 'registerMooseObject("PhysicsApp", EIRateCoefMaterial);' in single_ei
 # Existing heavy diffusion implementation outlives its retired naming wrapper.
 assert 'registerMooseObject("PhysicsApp", NVTransportMaterial);' in heavy
 assert 'registerMooseObject("PhysicsApp", DDTransportMaterial);' in drift
@@ -53,16 +53,16 @@ assert 'registerMooseObject("PhysicsApp", DDTransportMaterial);' in drift
 fixture = (ROOT / "ci/plasma_direct_existing_materials_smoke.i").read_text()
 for old_type in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
     assert "type = " + old_type not in fixture
-for type_name in ("DDTransportMaterial", "RateCoeffMaterial",
+for type_name in ("DDTransportMaterial", "EIRateCoefMaterial",
                   "NVTransportMaterial", "PhysicsPlasmaChargeDensityMaterial"):
     assert "type = " + type_name in fixture
-assert fixture.count("type = RateCoeffMaterial") == 2
+assert fixture.count("type = EIRateCoefMaterial") == 2
 
 # Keep the separate NV alias while retiring electron-lookup factory spellings.
 for legacy in (
     "PhysicsElectronMeanEnergyMaterial.C",
     "DDTransportMaterial.C",
-    "RateCoeffMaterial.C",
+    "EIRateCoefMaterial.C",
     "NVTransportMaterial.C",
 ):
     assert (ROOT / "src/materials" / legacy).is_file(), legacy
