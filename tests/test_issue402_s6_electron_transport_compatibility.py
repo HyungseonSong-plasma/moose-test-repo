@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import io
 import math
+import os
 from pathlib import Path
 import tarfile
 
@@ -24,6 +25,7 @@ TABLE = (ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/"
          "electron_moments.txt")
 ARCHIVE_HASH = "9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240"
 TABLE_GIT_BLOB = "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a"
+PREPARED_TABLE_GIT_BLOB = "aa05aadde111e4ba435185954a64a4b7dbbf2d45"
 BASE = "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i"
 
 spec = importlib.util.spec_from_file_location("s6_transport_compat", PREPARER)
@@ -127,13 +129,22 @@ def test_missing_electron_lookup_owner_rejected():
         module.canonicalize_staged_electron_lookup({Path("empty.i"): "[Mesh]\n[]\n"})
 
 
-def test_archived_public_transport_table_shape_and_content_identity():
-    content = TABLE.read_bytes()
+@pytest.mark.parametrize("table,git_blob,expected_rows", [
+    (TABLE, TABLE_GIT_BLOB, 100),
+    (None, PREPARED_TABLE_GIT_BLOB, 42),
+])
+def test_archived_public_transport_table_shape_and_content_identity(table, git_blob_expected, expected_rows):
+    if table is None:
+        name = os.environ.get("ISSUE402_HISTORICAL_PUBLIC_TABLE")
+        if not name:
+            pytest.skip("Requires pinned historical 42-row public P2 staging source")
+        table = Path(name)
+    content = table.read_bytes()
     git_blob = hashlib.sha1(b"blob " + str(len(content)).encode() + b"\x00" + content).hexdigest()
-    assert git_blob == TABLE_GIT_BLOB
+    assert git_blob == git_blob_expected
     lines = [line for line in content.decode().splitlines() if line.strip()]
     rows = [tuple(map(float, line.split())) for line in lines]
-    assert len(rows) == 100
+    assert len(rows) == expected_rows
     assert all(len(x) == 3 for x in rows)
     assert all(all(math.isfinite(v) for v in row) and row[1] >= 0 and row[2] >= 0
                for row in rows)
@@ -142,11 +153,18 @@ def test_archived_public_transport_table_shape_and_content_identity():
 
 @pytest.mark.parametrize("pressure,temperature", [(101325., 300.), (50., 450.)])
 @pytest.mark.parametrize("coordinate", [-10., 1.40991, 3.1, 5.73276, 22.1378, 25.])
+@pytest.mark.parametrize("prepared", [False, True])
 def test_historical_and_dd_lookup_equations_agree_at_archived_table_points(
-        coordinate, pressure, temperature):
+        coordinate, pressure, temperature, prepared):
     # Independent arithmetic oracle restricted to the proved archived S6
     # table and physically meaningful p,T; no C++ execution is claimed.
-    rows = [tuple(map(float, line.split())) for line in TABLE.read_text().splitlines()]
+    table = TABLE
+    if prepared:
+        name = os.environ.get("ISSUE402_HISTORICAL_PUBLIC_TABLE")
+        if not name:
+            pytest.skip("Requires pinned historical 42-row P2 source")
+        table = Path(name)
+    rows = [tuple(map(float, line.split())) for line in table.read_text().splitlines()]
     n_n = pressure / (1.380649e-23 * temperature)
     def evaluate(column):
         if coordinate <= rows[0][0]:
