@@ -226,23 +226,6 @@ parseDDTransport(const Json & value, const std::string & file)
   return result;
 }
 
-GasStateRecord
-parseGasState(const Json & value, const std::string & file)
-{
-  if (!value.is_object() || value.size() != 2 ||
-      !value.contains("species") || !value.contains("mass_fractions"))
-    fail(file, "gas_state requires exactly species and mass_fractions");
-  GasStateRecord result;
-  result.species = requiredTextList(value, "species", file);
-  result.mass_fractions = requiredTextList(value, "mass_fractions", file);
-  if (result.species.empty() || result.species.size() != result.mass_fractions.size())
-    fail(file, "gas_state requires nonempty, matching species and mass_fractions");
-  std::set<std::string> unique(result.species.begin(), result.species.end());
-  if (unique.size() != result.species.size())
-    fail(file, "gas_state species must be unique");
-  return result;
-}
-
 NVTransportRecord
 parseNVTransport(const Json & value, const std::string & file)
 {
@@ -276,12 +259,6 @@ DDTransportRecord::equals(const DDTransportRecord & rhs) const
          table_file == rhs.table_file &&
          table_units == rhs.table_units && pressure == rhs.pressure &&
          gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;
-}
-
-bool
-GasStateRecord::equals(const GasStateRecord & rhs) const
-{
-  return species == rhs.species && mass_fractions == rhs.mass_fractions;
 }
 
 bool
@@ -352,6 +329,31 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         if (!std::isfinite(species.molar_mass_kg_mol) || species.molar_mass_kg_mol <= 0.0)
           fail(file, "molar_mass_kg_mol must be finite and positive for " + it.key());
       }
+      // Volume initial composition and inlet/feed composition are independent.
+      // Explicit zero is valid; absent metadata is not interpreted as zero.
+      for (const auto * key : {"initial_vol_mass_fraction", "initial_inlet_mass_fraction"})
+        if (record.contains(key))
+        {
+          const auto & value = record.at(key);
+          if (!value.is_number())
+            fail(file, "non-numeric " + std::string(key) + " for " + it.key());
+          const double fraction = value.get<double>();
+          if (!std::isfinite(fraction) || fraction < 0.0 || fraction > 1.0)
+            fail(file, std::string(key) + " must be finite and within [0,1] for " + it.key());
+          if (it.key() == "e")
+            fail(file, "electron 'e' cannot declare heavy mass fractions");
+          if (species.molar_mass_kg_mol <= 0.0)
+            fail(file, "initial mass fractions require molar_mass_kg_mol for " + it.key());
+          if (std::string(key) == "initial_vol_mass_fraction")
+            species.initial_vol_mass_fraction = fraction;
+          else
+            species.initial_inlet_mass_fraction = fraction;
+        }
+      if (species.initial_vol_mass_fraction.has_value() !=
+          species.initial_inlet_mass_fraction.has_value())
+        fail(file, "species " + it.key() +
+             " must declare both initial_vol_mass_fraction and initial_inlet_mass_fraction");
+
       const auto existing = _species.find(it.key());
       if (existing == _species.end())
         _species.emplace(it.key(), species);
@@ -361,21 +363,25 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
             existing->second.elements != species.elements ||
             (existing->second.molar_mass_kg_mol > 0.0 &&
              species.molar_mass_kg_mol > 0.0 &&
-             existing->second.molar_mass_kg_mol != species.molar_mass_kg_mol))
+             existing->second.molar_mass_kg_mol != species.molar_mass_kg_mol) ||
+            (existing->second.initial_vol_mass_fraction &&
+             species.initial_vol_mass_fraction &&
+             *existing->second.initial_vol_mass_fraction != *species.initial_vol_mass_fraction) ||
+            (existing->second.initial_inlet_mass_fraction &&
+             species.initial_inlet_mass_fraction &&
+             *existing->second.initial_inlet_mass_fraction != *species.initial_inlet_mass_fraction))
           fail(file, "conflicting species identity for " + it.key());
         if (existing->second.molar_mass_kg_mol == 0.0)
           existing->second.molar_mass_kg_mol = species.molar_mass_kg_mol;
+        if (!existing->second.initial_vol_mass_fraction)
+          existing->second.initial_vol_mass_fraction = species.initial_vol_mass_fraction;
+        if (!existing->second.initial_inlet_mass_fraction)
+          existing->second.initial_inlet_mass_fraction = species.initial_inlet_mass_fraction;
       }
     }
 
     if (root.contains("gas_state"))
-    {
-      const auto record = parseGasState(root.at("gas_state"), file);
-      if (!_gas_state)
-        _gas_state = std::make_unique<GasStateRecord>(record);
-      else if (!_gas_state->equals(record))
-        fail(file, "conflicting gas_state composition owner across JSON files");
-    }
+      fail(file, "top-level gas_state is retired; put initial composition on each species");
 
     // Multiple chemistry files may contribute reactions independently, but
     // coefficient owners are one per species and one per NV mixture.
@@ -593,11 +599,6 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
   for (const auto & [id, config] : _dd_transport)
     if (_species.find(id) == _species.end())
       fail("<merged plasma mechanism>", "transport_coefficients references unknown species: " + id);
-  if (_gas_state)
-    for (const auto & id : _gas_state->species)
-      if (id == "e" || _species.find(id) == _species.end() ||
-          _species.at(id).molar_mass_kg_mol <= 0.0)
-        fail("<merged plasma mechanism>", "gas_state requires heavy species molar_mass_kg_mol: " + id);
   if (_nv_transport)
     for (const auto & id : _nv_transport->species)
       if (_species.find(id) == _species.end())
@@ -609,12 +610,6 @@ ChemistryData::ddTransport(const std::string & id) const
 {
   const auto it = _dd_transport.find(id);
   return it == _dd_transport.end() ? nullptr : &it->second;
-}
-
-const GasStateRecord *
-ChemistryData::gasState() const
-{
-  return _gas_state.get();
 }
 
 const NVTransportRecord *
