@@ -3,7 +3,9 @@
 
 #include "nlohmann/json.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <iomanip>
 #include <map>
 #include <fstream>
