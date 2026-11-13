@@ -85,6 +85,7 @@ public:
   explicit ChemistryData(const std::vector<std::string> & files);
 
   const SpeciesRecord & species(const std::string & id) const;
+  const std::map<std::string, SpeciesRecord> & speciesRecords() const { return _species; }
   const std::vector<ReactionRecord> & reactions() const { return _reactions; }
   bool hasSpeciesSource(const std::string & id) const;
   bool hasElectronEnergySource() const;
