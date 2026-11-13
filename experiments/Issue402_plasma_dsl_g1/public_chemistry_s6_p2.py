@@ -41,7 +41,12 @@ def execute(historical: Path, binary: Path, source_sha: str, evidence: Path) -> 
         for variant in ("417", "941"):
             staged = Path(scratch) / variant
             # Use the verified C candidate that removes only original ne_transport.
-            ordered = option.p2.stage(ROOT, historical, variant, "C", staged, manifest)
+            # D starts from a prebuilt C0 physics base, never a historical
+            # debug-instrumented C deck followed by probe removal.
+            d_base = (PILOT / "native/s6_c0_physics_base_no_d1.i")
+            ordered = option.p2.stage(
+                ROOT, historical, variant, "C", staged, manifest,
+                d_base_source=d_base)
             chemistry_dir = staged / option.p2.CHEM
             canonical = option.canonicalize_staged_D_inputs(chemistry_dir, ordered)
             type_remap = option.remap_staged_fem_types(chemistry_dir, ordered)
