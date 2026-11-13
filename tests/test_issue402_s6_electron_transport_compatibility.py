@@ -64,7 +64,7 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
     assert report["status"] == "SCRATCH_ONLY_EXACT_ELECTRON_LOOKUP_CUTOVER"
     assert report["source_layer"] == BASE
     assert report["bounds_policy"] == "clamp"
-    assert report["coordinate"] == "e_energy_eV"
+    assert report["coordinate"] == "e_energy_eV"  # new scratch DD output
     assert report["gas_temperature"] == "T_g_fixed"
     assert report["pressure"] == "p"
     assert report["table_units"] == "reduced"
@@ -92,7 +92,7 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
 
 @pytest.mark.parametrize("before,after", (
     ("bounds_policy = clamp", "bounds_policy = error"),
-    ("mean_energy = e_energy_eV", "mean_energy = other_mean"),
+    ("mean_energy = mean_en_solved", "mean_energy = other_mean"),
     ("pressure = p", "pressure = p_fake"),
     ("gas_temperature = T_g_fixed", "gas_temperature = T_g"),
     ("property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
@@ -122,7 +122,7 @@ def test_unverified_transport_identity_rejected_without_source_change(before, af
     "      unexpected = value",
     "    unexpected = value",
     "      mean_energy = dummy",
-    "    mean_energy = e_energy_eV",
+    "    mean_energy = mean_en_solved",
     "    garbage that is not an assignment",
 ])
 def test_hidden_or_duplicate_electron_transport_assignment_rejected(hidden):
