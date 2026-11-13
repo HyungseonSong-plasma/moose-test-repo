@@ -376,7 +376,7 @@ def canonicalize_staged_electron_lookup(
         "from_type": "PhysicsElectronTransportLookupMaterial",
         "to_type": "DDTransportMaterial",
         "table_file": table_path,
-        "coordinate": "mean_en_solved",
+        "coordinate": "e_energy_eV",
         "pressure": "p",
         "gas_temperature": "T_g_fixed",
         "table_units": "reduced",
