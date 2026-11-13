@@ -146,7 +146,13 @@ def check_head(repo: pathlib.Path, expected: str):
 
 
 def stage(control: pathlib.Path, historical: pathlib.Path, case: str, variant: str,
-          folder: pathlib.Path, manifest: dict) -> list[str]:
+          folder: pathlib.Path, manifest: dict, *,
+          d_base_source: pathlib.Path | None = None) -> list[str]:
+    """Stage immutable B/C decks, or D's prebuilt debug-free base directly.
+
+    The optional D source substitutes only the first C input layer. Nothing
+    is generated then deleted: historical B/C paths retain byte identity.
+    """
     if folder.exists():
         raise ValueError('refuse overwriting any previously staged case')
     if (historical / CHEM / 'private_rates').exists():
@@ -158,8 +164,13 @@ def stage(control: pathlib.Path, historical: pathlib.Path, case: str, variant: s
     rec = manifest['cases'][case]
     chemistry = folder / CHEM
     deck = control / DECKS / rec['name'] / variant
+    if d_base_source is not None:
+        if variant != 'C' or not d_base_source.is_file():
+            raise ValueError('Only the staged D input may use a prebuilt base')
+    first = rec['input_order'][0]
     for name in rec['input_order'] + (['migrated_continuity.i'] if variant == 'C' else []):
-        shutil.copyfile(deck / name, chemistry / name)
+        source = d_base_source if d_base_source is not None and name == first else deck / name
+        shutil.copyfile(source, chemistry / name)
     rate_dir = chemistry / 'private_rates'  # Historical MOOSE input-relative path only; values are PUBLIC.
     rate_dir.mkdir(mode=0o700)
     for name in rec['active']:
