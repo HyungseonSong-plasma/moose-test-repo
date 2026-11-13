@@ -17,11 +17,6 @@
   []
 []
 [FunctorMaterials]
-  [state]
-    type = ADGenericFunctorMaterial
-    prop_names = 'Y_O2 Y_O'
-    prop_values = '1 0'
-  []
   [surface_reactions]
     type = SurfaceReactionMaterial
     chemistry_file = json_surface_rate_p2.json
@@ -33,6 +28,18 @@
   []
 []
 [Postprocessors]
+  [volume_initial_O2]
+    type = ElementAverageFunctorPostprocessor
+    functor = Y_O2_initial_vol
+  []
+  [inlet_O2]
+    type = ElementAverageFunctorPostprocessor
+    functor = Y_O2_inlet
+  []
+  [inlet_O]
+    type = ElementAverageFunctorPostprocessor
+    functor = Y_O_inlet
+  []
   [surface_progress]
     type = ElementAverageFunctorPostprocessor
     functor = R_H90
