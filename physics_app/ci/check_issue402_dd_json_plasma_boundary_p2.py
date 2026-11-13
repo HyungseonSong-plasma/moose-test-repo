@@ -47,6 +47,67 @@ def main(exe: Path):
         check(exe, root, "JSON_PRESENT", JSON_INPUT, DATA, True)
         check(exe, root, "PHYSICS_AUTO_LOG_E_ENERGY_AND_BCS",
               PHYSICS_AUTO_INPUT, DATA, True)
+        # JSON owns continuity initial number density for FEM AND FVM.
+        # The .i selectors contain only species IDs (no positional values).
+        assert "fem_species = e" in PHYSICS_AUTO_INPUT
+        assert "fem_species = 'e 1e15'" not in PHYSICS_AUTO_INPUT
+        assert DATA["species"]["e"]["initial_number_density"] == 1e15
+
+        fvm_data = copy.deepcopy(DATA)
+        fvm_data["species"]["O2p"] = {
+            "elements": {"O": 2},
+            "charge_number": 1,
+            "initial_number_density": 1e14
+        }
+        fvm_data["transport_coefficients"]["drift_diffusion"]["O2p"] = {
+            "model": "constant", "mobility": 0.15, "diffusivity": 0.075
+        }
+        fvm_input = PHYSICS_AUTO_INPUT.replace(
+            "fem_species = e\n          fem_potential = potential",
+            "fem_species = e\n          fvm_species = O2p\n          fem_potential = potential",
+            1
+        )
+        assert fvm_input != PHYSICS_AUTO_INPUT
+        check(exe, root, "JSON_FEM_FVM_INITIAL_NUMBER_DENSITY",
+              fvm_input, fvm_data, True)
+
+        fvm_missing = copy.deepcopy(fvm_data)
+        del fvm_missing["species"]["O2p"]["initial_number_density"]
+        check(exe, root, "JSON_FVM_INITIAL_MISSING_WITHOUT_EXTERNAL_VARIABLE",
+              fvm_input, fvm_missing, False)
+
+        # Fail-closed JSON schema: a log-molar solved density requires a
+        # finite, strictly positive particle number density [1/m^3].
+        for label, bad in (
+            ("JSON_INITIAL_ZERO", 0.0),
+            ("JSON_INITIAL_NEGATIVE", -1.0),
+            ("JSON_INITIAL_STRING", "1e15"),
+            ("JSON_INITIAL_NULL", None)
+        ):
+            invalid = copy.deepcopy(DATA)
+            invalid["species"]["e"]["initial_number_density"] = bad
+            check(exe, root, label, PHYSICS_AUTO_INPUT, invalid, False)
+
+        no_initial = copy.deepcopy(DATA)
+        del no_initial["species"]["e"]["initial_number_density"]
+        check(exe, root, "JSON_INITIAL_MISSING_WITHOUT_EXTERNAL_VARIABLE",
+              PHYSICS_AUTO_INPUT, no_initial, False)
+
+        old_input = PHYSICS_AUTO_INPUT.replace(
+            "fem_species = e", "fem_species = 'e 1e15'", 1
+        )
+        check(exe, root, "RETIRED_POSITIONAL_FEM_INITIAL",
+              old_input, DATA, False)
+        duplicate_input = PHYSICS_AUTO_INPUT.replace(
+            "  [potential]\n    type = MooseVariable\n  []",
+            "  [potential]\n    type = MooseVariable\n  []\n"
+            "  [log_e]\n    type = MooseVariable\n  []",
+            1
+        )
+        assert duplicate_input != PHYSICS_AUTO_INPUT
+        check(exe, root, "JSON_INITIAL_DUPLICATE_EXTERNAL_VARIABLE",
+              duplicate_input, DATA, False)
+
         # The complete Physics path must not infer missing electron transport
         # or a missing electron-fluid energy closure from parser defaults.
         no_e_transport = copy.deepcopy(DATA)
