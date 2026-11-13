@@ -8,8 +8,8 @@ required = [
     ROOT / "src/materials/DDMaterial.C",
     ROOT / "include/materials/PhysicsElectronMeanEnergyMaterial.h",
     ROOT / "src/materials/PhysicsElectronMeanEnergyMaterial.C",
-    ROOT / "include/materials/PhysicsElectronImpactRateMaterial.h",
-    ROOT / "src/materials/PhysicsElectronImpactRateMaterial.C",
+    ROOT / "include/materials/ElectronImpactRateMaterial.h",
+    ROOT / "src/materials/ElectronImpactRateMaterial.C",
     ROOT / "include/materials/NVMaterial.h",
     ROOT / "src/materials/NVMaterial.C",
     ROOT / "include/materials/PhysicsPlasmaChargeDensityMaterial.h",
@@ -24,7 +24,7 @@ assert 'PlasmaClosures/*' not in app
 assert not (ROOT / "include/actions/PlasmaClosuresAction.h").exists()
 assert not (ROOT / "src/actions/PlasmaClosuresAction.C").exists()
 electron = (ROOT / "src/materials/PhysicsElectronMeanEnergyMaterial.C").read_text()
-single_ei = (ROOT / "src/materials/PhysicsElectronImpactRateMaterial.C").read_text()
+single_ei = (ROOT / "src/materials/ElectronImpactRateMaterial.C").read_text()
 heavy = (ROOT / "src/materials/NVMaterial.C").read_text()
 drift = (ROOT / "src/materials/DDMaterial.C").read_text()
 
@@ -44,7 +44,8 @@ for name in ('"electron_energy_mobility"', '"electron_energy_diffusion"',
 # Current EI progresses use an existing one-reaction-per-material owner.
 assert "rate_table_file" in single_ei
 assert "reaction_progress" in single_ei
-assert 'registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);' in single_ei
+assert 'registerMooseObject("PhysicsApp", ElectronImpactRateMaterial);' in single_ei
+assert 'registerMooseObjectAliased("PhysicsApp", ElectronImpactRateMaterial, "PhysicsElectronImpactRateMaterial");' in single_ei
 # Existing heavy diffusion implementation outlives its retired naming wrapper.
 assert 'registerMooseObject("PhysicsApp", NVMaterial);' in heavy
 assert 'registerMooseObject("PhysicsApp", DDMaterial);' in drift
@@ -53,22 +54,22 @@ assert 'registerMooseObject("PhysicsApp", DDMaterial);' in drift
 fixture = (ROOT / "ci/plasma_direct_existing_materials_smoke.i").read_text()
 for old_type in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
     assert "type = " + old_type not in fixture
-for type_name in ("DDMaterial", "PhysicsElectronImpactRateMaterial",
+for type_name in ("DDMaterial", "ElectronImpactRateMaterial",
                   "NVMaterial", "PhysicsPlasmaChargeDensityMaterial"):
     assert "type = " + type_name in fixture
-assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
+assert fixture.count("type = ElectronImpactRateMaterial") == 2
 
 # Keep the separate NV alias while retiring electron-lookup factory spellings.
 for legacy in (
     "PhysicsElectronMeanEnergyMaterial.C",
     "DDMaterial.C",
-    "PhysicsElectronImpactRateMaterial.C",
+    "ElectronImpactRateMaterial.C",
     "NVMaterial.C",
 ):
     assert (ROOT / "src/materials" / legacy).is_file(), legacy
 
 
-# Only the independent NV legacy name remains an active factory alias.
+# Legacy NV and electron-impact factory names remain registered as compatibility aliases.
 for old_type, new_type in (
     ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
 ):

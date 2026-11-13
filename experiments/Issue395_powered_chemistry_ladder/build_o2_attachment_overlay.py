@@ -58,7 +58,7 @@ def main() -> int:
     block = plasma
   []
   [ei01_progress]
-    type = PhysicsElectronImpactRateMaterial
+    type = ElectronImpactRateMaterial
     rate_table_file = {args.attachment_table}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical

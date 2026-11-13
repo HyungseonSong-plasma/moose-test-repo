@@ -10,8 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json"
-OWNER_H = ROOT / "physics_app/include/materials/PhysicsElectronImpactRateMaterial.h"
-OWNER_C = ROOT / "physics_app/src/materials/PhysicsElectronImpactRateMaterial.C"
+OWNER_H = ROOT / "physics_app/include/materials/ElectronImpactRateMaterial.h"
+OWNER_C = ROOT / "physics_app/src/materials/ElectronImpactRateMaterial.C"
 RUNTIME_CHECKER = ROOT / "physics_app/ci/check_e8_elastic_ei19_runtime.py"
 DATA_DIR = ROOT / "physics_app/data/electron_impact"
 
@@ -75,12 +75,12 @@ def _validate_owner_text(header, source):
     required_header = (
         "class ElectronImpactRateMaterial : public FunctorMaterial",
         "ElectronImpactRateMaterial(const InputParameters & parameters);",
-        "using PhysicsElectronImpactRateMaterial = ElectronImpactRateMaterial;",
         "PhysicsLookupTable1D _table;",
         "const std::string _reaction_progress_name;",
     )
     required_source = (
-        'registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);',
+        'registerMooseObject("PhysicsApp", ElectronImpactRateMaterial);',
+        'registerMooseObjectAliased("PhysicsApp", ElectronImpactRateMaterial, "PhysicsElectronImpactRateMaterial");',
         'ElectronImpactRateMaterial::validParams()',
         'ElectronImpactRateMaterial::ElectronImpactRateMaterial(',
         'ElectronImpactRateMaterial::interpolateStrict(',
@@ -162,7 +162,7 @@ def _runtime_checker_production_surface(text):
 
 def _validate_runtime_checker_text(text):
     for required in (
-        "PhysicsElectronImpactRateMaterial",
+        "ElectronImpactRateMaterial",
         "ADParsedFunctorMaterial",
         "FVCoupledForce",
         "R_elastic_O2",

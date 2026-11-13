@@ -347,7 +347,7 @@ def _insert_kinetic_owners(text: str) -> str:
         text = _insert_material(
             text,
             name,
-            f"""    type = PhysicsElectronImpactRateMaterial
+            f"""    type = ElectronImpactRateMaterial
     rate_table_file = {table}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
@@ -386,7 +386,7 @@ def _insert_kinetic_owners(text: str) -> str:
     text = _insert_material(
         text,
         "s5r_ei16_rate",
-        f"""    type = PhysicsElectronImpactRateMaterial
+        f"""    type = ElectronImpactRateMaterial
     rate_table_file = {RATE_TABLES["EI16"]}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
@@ -643,7 +643,7 @@ def _insert_observables(text: str) -> str:
 
 
 def _owner_paths_by_type(text: str) -> set[str]:
-    kinetic_types = {"PhysicsElectronImpactRateMaterial", "PhysicsReactionRateMaterial"}
+    kinetic_types = {"ElectronImpactRateMaterial", "PhysicsReactionRateMaterial"}
     projected_names = {
         "O2_o2s_excitation_mass_source", "O2s_excitation_mass_source",
         "O2_ionization_mass_source", "O2p_ionization_mass_source",
@@ -718,7 +718,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     for channel in ("EI01", "EI02", "EI17", "EI19", "EI18_O_TO_OS", "EI20_O_IONIZATION"):
         path = OWNER_BLOCKS[channel]
         checks[f"owner:{channel}"] = (
-            mp.get_parameter(text, path, "type") == "PhysicsElectronImpactRateMaterial"
+            mp.get_parameter(text, path, "type") == "ElectronImpactRateMaterial"
             and mp.get_parameter(text, path, "rate_table_file") == RATE_TABLES[channel]
             and mp.get_parameter(text, path, "mean_energy") == "mean_en_solved"
             and mp.get_parameter(text, path, "electron_number_density") == "n_e_physical"
@@ -736,7 +736,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["owner:EI16"] = (
         mp.get_parameter(text, OWNER_BLOCKS["EI16"], "type")
-        == "PhysicsElectronImpactRateMaterial"
+        == "ElectronImpactRateMaterial"
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "rate_table_file")
         == RATE_TABLES["EI16"]
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "mean_energy")

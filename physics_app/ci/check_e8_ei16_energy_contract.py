@@ -8,7 +8,7 @@ from pathlib import Path
 N_A = 6.02214076e23
 CONTRACT = Path("docs/development/2026-09-10_issue26_e8_ei16_energy_contract.json")
 R2 = Path("docs/development/2026-09-08_issue17_r2_o2_ionization_contract.json")
-RATE = Path("physics_app/src/materials/PhysicsElectronImpactRateMaterial.C")
+RATE = Path("physics_app/src/materials/ElectronImpactRateMaterial.C")
 PARTICLE = Path("physics_app/ci/check_e8_ei16_energy_runtime.py")
 RUNTIME = Path("physics_app/ci/check_e8_ei16_energy_runtime.py")
 CUSTOM_H = Path("physics_app/include/fvkernels/PhysicsFVElectronReactionEnergySource.h")
@@ -46,7 +46,7 @@ def main():
     runtime = RUNTIME.read_text()
     assert 'target_molar_concentration' in rate
     assert 'interpolateStrict' in rate and 'forbids clamp/floor' in rate
-    assert 'type = PhysicsElectronImpactRateMaterial' in particle
+    assert 'type = ElectronImpactRateMaterial' in particle
     assert 'reaction_progress = R_ion_O2' in particle
     for field, expression in (
         ("O2_ionization_mass_source", "-0.031998*rr"),

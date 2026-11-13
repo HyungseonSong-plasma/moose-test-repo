@@ -1,6 +1,8 @@
-#include "PhysicsElectronImpactRateMaterial.h"
+#include "ElectronImpactRateMaterial.h"
 
-registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);
+registerMooseObject("PhysicsApp", ElectronImpactRateMaterial);
+// Keep historical input decks loadable while the canonical factory name is simplified.
+registerMooseObjectAliased("PhysicsApp", ElectronImpactRateMaterial, "PhysicsElectronImpactRateMaterial");
 
 InputParameters
 ElectronImpactRateMaterial::validParams()

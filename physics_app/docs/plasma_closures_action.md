@@ -21,7 +21,7 @@
 > and scientific provenance only. Individual underlying Material types remain
 > independently registered where they remain in use. The now-retired
 > `PhysicsElectronKineticsMaterial` and `PhysicsHeavyTransportMaterial` are
-> replaced in input files by **existing** `PhysicsElectronImpactRateMaterial`
+> replaced in input files by **existing** `ElectronImpactRateMaterial`
 > (one per reaction) and `PhysicsThermalDiffusionMaterial` respectively.
 > Old inputs using `[PlasmaClosures]` will fail parsing until migrated. The immutable historical
 > source and archived results are not rewritten.

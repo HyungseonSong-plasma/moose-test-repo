@@ -42,8 +42,8 @@ EXPECTED_LEDGER = [
 ]
 
 EXPECTED_STAGE5 = {
-    "EI18_O_TO_OS": ("R_excitation_O_1p968", "PhysicsElectronImpactRateMaterial"),
-    "EI20_O_IONIZATION": ("R_ion_O", "PhysicsElectronImpactRateMaterial"),
+    "EI18_O_TO_OS": ("R_excitation_O_1p968", "ElectronImpactRateMaterial"),
+    "EI20_O_IONIZATION": ("R_ion_O", "ElectronImpactRateMaterial"),
     "EDETACH_OM": ("R_detach_Om", "ADParsedFunctorMaterial"),
     "H01_OP_O2_CHARGE_TRANSFER": ("reaction_rate_H01_Op_O2_charge_transfer", "PhysicsReactionRateMaterial"),
     "H02_OM_OP_NEUTRALIZATION": ("reaction_rate_H02_Om_Op_neutralization", "PhysicsReactionRateMaterial"),
@@ -137,7 +137,7 @@ def _check_ei01_recovery() -> None:
             raise AssertionError(f"EI01 table anchor mismatch at {x_text} eV")
 
     owner = recovery.get("progress_owner", {})
-    if owner.get("type") != "PhysicsElectronImpactRateMaterial":
+    if owner.get("type") != "ElectronImpactRateMaterial":
         raise AssertionError("EI01 progress owner type changed")
     if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_attachment.txt":
         raise AssertionError("EI01 progress owner table binding changed")

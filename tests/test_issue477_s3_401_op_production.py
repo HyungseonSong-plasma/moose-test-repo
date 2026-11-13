@@ -57,7 +57,7 @@ def test_native_owner_inventory_rejects_missing_or_duplicate_reactions(case, tmp
     else:
         s = "functor = S_electron_molar_EI941\nv = S_Op_molar_EI941\nexpression = '-13.62*R'\n"
     s += (
-        "type = PhysicsElectronImpactRateMaterial\n"
+        "type = ElectronImpactRateMaterial\n"
         f"rate_table_file = 'private_rates/{extra['rate']}'\n"
         f"reaction_progress = {extra['owner']}\n"
         "variable = log_ne\nvariable = log_energy\nvariable = log_nop\n"

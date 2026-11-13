@@ -161,7 +161,7 @@ without activating parameters does not add terms.
   must already have the equation's correct units.
 - **Chemistry:** `rate_table_files`, `mean_energy`,
   `electron_number_density`, and `target_molar_concentrations`
-  create existing strict-table `PhysicsElectronImpactRateMaterial` objects.
+  create existing strict-table `ElectronImpactRateMaterial` objects.
   Reaction source projection remains external.
 - **Poisson:** `charge_source_material` creates `Diffusion` and
   `MatBodyForce`. The property must supply `rho/epsilon0`
@@ -536,3 +536,5 @@ not a Material/Functor; its name and registered Physics syntax are unchanged.
   the pinned immutable C-only P3 artifacts. The workflow starts **only**
   after its own workflow YAML reaches `main`; PR validation only
   checks the runner's schema, safety and unit tests.
+
+Compatibility note (2026-11-13): `ElectronImpactRateMaterial` is the canonical MOOSE object and C++ class/file name. The prior `PhysicsElectronImpactRateMaterial` object name is retained only as a registration alias for historical `.i` inputs; no legacy C++ class/file remains.

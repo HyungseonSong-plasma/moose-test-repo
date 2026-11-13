@@ -61,7 +61,7 @@ def test_six_owner_guard_and_no_unlisted_chemistry(case, tmp_path):
         )
     else:
         extra = (
-            "type = PhysicsElectronImpactRateMaterial\n"
+            "type = ElectronImpactRateMaterial\n"
             f"rate_table_file = 'private_rates/{s5.EXTRAS[e]['rate']}'\n"
             f"reaction_progress = {owner}\nvariable = log_energy\n"
         )

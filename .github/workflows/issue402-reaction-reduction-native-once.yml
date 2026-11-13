@@ -65,8 +65,12 @@ jobs:
             tests/test_retired_legacy_physics_owners_contract.py \
             tests/test_issue402_s6_chemistry_run_templates.py \
             tests/test_issue402_full_s6_p2_only.py \
+            tests/test_electron_impact_rate_material_prefix.py \
+            tests/test_issue402_retired_plasma_closures.py \
             tests/test_issue402_reaction_reduction_p2_only.py
           python3 -m pytest -q tests/characterization/test_issue192_s5r.py tests/characterization/test_issue192_s5r_runtime.py
+          python3 physics_app/ci/check_plasma_closures_contract.py
+          python3 physics_app/ci/check_e8_elastic_ei19_implementation.py
           python3 physics_app/ci/check_r2_o2_ionization_implementation.py
           python3 physics_app/ci/check_r3_o2s_excitation_implementation.py
           python3 physics_app/ci/check_e8_ei10_energy_contract.py
@@ -80,6 +84,11 @@ jobs:
           for owner in PhysicsElectronImpactIonizationMaterial PhysicsElectronImpactO2sExcitationMaterial PhysicsO2IonizationSourceMaterial PhysicsO2sExcitationSourceMaterial; do
             test ! -f "physics_app/include/materials/${owner}.h"
           done
+          test -f physics_app/include/materials/ElectronImpactRateMaterial.h
+          test -f physics_app/src/materials/ElectronImpactRateMaterial.C
+          test ! -e physics_app/include/materials/PhysicsElectronImpactRateMaterial.h
+          test ! -e physics_app/src/materials/PhysicsElectronImpactRateMaterial.C
+          echo 'ISSUE402_ELECTRON_IMPACT_RATE_MATERIAL_RENAME_PASS'
           echo 'ISSUE402_REACTION_REDUCTION_TARGET_P0_PASS'
           echo 'D_BASE_SOURCE=PREBUILT_PINNED_NO_RUNTIME_DEBUG_FILTER_ALL_FOUR_D_ENTRYPOINTS'
       - name: Materialize pinned public historical 400W mesh

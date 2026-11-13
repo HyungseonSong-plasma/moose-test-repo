@@ -34,5 +34,3 @@ protected:
   PhysicsLookupTable1D _table;
 };
 
-// Keep the existing registered MOOSE object and historical input files valid.
-using PhysicsElectronImpactRateMaterial = ElectronImpactRateMaterial;
