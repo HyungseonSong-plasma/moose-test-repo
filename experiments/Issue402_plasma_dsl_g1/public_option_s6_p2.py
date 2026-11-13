@@ -229,8 +229,8 @@ RENAMED_FEM_KERNEL_TYPES = {
     "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
     "DDMaterial": "DDTransportMaterial",
     "NVMaterial": "NVTransportMaterial",
-    "ElectronImpactRateMaterial": "RateCoeffMaterial",
-    "PhysicsElectronImpactRateMaterial": "RateCoeffMaterial",
+    "ElectronImpactRateMaterial": "EIRateCoefMaterial",
+    "PhysicsElectronImpactRateMaterial": "EIRateCoefMaterial",
 }
 _FEM_TYPE_LINE = re.compile(
     r"(?m)^(?P<indent>[ \t]*type[ \t]*=[ \t]*)(?P<name>"
