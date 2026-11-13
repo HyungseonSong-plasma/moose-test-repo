@@ -8,12 +8,23 @@
   solve = false
   kernel_coverage_check = false
 []
+[Variables]
+  [w_O2]
+    type = MooseVariableFVReal
+  []
+  [w_O]
+    type = MooseVariableFVReal
+  []
+[]
 [Physics]
   [Plasmas]
     files = json_surface_rate_p2.json
     pressure = 1.333223684
     temperature = 300
     model = ideal_gas
+    initialize_species_mass_fractions = true
+    inlet_boundaries = left
+    inlet_bc_model = dirichlet
   []
 []
 [FunctorMaterials]
