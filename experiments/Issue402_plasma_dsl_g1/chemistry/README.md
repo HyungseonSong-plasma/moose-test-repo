@@ -276,8 +276,52 @@ The earlier missing `PhysicsLowerDSurfaceCurrentProbeAux` and
 `PhysicsWaferD1GeometryProbeAux` no longer block this **core** syntax test.
 That is **not** C++ face-value regression, observational equivalence,
 temporal/physics parity or validation of the missing 14 diagnostics.
-Required independent CodeRabbit review of the D1 isolation was requested
-but rate-limited; **no new D1 independent approval was issued**.
-Outstanding gates: **FULL_S6_P2=HOLD**, **DIAGNOSTIC_PARITY=HOLD**,
-native old/new transport and wall numerical parity unverified,
-**P3/P4=NOT_RUN, SCIENCE_HOLD, no merge**.
+**Historical gate as initially defined:** the initial experimental run marked
+`FULL_S6_P2=HOLD` and `DIAGNOSTIC_PARITY=HOLD`; CodeRabbit's D1 follow-up
+review was rate-limited. These historical facts remain in the immutable run
+artifact. The later operator decision below supersedes the *requirement* to
+reproduce/debug-review the retired D1 probes, but does not change that
+historical report.
+
+
+## Operator decision: D1 debugging complete; diagnostic retirement accepted (2026-11-13)
+
+The operator confirmed that the original Issue397 D1 instrumentation was
+introduced solely to investigate a specific defect, and that defect has
+already been identified. The D1 probes are no longer required model outputs.
+Consequently, **recreating 14 retired probe values / FaceArgs, proving
+diagnostic numerical parity, and arranging a separate independent reviewer
+for this now-unneeded instrumentation are not acceptance gates**. This is an
+explicit operator scope decision, **not** a claim that those values were
+reproduced or that a reviewer approved the retired code.
+
+The active target S6 D input excludes precisely 9 retired
+`PhysicsLowerDSurfaceCurrentProbeAux` and 5
+`PhysicsWaferD1GeometryProbeAux` instances plus their 14 unused AuxVariables.
+The guarded scratch-only transformation checks the exact archival signatures
+and ensures no unexpected variable consumer before removing them. The
+original B/C archive stays byte-identical and auditable, not rewritten.
+All physical `PhysicsLowerDSurfaceCurrent`, Wall, Poisson, transport,
+RF and Chemistry owners remain part of the active target.
+
+**Active model Native P2 acceptance** means `physics-opt --check-input`
+succeeds for the S6-417 and S6-941 stacks *after the explicitly retired
+debug probes are removed*. The last source-bound evidence already showed
+both cases `Syntax OK` in [run #43407079646](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43407079646).
+Historical evidence called this `CORE_INPUT_P2=PASS`, because the old
+diagnostic parity gate was still pending; this operator decision now
+makes that the **intended target model input**, not a temporary missing
+science component. Current staging records
+`OBSOLETE_D1_DEBUG_OBSERVATIONS_RETIRED`,
+`diagnostic_parity=NOT_APPLICABLE`, and
+`d1_retirement_review=NOT_REQUIRED_OPERATOR_DECISION`.
+The active P2 runner verifies exactly 14+14 removals before accepting Native
+syntax. Do not rewrite or reclassify historical signed CI receipts.
+
+**Remaining distinct gates:** Native C++ wall/transport physical parity and
+scientific provenance/trajectory acceptance are not proven by `--check-input`.
+`SCIENCE_HOLD` stays in effect; P3/P4 remain `NOT_RUN`, and neither
+PR #524 nor the stacked parent PR #523 is merged. This decision waives
+only *D1 debug-specific* reproduction and optional independent D1 review,
+not repository protection rules or evidence required for actual physics
+compatibility.
