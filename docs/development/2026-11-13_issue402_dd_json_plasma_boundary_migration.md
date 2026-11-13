@@ -228,6 +228,15 @@ All three calculations *can* be expressed as AD Functors, for example
 using `ADParsedFunctorMaterial`: `exp(log_energy-log_density)`,
 `energy_density/number_density`, or
 `epsilon_ref*normalized_energy/normalized_density`, respectively.
+
+The new synthetic P2 alternative
+`physics_app/ci/dd_plasma_boundary_parsed_mean_p2.i` uses an
+`ADParsedFunctorMaterial` to publish `e_energy_eV` with
+`functor_names='log_energy log_ne'`,
+`functor_symbols='ue un'`, and `expression='exp(ue-un)'`.
+A passing `--check-input` confirms **object construction and wiring
+only**: it does NOT prove equivalent error behavior, derivative/Jacobian
+values, or solution trajectory.
 **However**, a pure parsed expression does not preserve the present
 fail-fast finiteness, positivity, exact parameter/normalization checks.
 We have not migrated or removed these format branches or proven AD
