@@ -51,6 +51,7 @@ def test_root_ic_and_bc_create_only_for_solved_species():
     assert "inlet_bc_model" not in c
     assert 'if (_current_task == "add_ics_physics")' in c
     assert 'inlet_boundaries = left' in i
+    assert 'state_model = ideal_gas' in i
     assert 'sccm = 100' in i
     assert i.count('type = MooseVariableFVReal') == 2
 
@@ -109,4 +110,32 @@ def test_all_four_materials_share_y_i_of_solver_state_in_native_fixture():
     assert "active_reactions = 'H91'" in source
     assert "active_reactions = 'H90'" in source
     assert "sccm = 100" in source
-    assert "sccm = 100" in source
+    assert "state_model = ideal_gas" in source
+
+
+def test_root_state_options_are_only_state_model_and_sccm():
+    source = CODE.read_text()
+    assert 'params.addParam<MooseEnum>("state_model", MooseEnum("ideal_gas", "ideal_gas")' in source
+    assert 'params.addParam<MooseEnum>("model"' not in source
+    assert 'params.addParam<Real>("sccm"' in source
+    assert 'params.addParam<bool>("initialize_species_mass_fractions"' not in source
+    assert '"inlet_bc_model"' not in source
+    assert 'for (const auto & id : species)' in source
+    assert 'if (_current_task == "add_ics_physics")' in source
+    assert 'if (isParamValid("sccm"))' in source
+    assert 'if (!std::isfinite(feed) || feed <= 0.0)' in source
+
+
+def test_drift_diffusion_continuity_and_energy_do_not_generate_bcs():
+    continuity = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
+    energy = (APP / "src/physics/plasma/DDEnergyEq.C").read_text()
+    for name, source in (("DDContinuityEq", continuity), ("DDEnergyEq", energy)):
+        assert f'registerMooseAction("PhysicsApp", {name}, "add_ics_physics");' in source
+        assert f'registerMooseAction("PhysicsApp", {name}, "add_bc");' not in source
+        assert f'{name}::addBoundaryConditions' not in source
+    assert "continuityStateName" in continuity and '"log_" + species' in continuity
+    assert 'std::log(density) - std::log(PHYSICS_CONSTANTS::N_A)' in continuity
+    assert '"FVConstantIC"' in continuity and '"ConstantIC"' in continuity
+    assert "energyStateName" in energy and '"log_" + species + "_energy"' in energy
+    assert 'std::log(getParam<Real>("initial_molar_energy_density_eV"))' in energy
+    assert "Finite-volume electron energy is not supported" in energy
