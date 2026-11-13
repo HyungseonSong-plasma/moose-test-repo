@@ -731,8 +731,8 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
         and mp.get_parameter(text, OWNER_BLOCKS["EI10"], "property_name") == "R_O2s"
         and mp.words(mp.get_parameter(text, OWNER_BLOCKS["EI10"], "functor_names"))
         == ["n_e_physical", "c_O2"]
-        and mp.get_parameter(text, OWNER_BLOCKS["EI10"], "expression")
-        == "4.71e8*(ne/6.02214076e23)*co2"
+        and mp.words(mp.get_parameter(text, OWNER_BLOCKS["EI10"], "expression"))
+        == ["4.71e8*(ne/6.02214076e23)*co2"]
     )
     checks["owner:EI16"] = (
         mp.get_parameter(text, OWNER_BLOCKS["EI16"], "type")
@@ -793,8 +793,10 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
         mp.get_parameter(text, f"FunctorMaterials/{name}", "type")
         == "ADParsedFunctorMaterial"
         and mp.get_parameter(text, f"FunctorMaterials/{name}", "property_name") == property_name
-        and mp.get_parameter(text, f"FunctorMaterials/{name}", "functor_names") == progress
-        and mp.get_parameter(text, f"FunctorMaterials/{name}", "expression") == expression
+        and mp.words(mp.get_parameter(text, f"FunctorMaterials/{name}", "functor_names"))
+        == [progress]
+        and mp.words(mp.get_parameter(text, f"FunctorMaterials/{name}", "expression"))
+        == [expression]
         for name, property_name, progress, expression in source_definitions
     )
 
