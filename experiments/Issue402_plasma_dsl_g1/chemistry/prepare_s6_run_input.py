@@ -295,7 +295,7 @@ def sha(contents: bytes) -> str:
 _ARCHIVED_ELECTRON_LOOKUP = {
     "type": "PhysicsElectronTransportLookupMaterial",
     "property_table_file": "'../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
-    "mean_energy": "e_energy_eV",
+    "mean_energy": "mean_en_solved",
     "pressure": "p",
     "gas_temperature": "T_g_fixed",
     "bounds_policy": "clamp",
@@ -450,6 +450,15 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         edits[target] = source
     if len(retired) != 9:
         raise ValueError("Expected exactly nine old electron particle/energy Kernels")
+    # Resolve immutable archived source *before* renaming its identifiers.
+    # The historical input may still use legacy MOOSE factory names, but
+    # every scratch output must own the new registered class and Functor names.
+    for item in ordered[:-1]:
+        target = staged_chem_dir / Path(item).name
+        edits.setdefault(target, target.read_text(encoding="utf-8"))
+    edits, lookup_cutover = canonicalize_staged_electron_lookup(edits)
+    edits, wall_cutover = canonicalize_staged_wall_inputs(edits)
+
     # Retain archived owner signatures above, then consistently
     # migrate the remaining scratch-only variable references to the new
     # internally resolved DDEnergyEq state: log_e_energy.
@@ -490,11 +499,8 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         raise ValueError("Wrong reaction-set branch for S6")
     if "files = 'chemistry/oxygen_s6_common.json chemistry/oxygen_s6_" + variant + ".json'" not in template:
         raise ValueError("Template does not bind correct mechanism files")
-    # New-run Wall names are cut over only when every legacy output has a
-    # verified, uniquely identified FunctorMaterial producer. Fail before
-    # mutating any scratch file if an old/unknown wall owner is still present.
-    edits, lookup_cutover = canonicalize_staged_electron_lookup(edits)
-    edits, wall_cutover = canonicalize_staged_wall_inputs(edits)
+    # All wall/lookup owner checks have already run on original archival
+    # spelling; no unverified old provider enters the new scratch inputs.
     # Only after every owner check passes, modify disposable scratch.
     dest = staged_chem_dir / "chemistry"
     dest.mkdir(parents=True, exist_ok=True)
