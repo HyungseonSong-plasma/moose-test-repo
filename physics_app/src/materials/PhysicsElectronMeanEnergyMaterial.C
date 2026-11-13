@@ -32,8 +32,9 @@ PhysicsElectronMeanEnergyMaterial::validParams()
 
   params.addParam<MooseFunctorName>(
       "mean_energy_output",
-      "mean_en_solved",
-      "Published mean-electron-energy functor [eV]. The default preserves legacy inputs.");
+      "e_energy_eV",
+      "Canonical mean-electron-energy Functor [eV]. Historical default name mean_en_solved "
+      "is provided as a compatibility alias when no explicit output is supplied.");
 
   return params;
 }
@@ -58,8 +59,10 @@ PhysicsElectronMeanEnergyMaterial::PhysicsElectronMeanEnergyMaterial(
                  "Electron-energy normalization scale must be finite and positive.");
   }
 
-  addFunctorProperty<ADReal>(
-      getParam<MooseFunctorName>("mean_energy_output"),
+  // Keep one numerical expression. On a defaulted old input publish both
+  // the new canonical name and the old name, so historical reaction/material
+  // Functors do not lose their existing mean_en_solved dependency.
+  const auto mean_energy_functor =
       [this](const auto & r, const auto & state) -> ADReal
       {
         const ADReal energy_state = _electron_energy_density(r, state);
@@ -106,5 +109,10 @@ PhysicsElectronMeanEnergyMaterial::PhysicsElectronMeanEnergyMaterial(
               " eV. No clamp is applied.");
 
         return mean_energy;
-      });
+      };
+
+  addFunctorProperty<ADReal>(getParam<MooseFunctorName>("mean_energy_output"),
+                             mean_energy_functor);
+  if (!isParamSetByUser("mean_energy_output"))
+    addFunctorProperty<ADReal>("mean_en_solved", mean_energy_functor);
 }
