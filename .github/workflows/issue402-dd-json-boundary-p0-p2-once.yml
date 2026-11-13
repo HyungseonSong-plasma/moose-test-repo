@@ -34,7 +34,7 @@ jobs:
           test ! -e physics_app/src/materials/ElectronWallFluxMaterial.C
           test -f physics_app/src/materials/ESWallFluxMaterial.C
           grep -Fq 'registerMooseObject("PhysicsApp", ESWallFluxMaterial);' physics_app/src/materials/ESWallFluxMaterial.C
-          grep -Fq '"e_energy_eV"' physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
+          grep -Fq '"e_energy_eV"' physics_app/src/materials/ElectronEnergyMaterial.C
           grep -Fq '"boundaries"' physics_app/src/physics/plasma/Chemistry.C
           test -f physics_app/src/materials/ElectronEnergyMaterial.C
           test ! -e physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
