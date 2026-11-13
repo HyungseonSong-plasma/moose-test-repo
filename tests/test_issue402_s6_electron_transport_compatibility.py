@@ -45,7 +45,7 @@ def _load() -> dict[str, bytes]:
 
 def _case(archive: dict[str, bytes], case: str, variant: str):
     prefix = f"S6-{case}-407-2069-H25/{variant}/"
-    return {Path(name).name: content.decode("utf-8")
+    return {Path(Path(name).name): content.decode("utf-8")
             for name, content in archive.items() if name.startswith(prefix)
             and name.endswith(".i")}
 
@@ -101,7 +101,12 @@ def test_unverified_transport_identity_rejected_without_source_change(before, af
     text = _case(archive, "417", "C")[BASE]
     assert before in text
     # Replacement is restricted to the first matching instance in the base.
-    corrupted = text.replace(before, after, 1)
+    anchor = "[electron_transport]"
+    assert anchor in text
+    prefix, block = text.split(anchor, 1)
+    target, suffix = block.split("  []", 1)
+    assert before in target
+    corrupted = prefix + anchor + target.replace(before, after, 1) + "  []" + suffix
     source = {Path(BASE): corrupted, Path("other.i"): "unchanged\n"}
     with pytest.raises(ValueError, match="S6_ELECTRON_LOOKUP_IDENTITY_UNPROVED"):
         module.canonicalize_staged_electron_lookup(source)
