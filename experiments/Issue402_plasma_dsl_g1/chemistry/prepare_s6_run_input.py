@@ -352,6 +352,143 @@ def canonicalize_staged_electron_lookup(
     }
 
 
+
+# 14 observational D1 AuxKernels from issue397_d1_instrument.py are retired
+# upstream. No registered replacement provides identical higher-D FaceArg.
+# Suspend ONLY in disposable D core-P2 input. Diagnostic parity remains HOLD.
+_S6_D1_CURRENT_PROBES = {
+    "wafer_net_current_probe": "wafer_net_surface_current_density",
+    "d1_gamma_o2_positive": "ion_wall_number_flux",
+    "d1_gamma_o_positive": "atomic_positive_ion_wall_number_flux",
+    "d1_gamma_o_negative": "negative_ion_wall_number_flux",
+    "d1_gamma_electron": "electron_wall_number_flux",
+    "d1_sheath_drop_V": "electron_sheath_drop_V",
+    "d1_ne_m3": "n_e_physical",
+    "d1_mean_energy_eV": "mean_en_solved",
+    "d1_electron_mean_speed_m_s": "electron_mean_speed",
+}
+_S6_D1_GEOMETRY_PROBES = {
+    "d1_normal_r": "normal_r",
+    "d1_normal_z": "normal_z",
+    "d1_owner": "owner",
+    "d1_d_perp_m": "d_perp",
+    "d1_e_n_V_m": "e_n",
+}
+
+
+def suspend_staged_retired_d1_observations(
+        edits: dict[Path, str]) -> tuple[dict[Path, str], dict]:
+    """Audit and suspend only unconsumed D1 output probes in scratch core-P2.
+
+    All physical residuals, rate sources, wall current Functors and RF Aux
+    remain. Full S6 Native P2 and exact diagnostic equivalence stay HOLD.
+    """
+    expected = {
+        **{key: {
+            "type": "PhysicsLowerDSurfaceCurrentProbeAux",
+            "variable": key,
+            "surface_current_density": value,
+            "block": "wafer_surface",
+            "execute_on": "'INITIAL TIMESTEP_END'",
+        } for key, value in _S6_D1_CURRENT_PROBES.items()},
+        **{key: {
+            "type": "PhysicsWaferD1GeometryProbeAux",
+            "variable": key,
+            "surface_current_density": "wafer_net_surface_current_density",
+            "potential": "potential",
+            "component": value,
+            "block": "wafer_surface",
+            "execute_on": "'INITIAL TIMESTEP_END'",
+        } for key, value in _S6_D1_GEOMETRY_PROBES.items()},
+    }
+    retired_types = {
+        "PhysicsLowerDSurfaceCurrentProbeAux", "PhysicsWaferD1GeometryProbeAux"}
+    records = []
+    source_map = dict(edits)
+    for path, source in source_map.items():
+        for match in _WALL_BLOCK.finditer(source):
+            name, body = match.group("name"), match.group("body")
+            typed = _WALL_TYPE.search(body)
+            typ = typed.group("type") if typed else ""
+            if name not in expected and not (
+                    name.endswith("_kernel") and name[:-7] in expected) and (
+                    typ not in retired_types):
+                continue
+            roots = re.findall(
+                r"(?m)^\[([A-Za-z0-9_]+)\][ \t]*$", source[:match.start()])
+            section = roots[-1] if roots else ""
+            fields = re.findall(
+                r"(?m)^    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)$",
+                body)
+            props = {key: val.strip() for key, val in fields}
+            if len(fields) != len(props):
+                raise ValueError("S6_D1_PROBE_DUPLICATE_PARAMETER: " + name)
+            if section == "AuxVariables" and name in expected:
+                var = name
+                required = {"family": "MONOMIAL", "order": "CONSTANT",
+                            "block": "wafer_surface"}
+                kind = "variable"
+            elif section == "AuxKernels" and name.endswith("_kernel") and name[:-7] in expected:
+                var = name[:-7]
+                required = expected[var]
+                kind = "kernel"
+            else:
+                raise ValueError("S6_D1_PROBE_OWNER_OR_SECTION_UNPROVED: " + name)
+            if props != required:
+                raise ValueError("S6_D1_PROBE_SIGNATURE_UNPROVED: " + name)
+            records.append((path, match.start(), match.end(), kind, var,
+                            sha(match.group(0).encode("utf-8"))))
+    if not records:
+        # Existing synthetic chemistry tests have no D1 diagnostic owners.
+        return dict(edits), {
+            "status": "NO_D1_OBSERVATION_PROBES",
+            "suspended_auxkernels": 0, "suspended_auxvariables": 0,
+            "diagnostic_parity": "NOT_VERIFIED", "P3": "NOT_RUN",
+            "science": "SCIENCE_HOLD",
+        }
+    count = len(expected)
+    if len(records) != count * 2:
+        raise ValueError("S6_D1_PROBE_SET_INCOMPLETE: " + str(len(records)))
+    for kind in ("kernel", "variable"):
+        actual = [var for _, _, _, rec_kind, var, _ in records if rec_kind == kind]
+        if len(actual) != count or set(actual) != set(expected):
+            raise ValueError("S6_D1_PROBE_MISSING_OR_DUPLICATE_" + kind.upper())
+    for var in expected:
+        pattern = r"(?<![A-Za-z0-9_])" + re.escape(var) + r"(?![A-Za-z0-9_])"
+        references = sum(len(re.findall(pattern, source))
+                         for source in source_map.values())
+        # One name in AuxVariables, one as the associated AuxKernel variable.
+        if references != 2:
+            raise ValueError(
+                "S6_D1_PROBE_EXTERNAL_CONSUMER_UNPROVED: " +
+                var + " count=" + str(references))
+    updated = dict(source_map)
+    for path, source in source_map.items():
+        selections = [record for record in records if record[0] == path]
+        for _, start, end, _, _, _ in sorted(
+                selections, key=lambda rec: rec[1], reverse=True):
+            source = source[:start] + source[end:]
+        updated[path] = source
+    if any(re.search(
+            r"(?m)^    type[ \t]*=[ \t]*(?:PhysicsLowerDSurfaceCurrentProbeAux|"
+            r"PhysicsWaferD1GeometryProbeAux)[ \t]*$", source)
+            for source in updated.values()):
+        raise ValueError("S6_D1_RETIRED_AUX_OWNER_STILL_PRESENT")
+    return updated, {
+        "status": "CORE_P2_ONLY_D1_OBSERVATION_SUSPENDED",
+        "suspended_auxkernels": count,
+        "suspended_auxvariables": count,
+        "observed_fields": sorted(expected),
+        "original_diagnostic_signatures_sha256": {
+            kind + ":" + var: digest for _, _, _, kind, var, digest in records
+        },
+        "input_physics": "UNCHANGED",
+        "diagnostic_parity": "HOLD",
+        "full_native_p2": "HOLD",
+        "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
+    }
+
+
 def remove_one(text: str, name: str, variable: str, functor: str) -> str:
     # Native layer names may be reused by a FunctorMaterial and its Kernel.
     # Match ONLY the old FunctorKernel owner in the [Kernels] root section.
@@ -449,6 +586,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
     # New-run Wall names are cut over only when every legacy output has a
     # verified, uniquely identified FunctorMaterial producer. Fail before
     # mutating any scratch file if an old/unknown wall owner is still present.
+    edits, d1_scope = suspend_staged_retired_d1_observations(edits)
     edits, lookup_cutover = canonicalize_staged_electron_lookup(edits)
     edits, wall_cutover = canonicalize_staged_wall_inputs(edits)
     # Only after every owner check passes, modify disposable scratch.
@@ -465,6 +603,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         "removed_legacy_kernel_names": sorted(retired),
         "removed_count": len(retired),
         "canonical_name_replacements": renamed,
+        "scratch_d1_observation_scope": d1_scope,
         "scratch_electron_lookup_cutover": lookup_cutover,
         "scratch_wall_functor_cutover": wall_cutover,
         "overlay_sha256": sha(template.encode()),
