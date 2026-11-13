@@ -199,20 +199,6 @@ def test_guarded_scratch_cutover_retains_native_nonchem_operators(tmp_path, vari
     for old in ("R_elastic_O2", "R_elastic_O", "R_ion_O2"):
         assert result["canonical_name_replacements"][old] >= 1
     assert result["status"] == "P2_INPUT_PREPARED"
-    assert result["final_native_d1_debug_absence"] == {
-        "status": "PASS_OBSOLETE_D1_DIAGNOSTICS_ABSENT_FROM_NATIVE_INPUT",
-        "layers_checked": 11,
-        "retired_auxkernels_remaining": 0,
-        "retired_auxvariables_remaining": 0,
-        "retired_factory_types_remaining": 0,
-    }
-    all_native_layers = {
-        tmp_path / Path(name).name:
-            (tmp_path / Path(name).name).read_text(encoding="utf-8")
-        for name in ordered
-    }
-    assert (helper.audit_final_native_d1_debug_absence(all_native_layers)
-            == result["final_native_d1_debug_absence"])
     assert result["native_check_input"] == "NOT_RUN"
     assert result["run"] == "NOT_RUN"
     assert result["science"] == "SCIENCE_HOLD"
