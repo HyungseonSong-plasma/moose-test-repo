@@ -372,178 +372,6 @@ def canonicalize_staged_electron_lookup(
 
 
 
-# 14 observational D1 AuxKernels from issue397_d1_instrument.py are retired
-# upstream. No registered replacement provides identical higher-D FaceArg.
-# Retire ONLY in disposable D input; historical archived B/C preserved.
-# Operator decision: these were temporary debug probes for an already-diagnosed
-# issue. Their numerical parity and independent D1 retirement review are
-# deliberately NOT REQUIRED; physical and scientific gates remain separate.
-_S6_D1_CURRENT_PROBES = {
-    "wafer_net_current_probe": "wafer_net_surface_current_density",
-    "d1_gamma_o2_positive": "ion_wall_number_flux",
-    "d1_gamma_o_positive": "atomic_positive_ion_wall_number_flux",
-    "d1_gamma_o_negative": "negative_ion_wall_number_flux",
-    "d1_gamma_electron": "electron_wall_number_flux",
-    "d1_sheath_drop_V": "electron_sheath_drop_V",
-    "d1_ne_m3": "n_e_physical",
-    "d1_mean_energy_eV": "mean_en_solved",
-    "d1_electron_mean_speed_m_s": "electron_mean_speed",
-}
-_S6_D1_GEOMETRY_PROBES = {
-    "d1_normal_r": "normal_r",
-    "d1_normal_z": "normal_z",
-    "d1_owner": "owner",
-    "d1_d_perp_m": "d_perp",
-    "d1_e_n_V_m": "e_n",
-}
-
-
-def suspend_staged_retired_d1_observations(
-        edits: dict[Path, str]) -> tuple[dict[Path, str], dict]:
-    """Retire verified obsolete debug-only D1 outputs from disposable D input.
-
-    Audit every original owner and reject any consumer, so no physical equation
-    or live diagnostic dependency is silently removed. Do not infer P3 science
-    acceptance or numerical parity of transport/Wall physics from input P2.
-    """
-    expected = {
-        **{key: {
-            "type": "PhysicsLowerDSurfaceCurrentProbeAux",
-            "variable": key,
-            "surface_current_density": value,
-            "block": "wafer_surface",
-            "execute_on": "'INITIAL TIMESTEP_END'",
-        } for key, value in _S6_D1_CURRENT_PROBES.items()},
-        **{key: {
-            "type": "PhysicsWaferD1GeometryProbeAux",
-            "variable": key,
-            "surface_current_density": "wafer_net_surface_current_density",
-            "potential": "potential",
-            "component": value,
-            "block": "wafer_surface",
-            "execute_on": "'INITIAL TIMESTEP_END'",
-        } for key, value in _S6_D1_GEOMETRY_PROBES.items()},
-    }
-    retired_types = {
-        "PhysicsLowerDSurfaceCurrentProbeAux", "PhysicsWaferD1GeometryProbeAux"}
-    records = []
-    source_map = dict(edits)
-    for path, source in source_map.items():
-        for match in _WALL_BLOCK.finditer(source):
-            name, body = match.group("name"), match.group("body")
-            typed = _WALL_TYPE.search(body)
-            typ = typed.group("type") if typed else ""
-            if name not in expected and not (
-                    name.endswith("_kernel") and name[:-7] in expected) and (
-                    typ not in retired_types):
-                continue
-            roots = re.findall(
-                r"(?m)^\[([A-Za-z0-9_]+)\][ \t]*$", source[:match.start()])
-            section = roots[-1] if roots else ""
-            props = _parse_exact_s6_owner_parameters(body, name)
-            if section == "AuxVariables" and name in expected:
-                var = name
-                required = {"family": "MONOMIAL", "order": "CONSTANT",
-                            "block": "wafer_surface"}
-                kind = "variable"
-            elif section == "AuxKernels" and name.endswith("_kernel") and name[:-7] in expected:
-                var = name[:-7]
-                required = expected[var]
-                kind = "kernel"
-            else:
-                raise ValueError("S6_D1_PROBE_OWNER_OR_SECTION_UNPROVED: " + name)
-            if props != required:
-                raise ValueError("S6_D1_PROBE_SIGNATURE_UNPROVED: " + name)
-            records.append((path, match.start(), match.end(), kind, var,
-                            sha(match.group(0).encode("utf-8"))))
-    if not records:
-        # Existing synthetic chemistry tests have no D1 diagnostic owners.
-        return dict(edits), {
-            "status": "NO_D1_OBSERVATION_PROBES",
-            "suspended_auxkernels": 0, "suspended_auxvariables": 0,
-            "diagnostic_parity": "NOT_APPLICABLE",
-            "d1_retirement_review": "NOT_REQUIRED_OPERATOR_DECISION",
-            "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
-        }
-    count = len(expected)
-    if len(records) != count * 2:
-        raise ValueError("S6_D1_PROBE_SET_INCOMPLETE: " + str(len(records)))
-    for kind in ("kernel", "variable"):
-        actual = [var for _, _, _, rec_kind, var, _ in records if rec_kind == kind]
-        if len(actual) != count or set(actual) != set(expected):
-            raise ValueError("S6_D1_PROBE_MISSING_OR_DUPLICATE_" + kind.upper())
-    for var in expected:
-        pattern = r"(?<![A-Za-z0-9_])" + re.escape(var) + r"(?![A-Za-z0-9_])"
-        references = sum(len(re.findall(pattern, source))
-                         for source in source_map.values())
-        # One name in AuxVariables, one as the associated AuxKernel variable.
-        if references != 2:
-            raise ValueError(
-                "S6_D1_PROBE_EXTERNAL_CONSUMER_UNPROVED: " +
-                var + " count=" + str(references))
-    updated = dict(source_map)
-    for path, source in source_map.items():
-        selections = [record for record in records if record[0] == path]
-        for _, start, end, _, _, _ in sorted(
-                selections, key=lambda rec: rec[1], reverse=True):
-            source = source[:start] + source[end:]
-        updated[path] = source
-    if any(re.search(
-            r"(?m)^    type[ \t]*=[ \t]*(?:PhysicsLowerDSurfaceCurrentProbeAux|"
-            r"PhysicsWaferD1GeometryProbeAux)[ \t]*$", source)
-            for source in updated.values()):
-        raise ValueError("S6_D1_RETIRED_AUX_OWNER_STILL_PRESENT")
-    return updated, {
-        "status": "OBSOLETE_D1_DEBUG_OBSERVATIONS_RETIRED",
-        "suspended_auxkernels": count,
-        "suspended_auxvariables": count,
-        "observed_fields": sorted(expected),
-        "original_diagnostic_signatures_sha256": {
-            kind + ":" + var: digest for _, _, _, kind, var, digest in records
-        },
-        "input_physics": "UNCHANGED",
-        "retired_diagnostics": "NOT_REQUIRED_FOR_TARGET_MODEL",
-        "diagnostic_parity": "NOT_APPLICABLE",
-        "d1_retirement_review": "NOT_REQUIRED_OPERATOR_DECISION",
-        "native_p2": "NOT_RUN_BY_PREPARER",
-        "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
-    }
-
-
-
-def audit_final_native_d1_debug_absence(inputs: dict[Path, str]) -> dict:
-    """Reject retired D1 Aux anywhere in the final 11-layer Native input.
-
-    This guards both the in-memory assembly and the files actually handed to
-    physics-opt. Immutable B/C archived sources are not modified.
-    """
-    debug_vars = set(_S6_D1_CURRENT_PROBES) | set(_S6_D1_GEOMETRY_PROBES)
-    names = debug_vars | {name + "_kernel" for name in debug_vars}
-    heading = re.compile(
-        r"(?m)^[ \t]*\[(" + "|".join(sorted(map(re.escape, names))) +
-        r")\][ \t]*$")
-    retired_type = re.compile(
-        r"(?m)^[ \t]*type[ \t]*=[ \t]*(?:"
-        r"PhysicsLowerDSurfaceCurrentProbeAux|PhysicsWaferD1GeometryProbeAux)"
-        r"[ \t]*(?:#.*)?$")
-    for path, source in inputs.items():
-        if path.suffix != ".i":
-            raise ValueError("S6_NATIVE_D1_AUDIT_UNEXPECTED_INPUT: " + path.name)
-        bad_headers = [m.group(1) for m in heading.finditer(source)]
-        bad_types = retired_type.findall(source)
-        if bad_headers or bad_types:
-            raise ValueError(
-                "S6_NATIVE_D1_DEBUG_STILL_PRESENT: " + path.name +
-                " headers=" + repr(bad_headers) +
-                " retired_type_count=" + str(len(bad_types)))
-    return {
-        "status": "PASS_OBSOLETE_D1_DIAGNOSTICS_ABSENT_FROM_NATIVE_INPUT",
-        "layers_checked": len(inputs),
-        "retired_auxkernels_remaining": 0,
-        "retired_auxvariables_remaining": 0,
-        "retired_factory_types_remaining": 0,
-    }
-
 def remove_one(text: str, name: str, variable: str, functor: str) -> str:
     # Native layer names may be reused by a FunctorMaterial and its Kernel.
     # Match ONLY the old FunctorKernel owner in the [Kernels] root section.
@@ -641,20 +469,8 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
     # New-run Wall names are cut over only when every legacy output has a
     # verified, uniquely identified FunctorMaterial producer. Fail before
     # mutating any scratch file if an old/unknown wall owner is still present.
-    edits, d1_scope = suspend_staged_retired_d1_observations(edits)
     edits, lookup_cutover = canonicalize_staged_electron_lookup(edits)
     edits, wall_cutover = canonicalize_staged_wall_inputs(edits)
-    # Scan all final Native layers (including untouched ones) before writes.
-    native_inputs = {
-        staged_chem_dir / Path(item).name:
-            edits.get(staged_chem_dir / Path(item).name,
-                      (staged_chem_dir / Path(item).name).read_text(encoding="utf-8"))
-        for item in ordered[:-1]
-    }
-    native_inputs[overlay] = template
-    native_debug_scan = audit_final_native_d1_debug_absence(native_inputs)
-    if native_debug_scan["layers_checked"] != 11:
-        raise ValueError("S6_NATIVE_D1_AUDIT_WRONG_LAYER_COUNT")
     # Only after every owner check passes, modify disposable scratch.
     dest = staged_chem_dir / "chemistry"
     dest.mkdir(parents=True, exist_ok=True)
@@ -663,22 +479,12 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
     overlay.write_text(template, encoding="utf-8")
     (dest / "oxygen_s6_common.json").write_bytes(common)
     (dest / f"oxygen_s6_{variant}.json").write_bytes(selected)
-    # Independently inspect the bytes actually consumed by Native, not just
-    # the in-memory cutover report.
-    persisted = {
-        target: target.read_text(encoding="utf-8") for target in native_inputs
-    }
-    persisted_scan = audit_final_native_d1_debug_absence(persisted)
-    if persisted_scan != native_debug_scan:
-        raise ValueError("S6_NATIVE_D1_AUDIT_DISK_CONTENT_MISMATCH")
     return {
         "status": "P2_INPUT_PREPARED",
         "variant": variant,
         "removed_legacy_kernel_names": sorted(retired),
         "removed_count": len(retired),
         "canonical_name_replacements": renamed,
-        "scratch_d1_observation_scope": d1_scope,
-        "final_native_d1_debug_absence": persisted_scan,
         "scratch_electron_lookup_cutover": lookup_cutover,
         "scratch_wall_functor_cutover": wall_cutover,
         "overlay_sha256": sha(template.encode()),
