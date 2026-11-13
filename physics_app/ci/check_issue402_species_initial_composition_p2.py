@@ -62,20 +62,20 @@ def main():
         # A missing sccm does NOT turn off the required solved-species ICs.
         # It only turns off the inlet Dirichlet boundary condition.
         def no_sccm(text: str) -> str:
-            return text.replace("    sccm = 100\\n", "").replace(
-                "    inlet_boundaries = left\\n", ""
+            return text.replace("    sccm = 100\n", "").replace(
+                "    inlet_boundaries = left\n", ""
             )
         run_case(exe, work, "mandatory_ic_without_sccm", base,
                  input_rewrite=no_sccm)
 
         def no_inlet_sideset(text: str) -> str:
-            return text.replace("    inlet_boundaries = left\\n", "")
+            return text.replace("    inlet_boundaries = left\n", "")
         run_case(exe, work, "sccm_requires_inlet_boundary", base,
                  expected_error="sccm requires explicit inlet sidesets",
                  input_rewrite=no_inlet_sideset)
 
         def orphan_inlet_sideset(text: str) -> str:
-            return text.replace("    sccm = 100\\n", "")
+            return text.replace("    sccm = 100\n", "")
         run_case(exe, work, "inlet_sideset_requires_sccm", base,
                  expected_error="inlet_boundaries requires sccm",
                  input_rewrite=orphan_inlet_sideset)
@@ -93,17 +93,17 @@ def main():
         derived["species"]["O2"]["mass_fraction_functor"] = "w_O2_constraint"
         def rewrite_derived(text: str) -> str:
             text = text.replace(
-                "  [w_O2]\\n    type = MooseVariableFVReal\\n  []\\n", ""
+                "  [w_O2]\n    type = MooseVariableFVReal\n  []\n", ""
             )
-            return text.replace("[FunctorMaterials]\\n",
-                "[FunctorMaterials]\\n"
-                "  [O2_constraint]\\n"
-                "    type = ADParsedFunctorMaterial\\n"
-                "    property_name = w_O2_constraint\\n"
-                "    functor_names = 'w_O'\\n"
-                "    functor_symbols = 'wo'\\n"
-                "    expression = '1-wo'\\n"
-                "  []\\n",
+            return text.replace("[FunctorMaterials]\n",
+                "[FunctorMaterials]\n"
+                "  [O2_constraint]\n"
+                "    type = ADParsedFunctorMaterial\n"
+                "    property_name = w_O2_constraint\n"
+                "    functor_names = 'w_O'\n"
+                "    functor_symbols = 'wo'\n"
+                "    expression = '1-wo'\n"
+                "  []\n",
             )
         run_case(exe, work, "derived_species_read_only", derived,
                  input_rewrite=rewrite_derived)
