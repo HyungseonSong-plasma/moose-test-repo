@@ -73,26 +73,23 @@ def test_material_consumers_resolve_functor_at_evaluation_not_at_setup():
     assert 'if (rootGasStateEnabled())' in nv
 
 
-def test_sccm_converts_feed_and_separates_flow_bc_ownership():
-    c=CODE.read_text()
+def test_sccm_one_time_flow_module_and_no_duplicate_flow_bc():
+    c = CODE.read_text()
+    helper = (APP / "src/physics/plasma/SCCMInletFlow.C").read_text()
     assert 'params.addParam<Real>("sccm"' in c
     assert 'params.addParam<Real>("inlet_area"' in c
     assert 'params.addParam<Real>("standard_molar_volume", 0.0224136' in c
     assert '"inlet_species_bc_ownership"' in c
     assert '"root_dirichlet external_flux"' in c
     assert 'registerMooseAction("PhysicsApp", PlasmasAction, "add_postprocessor");' in c
-    assert '"ConstantPostprocessor"' in c
+    assert 'Plasma::SCCMInletFlow::calculate(settings, inlet_species)' in c
+    assert 'for (const auto & [name, value] : feed_values)' in c
     assert '_problem->addPostprocessor(type, name, params);' in c
-    assert 'addConstant("plasma_inlet_mdot", inlet_mdot);' in c
-    assert 'addConstant("plasma_inlet_area", inlet_area);' in c
-    assert 'addConstant("plasma_inlet_speed", inlet_speed);' in c
-    assert 'addConstant("plasma_inlet_mass_flux", inlet_mass_flux);' in c
-    assert 'addConstant("plasma_inlet_mdot_" + id, inlet_mdot * inlet_y);' in c
-    assert 'inlet_molar_mass / getParam<Real>("standard_molar_volume")' in c
-    assert 'const Real inlet_speed = inlet_mass_flux / inlet_rho;' in c
     assert 'getParam<MooseEnum>("inlet_species_bc_ownership") == "root_dirichlet"' in c
     assert 'getParam<std::vector<BoundaryName>>("inlet_boundaries")' in c
-    assert 'if (isParamValid("sccm"))' in c
+    assert "const double inlet_flux = inlet_mdot / settings.inlet_area_m2;" in helper
+    assert "const double inlet_speed = inlet_flux / inlet_rho;" in helper
+    assert '"plasma_inlet_area"' in helper and '"plasma_inlet_mdot"' in helper
 
 
 def test_all_four_materials_share_y_i_of_solver_state_in_native_fixture():

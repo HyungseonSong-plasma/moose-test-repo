@@ -109,6 +109,8 @@ defaults to the existing Issue #19 value 0.0224136 and must be changed if
 the standard reference condition differs. Flow speed is a **magnitude**;
 the existing WCNS BC owns its sign and inlet direction.
 
+The root delegates conversion and the named-value mapping to the pure C++ `SCCMInletFlow::calculate()` module in `physics_app/src/physics/plasma/SCCMInletFlow.C`. The `PlasmasAction` registers returned values as `ConstantPostprocessor` objects without hosting the equations. Values are computed **once at input construction**, not reevaluated per quadrature point or timestep. The mathematical contract and output names are unchanged from the pre-extraction version.
+
 The root creates `ConstantPostprocessor` providers:
 `plasma_inlet_mdot`, `plasma_inlet_area`, `plasma_inlet_rho`,
 `plasma_inlet_mass_flux`, `plasma_inlet_speed`,

@@ -1,4 +1,5 @@
 #include "Chemistry.h"
+#include "SCCMInletFlow.h"
 #include "FEProblemBase.h"
 
 #include "nlohmann/json.hpp"
@@ -1002,51 +1003,39 @@ PlasmasAction::act()
     if (!isParamValid("sccm"))
       return;
 
-    // Feed mixture molar mass uses the inlet fractions, never the initial
-    // volume state or the instantaneous solver state.
-    Real inverse_molar_mass = 0.0;
+    // The Action owns wiring only. SCCM physics and named value mapping
+    // reside in the independent, once-evaluated SCCMInletFlow module.
+    std::vector<Plasma::SCCMFeedSpecies> inlet_species;
+    inlet_species.reserve(species.size());
     for (const auto & id : species)
     {
       const auto & record = _data.species(id);
-      inverse_molar_mass +=
-          *record.initial_inlet_mass_fraction / record.molar_mass_kg_mol;
+      inlet_species.push_back(
+          {id, *record.initial_inlet_mass_fraction, record.molar_mass_kg_mol});
     }
-    if (!(std::isfinite(inverse_molar_mass) && inverse_molar_mass > 0.0))
-      paramError("files", "Inlet mixture molar mass is invalid.");
-    const Real inlet_molar_mass = 1.0 / inverse_molar_mass;
-    const Real inlet_mdot = getParam<Real>("sccm") * 1.0e-6 / 60.0 *
-                            inlet_molar_mass / getParam<Real>("standard_molar_volume");
-    const Real inlet_rho = getParam<Real>("pressure") * inlet_molar_mass /
-                           (8.31446261815324 * getParam<Real>("temperature"));
-    const Real inlet_area = getParam<Real>("inlet_area");
-    const Real inlet_mass_flux = inlet_mdot / inlet_area;
-    const Real inlet_speed = inlet_mass_flux / inlet_rho;
-    if (!(std::isfinite(inlet_mdot) && inlet_mdot > 0.0 &&
-          std::isfinite(inlet_rho) && inlet_rho > 0.0 &&
-          std::isfinite(inlet_mass_flux) && inlet_mass_flux > 0.0 &&
-          std::isfinite(inlet_speed) && inlet_speed > 0.0))
-      paramError("sccm", "SCCM inlet mass flow, mass flux or speed is nonfinite or nonpositive.");
+    const Plasma::SCCMFeedSettings settings{
+        getParam<Real>("sccm"),
+        getParam<Real>("inlet_area"),
+        getParam<Real>("standard_molar_volume"),
+        getParam<Real>("pressure"),
+        getParam<Real>("temperature")};
 
-    // These are numeric PostprocessorValues directly consumable by WCNS flux
-    // operators. Area is explicitly supplied; no AreaPostprocessor or
-    // momentum/pressure/species flow boundary condition is created here.
-    auto addConstant = [this](const std::string & name, const Real value)
+    std::map<std::string, double> feed_values;
+    try
+    {
+      feed_values = Plasma::SCCMInletFlow::calculate(settings, inlet_species);
+    }
+    catch (const std::invalid_argument & error)
+    {
+      paramError("sccm", "Invalid SCCM inlet feed: ", error.what());
+    }
+
+    for (const auto & [name, value] : feed_values)
     {
       const auto type = "ConstantPostprocessor";
       auto params = _factory.getValidParams(type);
       params.set<Real>("value") = value;
       _problem->addPostprocessor(type, name, params);
-    };
-    addConstant("plasma_inlet_mdot", inlet_mdot);
-    addConstant("plasma_inlet_area", inlet_area);
-    addConstant("plasma_inlet_rho", inlet_rho);
-    addConstant("plasma_inlet_speed", inlet_speed);
-    addConstant("plasma_inlet_mass_flux", inlet_mass_flux);
-    for (const auto & id : species)
-    {
-      const Real inlet_y = *_data.species(id).initial_inlet_mass_fraction;
-      addConstant("plasma_inlet_Y_" + id, inlet_y);
-      addConstant("plasma_inlet_mdot_" + id, inlet_mdot * inlet_y);
     }
     return;
   }

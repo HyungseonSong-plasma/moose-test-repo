@@ -61,15 +61,28 @@ def test_issue21_species_flow_identity_and_negative_mutations():
     assert "inlet_mdot_O_value = ${fparse inlet_mdot_value * Yin_O}" in ISSUE21.read_text()
 
 
-def test_action_generates_numeric_receivers_not_duplicate_wcns_owners():
-    source = ACTION.read_text()
-    assert '"ConstantPostprocessor"' in source
-    assert 'addConstant("plasma_inlet_mdot", inlet_mdot);' in source
-    assert 'addConstant("plasma_inlet_mass_flux", inlet_mass_flux);' in source
-    assert 'addConstant("plasma_inlet_speed", inlet_speed);' in source
-    assert 'addConstant("plasma_inlet_mdot_" + id, inlet_mdot * inlet_y);' in source
-    assert 'getParam<MooseEnum>("inlet_species_bc_ownership") == "root_dirichlet"' in source
-    assert "AreaPostprocessor" not in source
+def test_action_delegates_all_inlet_physics_and_mapping_to_pure_cpp():
+    action = ACTION.read_text()
+    library = (APP / "src/physics/plasma/SCCMInletFlow.C").read_text()
+    header = (APP / "include/physics/plasma/SCCMInletFlow.h").read_text()
+    assert '#include "SCCMInletFlow.h"' in action
+    assert "Plasma::SCCMInletFlow::calculate(settings, inlet_species)" in action
+    assert "for (const auto & [name, value] : feed_values)" in action
+    assert '"ConstantPostprocessor"' in action
+    assert '_problem->addPostprocessor(type, name, params);' in action
+    assert "inlet_mdot =" not in action  # no equation or hand-coded output names
+    assert "plasma_inlet_mdot" not in action
+    assert "plasma_inlet_speed" not in action
+    assert "0.0224136" in action  # historical reference default remains input-facing
+    assert 'getParam<MooseEnum>("inlet_species_bc_ownership") == "root_dirichlet"' in action
+    assert "AreaPostprocessor" not in action
+    assert "class SCCMInletFlow" in header
+    assert "SCCMInletFlow::calculate(" in library
+    assert "const double q_std_m3_per_s = settings.sccm * 1.0e-6 / 60.0;" in library
+    assert "item.inlet_mass_fraction / item.molar_mass_kg_per_mol" in library
+    assert "plasma_inlet_mass_flux" in library and "plasma_inlet_speed" in library
+    assert "plasma_inlet_mdot_" in library
+    assert "Moose" not in header and "Moose" not in library
     for i in ("json_surface_rate_p2.i", "json_species_live_all4_p2.i"):
         input_text = (APP / "ci" / i).read_text()
         assert "inlet_area = 0.05" in input_text
