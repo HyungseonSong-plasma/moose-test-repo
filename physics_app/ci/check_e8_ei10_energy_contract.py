@@ -7,7 +7,7 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 CONTRACT = Path("docs/development/2026-09-10_issue26_e8_ei10_energy_contract.json")
-RATE_OWNER = Path("physics_app/src/materials/PhysicsElectronImpactO2sExcitationMaterial.C")
+RATE_OWNER = Path("physics_app/ci/check_e8_ei10_energy_runtime.py")
 RUNTIME = Path("physics_app/ci/check_e8_ei10_energy_runtime.py")
 CUSTOM_H = Path("physics_app/include/fvkernels/PhysicsFVElectronReactionEnergySource.h")
 CUSTOM_C = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionEnergySource.C")
@@ -38,8 +38,9 @@ def main():
 
     rate = RATE_OWNER.read_text()
     runtime = RUNTIME.read_text()
-    assert 'addFunctorProperty<ADReal>(\n      "R_O2s"' in rate
-    assert "K_O2S = 4.71e8" in rate
+    assert 'property_name = R_O2s' in rate
+    assert "expression = '4.71e8*(ne/6.02214076e23)*co2'" in rate
+    assert 'type = PhysicsElectronImpactO2sExcitationMaterial' not in rate
     assert "type = FVCoupledForce" in runtime
     assert "v = R_O2s" in runtime
     assert "ENERGY_COEF = -(DELTA_E_EV * N_A)" in runtime
