@@ -1,4 +1,4 @@
-# Issue402 JSON plasma boundary P2 construction fixture.
+# Issue402 verbatim BC JSON migration fixture; no .i selector.
 # GeneratedMesh sideset mapping: left=wafer, bottom=cover, right=inlet, top=outlet.
 [Mesh]
   type = GeneratedMesh
@@ -24,11 +24,6 @@
 [Physics]
   [Plasmas]
     files = dd_plasma_boundary_json_p2.json
-    [Transport]
-      [DriftDiffusion]
-        plasma_boundary = json
-      []
-    []
   []
 []
 [FunctorMaterials]
@@ -36,6 +31,20 @@
     type = ADGenericFunctorMaterial
     prop_names = n_e_physical
     prop_values = 1e15
+  []
+  [mean_energy_bridge]
+    type = PhysicsElectronMeanEnergyMaterial
+    state_form = log_molar_eV
+    electron_energy_density = log_energy
+    electron_density = log_ne
+    mean_energy_output = mean_en_solved
+  []
+  [electron_wall_flux]
+    type = PhysicsElectronAdjacentSheathWallFluxMaterial
+    electron_density = n_e_physical
+    mean_energy = mean_en_solved
+    potential = potential
+    use_element_gradient_for_potential = true
   []
 []
 [Executioner]
