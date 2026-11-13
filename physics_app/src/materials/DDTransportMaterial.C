@@ -28,7 +28,7 @@ DDTransportMaterial::validParams()
   params.addParam<Real>("diffusivity", "Constant species diffusivity [m^2/s].");
   params.addParam<FileName>(
       "table_file",
-      "Three-column lookup table: mean_en_solved [eV], mobility, diffusivity. "
+      "Three-column lookup table: e_energy_eV [eV], mobility, diffusivity. "
       "Lookup energy is fixed to the solved electron mean energy.");
   params.addParam<bool>(
       "fluid_energy",
@@ -104,7 +104,7 @@ DDTransportMaterial::DDTransportMaterial(const InputParameters & parameters)
       paramError("table_file", "Lookup transport requires table_file.");
     // All lookup coefficients are indexed by solved mean electron energy.
     // No user-provided coordinate or alternate state name is accepted.
-    _mean_energy = &getFunctorByName<ADReal>("mean_en_solved");
+    _mean_energy = &getFunctorByName<ADReal>("e_energy_eV");
     const auto & filename = getParam<FileName>("table_file");
     _table = std::make_unique<PhysicsLookupTable1D>(filename, 1, std::vector<std::size_t>{2, 3});
     // Do not silently propagate NaN, infinity or negative transport data

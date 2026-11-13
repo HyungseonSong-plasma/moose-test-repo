@@ -207,9 +207,9 @@ parseDDTransport(const Json & value, const std::string & file)
       fail(file, "lookup transport forbids constant or Functor coefficient inputs");
     result.table_file = resolveDataFile(requiredText(value, "table_file", file), file);
     // Lookup always uses the canonical solved electron mean-energy Functor:
-    // mean_en_solved. The JSON schema must not expose its coordinate name.
+    // e_energy_eV. The JSON schema must not expose its coordinate name.
     if (value.contains("coordinate") || value.contains("mean_energy"))
-      fail(file, "DD lookup coordinate is implicit: mean_en_solved; do not specify coordinate.");
+      fail(file, "DD lookup coordinate is implicit: e_energy_eV; do not specify coordinate.");
     result.table_units = requiredText(value, "table_units", file);
     if (result.table_units != "reduced" && result.table_units != "physical")
       fail(file, "lookup table_units must be 'reduced' or 'physical'");

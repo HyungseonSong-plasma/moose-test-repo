@@ -11,10 +11,10 @@
   kernel_coverage_check = false
 []
 [Variables]
-  [log_ne]
+  [log_e]
     type = MooseVariable
   []
-  [log_energy]
+  [log_e_energy]
     type = MooseVariable
   []
   [potential]
@@ -35,9 +35,8 @@
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
     state_form = log_molar_eV
-    electron_energy_density = log_energy
-    electron_density = log_ne
-    mean_energy_output = e_energy_eV
+    electron_energy_density = log_e_energy
+    electron_density = log_e
   []
   [electron_wall_flux]
     type = ESWallFluxMaterial

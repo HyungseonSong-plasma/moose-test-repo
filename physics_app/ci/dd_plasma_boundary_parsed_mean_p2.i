@@ -11,10 +11,10 @@
   kernel_coverage_check = false
 []
 [Variables]
-  [log_ne]
+  [log_e]
     type = MooseVariable
   []
-  [log_energy]
+  [log_e_energy]
     type = MooseVariable
   []
   [potential]
@@ -35,7 +35,7 @@
   [mean_energy_bridge]
     type = ADParsedFunctorMaterial
     property_name = e_energy_eV
-    functor_names = 'log_energy log_ne'
+    functor_names = 'log_e_energy log_e'
     functor_symbols = 'ue un'
     expression = 'exp(ue-un)'
   []

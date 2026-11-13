@@ -12,12 +12,12 @@
       "bcs": {
         "electron_wafer": {
           "type": "FEMElectronSheathBC",
-          "variable": "log_ne",
+          "variable": "log_e",
           "wall_number_flux": "electron_wall_number_flux"
         },
         "electron_energy_wafer": {
           "type": "FEMElectronEnergySheathBC",
-          "variable": "log_energy",
+          "variable": "log_e_energy",
           "wall_number_flux": "electron_wall_number_flux",
           "mean_energy": "e_energy_eV"
         }
@@ -27,12 +27,12 @@
       "bcs": {
         "electron_cover": {
           "type": "FEMElectronSheathBC",
-          "variable": "log_ne",
+          "variable": "log_e",
           "wall_number_flux": "electron_wall_number_flux"
         },
         "electron_energy_cover": {
           "type": "FEMElectronEnergySheathBC",
-          "variable": "log_energy",
+          "variable": "log_e_energy",
           "wall_number_flux": "electron_wall_number_flux",
           "mean_energy": "e_energy_eV"
         }

@@ -15,7 +15,6 @@ CI = Path(__file__).resolve().parent
 DATA = json.loads((CI / "dd_plasma_boundary_json_p2.json").read_text())
 JSON_INPUT = (CI / "dd_plasma_boundary_json_p2.i").read_text()
 LEGACY_INPUT = (CI / "dd_plasma_boundary_legacy_p2.i").read_text()
-LEGACY_ENERGY_ALIAS = (CI / "dd_plasma_boundary_legacy_energy_alias_p2.i").read_text()
 PARSED_MEAN_INPUT = (CI / "dd_plasma_boundary_parsed_mean_p2.i").read_text()
 LEGACY_DATA = (CI / "json_surface_rate_p2.json").read_text()
 
@@ -56,22 +55,26 @@ def main(exe: Path):
         multiside["boundaries"].pop("bottom")
         check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", JSON_INPUT, multiside, True)
         check(exe, root, "LEGACY_EXPLICIT_BCS", LEGACY_INPUT, DATA, True)
-        check(exe, root, "LEGACY_MEAN_EN_SOLVED_ALIAS", LEGACY_ENERGY_ALIAS, DATA, True)
-        # Transitional sheath class name and historical thermal-only class
-        # are still resolvable. These are parser checks, not parity or
-        # equivalent-wall-physics claims.
-        check(exe, root, "TRANSITIONAL_SHEATH_CLASS_ALIAS",
-              LEGACY_INPUT.replace(
-                  "type = PhysicsElectronAdjacentSheathWallFluxMaterial",
-                  "type = ElectronWallFluxMaterial"),
-              DATA, True)
-        check(exe, root, "THERMAL_ONLY_HISTORICAL_CLASS",
-              LEGACY_INPUT.replace(
-                  "type = PhysicsElectronAdjacentSheathWallFluxMaterial",
-                  "type = PhysicsElectronWallFluxMaterial").replace(
-                  "    potential = potential\n", "").replace(
-                  "    use_element_gradient_for_potential = true\n", ""),
-              DATA, True)
+        # Old Material registrations, normalized state and old Functor
+        # output names are deliberately retired, not compatibility aliases.
+        for label, old_class in (
+            ("RETIRED_INTERMEDIATE_ES_CLASS", "ElectronWallFluxMaterial"),
+            ("RETIRED_ADJACENT_ES_CLASS", "PhysicsElectronAdjacentSheathWallFluxMaterial"),
+            ("RETIRED_THERMAL_CLASS", "PhysicsElectronWallFluxMaterial"),
+        ):
+            check(exe, root, label,
+                  LEGACY_INPUT.replace("type = ESWallFluxMaterial",
+                                       "type = " + old_class), DATA, False)
+        check(exe, root, "RETIRED_NORMALIZED_MEAN_STATE",
+              LEGACY_INPUT.replace("state_form = log_molar_eV",
+                                   "state_form = normalized"), DATA, False)
+        check(exe, root, "RETIRED_MEAN_OUTPUT_PARAM",
+              LEGACY_INPUT.replace("    state_form = log_molar_eV",
+                                   "    state_form = log_molar_eV\n    mean_energy_output = e_energy_eV"),
+              DATA, False)
+        check(exe, root, "RETIRED_MEAN_EN_FUNCTOR",
+              LEGACY_INPUT.replace("mean_energy = e_energy_eV",
+                                   "mean_energy = mean_en_solved"), DATA, False)
         no_registry = copy.deepcopy(DATA)
         no_registry.pop("boundaries")
         check(exe, root, "JSON_ABSENT_NO_GENERATED_BC", JSON_INPUT, no_registry, True)
