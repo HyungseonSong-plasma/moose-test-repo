@@ -26,7 +26,7 @@
 [FunctorMaterials]
   [controlled_inputs]
     type = ADGenericFunctorMaterial
-    prop_names = 'rho e_number_density w_O2p w_Om w_Op potential T_g mean_en_solved'
+    prop_names = 'rho e_number_density w_O2p w_Om w_Op potential T_g e_energy_eV'
     prop_values = '1 1e15 1e-6 1e-6 1e-6 0 300 4'
   []
   [charged_species_density]
@@ -94,10 +94,11 @@
     sticking = 1
   []
   [electron_wall]
-    type = PhysicsElectronWallFluxMaterial
+    type = ESWallFluxMaterial
     species_id = e
     electron_density = e_number_density
-    mean_energy = mean_en_solved
+    mean_energy = e_energy_eV
+    potential = potential
     sticking = 1
   []
 []

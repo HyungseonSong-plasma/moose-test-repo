@@ -11,7 +11,7 @@
 [FunctorMaterials]
   [controlled_fields]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en_solved T_g p Y_A Y_B'
+    prop_names = 'e_energy_eV T_g p Y_A Y_B'
     prop_values = '3 300 100 0.5 0.5'
   []
   [electron_constant]

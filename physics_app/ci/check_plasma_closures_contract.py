@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 required = [
     ROOT / "include/materials/DDTransportMaterial.h",
     ROOT / "src/materials/DDTransportMaterial.C",
-    ROOT / "include/materials/PhysicsElectronMeanEnergyMaterial.h",
-    ROOT / "src/materials/PhysicsElectronMeanEnergyMaterial.C",
+    ROOT / "include/materials/ElectronEnergyMaterial.h",
+    ROOT / "src/materials/ElectronEnergyMaterial.C",
     ROOT / "include/materials/EIRateCoefMaterial.h",
     ROOT / "src/materials/EIRateCoefMaterial.C",
     ROOT / "include/materials/NVTransportMaterial.h",
@@ -23,7 +23,7 @@ assert 'PlasmaClosuresAction' not in app
 assert 'PlasmaClosures/*' not in app
 assert not (ROOT / "include/actions/PlasmaClosuresAction.h").exists()
 assert not (ROOT / "src/actions/PlasmaClosuresAction.C").exists()
-electron = (ROOT / "src/materials/PhysicsElectronMeanEnergyMaterial.C").read_text()
+electron = (ROOT / "src/materials/ElectronEnergyMaterial.C").read_text()
 single_ei = (ROOT / "src/materials/EIRateCoefMaterial.C").read_text()
 heavy = (ROOT / "src/materials/NVTransportMaterial.C").read_text()
 drift = (ROOT / "src/materials/DDTransportMaterial.C").read_text()
@@ -36,7 +36,10 @@ for old_type in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMateri
 
 # The mean-energy state is a separate bridge; DDTransportMaterial alone owns
 # electron particle/energy transport coefficients and lookup interpolation.
-assert '"mean_energy_output"' in electron
+assert '"mean_energy_output"' not in electron
+assert '"normalized"' not in electron
+assert 'registerMooseObject("PhysicsApp", ElectronEnergyMaterial);' in electron
+assert 'addFunctorProperty<ADReal>(\n      "e_energy_eV"' in electron
 for name in ('"electron_energy_mobility"', '"electron_energy_diffusion"',
              '"electron_mobility"', '"electron_diffusion"'):
     assert name in drift
@@ -60,7 +63,7 @@ assert fixture.count("type = EIRateCoefMaterial") == 2
 
 # Keep the separate NV alias while retiring electron-lookup factory spellings.
 for legacy in (
-    "PhysicsElectronMeanEnergyMaterial.C",
+    "ElectronEnergyMaterial.C",
     "DDTransportMaterial.C",
     "EIRateCoefMaterial.C",
     "NVTransportMaterial.C",
@@ -81,7 +84,7 @@ for old_type in ("ElectronTransportLookupMaterial", "PhysicsElectronTransportLoo
     assert f'registerMooseObjectAliased("PhysicsApp", DDTransportMaterial, "{old_type}");' not in drift
 for retired_option in ('"property_table_file"', '"coordinate"', '"mean_energy"'):
     assert retired_option not in drift
-assert 'getFunctorByName<ADReal>("mean_en_solved")' in drift
+assert 'getFunctorByName<ADReal>("e_energy_eV")' in drift
 
 # The old charged transport assembler is now redundant: DDTransportMaterial owns
 # per-species mu/D, standalone charge density retains Poisson/FV sources,

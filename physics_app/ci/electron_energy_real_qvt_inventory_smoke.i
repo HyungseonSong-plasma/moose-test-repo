@@ -64,7 +64,7 @@
   []
 
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -150,16 +150,16 @@
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [mean_en_solved_min]
+  [e_energy_eV_min]
     type = ADElementExtremeFunctorValue
-    functor = mean_en_solved
+    functor = e_energy_eV
     value_type = min
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [mean_en_solved_max]
+  [e_energy_eV_max]
     type = ADElementExtremeFunctorValue
-    functor = mean_en_solved
+    functor = e_energy_eV
     value_type = max
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'

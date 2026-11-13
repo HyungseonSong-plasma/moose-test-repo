@@ -39,7 +39,7 @@
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en_solved p T_g zero_diffusion'
+    prop_names = 'e_energy_eV p T_g zero_diffusion'
     prop_values = '5.0 101325.0 300.0 0.0'
   []
   [electron_transport]
