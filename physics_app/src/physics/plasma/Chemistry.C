@@ -847,6 +847,15 @@ PlasmasAction::validParams()
   // condition. Derived/constraint Functors do not own an independent solver IC.
   params.addParam<std::vector<BoundaryName>>(
       "inlet_boundaries", {}, "Named inlet sidesets; never inferred from walls.");
+  params.addParam<std::vector<VariableName>>(
+      "inlet_flow_variables", {},
+      "Optional 2-D WCNS mass-flow owner: flow pressure, x velocity, y velocity. "
+      "If set, generate WCNSFVMassFluxBC and both momentum flux BCs on inlet_boundaries. "
+      "Do not also declare those flow BCs in [FVBCs].");
+  params.addParam<Point>(
+      "inlet_flow_direction",
+      "Required unit inward flow direction when inlet_flow_variables is set; "
+      "the direction is geometry-specific.");
   params.addParam<Real>("sccm",
                         "Optional positive standard volumetric feed rate [standard cm^3/min]. "
                         "When supplied, create inlet FVDirichletBC for each solved "
@@ -883,6 +892,30 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
   }
   else if (!getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
     paramError("sccm", "inlet_boundaries requires sccm to activate inlet species Dirichlet BCs.");
+  const auto & flow = getParam<std::vector<VariableName>>("inlet_flow_variables");
+  if (!flow.empty())
+  {
+    if (flow.size() != 3)
+      paramError("inlet_flow_variables",
+                 "2-D WCNS inlet flow requires exactly pressure, x-velocity and y-velocity names.");
+    if (!isParamValid("sccm"))
+      paramError("sccm", "inlet_flow_variables requires a positive SCCM rate.");
+    if (!isParamValid("inlet_flow_direction"))
+      paramError("inlet_flow_direction", "Automatic WCNS inlet flow requires a unit inward direction.");
+    const auto direction = getParam<Point>("inlet_flow_direction");
+    if (!std::isfinite(direction.norm()) || std::abs(direction.norm()-1.0)>1.0e-6)
+      paramError("inlet_flow_direction", "Inlet flow direction must be a unit vector.");
+    if (getParam<std::vector<BoundaryName>>("inlet_boundaries").size() != 1)
+      paramError("inlet_boundaries",
+                 "Automatic WCNS 2-D inlet flow requires exactly one inlet sideset "
+                 "with one consistently oriented direction.");
+    if (flow[0] == "p")
+      paramError("inlet_flow_variables",
+                 "Flow-pressure variable 'p' conflicts with canonical gas-pressure Functor p; "
+                 "use a distinct flow variable name such as p_flow.");
+  }
+  else if (isParamValid("inlet_flow_direction"))
+    paramError("inlet_flow_variables", "inlet_flow_direction requires inlet_flow_variables.");
 }
 
 void
@@ -1031,6 +1064,34 @@ PlasmasAction::act()
         params.set<Real>("value") = *record.initial_inlet_mass_fraction;
         _problem->addFVBC(type, "plasma_inlet_" + id + "_mass_fraction", params);
       }
+
+    // An actual WCNS flow solver can explicitly bind its variables here.
+    // Unlike the species Dirichlet BC, these BCs enforce the SCCM-converted
+    // TOTAL inlet mass rate on the continuity and two momentum equations.
+    const auto & flow = getParam<std::vector<VariableName>>("inlet_flow_variables");
+    if (!flow.empty())
+    {
+      for (unsigned int component = 0; component < 3; ++component)
+      {
+        const std::string type =
+            component == 0 ? "WCNSFVMassFluxBC" : "WCNSFVMomentumFluxBC";
+        auto params = _factory.getValidParams(type);
+        params.set<NonlinearVariableName>("variable") = flow[component];
+        params.set<std::vector<BoundaryName>>("boundary") =
+            getParam<std::vector<BoundaryName>>("inlet_boundaries");
+        params.set<PostprocessorName>("mdot_pp") = "inlet_mdot";
+        params.set<PostprocessorName>("area_pp") = "inlet_area";
+        params.set<MooseFunctorName>("rho") = "rho_g_inlet";
+        params.set<MooseFunctorName>("vel_x") = flow[1];
+        params.set<MooseFunctorName>("vel_y") = flow[2];
+        params.set<Point>("direction") = getParam<Point>("inlet_flow_direction");
+        if (component > 0)
+          params.set<MooseEnum>("momentum_component") = component == 1 ? "x" : "y";
+        const auto name = component == 0 ? "plasma_inlet_mass" :
+                          (component == 1 ? "plasma_inlet_flow_x" : "plasma_inlet_flow_y");
+        _problem->addFVBC(type, name, params);
+      }
+    }
     return;
   }
 
