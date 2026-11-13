@@ -481,7 +481,8 @@ if __name__ == '__main__':
         path.write_text(text, encoding='utf-8')
         print(f'wrote {path}')
 
-    print('state representation: identical log-molar electron, O2+, and electron-energy states')
+    print('FVM-only discriminator: log-molar electron, O2+, and electron-energy states')
+    print('FEM_GROUNDED_SHEATH_RETIRED: historical grounded sheath laws removed; no FEM deck generated')
     print(f'dt={DT} s; steps={NSTEPS}; end_time={END_TIME} s')
     print(f'initial ne=ni={NE0} 1/m3; initial mean electron energy={MEAN_E0} eV')
     print(f'initial log_ne={LOG_NE0:.17g}; log_ni={LOG_NI0:.17g}; log_e_energy={LOG_ENERGY0:.17g}')
