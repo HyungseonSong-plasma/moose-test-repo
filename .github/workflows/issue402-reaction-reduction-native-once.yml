@@ -89,6 +89,7 @@ jobs:
           test ! -e physics_app/include/materials/PhysicsElectronImpactRateMaterial.h
           test ! -e physics_app/src/materials/PhysicsElectronImpactRateMaterial.C
           echo 'ISSUE402_ELECTRON_IMPACT_RATE_MATERIAL_RENAME_PASS'
+          echo 'ISSUE402_CANONICAL_RATE_OWNER_TEST_CONTRACT_UPDATED'
           echo 'ISSUE402_REACTION_REDUCTION_TARGET_P0_PASS'
           echo 'D_BASE_SOURCE=PREBUILT_PINNED_NO_RUNTIME_DEBUG_FILTER_ALL_FOUR_D_ENTRYPOINTS'
       - name: Materialize pinned public historical 400W mesh
