@@ -73,3 +73,18 @@ def test_canonical_d_source_cannot_be_injected_into_b_archive(tmp_path):
     with pytest.raises(ValueError, match="Only the staged D input"):
         p2.stage(control, historical, "417", "B", tmp_path / "wrong",
                  {"cases": {"417": rec}}, d_base_source=FIXTURE)
+
+
+
+def test_both_d_entrypoints_use_prebuilt_source_without_debug_postprocessing():
+    pilot = ROOT / "experiments/Issue402_plasma_dsl_g1"
+    chemistry = (pilot / "run_chemistry_s6_p2_only.py").read_text()
+    option = (pilot / "public_option_s6_p2.py").read_text()
+    preparer = (pilot / "chemistry/prepare_s6_run_input.py").read_text()
+    assert "d_base_source=D_BASE" in chemistry
+    assert "d_base_source=d_base" in option
+    assert 'if variant == "D" else None' in option
+    for runtime in (chemistry, option, preparer):
+        assert "suspend_staged_retired_d1_observations" not in runtime
+        assert "audit_final_native_d1_debug_absence" not in runtime
+    assert "scratch_d1_observation_scope" not in preparer
