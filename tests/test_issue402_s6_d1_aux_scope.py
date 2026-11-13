@@ -92,28 +92,36 @@ def test_public_immutable_b_c_d1_observations_are_suspended_only_in_core_p2(
     # Removal of D1 Aux is an observational loss even if core P2 succeeds.
 
 
-@pytest.mark.parametrize("before,after", [
-    ("    surface_current_density = wafer_net_surface_current_density",
+@pytest.mark.parametrize("owner,before,after", [
+    ("wafer_net_current_probe_kernel",
+     "    surface_current_density = wafer_net_surface_current_density",
      "    surface_current_density = wrong_current"),
-    ("    block = wafer_surface\n  []",
-     "    block = plasma\n  []"),
-    ("    execute_on = 'INITIAL TIMESTEP_END'",
+    ("d1_normal_z", "    block = wafer_surface", "    block = plasma"),
+    ("d1_normal_z_kernel",
+     "    execute_on = 'INITIAL TIMESTEP_END'",
      "    execute_on = 'INITIAL'"),
-    ("    order = CONSTANT", "    order = FIRST"),
-    ("    type = PhysicsWaferD1GeometryProbeAux",
+    ("d1_normal_z", "    order = CONSTANT", "    order = FIRST"),
+    ("d1_normal_z_kernel",
+     "    type = PhysicsWaferD1GeometryProbeAux",
      "    type = PhysicsOtherGeometryProbe"),
-    ("    component = normal_z", "    component = e_n"),
+    ("d1_normal_z_kernel", "    component = normal_z", "    component = e_n"),
 ])
-def test_d1_observation_input_mutation_rejected_without_file_change(before, after):
+def test_d1_observation_input_mutation_rejected_without_file_change(
+        owner, before, after):
     original = _layers("417", "C")
     base = original[Path(BASE)]
-    assert before in base
-    edited = base.replace(before, after, 1)
-    inputs = dict(originals) if False else {**original, Path(BASE): edited}
+    rx = re.compile(r"(?m)^  \[" + re.escape(owner) +
+                    r"\]\n(?:^    .*\n)+^  \[\]\n")
+    matches = list(rx.finditer(base))
+    assert len(matches) == 1
+    m = matches[0]
+    block = m.group(0)
+    assert before in block
+    edited = base[:m.start()] + block.replace(before, after, 1) + base[m.end():]
+    inputs = {**original, Path(BASE): edited}
     with pytest.raises(ValueError, match="S6_D1_PROBE_"):
         mod.suspend_staged_retired_d1_observations(inputs)
     assert inputs[Path(BASE)] == edited
-
 
 @pytest.mark.parametrize("change", ["delete_variable", "delete_kernel", "duplicate", "external_use"])
 def test_d1_incomplete_duplicate_or_externally_used_probes_fail_closed(change):
