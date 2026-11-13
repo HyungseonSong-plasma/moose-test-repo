@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 -r requirements-evidence-engine.txt -r requirements-ontology.txt
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 -r control/requirements-evidence-engine.txt -r control/requirements-ontology.txt
           cd control
           export ISSUE402_HISTORICAL_PUBLIC_TABLE="$GITHUB_WORKSPACE/historical/.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt"
           test -s "$ISSUE402_HISTORICAL_PUBLIC_TABLE"
