@@ -51,14 +51,26 @@ first relocation intentionally preserves them as explicit external
 FV input and does not try to convert them into FEM BCs.
 
 The wall flux `electron_wall_number_flux` is already provided by
-`PhysicsElectronAdjacentSheathWallFluxMaterial`, using a plasma-sided
-`FaceArg`. `PhysicsElectronMeanEnergyMaterial` maps live
-`log_energy, log_ne` to `mean_en_solved` and preserves strict
-finite/positive error handling. Even with logarithmic states, `NaN`,
-infinite data, and `exp` underflow/overflow remain possible;
-a log variable does not automatically prove finite positive energy
-at every nonlinear iteration. Both existing Materials stay in the
-original `[FunctorMaterials]` section unchanged.
+`PhysicsElectronAdjacentSheathWallFluxMaterial.C`, using a plasma-sided
+`FaceArg` and `PhysicsGroundedElectronSheath::primaryParticleFluxHat`.
+`PhysicsElectronMeanEnergyMaterial.C` reads the solved log-molar states
+and publishes `mean_en_solved = exp(log_energy - log_ne)` [eV] as a
+**derived AD Functor**; it is not an independent solver variable.
+`FEMElectronEnergySheathBC.C` uses this Functor for
+`T_e=(2/3) mean_en_solved` and the existing outgoing energy flux
+`(Gamma_e/N_A)*(5/2)*T_e`.
+
+The `MeanEnergyMaterial` guard is **demand-driven**: it detects invalid
+inputs or the derived nonfinite/nonpositive mean energy when *that Functor
+is evaluated*. It is not a global validation of all nonlinear states,
+and a different Kernel or Functor might fail first. A negative finite
+`log_ne` or `log_energy` is valid (it encodes a small positive
+physical density). `NaN/Inf` in either state, or
+`exp(log_energy-log_ne)` underflow to zero / overflow to infinity,
+can still occur. These guards provide a local error message but cannot
+guarantee prevention of an earlier solver failure elsewhere. No
+mean-energy error policy or physical formula is changed here.
+Both original Materials stay in `[FunctorMaterials]` unchanged.
 
 ## New configuration is only a relocation
 
@@ -73,8 +85,7 @@ with left/bottom/right/top rather than production QVT sideset names):
 ```json
 {
   "drift_diffusion_boundary": {
-    "wafer": {
-      "mesh_boundary": "plasma_wafer",
+    "plasma_wafer": {
       "bcs": {
         "electron_wafer": {
           "type": "FEMElectronSheathBC",
@@ -89,21 +100,23 @@ with left/bottom/right/top rather than production QVT sideset names):
         }
       }
     },
-    "inlet": {"mesh_boundary": "inlet", "bcs": {}},
-    "outlet": {"mesh_boundary": "outlet", "bcs": {}}
+    "inlet": {"bcs": {}},
+    "outlet": {"bcs": {}}
   }
 }
 ```
 
 Actual `species`, `equations`, `reactions`, and optional
 `transport_coefficients` remain unchanged in the same JSON file.
-Each `bcs` map stores **the existing BC name** and exactly the
-supported BC type's `.i` parameters; `boundary` is inherited from
-the enclosing `mesh_boundary`. That value accepts either a single
-mesh sideset name, the original `.i` whitespace-separated boundary
-string, or an ordered JSON array of sideset names. A single
-multi-sideset BC is **never split into multiple MOOSE BC objects**.
-Empty `bcs` generates no BC.
+The outer JSON key itself is the **actual mesh boundary name**:
+`plasma_wafer` maps directly to the original MOOSE `boundary=plasma_wafer`.
+There is no redundant `mesh_boundary` field or role/mode selector.
+Each `bcs` map stores the **existing BC name** and its original
+`type`, `variable`, `wall_number_flux`, and (for electron energy)
+`mean_energy` values. A key containing whitespace-separated sideset
+names (e.g. `"plasma_electrode plasma_metal"`) represents **one original
+multi-sideset BC**, not two newly generated BCs.
+An empty `bcs` map generates no BC.
 
 `ChemistryData` performs strict static validation and the **existing**
 `PlasmasAction` iterates entries in its already registered
