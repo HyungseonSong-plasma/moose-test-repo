@@ -1,5 +1,6 @@
 #include "HeavyReactionRateMaterial.h"
 
+#include <algorithm>
 #include <cmath>
 #include <set>
 #include <stdexcept>
