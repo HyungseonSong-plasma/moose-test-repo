@@ -54,7 +54,9 @@ struct DDBoundaryBCRecord
 
 struct DDBoundaryRecord
 {
-  std::string mesh_boundary;
+  // One original BC may own several mesh sidesets. Never split that
+  // original operator into separate objects during JSON relocation.
+  std::vector<std::string> mesh_boundaries;
   std::map<std::string, DDBoundaryBCRecord> bcs;
 };
 
