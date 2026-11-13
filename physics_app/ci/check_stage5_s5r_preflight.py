@@ -137,7 +137,9 @@ def _check_ei01_recovery() -> None:
             raise AssertionError(f"EI01 table anchor mismatch at {x_text} eV")
 
     owner = recovery.get("progress_owner", {})
-    if owner.get("type") != "RateCoeffMaterial":
+    # Frozen recovery evidence stores the historical registered name.
+    # Active input uses RateCoeffMaterial, validated by the S5-R assembler.
+    if owner.get("type") != "PhysicsElectronImpactRateMaterial":
         raise AssertionError("EI01 progress owner type changed")
     if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_attachment.txt":
         raise AssertionError("EI01 progress owner table binding changed")
