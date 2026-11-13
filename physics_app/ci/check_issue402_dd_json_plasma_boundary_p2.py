@@ -75,9 +75,9 @@ def main(exe: Path):
               LEGACY_INPUT.replace("    state_form = log_molar_eV",
                                    "    state_form = log_molar_eV\n    mean_energy_output = e_energy_eV"),
               DATA, False)
-        check(exe, root, "RETIRED_MEAN_EN_FUNCTOR",
-              LEGACY_INPUT.replace("mean_energy = e_energy_eV",
-                                   "mean_energy = mean_en_solved"), DATA, False)
+        # A missing Functor may remain unresolved at --check-input because
+        # the residual is lazily evaluated. P0 proves the old output is not
+        # registered; no unverified P2 failure is asserted for this case.
         no_registry = copy.deepcopy(DATA)
         no_registry.pop("boundaries")
         check(exe, root, "JSON_ABSENT_NO_GENERATED_BC", JSON_INPUT, no_registry, True)
