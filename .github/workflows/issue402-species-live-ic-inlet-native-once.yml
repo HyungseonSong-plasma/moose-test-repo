@@ -1,5 +1,5 @@
 name: Issue402 Live Species Y IC Inlet P0 P1 P2
-# Source-bound P0/P1/P2 for mandatory species FV IC, renamed state_model and SCCM-triggered Dirichlet inlet.
+# Final source-bound P0/P1/P2 rerun: real missing SCCM/boundary and derived-state mutations.
 on:
   push:
     branches: [issue-402-species-live-ic-inlet]
