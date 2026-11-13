@@ -37,12 +37,12 @@
     state_form = log_molar_eV
     electron_energy_density = log_energy
     electron_density = log_ne
-    mean_energy_output = mean_en_solved
+    mean_energy_output = e_mean_energy
   []
   [electron_wall_flux]
-    type = PhysicsElectronAdjacentSheathWallFluxMaterial
+    type = ElectronWallFluxMaterial
     electron_density = n_e_physical
-    mean_energy = mean_en_solved
+    mean_energy = e_mean_energy
     potential = potential
     use_element_gradient_for_potential = true
   []
