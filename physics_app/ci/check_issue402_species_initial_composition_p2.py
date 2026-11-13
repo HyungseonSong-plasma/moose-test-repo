@@ -59,6 +59,35 @@ def main():
         work = Path(directory)
         run_case(exe, work, "valid_distinct_volume_inlet", base)
 
+        # A missing sccm does NOT turn off the required solved-species ICs.
+        # It only turns off the inlet Dirichlet boundary condition.
+        def no_sccm(text: str) -> str:
+            return text.replace("    sccm = 100\\n", "").replace(
+                "    inlet_boundaries = left\\n", ""
+            )
+        run_case(exe, work, "mandatory_ic_without_sccm", base,
+                 input_rewrite=no_sccm)
+
+        def no_inlet_sideset(text: str) -> str:
+            return text.replace("    inlet_boundaries = left\\n", "")
+        run_case(exe, work, "sccm_requires_inlet_boundary", base,
+                 expected_error="sccm requires explicit inlet sidesets",
+                 input_rewrite=no_inlet_sideset)
+
+        def orphan_inlet_sideset(text: str) -> str:
+            return text.replace("    sccm = 100\\n", "")
+        run_case(exe, work, "inlet_sideset_requires_sccm", base,
+                 expected_error="inlet_boundaries requires sccm",
+                 input_rewrite=orphan_inlet_sideset)
+
+        for label, value in (("zero_sccm", "0"), ("negative_sccm", "-1")):
+            run_case(exe, work, label, base,
+                     expected_error="SCCM feed rate must be finite and strictly positive",
+                     input_rewrite=lambda text, v=value: text.replace(
+                         "sccm = 100", f"sccm = {v}"
+                     ))
+
+
         derived = deepcopy(base)
         del derived["species"]["O2"]["mass_fraction_variable"]
         derived["species"]["O2"]["mass_fraction_functor"] = "w_O2_constraint"
