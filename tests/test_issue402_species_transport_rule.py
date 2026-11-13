@@ -36,7 +36,7 @@ def test_user_drift_diffusion_transport_coefficient_options_are_removed():
 
 
 def test_mean_energy_bridge_and_dd_transport_are_distinct_providers():
-    mean = text("physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C")
+    mean = text("physics_app/src/materials/ElectronEnergyMaterial.C")
     dd = text("physics_app/src/materials/DDTransportMaterial.C")
     assert 'getParam<MooseFunctorName>("mean_energy_output")' in mean
     assert "electron_energy_density" in mean and "electron_density" in mean
@@ -47,7 +47,7 @@ def test_mean_energy_bridge_and_dd_transport_are_distinct_providers():
 def test_lookup_axis_is_fixed_to_solved_mean_energy_and_aliases_are_removed():
     src = text("physics_app/src/materials/DDTransportMaterial.C")
     header = text("physics_app/include/materials/DDTransportMaterial.h")
-    assert 'getFunctorByName<ADReal>("mean_en_solved")' in src
+    assert 'getFunctorByName<ADReal>("e_energy_eV")' in src
     assert 'const Moose::Functor<ADReal> * _mean_energy = nullptr;' in header
     assert '(*_mean_energy)(r, state)' in header
     for obsolete in ("ElectronTransportLookupMaterial", "PhysicsElectronTransportLookupMaterial",

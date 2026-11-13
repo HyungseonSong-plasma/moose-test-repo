@@ -1,7 +1,7 @@
 """Active C++ Material naming, with obsolete electron factory aliases removed.
 
 Historical immutable B/C decks are not modified. New Native inputs must use
-DDTransportMaterial, table_file and the fixed mean_en_solved lookup axis.
+DDTransportMaterial, table_file and the fixed e_energy_eV lookup axis.
 """
 from pathlib import Path
 import ast
@@ -65,7 +65,7 @@ def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
                      "PhysicsElectronTransportLookupMaterial",
                      '"property_table_file"', '"coordinate"', '"mean_energy"'):
         assert obsolete not in dd
-    assert 'getFunctorByName<ADReal>("mean_en_solved")' in dd
+    assert 'getFunctorByName<ADReal>("e_energy_eV")' in dd
     for fixture in ("electron_energy_transport_smoke.i",
                     "electron_energy_lookup_response_smoke.i",
                     "electron_energy_joule_smoke.i",
