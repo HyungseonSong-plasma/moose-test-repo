@@ -2,7 +2,8 @@
   "species": {
     "e": {
       "elements": {},
-      "charge_number": -1
+      "charge_number": -1,
+      "initial_number_density": 1000000000000000
     }
   },
   "equations": {},
