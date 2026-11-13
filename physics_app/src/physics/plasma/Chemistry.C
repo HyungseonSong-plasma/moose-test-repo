@@ -843,6 +843,17 @@ PlasmasAction::validParams()
   params.addParam<Real>("temperature", "Uniform gas temperature [K]; enables canonical Gas State.");
   params.addParam<MooseEnum>("model", MooseEnum("ideal_gas", "ideal_gas"),
                              "Canonical mixture equation of state.");
+  params.addParam<bool>("initialize_species_mass_fractions", false,
+                        "Opt in to FVConstantIC for species-owned solved mass-fraction "
+                        "variables using JSON initial_vol_mass_fraction. Do not also "
+                        "provide variable-level or other explicit ICs.");
+  params.addParam<std::vector<BoundaryName>>(
+      "inlet_boundaries", {}, "Named inlet sidesets; never inferred from walls.");
+  params.addParam<MooseEnum>(
+      "inlet_bc_model", MooseEnum("none dirichlet", "none"),
+      "Explicitly select dirichlet to create FVDirichletBC for solved "
+      "mass-fraction variables. Existing mass-flow/SCCM BCs own their "
+      "own flux instead; do not combine these BC policies.");
   return params;
 }
 
@@ -861,12 +872,26 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
       (!std::isfinite(getParam<Real>("pressure")) || getParam<Real>("pressure") <= 0.0 ||
        !std::isfinite(getParam<Real>("temperature")) || getParam<Real>("temperature") <= 0.0))
     paramError("pressure", "Gas pressure and temperature must be finite and strictly positive.");
+  const auto bc_mode = getParam<MooseEnum>("inlet_bc_model");
+  if (bc_mode == "dirichlet" &&
+      getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
+    paramError("inlet_boundaries", "dirichlet inlet BC requires named inlet sidesets.");
+  if (bc_mode == "none" &&
+      !getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
+    paramError("inlet_bc_model",
+               "inlet_boundaries requires inlet_bc_model = dirichlet; "
+               "mass-flux inlets remain explicitly owned by their flow BCs.");
+  if ((!gasStateEnabled()) &&
+      (getParam<bool>("initialize_species_mass_fractions") || bc_mode == "dirichlet"))
+    paramError("pressure", "Species IC/inlet automation requires root ideal_gas pressure and temperature.");
 }
 
 void
 PlasmasAction::act()
 {
-  if (_current_task != "add_functor_material" || !gasStateEnabled())
+  if (!gasStateEnabled() ||
+      (_current_task != "add_functor_material" &&
+       _current_task != "add_ics_physics" && _current_task != "add_bc"))
     return;
 
   // No redundant top-level gas_state list. Composition is owned by each
@@ -887,6 +912,12 @@ PlasmasAction::act()
                  "Root ideal_gas requires molar_mass_kg_mol, initial_vol_mass_fraction "
                  "and initial_inlet_mass_fraction for every heavy species: ", id);
 
+    if (record.mass_fraction_variable.empty() && record.mass_fraction_functor.empty())
+      paramError("files", "Root ideal_gas requires one live mass_fraction_variable or "
+                          "mass_fraction_functor for every heavy species: ", id);
+    if (!record.mass_fraction_variable.empty() && !record.mass_fraction_functor.empty())
+      paramError("files", "Duplicate live mass fraction owner for ", id);
+
     species.push_back(id);
     masses.push_back(record.molar_mass_kg_mol);
     volume_sum += *record.initial_vol_mass_fraction;
@@ -898,27 +929,51 @@ PlasmasAction::act()
     paramError("files", "Initial volume and inlet heavy-species mass fractions must each "
                         "sum to 1; received volume=", volume_sum, ", inlet=", inlet_sum);
 
-  // Navier–Stokes owns the LIVE mass-fraction names when present.
-  // In a no-NV static gas, the JSON volume fractions define constant Y_i.
-  const auto * nv = _data.nvTransport();
-  if (nv)
+  // A solved variable is the only source allowed to receive an FV IC or BC;
+  // derived/constraint Functors are read-only and inherit the mixture closure.
+  if (_current_task == "add_ics_physics")
   {
-    std::set<std::string> active(nv->species.begin(), nv->species.end());
-    std::set<std::string> catalogue(species.begin(), species.end());
-    if (active != catalogue)
-      paramError("files",
-                 "Root ideal_gas requires NV transport species to match the complete "
-                 "heavy gas composition; no implicit species renormalization.");
-    for (const auto & id : species)
-    {
-      const auto it = std::find(nv->species.begin(), nv->species.end(), id);
-      fractions.push_back(nv->mass_fractions[std::distance(nv->species.begin(), it)]);
-    }
+    if (getParam<bool>("initialize_species_mass_fractions"))
+      for (const auto & id : species)
+      {
+        const auto & record = _data.species(id);
+        if (record.mass_fraction_variable.empty())
+          continue;
+        const auto type = "FVConstantIC";
+        auto params = _factory.getValidParams(type);
+        params.set<VariableName>("variable") = record.mass_fraction_variable;
+        params.set<Real>("value") = *record.initial_vol_mass_fraction;
+        _problem->addFVInitialCondition(
+            type, "plasma_initial_" + id + "_mass_fraction", params);
+      }
+    return;
   }
-  else
-    for (const auto & id : species)
-      fractions.push_back("Y_" + id);
+  if (_current_task == "add_bc")
+  {
+    if (getParam<MooseEnum>("inlet_bc_model") == "dirichlet")
+      for (const auto & id : species)
+      {
+        const auto & record = _data.species(id);
+        if (record.mass_fraction_variable.empty())
+          continue;
+        const std::string type = "FVDirichletBC";
+        auto params = _factory.getValidParams(type);
+        params.set<NonlinearVariableName>("variable") = record.mass_fraction_variable;
+        params.set<std::vector<BoundaryName>>("boundary") =
+            getParam<std::vector<BoundaryName>>("inlet_boundaries");
+        params.set<Real>("value") = *record.initial_inlet_mass_fraction;
+        _problem->addFVBC(type, "plasma_inlet_" + id + "_mass_fraction", params);
+      }
+    return;
+  }
 
+  // Y_<id> is always an alias of the LIVE solver/constraint owner, never the
+  // JSON initial value. NV consumes the same canonical live Y aliases.
+  for (const auto & id : species)
+  {
+    const auto & record = _data.species(id);
+    fractions.push_back("Y_" + id);
+  }
   // No custom GasStateMaterial: publish canonical p/T and ideal-gas
   // derived state via existing ADParsedFunctorMaterial Functors.
   auto add = [this](const std::string & name,
@@ -961,8 +1016,11 @@ PlasmasAction::act()
         literal(*record.initial_vol_mass_fraction), {}, {});
     add("Y_" + id + "_inlet",
         literal(*record.initial_inlet_mass_fraction), {}, {});
-    if (!nv)
-      add("Y_" + id, literal(*record.initial_vol_mass_fraction), {}, {});
+    const auto & live = record.mass_fraction_variable.empty()
+                           ? record.mass_fraction_functor
+                           : record.mass_fraction_variable;
+    if (live != "Y_" + id)
+      add("Y_" + id, "live_y", {live}, {"live_y"});
   }
 
   // Distinct inlet/volume EOS values: do not use the evolving bulk rho_g
