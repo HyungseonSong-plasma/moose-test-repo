@@ -1,5 +1,5 @@
 # Bounded branch-specific source-bound Native P0/P1/P2 only.
-# Exact-source canonical-only ESWallFlux and ElectronEnergyMaterial, e_energy_eV, normalized-mode deletion P0/P1/P2; SCIENCE_HOLD.
+# Current cut: canonical ElectronEnergyMaterial + ESWallFlux; P0/P1/P2 exact-head after old-parameter removal; P3 SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
 on:
