@@ -99,7 +99,11 @@ Actual `species`, `equations`, `reactions`, and optional
 `transport_coefficients` remain unchanged in the same JSON file.
 Each `bcs` map stores **the existing BC name** and exactly the
 supported BC type's `.i` parameters; `boundary` is inherited from
-the enclosing `mesh_boundary`. Empty `bcs` generates no BC.
+the enclosing `mesh_boundary`. That value accepts either a single
+mesh sideset name, the original `.i` whitespace-separated boundary
+string, or an ordered JSON array of sideset names. A single
+multi-sideset BC is **never split into multiple MOOSE BC objects**.
+Empty `bcs` generates no BC.
 
 `ChemistryData` performs strict static validation and the **existing**
 `PlasmasAction` iterates entries in its already registered
