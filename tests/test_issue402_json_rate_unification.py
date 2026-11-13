@@ -50,6 +50,9 @@ def test_legacy_parser_and_factories_are_really_deleted():
     assert 'rate basis must be particle or molar' in parser
     assert 'surface reactions require explicit rate' in parser
     assert 'if (reaction.domain == "surface")' in parser
+    assert "missing heavy molar_mass_kg_mol for " in parser
+    assert "surface electron-energy sources are unsupported" in parser
+    assert "molar rate coefficient overflow" in parser
 
 
 def test_heavy_json_preserves_exact_frozen_rate_models_and_conservation():
@@ -141,6 +144,11 @@ def test_surface_json_keeps_wall_mass_flux_separate_from_volume_sources():
     flux_O = -2 * 0.016 * progress
     assert math.isclose(flux_O2 + flux_O, 0.0, abs_tol=1e-16)
     material = (APP / "src/materials/SurfaceReactionMaterial.C").read_text()
+    fixture = (APP / "ci/json_surface_rate_p2.i").read_text()
+    assert "species = 'O2'" in fixture
+    assert "mass_fractions = 'Y_O2'" in fixture
+    assert "surface_mass_flux_O" in fixture
+    assert "_chemistry.speciesRecords()" in material
     assert 'reaction.progress' in material
     assert 'reaction.net(species)' in material
     assert '"surface_mass_flux_" + species' in material
