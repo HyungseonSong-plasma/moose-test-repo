@@ -1,0 +1,28 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    }
+  },
+  "equations": {},
+  "reactions": [],
+  "drift_diffusion_boundary": {
+    "wafer": {
+      "mesh_boundary": "left",
+      "electron_model": "adjacent_sheath"
+    },
+    "cover": {
+      "mesh_boundary": "bottom",
+      "electron_model": "adjacent_sheath"
+    },
+    "inlet": {
+      "mesh_boundary": "right",
+      "electron_model": "open"
+    },
+    "outlet": {
+      "mesh_boundary": "top",
+      "electron_model": "open"
+    }
+  }
+}
