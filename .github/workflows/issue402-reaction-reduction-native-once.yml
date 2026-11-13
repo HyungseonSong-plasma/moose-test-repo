@@ -77,7 +77,10 @@ jobs:
           test ! -f physics_app/src/materials/PhysicsElectronImpactO2sExcitationMaterial.C
           test ! -f physics_app/src/materials/PhysicsO2IonizationSourceMaterial.C
           test ! -f physics_app/src/materials/PhysicsO2sExcitationSourceMaterial.C
-          echo 'ISSUE402_REACTION_REDUCTION_TARGET_P0_PASS_NO_NEW_COMMITS_UNTIL_P2'
+          for owner in PhysicsElectronImpactIonizationMaterial PhysicsElectronImpactO2sExcitationMaterial PhysicsO2IonizationSourceMaterial PhysicsO2sExcitationSourceMaterial; do
+            test ! -f "physics_app/include/materials/${owner}.h"
+          done
+          echo 'ISSUE402_REACTION_REDUCTION_TARGET_P0_PASS'
           echo 'D_BASE_SOURCE=PREBUILT_PINNED_NO_RUNTIME_DEBUG_FILTER_ALL_FOUR_D_ENTRYPOINTS'
       - name: Materialize pinned public historical 400W mesh
         shell: bash
