@@ -8,8 +8,7 @@
   "equations": {},
   "reactions": [],
   "drift_diffusion_boundary": {
-    "wafer": {
-      "mesh_boundary": "left",
+    "left": {
       "bcs": {
         "electron_wafer": {
           "type": "FEMElectronSheathBC",
@@ -24,8 +23,7 @@
         }
       }
     },
-    "cover": {
-      "mesh_boundary": "bottom",
+    "bottom": {
       "bcs": {
         "electron_cover": {
           "type": "FEMElectronSheathBC",
@@ -40,12 +38,10 @@
         }
       }
     },
-    "inlet": {
-      "mesh_boundary": "right",
+    "right": {
       "bcs": {}
     },
-    "outlet": {
-      "mesh_boundary": "top",
+    "top": {
       "bcs": {}
     }
   }
