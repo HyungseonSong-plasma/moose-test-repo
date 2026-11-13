@@ -27,8 +27,12 @@ def test_json_drives_species_transport_without_i_material_blocks():
         assert owners[ion]["diffusivity"] >= 0
     assert owners["Om"]["table_file"] == "lookup_om_physical_p2.txt"
     assert (PILOT / owners["Om"]["table_file"]).exists()
-    assert "fem_species = 'e 1e16'" in deck
-    assert "fvm_species = 'O2p 1e16 Om 1e14 Op 1e15'" in deck
+    assert "fem_species = e" in deck
+    assert "fvm_species = 'O2p Om Op'" in deck
+    assert {id: data["species"][id]["initial_number_density"]
+            for id in ("e", "O2p", "Om", "Op")} == {
+            "e": 1e16, "O2p": 1e16, "Om": 1e14, "Op": 1e15
+        }
     assert "require_json_transport" not in deck
     assert "[DDTransportMaterial]" not in deck
     assert "type = DDTransportMaterial" not in deck
