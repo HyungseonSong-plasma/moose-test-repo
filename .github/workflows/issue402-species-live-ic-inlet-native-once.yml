@@ -1,5 +1,5 @@
 name: Issue402 Live Species Y IC Inlet P0 P1 P2
-# Native contract: species JSON populates FV IC/inlet BC; all rate and transport use live Y.
+# Source-bound rerun: full NV species set and live-Y aliases, FV IC/inlet BC.
 on:
   push:
     branches: [issue-402-species-live-ic-inlet]
