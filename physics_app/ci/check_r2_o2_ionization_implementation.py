@@ -91,16 +91,33 @@ RUNTIME_INPUT = f"""[Mesh]
     state_form = physical_eV
   []
   [r2_ionization_rate]
-    type = PhysicsElectronImpactIonizationMaterial
+    type = PhysicsElectronImpactRateMaterial
     rate_table_file = r2_o2_ionization_runtime_table.txt
     mean_energy = mean_en_solved
     electron_number_density = n_e
-    o2_molar_concentration = c_O2
+    target_molar_concentration = c_O2
+    reaction_progress = R_ion_O2
   []
   [r2_source_projection]
-    type = PhysicsO2IonizationSourceMaterial
-    reaction_progress = R_ion_O2
-    o2_molar_mass = 0.031998
+    type = ADParsedFunctorMaterial
+    property_name = O2_ionization_mass_source
+    functor_names = 'R_ion_O2'
+    functor_symbols = 'rr'
+    expression = '-0.031998*rr'
+  []
+  [r2_source_projection_o2p_ionization_source]
+    type = ADParsedFunctorMaterial
+    property_name = O2p_ionization_mass_source
+    functor_names = 'R_ion_O2'
+    functor_symbols = 'rr'
+    expression = '0.031998*rr'
+  []
+  [r2_source_projection_electron_ionization_source]
+    type = ADParsedFunctorMaterial
+    property_name = electron_ionization_number_source
+    functor_names = 'R_ion_O2'
+    functor_symbols = 'rr'
+    expression = '6.02214076e23*rr'
   []
 []
 
