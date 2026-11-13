@@ -95,6 +95,39 @@ def test_public_immutable_b_c_d1_debug_probes_are_safely_retired_in_d_input(
     # Their numerical parity is not a target requirement; physics is unchanged.
 
 
+@pytest.mark.parametrize("case", ("417", "941"))
+def test_final_native_layer_audit_rejects_retired_aux_and_passes_after_cutover(case):
+    original = _layers(case, "C")
+    with pytest.raises(ValueError, match="S6_NATIVE_D1_DEBUG_STILL_PRESENT"):
+        mod.audit_final_native_d1_debug_absence(original)
+    migrated, receipt = mod.suspend_staged_retired_d1_observations(original)
+    assert receipt["status"] == "OBSOLETE_D1_DEBUG_OBSERVATIONS_RETIRED"
+    scan = mod.audit_final_native_d1_debug_absence(migrated)
+    assert scan == {
+        "status": "PASS_OBSOLETE_D1_DIAGNOSTICS_ABSENT_FROM_NATIVE_INPUT",
+        "layers_checked": 11,
+        "retired_auxkernels_remaining": 0,
+        "retired_auxvariables_remaining": 0,
+        "retired_factory_types_remaining": 0,
+    }
+    # The final-input scanner covers *every* layer, even those not modified
+    # by chemistry cutover, so a forgotten diagnostic cannot slip into Native.
+    wrong = dict(migrated)
+    other = next(path for path in wrong if path != Path(BASE))
+    wrong[other] += (
+        "\n[AuxKernels]\n  [d1_gamma_o2_positive_kernel]\n"
+        "    type = PhysicsLowerDSurfaceCurrentProbeAux\n  []\n[]\n"
+    )
+    with pytest.raises(ValueError, match="S6_NATIVE_D1_DEBUG_STILL_PRESENT"):
+        mod.audit_final_native_d1_debug_absence(wrong)
+
+
+def test_final_native_layer_audit_rejects_unknown_input_extension():
+    with pytest.raises(ValueError, match="S6_NATIVE_D1_AUDIT_UNEXPECTED_INPUT"):
+        mod.audit_final_native_d1_debug_absence(
+            {Path("unexpected.json"): "{}"})
+
+
 @pytest.mark.parametrize("owner,before,after", [
     ("wafer_net_current_probe_kernel",
      "    surface_current_density = wafer_net_surface_current_density",
