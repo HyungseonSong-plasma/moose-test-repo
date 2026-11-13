@@ -1,125 +1,138 @@
-# Issue #402 — JSON-owned DriftDiffusion plasma boundaries
+# Issue #402 — Verbatim DriftDiffusion BC list relocation to JSON
 
-**Status:** Draft branch `issue-402-dd-plasma-boundary-action`, stacked on Draft
-PR #530. No merge, P3, powered ICP numerical parity, or SCIENCE acceptance.
-**SCIENCE_HOLD**.
+**Authority:** the existing FEM electron wall input and Issue #395
+`enable_electron_adjacent_sheath_wall.py` transformation; FV discriminator
+`experiments/fem_fvm_plasma_discriminator/prepare_cases.py` is a
+**separate, physically different** boundary set. **No new wall law**.
+Draft PR #531 is stacked on Draft PR #530. **SCIENCE_HOLD.**
 
-## Why the mean-energy Material still exists
+## Source inspection FIRST
 
-For `state_form=log_molar_eV`, the solved states are real log molar
-densities. The derived positive mean energy is
-`exp(log_energy - log_ne)` [eV]. A log transformation excludes
-nonpositive *represented physical states* for **finite, representable**
-numerical values; it does **not** prevent nonfinite solver states, overflow
-to infinity, or finite-precision underflow of the difference exponential
-to zero. The existing `PhysicsElectronMeanEnergyMaterial` detects those
-cases and refuses the invalid energy. For `physical_eV` and
-`normalized`, density positivity and normalization also require
-explicit validation. It remains live and differentiable; it is not a
-setup-time constant. The optional `external` mean-energy ownership
-preserves a preexisting validated provider without adding a duplicate.
-
-## Why adjacent sheath wall flux still exists
-
-`PhysicsElectronAdjacentSheathWallFluxMaterial` consumes live physical
-electron density, mean electron energy and potential. Its wall-face
-`FaceArg` evaluates plasma-adjacent `-grad(phi)`, normal direction,
-wall-to-cell normal distance and the *same* positive outward electron
-flux that the existing `FEMElectronSheathBC` and
-`FEMElectronEnergySheathBC` consume. Existing particle/energy
-sided-face and dielectric-current sign/ownership rules are unchanged.
-It is **not** interchangeable with `PhysicsElectronWallFluxMaterial`
-(thermal-only wall model), or a setup constant.
-
-## Source-authoritative mesh names
-
-Historical `experiments/Issue19_sccm_pressure_boundary/mesh.i` declares
-plasma-facing `inlet`, `outlet`, `plasma_electrode`,
-`plasma_metal`, `plasma_right`, `plasma_cover`,
-`plasma_wafer`, `plasma_focus_ring`.
-Historical Issue #395 electron wall uses all six named solid interfaces
-and excludes inlet/outlet. These are **physical mesh sideset names**,
-not a guarantee that every wall should share the same constitutive law.
-
-**Suggested future scenario JSON** (with the actual mesh above):
-
-```json
-{
-  "drift_diffusion_boundary": {
-    "inlet":      {"mesh_boundary": "inlet",             "electron_model": "open"},
-    "outlet":     {"mesh_boundary": "outlet",            "electron_model": "open"},
-    "electrode":  {"mesh_boundary": "plasma_electrode",  "electron_model": "adjacent_sheath"},
-    "metal":      {"mesh_boundary": "plasma_metal",      "electron_model": "adjacent_sheath"},
-    "right_wall": {"mesh_boundary": "plasma_right",      "electron_model": "adjacent_sheath"},
-    "cover":      {"mesh_boundary": "plasma_cover",      "electron_model": "adjacent_sheath"},
-    "wafer":      {"mesh_boundary": "plasma_wafer",      "electron_model": "adjacent_sheath"},
-    "focus_ring": {"mesh_boundary": "plasma_focus_ring", "electron_model": "adjacent_sheath"}
-  }
-}
-```
-
-This is **an illustrative migration contract**, not an assertion that
-all six solid surfaces have passed physical wall-model parity.
-For a wall still owned by an explicit special BC, set
-`electron_model: "external"` in JSON. This prevents the generated
-electron sheath BC on that surface. `open` and `external` do not
-generate a new electron BC; they do **not** automatically create
-inlet/outlet flow/charged-species/energy BCs or dielectric surface charge.
-
-The new model enum is `open | adjacent_sheath | external`. The parser
-fails on duplicates, unknown model, invalid alias, duplicate mesh
-sideset, empty catalogue, multiple JSON catalogue owners, and a
-literal `inlet`/`outlet` alias/sideset mapped to a solid sheath.
-
-## New .i interface
+The Issue #395 script preserves each existing BC block name and its original
+wall sideset, replacing the electron pair's object classes with the two
+existing registered types:
 
 ```ini
-[Physics]
-  [Plasmas]
-    files = plasma.json
-    [Transport]
-      [DriftDiffusion]
-        plasma_boundary = json
-      []
-    []
+[BCs]
+  [<existing electron particle BC name>]
+    type = FEMElectronSheathBC
+    variable = log_ne
+    wall_number_flux = electron_wall_number_flux
+    boundary = '<existing plasma wall sidesets>'
+  []
+  [<existing electron energy BC name>]
+    type = FEMElectronEnergySheathBC
+    variable = log_energy
+    wall_number_flux = electron_wall_number_flux
+    mean_energy = mean_en_solved
+    boundary = '<same plasma wall sidesets>'
   []
 []
 ```
 
-The .i no longer repeats boundary names or their wall type. When
-`plasma_boundary=none` (default), the Action creates nothing; existing
-explicit `[FunctorMaterials]` / `[BCs]` remain the owner.
-When `plasma_boundary=json`, Action obtains the **same shared**
-`ChemistryData` instance from `PlasmasAction` and registers one
-`PhysicsElectronMeanEnergyMaterial` (unless
-`plasma_boundary_mean_energy_owner=external`), one
-`PhysicsElectronAdjacentSheathWallFluxMaterial` (unless
-`plasma_boundary_wall_flux_owner=external`) and **a pair of existing
-FEM sheath BCs per `adjacent_sheath` mesh sideset**. They share the
-same positive outward `electron_wall_number_flux`, and the energy
-BC retains `Gamma/N_A * (5/2) * T_e`, with
-`T_e = (2/3) mean_en_solved`. No new independent plasma boundary law.
+The transformation expects **four existing particle and four existing
+energy BC blocks** in that historical generation chain. Their exact
+group names and sideset lists depend on the prior recipe; the generated
+complete production `.i` is not in the tracked source tree, so do not
+claim its byte-exact active layout from the generator alone. The
+historical mesh maps `inlet`, `outlet`,
+`plasma_electrode`, `plasma_metal`, `plasma_right`,
+`plasma_cover`, `plasma_wafer` and
+`plasma_focus_ring` as plasma-facing sidesets. The six solid
+interface labels, not the inlet/outlet pair, form the historical
+electron-wall candidate set.
 
-To migrate an active .i, delete the paired explicit electron wall
-`[BCs]` entries for those exact sidesets. Delete the previously
-explicit mean-energy and adjacent-sheath wall Materials only if their
-ownership has switched to `generated`. Use `external` owner options
-for already validated existing providers. The current Action does not
-detect arbitrary manually declared duplicate BCs; an **ownership
-inventory** is still required before converting a production input.
+**Important independent FV path:** the discriminator's explicit
+`[FVBCs]` used `PhysicsFVElectronGroundedSheathCollectionBC`,
+`PhysicsFVElectronGroundedSheathEnergyBC`, `FVFunctorNeumannBC`
+for the ion wall, and `FVDirichletBC` for grounded potential.
+These are **not** interchangeable with the FEM Issue #395 BCs; this
+first relocation intentionally preserves them as explicit external
+FV input and does not try to convert them into FEM BCs.
 
-The two synthetic P2 fixtures deliberately use 2D GeneratedMesh
-standard sideset names: wafer -> left, cover -> bottom, inlet -> right,
-outlet -> top; these names are NOT substitutes for the real production
-mesh sidesets.
+The wall flux `electron_wall_number_flux` is already provided by
+`PhysicsElectronAdjacentSheathWallFluxMaterial`, using a plasma-sided
+`FaceArg`. `PhysicsElectronMeanEnergyMaterial` maps live
+`log_energy, log_ne` to `mean_en_solved` and preserves strict
+finite/positive error handling. Even with logarithmic states, `NaN`,
+infinite data, and `exp` underflow/overflow remain possible;
+a log variable does not automatically prove finite positive energy
+at every nonlinear iteration. Both existing Materials stay in the
+original `[FunctorMaterials]` section unchanged.
 
-## Validation gates
+## New configuration is only a relocation
 
-- P0: schema/path/owner tests including invalid role and duplicate sideset;
-- P1: native `physics-opt` application build;
-- P2: actual `--check-input` positive generated and external mean-energy
-  cases, plus negative malformed JSON/model/sideset/empty catalogue and
-  missing JSON owner controls;
-- P3: not run. In particular face-oriented flux, wall energy and charge
-  conservation, and equivalence against full historical Issue #395 input
-  are *not* established by construction checks.
+There is **NO** `plasma_boundary` activation option. There are
+**NO** `open`/`adjacent_sheath`/role model labels. The key
+`drift_diffusion_boundary` in the same existing
+`[Physics]/[Plasmas]/files` JSON is the sole switch.
+
+Representative structured JSON (the P2 fixture uses 2D GeneratedMesh
+with left/bottom/right/top rather than production QVT sideset names):
+
+```json
+{
+  "drift_diffusion_boundary": {
+    "wafer": {
+      "mesh_boundary": "plasma_wafer",
+      "bcs": {
+        "electron_wafer": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_ne",
+          "wall_number_flux": "electron_wall_number_flux"
+        },
+        "electron_energy_wafer": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_energy",
+          "wall_number_flux": "electron_wall_number_flux",
+          "mean_energy": "mean_en_solved"
+        }
+      }
+    },
+    "inlet": {"mesh_boundary": "inlet", "bcs": {}},
+    "outlet": {"mesh_boundary": "outlet", "bcs": {}}
+  }
+}
+```
+
+Actual `species`, `equations`, `reactions`, and optional
+`transport_coefficients` remain unchanged in the same JSON file.
+Each `bcs` map stores **the existing BC name** and exactly the
+supported BC type's `.i` parameters; `boundary` is inherited from
+the enclosing `mesh_boundary`. Empty `bcs` generates no BC.
+
+`ChemistryData` performs strict static validation and the **existing**
+`PlasmasAction` iterates entries in its already registered
+`add_bc` task, creating the exact existing `FEMElectronSheathBC`
+or `FEMElectronEnergySheathBC` objects with unchanged parameter
+types, flux name and energy coefficient. The Action is invoked from
+the same root `[Plasmas]` even without `[Transport]/[DriftDiffusion]`
+subblocks; **presence of the JSON list is sufficient**. No second
+boundary Action, no background auto detection of wall models and no
+implicit `[FunctorMaterials]` construction.
+
+Without `drift_diffusion_boundary`, zero new BCs are created.
+The old explicit `[BCs]` input continues unchanged. For an opted-in
+JSON relocation, remove the corresponding **identical** explicit
+`[BCs]` blocks to prevent double residual ownership. Neither a
+JSON entry nor this Action removes old explicit BCs automatically.
+
+## Scope and evidence
+
+- Current typed importer covers the two **verified FEM electron wall**
+  BC classes above. Unsupported BC `type` fails closed rather than
+  substituting a different operator. Existing FV/ion/Poisson/flow
+  BC lists remain explicit until their own exact parameter inventories
+  and P2 migration oracles are performed.
+- `physics_app/ci/dd_plasma_boundary_json_p2.i` is new JSON-owned
+  synthetic control; `dd_plasma_boundary_legacy_p2.i` retains the
+  exact same four named MOOSE BC declarations. The P0 test checks
+  byte-for-field mapping of all four BCs.
+- P0 source and mapping invariant, P1 native build, P2 native
+  `physics-opt --check-input` both positive inputs, no-JSON and
+  fail-closed malformed BC definitions, duplicate owner and extra
+  parameter mutations.
+- P3 electron/energy wall flux and dielectric charge current parity
+  with the original powered Issue #395 source is **not verified**.
+  **SCIENCE_HOLD** until an exact historical input is available
+  and independently checked.
