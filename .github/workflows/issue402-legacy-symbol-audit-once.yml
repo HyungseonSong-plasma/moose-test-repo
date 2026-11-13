@@ -1,0 +1,50 @@
+name: Issue402 legacy symbol audit once
+run-name: Issue402 legacy symbol audit ${{ github.sha }}
+on:
+  push:
+    branches: [issue-402-dd-plasma-boundary-action]
+    paths: [.github/workflows/issue402-legacy-symbol-audit-once.yml]
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Inventory tracked source references without modification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 - <<'PY'
+          import subprocess
+          from collections import defaultdict
+          terms = [
+              r'log_energy', r'mean_en_solved', r'PhysicsElectronMeanEnergyMaterial',
+              r'PhysicsElectronWallFluxMaterial', r'PhysicsElectronAdjacentSheathWallFluxMaterial',
+              r'ElectronWallFluxMaterial', r'ESWallFluxMaterial',
+              r'normalized'
+          ]
+          paths = subprocess.check_output(["git", "ls-files", "-z"]).decode().split("\0")
+          for term in terms:
+              hits = defaultdict(list)
+              for p in paths:
+                  if not p: continue
+                  try:
+                      with open(p, encoding="utf-8") as f:
+                          for n, ln in enumerate(f, 1):
+                              if term in ln:
+                                  hits[p].append(n)
+                  except (UnicodeError, OSError):
+                      continue
+              print("SYMBOL", term, "FILES", len(hits), "HITS", sum(map(len, hits.values())), flush=True)
+              for p, lines in sorted(hits.items()):
+                  print("REF", term, p, ",".join(map(str, lines[:40])), flush=True)
+          PY
+      - name: Inventory done
+        shell: bash
+        run: echo ISSUE402_LEGACY_SYMBOL_AUDIT_PASS
