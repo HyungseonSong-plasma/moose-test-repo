@@ -10,19 +10,43 @@
   "drift_diffusion_boundary": {
     "wafer": {
       "mesh_boundary": "left",
-      "electron_model": "adjacent_sheath"
+      "bcs": {
+        "electron_wafer": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_ne",
+          "wall_number_flux": "electron_wall_number_flux"
+        },
+        "electron_energy_wafer": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_energy",
+          "wall_number_flux": "electron_wall_number_flux",
+          "mean_energy": "mean_en_solved"
+        }
+      }
     },
     "cover": {
       "mesh_boundary": "bottom",
-      "electron_model": "adjacent_sheath"
+      "bcs": {
+        "electron_cover": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_ne",
+          "wall_number_flux": "electron_wall_number_flux"
+        },
+        "electron_energy_cover": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_energy",
+          "wall_number_flux": "electron_wall_number_flux",
+          "mean_energy": "mean_en_solved"
+        }
+      }
     },
     "inlet": {
       "mesh_boundary": "right",
-      "electron_model": "open"
+      "bcs": {}
     },
     "outlet": {
       "mesh_boundary": "top",
-      "electron_model": "open"
+      "bcs": {}
     }
   }
 }
