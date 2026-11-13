@@ -2,7 +2,12 @@ name: Issue402 EI10 EI16 generic reaction reduction Native compatibility
 on:
   push:
     branches: [issue-402-species-functor-naming]
-    paths: [.github/workflows/issue402-reaction-reduction-native-once.yml]
+    paths:
+      - .github/workflows/issue402-reaction-reduction-native-once.yml
+      - physics_app/src/materials/RateCoeffMaterial.C
+      - physics_app/src/materials/DDTransportMaterial.C
+      - physics_app/src/materials/NVTransportMaterial.C
+      - tests/test_issue402_reaction_reduction_p2_only.py
 permissions:
   contents: read
 jobs:
