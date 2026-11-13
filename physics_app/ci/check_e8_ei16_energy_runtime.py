@@ -79,7 +79,7 @@ RUNTIME_INPUT = f"""[Mesh]
     expression = 'dens*wo2/0.031998'
   []
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -87,7 +87,7 @@ RUNTIME_INPUT = f"""[Mesh]
   [ei16_rate]
     type = EIRateCoefMaterial
     rate_table_file = e8_ei16_runtime_table.txt
-    mean_energy = mean_en_solved
+    mean_energy = e_energy_eV
     electron_number_density = n_e
     target_molar_concentration = c_O2
     reaction_progress = R_ion_O2
@@ -169,9 +169,9 @@ RUNTIME_INPUT = f"""[Mesh]
     functor = w_O2_constraint
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [mean_en_solved_avg]
+  [e_energy_eV_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [R_ion_O2_avg]
@@ -239,7 +239,7 @@ def validate_runtime_rows(rows):
     ep_i, ep_f = _num(i, "mean_en_avg"), _num(f, "mean_en_avg")
     wp_i, wp_f = _num(i, "w_O2p_avg"), _num(f, "w_O2p_avg")
     wo_i, wo_f = _num(i, "w_O2_avg"), _num(f, "w_O2_avg")
-    me_i, me_f = _num(i, "mean_en_solved_avg"), _num(f, "mean_en_solved_avg")
+    me_i, me_f = _num(i, "e_energy_eV_avg"), _num(f, "e_energy_eV_avg")
     r_f = _num(f, "R_ion_O2_avg")
     s_o2 = _num(f, "O2_source_avg")
     s_o2p = _num(f, "O2p_source_avg")
@@ -278,8 +278,8 @@ def validate_runtime_rows(rows):
     _close(oxygen_f, oxygen_i, rel=2e-12, abs_=1e-14, label="oxygen inventory")
 
     return {
-        "initial": {"n_e": ne_i, "mean_en": ep_i, "w_O2": wo_i, "w_O2p": wp_i, "mean_en_solved_eV": me_i},
-        "final": {"n_e": ne_f, "mean_en": ep_f, "w_O2": wo_f, "w_O2p": wp_f, "mean_en_solved_eV": me_f, "R_ion_O2_mol_m3_s": r_f, "electron_source_m3_s": s_e},
+        "initial": {"n_e": ne_i, "mean_en": ep_i, "w_O2": wo_i, "w_O2p": wp_i, "e_energy_eV_eV": me_i},
+        "final": {"n_e": ne_f, "mean_en": ep_f, "w_O2": wo_f, "w_O2p": wp_f, "e_energy_eV_eV": me_f, "R_ion_O2_mol_m3_s": r_f, "electron_source_m3_s": s_e},
         "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "standard_moose_object": "FVCoupledForce", "coef": ENERGY_COEF, "physical_rhs_eV_m3_s": rhs, "observed_dmean_en_dt_eV_m3_s": (ep_f - ep_i) / DT},
         "particle_heavy_charge_closure": {"heavy_fraction_sum": wo_f + wp_f, "charge_delta_e": delta_e, "charge_delta_o2p": delta_o2p, "oxygen_atom_molar_inventory_initial": oxygen_i, "oxygen_atom_molar_inventory_final": oxygen_f, "lookup_k_m3_mol_s": k}
     }
@@ -303,8 +303,8 @@ def runtime_checker_self_test():
     mean = ep / ne
     r0 = _interp(MEAN_E0_EV) * (N_E0 / N_A) * (RHO * (1 - W0) / M_O2)
     rows = [
-        {"n_e_avg": N_E0, "mean_en_avg": N_E0 * MEAN_E0_EV, "w_O2p_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": MEAN_E0_EV, "R_ion_O2_avg": r0, "O2_source_avg": -M_O2 * r0, "O2p_source_avg": M_O2 * r0, "electron_source_avg": N_A * r0},
-        {"n_e_avg": ne, "mean_en_avg": ep, "w_O2p_avg": wp, "w_O2_avg": 1 - wp, "mean_en_solved_avg": mean, "R_ion_O2_avg": r, "O2_source_avg": -M_O2 * r, "O2p_source_avg": M_O2 * r, "electron_source_avg": N_A * r}
+        {"n_e_avg": N_E0, "mean_en_avg": N_E0 * MEAN_E0_EV, "w_O2p_avg": W0, "w_O2_avg": 1 - W0, "e_energy_eV_avg": MEAN_E0_EV, "R_ion_O2_avg": r0, "O2_source_avg": -M_O2 * r0, "O2p_source_avg": M_O2 * r0, "electron_source_avg": N_A * r0},
+        {"n_e_avg": ne, "mean_en_avg": ep, "w_O2p_avg": wp, "w_O2_avg": 1 - wp, "e_energy_eV_avg": mean, "R_ion_O2_avg": r, "O2_source_avg": -M_O2 * r, "O2p_source_avg": M_O2 * r, "electron_source_avg": N_A * r}
     ]
     validate_runtime_rows(rows)
     assert "type = FVCoupledForce" in RUNTIME_INPUT
@@ -341,7 +341,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
         evidence["build_base_ref"] = build_base_ref
     if evidence_out:
         Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
-    print(f"E8_EI16_O2_IONIZATION_ENERGY_RUNTIME_VECTOR n_e={evidence['final']['n_e']:.12g} mean_en={evidence['final']['mean_en']:.12g} mean_en_eV={evidence['final']['mean_en_solved_eV']:.12g} R={evidence['final']['R_ion_O2_mol_m3_s']:.12g}")
+    print(f"E8_EI16_O2_IONIZATION_ENERGY_RUNTIME_VECTOR n_e={evidence['final']['n_e']:.12g} mean_en={evidence['final']['mean_en']:.12g} mean_en_eV={evidence['final']['e_energy_eV_eV']:.12g} R={evidence['final']['R_ion_O2_mol_m3_s']:.12g}")
     print("E8_EI16_O2_IONIZATION_ENERGY_LOCAL_RUNTIME_PASS")
 
 

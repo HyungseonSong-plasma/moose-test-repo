@@ -64,7 +64,7 @@ def text():
   expression='dens*womass/{M}'
  []
  [me]
-  type=PhysicsElectronMeanEnergyMaterial
+  type=ElectronEnergyMaterial
   electron_energy_density=mean_en
   electron_density=n_e
   state_form=physical_eV
@@ -72,7 +72,7 @@ def text():
  [te]
   type=ADParsedFunctorMaterial
   property_name=Te_eV
-  functor_names='mean_en_solved'
+  functor_names='e_energy_eV'
   functor_symbols='meanen'
   expression='(2.0/3.0)*meanen'
  []
@@ -160,7 +160,7 @@ def text():
  []
  [me]
   type=ElementAverageFunctorPostprocessor
-  functor=mean_en_solved
+  functor=e_energy_eV
   execute_on='INITIAL TIMESTEP_END'
  []
  [te]
@@ -208,7 +208,7 @@ def val(z):
  eq(o+w,1,r=0,a0=2e-12); eq(m,e/n); eq(t,(2/3)*m); eq(-sm/M,q); eq(so/M,q); eq(se/NA,q); eq(sm+so,0,r=0)
  eq(q,rate(n,e,w),r=9e-6,a0=1e-15); eq((n-n0)/DT,se,a0=1); eq(D*(w-w0)/DT,sm); eq(D*(o-o0)/DT,so); eq((e-e0)/DT,EC*q,a0=1e-8)
  de=n-n0; dm=NA*D*(w-w0)/M; eq(de+dm,0,r=0,a0=max(2,2e-5*abs(de)))
- return {"initial":{"n_e":n0,"mean_en":e0,"w_Om":w0},"final":{"n_e":n,"mean_en":e,"w_Om":w,"w_O":o,"mean_en_solved_eV":m,"Te_eV":t,"R_detach_Om_mol_m3_s":q},"closure":{"heavy_mass_source_sum":sm+so,"charge_delta_sum":de+dm,"energy_loss_eV_per_event":L}}
+ return {"initial":{"n_e":n0,"mean_en":e0,"w_Om":w0},"final":{"n_e":n,"mean_en":e,"w_Om":w,"w_O":o,"e_energy_eV_eV":m,"Te_eV":t,"R_detach_Om_mol_m3_s":q},"closure":{"heavy_mass_source_sum":sm+so,"charge_delta_sum":de+dm,"energy_loss_eV_per_event":L}}
 def syn():
  q=rate(NE0,NE0*ER,W)
  for _ in range(300):
@@ -233,7 +233,7 @@ def static():
  c=json.loads(C.read_text()); r=c["reaction"]; q=c["rate_law"]; p=c["projection"]; s=c["source_provenance"]
  if c["status"]!="CONTRACT_FROZEN" or c["slice"]!="S5-C_EDETACH_OM" or r["canonical_progress"]!=P or r["heavy_stoichiometry"]!={"Om":-1,"O":1} or r["net_electron_particle_stoich"]!=1: raise AssertionError("contract")
  if (q["particle_rate_prefactor_m3_s"],q["activation_eV"],q["temperature_exponent"],q["progress_owner"])!=(A,E,B,"ADParsedFunctorMaterial"): raise AssertionError("rate")
- if q["canonical_temperature_mapping"]!="Te_eV=(2/3)*mean_en_solved_eV" or s["collision_type"]!="Ionization" or s["collision_metadata_value"]!=L or p["electron_number_source"]!="+N_A*R_detach_Om" or p["energy_projection_owner"]!="FVCoupledForce": raise AssertionError("semantics")
+ if q["canonical_temperature_mapping"]!="Te_eV=(2/3)*e_energy_eV_eV" or s["collision_type"]!="Ionization" or s["collision_metadata_value"]!=L or p["electron_number_source"]!="+N_A*R_detach_Om" or p["energy_projection_owner"]!="FVCoupledForce": raise AssertionError("semantics")
  selftest(); print("STAGE5_EDETACH_IMPLEMENTATION_P0_PASS")
 def run(exe,out,sha,base):
  static(); exe=Path(exe).resolve()
@@ -245,7 +245,7 @@ def run(exe,out,sha,base):
   x=val(list(csv.DictReader((d/"c_out.csv").open())))
  ev={"schema_version":1,"stage":"STAGE_5","slice":"S5-C_EDETACH_OM","decision":"LOCAL_RUNTIME_ACCURACY","result":"PASS","integrated_physics_accuracy":"NOT_ESTABLISHED","repository_sha":sha,"build_base_ref":base,"executable_sha256":hashlib.sha256(exe.read_bytes()).hexdigest(),"runtime":x}
  if out: Path(out).write_text(json.dumps(ev,indent=2,sort_keys=True)+"\n")
- z=x["final"]; print(f"STAGE5_EDETACH_LOCAL_RUNTIME_PASS R={z['R_detach_Om_mol_m3_s']:.12g} n_e={z['n_e']:.12g} mean_en={z['mean_en_solved_eV']:.12g}")
+ z=x["final"]; print(f"STAGE5_EDETACH_LOCAL_RUNTIME_PASS R={z['R_detach_Om_mol_m3_s']:.12g} n_e={z['n_e']:.12g} mean_en={z['e_energy_eV_eV']:.12g}")
 def main():
  p=argparse.ArgumentParser(); p.add_argument("--self-test",action="store_true"); p.add_argument("--static",action="store_true"); p.add_argument("--executable"); p.add_argument("--evidence-out"); p.add_argument("--repository-sha"); p.add_argument("--build-base-ref"); a=p.parse_args()
  if a.self_test:selftest()

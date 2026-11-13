@@ -67,7 +67,7 @@ def check() -> None:
         raise AssertionError("EI16 table SHA-256 does not match frozen recovery provenance")
 
     lookup = recovery.get("lookup_contract", {})
-    if lookup.get("coordinate") != "mean_en_solved":
+    if lookup.get("coordinate") != "e_energy_eV":
         raise AssertionError("EI16 lookup coordinate is not solved mean energy")
     if lookup.get("coordinate_unit") != "eV":
         raise AssertionError("EI16 lookup coordinate unit changed")
@@ -108,7 +108,7 @@ def check() -> None:
         raise AssertionError("EI16 progress owner type changed")
     if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_ionization.txt":
         raise AssertionError("EI16 progress owner table binding changed")
-    if owner.get("mean_energy") != "mean_en_solved":
+    if owner.get("mean_energy") != "e_energy_eV":
         raise AssertionError("EI16 progress owner mean-energy binding changed")
     if owner.get("reaction_progress") != "R_ion_O2":
         raise AssertionError("EI16 canonical progress identity changed")

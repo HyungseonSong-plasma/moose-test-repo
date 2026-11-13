@@ -110,7 +110,7 @@ def runtime_input(mean=EREF):
     expression = 'dens*wo/{MO:.17g}'
   []
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -118,7 +118,7 @@ def runtime_input(mean=EREF):
   [ei20_rate]
     type = EIRateCoefMaterial
     rate_table_file = o_ionization.txt
-    mean_energy = mean_en_solved
+    mean_energy = e_energy_eV
     electron_number_density = n_e
     target_molar_concentration = c_O
     reaction_progress = {PROGRESS}
@@ -198,9 +198,9 @@ def runtime_input(mean=EREF):
     functor = w_O_constraint
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [mean_en_solved_avg]
+  [e_energy_eV_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [R_avg]
@@ -243,7 +243,7 @@ def validate(rows,table):
     ei,ef=num(i,"mean_en_avg"),num(f,"mean_en_avg")
     pi,pf=num(i,"w_Op_avg"),num(f,"w_Op_avg")
     oi,of=num(i,"w_O_avg"),num(f,"w_O_avg")
-    mi,mf=num(i,"mean_en_solved_avg"),num(f,"mean_en_solved_avg")
+    mi,mf=num(i,"e_energy_eV_avg"),num(f,"e_energy_eV_avg")
     r=num(f,"R_avg"); so=num(f,"O_source_avg"); sp=num(f,"Op_source_avg"); se=num(f,"electron_source_avg")
     if not nf>ni>0: raise AssertionError("EI20 electron production")
     if not 0<ef<ei: raise AssertionError("EI20 energy sink")
@@ -263,8 +263,8 @@ def validate(rows,table):
     rhs=ECOEF*r; close((ef-ei)/DT,rhs,rel=9e-6,abs_=1e-8,label="EI20 energy BE closure")
     de=nf-ni; dp=NA*RHO*(pf-pi)/MO; close(de,dp,rel=9e-6,abs_=1,label="charge closure")
     oxy_i=RHO*(oi+pi)/MO; oxy_f=RHO*(of+pf)/MO; close(oxy_f,oxy_i,rel=2e-12,abs_=1e-14,label="oxygen inventory")
-    return {"initial":{"n_e":ni,"mean_en":ei,"w_O":oi,"w_Op":pi,"mean_en_solved_eV":mi},
-            "final":{"n_e":nf,"mean_en":ef,"w_O":of,"w_Op":pf,"mean_en_solved_eV":mf,"R_ion_O_mol_m3_s":r,"electron_source_m3_s":se},
+    return {"initial":{"n_e":ni,"mean_en":ei,"w_O":oi,"w_Op":pi,"e_energy_eV_eV":mi},
+            "final":{"n_e":nf,"mean_en":ef,"w_O":of,"w_Op":pf,"e_energy_eV_eV":mf,"R_ion_O_mol_m3_s":r,"electron_source_m3_s":se},
             "closure":{"heavy_mass_source_sum_kg_m3_s":so+sp,"oxygen_atom_molar_inventory_initial":oxy_i,
                        "oxygen_atom_molar_inventory_final":oxy_f,"electron_particle_delta":de,"positive_ion_particle_delta":dp,
                        "energy_loss_eV_per_event":LOSS,"standard_moose_object":"FVCoupledForce","energy_coef":ECOEF,
@@ -279,9 +279,9 @@ def synthetic_rows(table):
         r=new
     ne=NE0+DT*NA*r; wp=W0+DT*MO*r/RHO; ep=NE0*EREF+DT*ECOEF*r; mean=ep/ne
     r0=interp(table,EREF)*(NE0/NA)*(RHO*(1-W0)/MO)
-    return [{"n_e_avg":NE0,"mean_en_avg":NE0*EREF,"w_Op_avg":W0,"w_O_avg":1-W0,"mean_en_solved_avg":EREF,
+    return [{"n_e_avg":NE0,"mean_en_avg":NE0*EREF,"w_Op_avg":W0,"w_O_avg":1-W0,"e_energy_eV_avg":EREF,
              "R_avg":r0,"O_source_avg":-MO*r0,"Op_source_avg":MO*r0,"electron_source_avg":NA*r0},
-            {"n_e_avg":ne,"mean_en_avg":ep,"w_Op_avg":wp,"w_O_avg":1-wp,"mean_en_solved_avg":mean,
+            {"n_e_avg":ne,"mean_en_avg":ep,"w_Op_avg":wp,"w_O_avg":1-wp,"e_energy_eV_avg":mean,
              "R_avg":r,"O_source_avg":-MO*r,"Op_source_avg":MO*r,"electron_source_avg":NA*r}]
 
 def expect_fail(fn,*args):
@@ -365,7 +365,7 @@ def run(executable,evidence_out=None,repository_sha=None,build_base_ref=None):
                                   "rows":100,"lookup_domain_eV":[XMIN,XMAX],"anchors_m3_per_mol_s":{str(k):v for k,v in ANCHORS.items()}},
               "runtime":result,"strict_bounds_negative_controls":"PASS","upstream_regressions":"enforced by governed science workflow"}
     if evidence_out: Path(evidence_out).write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n")
-    print(f"STAGE5_EI20_LOCAL_RUNTIME_PASS R={result['final']['R_ion_O_mol_m3_s']:.12g} n_e={result['final']['n_e']:.12g} mean_en={result['final']['mean_en_solved_eV']:.12g}")
+    print(f"STAGE5_EI20_LOCAL_RUNTIME_PASS R={result['final']['R_ion_O_mol_m3_s']:.12g} n_e={result['final']['n_e']:.12g} mean_en={result['final']['e_energy_eV_eV']:.12g}")
 
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--self-test",action="store_true"); p.add_argument("--static",action="store_true")

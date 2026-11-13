@@ -107,7 +107,7 @@ def _check_ei01_recovery() -> None:
         raise AssertionError("EI01 table SHA-256 does not match frozen recovery provenance")
 
     lookup = recovery.get("lookup_contract", {})
-    if lookup.get("coordinate") != "mean_en_solved":
+    if lookup.get("coordinate") != "e_energy_eV":
         raise AssertionError("EI01 lookup coordinate is not solved mean energy")
     if lookup.get("coordinate_unit") != "eV":
         raise AssertionError("EI01 lookup coordinate unit changed")
@@ -143,7 +143,7 @@ def _check_ei01_recovery() -> None:
         raise AssertionError("EI01 progress owner type changed")
     if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_attachment.txt":
         raise AssertionError("EI01 progress owner table binding changed")
-    if owner.get("mean_energy") != "mean_en_solved":
+    if owner.get("mean_energy") != "e_energy_eV":
         raise AssertionError("EI01 progress owner mean-energy binding changed")
     if owner.get("reaction_progress") != "R_attachment":
         raise AssertionError("EI01 canonical progress identity changed")
@@ -243,13 +243,13 @@ def check() -> None:
     _require(heavy, "functor_names = 'D_mix_Op T_g'", "O+ mobility")
 
     electron = ELECTRON.read_text()
-    _require(electron, "type = PhysicsElectronMeanEnergyMaterial", "electron-energy oracle")
+    _require(electron, "type = ElectronEnergyMaterial", "electron-energy oracle")
     _require(electron, "electron_energy_density = mean_en", "electron-energy oracle")
     _require(electron, "electron_density = n_e", "electron-energy oracle")
     _require(electron, "type = DDTransportMaterial", "electron transport")
     _require(electron, "model = lookup", "electron transport")
     _require(electron, "table_file =", "electron transport")
-    if "property_table_file" in electron or "mean_energy = mean_en_solved" in electron:
+    if "property_table_file" in electron or "mean_energy = e_energy_eV" in electron:
         raise AssertionError("retired lookup input option found")
     _require(electron, "bounds_policy = error", "electron transport")
     if "bounds_policy = clamp" in electron or "bounds_policy = floor" in electron:
@@ -264,7 +264,7 @@ def check() -> None:
         "required_heavy_temperature_functor": "T_g",
         "required_density_functor": "rho_mat",
         "required_constrained_oxygen_functor": "w_O2_constraint",
-        "required_solved_mean_energy_functor": "mean_en_solved",
+        "required_solved_mean_energy_functor": "e_energy_eV",
     }
     if ident != expected_identity:
         raise AssertionError("representative identity/state binding changed")

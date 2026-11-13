@@ -15,7 +15,7 @@ for name, energy_scale, path in FILES:
     with open(path, newline="") as handle:
         row = list(csv.DictReader(handle))[-1]
 
-    mean_energy = float(row["mean_en_solved_avg"])
+    mean_energy = float(row["e_energy_eV_avg"])
     mobility = float(row["electron_mobility_avg"])
     diffusion = float(row["electron_diffusion_avg"])
 

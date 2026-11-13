@@ -124,7 +124,7 @@ def runtime_input():
     expression = '{NA:.17g}*rprog'
   []
   [mean_energy]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -179,7 +179,7 @@ def runtime_input():
   []
   [mean_energy_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_O_avg]
@@ -358,7 +358,7 @@ def self_test():
         "type = PhysicsFVSpeciesReactionSource",
         "source = S_O_h05",
         "source = S_Om_h05",
-        "type = PhysicsElectronMeanEnergyMaterial",
+        "type = ElectronEnergyMaterial",
     )
     for token in required:
         if token not in text:
