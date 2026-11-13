@@ -1,5 +1,5 @@
 name: Issue402 Live Species Y IC Inlet P0 P1 P2
-# Source-bound rerun: charged NV n_e/T_e now wired in all-four Y_i P2 fixture.
+# Source-bound P0/P1/P2 for mandatory species FV IC, renamed state_model and SCCM-triggered Dirichlet inlet.
 on:
   push:
     branches: [issue-402-species-live-ic-inlet]
