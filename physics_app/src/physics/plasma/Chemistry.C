@@ -1,4 +1,5 @@
 #include "Chemistry.h"
+#include "FEProblemBase.h"
 
 #include "nlohmann/json.hpp"
 
@@ -225,6 +226,23 @@ parseDDTransport(const Json & value, const std::string & file)
   return result;
 }
 
+GasStateRecord
+parseGasState(const Json & value, const std::string & file)
+{
+  if (!value.is_object() || value.size() != 2 ||
+      !value.contains("species") || !value.contains("mass_fractions"))
+    fail(file, "gas_state requires exactly species and mass_fractions");
+  GasStateRecord result;
+  result.species = requiredTextList(value, "species", file);
+  result.mass_fractions = requiredTextList(value, "mass_fractions", file);
+  if (result.species.empty() || result.species.size() != result.mass_fractions.size())
+    fail(file, "gas_state requires nonempty, matching species and mass_fractions");
+  std::set<std::string> unique(result.species.begin(), result.species.end());
+  if (unique.size() != result.species.size())
+    fail(file, "gas_state species must be unique");
+  return result;
+}
+
 NVTransportRecord
 parseNVTransport(const Json & value, const std::string & file)
 {
@@ -258,6 +276,12 @@ DDTransportRecord::equals(const DDTransportRecord & rhs) const
          table_file == rhs.table_file &&
          table_units == rhs.table_units && pressure == rhs.pressure &&
          gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;
+}
+
+bool
+GasStateRecord::equals(const GasStateRecord & rhs) const
+{
+  return species == rhs.species && mass_fractions == rhs.mass_fractions;
 }
 
 bool
@@ -342,6 +366,15 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         if (existing->second.molar_mass_kg_mol == 0.0)
           existing->second.molar_mass_kg_mol = species.molar_mass_kg_mol;
       }
+    }
+
+    if (root.contains("gas_state"))
+    {
+      const auto record = parseGasState(root.at("gas_state"), file);
+      if (!_gas_state)
+        _gas_state = std::make_unique<GasStateRecord>(record);
+      else if (!_gas_state->equals(record))
+        fail(file, "conflicting gas_state composition owner across JSON files");
     }
 
     // Multiple chemistry files may contribute reactions independently, but
@@ -560,6 +593,11 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
   for (const auto & [id, config] : _dd_transport)
     if (_species.find(id) == _species.end())
       fail("<merged plasma mechanism>", "transport_coefficients references unknown species: " + id);
+  if (_gas_state)
+    for (const auto & id : _gas_state->species)
+      if (id == "e" || _species.find(id) == _species.end() ||
+          _species.at(id).molar_mass_kg_mol <= 0.0)
+        fail("<merged plasma mechanism>", "gas_state requires heavy species molar_mass_kg_mol: " + id);
   if (_nv_transport)
     for (const auto & id : _nv_transport->species)
       if (_species.find(id) == _species.end())
@@ -571,6 +609,12 @@ ChemistryData::ddTransport(const std::string & id) const
 {
   const auto it = _dd_transport.find(id);
   return it == _dd_transport.end() ? nullptr : &it->second;
+}
+
+const GasStateRecord *
+ChemistryData::gasState() const
+{
+  return _gas_state.get();
 }
 
 const NVTransportRecord *
@@ -759,7 +803,11 @@ PlasmasAction::validParams()
 {
   InputParameters params = Action::validParams();
   params.addParam<std::vector<FileName>>(
-      "files", {}, "Ordered JSON mechanism files shared by plasma Chemistry, Continuity and Poisson.");
+      "files", {}, "Ordered JSON mechanisms shared by Plasma Chemistry and Transport.");
+  params.addParam<Real>("pressure", "Uniform gas pressure [Pa]; enables canonical Gas State.");
+  params.addParam<Real>("temperature", "Uniform gas temperature [K]; enables canonical Gas State.");
+  params.addParam<MooseEnum>("model", MooseEnum("ideal_gas", "ideal_gas"),
+                             "Canonical mixture equation of state.");
   return params;
 }
 
@@ -772,6 +820,92 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
       return paths;
     }())
 {
+  if (isParamValid("pressure") != isParamValid("temperature"))
+    paramError("pressure", "Specify both pressure [Pa] and temperature [K] at [Plasmas].");
+  if (gasStateEnabled() &&
+      (!std::isfinite(getParam<Real>("pressure")) || getParam<Real>("pressure") <= 0.0 ||
+       !std::isfinite(getParam<Real>("temperature")) || getParam<Real>("temperature") <= 0.0))
+    paramError("pressure", "Gas pressure and temperature must be finite and strictly positive.");
+}
+
+void
+PlasmasAction::act()
+{
+  if (_current_task != "add_functor_material" || !gasStateEnabled())
+    return;
+
+  const auto * config = _data.gasState();
+  std::vector<std::string> species;
+  std::vector<std::string> fractions;
+  if (config)
+  {
+    species = config->species;
+    fractions = config->mass_fractions;
+  }
+  else if (_data.nvTransport())
+  {
+    species = _data.nvTransport()->species;
+    fractions = _data.nvTransport()->mass_fractions;
+  }
+  else
+    paramError("files",
+               "Gas State needs a gas_state {species, mass_fractions} composition in "
+               "[Plasmas]/files, or an existing navier_stokes transport composition.");
+
+  std::vector<Real> masses;
+  for (const auto & id : species)
+  {
+    const auto & record = _data.species(id);
+    if (id == "e" || record.molar_mass_kg_mol <= 0.0)
+      paramError("files", "Gas State requires a heavy molar_mass_kg_mol for ", id);
+    masses.push_back(record.molar_mass_kg_mol);
+  }
+
+  // No custom GasStateMaterial: publish canonical p/T and ideal-gas
+  // derived state via existing ADParsedFunctorMaterial Functors.
+  auto add = [this](const std::string & name,
+                    const std::string & expression,
+                    const std::vector<std::string> & functors,
+                    const std::vector<std::string> & symbols)
+  {
+    auto params = _app.getFactory().getValidParams("ADParsedFunctorMaterial");
+    params.set<std::string>("property_name") = name;
+    params.set<std::string>("expression") = expression;
+    if (!functors.empty())
+    {
+      params.set<std::vector<std::string>>("functor_names") = functors;
+      params.set<std::vector<std::string>>("functor_symbols") = symbols;
+    }
+    _problem->addFunctorMaterial("ADParsedFunctorMaterial", "plasma_gas_" + name, params);
+  };
+
+  std::ostringstream pressure_literal;
+  pressure_literal << std::setprecision(17) << getParam<Real>("pressure");
+  std::ostringstream temperature_literal;
+  temperature_literal << std::setprecision(17) << getParam<Real>("temperature");
+  add("p", pressure_literal.str(), {}, {});
+  add("T", temperature_literal.str(), {}, {});
+
+  // Composition is a live field: changing Y_i updates rho_g via AD.
+  std::vector<std::string> names = {"p", "T"};
+  std::vector<std::string> symbols = {"pressure", "temp"};
+  std::string denominator;
+  for (std::size_t i = 0; i < species.size(); ++i)
+  {
+    names.push_back(fractions[i]);
+    const auto symbol = "y" + std::to_string(i);
+    symbols.push_back(symbol);
+    std::ostringstream mass;
+    mass << std::setprecision(17) << masses[i];
+    denominator += (denominator.empty() ? "" : "+") + symbol + "/" + mass.str();
+  }
+  add("rho_g", "pressure/(8.31446261815324*temp*(" + denominator + "))",
+      names, symbols);
+  add("n_g", "pressure/(1.380649e-23*temp)", {"p", "T"}, {"pressure", "temp"});
+  add("M_mix", "1/(" + denominator + ")",
+      std::vector<std::string>(names.begin() + 2, names.end()),
+      std::vector<std::string>(symbols.begin() + 2, symbols.end()));
 }
 
 registerMooseAction("PhysicsApp", PlasmasAction, "check_integrity");
+registerMooseAction("PhysicsApp", PlasmasAction, "add_functor_material");
