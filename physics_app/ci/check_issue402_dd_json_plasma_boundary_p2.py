@@ -54,6 +54,21 @@ def main(exe: Path):
         check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", JSON_INPUT, multiside, True)
         check(exe, root, "LEGACY_EXPLICIT_BCS", LEGACY_INPUT, DATA, True)
         check(exe, root, "LEGACY_MEAN_EN_SOLVED_ALIAS", LEGACY_ENERGY_ALIAS, DATA, True)
+        # Transitional sheath class name and historical thermal-only class
+        # are still resolvable. These are parser checks, not parity or
+        # equivalent-wall-physics claims.
+        check(exe, root, "TRANSITIONAL_SHEATH_CLASS_ALIAS",
+              LEGACY_INPUT.replace(
+                  "type = PhysicsElectronAdjacentSheathWallFluxMaterial",
+                  "type = ElectronWallFluxMaterial"),
+              DATA, True)
+        check(exe, root, "THERMAL_ONLY_HISTORICAL_CLASS",
+              LEGACY_INPUT.replace(
+                  "type = PhysicsElectronAdjacentSheathWallFluxMaterial",
+                  "type = PhysicsElectronWallFluxMaterial").replace(
+                  "    potential = potential\n", "").replace(
+                  "    use_element_gradient_for_potential = true\n", ""),
+              DATA, True)
         no_registry = copy.deepcopy(DATA)
         no_registry.pop("boundaries")
         check(exe, root, "JSON_ABSENT_NO_GENERATED_BC", JSON_INPUT, no_registry, True)
