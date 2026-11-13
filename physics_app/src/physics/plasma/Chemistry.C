@@ -447,16 +447,35 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         const auto & item = group.value();
         if (!item.is_object() || item.size() != 2 ||
             !item.contains("mesh_boundary") || !item.contains("bcs") ||
-            !item.at("mesh_boundary").is_string() || !item.at("bcs").is_object())
+            (!item.at("mesh_boundary").is_string() &&
+             !item.at("mesh_boundary").is_array()) ||
+            !item.at("bcs").is_object())
           fail(file, "drift_diffusion_boundary." + group.key() +
                          " needs exactly mesh_boundary string and bcs object");
 
         DDBoundaryRecord record;
-        record.mesh_boundary = item.at("mesh_boundary").get<std::string>();
-        if (!std::regex_match(record.mesh_boundary, identifier) ||
-            !used_mesh_boundaries.insert(record.mesh_boundary).second)
-          fail(file, "invalid or duplicate mesh_boundary in drift_diffusion_boundary: " +
-                         record.mesh_boundary);
+        const auto & mesh_spec = item.at("mesh_boundary");
+        if (mesh_spec.is_string())
+        {
+          // Accept the exact .i multi-sideset boundary string unchanged.
+          std::istringstream input(mesh_spec.get<std::string>());
+          for (std::string side; input >> side;)
+            record.mesh_boundaries.push_back(side);
+        }
+        else
+          for (const auto & side : mesh_spec)
+          {
+            if (!side.is_string())
+              fail(file, "non-string mesh_boundary member for " + group.key());
+            record.mesh_boundaries.push_back(side.get<std::string>());
+          }
+        if (record.mesh_boundaries.empty())
+          fail(file, "empty mesh_boundary list for " + group.key());
+        for (const auto & side : record.mesh_boundaries)
+          if (!std::regex_match(side, identifier) ||
+              !used_mesh_boundaries.insert(side).second)
+            fail(file, "invalid or duplicate mesh_boundary in drift_diffusion_boundary: " +
+                           side);
 
         for (auto bc = item.at("bcs").begin(); bc != item.at("bcs").end(); ++bc)
         {
@@ -491,10 +510,12 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
             fail(file, "empty parameter value in drift_diffusion_boundary BC " + bc.key());
 
           // Do not double-own a physical residual under two different labels.
-          const std::string key = entry.type + "/" + entry.variable + "/" +
-                                  record.mesh_boundary;
-          if (!operator_owners.insert(key).second)
-            fail(file, "duplicate DriftDiffusion BC operator owner: " + key);
+          for (const auto & side : record.mesh_boundaries)
+          {
+            const std::string key = entry.type + "/" + entry.variable + "/" + side;
+            if (!operator_owners.insert(key).second)
+              fail(file, "duplicate DriftDiffusion BC operator owner: " + key);
+          }
           record.bcs.emplace(bc.key(), std::move(entry));
         }
         _dd_boundaries.emplace(group.key(), std::move(record));
@@ -997,7 +1018,10 @@ PlasmasAction::act()
       {
         auto params = _factory.getValidParams(bc.type);
         params.set<NonlinearVariableName>("variable") = bc.variable;
-        params.set<std::vector<BoundaryName>>("boundary") = {boundary.mesh_boundary};
+        std::vector<BoundaryName> sidesets;
+        for (const auto & side : boundary.mesh_boundaries)
+          sidesets.emplace_back(side);
+        params.set<std::vector<BoundaryName>>("boundary") = sidesets;
         params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
         if (bc.type == "FEMElectronEnergySheathBC")
           params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
