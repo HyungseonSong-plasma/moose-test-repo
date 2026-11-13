@@ -19,8 +19,8 @@
     chemistry_file = json_surface_rate_p2.json
     density = rho_g
     temperature = T_g
-    species = 'O2 O'
-    mass_fractions = 'Y_O2 Y_O'
+    species = 'O2'
+    mass_fractions = 'Y_O2'
     active_reactions = 'H90'
   []
 []
