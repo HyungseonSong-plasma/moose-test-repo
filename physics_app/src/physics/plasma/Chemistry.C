@@ -495,8 +495,10 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
               fail(file, reaction.id + ": invalid power-law temperature parameters");
           }
           unsigned int order = 0;
-          for (const auto & [id, count] : reaction.reactants)
-            order += count;
+          for (const auto & reactant : reaction.reactants)
+            order += reactant.second;
+          if (order == 0)
+            fail(file, reaction.id + ": rate requires reactants");
           law.A_molar = law.A_input *
               (law.basis == "particle"
                    ? std::pow(6.02214076e23, static_cast<double>(order - 1))
@@ -507,6 +509,22 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       }
       else if (reaction.domain == "surface")
         fail(file, reaction.id + ": surface reactions require explicit rate");
+
+      // Executable heavy and surface rate laws must provide physical molar
+      // masses for every heavy reactant/product, not silently omit wall flux.
+      if (!reaction.rate.model.empty())
+      {
+        std::set<std::string> involved;
+        for (const auto & item : reaction.reactants)
+          involved.insert(item.first);
+        for (const auto & item : reaction.products)
+          involved.insert(item.first);
+        for (const auto & species_id : involved)
+          if (species_id != "e" &&
+              (_species.find(species_id) == _species.end() ||
+               _species.at(species_id).molar_mass_kg_mol <= 0.0))
+            fail(file, reaction.id + ": missing heavy molar_mass_kg_mol for " + species_id);
+      }
 
       if (!entry.contains("energy_loss_eV"))
         fail(file, reaction.id + ": missing explicit electron energy policy");
@@ -528,6 +546,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       }
       else if (!(energy.is_object() && energy.value("model", std::string()) == "none"))
         fail(file, reaction.id + ": energy loss needs a nonnegative number, positive-loss functor or model none");
+      if (reaction.domain == "surface" && reaction.contributes_electron_energy)
+        fail(file, reaction.id + ": surface electron-energy sources are unsupported");
       validateReaction(reaction, _species, file);
       _reactions.push_back(std::move(reaction));
     }
