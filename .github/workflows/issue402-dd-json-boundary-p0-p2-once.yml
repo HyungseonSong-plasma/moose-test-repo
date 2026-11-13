@@ -1,5 +1,5 @@
 # Bounded branch-specific source-bound Native P0/P1/P2 only.
-# Current cut: canonical ElectronEnergyMaterial + ESWallFlux; P0/P1/P2 exact-head after old-parameter removal; P3 SCIENCE_HOLD.
+# Final source gates: no old factory aliases, physics auto-e-energy BC construction and current e_energy_eV; P3 SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
 on:
@@ -85,6 +85,7 @@ jobs:
               /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_json_p2.i
               /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_legacy_p2.i
               /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_parsed_mean_p2.i
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_json_physics_auto_p2.i
               cd /workspace
               python3 physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py \
                 /workspace/physics_app/physics-opt
