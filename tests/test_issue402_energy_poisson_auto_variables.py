@@ -29,7 +29,9 @@ def test_poisson_name_and_fem_type():
 def test_p2_decks_and_legacy_variable_reuse():
     good = (CASE / "auto_energy_potential_p2.i").read_text()
     assert "[Variables]" not in good
-    assert "fem_species = 'e 1e16'" in good
+    assert "fem_species = e" in good
+    assert "files = plasma_species_initial_p2.json" in good
+    assert "initial_number_density" not in good
     assert "fem_potential = potential" in good
     assert "initial_molar_energy_density_eV = 4.98161720152154e-8" in good
     assert "initial_potential_V = 0" in good
