@@ -87,9 +87,15 @@ def test_all_four_materials_share_y_i_of_solver_state_in_native_fixture():
         assert record["mass_fraction_variable"] == "w_"+id
         assert f"    functor = Y_{id}_initial_vol" not in source  # not a live state
         assert f"  [w_{id}]" in source
-    for owner in ("HRateCoefMaterial","NVTransport","SurfaceReactionMaterial",
+    for owner in ("HRateCoefMaterial","SurfaceReactionMaterial",
                   "PhysicsPlasmaChargeDensityMaterial"):
         assert owner in source
+    # NVTransportMaterial is Physics-generated from the JSON transport record,
+    # not explicitly named as a user-authored Material in the input file.
+    assert "[NavierStokes]" in source
+    assert "navier_stokes" in data["transport_coefficients"]
+    assert (APP/"src/physics/plasma/NVTransport.C").read_text().count(
+        'fractions.emplace_back("Y_" + id)') == 1
     for name in ("Y_O2", "Y_O", "Y_Op"):
         assert name in source
     assert "mass_fractions = 'Y_O2 Y_O Y_Op'" in source
