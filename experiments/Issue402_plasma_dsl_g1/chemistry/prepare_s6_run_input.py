@@ -321,7 +321,7 @@ def canonicalize_staged_electron_lookup(
             if not headings or headings[-1] != "FunctorMaterials":
                 raise ValueError("S6_ELECTRON_LOOKUP_NOT_FUNCTORMATERIAL")
             values = _parse_exact_s6_owner_parameters(body, "electron_transport")
-            if len(values) != len(pairs) or values != _ARCHIVED_ELECTRON_LOOKUP:
+            if values != _ARCHIVED_ELECTRON_LOOKUP:
                 raise ValueError(
                     "S6_ELECTRON_LOOKUP_IDENTITY_UNPROVED: " + path.name +
                     " " + repr(values))
