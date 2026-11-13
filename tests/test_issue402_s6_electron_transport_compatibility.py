@@ -129,7 +129,7 @@ def test_missing_electron_lookup_owner_rejected():
         module.canonicalize_staged_electron_lookup({Path("empty.i"): "[Mesh]\n[]\n"})
 
 
-@pytest.mark.parametrize("table,git_blob,expected_rows", [
+@pytest.mark.parametrize("table,git_blob_expected,expected_rows", [
     (TABLE, TABLE_GIT_BLOB, 100),
     (None, PREPARED_TABLE_GIT_BLOB, 42),
 ])
