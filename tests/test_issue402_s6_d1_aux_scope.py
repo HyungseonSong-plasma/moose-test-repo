@@ -1,8 +1,8 @@
-"""Bounded verification of archived S6 retired lower-D D1 diagnostics.
+"""Bounded verification of archived S6 retired lower-D D1 debug probes.
 
+The temporary instrumentation is no longer required for the target model.
 Physical continuity/Poisson/sheath/Wall/RF owners remain intact. The test
-checks *only* diagnostic suspension in disposable core-input P2; neither
-full diagnostic parity nor Native trajectory science is accepted.
+checks *only* fail-closed retirement in disposable D input, not trajectories.
 """
 import base64
 import hashlib
@@ -60,18 +60,20 @@ def _layers(case, variant):
 
 @pytest.mark.parametrize("case", ("417", "941"))
 @pytest.mark.parametrize("variant", ("B", "C"))
-def test_public_immutable_b_c_d1_observations_are_suspended_only_in_core_p2(
+def test_public_immutable_b_c_d1_debug_probes_are_safely_retired_in_d_input(
         case, variant):
     originals = _layers(case, variant)
     old = {name: text.encode() for name, text in originals.items()}
     out, receipt = mod.suspend_staged_retired_d1_observations(originals)
-    assert receipt["status"] == "CORE_P2_ONLY_D1_OBSERVATION_SUSPENDED"
+    assert receipt["status"] == "OBSOLETE_D1_DEBUG_OBSERVATIONS_RETIRED"
     assert receipt["suspended_auxkernels"] == 14
     assert receipt["suspended_auxvariables"] == 14
     assert receipt["observed_fields"] == sorted(EXPECTED)
     assert len(receipt["original_diagnostic_signatures_sha256"]) == 28
-    assert receipt["diagnostic_parity"] == "HOLD"
-    assert receipt["full_native_p2"] == "HOLD"
+    assert receipt["diagnostic_parity"] == "NOT_APPLICABLE"
+    assert receipt["retired_diagnostics"] == "NOT_REQUIRED_FOR_TARGET_MODEL"
+    assert receipt["d1_retirement_review"] == "NOT_REQUIRED_OPERATOR_DECISION"
+    assert receipt["native_p2"] == "NOT_RUN_BY_PREPARER"
     assert receipt["P3"] == "NOT_RUN"
     assert receipt["science"] == "SCIENCE_HOLD"
     assert all(originals[name].encode() == value for name, value in old.items())
@@ -89,7 +91,8 @@ def test_public_immutable_b_c_d1_observations_are_suspended_only_in_core_p2(
     assert "type = PhysicsIonWallTotalFluxMaterial" in text
     assert "type = PhysicsElectronTransportLookupMaterial" in text
     # Retain the old material and physical equation (staged in later steps).
-    # Removal of D1 Aux is an observational loss even if core P2 succeeds.
+    # Historical D1 observation outputs are intentionally retired from D.
+    # Their numerical parity is not a target requirement; physics is unchanged.
 
 
 @pytest.mark.parametrize("owner,before,after", [
@@ -170,7 +173,8 @@ def test_synthetic_test_without_d1_instrumentation_is_explicit_noop():
     out, report = mod.suspend_staged_retired_d1_observations(inputs)
     assert out == inputs
     assert report["status"] == "NO_D1_OBSERVATION_PROBES"
-    assert report["diagnostic_parity"] == "NOT_VERIFIED"
+    assert report["diagnostic_parity"] == "NOT_APPLICABLE"
+    assert report["d1_retirement_review"] == "NOT_REQUIRED_OPERATOR_DECISION"
 
 
 def test_current_cpp_surface_charge_kernel_not_removed():
