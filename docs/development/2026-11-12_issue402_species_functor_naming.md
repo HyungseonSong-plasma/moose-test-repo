@@ -281,3 +281,5 @@ This scope update does **not** waive actual physical Native face-value
 numerical parity or approval requirements imposed by repository protections,
 and does not authorize P3, merge or any science acceptance. Keep
 `SCIENCE_HOLD` and Draft PR status pending those distinct gates.
+
+Active input exact-head P2 evidence after operator decision: [run #43416474682](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43416474682) on `44b2ba1c2784ae33e5adad6388b5cd4783de7f24` records 638 P0 PASS, Native P1 PASS, S6-417 and S6-941 `--check-input` Syntax OK / exit 0. `ACTIVE_MODEL_P2=PASS`; retired D1 diagnostic parity `NOT_APPLICABLE` and independent D1 retirement review `NOT_REQUIRED_OPERATOR_DECISION`; P3 `NOT_RUN`, `SCIENCE_HOLD`, no merge. Signed evidence: [artifact #14033140207](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43416474682/artifacts/14033140207). Scientific parity remains separate.
