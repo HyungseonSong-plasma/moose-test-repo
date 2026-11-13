@@ -7,7 +7,7 @@
   },
   "equations": {},
   "reactions": [],
-  "drift_diffusion_boundary": {
+  "boundaries": {
     "left": {
       "bcs": {
         "electron_wafer": {
@@ -19,7 +19,7 @@
           "type": "FEMElectronEnergySheathBC",
           "variable": "log_energy",
           "wall_number_flux": "electron_wall_number_flux",
-          "mean_energy": "mean_en_solved"
+          "mean_energy": "e_mean_energy"
         }
       }
     },
@@ -34,7 +34,7 @@
           "type": "FEMElectronEnergySheathBC",
           "variable": "log_energy",
           "wall_number_flux": "electron_wall_number_flux",
-          "mean_energy": "mean_en_solved"
+          "mean_energy": "e_mean_energy"
         }
       }
     },
