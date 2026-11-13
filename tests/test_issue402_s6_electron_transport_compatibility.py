@@ -27,6 +27,7 @@ ARCHIVE_HASH = "9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240
 TABLE_GIT_BLOB = "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a"
 PREPARED_TABLE_GIT_BLOB = "aa05aadde111e4ba435185954a64a4b7dbbf2d45"
 BASE = "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i"
+BASE_PATH = Path(BASE)
 
 spec = importlib.util.spec_from_file_location("s6_transport_compat", PREPARER)
 assert spec and spec.loader
@@ -70,8 +71,8 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
     assert report["fluid_energy"] is True
     assert report["P3"] == "NOT_RUN" and report["science"] == "SCIENCE_HOLD"
     assert all(source[name].encode() == old for name, old in original.items())
-    assert all(updated[name] == source[name] for name in source if name != BASE)
-    old, new = source[BASE], updated[BASE]
+    assert all(updated[name] == source[name] for name in source if name != BASE_PATH)
+    old, new = source[BASE_PATH], updated[BASE_PATH]
     assert old.count("type = PhysicsElectronTransportLookupMaterial") == 1
     assert "type = PhysicsElectronTransportLookupMaterial" not in new
     assert new.count("type = DDMaterial") == 1
