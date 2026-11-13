@@ -34,6 +34,7 @@ def test_p2_only_never_invokes_solver(monkeypatch: pytest.MonkeyPatch, tmp_path:
     calls = []
 
     def fake_run(command, **kwargs):
+        assert kwargs["cwd"].is_dir()  # Check while TemporaryDirectory is alive.
         calls.append((command, kwargs))
         return subprocess.CompletedProcess(command, 0, stdout="Syntax OK", stderr="")
 
@@ -42,7 +43,6 @@ def test_p2_only_never_invokes_solver(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert len(calls) == 4
     for command, kwargs in calls:
         assert command == [str(executable), "--check-input", "-i", command[-1]]
-        assert kwargs["cwd"].is_dir()
         assert kwargs["timeout"] == 300
 
 
