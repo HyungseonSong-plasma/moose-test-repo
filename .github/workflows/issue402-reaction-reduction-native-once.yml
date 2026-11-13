@@ -8,6 +8,8 @@ on:
       - physics_app/src/materials/DDTransportMaterial.C
       - physics_app/src/materials/NVTransportMaterial.C
       - tests/test_issue402_reaction_reduction_p2_only.py
+      - tests/test_issue402_material_class_names.py
+      - tests/test_issue402_public_option_s6_p2.py
 permissions:
   contents: read
 jobs:

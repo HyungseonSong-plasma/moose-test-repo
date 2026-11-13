@@ -298,7 +298,9 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "host_cleanup": "PASS",
     }))
 
-    def stage(_root, _historical, case, old_variant, staged, _manifest):
+    def stage(_root, _historical, case, old_variant, staged, _manifest, *, d_base_source=None):
+        if old_variant == "C":
+            assert d_base_source is not None and d_base_source.name == "s6_c0_physics_base_no_d1.i"
         staged.mkdir(parents=True)
         directory = staged / "chem"
         directory.mkdir()

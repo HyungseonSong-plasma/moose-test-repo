@@ -12,7 +12,7 @@ BASE = ROOT / "physics_app"
 MAPPINGS = (("PhysicsThermalDiffusionMaterial", "NVTransportMaterial"),)
 
 
-def test_material_files_and_remaining_nv_factory_alias():
+def test_material_files_have_only_canonical_factory_registration():
     for old_name, new_name in MAPPINGS:
         h = BASE / "include/materials" / (new_name + ".h")
         c = BASE / "src/materials" / (new_name + ".C")
@@ -26,10 +26,7 @@ def test_material_files_and_remaining_nv_factory_alias():
         assert f"class {old_name}" not in header
         assert f'#include "{new_name}.h"' in source
         assert f'registerMooseObject("PhysicsApp", {new_name});' in source
-        assert (
-            f'registerMooseObjectAliased("PhysicsApp", '
-            f'{new_name}, "{old_name}");'
-        ) in source
+        assert "registerMooseObjectAliased(" not in source
         assert f"{new_name}::validParams()" in source
 
 
