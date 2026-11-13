@@ -249,8 +249,8 @@ def _copy_runtime_assets(case_dir: Path) -> None:
     for name in sorted(set(RATE_TABLES.values())):
         shutil.copy2(ELECTRON_DATA / name, case_dir / name)
     for name in (
-        "stage5_s5d_oxygen_heavy.txt",
-        "stage5_s5e_h05_oxygen_heavy.txt",
+        "stage5_s5d_oxygen_heavy.json",
+        "stage5_s5e_h05_oxygen_heavy.json",
     ):
         shutil.copy2(HEAVY_DATA / name, case_dir / name)
 
