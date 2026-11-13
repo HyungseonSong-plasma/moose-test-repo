@@ -146,6 +146,12 @@ def test_surface_json_keeps_wall_mass_flux_separate_from_volume_sources():
     material = (APP / "src/materials/SurfaceReactionMaterial.C").read_text()
     fixture = (APP / "ci/json_surface_rate_p2.i").read_text()
     assert "species = 'O2'" in fixture
+    assert "pressure = 1.333223684" in fixture
+    assert "temperature = 300" in fixture
+    assert "model = ideal_gas" in fixture
+    assert "temperature = T" in fixture
+    assert "density = rho_g" in fixture
+    assert data["gas_state"] == {"species": ["O2", "O"], "mass_fractions": ["Y_O2", "Y_O"]}
     assert "mass_fractions = 'Y_O2'" in fixture
     assert "surface_mass_flux_O" in fixture
     assert "_chemistry.speciesRecords()" in material
