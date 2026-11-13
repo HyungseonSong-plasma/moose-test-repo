@@ -83,7 +83,8 @@ def test_generated_functors_are_distinct_from_evolving_solver_state():
     assert "mass_fraction_variable" in source
     assert "mass_fraction_functor" in source
     assert "NV transport species to match the complete" in source
-    assert "boundaries and flow ownership remain" in source
+    assert '_problem->addFVBC(type, "plasma_inlet_" + id + "_mass_fraction", params);' in source
+    assert 'getParam<MooseEnum>("inlet_species_bc_ownership") == "root_dirichlet"' in source
     assert "gas_state" not in inp
     assert "prop_names = 'Y_O2 Y_O'" not in inp
     assert "functor = Y_O2_initial_vol" in inp

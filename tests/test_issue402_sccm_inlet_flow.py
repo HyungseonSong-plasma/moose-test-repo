@@ -79,7 +79,9 @@ def test_action_delegates_all_inlet_physics_and_mapping_to_pure_cpp():
     assert "class SCCMInletFlow" in header
     assert "SCCMInletFlow::calculate(" in library
     assert "const double q_std_m3_per_s = settings.sccm * 1.0e-6 / 60.0;" in library
-    assert "item.inlet_mass_fraction / item.molar_mass_kg_per_mol" in library
+    assert "IdealGasMixtureState::evaluate(" in library
+    gas_eos = (APP / "src/physics/plasma/IdealGasMixtureState.C").read_text()
+    assert "item.mass_fraction / item.molar_mass_kg_per_mol" in gas_eos
     assert "plasma_inlet_mass_flux" in library and "plasma_inlet_speed" in library
     assert "plasma_inlet_mdot_" in library
     assert "Moose" not in header and "Moose" not in library
