@@ -26,8 +26,13 @@ def test_json_species_schema_and_positive_finite_validation():
     ):
         assert fragment in parser
     assert "std::optional<double> initial_number_density;" in header
-    assert "bind_json_initial(fem, _fem_initial_number_densities);" in continuity
-    assert "bind_json_initial(fvm, _fvm_initial_number_densities);" in continuity
+    assert 'bind_json_initial(fem, "fem_species", _fem_initial_number_densities);' in continuity
+    assert 'bind_json_initial(fvm, "fvm_species", _fvm_initial_number_densities);' in continuity
+    assert 'if (found == records.end() || !found->second.initial_number_density)' in continuity
+    assert "Selected species '" in continuity
+    assert ".initial_number_density in Chemistry JSON [1/m^3]" in continuity
+    assert "external [Variables]/[ICs] cannot replace it." in continuity
+    assert "Missing metadata preserves" not in continuity
     assert "parseSpeciesInput" not in continuity
     assert "startsNumber" not in continuity
     assert "std::strtod" not in continuity
@@ -38,7 +43,9 @@ def test_json_species_schema_and_positive_finite_validation():
     assert "shouldCreateIC(" in continuity
     assert '"add_variables_physics"' in continuity
     assert '"add_ics_physics"' in continuity
-    assert "Choose JSON auto-generation OR external [Variables]/IC ownership" in continuity
+    assert "JSON is the sole initial-state owner." in continuity
+    assert "addRequiredPhysicsTask(\"add_variables_physics\");" in continuity
+    assert "addRequiredPhysicsTask(\"add_ics_physics\");" in continuity
     assert math.isclose(
         math.log(1e16) - math.log(6.02214076e23),
         math.log(1e16 / 6.02214076e23),
@@ -63,7 +70,7 @@ def test_p2_names_only_fem_fvm_with_json_initials():
     assert "type = Transient" in deck
 
 
-def test_retired_positional_initials_fail_closed_and_legacy_external_ownership():
+def test_retired_positional_initials_fail_closed_and_archival_sources_remain_untouched():
     # Old positional values remain only in deliberate negative inputs.
     assert "fem_species = 'e 0'" in (
         PILOT / "invalid_species_density_zero_p2.i").read_text()
@@ -82,8 +89,9 @@ def test_retired_positional_initials_fail_closed_and_legacy_external_ownership()
     assert "PLASMA_JSON_SPECIES_INITIAL_P2_PASS" in runner
     assert "PLASMA_RETIRED_POSITIONAL_SPECIES_INITIAL_REJECTED" in runner
 
-    # Production S6 source remains untouched: absent JSON initial_number_density
-    # means externally declared solver variables retain their prior ICs.
+    # Production S6 historical inputs remain untouched for provenance.
+    # Their missing JSON initial values now fail under the stricter contract;
+    # no implicit legacy/external IC fallback is permitted.
     for variant in ("417", "941"):
         old = (PILOT / f"s6_{variant}_chemistry_run.template.i").read_text()
         assert "fem_species = 'e'" in old
