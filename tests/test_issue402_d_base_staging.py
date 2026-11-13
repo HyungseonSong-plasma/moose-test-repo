@@ -80,11 +80,15 @@ def test_both_d_entrypoints_use_prebuilt_source_without_debug_postprocessing():
     pilot = ROOT / "experiments/Issue402_plasma_dsl_g1"
     chemistry = (pilot / "run_chemistry_s6_p2_only.py").read_text()
     option = (pilot / "public_option_s6_p2.py").read_text()
+    public_chemistry = (pilot / "public_chemistry_s6_p2.py").read_text()
+    canonical_p3 = (pilot / "run_canonical_s6_p3_once.py").read_text()
     preparer = (pilot / "chemistry/prepare_s6_run_input.py").read_text()
     assert "d_base_source=D_BASE" in chemistry
     assert "d_base_source=d_base" in option
+    assert "d_base_source=d_base" in public_chemistry
+    assert "d_base_source=d_base" in canonical_p3
     assert 'if variant == "D" else None' in option
-    for runtime in (chemistry, option, preparer):
+    for runtime in (chemistry, option, public_chemistry, canonical_p3, preparer):
         assert "suspend_staged_retired_d1_observations" not in runtime
         assert "audit_final_native_d1_debug_absence" not in runtime
     assert "scratch_d1_observation_scope" not in preparer
