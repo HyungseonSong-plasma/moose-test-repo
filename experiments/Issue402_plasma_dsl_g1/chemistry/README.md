@@ -168,3 +168,63 @@ historical name remain in the guarded archive-to-scratch canonicalization
 contract and in provenance/tests verifying old immutable evidence; the run
 itself contains only canonical state and progress Functor names. Historical
 input archives and previous solver output are **not** rewritten.
+
+
+## S6-417/941 archived electron transport lookup compatibility (2026-11-13)
+
+The preserved public B/C decks have exactly one original
+\`[FunctorMaterials]/[electron_transport]\` in the common base input:
+\`PhysicsElectronTransportLookupMaterial\`. Original parameters are exactly
+\`property_table_file='../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'\`,
+\`mean_energy=mean_en_solved\`, \`pressure=p\`,
+\`gas_temperature=T_g_fixed\`, \`bounds_policy=clamp\`, \`block=plasma\`.
+The \`clamp\` policy and \`T_g_fixed\` input are **required historical behavior**;
+do not silently substitute \`error\` or \`T_g\`.
+
+\`prepare_s6_run_input.py\` now performs a **strict, scratch-only conversion**
+after validating the exact owner and all original parameter values. The
+disposable D copy becomes \`DDMaterial\` with \`species_id=e\`,
+\`model=lookup\`, the *same original* \`table_file\`, \`table_units=reduced\`,
+\`pressure=p\`, \`gas_temperature=T_g_fixed\`, \`bounds_policy=clamp\`,
+\`fluid_energy=true\`, \`block=plasma\`. No B/C archive file, physical
+transport table or kinetic rate provider is rewritten. Any altered original
+table path, coordinate, pressure, temperature, bounds policy, duplicate owner
+or unknown factory fails closed.
+
+Both historical and new C++ implementations interpolate the same reduced
+electron mobility/diffusivity and divide by
+\`N_n = p/(k_B*T_g)\` for physical coefficients; electron energy transport
+uses \`5/3\` times the particle coefficients. For the accepted positive
+pressure/temperature domain, source-level equations match. Their exception
+behavior differs for unphysical/invalid transport values and is *not*
+claimed equivalent.
+
+**Public-data caveat:** The committed original electron_moments.txt contains
+100 rows (Git blob \`bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a\`). The
+historical 400 W native preparation *intentionally replaces it* with the pinned
+42-row public initial-mixture table (Git blob
+\`aa05aadde111e4ba435185954a64a4b7dbbf2d45\`) in the scratch
+historical checkout. Validation checks **both distinct inputs**, table
+positivity/ordering and bounded interpolation; neither should be confused
+with the review-only synthetic e_transport.txt.
+
+- Original B/C S6-417/941 block identity:
+  [P0 source audit #43402376955](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43402376955)
+  PASS.
+- Source-bound [P0/P1/native P2 #43403730997](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43403730997)
+  on \`2c79d2327367aeaa078726af0b3df5c9dc9d4a5f\`:
+  **613 P0 PASS**, public 400 W mesh PASS, exact-source Native P1
+  PASS. Both full 11-layer S6-417/941 Native P2 still **HOLD**.
+  The previous first parser error
+  \`PhysicsElectronTransportLookupMaterial is not a registered object\`
+  has disappeared. The new first parser error in both cases is
+  \`PhysicsLowerDSurfaceCurrentProbeAux is not a registered object\`,
+  a **separate retired lower-D diagnostic AuxKernel**. Do not restore
+  its C++ factory or drop its diagnostic ownership without independent
+  verification.
+- The exact native log and manifest for this run are in
+  [artifact #14026497410](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43403730997/artifacts/14026497410).
+  Python formula/fixture parity and Native \`--check-input\` do **not** prove
+  numerical temporal parity, actual old/new C++ face-value parity or full
+  science acceptance. No P3, no merge; \`SCIENCE_HOLD\` remains.
+
