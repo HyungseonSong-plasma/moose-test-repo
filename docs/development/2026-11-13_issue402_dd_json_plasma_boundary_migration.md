@@ -1,4 +1,4 @@
-# Issue #402 — Verbatim DriftDiffusion BC list relocation to JSON
+# Issue #402 — Existing BC list relocation to generic JSON boundaries
 
 **Authority:** the existing FEM electron wall input and Issue #395
 `enable_electron_adjacent_sheath_wall.py` transformation; FV discriminator
@@ -51,13 +51,15 @@ first relocation intentionally preserves them as explicit external
 FV input and does not try to convert them into FEM BCs.
 
 The wall flux `electron_wall_number_flux` is already provided by
-`PhysicsElectronAdjacentSheathWallFluxMaterial.C`, using a plasma-sided
+`ElectronWallFluxMaterial.C` (renamed from
+`PhysicsElectronAdjacentSheathWallFluxMaterial.C`), using a plasma-sided
 `FaceArg` and `PhysicsGroundedElectronSheath::primaryParticleFluxHat`.
 `PhysicsElectronMeanEnergyMaterial.C` reads the solved log-molar states
-and publishes `mean_en_solved = exp(log_energy - log_ne)` [eV] as a
+and publishes a configurable mean-energy Functor
+(e.g., `e_mean_energy = exp(log_energy - log_ne)` [eV]) as a
 **derived AD Functor**; it is not an independent solver variable.
 `FEMElectronEnergySheathBC.C` uses this Functor for
-`T_e=(2/3) mean_en_solved` and the existing outgoing energy flux
+`T_e=(2/3) e_mean_energy` for the new fixture and the existing outgoing energy flux
 `(Gamma_e/N_A)*(5/2)*T_e`.
 
 The `MeanEnergyMaterial` guard is **demand-driven**: it detects invalid
@@ -70,13 +72,32 @@ physical density). `NaN/Inf` in either state, or
 can still occur. These guards provide a local error message but cannot
 guarantee prevention of an earlier solver failure elsewhere. No
 mean-energy error policy or physical formula is changed here.
-Both original Materials stay in `[FunctorMaterials]` unchanged.
+The physical constitutive formula and error policies are unchanged. The
+new fixture sets `mean_energy_output=e_mean_energy` explicitly. The old
+`mean_en_solved` default remains valid for historical files. **Do not
+rename mean energy to `e_energy_density`:** mean energy is in eV per
+electron, while electron energy density is in eV/m3. The
+`PhysicsElectronMeanEnergyMaterial` supports normalized, physical_eV
+and log_molar_eV state representations and does *not* output an energy
+density, so calling it `EEDConvertorMaterial` would be misleading.
+
+`ElectronWallFluxMaterial` is now the canonical **sheath-suppressed**
+wall flux source. Historical
+`PhysicsElectronAdjacentSheathWallFluxMaterial` is a thin compatibility
+subclass, with no separate wall law. The older
+`PhysicsElectronWallFluxMaterial` **remains a separate thermal-only
+absorbing-wall model** used by Issue #3 dielectric surface charge
+experiments (`d3_combined_primary.i`, `d5_fv_wall_current_feedback.i`,
+`d6_2d_integrated.i` and associated generator scripts). The Issue #395
+recipe intentionally replaces it with the sheath model. Both publish
+`electron_wall_number_flux` in their respective configurations;
+they must not be instantiated together as owners of the same Functor.
 
 ## New configuration is only a relocation
 
 There is **NO** `plasma_boundary` activation option. There are
 **NO** `open`/`adjacent_sheath`/role model labels. The key
-`drift_diffusion_boundary` in the same existing
+`boundaries` in the same existing
 `[Physics]/[Plasmas]/files` JSON is the sole switch.
 
 Representative structured JSON (the P2 fixture uses 2D GeneratedMesh
@@ -84,7 +105,7 @@ with left/bottom/right/top rather than production QVT sideset names):
 
 ```json
 {
-  "drift_diffusion_boundary": {
+  "boundaries": {
     "plasma_wafer": {
       "bcs": {
         "electron_wafer": {
@@ -96,7 +117,7 @@ with left/bottom/right/top rather than production QVT sideset names):
           "type": "FEMElectronEnergySheathBC",
           "variable": "log_energy",
           "wall_number_flux": "electron_wall_number_flux",
-          "mean_energy": "mean_en_solved"
+          "mean_energy": "e_mean_energy"
         }
       }
     },
@@ -128,7 +149,9 @@ subblocks; **presence of the JSON list is sufficient**. No second
 boundary Action, no background auto detection of wall models and no
 implicit `[FunctorMaterials]` construction.
 
-Without `drift_diffusion_boundary`, zero new BCs are created.
+Without `boundaries`, zero new BCs are created.
+The previous experimental key `drift_diffusion_boundary` is explicitly
+rejected with a migration error; no silent omission.
 The old explicit `[BCs]` input continues unchanged. For an opted-in
 JSON relocation, remove the corresponding **identical** explicit
 `[BCs]` blocks to prevent double residual ownership. Neither a
@@ -141,6 +164,10 @@ JSON entry nor this Action removes old explicit BCs automatically.
   substituting a different operator. Existing FV/ion/Poisson/flow
   BC lists remain explicit until their own exact parameter inventories
   and P2 migration oracles are performed.
+- `physics_app/ci/dd_plasma_boundary_json_p2.i` uses the canonical
+  `ElectronWallFluxMaterial`; the explicit-BC control uses the legacy
+  alias class. Both use the exact same wall law and name the derived
+  mean energy `e_mean_energy` explicitly.
 - `physics_app/ci/dd_plasma_boundary_json_p2.i` is new JSON-owned
   synthetic control; `dd_plasma_boundary_legacy_p2.i` retains the
   exact same four named MOOSE BC declarations. The P0 test checks
