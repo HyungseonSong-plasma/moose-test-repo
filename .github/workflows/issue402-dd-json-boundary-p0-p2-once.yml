@@ -27,7 +27,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -f physics_app/src/physics/plasma/Chemistry.C
           test ! -e physics_app/src/physics/plasma/PlasmaDriftDiffusionBoundaryAction.C
-          grep -Fq "driftDiffusionBoundaries()" physics_app/src/physics/plasma/Chemistry.C
+          grep -Fq "boundaries()" physics_app/src/physics/plasma/Chemistry.C
           test -f physics_app/src/bcs/FEMElectronSheathBC.C
           test -f physics_app/src/bcs/FEMElectronEnergySheathBC.C
           test -f physics_app/src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C
