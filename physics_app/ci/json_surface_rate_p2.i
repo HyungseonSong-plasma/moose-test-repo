@@ -28,6 +28,18 @@
   []
 []
 [Postprocessors]
+  [initial_gas_density]
+    type = ElementAverageFunctorPostprocessor
+    functor = rho_g_initial
+  []
+  [inlet_gas_density]
+    type = ElementAverageFunctorPostprocessor
+    functor = rho_g_inlet
+  []
+  [inlet_mean_molar_mass]
+    type = ElementAverageFunctorPostprocessor
+    functor = M_mix_inlet
+  []
   [volume_initial_O2]
     type = ElementAverageFunctorPostprocessor
     functor = Y_O2_initial_vol
