@@ -29,8 +29,8 @@ RUNTIME_REF_RE = re.compile(
     r"^ghcr\.io/hyungseonsong-plasma/physics-runtime@sha256:[0-9a-f]{64}$"
 )
 
-RATE = Path("physics_app/src/materials/PhysicsElectronImpactIonizationMaterial.C")
-PROJ = Path("physics_app/src/materials/PhysicsO2IonizationSourceMaterial.C")
+RATE = Path("physics_app/src/materials/PhysicsElectronImpactRateMaterial.C")
+
 EK = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C")
 
 RUNTIME_INPUT = f"""[Mesh]
@@ -378,21 +378,26 @@ def runtime_checker_self_test():
 
 def static_implementation_gate():
     rate = RATE.read_text()
-    proj = PROJ.read_text()
     electron_kernel = EK.read_text()
 
-    assert 'addFunctorProperty<ADReal>(\n      "R_ion_O2"' in rate
-    assert 'interpolateStrict(_mean_energy(r, state)) * (n_e / N_A) * c_o2' in rate
-    for forbidden in ("O2_ionization_mass_source", "O2p_ionization_mass_source", "electron_ionization_number_source"):
-        assert forbidden not in rate
-    assert "outside lookup range" in rate and "strict R2 policy forbids clamp/floor" in rate
-
-    assert '_reaction_progress(getFunctor<ADReal>("reaction_progress"))' in proj
-    assert '"O2_ionization_mass_source"' in proj
-    assert '"O2p_ionization_mass_source"' in proj
-    assert '"electron_ionization_number_source"' in proj
-    for forbidden in ("PhysicsLookupTable1D", "interpolate", "mean_energy", "electron_number_density", "o2_molar_concentration"):
-        assert forbidden not in proj
+    assert 'registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);' in rate
+    assert 'reaction_progress' in rate
+    assert 'interpolateStrict(_mean_energy(r, state))' in rate
+    assert 'outside lookup range' in rate and 'forbids clamp/floor' in rate
+    assert 'target_molar_concentration' in rate
+    assert 'type = PhysicsElectronImpactRateMaterial' in RUNTIME_INPUT
+    assert 'target_molar_concentration = c_O2' in RUNTIME_INPUT
+    assert 'reaction_progress = R_ion_O2' in RUNTIME_INPUT
+    for field, expression in (
+        ("O2_ionization_mass_source", "-0.031998*rr"),
+        ("O2p_ionization_mass_source", "0.031998*rr"),
+        ("electron_ionization_number_source", "6.02214076e23*rr"),
+    ):
+        assert f"property_name = {field}" in RUNTIME_INPUT
+        assert f"expression = '{expression}'" in RUNTIME_INPUT
+    assert RUNTIME_INPUT.count("functor_names = 'R_ion_O2'") == 3
+    assert 'type = PhysicsElectronImpactIonizationMaterial' not in RUNTIME_INPUT
+    assert 'type = PhysicsO2IonizationSourceMaterial' not in RUNTIME_INPUT
 
     assert '_number_source(getFunctor<ADReal>("number_source"))' in electron_kernel
     assert '_physical_state(getParam<MooseEnum>("state_form") == "physical")' in electron_kernel
