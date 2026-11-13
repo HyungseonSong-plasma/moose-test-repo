@@ -425,6 +425,47 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     if (root.contains("gas_state"))
       fail(file, "top-level gas_state is retired; put initial composition on each species");
 
+    // JSON owns the mesh sideset names AND physical role. The .i only selects
+    // whether the optional DriftDiffusion wall Action consumes this catalogue.
+    // No sidesets, wall chemistry, or open-boundary behavior are inferred.
+    if (root.contains("drift_diffusion_boundary"))
+    {
+      if (_has_dd_boundary)
+        fail(file, "duplicate drift_diffusion_boundary owner across JSON files");
+      const auto & catalogue = root.at("drift_diffusion_boundary");
+      if (!catalogue.is_object() || catalogue.empty())
+        fail(file, "drift_diffusion_boundary must be a nonempty object");
+
+      std::set<std::string> sidesets;
+      static const std::regex safe_alias(R"(^[A-Za-z_][A-Za-z_0-9]*$)");
+      for (auto entry = catalogue.begin(); entry != catalogue.end(); ++entry)
+      {
+        const auto & item = entry.value();
+        if (!std::regex_match(entry.key(), safe_alias))
+          fail(file, "invalid drift_diffusion_boundary alias: " + entry.key());
+        if (!item.is_object() || item.size() != 2 ||
+            !item.contains("mesh_boundary") || !item.contains("electron_model") ||
+            !item.at("mesh_boundary").is_string() ||
+            !item.at("electron_model").is_string())
+          fail(file, "drift_diffusion_boundary." + entry.key() +
+                         " requires exactly mesh_boundary and electron_model strings");
+        const auto mesh_name = item.at("mesh_boundary").get<std::string>();
+        const auto model = item.at("electron_model").get<std::string>();
+        if (!std::regex_match(mesh_name, safe_alias) ||
+            !sidesets.insert(mesh_name).second)
+          fail(file, "invalid or duplicate mesh_boundary in drift_diffusion_boundary: " +
+                         mesh_name);
+        if (model != "open" && model != "adjacent_sheath" && model != "external")
+          fail(file, "invalid electron_model for " + entry.key() + ": " + model);
+        if (model == "adjacent_sheath" &&
+            (entry.key() == "inlet" || entry.key() == "outlet" ||
+             mesh_name == "inlet" || mesh_name == "outlet"))
+          fail(file, "inlet/outlet cannot select the solid adjacent_sheath electron BC");
+        _dd_boundaries.emplace(entry.key(), DDBoundaryRecord{mesh_name, model});
+      }
+      _has_dd_boundary = true;
+    }
+
     // Multiple chemistry files may contribute reactions independently, but
     // coefficient owners are one per species and one per NV mixture.
     if (root.contains("transport_coefficients"))
