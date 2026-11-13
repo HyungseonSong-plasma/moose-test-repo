@@ -211,6 +211,26 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
                     "    type = PhysicsIonWallFluxMaterial", body, count=1)
                 if converted != 1:
                     raise ValueError("S6_WALL_RETIRED_TYPE_CUTOVER_FAILED")
+            elif material_type in {
+                "PhysicsElectronWallFluxMaterial",
+                "PhysicsElectronAdjacentSheathWallFluxMaterial",
+            }:
+                # Both old factory names are removed from the new application.
+                # Transform the pre-existing archived *input text*, never
+                # register a new Physics compatibility alias. For the
+                # thermal-only source, conversion to the sheath owner changes
+                # the wall law and must remain under SCIENCE_HOLD.
+                body, converted = _WALL_TYPE.subn(
+                    "    type = ESWallFluxMaterial", body, count=1)
+                if converted != 1:
+                    raise ValueError("S6_ELECTRON_WALL_RETIRED_FACTORY_CUTOVER_FAILED")
+                if material_type == "PhysicsElectronWallFluxMaterial":
+                    if re.search(r"(?m)^    potential\s*=", body):
+                        raise ValueError("S6_THERMAL_WALL_UNEXPECTED_POTENTIAL")
+                    body = body.rstrip() + (
+                        "\n    potential = potential"
+                        "\n    use_element_gradient_for_potential = true\n"
+                    )
             # Add only the output-selector option; no physical input is altered.
             type_line = _WALL_TYPE.search(body)
             assert type_line is not None
@@ -220,7 +240,8 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
                 "source_layer": path.name, "block": m.group("name"),
                 "source_type": material_type,
                 "type": "PhysicsIonWallFluxMaterial"
-                if material_type == "PhysicsIonWallTotalFluxMaterial" else material_type,
+                if material_type == "PhysicsIonWallTotalFluxMaterial" else (
+                    "ESWallFluxMaterial" if species == "e" else material_type),
                 "species_id": species,
                 "outputs": dict(sorted(pairs.items())),
             })
@@ -274,7 +295,7 @@ def sha(contents: bytes) -> str:
 _ARCHIVED_ELECTRON_LOOKUP = {
     "type": "PhysicsElectronTransportLookupMaterial",
     "property_table_file": "'../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
-    "mean_energy": "mean_en_solved",
+    "mean_energy": "e_energy_eV",
     "pressure": "p",
     "gas_temperature": "T_g_fixed",
     "bounds_policy": "clamp",
@@ -332,7 +353,7 @@ def canonicalize_staged_electron_lookup(
     path, source, m = candidates[0]
     table_path = _ARCHIVED_ELECTRON_LOOKUP["property_table_file"]
     # Exactly the same table/pressure/temperature, same 'clamp' policy, and
-    # DDTransportMaterial's hardwired mean_en_solved lookup axis. No synthetic values.
+    # DDTransportMaterial's hardwired e_energy_eV lookup axis. No synthetic values.
     new_body = (
         "    type = DDTransportMaterial\n"
         "    species_id = e\n"
@@ -429,13 +450,16 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         edits[target] = source
     if len(retired) != 9:
         raise ValueError("Expected exactly nine old electron particle/energy Kernels")
-    # Retain original owner signatures above (log_energy), then consistently
+    # Retain archived owner signatures above, then consistently
     # migrate the remaining scratch-only variable references to the new
     # internally resolved DDEnergyEq state: log_e_energy.
     # Rename all ten staged layers, not only the nine edited sources,
     # so native RF/Joule and Material couplings resolve the same state.
     canonical_names = {
         "log_energy": "log_e_energy",
+        "log_ne": "log_e",
+        "mean_en_solved": "e_energy_eV",
+        "PhysicsElectronMeanEnergyMaterial": "ElectronEnergyMaterial",
         "R_elastic_O2": "R_EI02",
         "R_elastic_O": "R_EI17",
         "R_ion_O2": "R_EI415",
