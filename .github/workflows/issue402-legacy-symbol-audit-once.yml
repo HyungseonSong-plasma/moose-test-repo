@@ -1,5 +1,5 @@
 name: Issue402 legacy symbol audit once
-# Readonly archival identity + current canonical P0 regressions; historical records are immutable.
+# Validate canonical scratch lookup report and readonly historical identity; P0 only.
 run-name: Issue402 legacy symbol audit ${{ github.sha }}
 on:
   push:
