@@ -1,5 +1,5 @@
 name: Issue402 Canonical JSON Heavy Surface Rate P0 P1 P2
-# Rerun frozen EI01 provenance correction.
+# Final source-bound rerun including all-species surface-flux and fail-closed mass validation.
 on:
   push:
     branches: [issue-402-json-rate-unification]
