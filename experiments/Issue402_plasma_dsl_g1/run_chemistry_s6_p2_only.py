@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare and validate BOTH full Native S6 Chemistry input stacks without P3.
+"""Prepare and validate active Native S6 Chemistry input stacks without P3.
 
 Prerequisites (external to this command):
 - exact committed PhysicsApp HEAD already built as physics_app/physics-opt;
@@ -8,7 +8,8 @@ Prerequisites (external to this command):
 - no protected/private-rate directory in the historical source.
 
 This command stages the ten historical C input layers + one Chemistry overlay
-into durable, operator-reviewable scratch copies, and runs --check-input ONLY.
+into durable, operator-reviewable scratch copies, removes exclusively proven
+obsolete D1 debug observers and runs --check-input ONLY.
 It never calls run_canonical_s6_p3_once.run, never executes a time step, and
 never publishes/merges a science result.
 """
@@ -62,6 +63,9 @@ def check_only(historical: Path, expected_head: str, output: Path,
         "P0": "PASS",
         "P1": "PASS_SOURCE_BOUND_BINARY",
         "P2": "HOLD",
+        "native_input_scope": "ACTIVE_S6_PHYSICS_WITH_OBSOLETE_D1_DEBUG_RETIRED",
+        "retired_d1_diagnostic_parity": "NOT_APPLICABLE",
+        "retired_d1_independent_review": "NOT_REQUIRED_BY_OPERATOR",
         "P3": "NOT_RUN",
         "P4": "NOT_RUN",
         "science": "SCIENCE_HOLD",
@@ -77,6 +81,16 @@ def check_only(historical: Path, expected_head: str, output: Path,
             migration = option.canonicalize_staged_D_inputs(chemistry, ordered)
             type_remap = option.remap_staged_fem_types(chemistry, ordered)
             cutover = prepare(chemistry, ordered, case)
+            debug = cutover.get("scratch_d1_observation_scope", {})
+            if not (
+                debug.get("status") == "OBSOLETE_D1_DEBUG_OBSERVATIONS_RETIRED"
+                and debug.get("suspended_auxkernels") == 14
+                and debug.get("suspended_auxvariables") == 14
+                and debug.get("retired_diagnostics") == "NOT_REQUIRED_FOR_TARGET_MODEL"
+                and debug.get("diagnostic_parity") == "NOT_APPLICABLE"
+                and debug.get("d1_retirement_review") == "NOT_REQUIRED_OPERATOR_DECISION"
+            ):
+                raise ValueError("P2_RETIRED_D1_DIAGNOSTIC_SCOPE_UNPROVED")
             overlay = chemistry / "migrated_continuity.i"
             if digest(overlay) != cutover["overlay_sha256"]:
                 raise ValueError("P2_CHEMISTRY_OVERLAY_CONTENT_CHANGED")
