@@ -2,25 +2,29 @@
   "species": {
     "e": {
       "elements": {},
-      "charge_number": -1
+      "charge_number": -1,
+      "initial_number_density": 10000000000000000
     },
     "O2p": {
       "elements": {
         "O": 2
       },
-      "charge_number": 1
+      "charge_number": 1,
+      "initial_number_density": 10000000000000000
     },
     "Om": {
       "elements": {
         "O": 1
       },
-      "charge_number": -1
+      "charge_number": -1,
+      "initial_number_density": 100000000000000
     },
     "Op": {
       "elements": {
         "O": 1
       },
-      "charge_number": 1
+      "charge_number": 1,
+      "initial_number_density": 1000000000000000
     }
   },
   "equations": {},
