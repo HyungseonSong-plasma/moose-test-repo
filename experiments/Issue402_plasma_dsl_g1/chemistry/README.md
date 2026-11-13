@@ -280,3 +280,5 @@ check, not a numerical time-integration, face-value parity or scientific
 mechanism-provenance check. `SCIENCE_HOLD` stays active; P3/P4 remain
 `NOT_RUN`, PR #524 remains Draft stacked onto PR #523, and no merge is
 authorized by the D1 cleanup alone.
+
+**Final direct-source verification**: [Actions #43421515139](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43421515139), exact implementation SHA `0fd8a97bf5cf720eb0625b20aa9160a7fcb0efe8`: **623 P0 PASS**, public mesh PASS, source-bound Native P1 PASS, and **S6-417 plus S6-941 active Native P2 both PASS (`Syntax OK`, exit 0)**. [Immutable logs/receipts #14034922005](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43421515139/artifacts/14034922005). Every D entrypoint uses the pinned prebuilt source; the per-run D1 strip and scan stages do not exist. One-shot CI files are subsequently removed, without modifying tested implementation. `SCIENCE_HOLD`, no P3/P4 and no merge.
