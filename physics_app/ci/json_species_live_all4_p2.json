@@ -90,7 +90,9 @@
         "Y_O2",
         "Y_O",
         "Y_Op"
-      ]
+      ],
+      "electron_temperature": "T_e",
+      "electron_number_density": "n_e"
     }
   }
 }
