@@ -1,5 +1,5 @@
 name: Issue402 Live Species Y IC Inlet P0 P1 P2
-# Source-bound rerun: full NV species set and live-Y aliases, FV IC/inlet BC.
+# P0, pinned P1 and P2 for IC/BC and all four live-Y material consumers.
 on:
   push:
     branches: [issue-402-species-live-ic-inlet]
@@ -117,6 +117,8 @@ jobs:
               cd /workspace/physics_app/ci
               /workspace/physics_app/physics-opt --check-input -i json_surface_rate_p2.i
               echo JSON_SURFACE_RATE_NATIVE_P2_PASS
+              /workspace/physics_app/physics-opt --check-input -i json_species_live_all4_p2.i
+              echo FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS
               /workspace/physics_app/physics-opt --check-input -i plasma_direct_existing_materials_smoke.i
               echo EI_RATE_COEF_DIRECT_SMOKE_NATIVE_P2_PASS
               cd /workspace
