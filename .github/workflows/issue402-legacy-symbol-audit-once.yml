@@ -15,6 +15,21 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: P0 broad source and scratch compatibility regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q \\
+            tests/test_issue402_dd_plasma_boundary_json.py \\
+            tests/test_issue402_material_class_names.py \\
+            tests/test_issue402_species_functor_naming.py \\
+            tests/test_issue402_s6_wall_naming_staging.py \\
+            tests/test_issue402_s6_electron_transport_compatibility.py \\
+            tests/test_issue402_retired_plasma_closures.py \\
+            tests/test_issue402_transport_material_consolidation.py \\
+            tests/test_issue402_species_transport_rule.py
+          echo ISSUE402_CANONICAL_ENERGY_WALL_P0_PASS
       - name: Inventory tracked source references without modification
         shell: bash
         run: |
