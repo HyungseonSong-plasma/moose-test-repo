@@ -51,6 +51,10 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   registerSyntax("PlasmasAction", "Physics/Plasmas");
 
   // The continuity input checks the species variables before solving.
+  // Optional parent Action. plasma_boundary=json maps the root JSON catalogue
+  // to existing electron mean-energy/sheath Materials and paired FEM wall BCs.
+  registerSyntax("PlasmaDriftDiffusionBoundaryAction",
+                 "Physics/Plasmas/Transport/DriftDiffusion");
   registerSyntax("DDContinuityEq",
                  "Physics/Plasmas/Transport/DriftDiffusion/Continuity");
   registerSyntax("DDEnergyEq",
