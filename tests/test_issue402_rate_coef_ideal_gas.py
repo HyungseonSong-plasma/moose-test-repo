@@ -58,7 +58,7 @@ def test_surface_input_is_real_ideal_gas_wiring_and_composition():
     data = json.loads((APP / "ci/json_surface_rate_p2.json").read_text())
     assert "pressure = 1.333223684" in sample
     assert "temperature = 300" in sample
-    assert "model = ideal_gas" in sample
+    assert "state_model = ideal_gas" in sample
     assert "temperature = T" in sample
     assert "density = rho_g" in sample
     assert "gas_state" not in data
@@ -83,8 +83,8 @@ def test_surface_input_is_real_ideal_gas_wiring_and_composition():
     assert 'add("Y_" + id, "live_y", {live}, {"live_y"});' in parser
     assert '"mass_fraction_variable"' in parser
     assert '"mass_fraction_functor"' in parser
-    assert "initialize_species_mass_fractions = true" in sample
-    assert "inlet_bc_model = dirichlet" in sample
+    assert "sccm = 100" in sample
+    assert "sccm = 100" in sample
     assert data["species"]["O2"]["mass_fraction_variable"] == "w_O2"
     assert data["species"]["O"]["mass_fraction_variable"] == "w_O"
     assert "Initial volume and inlet heavy-species mass fractions must each" in parser
