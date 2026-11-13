@@ -342,3 +342,27 @@ PhysicsApp Native P1 PASS, S6-417 and S6-941 Native P2 **both
 preserves the case-local native input logs and bounded source identity
 receipts. This replaces the *current* D1-related P2 hold classification
 without changing any archived old run or science-gate decision.
+
+
+## Verified final Native S6 .i files without retired D1 Aux (2026-11-13)
+
+The active S6 target D input builder now checks the complete **11-layer
+Native .i stack** both in-memory (before any cutover files are written) and
+again from the **files actually written to disk**. The Native P2 runner
+independently re-reads those exact 11 files immediately before invoking
+`physics-opt --check-input`. Any occurrence of the 14 named obsolete D1
+AuxVariables, their 14 AuxKernel blocks, or either retired AuxKernel factory
+type causes a fail-closed error. This is an *actual target-input exclusion*,
+not simply ignoring their results or relaxing assertions. Original B/C
+archive evidence stays unchanged. The obsolete diagnostic numerical-parity
+and standalone D1 retirement review gates are **not applicable** by the
+operator's decision; physical numerical equivalence remains a separate gate.
+
+[Exact-source native run #43418084078](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43418084078)
+(HEAD `813da8b267a24487274f7c96a2ce3cf4f0443af8`): **641 P0 tests PASS**;
+public 400 W mesh PASS; source-bound Native P1 PASS;
+**S6-417 and S6-941 Native P2 both PASS, exit 0, Syntax OK**;
+all 11 layers explicitly audited zero obsolete D1 diagnostics.
+[Artifacts #14032148589](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43418084078/artifacts/14032148589).
+P3/P4 remain NOT_RUN, independent physics/Wall numerical parity unproven,
+`SCIENCE_HOLD` maintained and no branch merge authorized.
