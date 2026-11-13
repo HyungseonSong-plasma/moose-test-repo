@@ -1,0 +1,41 @@
+{
+  "species": {
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.032
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.016
+    }
+  },
+  "equations": {
+    "H90": "O2 -> 2O"
+  },
+  "reactions": [
+    {
+      "id": "H90",
+      "domain": "surface",
+      "reactants": {
+        "O2": 1
+      },
+      "products": {
+        "O": 2
+      },
+      "units": "mol/(m^2 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      },
+      "rate": {
+        "model": "thermal_sticking",
+        "sticking": 0.25
+      }
+    }
+  ]
+}
