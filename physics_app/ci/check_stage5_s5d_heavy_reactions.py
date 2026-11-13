@@ -458,7 +458,7 @@ def static_check() -> None:
     contract = json.loads(CONTRACT.read_text())
     if contract["status"] != "CONTRACT_FROZEN" or contract["slice"] != "S5-D_H01_H04_HEAVY_REACTIONS":
         raise AssertionError("wrong S5-D contract")
-    if contract["production_owner"]["rate_owner"] != "HeavyReactionRateMaterial":
+    if contract["production_owner"]["rate_owner"] != "PhysicsReactionRateMaterial":
         raise AssertionError("wrong rate owner")
     if contract["production_owner"]["electron_particle_projector"] != "NONE" or contract["production_owner"]["electron_energy_projector"] != "NONE":
         raise AssertionError("electron projection must be absent")
