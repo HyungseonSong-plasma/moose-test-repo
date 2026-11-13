@@ -56,7 +56,7 @@ def validate_inventory(inputs: list[Path], case: str) -> None:
     new_2069 = inputs[-2].read_text()
     new_h25 = inputs[-1].read_text()
     for required in (
-        "type = ElectronImpactRateMaterial",
+        "type = RateCoeffMaterial",
         "rate_table_file = 'private_rates/EI-2069_O2_a1Delta.txt'",
         "reaction_progress = R_EI2069",
         "variable = w_O2s",

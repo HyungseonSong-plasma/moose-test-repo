@@ -332,9 +332,9 @@ def canonicalize_staged_electron_lookup(
     path, source, m = candidates[0]
     table_path = _ARCHIVED_ELECTRON_LOOKUP["property_table_file"]
     # Exactly the same table/pressure/temperature, same 'clamp' policy, and
-    # DDMaterial's hardwired mean_en_solved lookup axis. No synthetic values.
+    # DDTransportMaterial's hardwired mean_en_solved lookup axis. No synthetic values.
     new_body = (
-        "    type = DDMaterial\n"
+        "    type = DDTransportMaterial\n"
         "    species_id = e\n"
         "    model = lookup\n"
         "    table_file = " + table_path + "\n"
@@ -353,7 +353,7 @@ def canonicalize_staged_electron_lookup(
         "source_layer": path.name,
         "owner": "electron_transport",
         "from_type": "PhysicsElectronTransportLookupMaterial",
-        "to_type": "DDMaterial",
+        "to_type": "DDTransportMaterial",
         "table_file": table_path,
         "coordinate": "mean_en_solved",
         "pressure": "p",

@@ -1,4 +1,4 @@
-#include "NVMaterial.h"
+#include "NVTransportMaterial.h"
 
 #include <algorithm>
 #include <array>
@@ -7,9 +7,7 @@
 #include <sstream>
 #include <utility>
 
-registerMooseObject("PhysicsApp", NVMaterial);
-// Historical decks retain their original type token; there is only one implementation.
-registerMooseObjectAliased("PhysicsApp", NVMaterial, "PhysicsThermalDiffusionMaterial");
+registerMooseObject("PhysicsApp", NVTransportMaterial);
 
 namespace
 {
@@ -59,7 +57,7 @@ constexpr std::array<std::array<Real, 8>, 26> DEBYE_TABLE = {{
 }
 
 InputParameters
-NVMaterial::validParams()
+NVTransportMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -109,7 +107,7 @@ NVMaterial::validParams()
   return params;
 }
 
-NVMaterial::NVMaterial(
+NVTransportMaterial::NVTransportMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _temperature(getFunctor<ADReal>("temperature")),
@@ -263,7 +261,7 @@ NVMaterial::NVMaterial(
 }
 
 std::string
-NVMaterial::trim(const std::string & s)
+NVTransportMaterial::trim(const std::string & s)
 {
   const auto first = s.find_first_not_of(" \t\r\n");
   if (first == std::string::npos)
@@ -274,7 +272,7 @@ NVMaterial::trim(const std::string & s)
 }
 
 std::string
-NVMaterial::pairKey(std::string a, std::string b)
+NVTransportMaterial::pairKey(std::string a, std::string b)
 {
   if (b < a)
     std::swap(a, b);
@@ -283,11 +281,11 @@ NVMaterial::pairKey(std::string a, std::string b)
 }
 
 void
-NVMaterial::loadTransportDatabase(const FileName & filename)
+NVTransportMaterial::loadTransportDatabase(const FileName & filename)
 {
   std::ifstream in(filename.c_str());
   if (!in.good())
-    mooseError("NVMaterial could not open transport database '",
+    mooseError("NVTransportMaterial could not open transport database '",
                filename,
                "'.");
 
@@ -436,8 +434,8 @@ NVMaterial::loadTransportDatabase(const FileName & filename)
     mooseError("Transport database '", filename, "' defines no collision pairs.");
 }
 
-const NVMaterial::CollisionTable &
-NVMaterial::collisionTable(const std::string & alias_a,
+const NVTransportMaterial::CollisionTable &
+NVTransportMaterial::collisionTable(const std::string & alias_a,
                                                  const std::string & alias_b) const
 {
   const auto key = pairKey(alias_a, alias_b);
@@ -456,7 +454,7 @@ NVMaterial::collisionTable(const std::string & alias_a,
 }
 
 int
-NVMaterial::aliasCharge(const std::string & alias)
+NVTransportMaterial::aliasCharge(const std::string & alias)
 {
   if (alias.empty())
     return 0;
@@ -471,14 +469,14 @@ NVMaterial::aliasCharge(const std::string & alias)
 }
 
 bool
-NVMaterial::isChargedChargedPair(const std::string & alias_a,
+NVTransportMaterial::isChargedChargedPair(const std::string & alias_a,
                                                        const std::string & alias_b)
 {
   return aliasCharge(alias_a) != 0 && aliasCharge(alias_b) != 0;
 }
 
-NVMaterial::CollisionData
-NVMaterial::debyeHuckelCollisionData(const ADReal & T,
+NVTransportMaterial::CollisionData
+NVTransportMaterial::debyeHuckelCollisionData(const ADReal & T,
                                                            const ADReal & Te,
                                                            const ADReal & ne,
                                                            const CoulombBranch branch) const
@@ -553,8 +551,8 @@ NVMaterial::debyeHuckelCollisionData(const ADReal & T,
   return data;
 }
 
-NVMaterial::CollisionData
-NVMaterial::collisionData(const ADReal & T,
+NVTransportMaterial::CollisionData
+NVTransportMaterial::collisionData(const ADReal & T,
                                                 const ADReal & Te,
                                                 const ADReal & ne,
                                                 const std::string & alias_a,
@@ -581,13 +579,13 @@ NVMaterial::collisionData(const ADReal & T,
 }
 
 ADReal
-NVMaterial::positiveFloor(const ADReal & value, const Real floor)
+NVTransportMaterial::positiveFloor(const ADReal & value, const Real floor)
 {
   return value.value() < floor ? ADReal(floor) : value;
 }
 
 ADReal
-NVMaterial::interpolateCollisionIntegral(
+NVTransportMaterial::interpolateCollisionIntegral(
     const ADReal & T,
     const std::vector<Real> & grid,
     const std::vector<Real> & values) const
@@ -613,17 +611,17 @@ NVMaterial::interpolateCollisionIntegral(
   return q * PHYSICS_CONSTANTS::pi * ANGSTROM2_TO_M2;
 }
 
-NVMaterial::Vec
-NVMaterial::solveSystem(Mat A, Vec b) const
+NVTransportMaterial::Vec
+NVTransportMaterial::solveSystem(Mat A, Vec b) const
 {
   const std::size_t n = A.size();
 
   if (n == 0 || b.size() != n)
-    mooseError("NVMaterial received an invalid linear system.");
+    mooseError("NVTransportMaterial received an invalid linear system.");
 
   for (const auto & row : A)
     if (row.size() != n)
-      mooseError("NVMaterial requires a square linear system.");
+      mooseError("NVTransportMaterial requires a square linear system.");
 
   Real scale = 0.0;
   for (const auto & row : A)
@@ -631,7 +629,7 @@ NVMaterial::solveSystem(Mat A, Vec b) const
       scale = std::max(scale, std::abs(a.value()));
 
   if (scale == 0.0)
-    mooseError("NVMaterial encountered a zero transport matrix.");
+    mooseError("NVTransportMaterial encountered a zero transport matrix.");
 
   for (std::size_t k = 0; k < n; ++k)
   {
@@ -649,7 +647,7 @@ NVMaterial::solveSystem(Mat A, Vec b) const
     }
 
     if (pivot_abs <= 1.0e-14 * scale)
-      mooseError("NVMaterial encountered a singular/ill-conditioned ",
+      mooseError("NVTransportMaterial encountered a singular/ill-conditioned ",
                  n,
                  "x",
                  n,
@@ -693,8 +691,8 @@ NVMaterial::solveSystem(Mat A, Vec b) const
   return x;
 }
 
-NVMaterial::Result
-NVMaterial::evaluate(const ADReal & T,
+NVTransportMaterial::Result
+NVTransportMaterial::evaluate(const ADReal & T,
                                           const ADReal & p,
                                           const ADReal & Te,
                                           const ADReal & ne,
@@ -703,10 +701,10 @@ NVMaterial::evaluate(const ADReal & T,
   const std::size_t n = _species_names.size();
 
   if (T.value() <= 0.0)
-    mooseError("NVMaterial requires T > 0 K. Got ", T.value());
+    mooseError("NVTransportMaterial requires T > 0 K. Got ", T.value());
 
   if (p.value() <= 0.0)
-    mooseError("NVMaterial requires absolute p > 0 Pa. Got ", p.value());
+    mooseError("NVTransportMaterial requires absolute p > 0 Pa. Got ", p.value());
 
   if (Y.size() != n)
     mooseError("Internal species/mass-fraction size mismatch.");
@@ -714,11 +712,11 @@ NVMaterial::evaluate(const ADReal & T,
   if (_has_charged_charged_pairs)
   {
     if (Te.value() <= 0.0)
-      mooseError("NVMaterial requires electron_temperature > 0 K when charged-charged pairs are active. Got ",
+      mooseError("NVTransportMaterial requires electron_temperature > 0 K when charged-charged pairs are active. Got ",
                  Te.value());
 
     if (ne.value() < 0.0)
-      mooseError("NVMaterial requires electron_number_density >= 0 when charged-charged pairs are active. Got ",
+      mooseError("NVTransportMaterial requires electron_number_density >= 0 when charged-charged pairs are active. Got ",
                  ne.value());
   }
 
@@ -726,7 +724,7 @@ NVMaterial::evaluate(const ADReal & T,
   for (std::size_t i = 0; i < n; ++i)
   {
     if (Y[i].value() < 0.0)
-      mooseError("NVMaterial requires non-negative mass fractions. "
+      mooseError("NVTransportMaterial requires non-negative mass fractions. "
                  "Species '",
                  _species_names[i],
                  "' has Y=",
@@ -736,7 +734,7 @@ NVMaterial::evaluate(const ADReal & T,
   }
 
   if (std::abs(Y_sum.value() - 1.0) > 1.0e-10)
-    mooseError("NVMaterial requires sum(Y)=1. Got ", Y_sum.value());
+    mooseError("NVTransportMaterial requires sum(Y)=1. Got ", Y_sum.value());
 
   ADReal mole_denominator = 0.0;
   for (std::size_t i = 0; i < n; ++i)
@@ -815,7 +813,7 @@ NVMaterial::evaluate(const ADReal & T,
 
       const ADReal Dij = nDij[i][j] / number_density;
       if (Dij.value() <= 0.0)
-        mooseError("NVMaterial obtained non-positive binary diffusion coefficient for species '",
+        mooseError("NVTransportMaterial obtained non-positive binary diffusion coefficient for species '",
                    _species_names[i],
                    "' and '",
                    _species_names[j],
@@ -826,7 +824,7 @@ NVMaterial::evaluate(const ADReal & T,
     }
 
     if (denominator.value() <= 0.0)
-      mooseError("NVMaterial could not construct positive D_k,m for species '",
+      mooseError("NVTransportMaterial could not construct positive D_k,m for species '",
                  _species_names[i],
                  "'. denominator=",
                  denominator.value());
@@ -961,7 +959,7 @@ NVMaterial::evaluate(const ADReal & T,
 }
 
 ADReal
-NVMaterial::evaluateDmix(const std::size_t species_i,
+NVTransportMaterial::evaluateDmix(const std::size_t species_i,
                                               const ADReal & T,
                                               const ADReal & p,
                                               const ADReal & Te,
@@ -971,15 +969,15 @@ NVMaterial::evaluateDmix(const std::size_t species_i,
   const std::size_t n = _species_names.size();
 
   if (species_i >= n)
-    mooseError("NVMaterial received invalid species index ",
+    mooseError("NVTransportMaterial received invalid species index ",
                species_i,
                " for D_mix evaluation.");
 
   if (T.value() <= 0.0)
-    mooseError("NVMaterial requires T > 0 K. Got ", T.value());
+    mooseError("NVTransportMaterial requires T > 0 K. Got ", T.value());
 
   if (p.value() <= 0.0)
-    mooseError("NVMaterial requires absolute p > 0 Pa. Got ", p.value());
+    mooseError("NVTransportMaterial requires absolute p > 0 Pa. Got ", p.value());
 
   if (Y.size() != n)
     mooseError("Internal species/mass-fraction size mismatch.");
@@ -988,13 +986,13 @@ NVMaterial::evaluateDmix(const std::size_t species_i,
   {
     if (Te.value() <= 0.0)
       mooseError(
-          "NVMaterial requires electron_temperature > 0 K "
+          "NVTransportMaterial requires electron_temperature > 0 K "
           "when charged-charged pairs are active. Got ",
           Te.value());
 
     if (ne.value() < 0.0)
       mooseError(
-          "NVMaterial requires electron_number_density >= 0 "
+          "NVTransportMaterial requires electron_number_density >= 0 "
           "when charged-charged pairs are active. Got ",
           ne.value());
   }
@@ -1005,7 +1003,7 @@ NVMaterial::evaluateDmix(const std::size_t species_i,
   for (std::size_t j = 0; j < n; ++j)
   {
     if (Y[j].value() < 0.0)
-      mooseError("NVMaterial requires non-negative mass fractions. "
+      mooseError("NVTransportMaterial requires non-negative mass fractions. "
                  "Species '",
                  _species_names[j],
                  "' has Y=",
@@ -1016,7 +1014,7 @@ NVMaterial::evaluateDmix(const std::size_t species_i,
   }
 
   if (std::abs(Y_sum.value() - 1.0) > 1.0e-10)
-    mooseError("NVMaterial requires sum(Y)=1. Got ", Y_sum.value());
+    mooseError("NVTransportMaterial requires sum(Y)=1. Got ", Y_sum.value());
 
   const ADReal one_minus_Y = 1.0 - Y[species_i];
 
@@ -1071,7 +1069,7 @@ NVMaterial::evaluateDmix(const std::size_t species_i,
 
     if (Dij.value() <= 0.0)
       mooseError(
-          "NVMaterial obtained non-positive binary diffusion "
+          "NVTransportMaterial obtained non-positive binary diffusion "
           "coefficient for species '",
           _species_names[species_i],
           "' and '",
@@ -1087,7 +1085,7 @@ NVMaterial::evaluateDmix(const std::size_t species_i,
 
   if (denominator.value() <= 0.0)
     mooseError(
-        "NVMaterial could not construct positive D_k,m for species '",
+        "NVTransportMaterial could not construct positive D_k,m for species '",
         _species_names[species_i],
         "'. denominator=",
         denominator.value());

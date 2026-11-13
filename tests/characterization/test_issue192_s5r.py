@@ -51,7 +51,7 @@ def test_s5r_preserves_solved_poisson_and_adds_solved_energy() -> None:
     )
     assert (
         mp.get_parameter(text, "FunctorMaterials/electron_transport", "type")
-        == "DDMaterial"
+        == "DDTransportMaterial"
     )
     assert mp.get_parameter(text, "FunctorMaterials/electron_transport", "model") == "lookup"
     assert mp.get_parameter(text, "FunctorMaterials/electron_transport", "table_file")
@@ -71,7 +71,7 @@ def test_s5r_has_exact_canonical_progress_owner_surface() -> None:
     assert set(OWNER_BLOCKS) == set(ADMITTED_CHANNELS)
     for channel in ("EI01", "EI02", "EI17", "EI19", "EI18_O_TO_OS", "EI20_O_IONIZATION"):
         path = OWNER_BLOCKS[channel]
-        assert mp.get_parameter(text, path, "type") == "ElectronImpactRateMaterial"
+        assert mp.get_parameter(text, path, "type") == "RateCoeffMaterial"
         assert mp.get_parameter(text, path, "rate_table_file") == RATE_TABLES[channel]
         assert mp.get_parameter(text, path, "reaction_progress") == PROGRESS[channel]
 
@@ -81,7 +81,7 @@ def test_s5r_has_exact_canonical_progress_owner_surface() -> None:
     )
     assert (
         mp.get_parameter(text, OWNER_BLOCKS["EI16"], "type")
-        == "ElectronImpactRateMaterial"
+        == "RateCoeffMaterial"
     )
     assert (
         mp.get_parameter(text, OWNER_BLOCKS["EDETACH_OM"], "property_name")

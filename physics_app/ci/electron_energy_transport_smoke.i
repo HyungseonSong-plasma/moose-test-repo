@@ -37,7 +37,7 @@
     state_form = physical_eV
   []
   [electron_transport]
-    type = DDMaterial
+    type = DDTransportMaterial
     model = lookup
     table_file = electron_energy_transport_smoke_table.txt
     pressure = p

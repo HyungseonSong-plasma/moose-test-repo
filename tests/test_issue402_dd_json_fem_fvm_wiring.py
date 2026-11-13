@@ -1,4 +1,4 @@
-"""Issue402: all selected FEM/FVM species get JSON-driven DDMaterial providers.
+"""Issue402: all selected FEM/FVM species get JSON-driven DDTransportMaterial providers.
 
 This static/schema check supplements exact-head Native P1 and P2; values
 in the fixtures are synthetic and must not be promoted to S6.
@@ -30,8 +30,8 @@ def test_json_drives_species_transport_without_i_material_blocks():
     assert "fem_species = 'e 1e16'" in deck
     assert "fvm_species = 'O2p 1e16 Om 1e14 Op 1e15'" in deck
     assert "require_json_transport" not in deck
-    assert "[DDMaterial]" not in deck
-    assert "type = DDMaterial" not in deck
+    assert "[DDTransportMaterial]" not in deck
+    assert "type = DDTransportMaterial" not in deck
     assert "electron_energy_mobility" not in deck
 
 
@@ -52,11 +52,11 @@ def test_continuity_maps_both_species_families_to_ddmaterial():
 
 def test_json_and_lookup_data_are_validated_fail_closed():
     parser = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
-    provider = (ROOT / "physics_app/src/materials/DDMaterial.C").read_text()
+    provider = (ROOT / "physics_app/src/materials/DDTransportMaterial.C").read_text()
     assert "resolveDataFile(requiredText(value, \"table_file\", file), file)" in parser
     assert "std::isfinite(result.mobility)" in parser
     assert "std::isfinite(result.diffusivity)" in parser
-    assert "DDMaterial lookup coefficients must be finite and nonnegative" in provider
+    assert "DDTransportMaterial lookup coefficients must be finite and nonnegative" in provider
     assert "functor transport accepts only model" in parser
     assert 'params.set<MooseEnum>("model") = config->model' in (
         ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()

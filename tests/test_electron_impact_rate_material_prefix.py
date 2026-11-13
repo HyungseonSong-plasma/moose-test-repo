@@ -1,31 +1,23 @@
-"""Canonical ElectronImpactRateMaterial class/file registration and legacy input compatibility."""
+"""Canonical RateCoeffMaterial registration without any factory or C++ aliases."""
 from pathlib import Path
 
 
-def test_ei_rate_material_class_file_and_registration():
+def test_canonical_rate_coeff_material_no_legacy_registration():
     root = Path(__file__).resolve().parents[1]
     app = root / "physics_app"
-    header = (app / "include/materials/ElectronImpactRateMaterial.h").read_text()
-    implementation = (app / "src/materials/ElectronImpactRateMaterial.C").read_text()
-
-    assert not (app / "include/materials/PhysicsElectronImpactRateMaterial.h").exists()
-    assert not (app / "src/materials/PhysicsElectronImpactRateMaterial.C").exists()
-    assert "class ElectronImpactRateMaterial : public FunctorMaterial" in header
-    assert "ElectronImpactRateMaterial(const InputParameters & parameters);" in header
-    assert "using PhysicsElectronImpactRateMaterial = " not in header
-    assert "class PhysicsElectronImpactRateMaterial" not in header
-    assert '#include "ElectronImpactRateMaterial.h"' in implementation
-
-    canonical = 'registerMooseObject("PhysicsApp", ElectronImpactRateMaterial);'
-    legacy = 'registerMooseObjectAliased("PhysicsApp", ElectronImpactRateMaterial, "PhysicsElectronImpactRateMaterial");'
-    assert implementation.count(canonical) == 1
-    assert implementation.count(legacy) == 1
-    assert "ElectronImpactRateMaterial::validParams()" in implementation
-    assert "ElectronImpactRateMaterial::ElectronImpactRateMaterial(" in implementation
-    assert "ElectronImpactRateMaterial::interpolateStrict(" in implementation
-    assert "PhysicsElectronImpactRateMaterial::" not in implementation
-
-    assert implementation.count('mooseError("ElectronImpactRateMaterial') == 3
-    assert 'mooseError("PhysicsElectronImpactRateMaterial' not in implementation
-    assert "return k_raw * (n_e / N_A) * c_target;" in implementation
-    assert "strict Stage-4 policy forbids clamp/floor" in implementation
+    header = (app / "include/materials/RateCoeffMaterial.h").read_text()
+    source = (app / "src/materials/RateCoeffMaterial.C").read_text()
+    for old in ("ElectronImpactRateMaterial", "PhysicsElectronImpactRateMaterial"):
+        assert not (app / "include/materials" / (old + ".h")).exists()
+        assert not (app / "src/materials" / (old + ".C")).exists()
+    assert "class RateCoeffMaterial : public FunctorMaterial" in header
+    assert "RateCoeffMaterial(const InputParameters & parameters);" in header
+    assert '#include "RateCoeffMaterial.h"' in source
+    assert source.count('registerMooseObject("PhysicsApp", RateCoeffMaterial);') == 1
+    assert 'registerMooseObjectAliased(' not in source
+    assert "RateCoeffMaterial::validParams()" in source
+    assert "RateCoeffMaterial::RateCoeffMaterial(" in source
+    assert "RateCoeffMaterial::interpolateStrict(" in source
+    assert source.count('mooseError("RateCoeffMaterial') == 3
+    assert "return k_raw * (n_e / N_A) * c_target;" in source
+    assert "strict Stage-4 policy forbids clamp/floor" in source

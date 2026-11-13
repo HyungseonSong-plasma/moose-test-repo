@@ -29,7 +29,7 @@ def synthetic_files(tmp_path: Path, parent: str) -> list[Path]:
         "reaction_progress = R_EI401",
         f"reaction_progress = R_EI{parent}",
         "\n".join([
-            "type = ElectronImpactRateMaterial",
+            "type = RateCoeffMaterial",
             "rate_table_file = 'private_rates/EI-407_O2_X.txt'",
             "reaction_progress = R_EI407",
             "variable = w_O2s",
@@ -38,7 +38,7 @@ def synthetic_files(tmp_path: Path, parent: str) -> list[Path]:
             "variable = log_energy",
         ]),
         "\n".join([
-            "type = ElectronImpactRateMaterial",
+            "type = RateCoeffMaterial",
             "rate_table_file = 'private_rates/EI-2069_O2_a1Delta.txt'",
             "reaction_progress = R_EI2069",
             "variable = w_O2s",

@@ -75,7 +75,7 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
     old, new = source[BASE_PATH], updated[BASE_PATH]
     assert old.count("type = PhysicsElectronTransportLookupMaterial") == 1
     assert "type = PhysicsElectronTransportLookupMaterial" not in new
-    assert new.count("type = DDMaterial") == 1
+    assert new.count("type = DDTransportMaterial") == 1
     electron_block = new.split("  [electron_transport]\n", 1)[1].split("  []", 1)[0]
     for line in ("table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
                  "pressure = p", "gas_temperature = T_g_fixed",
@@ -97,7 +97,7 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
     ("gas_temperature = T_g_fixed", "gas_temperature = T_g"),
     ("property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
      "property_table_file = 'e_transport.txt'"),
-    ("type = PhysicsElectronTransportLookupMaterial", "type = DDMaterial"),
+    ("type = PhysicsElectronTransportLookupMaterial", "type = DDTransportMaterial"),
     ("block = plasma", "block = elsewhere"),
 ))
 def test_unverified_transport_identity_rejected_without_source_change(before, after):
@@ -198,7 +198,7 @@ def test_historical_and_dd_lookup_equations_agree_at_archived_table_points(
                 return y0 + (coordinate - x0) * (y1 - y0) / (x1 - x0)
         raise AssertionError("unreachable")
 
-    # Old ElectronTransportLookupMaterial.C and new DDMaterial.C both
+    # Old ElectronTransportLookupMaterial.C and new DDTransportMaterial.C both
     # interpolate reduced coefficients and divide by the same neutral N.
     old_mu = evaluate(1) / n_n
     old_diff = evaluate(2) / n_n
@@ -211,8 +211,8 @@ def test_historical_and_dd_lookup_equations_agree_at_archived_table_points(
 
 
 def test_current_cpp_lookup_ownership_has_same_energy_projection():
-    cpp = (ROOT / "physics_app/src/materials/DDMaterial.C").read_text()
-    header = (ROOT / "physics_app/include/materials/DDMaterial.h").read_text()
+    cpp = (ROOT / "physics_app/src/materials/DDTransportMaterial.C").read_text()
+    header = (ROOT / "physics_app/include/materials/DDTransportMaterial.h").read_text()
     for symbol in ('getFunctorByName<ADReal>("mean_en_solved")',
                    '"electron_mobility"', '"electron_diffusion"',
                    '"electron_energy_mobility"', '"electron_energy_diffusion"',

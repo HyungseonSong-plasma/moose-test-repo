@@ -114,7 +114,7 @@ def test_p2_wiring_for_two_species_and_electron_and_negative_mutation():
         raise AssertionError("Negative-ion wall BC accepted O2p source")
 
 def test_no_immutable_s6_archive_or_global_dd_name_changes():
-    dd = source("physics_app/src/materials/DDMaterial.C")
+    dd = source("physics_app/src/materials/DDTransportMaterial.C")
     assert '_species + "_mobility"' in dd
     assert '_species + "_diffusivity"' in dd
     assert '"electron_mobility"' in dd  # Legacy consumer remains distinct.

@@ -50,7 +50,7 @@ class EI17OElasticOverlay(unittest.TestCase):
     def test_single_progress_energy_only(self):
         out = ei17.build(BASE, "o_elastic.txt")
         self.assertEqual(out.count("reaction_progress = R_elastic_O\n"), 1)
-        self.assertIn("type = ElectronImpactRateMaterial", out)
+        self.assertIn("type = RateCoeffMaterial", out)
         self.assertIn("rate_table_file = o_elastic.txt", out)
         self.assertIn("target_molar_concentration = c_O_EI17", out)
         self.assertIn("functor_names = 'rho_neutral w_O'", out)

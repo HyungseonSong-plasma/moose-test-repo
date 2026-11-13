@@ -113,7 +113,7 @@ ENERGY_LOSS_EV = {
 SOLVED_HEAVY = ("O2s", "O2p", "O", "Om", "Op", "Os")
 CURRENT_PHYSICS_OBJECT_TYPES = {
     "FunctorMaterials/heavy_transport": "PhysicsThermalDiffusionMaterial",
-    "FunctorMaterials/electron_transport": "DDMaterial",
+    "FunctorMaterials/electron_transport": "DDTransportMaterial",
     "FunctorMaterials/r31_charge_density": "PhysicsPlasmaChargeDensityMaterial",
     "FVKernels/n_e_drift": "PhysicsFVElectrostaticDrift",
     **{
@@ -241,7 +241,7 @@ def _insert_energy_state(text: str) -> str:
     # Promote the accepted R4 particle-transport lookup to the accepted Stage-4
     # solved-energy lookup owner. Particle property names remain unchanged.
     text = mp.upsert_parameter(
-        text, "FunctorMaterials/electron_transport", "type", "DDMaterial")
+        text, "FunctorMaterials/electron_transport", "type", "DDTransportMaterial")
     # Convert only the staged input. The original archived R4 material input
     # retains its historical spelling and source path.
     old_file = mp.get_parameter(text, "FunctorMaterials/electron_transport",
@@ -347,7 +347,7 @@ def _insert_kinetic_owners(text: str) -> str:
         text = _insert_material(
             text,
             name,
-            f"""    type = ElectronImpactRateMaterial
+            f"""    type = RateCoeffMaterial
     rate_table_file = {table}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
@@ -386,7 +386,7 @@ def _insert_kinetic_owners(text: str) -> str:
     text = _insert_material(
         text,
         "s5r_ei16_rate",
-        f"""    type = ElectronImpactRateMaterial
+        f"""    type = RateCoeffMaterial
     rate_table_file = {RATE_TABLES["EI16"]}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
@@ -643,7 +643,7 @@ def _insert_observables(text: str) -> str:
 
 
 def _owner_paths_by_type(text: str) -> set[str]:
-    kinetic_types = {"ElectronImpactRateMaterial", "PhysicsReactionRateMaterial"}
+    kinetic_types = {"RateCoeffMaterial", "PhysicsReactionRateMaterial"}
     projected_names = {
         "O2_o2s_excitation_mass_source", "O2s_excitation_mass_source",
         "O2_ionization_mass_source", "O2p_ionization_mass_source",
@@ -684,7 +684,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["strict_solved_energy_transport"] = (
         mp.get_parameter(text, "FunctorMaterials/electron_transport", "type")
-        == "DDMaterial"
+        == "DDTransportMaterial"
         and mp.get_parameter(text, "FunctorMaterials/electron_transport", "model")
         == "lookup"
         and mp.get_parameter(text, "FunctorMaterials/electron_transport", "table_file")
@@ -718,7 +718,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     for channel in ("EI01", "EI02", "EI17", "EI19", "EI18_O_TO_OS", "EI20_O_IONIZATION"):
         path = OWNER_BLOCKS[channel]
         checks[f"owner:{channel}"] = (
-            mp.get_parameter(text, path, "type") == "ElectronImpactRateMaterial"
+            mp.get_parameter(text, path, "type") == "RateCoeffMaterial"
             and mp.get_parameter(text, path, "rate_table_file") == RATE_TABLES[channel]
             and mp.get_parameter(text, path, "mean_energy") == "mean_en_solved"
             and mp.get_parameter(text, path, "electron_number_density") == "n_e_physical"
@@ -736,7 +736,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["owner:EI16"] = (
         mp.get_parameter(text, OWNER_BLOCKS["EI16"], "type")
-        == "ElectronImpactRateMaterial"
+        == "RateCoeffMaterial"
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "rate_table_file")
         == RATE_TABLES["EI16"]
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "mean_energy")

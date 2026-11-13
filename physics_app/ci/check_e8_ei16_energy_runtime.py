@@ -85,7 +85,7 @@ RUNTIME_INPUT = f"""[Mesh]
     state_form = physical_eV
   []
   [ei16_rate]
-    type = ElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = e8_ei16_runtime_table.txt
     mean_energy = mean_en_solved
     electron_number_density = n_e

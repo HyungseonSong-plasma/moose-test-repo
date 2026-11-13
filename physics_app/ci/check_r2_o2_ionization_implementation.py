@@ -29,7 +29,7 @@ RUNTIME_REF_RE = re.compile(
     r"^ghcr\.io/hyungseonsong-plasma/physics-runtime@sha256:[0-9a-f]{64}$"
 )
 
-RATE = Path("physics_app/src/materials/ElectronImpactRateMaterial.C")
+RATE = Path("physics_app/src/materials/RateCoeffMaterial.C")
 
 EK = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C")
 
@@ -91,7 +91,7 @@ RUNTIME_INPUT = f"""[Mesh]
     state_form = physical_eV
   []
   [r2_ionization_rate]
-    type = ElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = r2_o2_ionization_runtime_table.txt
     mean_energy = mean_en_solved
     electron_number_density = n_e
@@ -380,12 +380,12 @@ def static_implementation_gate():
     rate = RATE.read_text()
     electron_kernel = EK.read_text()
 
-    assert 'registerMooseObject("PhysicsApp", ElectronImpactRateMaterial);' in rate
+    assert 'registerMooseObject("PhysicsApp", RateCoeffMaterial);' in rate
     assert 'reaction_progress' in rate
     assert 'interpolateStrict(_mean_energy(r, state))' in rate
     assert 'outside lookup range' in rate and 'forbids clamp/floor' in rate
     assert 'target_molar_concentration' in rate
-    assert 'type = ElectronImpactRateMaterial' in RUNTIME_INPUT
+    assert 'type = RateCoeffMaterial' in RUNTIME_INPUT
     assert 'target_molar_concentration = c_O2' in RUNTIME_INPUT
     assert 'reaction_progress = R_ion_O2' in RUNTIME_INPUT
     for field, expression in (

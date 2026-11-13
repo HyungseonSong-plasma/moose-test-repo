@@ -20,11 +20,11 @@
  * For species=e, the same closure publishes the 5/3 electron energy
  * mobility/diffusion projection. It does not calculate Chemistry rates.
  */
-class DDMaterial : public FunctorMaterial
+class DDTransportMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  DDMaterial(const InputParameters & parameters);
+  DDTransportMaterial(const InputParameters & parameters);
 
 protected:
   enum class BoundsPolicy { Error, Clamp };
@@ -37,7 +37,7 @@ protected:
     const ADReal pressure = (*_pressure)(r, state);
     if (!std::isfinite(T_g.value()) || T_g.value() <= 0.0 ||
         !std::isfinite(pressure.value()) || pressure.value() <= 0.0)
-      mooseError("DDMaterial reduced table requires gas_temperature > 0 K and pressure > 0 Pa.");
+      mooseError("DDTransportMaterial reduced table requires gas_temperature > 0 K and pressure > 0 Pa.");
     return pressure / (PHYSICS_CONSTANTS::k_boltz * T_g);
   }
 

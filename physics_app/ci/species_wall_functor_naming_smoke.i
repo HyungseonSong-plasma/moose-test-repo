@@ -40,21 +40,21 @@
     canonical_species_names = true
   []
   [O2p_transport]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = O2p
     model = constant
     mobility = 0.002
     diffusivity = 0.003
   []
   [Op_transport]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = Op
     model = constant
     mobility = 0.004
     diffusivity = 0.005
   []
   [Om_transport]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = Om
     model = constant
     mobility = 0.002

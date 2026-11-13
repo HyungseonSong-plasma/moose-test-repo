@@ -51,21 +51,21 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
 []
 [FunctorMaterials]
   [O2p_species_transport_alias]
-    type = DDMaterial
+    type = DDTransportMaterial
     model = functor
     species_id = O2p
     mobility_source = ion_mobility
     diffusivity_source = ion_diffusion
   []
   [Om_species_transport_alias]
-    type = DDMaterial
+    type = DDTransportMaterial
     model = functor
     species_id = Om
     mobility_source = negative_ion_mobility
     diffusivity_source = negative_ion_diffusion
   []
   [Op_species_transport_alias]
-    type = DDMaterial
+    type = DDTransportMaterial
     model = functor
     species_id = Op
     mobility_source = atomic_positive_ion_mobility
@@ -73,7 +73,7 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
   []
 []
 """
-OVERLAY_SHA256 = "dcac4502c6bece4481651f97879699c27be994c97a6b09ad4443aca9c2edd544"
+OVERLAY_SHA256 = "edf3f8e8194927e93783d136066799d60df2673af9245d6d4b990fb7d267b513"
 CASES = ("417", "941")
 VARIANTS = ("B", "D")
 
@@ -218,12 +218,19 @@ def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
 
 
 # Historical archived decks retain old factory names only as provenance.
+# No old Material object aliases are registered in the application.
 # Rename the explicit type fields in disposable B/D scratch copies. No factory
 # aliases are installed by the application and no archived input is rewritten.
 RENAMED_FEM_KERNEL_TYPES = {
     "PhysicsFEMLogMolarTimeDerivative": "FEMLogMolarTimeDerivative",
     "PhysicsFEMLogMolarDriftDiffusion": "FEMLogMolarDriftDiffusion",
     "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
+    # Archived S6 inputs are rewritten only after their pinned byte hashes are checked.
+    "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
+    "DDMaterial": "DDTransportMaterial",
+    "NVMaterial": "NVTransportMaterial",
+    "ElectronImpactRateMaterial": "RateCoeffMaterial",
+    "PhysicsElectronImpactRateMaterial": "RateCoeffMaterial",
 }
 _FEM_TYPE_LINE = re.compile(
     r"(?m)^(?P<indent>[ \t]*type[ \t]*=[ \t]*)(?P<name>"

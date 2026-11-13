@@ -116,7 +116,7 @@ def runtime_input(mean=EREF):
     state_form = physical_eV
   []
   [ei20_rate]
-    type = ElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = o_ionization.txt
     mean_energy = mean_en_solved
     electron_number_density = n_e
@@ -298,13 +298,13 @@ def self_test():
         bad=[dict(r) for r in rows]; bad[-1][key]=mut(bad[-1][key]); expect_fail(validate,bad,table)
     expect_fail(interp,table,XMIN-.1); expect_fail(interp,table,XMAX+.1)
     text=runtime_input()
-    required=("type = ElectronImpactRateMaterial",f"reaction_progress = {PROGRESS}",
+    required=("type = RateCoeffMaterial",f"reaction_progress = {PROGRESS}",
               "type = PhysicsFVSpeciesReactionSource","source = Op_ei20_mass_source",
               "type = PhysicsFVElectronReactionSource","number_source = electron_ei20_number_source",
               "type = FVCoupledForce",f"v = {PROGRESS}","O_ei20_mass_source","Op_ei20_mass_source","electron_ei20_number_source")
     for token in required:
         if token not in text: raise AssertionError(f"runtime input missing {token}")
-    if text.count("type = ElectronImpactRateMaterial")!=1 or text.count(f"reaction_progress = {PROGRESS}")!=1:
+    if text.count("type = RateCoeffMaterial")!=1 or text.count(f"reaction_progress = {PROGRESS}")!=1:
         raise AssertionError("EI20 must have exactly one progress owner")
     for token in ("PhysicsFVElectronReactionEnergySource","o_excitation_1d.txt","R_excitation_O_1p968","PhysicsElectronImpactIonizationMaterial"):
         if token in text: raise AssertionError(f"wrong/deprecated Stage-5 surface activated: {token}")
@@ -324,7 +324,7 @@ def static_gate():
     data=TABLE.read_bytes()
     if blob_sha(data)!=EXPECTED_BLOB: raise AssertionError(f"EI20 production table blob changed: {blob_sha(data)}")
     read_table(data)
-    owner=(ROOT/"physics_app/src/materials/ElectronImpactRateMaterial.C").read_text()
+    owner=(ROOT/"physics_app/src/materials/RateCoeffMaterial.C").read_text()
     for token in ('addRequiredParam<std::string>("reaction_progress"',"return k_raw * (n_e / N_A) * c_target;","strict Stage-4 policy forbids clamp/floor"):
         if token not in owner: raise AssertionError(f"generic progress owner contract missing: {token}")
     ek=(ROOT/"physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()

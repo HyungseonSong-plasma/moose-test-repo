@@ -227,7 +227,7 @@ def selftest():
  s=text()
  req=("property_name=R_detach_Om","type=PhysicsFVSpeciesReactionSource","type=PhysicsFVElectronReactionSource","type=FVCoupledForce","v=R_detach_Om")
  if any(x not in s for x in req) or s.count("property_name=R_detach_Om")!=1: raise AssertionError("owner")
- if any(x in s for x in ("ElectronImpactRateMaterial","PhysicsFVElectronReactionEnergySource")): raise AssertionError("wrong owner")
+ if any(x in s for x in ("RateCoeffMaterial","PhysicsFVElectronReactionEnergySource")): raise AssertionError("wrong owner")
  print("STAGE5_EDETACH_RUNTIME_CHECKER_SELFTEST_PASS")
 def static():
  c=json.loads(C.read_text()); r=c["reaction"]; q=c["rate_law"]; p=c["projection"]; s=c["source_provenance"]

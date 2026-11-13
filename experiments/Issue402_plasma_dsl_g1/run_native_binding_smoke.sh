@@ -29,10 +29,10 @@ test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
     physics_app/include/physics/plasma/Chemistry.h \
     physics_app/src/physics/plasma/PoissonEq.C \
     physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
-    physics_app/src/materials/DDMaterial.C \
-    physics_app/include/materials/DDMaterial.h \
-    physics_app/src/materials/NVMaterial.C \
-    physics_app/include/materials/NVMaterial.h \
+    physics_app/src/materials/DDTransportMaterial.C \
+    physics_app/include/materials/DDTransportMaterial.h \
+    physics_app/src/materials/NVTransportMaterial.C \
+    physics_app/include/materials/NVTransportMaterial.h \
     physics_app/src/materials/PhysicsPlasmaChargeDensityMaterial.C \
     physics_app/include/materials/PhysicsPlasmaChargeDensityMaterial.h
 
@@ -107,16 +107,16 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_op
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
-# Automatic species-based DDMaterial and JSON-sourced NVMaterial.
+# Automatic species-based DDTransportMaterial and JSON-sourced NVTransportMaterial.
 # No transport-coefficient [FunctorMaterials] declarations in this deck.
 native --check-input -i "$PILOT/valid_json_generated_transport.i" \
   2>&1 | tee "$EVIDENCE/json_generated_transport_check.log"
 echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
-# AD-preserving DDMaterial model=functor generated directly from JSON.
+# AD-preserving DDTransportMaterial model=functor generated directly from JSON.
 native --check-input -i "$PILOT/valid_json_generated_functor.i" \
   2>&1 | tee "$EVIDENCE/json_generated_functor_check.log"
 echo "PLASMA_JSON_FUNCTOR_TRANSPORT_GENERATION_P2_PASS"
-# Single-provider checks: DDMaterial creates canonical ion mu/D; the
+# Single-provider checks: DDTransportMaterial creates canonical ion mu/D; the
 # separate charge-density Material owns n_i and Poisson-source Functors.
 # The retired charge-transport assembler is not instantiated.
 native --check-input -i "$PILOT/charge_core_ddmaterial_owner_p2.i" \
@@ -177,7 +177,7 @@ native --check-input -i "$PILOT/valid_json_dd_fem_fvm_mixed_p2.i" \
 echo "PLASMA_JSON_DD_FEM_FVM_MIXED_P2_PASS"
 
 for entry in "invalid_json_dd_missing_om_p2:Missing drift-diffusion transport JSON record for FVM species 'Om'" \
-             "invalid_json_dd_bad_lookup_p2:DDMaterial lookup coefficients must be finite and nonnegative"; do
+             "invalid_json_dd_bad_lookup_p2:DDTransportMaterial lookup coefficients must be finite and nonnegative"; do
   item="${entry%%:*}"
   expected="${entry#*:}"
   set +e

@@ -148,7 +148,7 @@ def _elastic_input(spec, tgas, mean_energy=MEAN_E0_EV):
     prop_values = '{mean_energy:.17g} {N_E0:.17g} {C_TARGET:.17g} {tgas:.17g}'
   []
   [reaction_rate]
-    type = ElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = {spec["table"]}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
@@ -251,7 +251,7 @@ def _ei19_input(mean_energy=MEAN_E0_EV):
     prop_values = '{mean_energy:.17g} {N_E0:.17g} {C_TARGET:.17g}'
   []
   [reaction_rate]
-    type = ElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = {EI19["table"]}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical

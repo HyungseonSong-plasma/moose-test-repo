@@ -146,7 +146,7 @@ def _runtime_input(mean_energy=EPSILON_E0_EV):
     state_form = physical_eV
   []
   [ei18_rate]
-    type = ElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = o_excitation_1d.txt
     mean_energy = mean_en_solved
     electron_number_density = n_e
@@ -400,7 +400,7 @@ def checker_self_test():
 
     text = _runtime_input()
     required = (
-        "type = ElectronImpactRateMaterial",
+        "type = RateCoeffMaterial",
         f"reaction_progress = {PROGRESS}",
         "type = PhysicsFVSpeciesReactionSource",
         "source = Os_ei18_mass_source",
@@ -413,7 +413,7 @@ def checker_self_test():
     for token in required:
         if token not in text:
             raise AssertionError(f"runtime input missing {token}")
-    if text.count("type = ElectronImpactRateMaterial") != 1:
+    if text.count("type = RateCoeffMaterial") != 1:
         raise AssertionError("EI18 must have exactly one kinetic progress owner")
     if "PhysicsFVElectronReactionSource" in text:
         raise AssertionError("EI18 must not change electron particle inventory")
@@ -443,7 +443,7 @@ def static_gate():
     if _git_blob_sha(data) != EXPECTED_GIT_BLOB:
         raise AssertionError(f"EI18 production table blob changed: {_git_blob_sha(data)}")
     _read_table_bytes(data)
-    owner_source = (ROOT / "physics_app/src/materials/ElectronImpactRateMaterial.C").read_text()
+    owner_source = (ROOT / "physics_app/src/materials/RateCoeffMaterial.C").read_text()
     for token in (
         'addRequiredParam<std::string>("reaction_progress"',
         "return k_raw * (n_e / N_A) * c_target;",

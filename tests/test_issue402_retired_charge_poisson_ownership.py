@@ -21,7 +21,7 @@ def test_charge_transport_assembler_is_retired_without_removing_charge_source():
     old_factory = (APP / "ci/check_plasma_closures_contract.py").read_text()
     assert '("PhysicsPlasmaChargeTransportMaterial", "PlasmaChargeTransportMaterial")' not in old_factory
     fixture = (PILOT / "charge_core_ddmaterial_owner_p2.i").read_text()
-    assert fixture.count("type = DDMaterial") == 3
+    assert fixture.count("type = DDTransportMaterial") == 3
     assert "type = PhysicsPlasmaChargeDensityMaterial" in fixture
     assert "type = PlasmaChargeTransportMaterial" not in fixture
     assert "functor = poisson_charge_source" in fixture

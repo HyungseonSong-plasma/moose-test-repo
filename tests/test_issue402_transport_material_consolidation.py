@@ -2,7 +2,7 @@
 
 Exact-head Native compilation/P2 and physical result parity are separate gates.
 Historical electron lookup aliases are retired; the separate NV thermal
-alias remains. Frozen source archives are not modified.
+alias is retired. Frozen source archives are not modified.
 """
 from pathlib import Path
 
@@ -12,7 +12,7 @@ INC = ROOT / "physics_app/include/materials"
 
 
 def test_dd_and_nv_canonical_materials_and_retired_implementations():
-    for cls in ("DDMaterial", "NVMaterial"):
+    for cls in ("DDTransportMaterial", "NVTransportMaterial"):
         header, source = INC / f"{cls}.h", SRC / f"{cls}.C"
         assert header.is_file() and source.is_file()
         assert f"class {cls} : public FunctorMaterial" in header.read_text()
@@ -25,8 +25,8 @@ def test_dd_and_nv_canonical_materials_and_retired_implementations():
 
 
 def test_dd_constant_lookup_units_naming_and_energy_projection():
-    dd = (SRC / "DDMaterial.C").read_text()
-    hd = (INC / "DDMaterial.h").read_text()
+    dd = (SRC / "DDTransportMaterial.C").read_text()
+    hd = (INC / "DDTransportMaterial.h").read_text()
     for token in ('"species_id"', '"model"', '"lookup constant functor"', '"table_file"',
                   '"mobility"', '"diffusivity"', '"table_units"', '"pressure"',
                   '"gas_temperature"'):
@@ -48,9 +48,9 @@ def test_dd_constant_lookup_units_naming_and_energy_projection():
 
 
 def test_nv_retains_unmodified_collision_integral_and_mixture_model():
-    nv = (SRC / "NVMaterial.C").read_text()
-    head = (INC / "NVMaterial.h").read_text()
-    assert 'registerMooseObjectAliased("PhysicsApp", NVMaterial, "PhysicsThermalDiffusionMaterial");' in nv
+    nv = (SRC / "NVTransportMaterial.C").read_text()
+    head = (INC / "NVTransportMaterial.h").read_text()
+    assert "registerMooseObjectAliased(" not in nv
     for formula in ("debyeHuckelCollisionData", "interpolateCollisionIntegral",
                     "collisionData", "evaluateDmix", "D_mix", "D_T", "kT"):
         assert formula in nv or formula in head
@@ -61,8 +61,8 @@ def test_nv_retains_unmodified_collision_integral_and_mixture_model():
 
 def test_native_p2_input_exercises_both_new_models():
     inp = (ROOT / "physics_app/ci/dd_nv_material_smoke.i").read_text()
-    assert inp.count("type = DDMaterial") == 2
-    assert inp.count("type = NVMaterial") == 1
+    assert inp.count("type = DDTransportMaterial") == 2
+    assert inp.count("type = NVTransportMaterial") == 1
     assert "model = constant" in inp and "model = lookup" in inp
     assert "table_units = physical" in inp
     assert "mobility = 0.25" in inp and "diffusivity = 0.125" in inp
@@ -76,11 +76,11 @@ def test_redundant_composite_retired_but_needed_ion_functor_bridge_remains():
     assert not (SRC / "ElectronClosureMaterial.C").exists()
     assert not (INC / "ElectronClosureMaterial.h").exists()
     assert "type = PhysicsElectronMeanEnergyMaterial" in inp
-    assert "type = DDMaterial" in inp
+    assert "type = DDTransportMaterial" in inp
     # Existing nonconstant heavy-ion coefficient Functors still require a
     # pass-through name bridge; replacing them by constants would alter physics.
-    dd = (SRC / "DDMaterial.C").read_text()
-    header = (INC / "DDMaterial.h").read_text()
+    dd = (SRC / "DDTransportMaterial.C").read_text()
+    header = (INC / "DDTransportMaterial.h").read_text()
     assert 'const bool explicit_mu = isParamValid("mobility_source")' in dd
     assert 'const bool explicit_D = isParamValid("diffusivity_source")' in dd
     assert '_species + "_mobility"' in dd

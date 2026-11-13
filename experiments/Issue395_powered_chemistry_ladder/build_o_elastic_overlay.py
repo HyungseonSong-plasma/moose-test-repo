@@ -67,7 +67,7 @@ def build(base: str, table_name: str) -> str:
     block = plasma
   []
   [ei17_progress]
-    type = ElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = {table_name}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical

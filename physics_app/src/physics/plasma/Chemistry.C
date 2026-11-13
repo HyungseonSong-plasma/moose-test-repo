@@ -190,7 +190,7 @@ parseDDTransport(const Json & value, const std::string & file)
     // model=functor reuses the existing canonical species coefficient AD Functors.
     // Numeric physical constants remain model=constant with explicit mu and D.
     if (value.size() != 1)
-      fail(file, "functor transport accepts only model; DDMaterial derives "
+      fail(file, "functor transport accepts only model; DDTransportMaterial derives "
                  "<species>_mobility and <species>_diffusivity.");
   }
   else if (result.model == "lookup")

@@ -38,7 +38,7 @@ def test_clean_c0_contract_stages_only_base_and_rf(tmp_path):
 
 @pytest.mark.parametrize("mutation", [
     "  reaction_progress = R_EI415\n",
-    "  type = ElectronImpactRateMaterial\n",
+    "  type = RateCoeffMaterial\n",
     "  source = S_electron_energy_EI415\n",
     "  stageb4_O_surface_loss = 1\n",
     "  functor_names = 'R_EI412'\n",

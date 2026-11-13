@@ -72,7 +72,7 @@
   []
 
   [electron_transport]
-    type = DDMaterial
+    type = DDTransportMaterial
     model = lookup
     table_file = '../../experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
     pressure = p
