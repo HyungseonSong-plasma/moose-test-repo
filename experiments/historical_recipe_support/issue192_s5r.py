@@ -342,7 +342,7 @@ def _insert_kinetic_owners(text: str) -> str:
         text = _insert_material(
             text,
             name,
-            f"""    type = RateCoeffMaterial
+            f"""    type = EIRateCoefMaterial
     rate_table_file = {table}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
@@ -381,7 +381,7 @@ def _insert_kinetic_owners(text: str) -> str:
     text = _insert_material(
         text,
         "s5r_ei16_rate",
-        f"""    type = RateCoeffMaterial
+        f"""    type = EIRateCoefMaterial
     rate_table_file = {RATE_TABLES["EI16"]}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
@@ -419,7 +419,7 @@ def _insert_kinetic_owners(text: str) -> str:
     text = _insert_material(
         text,
         "s5r_h01_h04_rates",
-        f"""    type = HeavyReactionRateMaterial
+        f"""    type = HRateCoefMaterial
     chemistry_file = stage5_s5d_oxygen_heavy.json
     density = rho_mat
     temperature = T_g
@@ -431,7 +431,7 @@ def _insert_kinetic_owners(text: str) -> str:
     text = _insert_material(
         text,
         "s5r_h05_rate",
-        f"""    type = HeavyReactionRateMaterial
+        f"""    type = HRateCoefMaterial
     chemistry_file = stage5_s5e_h05_oxygen_heavy.json
     density = rho_mat
     temperature = T_g
@@ -638,7 +638,7 @@ def _insert_observables(text: str) -> str:
 
 
 def _owner_paths_by_type(text: str) -> set[str]:
-    kinetic_types = {"RateCoeffMaterial", "HeavyReactionRateMaterial"}
+    kinetic_types = {"EIRateCoefMaterial", "HRateCoefMaterial"}
     projected_names = {
         "O2_o2s_excitation_mass_source", "O2s_excitation_mass_source",
         "O2_ionization_mass_source", "O2p_ionization_mass_source",
@@ -713,7 +713,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     for channel in ("EI01", "EI02", "EI17", "EI19", "EI18_O_TO_OS", "EI20_O_IONIZATION"):
         path = OWNER_BLOCKS[channel]
         checks[f"owner:{channel}"] = (
-            mp.get_parameter(text, path, "type") == "RateCoeffMaterial"
+            mp.get_parameter(text, path, "type") == "EIRateCoefMaterial"
             and mp.get_parameter(text, path, "rate_table_file") == RATE_TABLES[channel]
             and mp.get_parameter(text, path, "mean_energy") == "mean_en_solved"
             and mp.get_parameter(text, path, "electron_number_density") == "n_e_physical"
@@ -731,7 +731,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["owner:EI16"] = (
         mp.get_parameter(text, OWNER_BLOCKS["EI16"], "type")
-        == "RateCoeffMaterial"
+        == "EIRateCoefMaterial"
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "rate_table_file")
         == RATE_TABLES["EI16"]
         and mp.get_parameter(text, OWNER_BLOCKS["EI16"], "mean_energy")
@@ -753,7 +753,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["owner:H01_H04"] = (
         mp.get_parameter(text, OWNER_BLOCKS["H01_OP_O2_CHARGE_TRANSFER"], "type")
-        == "HeavyReactionRateMaterial"
+        == "HRateCoefMaterial"
         and mp.words(
             mp.get_parameter(
                 text, OWNER_BLOCKS["H01_OP_O2_CHARGE_TRANSFER"], "active_reactions"
@@ -767,7 +767,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["owner:H05"] = (
         mp.get_parameter(text, OWNER_BLOCKS["H05_OM_O_DETACHMENT"], "type")
-        == "HeavyReactionRateMaterial"
+        == "HRateCoefMaterial"
         and mp.words(
             mp.get_parameter(text, OWNER_BLOCKS["H05_OM_O_DETACHMENT"], "active_reactions")
         )
