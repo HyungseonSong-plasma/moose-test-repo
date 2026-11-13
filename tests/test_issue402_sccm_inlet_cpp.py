@@ -26,6 +26,7 @@ def test_standalone_sccm_cpp_oracle(tmp_path: Path):
     driver.write_text(r'''
 #include "SCCMInletFlow.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
