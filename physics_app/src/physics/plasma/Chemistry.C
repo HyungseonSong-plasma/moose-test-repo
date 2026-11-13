@@ -848,10 +848,17 @@ PlasmasAction::validParams()
   params.addParam<std::vector<BoundaryName>>(
       "inlet_boundaries", {}, "Named inlet sidesets; never inferred from walls.");
   params.addParam<Real>("sccm",
-                        "Optional positive standard volumetric feed rate [standard cm^3/min]. "
-                        "When supplied, create inlet FVDirichletBC for each solved "
-                        "heavy-species mass fraction using JSON inlet composition. "
-                        "Does not prescribe mixture mass flux, velocity, or inlet area.");
+                        "Positive standard volumetric feed rate [standard cm^3/min]; "
+                        "with inlet_area, publishes feed mass flow and speed.");
+  params.addParam<Real>("inlet_area",
+                        "Required with sccm: user-specified physical inlet area [m^2]. "
+                        "Never inferred from sidesets.");
+  params.addParam<Real>("standard_molar_volume", 0.0224136,
+                        "Reference molar volume [m^3/mol], default historical 0 C / 1 atm.");
+  params.addParam<MooseEnum>(
+      "inlet_species_bc_ownership", MooseEnum("root_dirichlet external_flux", "root_dirichlet"),
+      "root_dirichlet generates composition BCs; external_flux preserves user WCNS "
+      "species flux BCs without adding duplicate Dirichlet conditions.");
   return params;
 }
 
@@ -879,9 +886,23 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
       paramError("inlet_boundaries", "sccm requires explicit inlet sidesets for species Dirichlet BCs.");
     if (!gasStateEnabled())
       paramError("pressure", "sccm inlet composition requires pressure and temperature.");
+    if (!isParamValid("inlet_area") || !std::isfinite(getParam<Real>("inlet_area")) ||
+        getParam<Real>("inlet_area") <= 0.0)
+      paramError("inlet_area", "sccm requires a finite, strictly positive inlet_area [m^2].");
   }
-  else if (!getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
-    paramError("sccm", "inlet_boundaries requires sccm to activate inlet species Dirichlet BCs.");
+  else
+  {
+    if (!getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
+      paramError("sccm", "inlet_boundaries requires sccm to activate inlet species Dirichlet BCs.");
+    if (isParamValid("inlet_area"))
+      paramError("inlet_area", "inlet_area without sccm has no active feed.");
+    if (getParam<MooseEnum>("inlet_species_bc_ownership") == "external_flux")
+      paramError("inlet_species_bc_ownership", "external_flux requires positive sccm.");
+  }
+  if (!std::isfinite(getParam<Real>("standard_molar_volume")) ||
+      getParam<Real>("standard_molar_volume") <= 0.0)
+    paramError("standard_molar_volume",
+               "standard_molar_volume must be finite and strictly positive.");
 }
 
 void
@@ -889,7 +910,8 @@ PlasmasAction::act()
 {
   if (!gasStateEnabled() ||
       (_current_task != "add_functor_material" &&
-       _current_task != "add_ics_physics" && _current_task != "add_bc"))
+       _current_task != "add_ics_physics" && _current_task != "add_bc" &&
+       _current_task != "add_postprocessor"))
     return;
 
   // No redundant top-level gas_state list. Composition is owned by each
@@ -957,7 +979,8 @@ PlasmasAction::act()
   }
   if (_current_task == "add_bc")
   {
-    if (isParamValid("sccm"))
+    if (isParamValid("sccm") &&
+        getParam<MooseEnum>("inlet_species_bc_ownership") == "root_dirichlet")
       for (const auto & id : species)
       {
         const auto & record = _data.species(id);
@@ -971,6 +994,60 @@ PlasmasAction::act()
         params.set<Real>("value") = *record.initial_inlet_mass_fraction;
         _problem->addFVBC(type, "plasma_inlet_" + id + "_mass_fraction", params);
       }
+    return;
+  }
+
+  if (_current_task == "add_postprocessor")
+  {
+    if (!isParamValid("sccm"))
+      return;
+
+    // Feed mixture molar mass uses the inlet fractions, never the initial
+    // volume state or the instantaneous solver state.
+    Real inverse_molar_mass = 0.0;
+    for (const auto & id : species)
+    {
+      const auto & record = _data.species(id);
+      inverse_molar_mass +=
+          *record.initial_inlet_mass_fraction / record.molar_mass_kg_mol;
+    }
+    if (!(std::isfinite(inverse_molar_mass) && inverse_molar_mass > 0.0))
+      paramError("files", "Inlet mixture molar mass is invalid.");
+    const Real inlet_molar_mass = 1.0 / inverse_molar_mass;
+    const Real inlet_mdot = getParam<Real>("sccm") * 1.0e-6 / 60.0 *
+                            inlet_molar_mass / getParam<Real>("standard_molar_volume");
+    const Real inlet_rho = getParam<Real>("pressure") * inlet_molar_mass /
+                           (8.31446261815324 * getParam<Real>("temperature"));
+    const Real inlet_area = getParam<Real>("inlet_area");
+    const Real inlet_mass_flux = inlet_mdot / inlet_area;
+    const Real inlet_speed = inlet_mass_flux / inlet_rho;
+    if (!(std::isfinite(inlet_mdot) && inlet_mdot > 0.0 &&
+          std::isfinite(inlet_rho) && inlet_rho > 0.0 &&
+          std::isfinite(inlet_mass_flux) && inlet_mass_flux > 0.0 &&
+          std::isfinite(inlet_speed) && inlet_speed > 0.0))
+      paramError("sccm", "SCCM inlet mass flow, mass flux or speed is nonfinite or nonpositive.");
+
+    // These are numeric PostprocessorValues directly consumable by WCNS flux
+    // operators. Area is explicitly supplied; no AreaPostprocessor or
+    // momentum/pressure/species flow boundary condition is created here.
+    auto addConstant = [this](const std::string & name, const Real value)
+    {
+      const auto type = "ConstantPostprocessor";
+      auto params = _factory.getValidParams(type);
+      params.set<Real>("value") = value;
+      _problem->addPostprocessor(type, name, params);
+    };
+    addConstant("plasma_inlet_mdot", inlet_mdot);
+    addConstant("plasma_inlet_area", inlet_area);
+    addConstant("plasma_inlet_rho", inlet_rho);
+    addConstant("plasma_inlet_speed", inlet_speed);
+    addConstant("plasma_inlet_mass_flux", inlet_mass_flux);
+    for (const auto & id : species)
+    {
+      const Real inlet_y = *_data.species(id).initial_inlet_mass_fraction;
+      addConstant("plasma_inlet_Y_" + id, inlet_y);
+      addConstant("plasma_inlet_mdot_" + id, inlet_mdot * inlet_y);
+    }
     return;
   }
 
@@ -1078,3 +1155,4 @@ registerMooseAction("PhysicsApp", PlasmasAction, "check_integrity");
 registerMooseAction("PhysicsApp", PlasmasAction, "add_functor_material");
 registerMooseAction("PhysicsApp", PlasmasAction, "add_ics_physics");
 registerMooseAction("PhysicsApp", PlasmasAction, "add_bc");
+registerMooseAction("PhysicsApp", PlasmasAction, "add_postprocessor");
