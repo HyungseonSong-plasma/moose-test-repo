@@ -643,14 +643,20 @@ def _insert_observables(text: str) -> str:
 
 
 def _owner_paths_by_type(text: str) -> set[str]:
-    kinetic_types = {
-        "PhysicsElectronImpactRateMaterial",
-        "ADParsedFunctorMaterial",
-        "PhysicsReactionRateMaterial",
+    kinetic_types = {"PhysicsElectronImpactRateMaterial", "PhysicsReactionRateMaterial"}
+    projected_names = {
+        "O2_o2s_excitation_mass_source", "O2s_excitation_mass_source",
+        "O2_ionization_mass_source", "O2p_ionization_mass_source",
+        "electron_ionization_number_source",
     }
     paths = set()
     for path in mp.direct_children(text, "FunctorMaterials"):
-        if mp.get_parameter(text, path, "type") in kinetic_types:
+        typ = mp.get_parameter(text, path, "type")
+        prop = mp.get_parameter(text, path, "property_name")
+        if typ in kinetic_types or (
+            typ == "ADParsedFunctorMaterial"
+            and prop in set(PROGRESS.values()) | projected_names
+        ):
             paths.add(path)
     return paths
 
@@ -706,10 +712,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
         "FunctorMaterials/s5r_ei16_source_o2p",
         "FunctorMaterials/s5r_ei16_source_e",
     }
-    # The exact owner set is checked by blocks, not globally by the ADParsed
-    # type (which also serves transport and unrelated RF source expressions).
-    checks["exact_kinetic_owner_block_set"] = expected_owner_paths <= set(
-        mp.direct_children(text, "FunctorMaterials"))
+    checks["exact_kinetic_owner_block_set"] = _owner_paths_by_type(text) == expected_owner_paths
 
     # Generic electron-impact owners.
     for channel in ("EI01", "EI02", "EI17", "EI19", "EI18_O_TO_OS", "EI20_O_IONIZATION"):
