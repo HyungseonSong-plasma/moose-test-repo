@@ -325,6 +325,18 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       }
       if (it.key() == "e" && (species.charge_number != -1 || !species.elements.empty()))
         fail(file, "electron 'e' must carry -1 charge and zero nuclei");
+      // A continuity species' initial particle number density is JSON-owned,
+      // independent of heavy-gas mass fractions and energy-density ICs.
+      if (record.contains("initial_number_density"))
+      {
+        if (!record.at("initial_number_density").is_number())
+          fail(file, "initial_number_density must be numeric for " + it.key());
+        const double density = record.at("initial_number_density").get<double>();
+        if (!std::isfinite(density) || density <= 0.0)
+          fail(file, "initial_number_density must be finite and strictly positive [1/m^3] for " +
+                     it.key());
+        species.initial_number_density = density;
+      }
       if (record.contains("molar_mass_kg_mol"))
       {
         if (!record.at("molar_mass_kg_mol").is_number())
@@ -389,6 +401,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       {
         if (existing->second.charge_number != species.charge_number ||
             existing->second.elements != species.elements ||
+            (existing->second.initial_number_density &&
+             species.initial_number_density &&
+             *existing->second.initial_number_density != *species.initial_number_density) ||
             (existing->second.molar_mass_kg_mol > 0.0 &&
              species.molar_mass_kg_mol > 0.0 &&
              existing->second.molar_mass_kg_mol != species.molar_mass_kg_mol) ||
@@ -409,6 +424,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
             (!existing->second.mass_fraction_functor.empty() &&
              !species.mass_fraction_variable.empty()))
           fail(file, "conflicting species identity for " + it.key());
+        if (!existing->second.initial_number_density)
+          existing->second.initial_number_density = species.initial_number_density;
         if (existing->second.molar_mass_kg_mol == 0.0)
           existing->second.molar_mass_kg_mol = species.molar_mass_kg_mol;
         if (!existing->second.initial_vol_mass_fraction)
