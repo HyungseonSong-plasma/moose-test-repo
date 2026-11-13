@@ -44,5 +44,17 @@
     "top": {
       "bcs": {}
     }
+  },
+  "transport_coefficients": {
+    "drift_diffusion": {
+      "e": {
+        "model": "constant",
+        "mobility": 0.25,
+        "diffusivity": 0.125
+      },
+      "e_energy": {
+        "type": "fluid"
+      }
+    }
   }
 }
