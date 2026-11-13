@@ -75,3 +75,26 @@ def test_metadata_is_not_inferred_for_a_flux_boundary():
     assert 'getParam<std::vector<BoundaryName>>("inlet_boundaries")' in c
     assert '"mass-flux inlets remain explicitly owned by their flow BCs."' in c
     assert 'if (getParam<MooseEnum>("inlet_bc_model") == "dirichlet")' in c
+
+
+def test_all_four_materials_share_y_i_of_solver_state_in_native_fixture():
+    data=json.loads((APP/"ci/json_species_live_all4_p2.json").read_text())
+    source=(APP/"ci/json_species_live_all4_p2.i").read_text()
+    assert abs(sum(v["initial_vol_mass_fraction"] for v in data["species"].values())-1.0)<1e-14
+    assert abs(sum(v["initial_inlet_mass_fraction"] for v in data["species"].values())-1.0)<1e-14
+    assert data["species"]["O2"]["initial_inlet_mass_fraction"] != data["species"]["O2"]["initial_vol_mass_fraction"]
+    for id,record in data["species"].items():
+        assert record["mass_fraction_variable"] == "w_"+id
+        assert f"    functor = Y_{id}_initial_vol" not in source  # not a live state
+        assert f"  [w_{id}]" in source
+    for owner in ("HRateCoefMaterial","NVTransport","SurfaceReactionMaterial",
+                  "PhysicsPlasmaChargeDensityMaterial"):
+        assert owner in source
+    for name in ("Y_O2", "Y_O", "Y_Op"):
+        assert name in source
+    assert "mass_fractions = 'Y_O2 Y_O Y_Op'" in source
+    assert "ion_mass_fractions = 'Y_Op'" in source
+    assert "active_reactions = 'H91'" in source
+    assert "active_reactions = 'H90'" in source
+    assert "inlet_bc_model = dirichlet" in source
+    assert "initialize_species_mass_fractions = true" in source
