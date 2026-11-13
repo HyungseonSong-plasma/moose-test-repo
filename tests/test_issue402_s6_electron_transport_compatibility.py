@@ -118,6 +118,24 @@ def test_unverified_transport_identity_rejected_without_source_change(before, af
     assert source[Path("other.i")] == "unchanged\n"
 
 
+@pytest.mark.parametrize("hidden", [
+    "      unexpected = value",
+    "    unexpected = value",
+    "      mean_energy = dummy",
+    "    mean_energy = mean_en_solved",
+    "    garbage that is not an assignment",
+])
+def test_hidden_or_duplicate_electron_transport_assignment_rejected(hidden):
+    original = _case(_load(), "417", "C")[BASE_PATH]
+    anchor = "    bounds_policy = clamp\n"
+    assert original.count(anchor) == 1
+    corrupted = original.replace(anchor, anchor + hidden + "\n", 1)
+    source = {BASE_PATH: corrupted, Path("other.i"): "unchanged\n"}
+    with pytest.raises(ValueError, match="S6_OWNER_|S6_ELECTRON_LOOKUP_IDENTITY_UNPROVED"):
+        module.canonicalize_staged_electron_lookup(source)
+    assert source[BASE_PATH] == corrupted
+
+
 def test_duplicate_electron_lookup_owner_rejected():
     archive = _load()
     base = _case(archive, "417", "C")[BASE_PATH]
