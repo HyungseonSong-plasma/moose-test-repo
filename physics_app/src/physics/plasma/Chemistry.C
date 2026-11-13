@@ -841,19 +841,17 @@ PlasmasAction::validParams()
       "files", {}, "Ordered JSON mechanisms shared by Plasma Chemistry and Transport.");
   params.addParam<Real>("pressure", "Uniform gas pressure [Pa]; enables canonical Gas State.");
   params.addParam<Real>("temperature", "Uniform gas temperature [K]; enables canonical Gas State.");
-  params.addParam<MooseEnum>("model", MooseEnum("ideal_gas", "ideal_gas"),
+  params.addParam<MooseEnum>("state_model", MooseEnum("ideal_gas", "ideal_gas"),
                              "Canonical mixture equation of state.");
-  params.addParam<bool>("initialize_species_mass_fractions", false,
-                        "Opt in to FVConstantIC for species-owned solved mass-fraction "
-                        "variables using JSON initial_vol_mass_fraction. Do not also "
-                        "provide variable-level or other explicit ICs.");
+  // Every solved heavy-species mass fraction receives its JSON volume initial
+  // condition. Derived/constraint Functors do not own an independent solver IC.
   params.addParam<std::vector<BoundaryName>>(
       "inlet_boundaries", {}, "Named inlet sidesets; never inferred from walls.");
-  params.addParam<MooseEnum>(
-      "inlet_bc_model", MooseEnum("none dirichlet", "none"),
-      "Explicitly select dirichlet to create FVDirichletBC for solved "
-      "mass-fraction variables. Existing mass-flow/SCCM BCs own their "
-      "own flux instead; do not combine these BC policies.");
+  params.addParam<Real>("sccm",
+                        "Optional positive standard volumetric feed rate [standard cm^3/min]. "
+                        "When supplied, create inlet FVDirichletBC for each solved "
+                        "heavy-species mass fraction using JSON inlet composition. "
+                        "Does not prescribe mixture mass flux, velocity, or inlet area.");
   return params;
 }
 
@@ -872,18 +870,18 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
       (!std::isfinite(getParam<Real>("pressure")) || getParam<Real>("pressure") <= 0.0 ||
        !std::isfinite(getParam<Real>("temperature")) || getParam<Real>("temperature") <= 0.0))
     paramError("pressure", "Gas pressure and temperature must be finite and strictly positive.");
-  const auto bc_mode = getParam<MooseEnum>("inlet_bc_model");
-  if (bc_mode == "dirichlet" &&
-      getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
-    paramError("inlet_boundaries", "dirichlet inlet BC requires named inlet sidesets.");
-  if (bc_mode == "none" &&
-      !getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
-    paramError("inlet_bc_model",
-               "inlet_boundaries requires inlet_bc_model = dirichlet; "
-               "mass-flux inlets remain explicitly owned by their flow BCs.");
-  if ((!gasStateEnabled()) &&
-      (getParam<bool>("initialize_species_mass_fractions") || bc_mode == "dirichlet"))
-    paramError("pressure", "Species IC/inlet automation requires root ideal_gas pressure and temperature.");
+  if (isParamValid("sccm"))
+  {
+    const Real feed = getParam<Real>("sccm");
+    if (!std::isfinite(feed) || feed <= 0.0)
+      paramError("sccm", "SCCM feed rate must be finite and strictly positive.");
+    if (getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
+      paramError("inlet_boundaries", "sccm requires explicit inlet sidesets for species Dirichlet BCs.");
+    if (!gasStateEnabled())
+      paramError("pressure", "sccm inlet composition requires pressure and temperature.");
+  }
+  else if (!getParam<std::vector<BoundaryName>>("inlet_boundaries").empty())
+    paramError("sccm", "inlet_boundaries requires sccm to activate inlet species Dirichlet BCs.");
 }
 
 void
@@ -943,24 +941,23 @@ PlasmasAction::act()
   // derived/constraint Functors are read-only and inherit the mixture closure.
   if (_current_task == "add_ics_physics")
   {
-    if (getParam<bool>("initialize_species_mass_fractions"))
-      for (const auto & id : species)
-      {
-        const auto & record = _data.species(id);
-        if (record.mass_fraction_variable.empty())
-          continue;
-        const auto type = "FVConstantIC";
-        auto params = _factory.getValidParams(type);
-        params.set<VariableName>("variable") = record.mass_fraction_variable;
-        params.set<Real>("value") = *record.initial_vol_mass_fraction;
-        _problem->addFVInitialCondition(
-            type, "plasma_initial_" + id + "_mass_fraction", params);
-      }
+    for (const auto & id : species)
+    {
+      const auto & record = _data.species(id);
+      if (record.mass_fraction_variable.empty())
+        continue;
+      const auto type = "FVConstantIC";
+      auto params = _factory.getValidParams(type);
+      params.set<VariableName>("variable") = record.mass_fraction_variable;
+      params.set<Real>("value") = *record.initial_vol_mass_fraction;
+      _problem->addFVInitialCondition(
+          type, "plasma_initial_" + id + "_mass_fraction", params);
+    }
     return;
   }
   if (_current_task == "add_bc")
   {
-    if (getParam<MooseEnum>("inlet_bc_model") == "dirichlet")
+    if (isParamValid("sccm"))
       for (const auto & id : species)
       {
         const auto & record = _data.species(id);
