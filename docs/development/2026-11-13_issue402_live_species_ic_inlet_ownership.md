@@ -53,7 +53,7 @@ The root `rho_g`, `M_mix` evaluations now depend on solver-state
 `rho_g_initial` and `rho_g_inlet` are metadata-only static EOS
 calculations for initial and inlet data, not replacements for `rho_g`.
 
-## Optional IC and explicit Dirichlet inlet ownership
+## Mandatory heavy-species FV IC; SCCM-enabled Dirichlet inlet ownership
 
 ```ini
 [Physics]
@@ -61,27 +61,38 @@ calculations for initial and inlet data, not replacements for `rho_g`.
     files = oxygen_chemistry.json
     pressure = 1.333223684
     temperature = 300
-    model = ideal_gas
-    initialize_species_mass_fractions = true
-    inlet_boundaries = left
-    inlet_bc_model = dirichlet
+    state_model = ideal_gas
+    inlet_boundaries = inlet
+    sccm = 100
   []
 []
 ```
 
-The root Action creates one `FVConstantIC` on each
-`mass_fraction_variable` with value `initial_vol_mass_fraction`.
-With `inlet_bc_model=dirichlet`, it creates one `FVDirichletBC` per solved
-species on the explicitly named `inlet_boundaries`, taking
-`initial_inlet_mass_fraction` as the boundary value. It does not
-generate IC/BC for a `mass_fraction_functor`: a constrained species must
-remain dependent on solved species in both domains.
+The root Action **always** creates one `FVConstantIC` on every
+species-owned **solved** `mass_fraction_variable`, using JSON
+`initial_vol_mass_fraction`. There is no
+`initialize_species_mass_fractions` switch. A derived `mass_fraction_functor`
+is read-only; its value comes from the independent solved states and it
+must not receive a second IC.
 
-IC generation is an explicit **opt-in** so old solver variables and existing
-user-supplied ICs are not silently overridden. If enabled, remove any
-other ICs (including inline initial conditions) on those exact variables.
-Boundary creation is opt-in and fail closed without a named inlet sideset.
-Do not add a second BC to any variable/sideset pair.
+An explicitly supplied **positive and finite** `sccm` causes the
+root Action to create one `FVDirichletBC` for each solved species on
+the named `inlet_boundaries`; the boundary value is the JSON
+`initial_inlet_mass_fraction`. No `sccm` means **no generated inlet BC**,
+but still creates all solved species ICs. `inlet_boundaries` without `sccm`
+is rejected; `sccm` without inlet sidesets is rejected.
+The old root `model`, `inlet_bc_model`, and
+`initialize_species_mass_fractions` options are retired, with no aliases.
+
+`sccm` is the user-supplied standard volumetric flow rate
+(cm³/min); **its numeric value currently only activates composition
+Dirichlet BCs**. It does NOT set inlet velocity, mass flux, cross-sectional
+area, a standard gas reference density/temperature, or calculate
+`inlet_mdot`. These are distinct physical obligations and cannot be
+inferred solely from the species JSON. Never combine an automatically
+generated Dirichlet BC with an existing species mass-flux BC on the same
+variable/sideset. Remove duplicate user-authored inline/explicit ICs
+on root-initialized variables.
 
 **SCCM and flow-driven mass-flux inlet contracts are DIFFERENT.** Existing
 WCNSFVMassFluxBC/WCNSFVScalarFluxBC models use postprocessors
@@ -122,3 +133,9 @@ Not verified: P3 transient solution, physical inlet flux conservation,
 source-to-source reactor parity, transport TXT/JSON molar mass scientific
 reconciliation. Explicit direct user-authored density, reaction, charge and
 SCCM composition bindings need their own scenario checks before release.
+
+## DriftDiffusion BC owner survey (2026-11-13)
+
+- `DDContinuityEq.C` registers `add_variables_physics`, `add_ics_physics`, `check_integrity`, `add_kernel`, `add_functor_material`. It does **not** register `add_bc`. It creates FEM/FV `log_<species>` variables and log-molar `ConstantIC`/`FVConstantIC` when positive number-density pairs are supplied. These are number-density states, not heavy `Y_i` mass fractions. Native/user BCs retain ownership.
+- `DDEnergyEq.C` registers `add_variables_physics`, `add_ics_physics`, `check_integrity`, and `add_kernel` only. It supports FEM electron `log_e_energy` and generates `ConstantIC = log(initial_molar_energy_density_eV)` when auto-creating the variable. It does not register `add_bc`, and FV electron energy is currently unsupported by this Physics action.
+- Electron/ion wall flux and dielectric BCs remain dedicated Native implementations. There is no sound basis for treating electron-energy wall conditions or electron log-density as heavy-species Dirichlet (Y_i) boundary values.
