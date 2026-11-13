@@ -228,3 +228,56 @@ with the review-only synthetic e_transport.txt.
   numerical temporal parity, actual old/new C++ face-value parity or full
   science acceptance. No P3, no merge; \`SCIENCE_HOLD\` remains.
 
+
+
+## S6-417/941 retired D1 Aux diagnostic compatibility gate (2026-11-13)
+
+**Source audit, immutable B/C:** The 11-layer S6-417/941 public archive
+contains 9 `PhysicsLowerDSurfaceCurrentProbeAux` face-Functor observers,
+5 `PhysicsWaferD1GeometryProbeAux` observers, and 14 corresponding
+`wafer_surface` MONOMIAL AuxVariables in the shared base layer. Every
+observed variable has exactly two token references across the archived
+input stack (its declaration and its own diagnostic AuxKernel). No
+physics/RF/PDE residual, boundary condition or producer consumes those
+14 AuxVariable names in the pinned deck. See [immutable B/C audit
+#43405429511](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43405429511).
+
+Both historical C++ AuxKernel implementations existed at historical
+`29d1acc6ef7969908b86719e4b95c73a1565136d` but are no longer
+registered in the current PhysicsApp. They sampled the plasma-side
+`FaceArg` / signed face current and geometry (`normal_r`, `normal_z`,
+`owner`, `d_perp`, `e_n`). The currently registered physical kernel
+`PhysicsLowerDSurfaceCurrent` is a distinct PDE residual owner and
+**must not** be removed or treated as a diagnostic substitute.
+
+**Bounded disposable D core-input P2:** The staging helper
+`suspend_staged_retired_d1_observations()` verifies all 14 paired
+signature/owner/section assignments, rejects duplicate, missing,
+externally consumed or unexpectedly indented parameters, and removes
+only the 14 diagnostic AuxKernels and 14 associated AuxVariables
+from temporary D scratch. Physical Wall current Functors, surface-charge
+residuals, Poisson/transport/RF source owners and original B/C inputs
+are kept intact. Because diagnostics are omitted, this input is
+**CORE_INPUT_P2_ONLY**, never full original S6 acceptance.
+
+**Exact-source P0/P1/P2 evidence**: [run #43407079646]
+(https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43407079646)
+on tested SHA `e63791f10c54c8fa2d4c20a1c3cd549b9b07c1a7`:
+- P0 **638 tests PASS**, including the fixed 42-row public staging table
+  and deliberately invalid B/C owner/consumer/hidden-assignment inputs.
+- Public 400 W mesh prepared, exact-source Native P1 compiled **PASS**.
+- Real 11-layer S6-417 core-input `physics-opt --check-input`: **Syntax OK**, exit 0.
+- Real 11-layer S6-941 core-input `physics-opt --check-input`: **Syntax OK**, exit 0.
+- [Run artifact #14027838281]
+  (https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43407079646/artifacts/14027838281)
+  contains exact case-local logs, SHA-based source binding and bounded P2 receipts.
+
+The earlier missing `PhysicsLowerDSurfaceCurrentProbeAux` and
+`PhysicsWaferD1GeometryProbeAux` no longer block this **core** syntax test.
+That is **not** C++ face-value regression, observational equivalence,
+temporal/physics parity or validation of the missing 14 diagnostics.
+Required independent CodeRabbit review of the D1 isolation was requested
+but rate-limited; **no new D1 independent approval was issued**.
+Outstanding gates: **FULL_S6_P2=HOLD**, **DIAGNOSTIC_PARITY=HOLD**,
+native old/new transport and wall numerical parity unverified,
+**P3/P4=NOT_RUN, SCIENCE_HOLD, no merge**.
