@@ -1,14 +1,14 @@
 #pragma once
 
-#include "ElectronWallFluxMaterial.h"
+#include "ESWallFluxMaterial.h"
 
 /**
- * Compatibility alias for historical Issue #395 inputs.
- * All wall flux physics is owned by ElectronWallFluxMaterial.C, not duplicated.
- * New inputs should set type = ElectronWallFluxMaterial.
+ * Historical Issue #395 name retained for archived recipe inputs.
+ * This compatibility class has NO separate constitutive law.
+ * New inputs should use ESWallFluxMaterial.
  */
-class PhysicsElectronAdjacentSheathWallFluxMaterial : public ElectronWallFluxMaterial
+class PhysicsElectronAdjacentSheathWallFluxMaterial : public ESWallFluxMaterial
 {
 public:
-  using ElectronWallFluxMaterial::ElectronWallFluxMaterial;
+  using ESWallFluxMaterial::ESWallFluxMaterial;
 };
