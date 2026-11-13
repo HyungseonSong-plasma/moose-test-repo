@@ -81,17 +81,39 @@ def test_only_new_energy_material_and_sheath_names_are_registered():
         assert not (APP / "include/materials" / (obsolete + ".h")).exists()
 
 
-def test_single_e_energy_eV_output_two_noninterchangeable_input_representations():
-    assert 'MooseEnum("log_molar_eV physical_eV", "log_molar_eV")' in MEAN
+def test_single_e_energy_eV_output_rejects_physical_state():
+    assert 'MooseEnum("log_molar_eV", "log_molar_eV")' in MEAN
     assert 'addFunctorProperty<ADReal>(\n      "e_energy_eV"' in MEAN
-    assert "mean_energy = exp(energy_state - density_state);" in MEAN
-    assert "mean_energy = energy_state / density_state;" in MEAN
+    assert "const ADReal mean_energy = exp(energy_state - density_state);" in MEAN
+    assert "energy_state / density_state" not in MEAN
+    assert "physical_eV" not in MEAN and "physical_eV" not in MEAN_H
+    assert "_log_molar_state" not in MEAN and "_log_molar_state" not in MEAN_H
     assert '"energy_reference_eV"' not in MEAN
-    assert 'MooseEnum("log_molar_eV physical_eV", "log_molar_eV")' in MEAN
     assert "mean_en_solved" not in MEAN and "mean_en_solved" not in MEAN_H
     assert "mean_energy_output" not in MEAN and "mean_energy_output" not in MEAN_H
     assert "mean_energy_output" not in NEW and "mean_energy_output" not in LEGACY
     assert 'getFunctorByName<ADReal>("e_energy_eV")' in TRANSPORT
+
+
+def test_json_plus_minimal_i_owns_complete_fem_electron_equations_and_sheath():
+    auto = (APP / "ci/dd_plasma_boundary_json_physics_auto_p2.i").read_text()
+    assert "[FunctorMaterials]" not in auto and "[Kernels]" not in auto
+    assert "fem_species = 'e 1e15'" in auto
+    assert "fem_potential = potential" in auto
+    assert "initial_molar_energy_density_eV = 8.3e-9" in auto
+    owners = DATA["transport_coefficients"]["drift_diffusion"]
+    assert owners["e"]["model"] == "constant"
+    assert owners["e_energy"] == {"type": "fluid"}
+    for kernel in ("FEMLogMolarTimeDerivative", "FEMLogMolarDriftDiffusion",
+                   "FEMLogMolarElectronJouleHeating"):
+        assert kernel in ENERGY_ACTION
+    for name in ("ElectronEnergyMaterial", "ESWallFluxMaterial",
+                 "ADParsedFunctorMaterial"):
+        assert name in ENERGY_ACTION
+    assert 'params.set<MooseFunctorName>("electron_density") = "n_e_physical"' not in ENERGY_ACTION
+    assert 'wall.set<MooseFunctorName>("electron_density") = "n_e_physical"' in ENERGY_ACTION
+    assert 'density.set<std::string>("expression") = "6.02214076e23*exp(c)"' in ENERGY_ACTION
+    assert 'registerMooseAction("PhysicsApp", DDEnergyEq, "add_functor_material");' in ENERGY_ACTION
 
 
 def test_canonical_physics_action_resolves_log_e_energy_not_old_log_energy():
