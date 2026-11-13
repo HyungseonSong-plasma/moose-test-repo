@@ -98,7 +98,8 @@ def test_single_e_energy_eV_output_rejects_physical_state():
 def test_json_plus_minimal_i_owns_complete_fem_electron_equations_and_sheath():
     auto = (APP / "ci/dd_plasma_boundary_json_physics_auto_p2.i").read_text()
     assert "[FunctorMaterials]" not in auto and "[Kernels]" not in auto
-    assert "fem_species = 'e 1e15'" in auto
+    assert "fem_species = e" in auto
+    assert DATA["species"]["e"]["initial_number_density"] == 1e15
     assert "fem_potential = potential" in auto
     assert "initial_molar_energy_density_eV = 8.3e-9" in auto
     owners = DATA["transport_coefficients"]["drift_diffusion"]
