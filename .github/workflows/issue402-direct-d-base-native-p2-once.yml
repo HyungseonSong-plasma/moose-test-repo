@@ -66,7 +66,7 @@ jobs:
             tests/test_issue402_s6_chemistry_run_templates.py \
             tests/test_issue402_full_s6_p2_only.py
           echo 'ISSUE402_DIRECT_CANONICAL_D_INPUT_P0_PASS'
-          echo 'D_BASE_SOURCE=PREBUILT_PINNED_NO_RUNTIME_DEBUG_FILTER'
+          echo 'D_BASE_SOURCE=PREBUILT_PINNED_NO_RUNTIME_DEBUG_FILTER_ALL_FOUR_D_ENTRYPOINTS'
       - name: Materialize pinned public historical 400W mesh
         shell: bash
         run: |
@@ -123,7 +123,7 @@ jobs:
           },indent=2,sort_keys=True)+"\n")
           PY
           echo 'ISSUE402_REAL_S6_SOURCE_BOUND_P1_PASS'
-      - name: Active Native S6 417/941 P2 with obsolete diagnostic retirement verified
+      - name: Direct prebuilt D base S6 417/941 Native P2 (no filtering/scans)
         shell: bash
         run: |
           set -euo pipefail
