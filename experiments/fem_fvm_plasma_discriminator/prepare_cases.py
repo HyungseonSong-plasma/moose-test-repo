@@ -473,7 +473,7 @@ def fvm():
 
 if __name__ == '__main__':
     cases = {
-        'fem': fem(),
+        # Grounded FEM sheath physics is retired; independent FV remains active.
         'fvm': fvm(),
     }
     for name, text in cases.items():
