@@ -401,8 +401,13 @@ def execute(historical: Path, binary: Path, expected_head: str,
                     try:
                         old_variant = "B" if variant == "B" else "C"
                         scratch_migration = None
+                        # Original B stays byte-identical. D starts directly
+                        # from the pinned debug-free physics base; no injection
+                        # and no subsequent stripping of obsolete D1 probes.
+                        d_base = (ROOT / "experiments/Issue402_plasma_dsl_g1/native/"
+                                  "s6_c0_physics_base_no_d1.i") if variant == "D" else None
                         ordered = p2.stage(ROOT, historical, case, old_variant,
-                                           staged, manifest)
+                                           staged, manifest, d_base_source=d_base)
                         if variant == "D":
                             overlay = staged / p2.CHEM / "migrated_continuity.i"
                             # Rewrite only the temporary D copies of the ten
