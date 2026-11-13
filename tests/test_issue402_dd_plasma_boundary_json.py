@@ -36,14 +36,17 @@ def _legacy_bc_definitions(text):
 
 def test_json_is_a_literal_registry_of_existing_bc_blocks():
     catalog = DATA["drift_diffusion_boundary"]
-    assert set(catalog) == {"wafer", "cover", "inlet", "outlet"}
-    assert catalog["inlet"]["bcs"] == {}
-    assert catalog["outlet"]["bcs"] == {}
+    # The object key is the physical GeneratedMesh sideset. No alias or
+    # duplicate mesh_boundary field is stored in JSON.
+    assert set(catalog) == {"left", "bottom", "right", "top"}
+    assert catalog["right"]["bcs"] == {}
+    assert catalog["top"]["bcs"] == {}
+    assert all(set(spec) == {"bcs"} for spec in catalog.values())
     original = _legacy_bc_definitions(LEGACY)
     relocated = {}
-    for spec in catalog.values():
+    for mesh_sideset, spec in catalog.items():
         for name, bc in spec["bcs"].items():
-            relocated[name] = {**bc, "boundary": spec["mesh_boundary"]}
+            relocated[name] = {**bc, "boundary": mesh_sideset}
     assert relocated == original
     assert len(relocated) == 4
 
@@ -75,7 +78,7 @@ def test_existing_mean_energy_and_sheath_laws_untouched():
 def test_fail_closed_schema_and_duplicate_owners():
     for fragment in (
         "duplicate drift_diffusion_boundary owner across JSON files",
-        "invalid or duplicate mesh_boundary in drift_diffusion_boundary",
+        "invalid or duplicate drift_diffusion_boundary mesh sideset",
         "duplicate DriftDiffusion BC operator owner",
         "drift_diffusion_boundary BC type is not yet supported",
         "wrong named arguments in drift_diffusion_boundary BC",
@@ -83,3 +86,5 @@ def test_fail_closed_schema_and_duplicate_owners():
         assert fragment in CHEM
     assert "electron_model" not in CHEM
     assert '"plasma_boundary"' not in CHEM
+    assert 'item.contains("mesh_boundary")' not in CHEM
+    assert "The JSON object key IS the physical mesh sideset name" in CHEM
