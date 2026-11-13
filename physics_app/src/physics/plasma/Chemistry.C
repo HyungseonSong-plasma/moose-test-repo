@@ -355,6 +355,30 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           species.initial_inlet_mass_fraction.has_value())
         fail(file, "species " + it.key() +
              " must declare both initial_vol_mass_fraction and initial_inlet_mass_fraction");
+      for (const auto * key : {"mass_fraction_variable", "mass_fraction_functor"})
+        if (record.contains(key))
+        {
+          if (!record.at(key).is_string() || record.at(key).get<std::string>().empty())
+            fail(file, "species " + it.key() + " requires nonempty " + key);
+          if (it.key() == "e")
+            fail(file, "electron 'e' cannot bind a heavy mass-fraction state");
+          const std::string source = record.at(key).get<std::string>();
+          if (!std::isalpha(static_cast<unsigned char>(source.front())) &&
+              source.front() != '_')
+            fail(file, "invalid mass-fraction state name for " + it.key());
+          for (const unsigned char character : source)
+            if (!std::isalnum(character) && character != '_')
+              fail(file, "invalid mass-fraction state name for " + it.key());
+          if (std::string(key) == "mass_fraction_variable")
+            species.mass_fraction_variable = source;
+          else
+            species.mass_fraction_functor = source;
+        }
+      if (!species.mass_fraction_variable.empty() &&
+          !species.mass_fraction_functor.empty())
+        fail(file, "species " + it.key() +
+             " must select a solved mass_fraction_variable OR a derived mass_fraction_functor");
+
 
       const auto existing = _species.find(it.key());
       if (existing == _species.end())
@@ -371,7 +395,17 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
              *existing->second.initial_vol_mass_fraction != *species.initial_vol_mass_fraction) ||
             (existing->second.initial_inlet_mass_fraction &&
              species.initial_inlet_mass_fraction &&
-             *existing->second.initial_inlet_mass_fraction != *species.initial_inlet_mass_fraction))
+             *existing->second.initial_inlet_mass_fraction != *species.initial_inlet_mass_fraction) ||
+            (!existing->second.mass_fraction_variable.empty() &&
+             !species.mass_fraction_variable.empty() &&
+             existing->second.mass_fraction_variable != species.mass_fraction_variable) ||
+            (!existing->second.mass_fraction_functor.empty() &&
+             !species.mass_fraction_functor.empty() &&
+             existing->second.mass_fraction_functor != species.mass_fraction_functor) ||
+            (!existing->second.mass_fraction_variable.empty() &&
+             !species.mass_fraction_functor.empty()) ||
+            (!existing->second.mass_fraction_functor.empty() &&
+             !species.mass_fraction_variable.empty()))
           fail(file, "conflicting species identity for " + it.key());
         if (existing->second.molar_mass_kg_mol == 0.0)
           existing->second.molar_mass_kg_mol = species.molar_mass_kg_mol;
@@ -379,6 +413,10 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           existing->second.initial_vol_mass_fraction = species.initial_vol_mass_fraction;
         if (!existing->second.initial_inlet_mass_fraction)
           existing->second.initial_inlet_mass_fraction = species.initial_inlet_mass_fraction;
+        if (existing->second.mass_fraction_variable.empty())
+          existing->second.mass_fraction_variable = species.mass_fraction_variable;
+        if (existing->second.mass_fraction_functor.empty())
+          existing->second.mass_fraction_functor = species.mass_fraction_functor;
       }
     }
 
