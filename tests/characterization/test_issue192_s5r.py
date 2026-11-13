@@ -77,11 +77,11 @@ def test_s5r_has_exact_canonical_progress_owner_surface() -> None:
 
     assert (
         mp.get_parameter(text, OWNER_BLOCKS["EI10"], "type")
-        == "PhysicsElectronImpactO2sExcitationMaterial"
+        == "ADParsedFunctorMaterial"
     )
     assert (
         mp.get_parameter(text, OWNER_BLOCKS["EI16"], "type")
-        == "PhysicsElectronImpactIonizationMaterial"
+        == "PhysicsElectronImpactRateMaterial"
     )
     assert (
         mp.get_parameter(text, OWNER_BLOCKS["EDETACH_OM"], "property_name")
@@ -132,14 +132,20 @@ def test_s5r_reuses_standard_projection_and_excludes_deferred_channels() -> None
     for token in DEFERRED_TOKENS:
         assert token not in text
 
-    assert (
-        mp.get_parameter(text, "FunctorMaterials/s5r_ei10_projection", "type")
-        == "PhysicsO2sExcitationSourceMaterial"
-    )
-    assert (
-        mp.get_parameter(text, "FunctorMaterials/s5r_ei16_projection", "type")
-        == "PhysicsO2IonizationSourceMaterial"
-    )
+    for name, expected in (
+        ("s5r_ei10_source_o2", "O2_o2s_excitation_mass_source"),
+        ("s5r_ei10_source_o2s", "O2s_excitation_mass_source"),
+        ("s5r_ei16_source_o2", "O2_ionization_mass_source"),
+        ("s5r_ei16_source_o2p", "O2p_ionization_mass_source"),
+        ("s5r_ei16_source_e", "electron_ionization_number_source"),
+    ):
+        path = f"FunctorMaterials/{name}"
+        assert mp.get_parameter(text, path, "type") == "ADParsedFunctorMaterial"
+        assert mp.get_parameter(text, path, "property_name") == expected
+    assert mp.get_parameter(
+        text, OWNER_BLOCKS["EI16"], "reaction_progress") == PROGRESS["EI16"]
+    assert mp.get_parameter(
+        text, OWNER_BLOCKS["EI10"], "property_name") == PROGRESS["EI10"]
     assert (
         mp.get_parameter(text, "FVKernels/s5r_electron_source", "type")
         == "PhysicsFVElectronReactionSource"
