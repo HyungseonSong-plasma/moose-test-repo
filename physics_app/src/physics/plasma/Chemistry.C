@@ -442,39 +442,25 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       std::set<std::string> operator_owners;
       for (auto group = catalogue.begin(); group != catalogue.end(); ++group)
       {
-        if (!std::regex_match(group.key(), identifier))
-          fail(file, "invalid drift_diffusion_boundary group: " + group.key());
+        // The JSON object key IS the physical mesh sideset name, e.g.
+        // "plasma_wafer". A whitespace-separated key also preserves a
+        // historical single BC owning several sidesets, without splitting it.
         const auto & item = group.value();
-        if (!item.is_object() || item.size() != 2 ||
-            !item.contains("mesh_boundary") || !item.contains("bcs") ||
-            (!item.at("mesh_boundary").is_string() &&
-             !item.at("mesh_boundary").is_array()) ||
-            !item.at("bcs").is_object())
+        if (!item.is_object() || item.size() != 1 ||
+            !item.contains("bcs") || !item.at("bcs").is_object())
           fail(file, "drift_diffusion_boundary." + group.key() +
-                         " needs exactly mesh_boundary string and bcs object");
+                         " requires exactly a bcs object; its key is the mesh boundary");
 
         DDBoundaryRecord record;
-        const auto & mesh_spec = item.at("mesh_boundary");
-        if (mesh_spec.is_string())
-        {
-          // Accept the exact .i multi-sideset boundary string unchanged.
-          std::istringstream input(mesh_spec.get<std::string>());
-          for (std::string side; input >> side;)
-            record.mesh_boundaries.push_back(side);
-        }
-        else
-          for (const auto & side : mesh_spec)
-          {
-            if (!side.is_string())
-              fail(file, "non-string mesh_boundary member for " + group.key());
-            record.mesh_boundaries.push_back(side.get<std::string>());
-          }
+        std::istringstream input(group.key());
+        for (std::string side; input >> side;)
+          record.mesh_boundaries.push_back(side);
         if (record.mesh_boundaries.empty())
-          fail(file, "empty mesh_boundary list for " + group.key());
+          fail(file, "empty drift_diffusion_boundary mesh sideset key");
         for (const auto & side : record.mesh_boundaries)
           if (!std::regex_match(side, identifier) ||
               !used_mesh_boundaries.insert(side).second)
-            fail(file, "invalid or duplicate mesh_boundary in drift_diffusion_boundary: " +
+            fail(file, "invalid or duplicate drift_diffusion_boundary mesh sideset: " +
                            side);
 
         for (auto bc = item.at("bcs").begin(); bc != item.at("bcs").end(); ++bc)
