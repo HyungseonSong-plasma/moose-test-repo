@@ -34,7 +34,7 @@
     prop_values = 1e15
   []
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     state_form = log_molar_eV
     electron_energy_density = log_e_energy
     electron_density = log_e

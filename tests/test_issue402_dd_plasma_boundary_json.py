@@ -86,7 +86,8 @@ def test_single_e_energy_eV_output_two_noninterchangeable_input_representations(
     assert 'addFunctorProperty<ADReal>(\n      "e_energy_eV"' in MEAN
     assert "mean_energy = exp(energy_state - density_state);" in MEAN
     assert "mean_energy = energy_state / density_state;" in MEAN
-    assert "normalized" not in MEAN and "normalized" not in MEAN_H
+    assert '"energy_reference_eV"' not in MEAN
+    assert 'MooseEnum("log_molar_eV physical_eV", "log_molar_eV")' in MEAN
     assert "mean_en_solved" not in MEAN and "mean_en_solved" not in MEAN_H
     assert "mean_energy_output" not in MEAN and "mean_energy_output" not in MEAN_H
     assert "mean_energy_output" not in NEW and "mean_energy_output" not in LEGACY

@@ -13,7 +13,7 @@
  *   e_energy_eV = electron_energy_density[eV/m^3] /
  *                 electron_density[1/m^3].
  *
- * No normalized state, output aliases or configurable output name.
+ * Exactly two source encodings; one fixed output name and no aliases.
  */
 class ElectronEnergyMaterial : public FunctorMaterial
 {
