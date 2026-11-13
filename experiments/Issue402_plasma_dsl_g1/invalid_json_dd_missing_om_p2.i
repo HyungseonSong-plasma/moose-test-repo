@@ -20,7 +20,7 @@
   # Thermodynamic test Functors; not coefficient providers.
   [synthetic_dd_state]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en_solved p T_g'
+    prop_names = 'e_energy_eV p T_g'
     prop_values = '3 100 300'
   []
 []
