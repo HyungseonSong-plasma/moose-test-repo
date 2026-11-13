@@ -14,7 +14,8 @@ import sys
 
 def run_case(exe: Path, work: Path, name: str, data: dict,
              *, expected_error: str | None = None,
-             second: dict | None = None) -> None:
+             second: dict | None = None,
+             input_rewrite=None) -> None:
     mechanism = work / f"{name}.json"
     mechanism.write_text(json.dumps(data, indent=2))
     files = mechanism.name
@@ -30,6 +31,8 @@ def run_case(exe: Path, work: Path, name: str, data: dict,
         "chemistry_file = json_surface_rate_p2.json",
         f"chemistry_file = {mechanism.name}",
     )
+    if input_rewrite is not None:
+        template = input_rewrite(template)
     source = work / f"{name}.i"
     source.write_text(template)
     proc = subprocess.run(
@@ -55,6 +58,41 @@ def main():
     with tempfile.TemporaryDirectory() as directory:
         work = Path(directory)
         run_case(exe, work, "valid_distinct_volume_inlet", base)
+
+        derived = deepcopy(base)
+        del derived["species"]["O2"]["mass_fraction_variable"]
+        derived["species"]["O2"]["mass_fraction_functor"] = "w_O2_constraint"
+        def rewrite_derived(text: str) -> str:
+            text = text.replace(
+                "  [w_O2]\\n    type = MooseVariableFVReal\\n  []\\n", ""
+            )
+            return text.replace("[FunctorMaterials]\\n",
+                "[FunctorMaterials]\\n"
+                "  [O2_constraint]\\n"
+                "    type = ADParsedFunctorMaterial\\n"
+                "    property_name = w_O2_constraint\\n"
+                "    functor_names = 'w_O'\\n"
+                "    functor_symbols = 'wo'\\n"
+                "    expression = '1-wo'\\n"
+                "  []\\n",
+            )
+        run_case(exe, work, "derived_species_read_only", derived,
+                 input_rewrite=rewrite_derived)
+
+        duplicate = deepcopy(base)
+        duplicate["species"]["O2"]["mass_fraction_functor"] = "w_O2_constraint"
+        run_case(exe, work, "duplicate_live_owner", duplicate,
+                 expected_error="must select a solved mass_fraction_variable OR a derived mass_fraction_functor")
+
+        no_live = deepcopy(base)
+        del no_live["species"]["O2"]["mass_fraction_variable"]
+        run_case(exe, work, "missing_live_owner", no_live,
+                 expected_error="Root ideal_gas requires one live mass_fraction_variable or")
+
+        invalid_name = deepcopy(base)
+        invalid_name["species"]["O2"]["mass_fraction_variable"] = "not-a-variable"
+        run_case(exe, work, "invalid_live_state_name", invalid_name,
+                 expected_error="invalid mass-fraction state name")
 
         retired = deepcopy(base)
         retired["gas_state"] = {"species": ["O2", "O"], "mass_fractions": ["Y_O2", "Y_O"]}
