@@ -76,12 +76,13 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
     assert old.count("type = PhysicsElectronTransportLookupMaterial") == 1
     assert "type = PhysicsElectronTransportLookupMaterial" not in new
     assert new.count("type = DDMaterial") == 1
+    electron_block = new.split("  [electron_transport]\n", 1)[1].split("  []", 1)[0]
     for line in ("table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
                  "pressure = p", "gas_temperature = T_g_fixed",
                  "bounds_policy = clamp", "model = lookup",
                  "table_units = reduced", "fluid_energy = true",
                  "species_id = e", "block = plasma"):
-        assert new.count(line) == 1
+        assert electron_block.count(line) == 1
     assert "property_table_file =" not in new
     assert "mean_energy = mean_en_solved" not in new.split("[electron_transport]")[1].split("  []")[0]
     # Preserve original physical table, pressure, temperature and all consumers.
@@ -101,7 +102,7 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
 ))
 def test_unverified_transport_identity_rejected_without_source_change(before, after):
     archive = _load()
-    text = _case(archive, "417", "C")[BASE]
+    text = _case(archive, "417", "C")[BASE_PATH]
     assert before in text
     # Replacement is restricted to the first matching instance in the base.
     anchor = "[electron_transport]"
@@ -119,7 +120,7 @@ def test_unverified_transport_identity_rejected_without_source_change(before, af
 
 def test_duplicate_electron_lookup_owner_rejected():
     archive = _load()
-    base = _case(archive, "417", "C")[BASE]
+    base = _case(archive, "417", "C")[BASE_PATH]
     source = {Path(BASE): base, Path("repeated.i"): base}
     with pytest.raises(ValueError, match="S6_ELECTRON_LOOKUP_OWNER_COUNT_UNPROVED"):
         module.canonicalize_staged_electron_lookup(source)
