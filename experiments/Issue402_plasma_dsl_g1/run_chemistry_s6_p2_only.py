@@ -21,7 +21,7 @@ import json
 from pathlib import Path
 
 import public_option_s6_p2 as option
-from chemistry.prepare_s6_run_input import prepare
+from chemistry.prepare_s6_run_input import prepare, audit_final_native_d1_debug_absence
 from p3_chemistry_preflight import audit
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -98,6 +98,17 @@ def check_only(historical: Path, expected_head: str, output: Path,
             # coefficients and Poisson owner remain exactly as staged.
             if not all((staged / relative).is_file() for relative in ordered):
                 raise ValueError("P2_S6_STAGED_INPUT_LAYER_MISSING")
+            # Verify the actual 11 .i files passed to physics-opt, independent
+            # of the preparer's in-memory receipts.
+            native_layers = {
+                chemistry / Path(item).name:
+                    (chemistry / Path(item).name).read_text(encoding="utf-8")
+                for item in ordered
+            }
+            on_disk_d1 = audit_final_native_d1_debug_absence(native_layers)
+            if (on_disk_d1 != cutover.get("final_native_d1_debug_absence")
+                    or on_disk_d1["layers_checked"] != 11):
+                raise ValueError("P2_FINAL_NATIVE_D1_DIAGNOSTIC_INPUT_UNVERIFIED")
             if digest(binary) != identity["binary_sha256"]:
                 raise ValueError("P2_NATIVE_BINARY_CHANGED_AFTER_P1")
             checked = option.run_one(
@@ -110,6 +121,7 @@ def check_only(historical: Path, expected_head: str, output: Path,
                 "scratch_canonicalization": migration,
                 "scratch_fem_type_remap": type_remap,
                 "scratch_chemistry_cutover": cutover,
+                "native_input_d1_debug_audit": on_disk_d1,
                 "overlay_sha256": digest(overlay),
                 "P3": "NOT_RUN",
             }
