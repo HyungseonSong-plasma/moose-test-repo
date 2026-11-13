@@ -19,7 +19,7 @@
           "type": "FEMElectronEnergySheathBC",
           "variable": "log_energy",
           "wall_number_flux": "electron_wall_number_flux",
-          "mean_energy": "e_mean_energy"
+          "mean_energy": "e_energy_eV"
         }
       }
     },
@@ -34,7 +34,7 @@
           "type": "FEMElectronEnergySheathBC",
           "variable": "log_energy",
           "wall_number_flux": "electron_wall_number_flux",
-          "mean_energy": "e_mean_energy"
+          "mean_energy": "e_energy_eV"
         }
       }
     },
