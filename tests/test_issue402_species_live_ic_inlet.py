@@ -100,6 +100,9 @@ def test_all_four_materials_share_y_i_of_solver_state_in_native_fixture():
         assert name in source
     assert "mass_fractions = 'Y_O2 Y_O Y_Op'" in source
     assert "ion_mass_fractions = 'Y_Op'" in source
+    assert data["transport_coefficients"]["navier_stokes"]["electron_temperature"] == "T_e"
+    assert data["transport_coefficients"]["navier_stokes"]["electron_number_density"] == "n_e"
+    assert "prop_names = 'n_e T_e'" in source
     assert "active_reactions = 'H91'" in source
     assert "active_reactions = 'H90'" in source
     assert "inlet_bc_model = dirichlet" in source
