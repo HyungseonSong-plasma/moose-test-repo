@@ -987,6 +987,23 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
 void
 PlasmasAction::act()
 {
+  // Root JSON is the sole ownership switch for the relocated, verbatim
+  // DriftDiffusion [BCs] blocks. There is deliberately NO .i
+  // plasma_boundary toggle and NO implicit wall type interpretation.
+  // This path also works when root gas_state is not enabled.
+  if (_current_task == "add_bc" && _data.hasDriftDiffusionBoundary())
+    for (const auto & [group, boundary] : _data.driftDiffusionBoundaries())
+      for (const auto & [name, bc] : boundary.bcs)
+      {
+        auto params = _factory.getValidParams(bc.type);
+        params.set<NonlinearVariableName>("variable") = bc.variable;
+        params.set<std::vector<BoundaryName>>("boundary") = {boundary.mesh_boundary};
+        params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
+        if (bc.type == "FEMElectronEnergySheathBC")
+          params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
+        _problem->addBoundaryCondition(bc.type, name, params);
+      }
+
   if (!gasStateEnabled() ||
       (_current_task != "add_functor_material" &&
        _current_task != "add_ics_physics" && _current_task != "add_bc" &&
