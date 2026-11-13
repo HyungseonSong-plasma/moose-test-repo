@@ -43,6 +43,14 @@ def main(exe: Path):
     with TemporaryDirectory(prefix="issue402_bc_exact_") as folder:
         root = Path(folder)
         check(exe, root, "JSON_PRESENT", JSON_INPUT, DATA, True)
+        # One original BC block can own several sidesets. The JSON path
+        # must not split it into multiple independent operators.
+        multiside = copy.deepcopy(DATA)
+        multiside["drift_diffusion_boundary"]["wafer"]["mesh_boundary"] = [
+            "left", "bottom"
+        ]
+        multiside["drift_diffusion_boundary"].pop("cover")
+        check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", JSON_INPUT, multiside, True)
         check(exe, root, "LEGACY_EXPLICIT_BCS", LEGACY_INPUT, DATA, True)
         no_registry = copy.deepcopy(DATA)
         no_registry.pop("drift_diffusion_boundary")
