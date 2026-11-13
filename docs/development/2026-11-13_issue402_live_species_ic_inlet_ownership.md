@@ -64,6 +64,8 @@ calculations for initial and inlet data, not replacements for `rho_g`.
     state_model = ideal_gas
     inlet_boundaries = inlet
     sccm = 100
+    inlet_area = 0.05
+    standard_molar_volume = 0.0224136
   []
 []
 ```
@@ -84,23 +86,48 @@ is rejected; `sccm` without inlet sidesets is rejected.
 The old root `model`, `inlet_bc_model`, and
 `initialize_species_mass_fractions` options are retired, with no aliases.
 
-`sccm` is the user-supplied standard volumetric flow rate
-(cm³/min); **its numeric value currently only activates composition
-Dirichlet BCs**. It does NOT set inlet velocity, mass flux, cross-sectional
-area, a standard gas reference density/temperature, or calculate
-`inlet_mdot`. These are distinct physical obligations and cannot be
-inferred solely from the species JSON. Never combine an automatically
-generated Dirichlet BC with an existing species mass-flux BC on the same
-variable/sideset. Remove duplicate user-authored inline/explicit ICs
-on root-initialized variables.
+SCCM is an inlet flow-rate specification (standard cm³/min), not only a
+composition BC switch. The existing Issue #19 and Issue #21 input contracts
+already use `${fparse}` and Receiver Postprocessors to convert standard
+volumetric flow to mass flow. This root Action reuses **the same numerical
+identity**, sourcing `M_inlet` and feed fractions from authoritative species
+JSON instead of duplicating the hand-entered mixture expression in every .i.
 
-**SCCM and flow-driven mass-flux inlet contracts are DIFFERENT.** Existing
-WCNSFVMassFluxBC/WCNSFVScalarFluxBC models use postprocessors
-`inlet_mdot` and `inlet_mdot_<id>`, not Dirichlet concentrations. They
-MUST retain their existing flux owners; their input builder must calculate
-`inlet_mdot_<id> = inlet_mdot * initial_inlet_mass_fraction_<id>`.
-Do not automatically stack `FVDirichletBC` over a WCNSFVMassFluxBC.
-This PR does not silently rewrite archived or production SCCM cases.
+```text
+M_inlet  = 1 / sum_i(Y_i_inlet / M_i)             [kg/mol]
+Q_std    = sccm * 1e-6 / 60                      [m^3/s]
+mdot     = Q_std * M_inlet / standard_molar_volume [kg/s]
+rho_in   = pressure * M_inlet / (R * temperature) [kg/m^3]
+flux     = mdot / inlet_area                     [kg/m^2/s]
+speed    = flux / rho_in                         [m/s]
+mdot_i   = mdot * Y_i_inlet                      [kg/s]
+```
+
+`inlet_area` [m²] is required with `sccm` and is **provided externally**;
+no AreaPostprocessor is created. `standard_molar_volume` [m³/mol]
+defaults to the existing Issue #19 value 0.0224136 and must be changed if
+the standard reference condition differs. Flow speed is a **magnitude**;
+the existing WCNS BC owns its sign and inlet direction.
+
+The root creates `ConstantPostprocessor` providers:
+`plasma_inlet_mdot`, `plasma_inlet_area`, `plasma_inlet_rho`,
+`plasma_inlet_mass_flux`, `plasma_inlet_speed`,
+`plasma_inlet_Y_<id>`, and `plasma_inlet_mdot_<id>`.
+These provide the real MOOSE PostprocessorValue interface required by
+existing `WCNSFVMassFluxBC` and `WCNSFVScalarFluxBC` consumers.
+For a mixture mass-flow inlet, explicitly bind
+`mdot_pp = plasma_inlet_mdot`, `area_pp = plasma_inlet_area` on the
+existing WCNS mass and momentum inlet BCs. Scalar flux BC consumers must
+use the matching species fraction/feed values and retain their existing
+owner semantics.
+
+`inlet_species_bc_ownership = root_dirichlet` (default) creates FVDirichletBC
+for solved mass-fraction variables. `external_flux` suppresses all those
+generated Dirichlet BCs; an explicit WCNS scalar-flux BC can then own
+each variable/sideset without double application. The Action does not
+automatically generate momentum, velocity, pressure or flux BC objects,
+or infer inlet direction/sideset area. It does not rewrite historical S6
+inputs or provide a P3 flow-conservation claim.
 
 ## Native P2 demonstration
 

@@ -73,11 +73,25 @@ def test_material_consumers_resolve_functor_at_evaluation_not_at_setup():
     assert 'if (rootGasStateEnabled())' in nv
 
 
-def test_metadata_is_not_inferred_for_a_flux_boundary():
+def test_sccm_converts_feed_and_separates_flow_bc_ownership():
     c=CODE.read_text()
     assert 'params.addParam<Real>("sccm"' in c
+    assert 'params.addParam<Real>("inlet_area"' in c
+    assert 'params.addParam<Real>("standard_molar_volume", 0.0224136' in c
+    assert '"inlet_species_bc_ownership"' in c
+    assert '"root_dirichlet external_flux"' in c
+    assert 'registerMooseAction("PhysicsApp", PlasmasAction, "add_postprocessor");' in c
+    assert '"ConstantPostprocessor"' in c
+    assert '_problem->addPostprocessor(type, name, params);' in c
+    assert 'addConstant("plasma_inlet_mdot", inlet_mdot);' in c
+    assert 'addConstant("plasma_inlet_area", inlet_area);' in c
+    assert 'addConstant("plasma_inlet_speed", inlet_speed);' in c
+    assert 'addConstant("plasma_inlet_mass_flux", inlet_mass_flux);' in c
+    assert 'addConstant("plasma_inlet_mdot_" + id, inlet_mdot * inlet_y);' in c
+    assert 'inlet_molar_mass / getParam<Real>("standard_molar_volume")' in c
+    assert 'const Real inlet_speed = inlet_mass_flux / inlet_rho;' in c
+    assert 'getParam<MooseEnum>("inlet_species_bc_ownership") == "root_dirichlet"' in c
     assert 'getParam<std::vector<BoundaryName>>("inlet_boundaries")' in c
-    assert '"Does not prescribe mixture mass flux, velocity, or inlet area."' in c
     assert 'if (isParamValid("sccm"))' in c
 
 

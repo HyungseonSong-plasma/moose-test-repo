@@ -64,7 +64,7 @@ def main():
         def no_sccm(text: str) -> str:
             return text.replace("    sccm = 100\n", "").replace(
                 "    inlet_boundaries = left\n", ""
-            )
+            ).replace("    inlet_area = 0.05\n", "")
         run_case(exe, work, "mandatory_ic_without_sccm", base,
                  input_rewrite=no_sccm)
 
@@ -79,6 +79,31 @@ def main():
         run_case(exe, work, "inlet_sideset_requires_sccm", base,
                  expected_error="inlet_boundaries requires sccm",
                  input_rewrite=orphan_inlet_sideset)
+
+        def no_area(text: str) -> str:
+            return text.replace("    inlet_area = 0.05\n", "")
+        run_case(exe, work, "sccm_requires_area", base,
+                 expected_error="sccm requires a finite, strictly positive inlet_area",
+                 input_rewrite=no_area)
+
+        def external_flux(text: str) -> str:
+            return text.replace("    inlet_area = 0.05\n",
+                                "    inlet_area = 0.05\n"
+                                "    inlet_species_bc_ownership = external_flux\n")
+        run_case(exe, work, "external_flux_species_bc_owner", base,
+                 input_rewrite=external_flux)
+
+        for name, invalid_area in (("zero_area", "0"), ("negative_area", "-0.1")):
+            run_case(exe, work, name, base,
+                     expected_error="sccm requires a finite, strictly positive inlet_area",
+                     input_rewrite=lambda text, value=invalid_area: text.replace(
+                         "inlet_area = 0.05", f"inlet_area = {value}"
+                     ))
+        run_case(exe, work, "invalid_std_molar_volume", base,
+                 expected_error="standard_molar_volume must be finite and strictly positive",
+                 input_rewrite=lambda text: text.replace(
+                     "standard_molar_volume = 0.0224136", "standard_molar_volume = 0"
+                 ))
 
         for label, value in (("zero_sccm", "0"), ("negative_sccm", "-1")):
             run_case(exe, work, label, base,
