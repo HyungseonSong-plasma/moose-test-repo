@@ -84,6 +84,11 @@ def test_generated_functors_are_distinct_from_evolving_solver_state():
     assert "functor = Y_O2_initial_vol" in inp
     assert "functor = Y_O2_inlet" in inp
     assert "functor = Y_O_inlet" in inp
+    assert "functor = rho_g_initial" in inp
+    assert "functor = rho_g_inlet" in inp
+    assert "functor = M_mix_inlet" in inp
+    assert 'add("rho_g_inlet"' in source
+    assert 'add("rho_g_initial"' in source
 
 
 def test_repository_wide_inventory_is_executable_and_covers_owners():
