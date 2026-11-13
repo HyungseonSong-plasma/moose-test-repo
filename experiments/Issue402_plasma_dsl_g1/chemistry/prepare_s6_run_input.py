@@ -282,6 +282,28 @@ _ARCHIVED_ELECTRON_LOOKUP = {
 }
 
 
+
+def _parse_exact_s6_owner_parameters(body: str, owner: str) -> dict[str, str]:
+    """Fail closed on ALL non-comment content, including extra-indented lines.
+
+    Historical S6 owner blocks use exactly four leading spaces for each
+    assignment. Unknown or hidden assignments must never be silently dropped
+    when serializing a replacement owner.
+    """
+    params = {}
+    for line in body.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        match = re.fullmatch(
+            r"    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)", line)
+        if not match:
+            raise ValueError("S6_OWNER_UNPARSED_LINE: " + owner + " " + repr(line))
+        key, value = match.group(1), match.group(2).strip()
+        if key in params:
+            raise ValueError("S6_OWNER_DUPLICATE_PARAMETER: " + owner + " " + key)
+        params[key] = value
+    return params
+
 def canonicalize_staged_electron_lookup(
         edits: dict[Path, str]) -> tuple[dict[Path, str], dict]:
     """Migrate exactly one verified historical electron closure, with no physics edits."""
@@ -298,10 +320,7 @@ def canonicalize_staged_electron_lookup(
                 r"(?m)^\[([A-Za-z0-9_]+)\][ \t]*$", source[:m.start()])
             if not headings or headings[-1] != "FunctorMaterials":
                 raise ValueError("S6_ELECTRON_LOOKUP_NOT_FUNCTORMATERIAL")
-            pairs = re.findall(
-                r"(?m)^    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)$",
-                body)
-            values = {key: val.strip() for key, val in pairs}
+            values = _parse_exact_s6_owner_parameters(body, "electron_transport")
             if len(values) != len(pairs) or values != _ARCHIVED_ELECTRON_LOOKUP:
                 raise ValueError(
                     "S6_ELECTRON_LOOKUP_IDENTITY_UNPROVED: " + path.name +
@@ -417,12 +436,7 @@ def suspend_staged_retired_d1_observations(
             roots = re.findall(
                 r"(?m)^\[([A-Za-z0-9_]+)\][ \t]*$", source[:match.start()])
             section = roots[-1] if roots else ""
-            fields = re.findall(
-                r"(?m)^    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)$",
-                body)
-            props = {key: val.strip() for key, val in fields}
-            if len(fields) != len(props):
-                raise ValueError("S6_D1_PROBE_DUPLICATE_PARAMETER: " + name)
+            props = _parse_exact_s6_owner_parameters(body, name)
             if section == "AuxVariables" and name in expected:
                 var = name
                 required = {"family": "MONOMIAL", "order": "CONSTANT",
