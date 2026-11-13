@@ -1,5 +1,6 @@
-# P2 input-construction only: JSON + Physics auto-generate log_e/log_e_energy and BCs.
-# No full energy drift/diffusion/time equation or physics time integration.
+# P2 only: JSON + Physics generate electron continuity/energy states, conservative
+# time, drift-diffusion, Joule, mean-energy and sheath flux providers, plus BCs.
+# No physical time integration or scientific parity assertion.
 # GeneratedMesh sideset mapping: left=wafer, bottom=cover, right=inlet, top=outlet.
 [Mesh]
   type = GeneratedMesh
@@ -23,33 +24,15 @@
       [DriftDiffusion]
         [Continuity]
           fem_species = 'e 1e15'
+          fem_potential = potential
         []
         [Energy]
           fem_species = e
+          fem_potential = potential
           initial_molar_energy_density_eV = 8.3e-9
         []
       []
     []
-  []
-[]
-[FunctorMaterials]
-  [physical_electron_density]
-    type = ADGenericFunctorMaterial
-    prop_names = n_e_physical
-    prop_values = 1e15
-  []
-  [mean_energy_bridge]
-    type = ElectronEnergyMaterial
-    state_form = log_molar_eV
-    electron_energy_density = log_e_energy
-    electron_density = log_e
-  []
-  [electron_wall_flux]
-    type = ESWallFluxMaterial
-    electron_density = n_e_physical
-    mean_energy = e_energy_eV
-    potential = potential
-    use_element_gradient_for_potential = true
   []
 []
 [Executioner]
