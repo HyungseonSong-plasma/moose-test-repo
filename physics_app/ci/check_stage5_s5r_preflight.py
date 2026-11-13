@@ -45,11 +45,11 @@ EXPECTED_STAGE5 = {
     "EI18_O_TO_OS": ("R_excitation_O_1p968", "RateCoeffMaterial"),
     "EI20_O_IONIZATION": ("R_ion_O", "RateCoeffMaterial"),
     "EDETACH_OM": ("R_detach_Om", "ADParsedFunctorMaterial"),
-    "H01_OP_O2_CHARGE_TRANSFER": ("reaction_rate_H01_Op_O2_charge_transfer", "PhysicsReactionRateMaterial"),
-    "H02_OM_OP_NEUTRALIZATION": ("reaction_rate_H02_Om_Op_neutralization", "PhysicsReactionRateMaterial"),
-    "H03_OM_O2P_TO_3O": ("reaction_rate_H03_Om_O2p_to_3O", "PhysicsReactionRateMaterial"),
-    "H04_OM_O2P_TO_O_O2": ("reaction_rate_H04_Om_O2p_to_O_O2", "PhysicsReactionRateMaterial"),
-    "H05_OM_O_DETACHMENT": ("reaction_rate_H05_Om_O_to_O2_electron", "PhysicsReactionRateMaterial"),
+    "H01_OP_O2_CHARGE_TRANSFER": ("R_H01", "HeavyReactionRateMaterial"),
+    "H02_OM_OP_NEUTRALIZATION": ("R_H02", "HeavyReactionRateMaterial"),
+    "H03_OM_O2P_TO_3O": ("R_H03", "HeavyReactionRateMaterial"),
+    "H04_OM_O2P_TO_O_O2": ("R_H04", "HeavyReactionRateMaterial"),
+    "H05_OM_O_DETACHMENT": ("R_H05", "HeavyReactionRateMaterial"),
 }
 
 EXPECTED_EXCLUSIONS = {
