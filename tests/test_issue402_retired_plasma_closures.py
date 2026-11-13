@@ -70,7 +70,7 @@ def test_retired_action_is_absent_independent_material_objects_remain():
     for retired in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
         assert not (APP / "src/materials" / (retired + ".C")).exists()
         assert not (APP / "include/materials" / (retired + ".h")).exists()
-    for material in ("PhysicsElectronMeanEnergyMaterial", "DDTransportMaterial", "RateCoeffMaterial",
+    for material in ("PhysicsElectronMeanEnergyMaterial", "DDTransportMaterial", "EIRateCoefMaterial",
                      "NVTransportMaterial", "PhysicsPlasmaChargeDensityMaterial"):
         source = APP / "src/materials" / (material + ".C")
         header = APP / "include/materials" / (material + ".h")
@@ -85,7 +85,7 @@ def test_existing_native_smoke_uses_direct_materials_without_code_generation():
     assert "[PlasmaClosures]" not in fixture
     assert "PhysicsElectronKineticsMaterial" not in fixture
     assert "PhysicsHeavyTransportMaterial" not in fixture
-    assert fixture.count("type = RateCoeffMaterial") == 2
+    assert fixture.count("type = EIRateCoefMaterial") == 2
     assert "type = NVTransportMaterial" in fixture
     assert "type = DDTransportMaterial" in fixture
     assert "type = PhysicsElectronMeanEnergyMaterial" in fixture
