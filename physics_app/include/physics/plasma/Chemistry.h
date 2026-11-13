@@ -5,6 +5,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -38,22 +39,16 @@ struct NVTransportRecord
   bool equals(const NVTransportRecord & rhs) const;
 };
 
-// Functor names for the heavy-mixture composition. Values live in the solver;
-// species identities and molar masses live in the canonical Chemistry JSON.
-struct GasStateRecord
-{
-  std::vector<std::string> species;
-  std::vector<std::string> mass_fractions;
-
-  bool equals(const GasStateRecord & rhs) const;
-};
-
 struct SpeciesRecord
 {
   std::map<std::string, int> elements;
   int charge_number = 0;
   // Needed only for rate laws evaluated from heavy-species mass fractions.
   double molar_mass_kg_mol = 0.0;
+  // Scenario-specific initial data, never the instantaneous solver state.
+  // Missing is different from an explicitly zero concentration.
+  std::optional<double> initial_vol_mass_fraction;
+  std::optional<double> initial_inlet_mass_fraction;
 };
 
 // Validated executable rate law. Empty model means the reaction progress
@@ -103,7 +98,7 @@ public:
   bool hasDDTransport() const { return !_dd_transport.empty(); }
   bool fluidElectronEnergyTransport() const { return _fluid_electron_energy_transport; }
   const NVTransportRecord * nvTransport() const;
-  const GasStateRecord * gasState() const;
+  // Scenario-specific heavy-species composition is stored directly in speciesRecords().
 
 private:
   std::map<std::string, SpeciesRecord> _species;
@@ -111,7 +106,6 @@ private:
   std::map<std::string, DDTransportRecord> _dd_transport;
   bool _fluid_electron_energy_transport = false;
   std::unique_ptr<NVTransportRecord> _nv_transport;
-  std::unique_ptr<GasStateRecord> _gas_state;
 };
 
 // Chemistry owns the Physics source projector and the validated JSON data model.
