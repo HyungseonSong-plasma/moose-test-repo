@@ -38,8 +38,8 @@
 [FunctorMaterials]
   [electron_state]
     type = ADGenericFunctorMaterial
-    prop_names = 'n_e'
-    prop_values = '1e15'
+    prop_names = 'n_e T_e'
+    prop_values = '1e15 10000'
   []
   [heavy_progress]
     type = HRateCoefMaterial
