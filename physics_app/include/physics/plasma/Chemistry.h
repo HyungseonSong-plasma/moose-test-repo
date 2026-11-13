@@ -66,6 +66,10 @@ struct SpeciesRecord
   int charge_number = 0;
   // Needed only for rate laws evaluated from heavy-species mass fractions.
   double molar_mass_kg_mol = 0.0;
+  // Optional initial number density [1/m^3] for FEM/FV continuity. Presence
+  // activates generated log-molar variable/IC; absence leaves legacy external
+  // solver variable ownership. Strictly positive (log-state cannot encode zero).
+  std::optional<double> initial_number_density;
   // Scenario-specific initial data, never the instantaneous solver state.
   // Missing is different from an explicitly zero concentration.
   std::optional<double> initial_vol_mass_fraction;
