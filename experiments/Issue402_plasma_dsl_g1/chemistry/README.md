@@ -325,3 +325,20 @@ PR #524 nor the stacked parent PR #523 is merged. This decision waives
 only *D1 debug-specific* reproduction and optional independent D1 review,
 not repository protection rules or evidence required for actual physics
 compatibility.
+
+
+### Exact-source active S6 Native P2 result after D1 retirement
+
+[Workflow run #43416474682](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43416474682)
+at source SHA `44b2ba1c2784ae33e5adad6388b5cd4783de7f24`
+completed successfully using the operator-approved active input definition:
+**638 P0 tests PASS**, pinned public mesh P0 PASS, source-bound
+PhysicsApp Native P1 PASS, S6-417 and S6-941 Native P2 **both
+`Syntax OK` / exit 0**. The output contract records
+`ACTIVE_MODEL_P2=PASS`, `RETIRED_D1_PARITY=NOT_APPLICABLE`,
+`RETIRED_D1_REVIEW=NOT_REQUIRED_OPERATOR_DECISION`, and
+`SCIENCE_HOLD`, with P3 `NOT_RUN`.
+[Artifact #14033140207](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43416474682/artifacts/14033140207)
+preserves the case-local native input logs and bounded source identity
+receipts. This replaces the *current* D1-related P2 hold classification
+without changing any archived old run or science-gate decision.
