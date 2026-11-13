@@ -425,16 +425,18 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     if (root.contains("gas_state"))
       fail(file, "top-level gas_state is retired; put initial composition on each species");
 
-    // JSON only relocates the EXISTING named [BCs] declarations.
-    // An absent drift_diffusion_boundary means no generated electron BCs.
+    // The top-level JSON boundaries registry relocates existing named [BCs].
+    // Absence of boundaries creates no additional BC objects.
     // No wall law, 'open' role, or additional implicit BC is invented.
     if (root.contains("drift_diffusion_boundary"))
+      fail(file, "drift_diffusion_boundary is retired; use boundaries with physical mesh sideset keys");
+    if (root.contains("boundaries"))
     {
-      if (_has_dd_boundary)
-        fail(file, "duplicate drift_diffusion_boundary owner across JSON files");
-      const auto & catalogue = root.at("drift_diffusion_boundary");
+      if (_has_boundaries)
+        fail(file, "duplicate boundaries owner across JSON files");
+      const auto & catalogue = root.at("boundaries");
       if (!catalogue.is_object() || catalogue.empty())
-        fail(file, "drift_diffusion_boundary must be a nonempty object");
+        fail(file, "boundaries must be a nonempty object");
 
       static const std::regex identifier(R"(^[A-Za-z_][A-Za-z_0-9]*$)");
       std::set<std::string> used_mesh_boundaries;
@@ -448,19 +450,19 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         const auto & item = group.value();
         if (!item.is_object() || item.size() != 1 ||
             !item.contains("bcs") || !item.at("bcs").is_object())
-          fail(file, "drift_diffusion_boundary." + group.key() +
+          fail(file, "boundaries." + group.key() +
                          " requires exactly a bcs object; its key is the mesh boundary");
 
-        DDBoundaryRecord record;
+        BoundaryRecord record;
         std::istringstream input(group.key());
         for (std::string side; input >> side;)
           record.mesh_boundaries.push_back(side);
         if (record.mesh_boundaries.empty())
-          fail(file, "empty drift_diffusion_boundary mesh sideset key");
+          fail(file, "empty boundaries mesh sideset key");
         for (const auto & side : record.mesh_boundaries)
           if (!std::regex_match(side, identifier) ||
               !used_mesh_boundaries.insert(side).second)
-            fail(file, "invalid or duplicate drift_diffusion_boundary mesh sideset: " +
+            fail(file, "invalid or duplicate boundaries mesh sideset: " +
                            side);
 
         for (auto bc = item.at("bcs").begin(); bc != item.at("bcs").end(); ++bc)
@@ -473,27 +475,27 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
               !spec.contains("wall_number_flux") || !spec.at("type").is_string() ||
               !spec.at("variable").is_string() ||
               !spec.at("wall_number_flux").is_string())
-            fail(file, "drift_diffusion_boundary BC " + bc.key() +
+            fail(file, "boundaries BC " + bc.key() +
                            " requires type, variable, and wall_number_flux strings");
 
-          DDBoundaryBCRecord entry;
+          BoundaryBCRecord entry;
           entry.type = spec.at("type").get<std::string>();
           entry.variable = spec.at("variable").get<std::string>();
           entry.wall_number_flux = spec.at("wall_number_flux").get<std::string>();
           const bool particle = entry.type == "FEMElectronSheathBC";
           const bool energy = entry.type == "FEMElectronEnergySheathBC";
           if (!particle && !energy)
-            fail(file, "drift_diffusion_boundary BC type is not yet supported: " +
+            fail(file, "boundaries BC type is not yet supported: " +
                            entry.type + " for " + bc.key());
           if (spec.size() != (particle ? 3 : 4) ||
               (energy && (!spec.contains("mean_energy") ||
                           !spec.at("mean_energy").is_string())))
-            fail(file, "wrong named arguments in drift_diffusion_boundary BC " + bc.key());
+            fail(file, "wrong named arguments in boundaries BC " + bc.key());
           if (energy)
             entry.mean_energy = spec.at("mean_energy").get<std::string>();
           if (entry.variable.empty() || entry.wall_number_flux.empty() ||
               (energy && entry.mean_energy.empty()))
-            fail(file, "empty parameter value in drift_diffusion_boundary BC " + bc.key());
+            fail(file, "empty parameter value in boundaries BC " + bc.key());
 
           // Do not double-own a physical residual under two different labels.
           for (const auto & side : record.mesh_boundaries)
@@ -504,9 +506,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           }
           record.bcs.emplace(bc.key(), std::move(entry));
         }
-        _dd_boundaries.emplace(group.key(), std::move(record));
+        _boundaries.emplace(group.key(), std::move(record));
       }
-      _has_dd_boundary = true;
+      _has_boundaries = true;
     }
 
     // Multiple chemistry files may contribute reactions independently, but
@@ -995,11 +997,11 @@ void
 PlasmasAction::act()
 {
   // Root JSON is the sole ownership switch for the relocated, verbatim
-  // DriftDiffusion [BCs] blocks. There is deliberately NO .i
+  // [BCs] blocks, independent of the DD/NV taxonomy. There is deliberately NO .i
   // plasma_boundary toggle and NO implicit wall type interpretation.
   // This path also works when root gas_state is not enabled.
-  if (_current_task == "add_bc" && _data.hasDriftDiffusionBoundary())
-    for (const auto & [group, boundary] : _data.driftDiffusionBoundaries())
+  if (_current_task == "add_bc" && _data.hasBoundaries())
+    for (const auto & [group, boundary] : _data.boundaries())
       for (const auto & [name, bc] : boundary.bcs)
       {
         auto params = _factory.getValidParams(bc.type);
