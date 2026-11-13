@@ -1,0 +1,98 @@
+# Bounded source-bound P0/P1/P2 only for Issue #402 SCCM/static gas-state.
+# Trigger once when introduced on the exact work branch. No P3 / no merge.
+name: Issue402 SCCM static gas P0 P1 P2 once
+run-name: Issue402 SCCM fixed gas Native at ${{ github.sha }}
+on:
+  push:
+    branches: [issue-402-sccm-inlet-flow-native]
+    paths: [.github/workflows/issue402-sccm-fixed-gas-p0-p2-once.yml]
+permissions:
+  contents: read
+jobs:
+  source-bound-native:
+    name: Native gas-state setup and SCCM P0-P2
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact branch revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate source identity and immutable operator boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C
+          test ! -e physics_app/src/bcs/PhysicsFEMLogMolarElectronFieldLimitedFluxBC.C
+          test -e physics_app/src/bcs/FEMElectronSheathBC.C
+          test -e physics_app/src/bcs/FEMElectronEnergySheathBC.C
+          test -e physics_app/src/physics/plasma/SCCMInletFlow.C
+          test -e physics_app/src/physics/plasma/IdealGasMixtureState.C
+          echo "SOURCE=$GITHUB_SHA P3=NOT_RUN SCIENCE_HOLD"
+      - name: Python and actual C++ P0 oracle/mutation tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_issue402_sccm_inlet_cpp.py \
+            tests/test_issue402_sccm_inlet_flow.py \
+            tests/test_issue402_species_initial_composition.py \
+            tests/test_issue402_species_live_ic_inlet.py \
+            tests/test_issue402_rate_coef_ideal_gas.py \
+            tests/test_issue402_fem_electron_sheath_bc_retirement.py \
+            2>&1 | tee /tmp/issue402_sccm_static_gas_p0.log
+          echo SCCM_STATIC_GAS_SOURCE_P0_PASS
+      - name: Native P1 compile in pinned Physics build image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee /tmp/issue402_sccm_static_gas_p1.log
+          echo SCCM_STATIC_GAS_NATIVE_P1_PASS
+      - name: Native P2 positive fixtures and invalid feed mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              cd /workspace/physics_app/ci
+              /workspace/physics_app/physics-opt --check-input -i json_surface_rate_p2.i
+              echo SCCM_SURFACE_POSITIVE_P2_PASS
+              /workspace/physics_app/physics-opt --check-input -i json_species_live_all4_p2.i
+              echo SCCM_LIVE_ALL4_P2_PASS
+              cd /workspace
+              python3 physics_app/ci/check_issue402_species_initial_composition_p2.py \
+                /workspace/physics_app/physics-opt
+              echo SCCM_MUTATIONS_AND_DERIVED_OWNER_P2_PASS
+            ' 2>&1 | tee /tmp/issue402_sccm_static_gas_p2.log
+          echo ISSUE402_SCCM_STATIC_GAS_NATIVE_P2_PASS_P3_NOT_RUN
+      - name: Upload exact-head P0 P1 P2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-sccm-static-gas-p0p2-${{ github.sha }}
+          path: |
+            /tmp/issue402_sccm_static_gas_p0.log
+            /tmp/issue402_sccm_static_gas_p1.log
+            /tmp/issue402_sccm_static_gas_p2.log
+          if-no-files-found: warn
+          retention-days: 30
