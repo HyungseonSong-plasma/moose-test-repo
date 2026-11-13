@@ -23,7 +23,7 @@
     [Transport]
       [DriftDiffusion]
         [Continuity]
-          fem_species = 'e 1e15'
+          fem_species = e
           fem_potential = potential
         []
         [Energy]
