@@ -851,7 +851,8 @@ PlasmasAction::validParams()
                         "Optional positive standard volumetric feed rate [standard cm^3/min]. "
                         "When supplied, create inlet FVDirichletBC for each solved "
                         "heavy-species mass fraction using JSON inlet composition. "
-                        "Does not prescribe mixture mass flux, velocity, or inlet area.");
+                        "Publishes inlet_mdot, inlet_mdot_<species>, inlet_area, "
+                        "inlet_mass_flux and inlet_velocity Postprocessors for flow BCs.");
   return params;
 }
 
@@ -889,7 +890,8 @@ PlasmasAction::act()
 {
   if (!gasStateEnabled() ||
       (_current_task != "add_functor_material" &&
-       _current_task != "add_ics_physics" && _current_task != "add_bc"))
+       _current_task != "add_ics_physics" && _current_task != "add_bc" &&
+       _current_task != "add_postprocessor"))
     return;
 
   // No redundant top-level gas_state list. Composition is owned by each
@@ -935,6 +937,64 @@ PlasmasAction::act()
       paramError("files",
                  "Root ideal_gas requires NV transport species to match the complete "
                  "heavy gas composition; no implicit renormalization or silent omission.");
+  }
+
+  // Canonical Issue19/21 conversion: standard cm^3/min -> mol/s -> kg/s.
+  // SCCM reference is the accepted 0 C / 1 atm molar volume [m^3/mol].
+  // The feed mixture is the JSON INLET composition, never Y_i(t,x).
+  if (_current_task == "add_postprocessor")
+  {
+    if (!isParamValid("sccm"))
+      return;
+
+    constexpr Real standard_molar_volume_m3_per_mol = 0.0224136;
+    constexpr Real gas_constant = 8.31446261815324;
+    Real inverse_inlet_molar_mass = 0.0;
+    for (const auto & id : species)
+    {
+      const auto & record = _data.species(id);
+      inverse_inlet_molar_mass +=
+          *record.initial_inlet_mass_fraction / record.molar_mass_kg_mol;
+    }
+    if (!std::isfinite(inverse_inlet_molar_mass) || inverse_inlet_molar_mass <= 0.0)
+      paramError("files", "SCCM inlet mixture needs a finite positive mean molar mass.");
+    const Real inlet_molar_mass = 1.0 / inverse_inlet_molar_mass;
+    const Real standard_flow_m3_s = getParam<Real>("sccm") * 1.0e-6 / 60.0;
+    const Real inlet_mdot = standard_flow_m3_s * inlet_molar_mass /
+                            standard_molar_volume_m3_per_mol;
+    const Real inlet_density = getParam<Real>("pressure") * inlet_molar_mass /
+                               (gas_constant * getParam<Real>("temperature"));
+    if (!std::isfinite(inlet_mdot) || inlet_mdot <= 0.0 ||
+        !std::isfinite(inlet_density) || inlet_density <= 0.0)
+      paramError("sccm", "SCCM inlet mass flow or physical inlet density is invalid.");
+
+    const auto addReceiver = [this](const std::string & name, Real value)
+    {
+      auto params = _factory.getValidParams("Receiver");
+      params.set<Real>("default") = value;
+      _problem->addPostprocessor("Receiver", name, params);
+    };
+    addReceiver("inlet_mdot", inlet_mdot);
+    for (const auto & id : species)
+      addReceiver("inlet_mdot_" + id,
+                  inlet_mdot * *_data.species(id).initial_inlet_mass_fraction);
+
+    auto area = _factory.getValidParams("AreaPostprocessor");
+    area.set<std::vector<BoundaryName>>("boundary") =
+        getParam<std::vector<BoundaryName>>("inlet_boundaries");
+    _problem->addPostprocessor("AreaPostprocessor", "inlet_area", area);
+
+    for (const auto & quantity : {"mass_flux", "velocity"})
+    {
+      auto params = _factory.getValidParams("PhysicsSCCMInletFlowPostprocessor");
+      params.set<Real>("mdot_kg_per_s") = inlet_mdot;
+      params.set<Real>("rho_inlet_kg_per_m3") = inlet_density;
+      params.set<PostprocessorName>("area_pp") = "inlet_area";
+      params.set<MooseEnum>("quantity") = quantity;
+      _problem->addPostprocessor("PhysicsSCCMInletFlowPostprocessor",
+                                 std::string("inlet_") + quantity, params);
+    }
+    return;
   }
 
   // A solved variable is the only source allowed to receive an FV IC or BC;
@@ -1078,3 +1138,4 @@ registerMooseAction("PhysicsApp", PlasmasAction, "check_integrity");
 registerMooseAction("PhysicsApp", PlasmasAction, "add_functor_material");
 registerMooseAction("PhysicsApp", PlasmasAction, "add_ics_physics");
 registerMooseAction("PhysicsApp", PlasmasAction, "add_bc");
+registerMooseAction("PhysicsApp", PlasmasAction, "add_postprocessor");
