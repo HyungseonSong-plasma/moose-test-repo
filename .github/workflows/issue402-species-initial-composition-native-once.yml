@@ -1,5 +1,5 @@
 name: Issue402 Species Initial Volume Inlet Composition P0 P1 P2
-# Source-bound validation for per-species initial volume/inlet composition, EOS and audit.
+# Final source-bound rerun also verifies distinct rho_g_initial/rho_g_inlet and M_mix_inlet.
 on:
   push:
     branches: [issue-402-species-initial-composition]
