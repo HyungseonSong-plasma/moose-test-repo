@@ -48,7 +48,7 @@ heavy species whenever the ideal-gas state is enabled. The volume and inlet
 fractions each independently sum to one. A duplicate species record across
 different JSON mechanism files must not contradict its initial or inlet data.
 
-Generated `Y_<species>_initial_vol` and `Y_<species>_inlet` are constant
+Generated `Y_<species>_initial_vol`, `Y_<species>_inlet`, and separate `rho_g_initial`/`rho_g_inlet` and `M_mix_initial`/`M_mix_inlet` are constant
 Functor input DATA. They are **not** implicit solver initial/boundary operators:
 only active solver and boundary configurations know which variables and inlet
 boundaries exist. If no Navier–Stokes live composition is configured, the root
