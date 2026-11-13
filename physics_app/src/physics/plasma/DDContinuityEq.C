@@ -82,30 +82,32 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
         paramError("fvm_species", "Invalid species ID for automatic naming: ", species);
   }
 
-  // A JSON initial_number_density activates automatic FEM/FVM log-state
-  // variable and IC construction. Missing metadata preserves explicitly
-  // declared Native solver variables and their independently owned ICs.
+  // Every selected FEM/FVM continuity state must be explicitly initialized
+  // by species.<id>.initial_number_density in Chemistry JSON. No fallback
+  // to user-declared [Variables]/[ICs] or implicit zero state is supported.
   const auto & records = chemistryData().speciesRecords();
   const auto bind_json_initial = [this, &records](
       const std::vector<std::string> & selected,
+      const std::string & option,
       std::map<std::string, Real> & destinations)
   {
     for (const auto & id : selected)
     {
       const auto found = records.find(id);
       if (found == records.end() || !found->second.initial_number_density)
-        continue;
+        paramError(option,
+                   "Selected species '", id,
+                   "' requires species.", id,
+                   ".initial_number_density in Chemistry JSON [1/m^3]; "
+                   "external [Variables]/[ICs] cannot replace it.");
       destinations.emplace(id, *found->second.initial_number_density);
       saveSolverVariableName(continuityStateName(id));
     }
   };
-  bind_json_initial(fem, _fem_initial_number_densities);
-  bind_json_initial(fvm, _fvm_initial_number_densities);
-  if (!_fem_initial_number_densities.empty() || !_fvm_initial_number_densities.empty())
-  {
-    addRequiredPhysicsTask("add_variables_physics");
-    addRequiredPhysicsTask("add_ics_physics");
-  }
+  bind_json_initial(fem, "fem_species", _fem_initial_number_densities);
+  bind_json_initial(fvm, "fvm_species", _fvm_initial_number_densities);
+  addRequiredPhysicsTask("add_variables_physics");
+  addRequiredPhysicsTask("add_ics_physics");
 
   // JSON automatically owns all selected DD species when any DD record exists.
   // A fully absent section preserves historical Native coefficients.
@@ -150,7 +152,7 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
 void
 DDContinuityEq::addSolverVariables()
 {
-  // JSON-owned ICs cannot silently override an explicit Native variable or IC.
+  // JSON is the sole initial-state owner; reject competing external variables/ICs.
   const auto generate = [this](const std::map<std::string, Real> & densities,
                                const bool finite_volume,
                                const std::string & option) {
@@ -161,7 +163,8 @@ DDContinuityEq::addSolverVariables()
         paramError(option,
                    "Species '", species, "' has JSON initial_number_density and an "
                    "existing solver variable '", variable,
-                   "'. Choose JSON auto-generation OR external [Variables]/IC ownership.");
+                   "'. Remove the conflicting [Variables]/[ICs] declaration; "
+                   "JSON is the sole initial-state owner.");
       const std::string type = finite_volume ? "MooseVariableFVReal" : "MooseVariable";
       auto params = getFactory().getValidParams(type);
       assignBlocks(params, _blocks);
