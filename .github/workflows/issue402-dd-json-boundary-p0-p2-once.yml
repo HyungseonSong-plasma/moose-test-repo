@@ -1,5 +1,5 @@
 # Bounded branch-specific source-bound Native P0/P1/P2 only.
-# Generic boundaries plus canonical ElectronWallFluxMaterial registration: exact-source P0/P1/P2. No P3; SCIENCE_HOLD.
+# Source-bound canonical ESWallFluxMaterial and e_energy_eV plus historical aliases P0/P1/P2; P3 SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
 on:
@@ -32,6 +32,9 @@ jobs:
           test -f physics_app/src/bcs/FEMElectronEnergySheathBC.C
           test -f physics_app/src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C
           test -f physics_app/src/materials/ElectronWallFluxMaterial.C
+          test -f physics_app/src/materials/ESWallFluxMaterial.C
+          grep -Fq 'registerMooseObject("PhysicsApp", ESWallFluxMaterial);' physics_app/src/materials/ESWallFluxMaterial.C
+          grep -Fq '"e_energy_eV"' physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
           grep -Fq '"boundaries"' physics_app/src/physics/plasma/Chemistry.C
           grep -Fq 'registerMooseObject("PhysicsApp", ElectronWallFluxMaterial);' physics_app/src/materials/ElectronWallFluxMaterial.C
           echo "DD_JSON_BOUNDARY_SOURCE=$GITHUB_SHA SCIENCE_HOLD P3_NOT_RUN"
