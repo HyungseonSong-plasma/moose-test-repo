@@ -214,7 +214,7 @@ with the review-only synthetic e_transport.txt.
 - Source-bound [P0/P1/native P2 #43403730997](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43403730997)
   on \`2c79d2327367aeaa078726af0b3df5c9dc9d4a5f\`:
   **613 P0 PASS**, public 400 W mesh PASS, exact-source Native P1
-  PASS. Both full 11-layer S6-417/941 Native P2 still **HOLD**.
+  PASS. Both full 11-layer S6-417/941 Native P2 still **HOLD at that historical run**.
   The previous first parser error
   \`PhysicsElectronTransportLookupMaterial is not a registered object\`
   has disappeared. The new first parser error in both cases is
@@ -230,139 +230,53 @@ with the review-only synthetic e_transport.txt.
 
 
 
-## S6-417/941 retired D1 Aux diagnostic compatibility gate (2026-11-13)
+## Native S6 D base with obsolete D1 debugging absent by construction (2026-11-13)
 
-**Source audit, immutable B/C:** The 11-layer S6-417/941 public archive
-contains 9 `PhysicsLowerDSurfaceCurrentProbeAux` face-Functor observers,
-5 `PhysicsWaferD1GeometryProbeAux` observers, and 14 corresponding
-`wafer_surface` MONOMIAL AuxVariables in the shared base layer. Every
-observed variable has exactly two token references across the archived
-input stack (its declaration and its own diagnostic AuxKernel). No
-physics/RF/PDE residual, boundary condition or producer consumes those
-14 AuxVariable names in the pinned deck. See [immutable B/C audit
-#43405429511](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43405429511).
+**Operator scope:** Issue397 D1 diagnostics were temporary instruments for a
+resolved defect. Their 9 surface-current probes, 5 geometry probes, and
+14 AuxVariables are not required in the target D model. No numerical parity
+or independent review of these now-retired outputs is required. Physical
+`PhysicsLowerDSurfaceCurrent`, sheath/Wall/RF sources and transport remain.
 
-Both historical C++ AuxKernel implementations existed at historical
-`29d1acc6ef7969908b86719e4b95c73a1565136d` but are no longer
-registered in the current PhysicsApp. They sampled the plasma-side
-`FaceArg` / signed face current and geometry (`normal_r`, `normal_z`,
-`owner`, `d_perp`, `e_n`). The currently registered physical kernel
-`PhysicsLowerDSurfaceCurrent` is a distinct PDE residual owner and
-**must not** be removed or treated as a diagnostic substitute.
+**Source of truth:** The original public B/C S6-417 and S6-941 archives
+remain SHA-pinned and unmodified. Both public C variants share exactly the same
+original C0 physics base (`SHA256:
+66548d33947b227ca29849b0c52146100887d1795a66e0f90df11a94199fc5bf`).
+A **one-time** archival migration produced
+`experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i`
+(`SHA256:
+c9686adb669cc115556860c00438fcfdd93a438751e9f99825b4ddb6ebf65088`).
+Generation was source-bound, verified exactly 14 debug AuxKernels and 14 paired
+AuxVariables were removed, and confirmed physical owners were preserved.
+[One-time generation evidence #43419992876](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43419992876).
 
-**Bounded disposable D core-input P2:** The staging helper
-`suspend_staged_retired_d1_observations()` verifies all 14 paired
-signature/owner/section assignments, rejects duplicate, missing,
-externally consumed or unexpectedly indented parameters, and removes
-only the 14 diagnostic AuxKernels and 14 associated AuxVariables
-from temporary D scratch. Physical Wall current Functors, surface-charge
-residuals, Poisson/transport/RF source owners and original B/C inputs
-are kept intact. Because diagnostics are omitted, this input is
-**CORE_INPUT_P2_ONLY**, never full original S6 acceptance.
+**Production input creation:** All four known D input entrypoints now use
+`public_p2_check.stage(..., d_base_source=.../native/s6_c0_physics_base_no_d1.i)`:
+`run_chemistry_s6_p2_only.py`, `public_chemistry_s6_p2.py`,
+`public_option_s6_p2.py` (D arm only) and
+`run_canonical_s6_p3_once.py` (future, separately authorized P3).
+The staged D base therefore **never contains** the obsolete debug Aux objects.
+Historical B/C `stage()` with no override retains its original byte-identical
+deck. The historical `issue397_d1_instrument.py` is a provenance-only
+generator; the active D path never invokes it.
 
-**Exact-source P0/P1/P2 evidence**: [run #43407079646]
-(https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43407079646)
-on tested SHA `e63791f10c54c8fa2d4c20a1c3cd549b9b07c1a7`:
-- P0 **638 tests PASS**, including the fixed 42-row public staging table
-  and deliberately invalid B/C owner/consumer/hidden-assignment inputs.
-- Public 400 W mesh prepared, exact-source Native P1 compiled **PASS**.
-- Real 11-layer S6-417 core-input `physics-opt --check-input`: **Syntax OK**, exit 0.
-- Real 11-layer S6-941 core-input `physics-opt --check-input`: **Syntax OK**, exit 0.
-- [Run artifact #14027838281]
-  (https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43407079646/artifacts/14027838281)
-  contains exact case-local logs, SHA-based source binding and bounded P2 receipts.
+The former `suspend_staged_retired_d1_observations()`, its 14-entry maps,
+`audit_final_native_d1_debug_absence()`, recurring pre/post-write scans and
+their dedicated negative-control tests have **all been deleted**. The active
+input is not created with diagnostics and then stripped; no per-run D1
+cleanup or absence scan is executed. A compact P0 source SHA pin and direct
+staging regression cover fixture integrity and B/C non-interference without
+rebuilding the obsolete debug analysis.
 
-The earlier missing `PhysicsLowerDSurfaceCurrentProbeAux` and
-`PhysicsWaferD1GeometryProbeAux` no longer block this **core** syntax test.
-That is **not** C++ face-value regression, observational equivalence,
-temporal/physics parity or validation of the missing 14 diagnostics.
-**Historical gate as initially defined:** the initial experimental run marked
-`FULL_S6_P2=HOLD` and `DIAGNOSTIC_PARITY=HOLD`; CodeRabbit's D1 follow-up
-review was rate-limited. These historical facts remain in the immutable run
-artifact. The later operator decision below supersedes the *requirement* to
-reproduce/debug-review the retired D1 probes, but does not change that
-historical report.
+**Historical transition evidence:** Prior active-input run
+[#43418084078](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43418084078)
+passed P0 641, Native P1, and Native S6-417/941 P2 using temporary filtering
+and scanning. That was a transitional implementation and has been superseded
+by the direct-source construction above; it must **not** be cited as proof
+that the final refactored path ran until its own exact-source CI completes.
 
-
-## Operator decision: D1 debugging complete; diagnostic retirement accepted (2026-11-13)
-
-The operator confirmed that the original Issue397 D1 instrumentation was
-introduced solely to investigate a specific defect, and that defect has
-already been identified. The D1 probes are no longer required model outputs.
-Consequently, **recreating 14 retired probe values / FaceArgs, proving
-diagnostic numerical parity, and arranging a separate independent reviewer
-for this now-unneeded instrumentation are not acceptance gates**. This is an
-explicit operator scope decision, **not** a claim that those values were
-reproduced or that a reviewer approved the retired code.
-
-The active target S6 D input excludes precisely 9 retired
-`PhysicsLowerDSurfaceCurrentProbeAux` and 5
-`PhysicsWaferD1GeometryProbeAux` instances plus their 14 unused AuxVariables.
-The guarded scratch-only transformation checks the exact archival signatures
-and ensures no unexpected variable consumer before removing them. The
-original B/C archive stays byte-identical and auditable, not rewritten.
-All physical `PhysicsLowerDSurfaceCurrent`, Wall, Poisson, transport,
-RF and Chemistry owners remain part of the active target.
-
-**Active model Native P2 acceptance** means `physics-opt --check-input`
-succeeds for the S6-417 and S6-941 stacks *after the explicitly retired
-debug probes are removed*. The last source-bound evidence already showed
-both cases `Syntax OK` in [run #43407079646](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43407079646).
-Historical evidence called this `CORE_INPUT_P2=PASS`, because the old
-diagnostic parity gate was still pending; this operator decision now
-makes that the **intended target model input**, not a temporary missing
-science component. Current staging records
-`OBSOLETE_D1_DEBUG_OBSERVATIONS_RETIRED`,
-`diagnostic_parity=NOT_APPLICABLE`, and
-`d1_retirement_review=NOT_REQUIRED_OPERATOR_DECISION`.
-The active P2 runner verifies exactly 14+14 removals before accepting Native
-syntax. Do not rewrite or reclassify historical signed CI receipts.
-
-**Remaining distinct gates:** Native C++ wall/transport physical parity and
-scientific provenance/trajectory acceptance are not proven by `--check-input`.
-`SCIENCE_HOLD` stays in effect; P3/P4 remain `NOT_RUN`, and neither
-PR #524 nor the stacked parent PR #523 is merged. This decision waives
-only *D1 debug-specific* reproduction and optional independent D1 review,
-not repository protection rules or evidence required for actual physics
-compatibility.
-
-
-### Exact-source active S6 Native P2 result after D1 retirement
-
-[Workflow run #43416474682](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43416474682)
-at source SHA `44b2ba1c2784ae33e5adad6388b5cd4783de7f24`
-completed successfully using the operator-approved active input definition:
-**638 P0 tests PASS**, pinned public mesh P0 PASS, source-bound
-PhysicsApp Native P1 PASS, S6-417 and S6-941 Native P2 **both
-`Syntax OK` / exit 0**. The output contract records
-`ACTIVE_MODEL_P2=PASS`, `RETIRED_D1_PARITY=NOT_APPLICABLE`,
-`RETIRED_D1_REVIEW=NOT_REQUIRED_OPERATOR_DECISION`, and
-`SCIENCE_HOLD`, with P3 `NOT_RUN`.
-[Artifact #14033140207](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43416474682/artifacts/14033140207)
-preserves the case-local native input logs and bounded source identity
-receipts. This replaces the *current* D1-related P2 hold classification
-without changing any archived old run or science-gate decision.
-
-
-## Verified final Native S6 .i files without retired D1 Aux (2026-11-13)
-
-The active S6 target D input builder now checks the complete **11-layer
-Native .i stack** both in-memory (before any cutover files are written) and
-again from the **files actually written to disk**. The Native P2 runner
-independently re-reads those exact 11 files immediately before invoking
-`physics-opt --check-input`. Any occurrence of the 14 named obsolete D1
-AuxVariables, their 14 AuxKernel blocks, or either retired AuxKernel factory
-type causes a fail-closed error. This is an *actual target-input exclusion*,
-not simply ignoring their results or relaxing assertions. Original B/C
-archive evidence stays unchanged. The obsolete diagnostic numerical-parity
-and standalone D1 retirement review gates are **not applicable** by the
-operator's decision; physical numerical equivalence remains a separate gate.
-
-[Exact-source native run #43418084078](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43418084078)
-(HEAD `813da8b267a24487274f7c96a2ce3cf4f0443af8`): **641 P0 tests PASS**;
-public 400 W mesh PASS; source-bound Native P1 PASS;
-**S6-417 and S6-941 Native P2 both PASS, exit 0, Syntax OK**;
-all 11 layers explicitly audited zero obsolete D1 diagnostics.
-[Artifacts #14032148589](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43418084078/artifacts/14032148589).
-P3/P4 remain NOT_RUN, independent physics/Wall numerical parity unproven,
-`SCIENCE_HOLD` maintained and no branch merge authorized.
+**Remaining science gates:** Native `--check-input` is an input-validity
+check, not a numerical time-integration, face-value parity or scientific
+mechanism-provenance check. `SCIENCE_HOLD` stays active; P3/P4 remain
+`NOT_RUN`, PR #524 remains Draft stacked onto PR #523, and no merge is
+authorized by the D1 cleanup alone.
