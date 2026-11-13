@@ -1,5 +1,5 @@
 # Issue #402 synthetic P2 test: FEM + 3 FVM species use JSON-owned DDTransportMaterial.
-# Species/initial number density [1/m^3] pairs are declared only in Continuity.
+# Continuity selects species IDs; JSON species owns initial number density [1/m^3].
 # The rates, electron lookup table and ion constants below are NOT physical S6 data.
 [Mesh]
   type = GeneratedMesh
@@ -30,9 +30,8 @@
     [Transport]
       [DriftDiffusion]
         [Continuity]
-          # Format: species_name initial_number_density ...
-          fem_species = 'e 1e16'
-          fvm_species = 'O2p 1e16 Om 1e14 Op 1e15'
+          fem_species = e
+          fvm_species = 'O2p Om Op'
           fem_potential = potential
         []
       []
