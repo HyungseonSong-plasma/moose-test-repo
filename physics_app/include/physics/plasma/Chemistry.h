@@ -39,6 +39,14 @@ struct NVTransportRecord
   bool equals(const NVTransportRecord & rhs) const;
 };
 
+// One explicitly declared mesh sideset and its electron boundary owner.
+// Aliases such as wafer and inlet are labels, not inferred mesh names.
+struct DDBoundaryRecord
+{
+  std::string mesh_boundary;
+  std::string electron_model; // open | adjacent_sheath | external
+};
+
 struct SpeciesRecord
 {
   std::map<std::string, int> elements;
@@ -103,6 +111,11 @@ public:
   bool hasDDTransport() const { return !_dd_transport.empty(); }
   bool fluidElectronEnergyTransport() const { return _fluid_electron_energy_transport; }
   const NVTransportRecord * nvTransport() const;
+  bool hasDriftDiffusionBoundary() const { return _has_dd_boundary; }
+  const std::map<std::string, DDBoundaryRecord> & driftDiffusionBoundaries() const
+  {
+    return _dd_boundaries;
+  }
   // Scenario-specific heavy-species composition is stored directly in speciesRecords().
 
 private:
@@ -111,6 +124,8 @@ private:
   std::map<std::string, DDTransportRecord> _dd_transport;
   bool _fluid_electron_energy_transport = false;
   std::unique_ptr<NVTransportRecord> _nv_transport;
+  bool _has_dd_boundary = false;
+  std::map<std::string, DDBoundaryRecord> _dd_boundaries;
 };
 
 // Chemistry owns the Physics source projector and the validated JSON data model.
