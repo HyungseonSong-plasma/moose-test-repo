@@ -38,7 +38,9 @@ def test_user_drift_diffusion_transport_coefficient_options_are_removed():
 def test_mean_energy_bridge_and_dd_transport_are_distinct_providers():
     mean = text("physics_app/src/materials/ElectronEnergyMaterial.C")
     dd = text("physics_app/src/materials/DDTransportMaterial.C")
-    assert 'getParam<MooseFunctorName>("mean_energy_output")' in mean
+    assert 'addFunctorProperty<ADReal>(\n      "e_energy_eV"' in mean
+    assert '"mean_energy_output"' not in mean
+    assert '"energy_reference_eV"' not in mean
     assert "electron_energy_density" in mean and "electron_density" in mean
     assert 'addFunctorProperty<ADReal>("electron_mobility", particle_mu)' in dd
     assert '"electron_energy_mobility"' in dd
