@@ -33,7 +33,7 @@ def test_root_ideal_gas_has_no_json_initial_as_live_density_input():
     assert 'add("Y_" + id, literal(*record.initial_vol_mass_fraction)' not in c
     assert 'names.push_back(fractions[i]);' in c
     assert 'add("rho_g", "pressure/(8.31446261815324*temp*(' in c
-    assert 'add("rho_g_initial"' in c and 'add("rho_g_inlet"' in c
+    assert 'addStatic("rho_g_initial"' in c and 'addStatic("rho_g_inlet"' in c
 
 
 def test_root_ic_and_bc_create_only_for_solved_species():
@@ -89,6 +89,7 @@ def test_sccm_one_time_flow_module_and_no_duplicate_flow_bc():
     assert 'getParam<std::vector<BoundaryName>>("inlet_boundaries")' in c
     assert "const double inlet_flux = inlet_mdot / settings.inlet_area_m2;" in helper
     assert "const double inlet_speed = inlet_flux / inlet_rho;" in helper
+    assert "state.density_kg_per_m3" in helper
     assert '"plasma_inlet_area"' in helper and '"plasma_inlet_mdot"' in helper
 
 

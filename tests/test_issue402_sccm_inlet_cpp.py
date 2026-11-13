@@ -13,6 +13,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "physics_app/src/physics/plasma/SCCMInletFlow.C"
+GAS_STATE_SRC = ROOT / "physics_app/src/physics/plasma/IdealGasMixtureState.C"
 INC = ROOT / "physics_app/include/physics/plasma"
 
 
@@ -124,7 +125,7 @@ int main()
 ''')
     compile_result = subprocess.run(
         [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror",
-         "-I", str(INC), str(SRC), str(driver), "-o", str(binary)],
+         "-I", str(INC), str(SRC), str(GAS_STATE_SRC), str(driver), "-o", str(binary)],
         capture_output=True, text=True, check=False,
     )
     assert compile_result.returncode == 0, (

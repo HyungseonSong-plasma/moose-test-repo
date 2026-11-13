@@ -18,8 +18,8 @@ a consumer explicitly requires `MooseFunctorName` or differentiable
 | Provider and current outputs | Dependency | Classification | Action |
 | --- | --- | --- | --- |
 | `SCCMInletFlow`: `plasma_inlet_mdot`, area, speed, flux, per-species feed | fixed SCCM, inlet JSON Y, mass, p/T, area and standard molar volume | **setup-only** | **Implemented:** pure C++ mapping at construction; publish immutable ConstantPostprocessors |
-| Root `PlasmasAction` `p`, `T`, `n_g` | current contract fixed user p and T | setup-only in current root model | **Candidate A:** compute numeric values once and publish as *constant AD Functors* (e.g. compatible ADGenericFunctorMaterial) only after Native consumer P2 coverage. Keep `p`/`T` Functor names. |
-| Root `Y_<id>_initial_vol`, `Y_<id>_inlet`, `M_mix_initial`, `M_mix_inlet`, `rho_g_initial`, `rho_g_inlet` | fixed JSON initial/feed fractions plus p/T | setup-only | **Candidate A:** reuse common precomputed initial/inlet state; do **not** change API into Postprocessors because HRate/NV and postprocessors consume Functors. Verify identical numerical conventions and provider ownership first. |
+| Root `PlasmasAction` `p`, `T`, `n_g` | current contract fixed user p and T | setup-only in current root model | **IMPLEMENTED (P1/P2 pending):** setup-computed numeric values supplied through `ADGenericFunctorMaterial`; stable `p`/`T`/`n_g` Functor names and AD interface. |
+| Root `Y_<id>_initial_vol`, `Y_<id>_inlet`, `M_mix_initial`, `M_mix_inlet`, `rho_g_initial`, `rho_g_inlet` | fixed JSON initial/feed fractions plus p/T | setup-only | **IMPLEMENTED (P1/P2 pending):** `IdealGasMixtureState::evaluate` owns static state once; `ADGenericFunctorMaterial` retains the old Functor API. SCCM inlet reuses the same fixed EOS calculation. |
 | Root `Y_<id>` aliases, `M_mix`, `rho_g` | live `mass_fraction_variable` or `mass_fraction_functor` | **live** | Keep AD Functor and solver derivatives; any replacement by setup constants breaks evolving composition and EOS. |
 | `DDTransportMaterial` in `constant` mode | model constants only | setup-only *coefficients* | **Candidate B:** precompute/retain constant coefficients internally, but preserve the current AD Functor names/properties required by drift-diffusion. Measure before changing. |
 | `DDTransportMaterial` in `lookup`/`functor` mode | solved mean energy, density, p/T or upstream transport Functors | live | Keep state-aware interpolation/AD. A constant-table *load* already belongs in construction; lookup *evaluation* does not. |
@@ -34,10 +34,10 @@ a consumer explicitly requires `MooseFunctorName` or differentiable
    fixed-case calculation; keep root generated Postprocessor interface. Unit
    test the actual C++ translation unit independently of MOOSE, plus historical
    Issue #19/#21 analytic and wrong-reference/area/species mutations.
-2. **Later, separate PR:** Candidate A fixed `p`, `T`, static initial/inlet
-   mixture, `n_g` constant-valued Functor optimization. Predeclare unchanged
-   name, units, blocks, AD derivative (zero for fixed values), and exact P2
-   provider map. Verify volume-vs-inlet composition remains distinct.
+2. **This PR:** Candidate A fixed `p`, `T`, static initial/inlet mixture,
+   `n_g` now use numeric `ADGenericFunctorMaterial` aliases, with untouched
+   names, units and zero AD derivative. Native P1/P2 must prove provider
+   compatibility and volume-vs-inlet distinction before acceptance.
 3. **Later, contingent on profiling:** Candidate C `NVTransportMaterial`
    repeated evaluation is more likely to dominate cost than one-time SCCM.
    Prove recomputation from actual source/solver profiling before introducing

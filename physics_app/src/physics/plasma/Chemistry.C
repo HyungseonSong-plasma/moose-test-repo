@@ -1,5 +1,6 @@
 #include "Chemistry.h"
 #include "SCCMInletFlow.h"
+#include "IdealGasMixtureState.h"
 #include "FEProblemBase.h"
 
 #include "nlohmann/json.hpp"
@@ -1040,15 +1041,11 @@ PlasmasAction::act()
     return;
   }
 
-  // Y_<id> is always an alias of the LIVE solver/constraint owner, never the
-  // JSON initial value. NV consumes the same canonical live Y aliases.
+  // LIVE Y aliases retain their AD dependency on solver/constraint state.
+  // The static initial/feed composition remains independent of live Y(t,x).
   for (const auto & id : species)
-  {
-    const auto & record = _data.species(id);
     fractions.push_back("Y_" + id);
-  }
-  // No custom GasStateMaterial: publish canonical p/T and ideal-gas
-  // derived state via existing ADParsedFunctorMaterial Functors.
+
   auto add = [this](const std::string & name,
                     const std::string & expression,
                     const std::vector<std::string> & functors,
@@ -1065,30 +1062,40 @@ PlasmasAction::act()
     _problem->addFunctorMaterial("ADParsedFunctorMaterial", "plasma_gas_" + name, params);
   };
 
-  std::ostringstream pressure_literal;
-  pressure_literal << std::setprecision(17) << getParam<Real>("pressure");
-  std::ostringstream temperature_literal;
-  temperature_literal << std::setprecision(17) << getParam<Real>("temperature");
-  add("p", pressure_literal.str(), {}, {});
-  add("T", temperature_literal.str(), {}, {});
-
-  // These constant Functors are initial and feed boundary DATA, not solver IC/BC
-  // operators: boundaries and flow ownership remain with the active Physics.
-  // A statically specified (no NV) mixture uses its volume fraction as Y_i;
-  // with NV, the real, evolving mass-fraction Functors remain the sole owners.
-  auto literal = [](double value)
+  // MOOSE's numeric MooseFunctorName is a constant AD Functor. The underlying
+  // formula and value are computed once; property names and AD API are stable.
+  auto literal = [](const double value)
   {
     std::ostringstream stream;
     stream << std::setprecision(17) << value;
     return stream.str();
   };
+  auto addStatic = [this, &literal](const std::string & name, const Real value)
+  {
+    const auto type = "ADGenericFunctorMaterial";
+    auto params = _app.getFactory().getValidParams(type);
+    params.set<std::vector<std::string>>("prop_names") = {name};
+    params.set<std::vector<MooseFunctorName>>("prop_values") = {literal(value)};
+    params.set<bool>("define_dot_functors") = false;
+    _problem->addFunctorMaterial(type, "plasma_gas_" + name, params);
+  };
+
+  // The setup-only calculation has one physical owner, also reused by the
+  // SCCM inlet module. No time-dependent solver value is snapshotted.
+  std::vector<Plasma::IdealGasMixtureSpecies> initial_species;
+  std::vector<Plasma::IdealGasMixtureSpecies> inlet_species;
+  initial_species.reserve(species.size());
+  inlet_species.reserve(species.size());
   for (const auto & id : species)
   {
     const auto & record = _data.species(id);
-    add("Y_" + id + "_initial_vol",
-        literal(*record.initial_vol_mass_fraction), {}, {});
-    add("Y_" + id + "_inlet",
-        literal(*record.initial_inlet_mass_fraction), {}, {});
+    initial_species.push_back(
+        {id, *record.initial_vol_mass_fraction, record.molar_mass_kg_mol});
+    inlet_species.push_back(
+        {id, *record.initial_inlet_mass_fraction, record.molar_mass_kg_mol});
+    addStatic("Y_" + id + "_initial_vol", *record.initial_vol_mass_fraction);
+    addStatic("Y_" + id + "_inlet", *record.initial_inlet_mass_fraction);
+
     const auto & live = record.mass_fraction_variable.empty()
                            ? record.mass_fraction_functor
                            : record.mass_fraction_variable;
@@ -1096,27 +1103,27 @@ PlasmasAction::act()
       add("Y_" + id, "live_y", {live}, {"live_y"});
   }
 
-  // Distinct inlet/volume EOS values: do not use the evolving bulk rho_g
-  // as the fixed inlet density when inlet and volume compositions differ.
-  std::string initial_inverse_molar_mass;
-  std::string inlet_inverse_molar_mass;
-  for (const auto & id : species)
+  Plasma::IdealGasMixtureValues initial;
+  Plasma::IdealGasMixtureValues inlet;
+  try
   {
-    const auto & record = _data.species(id);
-    const std::string mass = literal(record.molar_mass_kg_mol);
-    initial_inverse_molar_mass += (initial_inverse_molar_mass.empty() ? "" : "+") +
-                                  literal(*record.initial_vol_mass_fraction) + "/" + mass;
-    inlet_inverse_molar_mass += (inlet_inverse_molar_mass.empty() ? "" : "+") +
-                                literal(*record.initial_inlet_mass_fraction) + "/" + mass;
+    initial = Plasma::IdealGasMixtureState::evaluate(
+        getParam<Real>("pressure"), getParam<Real>("temperature"), initial_species);
+    inlet = Plasma::IdealGasMixtureState::evaluate(
+        getParam<Real>("pressure"), getParam<Real>("temperature"), inlet_species);
   }
-  add("M_mix_initial", "1/(" + initial_inverse_molar_mass + ")", {}, {});
-  add("M_mix_inlet", "1/(" + inlet_inverse_molar_mass + ")", {}, {});
-  add("rho_g_initial",
-      "pressure/(8.31446261815324*temp*(" + initial_inverse_molar_mass + "))",
-      {"p", "T"}, {"pressure", "temp"});
-  add("rho_g_inlet",
-      "pressure/(8.31446261815324*temp*(" + inlet_inverse_molar_mass + "))",
-      {"p", "T"}, {"pressure", "temp"});
+  catch (const std::invalid_argument & error)
+  {
+    paramError("files", "Invalid fixed ideal-gas mixture: ", error.what());
+  }
+
+  addStatic("p", getParam<Real>("pressure"));
+  addStatic("T", getParam<Real>("temperature"));
+  addStatic("n_g", initial.number_density_per_m3);
+  addStatic("M_mix_initial", initial.molar_mass_kg_per_mol);
+  addStatic("M_mix_inlet", inlet.molar_mass_kg_per_mol);
+  addStatic("rho_g_initial", initial.density_kg_per_m3);
+  addStatic("rho_g_inlet", inlet.density_kg_per_m3);
 
   // The equation of state consumes live Y_i when NV is activated; otherwise
   // this is a constant-composition, non-evolving gas-state closure.
@@ -1134,7 +1141,6 @@ PlasmasAction::act()
   }
   add("rho_g", "pressure/(8.31446261815324*temp*(" + denominator + "))",
       names, symbols);
-  add("n_g", "pressure/(1.380649e-23*temp)", {"p", "T"}, {"pressure", "temp"});
   add("M_mix", "1/(" + denominator + ")",
       std::vector<std::string>(names.begin() + 2, names.end()),
       std::vector<std::string>(symbols.begin() + 2, symbols.end()));

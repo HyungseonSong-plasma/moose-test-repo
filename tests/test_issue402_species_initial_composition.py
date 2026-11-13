@@ -73,8 +73,8 @@ def test_volume_initial_and_inlet_values_have_different_roles():
 def test_generated_functors_are_distinct_from_evolving_solver_state():
     source = SOURCE.read_text()
     inp = INPUT.read_text()
-    assert 'add("Y_" + id + "_initial_vol"' in source
-    assert 'add("Y_" + id + "_inlet"' in source
+    assert 'addStatic("Y_" + id + "_initial_vol"' in source
+    assert 'addStatic("Y_" + id + "_inlet"' in source
     assert "if (!nv)" not in source
     assert 'fractions.push_back("Y_" + id)' in source
     assert 'add("Y_" + id, "live_y", {live}, {"live_y"});' in source
@@ -92,8 +92,8 @@ def test_generated_functors_are_distinct_from_evolving_solver_state():
     assert "functor = rho_g_initial" in inp
     assert "functor = rho_g_inlet" in inp
     assert "functor = M_mix_inlet" in inp
-    assert 'add("rho_g_inlet"' in source
-    assert 'add("rho_g_initial"' in source
+    assert 'addStatic("rho_g_inlet", inlet.density_kg_per_m3);' in source
+    assert 'addStatic("rho_g_initial", initial.density_kg_per_m3);' in source
 
 
 def test_repository_wide_inventory_is_executable_and_covers_owners():
