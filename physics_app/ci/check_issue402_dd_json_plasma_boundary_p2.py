@@ -16,6 +16,7 @@ DATA = json.loads((CI / "dd_plasma_boundary_json_p2.json").read_text())
 JSON_INPUT = (CI / "dd_plasma_boundary_json_p2.i").read_text()
 LEGACY_INPUT = (CI / "dd_plasma_boundary_legacy_p2.i").read_text()
 LEGACY_ENERGY_ALIAS = (CI / "dd_plasma_boundary_legacy_energy_alias_p2.i").read_text()
+PARSED_MEAN_INPUT = (CI / "dd_plasma_boundary_parsed_mean_p2.i").read_text()
 LEGACY_DATA = (CI / "json_surface_rate_p2.json").read_text()
 
 
@@ -44,6 +45,8 @@ def main(exe: Path):
     with TemporaryDirectory(prefix="issue402_bc_exact_") as folder:
         root = Path(folder)
         check(exe, root, "JSON_PRESENT", JSON_INPUT, DATA, True)
+        check(exe, root, "PARSED_MEAN_FUNCTOR_CONSTRUCTION",
+              PARSED_MEAN_INPUT, DATA, True)
         # One original BC block can own several sidesets. The JSON path
         # must not split it into multiple independent operators.
         multiside = copy.deepcopy(DATA)
