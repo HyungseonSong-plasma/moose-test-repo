@@ -78,8 +78,8 @@ def test_generated_functors_are_distinct_from_evolving_solver_state():
     assert "if (!nv)" not in source
     assert 'fractions.push_back("Y_" + id)' in source
     assert 'add("Y_" + id, "live_y", {live}, {"live_y"});' in source
-    assert "initialize_species_mass_fractions" in inp
-    assert "inlet_bc_model = dirichlet" in inp
+    assert "sccm" in inp
+    assert "sccm = 100" in inp
     assert "mass_fraction_variable" in source
     assert "mass_fraction_functor" in source
     assert "NV transport species to match the complete" in source
