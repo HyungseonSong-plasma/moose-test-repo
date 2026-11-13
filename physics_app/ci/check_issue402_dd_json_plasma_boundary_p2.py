@@ -46,14 +46,14 @@ def main(exe: Path):
         # One original BC block can own several sidesets. The JSON path
         # must not split it into multiple independent operators.
         multiside = copy.deepcopy(DATA)
-        multiside["drift_diffusion_boundary"]["left bottom"] = (
-            multiside["drift_diffusion_boundary"].pop("left")
+        multiside["boundaries"]["left bottom"] = (
+            multiside["boundaries"].pop("left")
         )
-        multiside["drift_diffusion_boundary"].pop("bottom")
+        multiside["boundaries"].pop("bottom")
         check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", JSON_INPUT, multiside, True)
         check(exe, root, "LEGACY_EXPLICIT_BCS", LEGACY_INPUT, DATA, True)
         no_registry = copy.deepcopy(DATA)
-        no_registry.pop("drift_diffusion_boundary")
+        no_registry.pop("boundaries")
         check(exe, root, "JSON_ABSENT_NO_GENERATED_BC", JSON_INPUT, no_registry, True)
 
         def mutate(label, fn):
@@ -62,36 +62,38 @@ def main(exe: Path):
             check(exe, root, label, JSON_INPUT, data, False)
 
         mutate("UNSUPPORTED_BC_TYPE",
-               lambda d: d["drift_diffusion_boundary"]["left"]["bcs"]["electron_wafer"].update(
+               lambda d: d["boundaries"]["left"]["bcs"]["electron_wafer"].update(
                    type="InventedWallBC"))
         mutate("DUPLICATE_OPERATOR",
-               lambda d: d["drift_diffusion_boundary"]["left"]["bcs"].update(
-                   extra_wall=copy.deepcopy(d["drift_diffusion_boundary"]["left"]["bcs"]["electron_wafer"])))
+               lambda d: d["boundaries"]["left"]["bcs"].update(
+                   extra_wall=copy.deepcopy(d["boundaries"]["left"]["bcs"]["electron_wafer"])))
         mutate("DUPLICATE_MESH_BOUNDARY",
-               lambda d: d["drift_diffusion_boundary"].update(
+               lambda d: d["boundaries"].update(
                    {"left bottom": {"bcs": {}}}))
         mutate("MISSING_FLUX",
-               lambda d: d["drift_diffusion_boundary"]["left"]["bcs"]["electron_wafer"].pop(
+               lambda d: d["boundaries"]["left"]["bcs"]["electron_wafer"].pop(
                    "wall_number_flux"))
         mutate("MISSING_ENERGY",
-               lambda d: d["drift_diffusion_boundary"]["left"]["bcs"]["electron_energy_wafer"].pop(
+               lambda d: d["boundaries"]["left"]["bcs"]["electron_energy_wafer"].pop(
                    "mean_energy"))
         mutate("INVALID_BCS_LIST",
-               lambda d: d["drift_diffusion_boundary"]["left"].update(bcs=["one"]))
+               lambda d: d["boundaries"]["left"].update(bcs=["one"]))
         mutate("UNKNOWN_EXTRA_BC_PARAM",
-               lambda d: d["drift_diffusion_boundary"]["left"]["bcs"]["electron_wafer"].update(
+               lambda d: d["boundaries"]["left"]["bcs"]["electron_wafer"].update(
                    imaginary_parameter=1))
         mutate("EMPTY_CATALOGUE",
-               lambda d: d.update(drift_diffusion_boundary={}))
+               lambda d: d.update(boundaries={}))
         mutate("UNSAFE_BC_NAME",
-               lambda d: d["drift_diffusion_boundary"]["left"]["bcs"].update(
-                   **{"electron-wafer": d["drift_diffusion_boundary"]["left"]["bcs"].pop("electron_wafer")}))
+               lambda d: d["boundaries"]["left"]["bcs"].update(
+                   **{"electron-wafer": d["boundaries"]["left"]["bcs"].pop("electron_wafer")}))
+        mutate("RETIRED_DD_BOUNDARY_KEY",
+               lambda d: d.update(drift_diffusion_boundary=d.pop("boundaries")))
         mutate("OLD_MESH_BOUNDARY_FIELD",
-               lambda d: d["drift_diffusion_boundary"]["left"].update(
+               lambda d: d["boundaries"]["left"].update(
                    mesh_boundary="left"))
         mutate("INVALID_PHYSICAL_SIDESET_NAME",
-               lambda d: d["drift_diffusion_boundary"].update(
-                   {"invalid-side": d["drift_diffusion_boundary"].pop("left")}))
+               lambda d: d["boundaries"].update(
+                   {"invalid-side": d["boundaries"].pop("left")}))
     print("DD_JSON_BC_EXACT_LEGACY_NATIVE_P2_PASS_P3_NOT_RUN SCIENCE_HOLD", flush=True)
 
 
