@@ -92,21 +92,26 @@ SurfaceReactionMaterial::SurfaceReactionMaterial(const InputParameters & paramet
         { return reactionProgress(_chemistry.reactions().at(index), r, state); });
   }
 
-  // All named heavy species have deterministic outward surface flux outputs.
-  // A species with no active surface reaction has exactly zero net flux.
-  for (const auto & [species, record] : _mass_fractions)
-    addFunctorProperty<ADReal>(
-        "surface_mass_flux_" + species,
-        [this, species](const auto & r, const auto & state) -> ADReal
-        { return outwardMassFlux(species, r, state); });
+  // Preserve the original surface provider's all-species flux interface:
+  // product species have an outward flux even without a mass-fraction input.
+  for (const auto & item : _chemistry.speciesRecords())
+    if (item.first != "e" && item.second.molar_mass_kg_mol > 0.0)
+    {
+      const auto species = item.first;
+      addFunctorProperty<ADReal>(
+          "surface_mass_flux_" + species,
+          [this, species](const auto & r, const auto & state) -> ADReal
+          { return outwardMassFlux(species, r, state); });
+    }
 
   addFunctorProperty<ADReal>(
       "surface_mass_flux_sum",
       [this](const auto & r, const auto & state) -> ADReal
       {
         ADReal sum = 0.0;
-        for (const auto & [species, record] : _mass_fractions)
-          sum += outwardMassFlux(species, r, state);
+        for (const auto & item : _chemistry.speciesRecords())
+          if (item.first != "e" && item.second.molar_mass_kg_mol > 0.0)
+            sum += outwardMassFlux(item.first, r, state);
         return sum;
       });
 }
