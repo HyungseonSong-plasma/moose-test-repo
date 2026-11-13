@@ -245,7 +245,7 @@ original C0 physics base (`SHA256:
 A **one-time** archival migration produced
 `experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i`
 (`SHA256:
-c9686adb669cc115556860c00438fcfdd93a438751e9f99825b4ddb6ebf65088`).
+e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd`).
 Generation was source-bound, verified exactly 14 debug AuxKernels and 14 paired
 AuxVariables were removed, and confirmed physical owners were preserved.
 [One-time generation evidence #43419992876](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43419992876).
