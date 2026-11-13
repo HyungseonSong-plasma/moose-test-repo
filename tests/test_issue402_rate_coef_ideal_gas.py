@@ -79,7 +79,14 @@ def test_surface_input_is_real_ideal_gas_wiring_and_composition():
     assert "conflicting species identity for " in parser
     assert 'add("Y_" + id + "_initial_vol"' in parser
     assert 'add("Y_" + id + "_inlet"' in parser
-    assert "const auto * nv = _data.nvTransport();" in parser
+    assert 'fractions.push_back("Y_" + id)' in parser
+    assert 'add("Y_" + id, "live_y", {live}, {"live_y"});' in parser
+    assert '"mass_fraction_variable"' in parser
+    assert '"mass_fraction_functor"' in parser
+    assert "initialize_species_mass_fractions = true" in sample
+    assert "inlet_bc_model = dirichlet" in sample
+    assert data["species"]["O2"]["mass_fraction_variable"] == "w_O2"
+    assert data["species"]["O"]["mass_fraction_variable"] == "w_O"
     assert "Initial volume and inlet heavy-species mass fractions must each" in parser
 
 
