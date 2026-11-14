@@ -17,6 +17,8 @@ struct DDTransportRecord
   std::string model;
   double mobility = 0.0;
   double diffusivity = 0.0;
+  std::string mobility_source;
+  std::string diffusivity_source;
   std::string table_file;
   std::string table_units;
   std::string pressure;
