@@ -140,16 +140,25 @@ def test_root_state_options_are_only_state_model_and_sccm():
     assert 'if (!std::isfinite(feed) || feed <= 0.0)' in source
 
 
-def test_drift_diffusion_continuity_and_energy_do_not_generate_bcs():
+def test_drift_diffusion_owns_only_its_electron_sheath_bcs():
+    # The retired root-BC contract is obsolete: Continuity owns the particle
+    # electron sheath, Energy the electron-energy sheath; root [Plasmas]
+    # validates presence but never creates those BCs or duplicates them.
     continuity = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
     energy = (APP / "src/physics/plasma/DDEnergyEq.C").read_text()
+    chemistry = (APP / "src/physics/plasma/Chemistry.C").read_text()
     for name, source in (("DDContinuityEq", continuity), ("DDEnergyEq", energy)):
         assert f'registerMooseAction("PhysicsApp", {name}, "add_ics_physics");' in source
-        assert f'registerMooseAction("PhysicsApp", {name}, "add_bc");' not in source
+        assert f'registerMooseAction("PhysicsApp", {name}, "add_bc");' in source
+        assert f'{name}::addFEBCs()' in source
+        assert 'getProblem().addBoundaryCondition(bc.type, bc_name, params);' in source
         assert f'{name}::addBoundaryConditions' not in source
+    assert 'bc.type != "FEMElectronSheathBC"' in continuity
+    assert 'bc.type != "FEMElectronEnergySheathBC"' in energy
+    assert '_problem->addBoundaryCondition(' not in chemistry
     assert "continuityStateName" in continuity and '"log_" + species' in continuity
     assert 'std::log(density) - std::log(PHYSICS_CONSTANTS::N_A)' in continuity
     assert '"FVConstantIC"' in continuity and '"ConstantIC"' in continuity
     assert "energyStateName" in energy and '"log_" + species + "_energy"' in energy
     assert 'std::log(getParam<Real>("initial_molar_energy_density_eV"))' in energy
-    assert "Finite-volume electron energy is not supported" in energy
+    assert 'finite_element_species.front() != "e"' in energy
