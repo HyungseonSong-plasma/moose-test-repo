@@ -307,6 +307,88 @@ def canonicalize_native_ion_transport_sources(
 
 # The only user-configured gas values are in [Physics]/[Plasmas].
 # These historical constants are checked exactly before they are retired.
+
+def retire_staged_kinetic_owners(edits: dict[str, str], mechanism: dict) -> tuple[dict[str, str], dict]:
+    """Retire only source-verified progress and elastic-loss producers in scratch.
+
+    No rate tables are copied or synthesized. The JSON table path names point
+    to independently staged original files; Physics Chemistry creates the
+    original Native Material classes. Archive source bytes are untouched.
+    """
+    expected = {}
+    for reaction in mechanism["reactions"]:
+        id = reaction["id"]
+        progress = ("R_EI" + id[3:] if id.startswith("EI-") else "R_H" + id[1:])
+        expected[progress] = reaction
+    elastic = {"delta_epsilon_EI02_eV", "delta_epsilon_EI17_eV"}
+    seen = {}
+    removed = []
+    updated = dict(edits)
+
+    for filename, original in edits.items():
+        source = original
+        candidates = []
+        for block in BLOCK.finditer(original):
+            headings = re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
+                                  original[:block.start()])
+            if not headings or headings[-1] != "FunctorMaterials":
+                continue
+            args = parameters(block.group("body"))
+            progress = args.get("reaction_progress", "")
+            if not progress and args.get("property_name") in expected:
+                progress = args["property_name"]
+            if progress in expected:
+                if progress in seen:
+                    raise ValueError("HYBRID_DUPLICATE_NATIVE_RATE_OWNER_" + progress)
+                reaction = expected[progress]
+                if "table" in reaction:
+                    if args.get("type") != "EIRateCoefMaterial":
+                        raise ValueError("HYBRID_RATE_FACTORY_CHANGED_" + progress)
+                    actual = args.get("rate_table_file", "").strip("'\"")
+                    if Path(actual).name != Path(reaction["table"]).name:
+                        raise ValueError("HYBRID_RATE_TABLE_IDENTITY_CHANGED_" + progress)
+                    if (args.get("mean_energy") != "e_energy_eV" or
+                            args.get("electron_number_density") != "n_e_physical"):
+                        raise ValueError("HYBRID_NATIVE_RATE_INPUT_CHANGED_" + progress)
+                elif reaction["id"] == "H25":
+                    if (args.get("type") != "ADParsedFunctorMaterial" or
+                            "1.204428152e7" not in args.get("expression", "") or
+                            "(300.0/tg)^0.4" not in args.get("expression", "")):
+                        raise ValueError("HYBRID_H25_NATIVE_LAW_MISMATCH")
+                else:
+                    raise ValueError("HYBRID_UNKNOWN_NON_TABLE_REACTION_" + progress)
+                seen[progress] = filename
+                candidates.append((block, progress))
+            elif args.get("property_name") in elastic:
+                name = args["property_name"]
+                if name in seen:
+                    raise ValueError("HYBRID_DUPLICATE_ELASTIC_ENERGY_OWNER_" + name)
+                if (args.get("type") != "ADParsedFunctorMaterial" or
+                        "e_energy_eV" not in args.get("functor_names", "") or
+                        "temperature" not in args.get("functor_names", "") or
+                        "(2.0/3.0)*eps" not in args.get("expression", "")):
+                    raise ValueError("HYBRID_ELASTIC_SOURCE_IDENTITY_CHANGED_" + name)
+                seen[name] = filename
+                candidates.append((block, name))
+        for block, owner in reversed(candidates):
+            source = source[:block.start()] + source[block.end():]
+            removed.append({"owner": owner, "source_layer": filename,
+                            "source_sha256": digest(block.group(0).encode("utf-8"))})
+        updated[filename] = source
+    if any(progress in seen for progress in expected) and not all(
+            progress in seen for progress in expected):
+        raise ValueError("HYBRID_PARTIAL_NATIVE_RATE_OWNER_CUTOVER")
+    if any(energy in seen for energy in elastic) and not all(
+            energy in seen for energy in elastic):
+        raise ValueError("HYBRID_PARTIAL_NATIVE_ELASTIC_OWNER_CUTOVER")
+    return updated, {
+        "native_kinetic_owners_retired": sorted(removed, key=lambda r: r["owner"]),
+        "native_progress_retired_count": sum(k in seen for k in expected),
+        "elastic_loss_retired_count": sum(k in seen for k in elastic),
+        "original_rate_tables_unchanged": True,
+    }
+
+
 ROOT_PRESSURE_PA = "1.333223684"
 ROOT_TEMPERATURE_K = "300"
 ROOT_PRESSURE_VARIABLE = {
@@ -704,6 +786,9 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     native_inputs, gas_state_receipt = canonicalize_s6_root_gas_state(
         native_inputs, first.name
     )
+    native_inputs, kinetic_receipt = retire_staged_kinetic_owners(
+        native_inputs, integrated_json
+    )
     before = {n: digest((staged_chem_dir / n).read_bytes()) for n in names}
     # Validate all inputs and source identities before any scratch write.
     json_path = staged_chem_dir / unified_name
@@ -718,6 +803,10 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     changed = [n for n in names if before[n] != after[n]]
     expected_changed = set(ion_rename_receipt["changed_staged_native_layers"])
     expected_changed.update(gas_state_receipt["changed_staged_native_layers"])
+    expected_changed.update(
+        n for n, value in native_inputs.items()
+        if digest(value.encode("utf-8")) != before[n]
+    )
     expected_changed.update((first.name, overlay.name))
     if set(changed) != expected_changed:
         raise ValueError("HYBRID_UNEXPECTED_NATIVE_LAYER_EDIT: " + repr(changed))
@@ -728,6 +817,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         "native_owner_preservation":
             "NATIVE_EQUATIONS_UNCHANGED_WITH_ROOT_PRESSURE_IC_AND_SPECIES_FUNCTORS",
         "native_species_coefficient_binding_migration": ion_rename_receipt,
+        "native_kinetic_rate_cutover": kinetic_receipt,
         "root_gas_state_pressure_initial_condition": gas_state_receipt,
         "integrated_mechanism_json": unified_name,
         "integrated_reaction_count": len(integrated_json["reactions"]),
