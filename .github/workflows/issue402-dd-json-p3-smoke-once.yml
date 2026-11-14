@@ -1,7 +1,7 @@
-# Bounded one-shot P3 science-qualification smoke, no RF/S6 acceptance.
+# Bounded one-shot P3 JSON sheath-only transient; no RF/S6 acceptance.
 # Triggered only by an explicit edit of this branch-local workflow path.
-name: Issue402 DD JSON Native P3 two-lane smoke once
-run-name: Issue402 DD JSON P3 no-wall vs sheath @ ${{ github.sha }}
+name: Issue402 DD JSON Native P3 sheath-only smoke once
+run-name: Issue402 DD JSON P3 sheath only @ ${{ github.sha }}
 on:
   push:
     branches: [issue-402-dd-plasma-boundary-action]
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   bounded-p3:
-    name: Native P3 FEM electron continuity energy sheath discriminator
+    name: Native P3 FEM electron continuity energy with JSON sheath only
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -36,7 +36,7 @@ jobs:
           grep -Fq 'energy_transport_coef' physics_app/ci/dd_plasma_boundary_json_p2.json
           ! grep -Fq '"drift_diffusion"' physics_app/ci/dd_plasma_boundary_json_p2.json
           python3 -m py_compile physics_app/ci/run_issue402_dd_json_p3_smoke.py
-          echo "P3_TWO_LANE_SOURCE=$GITHUB_SHA P0_PASS SCIENCE_HOLD"
+          echo "P3_SHEATH_ONLY_SOURCE=$GITHUB_SHA P0_PASS SCIENCE_HOLD"
       - name: P1 build exact pinned native PhysicsApp binary
         shell: bash
         run: |
@@ -56,7 +56,7 @@ jobs:
               test -x physics_app/physics-opt
             ' 2>&1 | tee /tmp/issue402_dd_json_p3_native_build.log
           echo P3_NATIVE_BINARY_P1_PASS
-      - name: P2 and P3 real two-step transient in isolated no-wall / JSON-sheath lanes
+      - name: P2 and P3 real two-step JSON sheath transient only
         shell: bash
         run: |
           set -euo pipefail
@@ -72,7 +72,7 @@ jobs:
                 --source-sha "$RUN_SOURCE_SHA"
             ' 2>&1 | tee /tmp/issue402_dd_json_p3_transient.log
           test -s .issue402_dd_json_p3_evidence/status.json
-          echo P3_BOUNDED_TWO_LANE_REAL_TRANSIENT_PASS_SCIENCE_HOLD
+          echo P3_BOUNDED_JSON_SHEATH_REAL_TRANSIENT_PASS_SCIENCE_HOLD
       - name: Upload P3 source-bound Exodus, CSV, diagnostics, and failure evidence
         if: always()
         uses: actions/upload-artifact@v4
