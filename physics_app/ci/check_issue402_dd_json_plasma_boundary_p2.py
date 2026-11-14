@@ -63,6 +63,50 @@ assert KINETIC_INPUT != PHYSICS_AUTO_INPUT
 assert "target_molar_concentration" not in json.dumps(KINETIC_DATA)
 assert "table_sha256" not in json.dumps(KINETIC_DATA)
 
+def synthetic_s6(variant: str) -> dict:
+    """Exercise eight *real* S6 reaction definitions without private rate bytes."""
+    mechanism = json.loads((
+        CI.parents[1] / "experiments/Issue402_plasma_dsl_g1/chemistry" /
+        f"unified_s6_{variant}.json"
+    ).read_text())
+    data = copy.deepcopy(mechanism)
+    data["boundaries"] = copy.deepcopy(DATA["boundaries"])
+    data["species"]["e"] = copy.deepcopy(DATA["species"]["e"])
+    for name, spec in data["species"].items():
+        if name == "e":
+            continue
+        for key in ("transport_coef", "mobility", "diffusivity", "table_file",
+                    "table_units", "bounds_policy", "pressure", "gas_temperature"):
+            spec.pop(key, None)
+        spec["initial_vol_mass_fraction"] = 1.0 if name == "O2" else 0.0
+        spec["initial_inlet_mass_fraction"] = 1.0 if name == "O2" else 0.0
+        spec["mass_fraction_functor"] = "w_" + name
+    for reaction in data["reactions"]:
+        if "table" in reaction:
+            reaction["table"] = "plasma_closures_rate_a.txt"
+        assert "table_sha256" not in reaction
+        assert "target_molar_concentration" not in reaction
+    assert sum("table" in r for r in data["reactions"]) == 7
+    assert sum(r.get("rate", {}).get("model") == "power_law"
+               for r in data["reactions"]) == 1
+    assert len(data["reactions"]) == 8
+    return data
+
+
+S6_SYNTHETIC_INPUT = KINETIC_INPUT.replace(
+    "  [potential]\\n    type = MooseVariable\\n  []",
+    "  [potential]\\n    type = MooseVariable\\n  []\\n"
+    "  [log_Op]\\n    type = MooseVariableFVReal\\n  []", 1
+).replace(
+    "prop_names = 'w_O2 w_O2p'",
+    "prop_names = 'w_O2 w_O w_O2p w_Om w_Op w_O2a'", 1
+).replace(
+    "prop_values = '1 0'",
+    "prop_values = '1 0 0 0 0 0'", 1
+)
+assert S6_SYNTHETIC_INPUT != KINETIC_INPUT
+assert "log_Op" in S6_SYNTHETIC_INPUT
+
 
 def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool,
           expected_error: str | None = None):
@@ -106,6 +150,9 @@ def main(exe: Path):
         # groups exercise canonical e_wall_number_flux and energy coupling.
         check(exe, root, "NATIVE_EI415_TABLE_BOTH_FEM_EQUATIONS",
               KINETIC_INPUT, KINETIC_DATA, True)
+        for variant in ("417", "941"):
+            check(exe, root, "S6_" + variant + "_EIGHT_REACTION_FEM_CONSTRUCTION",
+                  S6_SYNTHETIC_INPUT, synthetic_s6(variant), True)
         wrong_table = copy.deepcopy(KINETIC_DATA)
         wrong_table["reactions"][0]["table"] = "missing_ei415.txt"
         check(exe, root, "EI_RATE_MISSING_TABLE_FAIL_CLOSED",
