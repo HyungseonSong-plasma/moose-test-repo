@@ -1,14 +1,13 @@
 {
-  "species": {},
-  "equations": {},
-  "reactions": [],
-  "transport_coefficients": {
-    "drift_diffusion": {
-      "e": {
-        "model": "constant",
-        "mobility": 1,
-        "diffusivity": 1
-      }
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1,
+      "transport_coef": "constant",
+      "mobility": 1,
+      "diffusivity": 1
     }
-  }
+  },
+  "equations": {},
+  "reactions": []
 }
