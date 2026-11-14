@@ -1,0 +1,216 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1,
+      "initial_number_density": 1000000000000001.6,
+      "transport_coef": "lookup",
+      "table_file": "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "table_units": "reduced",
+      "pressure": "p",
+      "gas_temperature": "T_g_fixed",
+      "bounds_policy": "clamp",
+      "energy_transport_coef": "fluid"
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1,
+      "initial_number_density": 1000000000000001.6,
+      "transport_coef": "functor",
+      "mobility": "O2p_mobility",
+      "diffusivity": "O2p_diffusivity"
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1,
+      "initial_number_density": 999999999999.9983,
+      "transport_coef": "functor",
+      "mobility": "Om_mobility",
+      "diffusivity": "Om_diffusivity"
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1,
+      "initial_number_density": 999999999999.9983,
+      "transport_coef": "functor",
+      "mobility": "Op_mobility",
+      "diffusivity": "Op_diffusivity"
+    },
+    "O2a": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    }
+  },
+  "equations": {
+    "EI-02": "e + O2 -> e + O2",
+    "EI-17": "e + O -> e + O",
+    "EI-415": "e + O2 -> 2e + O2p",
+    "EI-401": "e + O2 -> Om + O",
+    "EI-407": "e + O2 -> e + O2a",
+    "EI-2069": "e + O2a -> e + 2O",
+    "H25": "Op + O2 -> O + O2p",
+    "EI-417": "e + O2 -> 2e + Op + O"
+  },
+  "reactions": [
+    {
+      "id": "EI-02",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 1,
+        "O2": 1
+      },
+      "provenance": {
+        "archive_layer": "o2_elastic_400w_100us_dt1000ns_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "functor",
+        "name": "delta_epsilon_EI02_eV"
+      }
+    },
+    {
+      "id": "EI-17",
+      "reactants": {
+        "e": 1,
+        "O": 1
+      },
+      "products": {
+        "e": 1,
+        "O": 1
+      },
+      "provenance": {
+        "archive_layer": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "functor",
+        "name": "delta_epsilon_EI17_eV"
+      }
+    },
+    {
+      "id": "EI-415",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "O2p": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S2-415_generation_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 12.06
+    },
+    {
+      "id": "EI-401",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "Om": 1,
+        "O": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S3-415-401_extra_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 0
+    },
+    {
+      "id": "EI-407",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 1,
+        "O2a": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S5-417-407_o2_consumer_overlay.i",
+        "alternate_archive_layer": "issue477_S5-941-407_o2_consumer_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 0.977
+    },
+    {
+      "id": "EI-2069",
+      "reactants": {
+        "e": 1,
+        "O2a": 1
+      },
+      "products": {
+        "e": 1,
+        "O": 2
+      },
+      "provenance": {
+        "archive_layer": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_EI2069_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 5.02
+    },
+    {
+      "id": "H25",
+      "reactants": {
+        "Op": 1,
+        "O2": 1
+      },
+      "products": {
+        "O": 1,
+        "O2p": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_H25_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      }
+    },
+    {
+      "id": "EI-417",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "Op": 1,
+        "O": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S4-401-417_op_ionization_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 17
+    }
+  ]
+}
