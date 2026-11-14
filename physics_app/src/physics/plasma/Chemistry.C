@@ -906,6 +906,19 @@ void
 Chemistry::addFunctorMaterials()
 {
   const auto & mechanism = chemistryData();
+  // A fully declared JSON mechanism cannot silently leave one progress
+  // unowned. Historical entirely Native-owned mechanisms remain supported.
+  bool any_json_rate = false;
+  for (const auto & reaction : mechanism.reactions())
+    if (!reaction.rate.table_file.empty() || !reaction.rate.model.empty())
+      any_json_rate = true;
+  if (any_json_rate)
+    for (const auto & reaction : mechanism.reactions())
+      if (reaction.domain == "volume" &&
+          reaction.rate.table_file.empty() && reaction.rate.model.empty())
+        paramError("block", "Reaction ", reaction.id,
+                   " needs table or rate for fully JSON-owned Chemistry.");
+
   // Only Chemistry owns executable progress R_k. Species and rate data are
   // immutable JSON inputs; target Functor names are derived internally.
   std::set<std::string> required_concentrations;
