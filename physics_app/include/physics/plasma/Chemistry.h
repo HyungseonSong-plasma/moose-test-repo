@@ -112,6 +112,7 @@ struct ReactionRecord
   double energy_loss_eV = 0;
   std::string energy_loss_functor;
   bool contributes_electron_energy = false;
+  bool elastic_energy_loss = false;
 
   int net(const std::string & species) const;
 };
