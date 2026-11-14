@@ -45,11 +45,11 @@ EXPECTED_STAGE5 = {
     "EI18_O_TO_OS": ("R_excitation_O_1p968", "RateCoeffMaterial"),
     "EI20_O_IONIZATION": ("R_ion_O", "RateCoeffMaterial"),
     "EDETACH_OM": ("R_detach_Om", "ADParsedFunctorMaterial"),
-    "H01_OP_O2_CHARGE_TRANSFER": ("reaction_rate_H01_Op_O2_charge_transfer", "PhysicsReactionRateMaterial"),
-    "H02_OM_OP_NEUTRALIZATION": ("reaction_rate_H02_Om_Op_neutralization", "PhysicsReactionRateMaterial"),
-    "H03_OM_O2P_TO_3O": ("reaction_rate_H03_Om_O2p_to_3O", "PhysicsReactionRateMaterial"),
-    "H04_OM_O2P_TO_O_O2": ("reaction_rate_H04_Om_O2p_to_O_O2", "PhysicsReactionRateMaterial"),
-    "H05_OM_O_DETACHMENT": ("reaction_rate_H05_Om_O_to_O2_electron", "PhysicsReactionRateMaterial"),
+    "H01_OP_O2_CHARGE_TRANSFER": ("R_H01", "HeavyReactionRateMaterial"),
+    "H02_OM_OP_NEUTRALIZATION": ("R_H02", "HeavyReactionRateMaterial"),
+    "H03_OM_O2P_TO_3O": ("R_H03", "HeavyReactionRateMaterial"),
+    "H04_OM_O2P_TO_O_O2": ("R_H04", "HeavyReactionRateMaterial"),
+    "H05_OM_O_DETACHMENT": ("R_H05", "HeavyReactionRateMaterial"),
 }
 
 EXPECTED_EXCLUSIONS = {
@@ -137,7 +137,9 @@ def _check_ei01_recovery() -> None:
             raise AssertionError(f"EI01 table anchor mismatch at {x_text} eV")
 
     owner = recovery.get("progress_owner", {})
-    if owner.get("type") != "RateCoeffMaterial":
+    # Frozen recovery evidence stores the historical registered name.
+    # Active input uses RateCoeffMaterial, validated by the S5-R assembler.
+    if owner.get("type") != "PhysicsElectronImpactRateMaterial":
         raise AssertionError("EI01 progress owner type changed")
     if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_attachment.txt":
         raise AssertionError("EI01 progress owner table binding changed")
@@ -198,7 +200,15 @@ def check() -> None:
     progress_names = []
     for channel, (progress, owner) in EXPECTED_STAGE5.items():
         row = owner_map[channel]
-        if row.get("progress") != progress or row.get("owner") != owner:
+        if channel.startswith("H0"):
+            # Frozen Stage-5 provenance records the retired TXT owner and
+            # progress spelling. The active Chemistry JSON route is R_Hnn.
+            historical_id = channel.split("_", 1)[0]
+            if (row.get("owner") != "PhysicsReactionRateMaterial" or
+                    not row.get("progress", "").startswith("reaction_rate_" + historical_id + "_") or
+                    progress != "R_" + historical_id or owner != "HeavyReactionRateMaterial"):
+                raise AssertionError(f"historical/new Chemistry owner mismatch for {channel}")
+        elif row.get("progress") != progress or row.get("owner") != owner:
             raise AssertionError(f"owner-map mismatch for {channel}")
         progress_names.append(progress)
     if len(set(progress_names)) != len(progress_names):

@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "docs/development/2026-09-10_issue176_stage5_s5d_heavy_reactions_contract.json"
-DATABASE = ROOT / "physics_app/data/heavy_reactions/stage5_s5d_oxygen_heavy.txt"
+DATABASE = ROOT / "physics_app/data/heavy_reactions/stage5_s5d_oxygen_heavy.json"
 NA = 6.02214076e23
 RHO = 3.1998e-5
 M_O2 = 0.032
@@ -22,12 +22,12 @@ DT = 1.0e-7
 INITIAL = {"O2p": 0.01, "O": 0.10, "Om": 0.01, "Op": 0.01}
 INITIAL_O2 = 1.0 - sum(INITIAL.values())
 RATE_META = {
-    "h1": ("H01_Op_O2_charge_transfer", 2.0e-17, 0.5),
-    "h2": ("H02_Om_Op_neutralization", 4.0e-14, 0.43),
-    "h3": ("H03_Om_O2p_to_3O", 2.6e-14, 0.44),
-    "h4": ("H04_Om_O2p_to_O_O2", 2.6e-14, 0.44),
+    "h1": ("H01", 2.0e-17, 0.5),
+    "h2": ("H02", 4.0e-14, 0.43),
+    "h3": ("H03", 2.6e-14, 0.44),
+    "h4": ("H04", 2.6e-14, 0.44),
 }
-PROGRESS = {key: f"reaction_rate_{value[0]}" for key, value in RATE_META.items()}
+PROGRESS = {key: f"R_{value[0]}" for key, value in RATE_META.items()}
 RESERVED = {"x", "y", "z", "t", "pi", "e"}
 
 
@@ -215,7 +215,7 @@ def input_text(temperature: float) -> str:
     expression = '1.0-m2p-mo-mom-mop'
   []
   [heavy_rates]
-    type = PhysicsReactionRateMaterial
+    type = HeavyReactionRateMaterial
     chemistry_file = '{DATABASE.resolve()}'
     density = rho_const
     temperature = T_g
@@ -398,7 +398,7 @@ def input_text(temperature: float) -> str:
 
 def validate_surface(text: str) -> None:
     required = [
-        "type = PhysicsReactionRateMaterial",
+        "type = HeavyReactionRateMaterial",
         "temperature = T_g",
         "type = PhysicsFVSpeciesReactionSource",
         "property_name = S_O2p_s5d",
@@ -416,7 +416,7 @@ def validate_surface(text: str) -> None:
     for token in forbidden:
         if token in text:
             raise AssertionError(f"forbidden S5-D production token: {token}")
-    if text.count("type = PhysicsReactionRateMaterial") != 1:
+    if text.count("type = HeavyReactionRateMaterial") != 1:
         raise AssertionError("S5-D requires exactly one heavy reaction-rate owner")
     for progress in PROGRESS.values():
         if text.count(progress) < 2:
@@ -429,47 +429,28 @@ def validate_surface(text: str) -> None:
 
 
 def parse_database(text: str) -> dict[str, dict]:
-    species = {}
+    """Read the production Chemistry JSON, never the retired text grammar."""
+    data = json.loads(text)
+    species = {
+        name: {
+            "solver": name,
+            "mass": value["molar_mass_kg_mol"],
+            "charge": value["charge_number"],
+            "kind": "heavy",
+        }
+        for name, value in data["species"].items()
+    }
     reactions = {}
-    current = None
-    for raw in text.splitlines():
-        line = raw.split("#", 1)[0].strip()
-        if not line:
-            continue
-        parts = line.split()
-        if current is None:
-            if parts[0] == "species":
-                if len(parts) != 6:
-                    raise AssertionError("bad species row")
-                species[parts[1]] = {
-                    "solver": parts[2], "mass": float(parts[3]),
-                    "charge": int(parts[4]), "kind": parts[5],
-                }
-            elif parts[0] == "reaction":
-                if len(parts) != 4 or parts[2:] != ["volume", "power_law"]:
-                    raise AssertionError("bad reaction header")
-                current = {"name": parts[1], "reactants": {}, "products": {}}
-            else:
-                raise AssertionError(f"unexpected database token: {parts[0]}")
-        else:
-            key = parts[0]
-            if key in ("reactant", "product"):
-                current[key + "s"][parts[1]] = float(parts[2])
-            elif key == "A":
-                current["A"] = float(parts[1])
-            elif key == "basis":
-                current["basis"] = parts[1]
-            elif key == "T_ref":
-                current["T_ref"] = float(parts[1])
-            elif key == "exponent":
-                current["exponent"] = float(parts[1])
-            elif key == "end":
-                reactions[current["name"]] = current
-                current = None
-            else:
-                raise AssertionError(f"unexpected reaction token: {key}")
-    if current is not None:
-        raise AssertionError("unterminated database reaction")
+    for entry in data["reactions"]:
+        rate = entry["rate"]
+        reactions[entry["id"]] = {
+            "A": rate["A"],
+            "T_ref": rate["T_ref"],
+            "exponent": rate["exponent"],
+            "basis": rate["basis"],
+            "reactants": {name: float(n) for name, n in entry["reactants"].items()},
+            "products": {name: float(n) for name, n in entry["products"].items()},
+        }
     return {"species": species, "reactions": reactions}
 
 
@@ -500,7 +481,7 @@ def static_check() -> None:
         close(item["mass"], mass, rel=0.0, abs_=0.0)
     if set(db["reactions"]) != {x[0] for x in RATE_META.values()}:
         raise AssertionError("database must contain exactly H01-H04")
-    contract_by_name = {r["database_name"]: r for r in contract["reactions"]}
+    contract_by_name = {r["database_name"].split("_", 1)[0]: r for r in contract["reactions"]}
     for key, (name, A, exponent) in RATE_META.items():
         r = db["reactions"][name]
         c = contract_by_name[name]
@@ -558,8 +539,8 @@ def self_test() -> None:
         raise AssertionError("temperature-exponent mutation not detected")
 
     bad_surface = input_text(600.0).replace(
-        "functor_names = 'reaction_rate_H01_Op_O2_charge_transfer reaction_rate_H03_Om_O2p_to_3O reaction_rate_H04_Om_O2p_to_O_O2'",
-        "functor_names = 'reaction_source_Op reaction_rate_H03_Om_O2p_to_3O reaction_rate_H04_Om_O2p_to_O_O2'",
+        "functor_names = 'R_H01 R_H03 R_H04'",
+        "functor_names = 'reaction_source_Op R_H03 R_H04'",
         1,
     )
     try:
@@ -627,7 +608,7 @@ def runtime(executable: str, evidence_out: str | None, repository_sha: str | Non
         "repository_sha": repository_sha,
         "build_base_ref": build_base_ref,
         "executable_sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-        "production_owner": "PhysicsReactionRateMaterial.reaction_rate_*",
+        "production_owner": "HeavyReactionRateMaterial.R_H*",
         "source_projection": "ADParsedFunctorMaterial_from_published_progress_then_PhysicsFVSpeciesReactionSource",
         "cases": [low, high],
         "temperature_scaling": {

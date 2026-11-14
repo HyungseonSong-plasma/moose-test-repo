@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "docs/development/2026-09-11_issue191_stage5_h05_contract.json"
-DATABASE = ROOT / "physics_app/data/heavy_reactions/stage5_s5e_h05_oxygen_heavy.txt"
+DATABASE = ROOT / "physics_app/data/heavy_reactions/stage5_s5e_h05_oxygen_heavy.json"
 
 NA = 6.02214076e23
 A = 3.0e-16
@@ -26,7 +26,7 @@ EREF = 5.73276
 DT = 1.0e-7
 W_O0 = 0.10
 W_OM0 = 0.01
-PROGRESS = "reaction_rate_H05_Om_O_to_O2_electron"
+PROGRESS = "R_H05"
 
 
 def close(a, b, rel=2.0e-5, abs_=1.0e-12, label="value"):
@@ -87,13 +87,13 @@ def runtime_input():
     expression = '1-wo-wom'
   []
   [heavy_rates]
-    type = PhysicsReactionRateMaterial
+    type = HeavyReactionRateMaterial
     chemistry_file = '{DATABASE.resolve()}'
     density = rho_const
     temperature = T_g
     species = 'O2 O Om'
     mass_fractions = 'w_O2_constraint w_O w_Om'
-    active_reactions = 'H05_Om_O_to_O2_electron'
+    active_reactions = 'H05'
   []
   [O_source]
     type = ADParsedFunctorMaterial
@@ -350,8 +350,8 @@ def self_test():
 
     text = runtime_input()
     required = (
-        "type = PhysicsReactionRateMaterial",
-        "active_reactions = 'H05_Om_O_to_O2_electron'",
+        "type = HeavyReactionRateMaterial",
+        "active_reactions = 'H05'",
         f"functor_names = '{PROGRESS}'",
         "type = PhysicsFVElectronReactionSource",
         "number_source = S_e_h05",
@@ -363,7 +363,7 @@ def self_test():
     for token in required:
         if token not in text:
             raise AssertionError(f"runtime input missing {token}")
-    if text.count("type = PhysicsReactionRateMaterial") != 1:
+    if text.count("type = HeavyReactionRateMaterial") != 1:
         raise AssertionError("H05 must have exactly one canonical progress owner")
     for forbidden in ("PhysicsFVElectronReactionEnergySource", "FVCoupledForce", "S_epsilon_h05"):
         if forbidden in text:
@@ -379,24 +379,22 @@ def static_gate():
         raise AssertionError("H05 frozen kinetic contract changed")
     if contract["electron_energy"]["explicit_source"] != 0.0:
         raise AssertionError("H05 explicit energy-source convention changed")
-    db = DATABASE.read_text()
-    required = (
-        "reaction H05_Om_O_to_O2_electron volume power_law",
-        "reactant Om 1",
-        "reactant O 1",
-        "product O2 1",
-        "A 3e-16",
-        "basis particle",
-        "exponent 0",
-    )
-    for token in required:
-        if token not in db:
-            raise AssertionError(f"H05 database contract missing {token}")
-    if "product e " in db or "species e " in db:
-        raise AssertionError("heavy reaction database must not own the electron species")
-    owner = (ROOT / "physics_app/src/materials/PhysicsReactionRateMaterial.C").read_text()
-    if '"reaction_rate_" + reaction.name' not in owner or "addFunctorProperty<ADReal>" not in owner:
-        raise AssertionError("canonical reaction-progress owner contract changed")
+    db = json.loads(DATABASE.read_text())
+    if {r["id"] for r in db["reactions"]} != {"H05"}:
+        raise AssertionError("canonical Chemistry JSON H05 channel missing")
+    reaction = db["reactions"][0]
+    if reaction["reactants"] != {"Om": 1, "O": 1} or reaction["products"] != {"O2": 1, "e": 1}:
+        raise AssertionError("H05 JSON stoichiometry changed")
+    if reaction["rate"] != {
+        "model": "power_law", "A": 3e-16, "basis": "particle",
+        "T_ref": 300, "exponent": 0,
+    }:
+        raise AssertionError("H05 JSON rate law drift")
+    if db["species"]["e"]["charge_number"] != -1:
+        raise AssertionError("H05 must declare electron stoichiometry in Chemistry JSON")
+    owner = (ROOT / "physics_app/src/materials/HeavyReactionRateMaterial.C").read_text()
+    if "reaction.progress" not in owner or "addFunctorProperty<ADReal>" not in owner:
+        raise AssertionError("canonical R_H05 progress owner contract changed")
     eproj = (ROOT / "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()
     if 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' not in eproj:
         raise AssertionError("electron projection dual-state semantics changed")

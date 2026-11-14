@@ -1,0 +1,114 @@
+name: Issue402 Canonical JSON Heavy Surface Rate P0 P1 P2
+# Final source-bound rerun including all-species surface-flux and fail-closed mass validation.
+on:
+  push:
+    branches: [issue-402-json-rate-unification]
+    paths: [.github/workflows/issue402-json-rate-native-once.yml]
+permissions:
+  contents: read
+jobs:
+  json-heavy-surface-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact JSON conversion branch source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: P0 original scientific input provenance and retired sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e physics_app/include/utils/PhysicsReactionDatabase.h
+          test ! -e physics_app/src/utils/PhysicsReactionDatabase.C
+          for name in PhysicsReactionRateMaterial PhysicsSurfaceReactionMaterial; do
+            test ! -e "physics_app/include/materials/$name.h"
+            test ! -e "physics_app/src/materials/$name.C"
+          done
+          test ! -e physics_app/data/heavy_reactions/stage5_s5d_oxygen_heavy.txt
+          test ! -e physics_app/data/heavy_reactions/stage5_s5e_h05_oxygen_heavy.txt
+          test ! -e physics_app/physics-opt
+          echo "SOURCE=$GITHUB_SHA P3=NOT_RUN SCIENCE_HOLD"
+      - name: Install Python P0 dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: JSON and legacy numerical contract P0
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet 'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          python3 -m pytest -q tests/test_issue402_json_rate_unification.py
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --static
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --self-test
+          python3 physics_app/ci/check_stage5_h05_runtime.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
+          # The frozen EI18 Stage-5 owner ledger predates RateCoeffMaterial;
+          # its independent archival preflight is outside this JSON-rate gate.
+          python3 -m pytest -q tests/characterization/test_issue192_s5r.py tests/characterization/test_issue192_s5r_runtime.py
+          echo "JSON_HEAVY_SURFACE_P0_PASS"
+      - name: Native P1 build in pinned Physics MOOSE image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee /tmp/issue402_json_rates_native_build.log
+          echo "JSON_RATE_NATIVE_P1_PASS"
+      - name: Native P2 H01-H05 and thermal-sticking syntax only
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              python3 - <<'PY'
+          from pathlib import Path
+          from tempfile import TemporaryDirectory
+          import subprocess
+          from physics_app.ci.check_stage5_s5d_heavy_reactions import input_text
+          from physics_app.ci.check_stage5_h05_runtime import runtime_input
+          exe = Path("/workspace/physics_app/physics-opt")
+          with TemporaryDirectory() as temp:
+              root = Path(temp)
+              for name, source in (("H01_H04", input_text(600.0)),
+                                   ("H05", runtime_input())):
+                  path = root / (name + ".i")
+                  path.write_text(source)
+                  p = subprocess.run([str(exe), "--check-input", "-i", path.name],
+                                     cwd=root, check=True, text=True, capture_output=True)
+                  assert "Syntax OK" in p.stdout + p.stderr, p.stdout + p.stderr
+                  print(name + "_JSON_NATIVE_P2_PASS")
+          PY
+              cd /workspace/physics_app/ci
+              /workspace/physics_app/physics-opt --check-input -i json_surface_rate_p2.i
+              echo JSON_SURFACE_RATE_NATIVE_P2_PASS
+            ' 2>&1 | tee /tmp/issue402_json_rates_native_p2.log
+          echo "JSON_HEAVY_SURFACE_NATIVE_P2_PASS_P3_NOT_RUN"
+      - name: Publish source-bound P0-P2 logs only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-json-rate-p0-p1-p2-${{ github.sha }}
+          path: |
+            /tmp/issue402_json_rates_native_build.log
+            /tmp/issue402_json_rates_native_p2.log
+          if-no-files-found: warn
+          retention-days: 30

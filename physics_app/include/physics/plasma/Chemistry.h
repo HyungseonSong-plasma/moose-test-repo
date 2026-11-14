@@ -42,6 +42,21 @@ struct SpeciesRecord
 {
   std::map<std::string, int> elements;
   int charge_number = 0;
+  // Needed only for rate laws evaluated from heavy-species mass fractions.
+  double molar_mass_kg_mol = 0.0;
+};
+
+// Validated executable rate law. Empty model means the reaction progress
+// must be provided independently (e.g. an electron-impact lookup table).
+struct RateRecord
+{
+  std::string model;
+  std::string basis;
+  double A_input = 0.0;
+  double A_molar = 0.0;
+  double T_ref = 300.0;
+  double exponent = 0.0;
+  double sticking = 0.0;
 };
 
 struct ReactionRecord
@@ -51,6 +66,8 @@ struct ReactionRecord
   std::map<std::string, int> reactants;
   std::map<std::string, int> products;
   std::string progress;
+  std::string domain = "volume";
+  RateRecord rate;
   // Positive energy_loss_eV removes electron energy (one minus sign at RHS).
   // A functor is an alternative positive-loss magnitude in eV/event.
   double energy_loss_eV = 0;
@@ -68,6 +85,7 @@ public:
   explicit ChemistryData(const std::vector<std::string> & files);
 
   const SpeciesRecord & species(const std::string & id) const;
+  const std::map<std::string, SpeciesRecord> & speciesRecords() const { return _species; }
   const std::vector<ReactionRecord> & reactions() const { return _reactions; }
   bool hasSpeciesSource(const std::string & id) const;
   bool hasElectronEnergySource() const;

@@ -53,11 +53,11 @@ PROGRESS = {
     "EI18_O_TO_OS": "R_excitation_O_1p968",
     "EI20_O_IONIZATION": "R_ion_O",
     "EDETACH_OM": "R_detach_Om",
-    "H01_OP_O2_CHARGE_TRANSFER": "reaction_rate_H01_Op_O2_charge_transfer",
-    "H02_OM_OP_NEUTRALIZATION": "reaction_rate_H02_Om_Op_neutralization",
-    "H03_OM_O2P_TO_3O": "reaction_rate_H03_Om_O2p_to_3O",
-    "H04_OM_O2P_TO_O_O2": "reaction_rate_H04_Om_O2p_to_O_O2",
-    "H05_OM_O_DETACHMENT": "reaction_rate_H05_Om_O_to_O2_electron",
+    "H01_OP_O2_CHARGE_TRANSFER": "R_H01",
+    "H02_OM_OP_NEUTRALIZATION": "R_H02",
+    "H03_OM_O2P_TO_3O": "R_H03",
+    "H04_OM_O2P_TO_O_O2": "R_H04",
+    "H05_OM_O_DETACHMENT": "R_H05",
 }
 
 OWNER_BLOCKS = {
@@ -87,13 +87,8 @@ RATE_TABLES = {
     "EI20_O_IONIZATION": "o_ionization.txt",
 }
 
-H01_H04_ACTIVE = (
-    "H01_Op_O2_charge_transfer",
-    "H02_Om_Op_neutralization",
-    "H03_Om_O2p_to_3O",
-    "H04_Om_O2p_to_O_O2",
-)
-H05_ACTIVE = "H05_Om_O_to_O2_electron"
+H01_H04_ACTIVE = ("H01", "H02", "H03", "H04")
+H05_ACTIVE = "H05"
 
 DEFERRED_TOKENS = (
     "e + O2 -> e + O + O",
@@ -424,8 +419,8 @@ def _insert_kinetic_owners(text: str) -> str:
     text = _insert_material(
         text,
         "s5r_h01_h04_rates",
-        f"""    type = PhysicsReactionRateMaterial
-    chemistry_file = stage5_s5d_oxygen_heavy.txt
+        f"""    type = HeavyReactionRateMaterial
+    chemistry_file = stage5_s5d_oxygen_heavy.json
     density = rho_mat
     temperature = T_g
     species = 'O2 O2p O Om Op'
@@ -436,8 +431,8 @@ def _insert_kinetic_owners(text: str) -> str:
     text = _insert_material(
         text,
         "s5r_h05_rate",
-        f"""    type = PhysicsReactionRateMaterial
-    chemistry_file = stage5_s5e_h05_oxygen_heavy.txt
+        f"""    type = HeavyReactionRateMaterial
+    chemistry_file = stage5_s5e_h05_oxygen_heavy.json
     density = rho_mat
     temperature = T_g
     species = 'O2 O Om'
@@ -643,7 +638,7 @@ def _insert_observables(text: str) -> str:
 
 
 def _owner_paths_by_type(text: str) -> set[str]:
-    kinetic_types = {"RateCoeffMaterial", "PhysicsReactionRateMaterial"}
+    kinetic_types = {"RateCoeffMaterial", "HeavyReactionRateMaterial"}
     projected_names = {
         "O2_o2s_excitation_mass_source", "O2s_excitation_mass_source",
         "O2_ionization_mass_source", "O2p_ionization_mass_source",
@@ -758,7 +753,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["owner:H01_H04"] = (
         mp.get_parameter(text, OWNER_BLOCKS["H01_OP_O2_CHARGE_TRANSFER"], "type")
-        == "PhysicsReactionRateMaterial"
+        == "HeavyReactionRateMaterial"
         and mp.words(
             mp.get_parameter(
                 text, OWNER_BLOCKS["H01_OP_O2_CHARGE_TRANSFER"], "active_reactions"
@@ -772,7 +767,7 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["owner:H05"] = (
         mp.get_parameter(text, OWNER_BLOCKS["H05_OM_O_DETACHMENT"], "type")
-        == "PhysicsReactionRateMaterial"
+        == "HeavyReactionRateMaterial"
         and mp.words(
             mp.get_parameter(text, OWNER_BLOCKS["H05_OM_O_DETACHMENT"], "active_reactions")
         )

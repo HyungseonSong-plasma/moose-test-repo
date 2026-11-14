@@ -101,13 +101,16 @@ def static_check() -> dict:
     if "gas_temperature = T_gas" in text or "temperature = T_gas" in text:
         raise AssertionError("controlled discriminator T_gas leaked into representative assembly")
 
-    h14 = (HEAVY_DATA / "stage5_s5d_oxygen_heavy.txt").read_text()
-    h05 = (HEAVY_DATA / "stage5_s5e_h05_oxygen_heavy.txt").read_text()
-    for reaction in H01_H04_ACTIVE:
-        if f"reaction {reaction} " not in h14:
-            raise AssertionError(f"missing frozen heavy reaction database entry: {reaction}")
-    if f"reaction {H05_ACTIVE} " not in h05:
-        raise AssertionError("missing frozen H05 reaction database entry")
+    h14 = json.loads((HEAVY_DATA / "stage5_s5d_oxygen_heavy.json").read_text())
+    h05 = json.loads((HEAVY_DATA / "stage5_s5e_h05_oxygen_heavy.json").read_text())
+    if {r["id"] for r in h14["reactions"]} != set(H01_H04_ACTIVE):
+        raise AssertionError("canonical JSON missing H01-H04 heavy rate laws")
+    if {r["id"] for r in h05["reactions"]} != {H05_ACTIVE}:
+        raise AssertionError("canonical JSON missing H05 heavy rate law")
+    for mechanism in (h14, h05):
+        for reaction in mechanism["reactions"]:
+            if reaction.get("rate", {}).get("model") != "power_law":
+                raise AssertionError("heavy JSON reaction lacks power_law kinetics")
 
     result = {
         "schema_version": 1,
@@ -166,7 +169,7 @@ def _stage(work: Path) -> tuple[Path, dict]:
 
     for name in RATE_TABLES.values():
         shutil.copy2(ELECTRON_DATA / name, work / name)
-    for name in ("stage5_s5d_oxygen_heavy.txt", "stage5_s5e_h05_oxygen_heavy.txt"):
+    for name in ("stage5_s5d_oxygen_heavy.json", "stage5_s5e_h05_oxygen_heavy.json"):
         shutil.copy2(HEAVY_DATA / name, work / name)
 
     input_path = work / "s5r_representative.i"

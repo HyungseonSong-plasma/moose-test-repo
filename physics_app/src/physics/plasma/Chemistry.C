@@ -111,7 +111,9 @@ validateReaction(const ReactionRecord & reaction,
   };
   accumulate(reaction.reactants, -1);
   accumulate(reaction.products, 1);
-  if (charge_balance != 0)
+  // Surface charge may be balanced by the wall current. Volume reactions
+  // conserve charge entirely within the plasma chemistry catalogue.
+  if (reaction.domain == "volume" && charge_balance != 0)
     fail(file, reaction.id + ": charge conservation failed");
   for (const auto & [element, balance] : element_balance)
     if (balance != 0)
@@ -318,12 +320,28 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       }
       if (it.key() == "e" && (species.charge_number != -1 || !species.elements.empty()))
         fail(file, "electron 'e' must carry -1 charge and zero nuclei");
+      if (record.contains("molar_mass_kg_mol"))
+      {
+        if (!record.at("molar_mass_kg_mol").is_number())
+          fail(file, "non-numeric molar_mass_kg_mol for " + it.key());
+        species.molar_mass_kg_mol = record.at("molar_mass_kg_mol").get<double>();
+        if (!std::isfinite(species.molar_mass_kg_mol) || species.molar_mass_kg_mol <= 0.0)
+          fail(file, "molar_mass_kg_mol must be finite and positive for " + it.key());
+      }
       const auto existing = _species.find(it.key());
       if (existing == _species.end())
         _species.emplace(it.key(), species);
-      else if (existing->second.charge_number != species.charge_number ||
-               existing->second.elements != species.elements)
-        fail(file, "conflicting species identity for " + it.key());
+      else
+      {
+        if (existing->second.charge_number != species.charge_number ||
+            existing->second.elements != species.elements ||
+            (existing->second.molar_mass_kg_mol > 0.0 &&
+             species.molar_mass_kg_mol > 0.0 &&
+             existing->second.molar_mass_kg_mol != species.molar_mass_kg_mol))
+          fail(file, "conflicting species identity for " + it.key());
+        if (existing->second.molar_mass_kg_mol == 0.0)
+          existing->second.molar_mass_kg_mol = species.molar_mass_kg_mol;
+      }
     }
 
     // Multiple chemistry files may contribute reactions independently, but
@@ -405,13 +423,108 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       if (!reaction_ids.insert(reaction.id).second ||
           !progresses.insert(reaction.progress).second)
         fail(file, "duplicate reaction ID or generated progress owner: " + reaction.id);
-      if (entry["units"].get<std::string>() != "mol/(m^3 s)")
-        fail(file, reaction.id + ": progress must have mol/(m^3 s) units");
       if (!equation_ids.erase(reaction.id))
         fail(file, reaction.id + ": missing equation mapping");
       reaction.equation = root["equations"].at(reaction.id).get<std::string>();
       reaction.reactants = readCoefficients(entry["reactants"], file);
       reaction.products = readCoefficients(entry["products"], file);
+      if (entry.contains("domain"))
+      {
+        if (!entry.at("domain").is_string())
+          fail(file, reaction.id + ": domain must be a string");
+        reaction.domain = entry.at("domain").get<std::string>();
+      }
+      if (reaction.domain != "volume" && reaction.domain != "surface")
+        fail(file, reaction.id + ": domain must be volume or surface");
+      const std::string units = reaction.domain == "surface" ? "mol/(m^2 s)" : "mol/(m^3 s)";
+      if (entry.at("units").get<std::string>() != units)
+        fail(file, reaction.id + ": progress units must be " + units);
+
+      if (entry.contains("rate"))
+      {
+        const auto & rate = entry.at("rate");
+        if (!rate.is_object() || !rate.contains("model") || !rate.at("model").is_string())
+          fail(file, reaction.id + ": rate must contain a model");
+        auto & law = reaction.rate;
+        law.model = rate.at("model").get<std::string>();
+        const bool surface = reaction.domain == "surface";
+        if (!surface && law.model != "constant" && law.model != "power_law")
+          fail(file, reaction.id + ": unsupported volume rate model");
+        if (surface && law.model != "thermal_sticking" &&
+            law.model != "deferred_charged_flux")
+          fail(file, reaction.id + ": unsupported surface rate model");
+
+        const std::set<std::string> accepted = surface
+            ? std::set<std::string>{"model", "sticking"}
+            : std::set<std::string>{"model", "A", "basis", "T_ref", "exponent"};
+        for (auto it = rate.begin(); it != rate.end(); ++it)
+          if (!accepted.count(it.key()))
+            fail(file, reaction.id + ": unsupported rate key " + it.key());
+
+        if (surface)
+        {
+          if (!rate.contains("sticking") || !rate.at("sticking").is_number())
+            fail(file, reaction.id + ": surface rate requires sticking");
+          law.sticking = rate.at("sticking").get<double>();
+          if (!std::isfinite(law.sticking) || law.sticking < 0.0)
+            fail(file, reaction.id + ": sticking must be finite and nonnegative");
+        }
+        else
+        {
+          if (!rate.contains("A") || !rate.at("A").is_number() ||
+              !rate.contains("basis") || !rate.at("basis").is_string())
+            fail(file, reaction.id + ": volume rate requires numeric A and basis");
+          law.A_input = rate.at("A").get<double>();
+          law.basis = rate.at("basis").get<std::string>();
+          if (!std::isfinite(law.A_input) || law.A_input < 0.0)
+            fail(file, reaction.id + ": A must be finite and nonnegative");
+          if (law.basis != "particle" && law.basis != "molar")
+            fail(file, reaction.id + ": rate basis must be particle or molar");
+          if (law.model == "constant" &&
+              (rate.contains("T_ref") || rate.contains("exponent")))
+            fail(file, reaction.id + ": constant rate forbids power-law parameters");
+          if (law.model == "power_law")
+          {
+            if (!rate.contains("T_ref") || !rate.contains("exponent") ||
+                !rate.at("T_ref").is_number() || !rate.at("exponent").is_number())
+              fail(file, reaction.id + ": power_law requires T_ref and exponent");
+            law.T_ref = rate.at("T_ref").get<double>();
+            law.exponent = rate.at("exponent").get<double>();
+            if (!std::isfinite(law.T_ref) || law.T_ref <= 0.0 ||
+                !std::isfinite(law.exponent))
+              fail(file, reaction.id + ": invalid power-law temperature parameters");
+          }
+          unsigned int order = 0;
+          for (const auto & reactant : reaction.reactants)
+            order += reactant.second;
+          if (order == 0)
+            fail(file, reaction.id + ": rate requires reactants");
+          law.A_molar = law.A_input *
+              (law.basis == "particle"
+                   ? std::pow(6.02214076e23, static_cast<double>(order - 1))
+                   : 1.0);
+          if (!std::isfinite(law.A_molar))
+            fail(file, reaction.id + ": molar rate coefficient overflow");
+        }
+      }
+      else if (reaction.domain == "surface")
+        fail(file, reaction.id + ": surface reactions require explicit rate");
+
+      // Executable heavy and surface rate laws must provide physical molar
+      // masses for every heavy reactant/product, not silently omit wall flux.
+      if (!reaction.rate.model.empty())
+      {
+        std::set<std::string> involved;
+        for (const auto & item : reaction.reactants)
+          involved.insert(item.first);
+        for (const auto & item : reaction.products)
+          involved.insert(item.first);
+        for (const auto & species_id : involved)
+          if (species_id != "e" &&
+              (_species.find(species_id) == _species.end() ||
+               _species.at(species_id).molar_mass_kg_mol <= 0.0))
+            fail(file, reaction.id + ": missing heavy molar_mass_kg_mol for " + species_id);
+      }
 
       if (!entry.contains("energy_loss_eV"))
         fail(file, reaction.id + ": missing explicit electron energy policy");
@@ -433,6 +546,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       }
       else if (!(energy.is_object() && energy.value("model", std::string()) == "none"))
         fail(file, reaction.id + ": energy loss needs a nonnegative number, positive-loss functor or model none");
+      if (reaction.domain == "surface" && reaction.contributes_electron_energy)
+        fail(file, reaction.id + ": surface electron-energy sources are unsupported");
       validateReaction(reaction, _species, file);
       _reactions.push_back(std::move(reaction));
     }
@@ -477,7 +592,7 @@ bool
 ChemistryData::hasSpeciesSource(const std::string & id) const
 {
   for (const auto & reaction : _reactions)
-    if (reaction.net(id) != 0)
+    if (reaction.domain == "volume" && reaction.net(id) != 0)
       return true;
   return false;
 }
@@ -486,7 +601,7 @@ bool
 ChemistryData::hasElectronEnergySource() const
 {
   for (const auto & reaction : _reactions)
-    if (reaction.contributes_electron_energy)
+    if (reaction.domain == "volume" && reaction.contributes_electron_energy)
       return true;
   return false;
 }
@@ -573,6 +688,9 @@ Chemistry::addFunctorMaterials()
   // DDEnergyEq inserts that aggregate as ONE RHS Kernel, not one per reaction.
   for (const auto & reaction : mechanism.reactions())
   {
+    // Boundary reactions must not be projected into volumetric RHS kernels.
+    if (reaction.domain == "surface")
+      continue;
     std::set<std::string> touched;
     for (const auto & [id, coefficient] : reaction.reactants)
       touched.insert(id);

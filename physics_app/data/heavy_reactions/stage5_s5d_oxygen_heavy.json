@@ -1,0 +1,137 @@
+{
+  "species": {
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.032
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1,
+      "molar_mass_kg_mol": 0.032
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.016
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1,
+      "molar_mass_kg_mol": 0.016
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1,
+      "molar_mass_kg_mol": 0.016
+    }
+  },
+  "equations": {
+    "H01": "Op + O2 -> O + O2p",
+    "H02": "Om + Op -> 2O",
+    "H03": "Om + O2p -> 3O",
+    "H04": "Om + O2p -> O + O2"
+  },
+  "reactions": [
+    {
+      "id": "H01",
+      "domain": "volume",
+      "reactants": {
+        "Op": 1,
+        "O2": 1
+      },
+      "products": {
+        "O": 1,
+        "O2p": 1
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      },
+      "rate": {
+        "model": "power_law",
+        "A": 2e-17,
+        "basis": "particle",
+        "T_ref": 300,
+        "exponent": 0.5
+      }
+    },
+    {
+      "id": "H02",
+      "domain": "volume",
+      "reactants": {
+        "Om": 1,
+        "Op": 1
+      },
+      "products": {
+        "O": 2
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      },
+      "rate": {
+        "model": "power_law",
+        "A": 4e-14,
+        "basis": "particle",
+        "T_ref": 300,
+        "exponent": 0.43
+      }
+    },
+    {
+      "id": "H03",
+      "domain": "volume",
+      "reactants": {
+        "Om": 1,
+        "O2p": 1
+      },
+      "products": {
+        "O": 3
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      },
+      "rate": {
+        "model": "power_law",
+        "A": 2.6e-14,
+        "basis": "particle",
+        "T_ref": 300,
+        "exponent": 0.44
+      }
+    },
+    {
+      "id": "H04",
+      "domain": "volume",
+      "reactants": {
+        "Om": 1,
+        "O2p": 1
+      },
+      "products": {
+        "O": 1,
+        "O2": 1
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      },
+      "rate": {
+        "model": "power_law",
+        "A": 2.6e-14,
+        "basis": "particle",
+        "T_ref": 300,
+        "exponent": 0.44
+      }
+    }
+  ]
+}
