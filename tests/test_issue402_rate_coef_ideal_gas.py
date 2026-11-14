@@ -24,15 +24,15 @@ def test_only_explicit_ei_and_h_rate_factory_names():
         assert "registerMooseObjectAliased" not in source
 
 
-def test_plasmas_root_owns_only_p_t_and_ideal_gas_model():
+def test_plasmas_root_owns_only_pressure_temperature_and_ideal_gas_model():
     header = (APP / "include/physics/plasma/Chemistry.h").read_text()
     source = (SRC / "physics/plasma/Chemistry.C").read_text()
     assert "void act() override;" in header
     assert 'params.addParam<Real>("pressure"' in source
     assert 'params.addParam<Real>("temperature"' in source
     assert 'MooseEnum("ideal_gas", "ideal_gas")' in source
-    assert 'addStatic("p", getParam<Real>("pressure"));' in source
-    assert 'addStatic("T", getParam<Real>("temperature"));' in source
+    assert 'addStatic("pressure", getParam<Real>("pressure"));' in source
+    assert 'addStatic("temperature", getParam<Real>("temperature"));' in source
     assert 'add("rho_g", "pressure/(8.31446261815324*temp*(' in source
     assert 'addStatic("n_g", initial.number_density_per_m3);' in source
     assert 'add("M_mix", "1/(" + denominator' in source
@@ -43,14 +43,14 @@ def test_plasmas_root_owns_only_p_t_and_ideal_gas_model():
     assert not (APP / "src/materials/GasStateMaterial.C").exists()
 
 
-def test_all_transport_owners_use_common_p_and_t_when_present():
+def test_all_transport_owners_use_common_pressure_and_temperature_when_present():
     interface = (SRC / "physics/plasma/PlasmaInterface.C").read_text()
     nv = (SRC / "physics/plasma/NVTransport.C").read_text()
     dd = (SRC / "physics/plasma/DDContinuityEq.C").read_text()
     assert "rootGasStateEnabled()" in interface
     for source in (nv, dd):
-        assert 'rootGasStateEnabled() ? "p"' in source
-        assert 'rootGasStateEnabled() ? "T"' in source
+        assert 'rootGasStateEnabled() ? "pressure"' in source
+        assert 'rootGasStateEnabled() ? "temperature"' in source
 
 
 def test_surface_input_is_real_ideal_gas_wiring_and_composition():
@@ -59,7 +59,7 @@ def test_surface_input_is_real_ideal_gas_wiring_and_composition():
     assert "pressure = 1.333223684" in sample
     assert "temperature = 300" in sample
     assert "state_model = ideal_gas" in sample
-    assert "temperature = T" in sample
+    assert "temperature = temperature" in sample
     assert "density = rho_g" in sample
     assert "gas_state" not in data
     assert "prop_names = 'Y_O2 Y_O'" not in sample
@@ -100,3 +100,17 @@ def test_ideal_gas_mixture_molar_mass_and_density_oracle():
         assert 0.0 < density < 1.8e-5
     oxygen = p * 0.032 / (R * T)
     assert math.isclose(oxygen, 1.7105e-5, rel_tol=3e-4)
+
+
+def test_solved_pressure_root_ic_uses_one_variable_functor_not_duplicate_static():
+    source = (SRC / "physics/plasma/Chemistry.C").read_text()
+    assert 'if (_problem->hasVariable("pressure"))' in source
+    assert 'params.set<VariableName>("variable") = "pressure";' in source
+    assert 'params.set<Real>("value") = getParam<Real>("pressure");' in source
+    assert '_problem->addFVInitialCondition(type, "plasma_initial_pressure", params);' in source
+    assert '"plasma_gas_temperature"' in source
+    assert 'params.set<std::vector<std::string>>("prop_names") = {"temperature"};' in source
+    assert 'gas.set<std::vector<std::string>>("functor_names")' in source
+    assert '"pressure", "temperature"' in source
+    assert 'params.set<std::vector<std::string>>("prop_names") = {"pressure"};' not in source
+    assert 'addStatic("p",' not in source and 'addStatic("T",' not in source
