@@ -758,8 +758,23 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           fail(file, reaction.id + ": empty energy-loss functor");
         reaction.contributes_electron_energy = true;
       }
+      else if (energy.is_object() && energy.value("model", std::string()) == "elastic" &&
+               energy.size() == 1 &&
+               (reaction.id == "EI-02" || reaction.id == "EI-17"))
+      {
+        // The original oxygen elastic energy exchange is a function of
+        // mean electron energy and gas temperature, never a static loss.
+        const std::string target = reaction.id == "EI-02" ? "O2" : "O";
+        if (reaction.reactants.count(target) != 1 ||
+            _species.at(target).molar_mass_kg_mol <= 0.0)
+          fail(file, reaction.id + ": elastic loss requires the original target molar mass");
+        reaction.energy_loss_functor = "delta_epsilon_" +
+            std::string(reaction.id == "EI-02" ? "EI02" : "EI17") + "_eV";
+        reaction.elastic_energy_loss = true;
+        reaction.contributes_electron_energy = true;
+      }
       else if (!(energy.is_object() && energy.value("model", std::string()) == "none"))
-        fail(file, reaction.id + ": energy loss needs a nonnegative number, positive-loss functor or model none");
+        fail(file, reaction.id + ": energy loss needs a nonnegative number, elastic model, positive-loss functor or model none");
       if (reaction.domain == "surface" && reaction.contributes_electron_energy)
         fail(file, reaction.id + ": surface electron-energy sources are unsupported");
       validateReaction(reaction, _species, file);
@@ -891,6 +906,131 @@ void
 Chemistry::addFunctorMaterials()
 {
   const auto & mechanism = chemistryData();
+  // Only Chemistry owns executable progress R_k. Species and rate data are
+  // immutable JSON inputs; target Functor names are derived internally.
+  std::set<std::string> required_concentrations;
+  std::vector<std::string> heavy_rate_ids;
+  std::vector<std::string> heavy_reactants;
+  for (const auto & reaction : mechanism.reactions())
+  {
+    if (!reaction.rate.table_file.empty())
+    {
+      std::string target;
+      for (const auto & [species, count] : reaction.reactants)
+        if (species != "e")
+          target = species;
+      required_concentrations.insert(target);
+    }
+    if (reaction.domain == "volume" &&
+        (reaction.rate.model == "constant" || reaction.rate.model == "power_law"))
+    {
+      heavy_rate_ids.push_back(reaction.id);
+      for (const auto & [species, count] : reaction.reactants)
+        if (species != "e")
+          required_concentrations.insert(species);
+    }
+  }
+
+  const std::string parsed_type = "ADParsedFunctorMaterial";
+  for (const auto & id : required_concentrations)
+  {
+    const auto & species = mechanism.species(id);
+    auto params = getFactory().getValidParams(parsed_type);
+    params.set<std::string>("property_name") = "c_" + id;
+    params.set<std::vector<std::string>>("functor_symbols") = {"u"};
+    if (species.initial_number_density && species.charge_number != 0)
+    {
+      // Heavy charged species use their live solved log-molar state.
+      params.set<std::vector<std::string>>("functor_names") = {"log_" + id};
+      params.set<std::string>("expression") = "exp(u)";
+    }
+    else
+    {
+      const auto live_fraction = species.mass_fraction_functor.empty()
+                                     ? species.mass_fraction_variable
+                                     : species.mass_fraction_functor;
+      if (live_fraction.empty() || species.molar_mass_kg_mol <= 0.0)
+        paramError("block", "Reaction target ", id,
+                   " requires a live species mass fraction and molar_mass_kg_mol.");
+      const std::string density =
+          getProblem().hasVariable("pressure") ? "rho_neutral" : "rho_g";
+      params.set<std::vector<std::string>>("functor_names") = {density, live_fraction};
+      params.set<std::vector<std::string>>("functor_symbols") = {"rho", "y"};
+      params.set<std::string>("expression") =
+          "rho*y/" + realLiteral(species.molar_mass_kg_mol);
+    }
+    assignBlocks(params, _blocks);
+    getProblem().addFunctorMaterial(parsed_type, "chemistry_" + id + "_concentration", params);
+  }
+
+  for (const auto & reaction : mechanism.reactions())
+    if (!reaction.rate.table_file.empty())
+    {
+      const auto type = "EIRateCoefMaterial";
+      auto params = getFactory().getValidParams(type);
+      std::string target;
+      for (const auto & [species, count] : reaction.reactants)
+        if (species != "e")
+          target = species;
+      params.set<FileName>("rate_table_file") = reaction.rate.table_file;
+      params.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
+      params.set<MooseFunctorName>("electron_number_density") = "n_e_physical";
+      params.set<MooseFunctorName>("target_molar_concentration") = "c_" + target;
+      params.set<std::string>("reaction_progress") = reaction.progress;
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(type, "chemistry_" + reaction.progress + "_rate", params);
+    }
+
+  if (!heavy_rate_ids.empty())
+  {
+    if (mechanism.sourceFiles().size() != 1)
+      paramError("block", "Automatic heavy reaction rates require one [Plasmas]/files JSON.");
+    for (const auto & id : required_concentrations)
+      if (id != "e")
+      {
+        bool in_heavy_rate = false;
+        for (const auto & reaction : mechanism.reactions())
+          if (reaction.rate.model == "constant" || reaction.rate.model == "power_law")
+            in_heavy_rate |= reaction.reactants.count(id) > 0;
+        if (in_heavy_rate)
+          heavy_reactants.push_back(id);
+      }
+    const auto type = "HRateCoefMaterial";
+    auto params = getFactory().getValidParams(type);
+    std::vector<MooseFunctorName> concentrations;
+    for (const auto & id : heavy_reactants)
+      concentrations.push_back("c_" + id);
+    params.set<FileName>("chemistry_file") = mechanism.sourceFiles().front();
+    params.set<MooseFunctorName>("temperature") = "temperature";
+    params.set<std::vector<std::string>>("species") = heavy_reactants;
+    params.set<std::vector<MooseFunctorName>>("reactant_concentrations") = concentrations;
+    params.set<std::vector<std::string>>("active_reactions") = heavy_rate_ids;
+    assignBlocks(params, _blocks);
+    getProblem().addFunctorMaterial(type, name() + "_heavy_rates", params);
+  }
+
+  for (const auto & reaction : mechanism.reactions())
+    if (reaction.elastic_energy_loss)
+    {
+      const auto target = reaction.id == "EI-02" ? "O2" : "O";
+      const Real molar_mass = mechanism.species(target).molar_mass_kg_mol;
+      constexpr Real electron_mass = 9.1093837015e-31;
+      constexpr Real avogadro = 6.02214076e23;
+      constexpr Real kb_over_ev = 8.617333262145e-5;
+      const Real factor = 3.0 * electron_mass * avogadro / molar_mass;
+      auto params = getFactory().getValidParams(parsed_type);
+      params.set<std::string>("property_name") = reaction.energy_loss_functor;
+      params.set<std::vector<std::string>>("functor_names") =
+          {"e_energy_eV", "temperature"};
+      params.set<std::vector<std::string>>("functor_symbols") = {"eps", "Tg"};
+      params.set<std::string>("expression") =
+          realLiteral(factor) + "*((2.0/3.0)*eps-" +
+          realLiteral(kb_over_ev) + "*Tg)";
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(
+          parsed_type, "chemistry_" + reaction.progress + "_elastic_loss", params);
+    }
+
   std::map<std::string, SourceExpression> particle;
   SourceExpression energy;
 
