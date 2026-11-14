@@ -72,7 +72,7 @@ def _fixtures(root: Path) -> list[tuple[str, Path]]:
     r2._prepare_runtime_fixture(r2_dir)
     r2_input = r2_dir / "r2_o2_ionization_runtime.i"
     r2_input.write_text(_adapt_physical_mean_energy_for_p2(r2_input.read_text()))
-    cases.append(("R2_EI16", r2_input)
+    cases.append(("R2_EI16", r2_input))
 
     r3_dir = root / "r3_excitation"
     r3_dir.mkdir()
