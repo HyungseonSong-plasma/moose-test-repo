@@ -279,6 +279,33 @@ DDContinuityEq::addFEKernels()
 }
 
 void
+DDContinuityEq::addFEBCs()
+{
+  // Only DriftDiffusion Continuity may create electron particle sheath BCs.
+  // PlasmasAction has already validated the JSON BC type and physical sidesets.
+  for (const auto & [group, boundary] : chemistryData().boundaries())
+    for (const auto & [bc_name, bc] : boundary.bcs)
+    {
+      (void)group;
+      if (bc.type != "FEMElectronSheathBC")
+        continue;
+      if (!isParamValid("fem_potential") ||
+          std::find(_fem_species.begin(), _fem_species.end(), "e") == _fem_species.end())
+        paramError("fem_species",
+                   "JSON FEMElectronSheathBC requires FEM electron continuity and fem_potential.");
+
+      auto params = getFactory().getValidParams(bc.type);
+      params.set<NonlinearVariableName>("variable") = bc.variable;
+      std::vector<BoundaryName> sidesets;
+      for (const auto & side : boundary.mesh_boundaries)
+        sidesets.emplace_back(side);
+      params.set<std::vector<BoundaryName>>("boundary") = sidesets;
+      params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
+      getProblem().addBoundaryCondition(bc.type, bc_name, params);
+    }
+}
+
+void
 DDContinuityEq::addFunctorMaterials()
 {
   // Material ownership follows exactly the FEM and FVM species listed by
@@ -390,4 +417,5 @@ registerMooseAction("PhysicsApp", DDContinuityEq, "add_variables_physics");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_ics_physics");
 registerMooseAction("PhysicsApp", DDContinuityEq, "check_integrity");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_kernel");
+registerMooseAction("PhysicsApp", DDContinuityEq, "add_bc");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_functor_material");
