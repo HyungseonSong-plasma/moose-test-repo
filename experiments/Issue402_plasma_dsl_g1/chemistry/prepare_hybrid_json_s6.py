@@ -161,7 +161,7 @@ def migrate_exact_s6_fem_sheath(source: str) -> tuple[str, list[dict]]:
             if match.group("name") != name:
                 continue
             roots = re.findall(
-                r"(?m)^\\[([A-Za-z0-9_]+)\\]\\s*$", source[:match.start()])
+                r"(?m)^\[([A-Za-z0-9_]+)\]\s*$", source[:match.start()])
             if roots and roots[-1] == "BCs":
                 candidates.append(match)
         if len(candidates) != 1:
@@ -188,8 +188,8 @@ def migrate_exact_s6_fem_sheath(source: str) -> tuple[str, list[dict]]:
     for old, name, new_type in reversed(matched):
         before = old.group(0)
         after = before.replace(
-            "    type = " + OLD_SHEATH_TYPES[new_type] + "\\n",
-            "    type = " + new_type + "\\n", 1)
+            "    type = " + OLD_SHEATH_TYPES[new_type] + "\n",
+            "    type = " + new_type + "\n", 1)
         if before == after:
             raise ValueError("HYBRID_SHEATH_TYPE_REPLACEMENT_FAILED_" + name)
         source = source[:old.start()] + after + source[old.end():]
