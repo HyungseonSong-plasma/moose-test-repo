@@ -96,24 +96,24 @@ def main(exe: Path):
         # The older external [Variables]/[ICs] fallback is deliberately
         # rejected even when a matching solver variable and IC are provided.
         external_input = PHYSICS_AUTO_INPUT.replace(
-            "  [potential]\\n    type = MooseVariable\\n  []",
-            "  [potential]\\n    type = MooseVariable\\n  []\\n"
-            "  [log_e]\\n    type = MooseVariable\\n  []",
+            "  [potential]\n    type = MooseVariable\n  []",
+            "  [potential]\n    type = MooseVariable\n  []\n"
+            "  [log_e]\n    type = MooseVariable\n  []",
             1
         ).replace(
-            "[Physics]\\n",
-            "[ICs]\\n  [external_log_e_initial]\\n"
-            "    type = ConstantIC\\n    variable = log_e\\n"
-            "    value = -20\\n  []\\n[]\\n[Physics]\\n",
+            "[Physics]\n",
+            "[ICs]\n  [external_log_e_initial]\n"
+            "    type = ConstantIC\n    variable = log_e\n"
+            "    value = -20\n  []\n[]\n[Physics]\n",
             1
         )
         assert external_input != PHYSICS_AUTO_INPUT
         check(exe, root, "JSON_INITIAL_MISSING_DESPITE_EXTERNAL_VARIABLE_AND_IC",
               external_input, no_initial, False)
         fvm_external_input = fvm_input.replace(
-            "  [potential]\\n    type = MooseVariable\\n  []",
-            "  [potential]\\n    type = MooseVariable\\n  []\\n"
-            "  [log_O2p]\\n    type = MooseVariableFVReal\\n  []",
+            "  [potential]\n    type = MooseVariable\n  []",
+            "  [potential]\n    type = MooseVariable\n  []\n"
+            "  [log_O2p]\n    type = MooseVariableFVReal\n  []",
             1
         )
         assert fvm_external_input != fvm_input
