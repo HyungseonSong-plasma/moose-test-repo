@@ -93,6 +93,20 @@ def verify(results: Path, expected_head: str, case: str, *, hybrid_json: bool = 
         if sha != status.get(key) or sha != manifest.get("files", {}).get(filename, {}).get("sha256"):
             raise ValueError("P3_EVIDENCE_OUTPUT_SHA_MISMATCH:" + filename)
         out[filename] = sha
+    if hybrid_json:
+        name = f"unified_s6_{case}.json"
+        json_path = results / name
+        if not json_path.is_file():
+            raise ValueError("P3_EVIDENCE_INTEGRATED_SIMULATION_JSON_MISSING")
+        file_sha = digest(json_path)
+        if (file_sha != status["hybrid_json_ownership_cutover"]["hybrid_json_sha256"]
+            or file_sha != manifest.get("files", {}).get(name, {}).get("sha256")):
+            raise ValueError("P3_EVIDENCE_INTEGRATED_SIMULATION_JSON_SHA_MISMATCH")
+        data = json.loads(json_path.read_text())
+        if (len(data["species"]) != 7 or len(data["reactions"]) != 8 or
+            set(data["equations"]) != {r["id"] for r in data["reactions"]}):
+            raise ValueError("P3_EVIDENCE_INTEGRATED_SIMULATION_JSON_CONTENT_MISMATCH")
+        out[name] = file_sha
     return {"status": "BYTES_AND_PROVENANCE_PASS_UPLOAD_RECEIPT_PENDING",
             "case": case, "source_sha": expected_head, "files_sha256": out,
             "artifact_rest_receipt": "PENDING",
