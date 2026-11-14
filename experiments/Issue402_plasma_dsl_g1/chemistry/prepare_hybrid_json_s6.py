@@ -121,6 +121,90 @@ def retire(source: str, section: str, name: str, expected: dict[str, str]
     })
 
 
+
+# The retired archive factories are not registered in the active PhysicsApp.
+# Native sheath terms are NOT generated from this hybrid JSON, therefore
+# preserve their original named BCs, boundaries, wall-number-flux Functor
+# and mean-energy Functor while binding registered equivalent classes.
+SHEATH_BC_SPEC = {
+    "electron_sheath": ("FEMElectronSheathBC",
+                        "'plasma_electrode plasma_metal plasma_right'"),
+    "electron_cover_dielectric": ("FEMElectronSheathBC", "'plasma_cover'"),
+    "electron_wafer_dielectric": ("FEMElectronSheathBC", "'plasma_wafer'"),
+    "electron_focus_ring_dielectric": ("FEMElectronSheathBC",
+                                       "'plasma_focus_ring'"),
+    "electron_energy_sheath": ("FEMElectronEnergySheathBC",
+                               "'plasma_electrode plasma_metal plasma_right'"),
+    "electron_energy_cover": ("FEMElectronEnergySheathBC", "'plasma_cover'"),
+    "electron_energy_wafer": ("FEMElectronEnergySheathBC", "'plasma_wafer'"),
+    "electron_energy_focus_ring": ("FEMElectronEnergySheathBC",
+                                   "'plasma_focus_ring'"),
+}
+OLD_SHEATH_TYPES = {
+    "FEMElectronSheathBC": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+    "FEMElectronEnergySheathBC":
+        "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC",
+}
+
+
+def migrate_exact_s6_fem_sheath(source: str) -> tuple[str, list[dict]]:
+    """Guarded 4+4 BC rebind in staged S6 D input ONLY.
+
+    This is a registration-name migration, not a change of wall-flux
+    physics, boundary coverage, electron energy flux, or native ownership.
+    All fields must match the original canonicalized source exactly.
+    """
+    matched = []
+    for name, (new_type, boundary) in SHEATH_BC_SPEC.items():
+        candidates = []
+        for match in BLOCK.finditer(source):
+            if match.group("name") != name:
+                continue
+            roots = re.findall(
+                r"(?m)^\\[([A-Za-z0-9_]+)\\]\\s*$", source[:match.start()])
+            if roots and roots[-1] == "BCs":
+                candidates.append(match)
+        if len(candidates) != 1:
+            raise ValueError(
+                f"HYBRID_SHEATH_BC_OWNER_COUNT_{name}: {len(candidates)}")
+        old = candidates[0]
+        expected = {
+            "type": OLD_SHEATH_TYPES[new_type],
+            "variable": ("log_e_energy" if new_type == "FEMElectronEnergySheathBC"
+                         else "log_e"),
+            "wall_number_flux": "e_wall_number_flux",
+            "boundary": boundary,
+        }
+        if new_type == "FEMElectronEnergySheathBC":
+            expected["mean_energy"] = "e_energy_eV"
+        got = parameters(old.group("body"))
+        if got != expected:
+            raise ValueError(
+                "HYBRID_SHEATH_BC_IDENTITY_" + name + ": " + repr(got))
+        matched.append((old, name, new_type))
+    if len(matched) != 8:
+        raise ValueError("HYBRID_EXPECTED_EXACTLY_8_REGISTERED_SHEATH_BCS")
+    report = []
+    for old, name, new_type in reversed(matched):
+        before = old.group(0)
+        after = before.replace(
+            "    type = " + OLD_SHEATH_TYPES[new_type] + "\\n",
+            "    type = " + new_type + "\\n", 1)
+        if before == after:
+            raise ValueError("HYBRID_SHEATH_TYPE_REPLACEMENT_FAILED_" + name)
+        source = source[:old.start()] + after + source[old.end():]
+        report.append({
+            "owner": name, "new_type": new_type,
+            "old_block_sha256": digest(before.encode("utf-8")),
+            "new_block_sha256": digest(after.encode("utf-8")),
+        })
+    if "PhysicsFEMLogMolarElectronFieldLimitedFluxBC" in source or (
+        "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC" in source
+    ):
+        raise ValueError("HYBRID_UNREGISTERED_SHEATH_BC_REMAINS")
+    return source, sorted(report, key=lambda x: x["owner"])
+
+
 def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     if case not in ("417", "941"):
         raise ValueError("HYBRID_CASE_NOT_417_OR_941")
@@ -156,6 +240,8 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     for name, expected in SOURCE_MATERIAL.items():
         source, receipt = retire(source, "FunctorMaterials", name, expected)
         removed.append(receipt)
+
+    source, sheath_bc_rebinds = migrate_exact_s6_fem_sheath(source)
 
     # Existing Native physics that JSON does NOT generate is immutable.
     for signature in ("[potential]", "[phi_diffusion]", "[phi_source]",
@@ -264,6 +350,8 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         "native_owner_preservation": "ALL_NON_GENERATED_PHYSICS_INPUTS_UNCHANGED",
         "removed_generated_owner_count": len(removed),
         "removed_owners": removed,
+        "rebound_native_sheath_bcs": sheath_bc_rebinds,
+        "rebound_native_sheath_bc_count": len(sheath_bc_rebinds),
         "changed_staged_layers": changed,
         "initial_number_densities_per_m3": density,
         "initial_molar_energy_density_eV": math.exp(float(PINNED_INITIAL_LOG["log_e_energy"])),
