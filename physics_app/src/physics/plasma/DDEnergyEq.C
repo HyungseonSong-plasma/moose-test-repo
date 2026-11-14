@@ -26,8 +26,6 @@ DDEnergyEq::validParams()
       "assemble the complete conservative electron energy equation.");
   params.addParam<std::vector<std::string>>(
       "fem_species", {}, "Electron species solved with finite-element variables.");
-  params.addParam<std::vector<std::string>>(
-      "fvm_species", {}, "Electron species solved with finite-volume variables.");
   params.addParam<VariableName>(
       "fem_potential",
       "FEM electric potential. Enables conservative energy time, drift-diffusion, "
@@ -44,16 +42,11 @@ DDEnergyEq::DDEnergyEq(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
   const auto & finite_element_species = getParam<std::vector<std::string>>("fem_species");
-  const auto & finite_volume_species = getParam<std::vector<std::string>>("fvm_species");
-  if (!finite_volume_species.empty())
-    paramError("fvm_species",
-               "Finite-volume electron energy is not supported by this input check yet.");
-
   if (finite_element_species.size() != 1 || finite_element_species.front() != "e")
     paramError("fem_species", "Electron energy requires fem_species = 'e'.");
 
   validateSpeciesInputs(finite_element_species,
-                        finite_volume_species,
+                        {},
                         {energyStateName(finite_element_species.front())});
   if (isParamValid("initial_molar_energy_density_eV"))
   {
@@ -123,7 +116,7 @@ DDEnergyEq::checkIntegrity() const
 {
   const auto variable = energyStateName(getParam<std::vector<std::string>>("fem_species").front());
   validateExistingSpeciesVariables(getParam<std::vector<std::string>>("fem_species"),
-                                   getParam<std::vector<std::string>>("fvm_species"),
+                                   {},
                                    {variable});
   if (isParamValid("fem_potential"))
   {
