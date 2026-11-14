@@ -175,7 +175,7 @@ parseDDTransport(const Json & value, const std::string & file)
   if (!value.is_object())
     fail(file, "drift_diffusion transport entry must be an object");
   DDTransportRecord result;
-  result.model = requiredText(value, "model", file);
+  result.model = requiredText(value, "transport_coef", file);
   if (result.model == "constant")
   {
     if (!value.contains("mobility") || !value.at("mobility").is_number() ||
@@ -186,7 +186,7 @@ parseDDTransport(const Json & value, const std::string & file)
     if (!std::isfinite(result.mobility) || !std::isfinite(result.diffusivity) ||
         result.mobility < 0.0 || result.diffusivity < 0.0)
       fail(file, "constant mobility/diffusivity must be finite and nonnegative");
-    for (const auto * excluded : {"table_file", "coordinate", "table_units",
+    for (const auto * excluded : {"table_file", "coordinate", "mean_energy", "table_units",
                                    "pressure", "gas_temperature", "bounds_policy",
                                    "mobility_source", "diffusivity_source"})
       if (value.contains(excluded))
@@ -194,11 +194,15 @@ parseDDTransport(const Json & value, const std::string & file)
   }
   else if (result.model == "functor")
   {
-    // model=functor reuses the existing canonical species coefficient AD Functors.
-    // Numeric physical constants remain model=constant with explicit mu and D.
-    if (value.size() != 1)
-      fail(file, "functor transport accepts only model; DDTransportMaterial derives "
-                 "<species>_mobility and <species>_diffusivity.");
+    // Upstream AD coefficient Functor names; numeric values require constant mode.
+    result.mobility_source = requiredText(value, "mobility", file);
+    result.diffusivity_source = requiredText(value, "diffusivity", file);
+    for (const auto * excluded : {"table_file", "table_units", "pressure",
+                                   "gas_temperature", "bounds_policy",
+                                   "coordinate", "mean_energy",
+                                   "mobility_source", "diffusivity_source"})
+      if (value.contains(excluded))
+        fail(file, std::string("functor transport forbids ") + excluded);
   }
   else if (result.model == "lookup")
   {
@@ -260,6 +264,8 @@ bool
 DDTransportRecord::equals(const DDTransportRecord & rhs) const
 {
   return model == rhs.model && mobility == rhs.mobility && diffusivity == rhs.diffusivity &&
+         mobility_source == rhs.mobility_source &&
+         diffusivity_source == rhs.diffusivity_source &&
          table_file == rhs.table_file &&
          table_units == rhs.table_units && pressure == rhs.pressure &&
          gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;
@@ -336,6 +342,31 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           fail(file, "initial_number_density must be finite and strictly positive [1/m^3] for " +
                      it.key());
         species.initial_number_density = density;
+      }
+      // Every DD coefficient owner lives in the species JSON record.
+      if (record.contains("transport_coef"))
+      {
+        const auto transport = parseDDTransport(record, file);
+        const auto previous = _dd_transport.find(it.key());
+        if (previous == _dd_transport.end())
+          _dd_transport.emplace(it.key(), transport);
+        else if (!previous->second.equals(transport))
+          fail(file, "conflicting species transport_coef owner for " + it.key());
+      }
+      else
+        for (const auto * key : {"mobility", "diffusivity", "table_file",
+                                  "table_units", "pressure", "gas_temperature",
+                                  "bounds_policy", "mobility_source",
+                                  "diffusivity_source"})
+          if (record.contains(key))
+            fail(file, "species '" + it.key() + "' has " + key +
+                           " without transport_coef");
+      if (record.contains("energy_transport_coef"))
+      {
+        if (it.key() != "e" || !record.at("energy_transport_coef").is_string() ||
+            record.at("energy_transport_coef").get<std::string>() != "fluid")
+          fail(file, "energy_transport_coef supports only species.e = fluid");
+        _fluid_electron_energy_transport = true;
       }
       if (record.contains("molar_mass_kg_mol"))
       {
@@ -528,8 +559,7 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       _has_boundaries = true;
     }
 
-    // Multiple chemistry files may contribute reactions independently, but
-    // coefficient owners are one per species and one per NV mixture.
+    // Drift-diffusion coefficients now live on species; Navier-Stokes stays mixture-owned.
     if (root.contains("transport_coefficients"))
     {
       const auto & coefficients = root.at("transport_coefficients");
@@ -540,34 +570,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           fail(file, "unknown transport_coefficients section: " + it.key());
 
       if (coefficients.contains("drift_diffusion"))
-      {
-        const auto & owners = coefficients.at("drift_diffusion");
-        if (!owners.is_object())
-          fail(file, "transport_coefficients.drift_diffusion must be an object");
-        for (auto it = owners.begin(); it != owners.end(); ++it)
-        {
-          if (it.key() == "e_energy")
-          {
-            // This is a closure selector, not a separate particle DD
-            // Material and not a Chemistry reaction species.
-            const auto & energy = it.value();
-            if (!energy.is_object() || energy.size() != 1 ||
-                !energy.contains("type") || !energy.at("type").is_string() ||
-                energy.at("type").get<std::string>() != "fluid")
-              fail(file, "e_energy transport requires exactly {\"type\":\"fluid\"}.");
-            if (_fluid_electron_energy_transport)
-              fail(file, "duplicate e_energy transport closure owner");
-            _fluid_electron_energy_transport = true;
-            continue;
-          }
-          const auto record = parseDDTransport(it.value(), file);
-          const auto previous = _dd_transport.find(it.key());
-          if (previous == _dd_transport.end())
-            _dd_transport.emplace(it.key(), record);
-          else if (!previous->second.equals(record))
-            fail(file, "conflicting drift_diffusion coefficient owner for " + it.key());
-        }
-      }
+        fail(file, "transport_coefficients.drift_diffusion is retired; "
+                   "declare transport_coef and mobility/diffusivity in species.<id>");
       if (coefficients.contains("navier_stokes"))
       {
         const auto record = parseNVTransport(coefficients.at("navier_stokes"), file);
@@ -740,10 +744,10 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
   }
   if (_fluid_electron_energy_transport && _dd_transport.find("e") == _dd_transport.end())
     fail("<merged plasma mechanism>",
-         "e_energy type=fluid requires an electron e drift_diffusion transport record");
+         "species.e.energy_transport_coef=fluid requires species.e.transport_coef");
   for (const auto & [id, config] : _dd_transport)
     if (_species.find(id) == _species.end())
-      fail("<merged plasma mechanism>", "transport_coefficients references unknown species: " + id);
+      fail("<merged plasma mechanism>", "species transport_coef references unknown species: " + id);
   if (_nv_transport)
     for (const auto & id : _nv_transport->species)
       if (_species.find(id) == _species.end())
