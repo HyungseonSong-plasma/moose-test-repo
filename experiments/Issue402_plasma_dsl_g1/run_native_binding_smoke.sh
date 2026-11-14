@@ -19,19 +19,23 @@ test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
 {
   printf 'source_sha=%s\n' "$(git rev-parse HEAD)"
   printf 'build_base_ref=%s\n' "$PINNED_BASE"
-  sha256sum "$PILOT"/*.i physics_app/include/physics/plasma/PlasmaInterface.h \
+  sha256sum "$PILOT"/*.i "$PILOT"/*.json physics_app/include/physics/plasma/PlasmaInterface.h \
     physics_app/src/physics/plasma/PlasmaInterface.C \
-    physics_app/include/physics/plasma/ContinuityEq.h \
-    physics_app/src/physics/plasma/ContinuityEq.C \
-    physics_app/src/physics/plasma/EnergyPhysics.C \
-    physics_app/src/physics/plasma/ChemistryPhysics.C \
-    physics_app/src/physics/plasma/PoissonPhysics.C \
+    physics_app/include/physics/plasma/DDContinuityEq.h \
+    physics_app/src/physics/plasma/DDContinuityEq.C \
+    physics_app/include/physics/plasma/DDEnergyEq.h \
+    physics_app/src/physics/plasma/DDEnergyEq.C \
+    physics_app/src/physics/plasma/Chemistry.C \
+    physics_app/include/physics/plasma/Chemistry.h \
+    physics_app/src/physics/plasma/PoissonEq.C \
     physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
-    physics_app/src/materials/ElectronClosureMaterial.C \
-    physics_app/src/materials/ElectronTransportLookupMaterial.C \
-    physics_app/src/materials/PlasmaChargeTransportMaterial.C \
-    physics_app/include/materials/SpeciesTransportAliasMaterial.h \
-    physics_app/src/materials/SpeciesTransportAliasMaterial.C
+    physics_app/src/materials/DDMaterial.C \
+    physics_app/include/materials/DDMaterial.h \
+    physics_app/src/materials/NVMaterial.C \
+    physics_app/include/materials/NVMaterial.h \
+    physics_app/src/materials/PhysicsPlasmaChargeDensityMaterial.C \
+    physics_app/include/materials/PhysicsPlasmaChargeDensityMaterial.h
+
 } > "$EVIDENCE/provenance.txt"
 
 docker pull "$PINNED_BASE"
@@ -102,12 +106,194 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
+
+# Automatic species-based DDMaterial and JSON-sourced NVMaterial.
+# No transport-coefficient [FunctorMaterials] declarations in this deck.
+native --check-input -i "$PILOT/valid_json_generated_transport.i" \
+  2>&1 | tee "$EVIDENCE/json_generated_transport_check.log"
+echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
+# AD-preserving DDMaterial model=functor generated directly from JSON.
+native --check-input -i "$PILOT/valid_json_generated_functor.i" \
+  2>&1 | tee "$EVIDENCE/json_generated_functor_check.log"
+echo "PLASMA_JSON_FUNCTOR_TRANSPORT_GENERATION_P2_PASS"
+# Single-provider checks: DDMaterial creates canonical ion mu/D; the
+# separate charge-density Material owns n_i and Poisson-source Functors.
+# The retired charge-transport assembler is not instantiated.
+native --check-input -i "$PILOT/charge_core_ddmaterial_owner_p2.i" \
+  2>&1 | tee "$EVIDENCE/charge_core_ddmaterial_owner_p2.log"
+echo "PLASMA_DDMATERIAL_ION_COEFFICIENT_SINGLE_OWNER_P2_PASS"
+
+# Retired charge-transport assembler must not remain factory-registered.
+set +e
+native --check-input -i "$PILOT/invalid_retired_charge_material_p2.i" \
+  > "$EVIDENCE/invalid_retired_charge_material_p2.log" 2>&1
+retired_charge_status=$?
+set -e
+if [[ "$retired_charge_status" -eq 0 ]] || \
+   ! grep -Fq "PlasmaChargeTransportMaterial" "$EVIDENCE/invalid_retired_charge_material_p2.log"; then
+  echo "::error::Retired charge transport factory type unexpectedly accepted" >&2
+  cat "$EVIDENCE/invalid_retired_charge_material_p2.log" >&2
+  exit 30
+fi
+echo "PLASMA_RETIRED_CHARGE_ASSEMBLER_REJECTED"
+
+# FEM Poisson must consume charge_density / epsilon_0 as an AD Functor
+# with an RHS FunctorKernel, without requiring a FE MaterialProperty adapter.
+native --check-input -i "$PILOT/valid_fem_poisson_charge_functor_p2.i" \
+  2>&1 | tee "$EVIDENCE/fem_poisson_charge_functor_p2.log"
+echo "PLASMA_FEM_POISSON_CHARGE_FUNCTOR_P2_PASS"
+
+# The existing FE MaterialProperty path must never be combined with the
+# Functor path, because it would count the charge density twice.
+set +e
+native --check-input -i "$PILOT/invalid_fem_poisson_dual_source_p2.i" \
+  > "$EVIDENCE/invalid_fem_poisson_dual_source_p2.log" 2>&1
+poisson_dual_status=$?
+set -e
+if [[ "$poisson_dual_status" -eq 0 ]] || \
+   ! grep -Fq "Poisson may have only one charge RHS owner" "$EVIDENCE/invalid_fem_poisson_dual_source_p2.log"; then
+  echo "::error::FEM Poisson allowed duplicate charge source owners" >&2
+  cat "$EVIDENCE/invalid_fem_poisson_dual_source_p2.log" >&2
+  exit 31
+fi
+echo "PLASMA_FEM_POISSON_DUAL_SOURCE_REJECTED"
+# Only Material logic may derive canonical mobility/diffusivity names.
+set +e
+native --check-input -i "$PILOT/invalid_json_functor_name_override_p2.i" \
+  > "$EVIDENCE/invalid_json_functor_name_override_p2.log" 2>&1
+bad_functor_status=$?
+set -e
+if [[ "$bad_functor_status" -eq 0 ]] || \
+   ! grep -Fq "functor transport accepts only model" "$EVIDENCE/invalid_json_functor_name_override_p2.log"; then
+  echo "::error::JSON functor source-name override was accepted or misdiagnosed" >&2
+  cat "$EVIDENCE/invalid_json_functor_name_override_p2.log" >&2
+  exit 28
+fi
+echo "PLASMA_JSON_FUNCTOR_SOURCE_OVERRIDE_REJECTED"
+
+# One JSON entry per selected FEM/FVM species: both table modes and constants.
+native --check-input -i "$PILOT/valid_json_dd_fem_fvm_mixed_p2.i" \
+  2>&1 | tee "$EVIDENCE/json_dd_fem_fvm_mixed_check.log"
+echo "PLASMA_JSON_DD_FEM_FVM_MIXED_P2_PASS"
+
+for entry in "invalid_json_dd_missing_om_p2:Missing drift-diffusion transport JSON record for FVM species 'Om'" \
+             "invalid_json_dd_bad_lookup_p2:DDMaterial lookup coefficients must be finite and nonnegative"; do
+  item="${entry%%:*}"
+  expected="${entry#*:}"
+  set +e
+  native --check-input -i "$PILOT/$item.i" > "$EVIDENCE/$item.log" 2>&1
+  result=$?
+  set -e
+  if [[ "$result" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
+    echo "::error::JSON transport guard failed: $item" >&2
+    cat "$EVIDENCE/$item.log" >&2
+    exit 27
+  fi
+done
+echo "PLASMA_JSON_DD_MISSING_AND_INVALID_LOOKUP_REJECTED"
+
+# Density-paired species create their own FEM/FV variables and log-molar ICs.
+# These are parser/P2 checks only; no P3 or physical S6 run.
+native --check-input -i "$PILOT/species_density_pairs_p2.i" \
+  2>&1 | tee "$EVIDENCE/species_density_pairs_p2.log"
+echo "PLASMA_SPECIES_DENSITY_PAIRS_P2_PASS"
+# Physics-generated energy/potential states, exact-head P2 check only.
+native --check-input -i "$PILOT/auto_energy_potential_p2.i" \
+  2>&1 | tee "$EVIDENCE/auto_energy_potential_p2.log"
+echo "PLASMA_AUTO_ENERGY_POTENTIAL_P2_PASS"
+for entry in "invalid_auto_energy_missing_initial_p2:requires an explicit positive initial molar" \
+             "invalid_auto_energy_zero_initial_p2:must be finite and strictly positive" \
+             "invalid_auto_poisson_nan_initial_p2:invalid syntax for double parameter"; do
+  item="${entry%%:*}"
+  expected="${entry#*:}"
+  set +e
+  native --check-input -i "$PILOT/$item.i" > "$EVIDENCE/$item.log" 2>&1
+  result=$?
+  set -e
+  if [[ "$result" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
+    echo "::error::Invalid auto-created energy/Poisson initial value accepted: $item" >&2
+    cat "$EVIDENCE/$item.log" >&2
+    exit 26
+  fi
+done
+echo "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED"
+
+for entry in "invalid_species_density_zero_p2:requires a finite, strictly positive" \
+             "invalid_species_density_odd_p2:expected species_name initial_number_density pairs" \
+             "invalid_species_density_nan_p2:requires a finite, strictly positive"; do
+  item="${entry%%:*}"
+  expected="${entry#*:}"
+  set +e
+  native --check-input -i "$PILOT/$item.i" > "$EVIDENCE/$item.log" 2>&1
+  result=$?
+  set -e
+  if [[ "$result" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
+    echo "::error::Invalid species/density pairing accepted: $item" >&2
+    cat "$EVIDENCE/$item.log" >&2
+    exit 25
+  fi
+done
+echo "PLASMA_INVALID_SPECIES_DENSITY_PAIRS_REJECTED"
+
+
+# Synthetic equal-equation channels must create separate signed electron energy contributions.
+native --check-input -i "$PILOT/chemistry_two_channels.i" \
+  2>&1 | tee "$EVIDENCE/chemistry_two_channels.log"
+echo "PLASMA_CHEMISTRY_TWO_CHANNELS_P2_PASS"
+# Schema renames must fail closed; a negative energy_loss_eV must not turn
+# physical electron loss into spurious heating.
+for entry in "plasma_negative_energy_loss_p2:electron energy loss must be finite and nonnegative" \
+             "plasma_legacy_energy_schema_p2:legacy reaction keys progress_units/electron_energy_change_eV"; do
+  item="${entry%%:*}"
+  expected="${entry#*:}"
+  set +e
+  native --check-input -i "$PILOT/$item.i" > "$EVIDENCE/$item.log" 2>&1
+  result=$?
+  set -e
+  if [[ "$result" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
+    echo "::error::Reaction schema/sign guard failed: $item" >&2
+    cat "$EVIDENCE/$item.log" >&2
+    exit 29
+  fi
+done
+echo "PLASMA_ENERGY_LOSS_AND_LEGACY_SCHEMA_REJECTED"
+
+# Check S6 archival channel catalogues against synthetic-only kinetic providers.
+# This is a parser/build P2 gate; original physical rate tables are not replayed.
+for channel in 417 941; do
+  native --check-input -i "$PILOT/chemistry_s6_${channel}_catalogue_p2.i" \
+    2>&1 | tee "$EVIDENCE/chemistry_s6_${channel}_catalogue_p2.log"
+  echo "PLASMA_CHEMISTRY_S6_${channel}_CATALOGUE_P2_PASS"
+done
+
+# Negative P2: no second Native time derivative alongside generated e_time.
+# This checks semantic Kernel type + variable ownership, not object name only.
+set +e
+native --check-input -i "$PILOT/baseline.i" \
+  "$PILOT/valid_generated_transport_options.i" \
+  "$PILOT/duplicate_e_time.i" > "$EVIDENCE/duplicate_e_time.log" 2>&1
+duplicate_time_exit=$?
+set -e
+if [[ "$duplicate_time_exit" -eq 0 ]] ||
+   ! grep -Fq "FEMLogMolarTimeDerivative" "$EVIDENCE/duplicate_e_time.log" ||
+   ! grep -Fq "must have exactly one owner" "$EVIDENCE/duplicate_e_time.log"; then
+  echo "::error::A Native and Physics-generated electron time operator were both accepted" >&2
+  cat "$EVIDENCE/duplicate_e_time.log" >&2
+  exit 24
+fi
+echo "PLASMA_DUPLICATE_E_TIME_REJECTED"
 echo "PLASMA_VARIABLE_CHECK_PASSED"
 
 # Native P2 exercises existing registered Materials via checked-in input, not a C++ generator.
 native --check-input -i "physics_app/ci/plasma_direct_existing_materials_smoke.i" \
   2>&1 | tee "$EVIDENCE/direct_materials_check.log"
 echo "PLASMA_DIRECT_EXISTING_MATERIALS_P2_PASS"
+
+# DD: physical constants and absolute-lookup coefficients; NV: heavy binary
+# collision, mixture and thermal transport. Input validation only; no timestep.
+native --check-input -i "physics_app/ci/dd_nv_material_smoke.i" \
+  2>&1 | tee "$EVIDENCE/dd_nv_materials_check.log"
+echo "PLASMA_DD_NV_MATERIALS_P2_PASS"
 
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
   set +e
@@ -120,15 +306,15 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_fem_fv_swap) expected='wrong type' ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
-    invalid_chemistry_reactions) expected='Repeated or empty reaction name' ;;
-    invalid_poisson_variable) expected='Electric potential variable was not found' ;;
+    invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
+    invalid_poisson_variable) expected='Poisson fem_potential requires an FEM solver variable' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
     invalid_missing_variable) expected='was not found' ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
-    invalid_missing_fvm_charges) expected='Provide fem_potential and FEM/FVM charge vectors together' ;;
+    invalid_missing_fvm_charges) expected='fem_charge_numbers' ;;
     invalid_incomplete_coefficients) expected='mobility' ;;
-    invalid_wrong_charge_sign) expected='Charge does not match verified species identity' ;;
+    invalid_wrong_charge_sign) expected='fem_charge_numbers' ;;
   esac
   if [[ "$code" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
     echo "::error::Invalid input was accepted or reported the wrong error: $item" >&2

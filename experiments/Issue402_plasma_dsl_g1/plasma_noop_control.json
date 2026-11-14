@@ -1,0 +1,40 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1
+    }
+  },
+  "equations": {
+    "EI-000": "e + O2 -> e + O2"
+  },
+  "reactions": [
+    {
+      "id": "EI-000",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 1,
+        "O2": 1
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      }
+    }
+  ]
+}

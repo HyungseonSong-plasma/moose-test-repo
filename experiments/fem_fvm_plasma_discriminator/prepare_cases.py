@@ -138,7 +138,7 @@ COMMON_MATERIALS = f'''[FunctorMaterials]
   [electron_molar_energy_density]
     type = ADParsedFunctorMaterial
     property_name = electron_molar_energy_density
-    functor_names = 'log_energy'
+    functor_names = 'log_e_energy'
     functor_symbols = 'ue'
     expression = 'exp(ue)'
     block = plasma
@@ -153,15 +153,15 @@ COMMON_MATERIALS = f'''[FunctorMaterials]
   []
   [mean_energy]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = log_energy
+    electron_energy_density = log_e_energy
     electron_density = log_ne
     state_form = log_molar_eV
     block = plasma
   []
   [electron_transport]
-    type = PhysicsElectronTransportLookupMaterial
-    property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
-    mean_energy = mean_en_solved
+    type = DDMaterial
+    model = lookup
+    table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
     pressure = p_fixed
     gas_temperature = T_g_fixed
     bounds_policy = clamp
@@ -324,7 +324,7 @@ def fem():
     initial_condition = {LOG_NI0:.17g}
     block = plasma
   []
-  [log_energy]
+  [log_e_energy]
     family = LAGRANGE
     order = FIRST
     initial_condition = {LOG_ENERGY0:.17g}
@@ -341,12 +341,12 @@ def fem():
 ''' + COMMON_MATERIALS + f'''
 [Kernels]
   [ne_time]
-    type = PhysicsFEMLogMolarTimeDerivative
+    type = FEMLogMolarTimeDerivative
     variable = log_ne
     block = plasma
   []
   [ne_transport]
-    type = PhysicsFEMLogMolarDriftDiffusion
+    type = FEMLogMolarDriftDiffusion
     variable = log_ne
     potential = potential
     mobility = electron_mobility
@@ -355,12 +355,12 @@ def fem():
     block = plasma
   []
   [ni_time]
-    type = PhysicsFEMLogMolarTimeDerivative
+    type = FEMLogMolarTimeDerivative
     variable = log_ni
     block = plasma
   []
   [ni_transport]
-    type = PhysicsFEMLogMolarDriftDiffusion
+    type = FEMLogMolarDriftDiffusion
     variable = log_ni
     potential = potential
     mobility = ion_mobility
@@ -369,13 +369,13 @@ def fem():
     block = plasma
   []
   [energy_time]
-    type = PhysicsFEMLogMolarTimeDerivative
-    variable = log_energy
+    type = FEMLogMolarTimeDerivative
+    variable = log_e_energy
     block = plasma
   []
   [energy_transport]
-    type = PhysicsFEMLogMolarDriftDiffusion
-    variable = log_energy
+    type = FEMLogMolarDriftDiffusion
+    variable = log_e_energy
     potential = potential
     mobility = electron_energy_mobility
     diffusion = electron_energy_diffusion
@@ -383,8 +383,8 @@ def fem():
     block = plasma
   []
   [energy_joule]
-    type = PhysicsFEMLogMolarElectronJouleHeating
-    variable = log_energy
+    type = FEMLogMolarElectronJouleHeating
+    variable = log_e_energy
     electron_log_density = log_ne
     potential = potential
     mobility = electron_mobility
@@ -409,13 +409,13 @@ def fem():
   [electron_sheath]
     type = PhysicsFEMLogMolarElectronGroundedSheathBC
     variable = log_ne
-    log_energy = log_energy
+    log_e_energy = log_e_energy
     potential = potential
     boundary = '{EWALL}'
   []
   [electron_energy_sheath]
     type = PhysicsFEMLogMolarElectronGroundedSheathEnergyBC
-    variable = log_energy
+    variable = log_e_energy
     log_electron_density = log_ne
     potential = potential
     boundary = '{EWALL}'
@@ -456,7 +456,7 @@ def fvm():
     initial_condition = {LOG_NI0:.17g}
     block = plasma
   []
-  [log_energy]
+  [log_e_energy]
     type = MooseVariableFVReal
     initial_condition = {LOG_ENERGY0:.17g}
     block = plasma
@@ -516,18 +516,18 @@ def fvm():
   []
   [energy_time]
     type = PhysicsFVLogMolarElectronTimeDerivative
-    variable = log_energy
+    variable = log_e_energy
     block = plasma
   []
   [energy_diffusion]
     type = PhysicsFVLogMolarElectronDiffusion
-    variable = log_energy
+    variable = log_e_energy
     coeff = electron_energy_diffusion
     block = plasma
   []
   [energy_drift]
     type = PhysicsFVLogMolarElectrostaticDrift
-    variable = log_energy
+    variable = log_e_energy
     potential = potential
     mobility = electron_energy_mobility
     carrier = carrier_one
@@ -538,7 +538,7 @@ def fvm():
   []
   [energy_joule]
     type = PhysicsFVElectronEnergyJouleHeating
-    variable = log_energy
+    variable = log_e_energy
     electron_density = electron_molar_density
     potential = potential
     mobility = electron_mobility
@@ -572,7 +572,7 @@ def fvm():
   []
   [electron_energy_sheath]
     type = PhysicsFVElectronGroundedSheathEnergyBC
-    variable = log_energy
+    variable = log_e_energy
     electron_density = electron_molar_density
     mean_electron_energy = mean_en_solved
     potential = potential
@@ -610,6 +610,6 @@ if __name__ == '__main__':
     print('state representation: identical log-molar electron, O2+, and electron-energy states')
     print(f'dt={DT} s; steps={NSTEPS}; end_time={END_TIME} s')
     print(f'initial ne=ni={NE0} 1/m3; initial mean electron energy={MEAN_E0} eV')
-    print(f'initial log_ne={LOG_NE0:.17g}; log_ni={LOG_NI0:.17g}; log_energy={LOG_ENERGY0:.17g}')
+    print(f'initial log_ne={LOG_NE0:.17g}; log_ni={LOG_NI0:.17g}; log_e_energy={LOG_ENERGY0:.17g}')
     print(f'fixed ion mu={ION_MU} m2/(V s); fixed ion D={ION_D} m2/s at 300 K discriminator')
     print('electron transport=energy-dependent lookup; chemistry=OFF; heavy flow=OFF; wall-layer Joule suppression=OFF')

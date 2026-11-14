@@ -1,5 +1,5 @@
 # This is a checked-in input of already-implemented Material types, not a C++ generator.
-# Historical composition smoke remains archived, unchanged.
+# This replaces a redundant combined electron Closure with separate state and DD transport.
 [Mesh]
   type = GeneratedMesh
   dim = 1
@@ -55,19 +55,34 @@
 []
 
 [FunctorMaterials]
-  [electron]
-    type = ElectronClosureMaterial
+  # Mean energy and temperature are state closures, not transport coefficients.
+  [electron_mean_energy]
+    type = PhysicsElectronMeanEnergyMaterial
     state_form = physical_eV
-    electron_number_density = electron_number_density_physical
+    electron_density = electron_number_density_physical
     electron_energy_density = electron_energy_density_physical
-    gas_pressure = gas_pressure
+    mean_energy_output = mean_en_solved
+  []
+  [electron_temperature]
+    type = ADParsedFunctorMaterial
+    property_name = electron_temperature_K
+    functor_names = 'mean_en_solved'
+    functor_symbols = 'mean_eV'
+    expression = '(2/3)*mean_eV*1.602176634e-19/1.380649e-23'
+  []
+  # One lookup owner of electron mobility, diffusivity and 5/3 energy transport.
+  [electron]
+    type = DDMaterial
+    species_id = e
+    model = lookup
+    pressure = gas_pressure
     gas_temperature = gas_temperature
-    transport_table_file = plasma_closures_transport_table.txt
+    table_file = plasma_closures_transport_table.txt
   []
   [reaction_A]
     type = PhysicsElectronImpactRateMaterial
     rate_table_file = plasma_closures_rate_a.txt
-    mean_energy = electron_mean_energy_eV
+    mean_energy = mean_en_solved
     electron_number_density = electron_number_density_physical
     target_molar_concentration = target_A_molar_concentration
     reaction_progress = electron_reaction_A
@@ -75,13 +90,13 @@
   [reaction_B]
     type = PhysicsElectronImpactRateMaterial
     rate_table_file = plasma_closures_rate_b.txt
-    mean_energy = electron_mean_energy_eV
+    mean_energy = mean_en_solved
     electron_number_density = electron_number_density_physical
     target_molar_concentration = target_B_molar_concentration
     reaction_progress = electron_reaction_B
   []
   [heavy]
-    type = PhysicsThermalDiffusionMaterial
+    type = NVMaterial
     temperature = gas_temperature
     pressure = gas_pressure
     transport_data_file = plasma_closures_heavy_transport.txt
@@ -102,7 +117,7 @@
 [Postprocessors]
   [mean_energy]
     type = ElementAverageFunctorPostprocessor
-    functor = electron_mean_energy_eV
+    functor = mean_en_solved
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [electron_temperature]

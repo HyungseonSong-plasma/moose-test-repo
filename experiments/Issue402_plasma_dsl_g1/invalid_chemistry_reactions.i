@@ -1,9 +1,9 @@
+# P2 negative: duplicate reaction ID, even though both channels use the same equation.
 [Physics]
   [Plasmas]
+    files = plasma_duplicate_id.json
     [Transport]
       [Chemistry]
-        reaction_ids = 'first first'
-        reaction_progress = 'rate_one rate_two'
       []
     []
   []

@@ -32,7 +32,7 @@ class Issue397SamuelReplayTests(unittest.TestCase):
         for item in (
             "EXPECTED_STEPS=460",
             "ISSUE397_BASELINE_L1_MESH_PASS",
-            "ISSUE397_D1_NATIVE_DIAGNOSTICS_INPUT_PASS",
+            "ISSUE397_ORIGINAL_WAFER_CURRENT_OWNER_PASS",
             "nl_abs_tol = 1e-11",
             "ISSUE397_MAXWELL_SINGLE_TOLERANCE_CHANGE_PASS",
             "PID_max_drive_unmodified",
@@ -40,10 +40,19 @@ class Issue397SamuelReplayTests(unittest.TestCase):
             "make -C physics_app -j2",
             "physics_app/physics-opt --check-input",
             "Outputs/file_base=",
-            "D1_NATIVE_DIAGNOSTIC_INTEGRITY_PASS",
+            "ISSUE397_NATIVE_OUTPUT_COMPLETENESS_PASS",
         ):
             with self.subTest(contract=item):
                 self.assertIn(item, source)
+        for removed in (
+            "check_wafer_checkerboard_ab.py",
+            "issue397_d1_instrument.py",
+            "issue397_d1_analyze.py",
+            "PhysicsLowerDSurfaceCurrentProbeAux",
+            "PhysicsWaferD1GeometryProbeAux",
+        ):
+            self.assertNotIn(removed, source)
+        self.assertIn("issue397_replay_output_audit.py", source)
         # Historical alternatives must stay inactive in the generated input.
         self.assertIn('! grep -q "use_bohm_ion_collection = true"', source)
         self.assertIn('! grep -q "use_negative_ion_sheath_barrier = true"', source)
@@ -71,6 +80,8 @@ class Issue397SamuelReplayTests(unittest.TestCase):
         self.assertIn("fail-fast: false", template)
         self.assertIn("power_w: [200, 250, 300]", template)
         self.assertIn('if: always()', template)
+        self.assertIn("P4 Native output completeness (D1 per-face audit retired)", template)
+        self.assertNotIn("P4 native per-face wafer charge and current audit", template)
         self.assertIn("audit \"${{ matrix.power_w }}\"", template)
         self.assertFalse((ROOT / ".github/workflows/issue397-l1-final-replay-once.yml").exists())
 
@@ -81,6 +92,8 @@ class Issue397SamuelReplayTests(unittest.TestCase):
         self.assertEqual(data["controls"]["time_grid"]["steps"], 460)
         self.assertEqual(data["controls"]["wafer_faces"], 27)
         self.assertTrue(data["safety_and_evidence"]["never_claim_preflight_as_100us_solver_pass"])
+        self.assertFalse(data["safety_and_evidence"]["native_D1_perface_current_and_charge_audit"])
+        self.assertTrue(data["safety_and_evidence"]["no_new_D1_science_pass_claim"])
         self.assertEqual(data["execution"]["samuel_manifest"], MANIFEST.relative_to(ROOT).as_posix())
         self.assertEqual(data["historical_outcomes"]["original_run_39617859962"]["power_300"], "P3 cancelled near 58ns under nl_abs_tol=1e-12")
 

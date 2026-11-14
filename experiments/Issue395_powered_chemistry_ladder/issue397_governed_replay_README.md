@@ -45,7 +45,7 @@ governed workflow has a **120-minute job limit**; its manifest stage limit is
 
 ## Long solver replay — explicit governed one-shot
 
-The same source-faithful replay script has five phases:
+The source-preserving physics replay script has five phases. D1 diagnostic output is no longer collected:
 
 ```bash
 bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 300
@@ -75,3 +75,25 @@ python3 ci/guards/workflow_surface_guard.py --check
 
 See `issue397_final_l1_200_250_300w_power_scan_contract.json` for immutable
 mesh SHA, 27-face D1 and original-versus-follow-up experimental provenance.
+
+## Current replay scope after Issue #402 D1 probe retirement
+
+The two custom D1 wafer AuxKernel implementations have been deleted.
+Current `issue397_l1_power_scan_replay.sh` no longer invokes
+`check_wafer_checkerboard_ab.py`, `issue397_d1_instrument.py`, or
+`issue397_d1_analyze.py`. Those earlier scripts and archived workflow
+sources are retained for historical provenance, not active replay.
+
+Preparation keeps the exact original physical wafer-current source
+`e*(gi+gop-gm-ge)`, original ion thermal+migration walls, electron sheath,
+L1 mesh, Maxwell tolerance, and 460-step grid. No D1 AuxVariable or
+custom probe is injected. The current `audit` phase only verifies the
+generated Native Exodus output: exact 461 time points to 100 us, the
+27-face `wafer_surface` block, and finite `sigma_wafer` values.
+
+**The prior D1 per-face current/charge balance, species-flux,
+E-normal and sheath-law checks are retired, not replaced by equivalent
+validation.** The new audit cannot claim
+`D1_NATIVE_DIAGNOSTIC_INTEGRITY_PASS`, physical equivalence, or
+scientific acceptance. Historical scientific results are unchanged
+and remain associated with their original Actions evidence.

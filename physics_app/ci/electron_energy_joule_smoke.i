@@ -39,13 +39,13 @@
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en p T_g zero_diffusion'
+    prop_names = 'mean_en_solved p T_g zero_diffusion'
     prop_values = '5.0 101325.0 300.0 0.0'
   []
   [electron_transport]
-    type = PhysicsElectronTransportLookupMaterial
-    property_table_file = electron_energy_transport_smoke_table.txt
-    mean_energy = mean_en
+    type = DDMaterial
+    model = lookup
+    table_file = electron_energy_transport_smoke_table.txt
     pressure = p
     gas_temperature = T_g
     bounds_policy = error

@@ -21,7 +21,7 @@ REQUIRED_BASE_TOKENS = (
     "property_name = rho_neutral",
     "property_name = w_O2_constraint",
     "T_g_fixed",
-    "type = PhysicsFEMLogMolarTimeDerivative",
+    "type = FEMLogMolarTimeDerivative",
     "type = PhysicsFVLogMolarElectronTimeDerivative",
 )
 

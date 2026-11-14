@@ -15,6 +15,23 @@ import numpy as np
 from scipy.io import netcdf_file
 
 
+def nodal_names(exodus) -> list[str] | None:
+    """Read Exodus node-variable identities; compare physical fields by name.
+
+    Adding a separately constrained P2-only energy probe may change the
+    on-disk variable index. Raw vals_nod_var# positional comparison would
+    falsely classify two unchanged fields as a numerical discrepancy.
+    """
+    if "name_nod_var" not in exodus.variables:
+        return None
+    rows = np.asarray(exodus.variables["name_nod_var"].data)
+    decoded = [np.asarray(row).tobytes().decode("ascii").split("\x00", 1)[0].strip()
+               for row in rows]
+    if not all(decoded) or len(decoded) != len(set(decoded)):
+        raise ValueError("Nonunique/missing Exodus nodal variable names")
+    return decoded
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--baseline", required=True, type=Path)
@@ -38,16 +55,31 @@ def main() -> None:
             )
             if not watched:
                 raise ValueError("No physical Exodus state variables found")
+            ref_nodal = nodal_names(ref)
+            trial_nodal = nodal_names(trial)
+            if (ref_nodal is None) != (trial_nodal is None):
+                raise ValueError("Exodus nodal identity metadata differs")
+            node_source_to_trial = {}
+            if ref_nodal is not None:
+                for index, physical_name in enumerate(ref_nodal, start=1):
+                    if physical_name not in trial_nodal:
+                        raise ValueError(f"Physical nodal field missing: {physical_name}")
+                    node_source_to_trial[f"vals_nod_var{index}"] = (
+                        f"vals_nod_var{trial_nodal.index(physical_name)+1}")
+
+            compared = []
             for name in watched:
-                if name not in trial.variables:
-                    raise ValueError(f"Exodus field missing: {name}")
+                target = node_source_to_trial.get(name, name)
+                if target not in trial.variables:
+                    raise ValueError(f"Exodus field missing: {name} -> {target}")
                 a = np.asarray(ref.variables[name].data)
-                b = np.asarray(trial.variables[name].data)
+                b = np.asarray(trial.variables[target].data)
                 if a.shape != b.shape or not np.isfinite(a).all() or not np.isfinite(b).all():
-                    raise ValueError(f"Shape or finite state mismatch: {name}")
+                    raise ValueError(f"Shape or finite state mismatch: {name} -> {target}")
                 if not np.allclose(a, b, rtol=1e-12, atol=1e-12):
-                    raise ValueError(f"Numerical discrepancy from external-only action: {name}")
-            report["compared_exodus_fields"] = watched
+                    raise ValueError(f"Numerical discrepancy from external-only action: {name} -> {target}")
+                compared.append({"baseline": name, "candidate": target})
+            report["compared_exodus_fields"] = compared
             report["result"] = "TINY_DIFFUSION_NATIVE_NUMERICAL_PARITY_PASS"
         print(report["result"])
     except Exception as exc:

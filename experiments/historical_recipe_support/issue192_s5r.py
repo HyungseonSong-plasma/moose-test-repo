@@ -113,7 +113,7 @@ ENERGY_LOSS_EV = {
 SOLVED_HEAVY = ("O2s", "O2p", "O", "Om", "Op", "Os")
 CURRENT_PHYSICS_OBJECT_TYPES = {
     "FunctorMaterials/heavy_transport": "PhysicsThermalDiffusionMaterial",
-    "FunctorMaterials/electron_transport": "PhysicsElectronTransportLookupMaterial",
+    "FunctorMaterials/electron_transport": "DDMaterial",
     "FunctorMaterials/r31_charge_density": "PhysicsPlasmaChargeDensityMaterial",
     "FVKernels/n_e_drift": "PhysicsFVElectrostaticDrift",
     **{
@@ -241,17 +241,21 @@ def _insert_energy_state(text: str) -> str:
     # Promote the accepted R4 particle-transport lookup to the accepted Stage-4
     # solved-energy lookup owner. Particle property names remain unchanged.
     text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/electron_transport",
-        "type",
-        "PhysicsElectronTransportLookupMaterial",
-    )
+        text, "FunctorMaterials/electron_transport", "type", "DDMaterial")
+    # Convert only the staged input. The original archived R4 material input
+    # retains its historical spelling and source path.
+    old_file = mp.get_parameter(text, "FunctorMaterials/electron_transport",
+                                "property_table_file")
+    if not old_file:
+        raise ValueError("Archived R4 electron lookup table filename is absent")
     text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/electron_transport",
-        "mean_energy",
-        "mean_en_solved",
-    )
+        text, "FunctorMaterials/electron_transport", "table_file", old_file)
+    text = mp.remove_parameter(
+        text, "FunctorMaterials/electron_transport", "property_table_file")
+    text = mp.remove_parameter(
+        text, "FunctorMaterials/electron_transport", "mean_energy")
+    text = mp.upsert_parameter(
+        text, "FunctorMaterials/electron_transport", "model", "lookup")
     text = mp.upsert_parameter(
         text,
         "FunctorMaterials/electron_transport",
@@ -665,9 +669,15 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
     )
     checks["strict_solved_energy_transport"] = (
         mp.get_parameter(text, "FunctorMaterials/electron_transport", "type")
-        == "PhysicsElectronTransportLookupMaterial"
+        == "DDMaterial"
+        and mp.get_parameter(text, "FunctorMaterials/electron_transport", "model")
+        == "lookup"
+        and mp.get_parameter(text, "FunctorMaterials/electron_transport", "table_file")
+        is not None
+        and mp.get_parameter(text, "FunctorMaterials/electron_transport", "property_table_file")
+        is None
         and mp.get_parameter(text, "FunctorMaterials/electron_transport", "mean_energy")
-        == "mean_en_solved"
+        is None
         and mp.get_parameter(text, "FunctorMaterials/electron_transport", "gas_temperature")
         == "T_g"
         and mp.get_parameter(text, "FunctorMaterials/electron_transport", "bounds_policy")

@@ -1,0 +1,50 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1
+    }
+  },
+  "equations": {},
+  "reactions": [],
+  "transport_coefficients": {
+    "drift_diffusion": {
+      "e": {
+        "model": "lookup",
+        "table_file": "chemistry/e_transport.txt",
+        "table_units": "reduced",
+        "pressure": "p",
+        "gas_temperature": "T_g",
+        "bounds_policy": "error"
+      },
+      "O2p": {
+        "model": "constant",
+        "mobility": 0.25,
+        "diffusivity": 0.125
+      },
+      "Op": {
+        "model": "constant",
+        "mobility": 0.35,
+        "diffusivity": 0.175
+      }
+    }
+  }
+}

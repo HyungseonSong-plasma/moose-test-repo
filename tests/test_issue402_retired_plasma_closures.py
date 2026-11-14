@@ -1,7 +1,7 @@
 """Retirement guard for the legacy PlasmaClosures input Action.
 
 S6-417/941 D stages the SHA-pinned public C decks, rewrites solver state
-tokens only in scratch, and adds a ContinuityEq-only overlay. The old
+tokens only in scratch, and adds a DDContinuityEq-only overlay. The old
 PlasmaClosures composition Action must not be a dependency of those runs.
 This test does not execute a native solver or claim scientific parity.
 """
@@ -67,14 +67,14 @@ def test_retired_action_is_absent_independent_material_objects_remain():
     for retired in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
         assert not (APP / "src/materials" / (retired + ".C")).exists()
         assert not (APP / "include/materials" / (retired + ".h")).exists()
-    for material in ("ElectronClosureMaterial", "PhysicsElectronImpactRateMaterial",
-                     "PhysicsThermalDiffusionMaterial", "PhysicsPlasmaChargeDensityMaterial"):
+    for material in ("PhysicsElectronMeanEnergyMaterial", "DDMaterial", "PhysicsElectronImpactRateMaterial",
+                     "NVMaterial", "PhysicsPlasmaChargeDensityMaterial"):
         source = APP / "src/materials" / (material + ".C")
         header = APP / "include/materials" / (material + ".h")
         assert source.is_file() and header.is_file()
         assert f'registerMooseObject("PhysicsApp", {material});' in source.read_text()
-    assert 'registerSyntax("ContinuityEq",' in app
-    assert 'registerSyntax("EnergyPhysics",' in app
+    assert 'registerSyntax("DDContinuityEq",' in app
+    assert 'registerSyntax("DDEnergyEq",' in app
 
 
 def test_existing_native_smoke_uses_direct_materials_without_code_generation():
@@ -83,8 +83,10 @@ def test_existing_native_smoke_uses_direct_materials_without_code_generation():
     assert "PhysicsElectronKineticsMaterial" not in fixture
     assert "PhysicsHeavyTransportMaterial" not in fixture
     assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
-    assert "type = PhysicsThermalDiffusionMaterial" in fixture
-    assert "type = ElectronClosureMaterial" in fixture
+    assert "type = NVMaterial" in fixture
+    assert "type = DDMaterial" in fixture
+    assert "type = PhysicsElectronMeanEnergyMaterial" in fixture
+    assert "type = ElectronClosureMaterial" not in fixture
     assert "type = PhysicsPlasmaChargeDensityMaterial" in fixture
     runner = (PILOT / "run_native_binding_smoke.sh").read_text()
     assert "python3 physics_app/ci/check_plasma_closures_contract.py" in runner

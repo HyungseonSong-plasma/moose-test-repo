@@ -37,7 +37,7 @@ def _case(root: Path, times=(0., 1.e-4), *, canonical=False) -> tuple[Path, Path
         f.createVariable("connect1", "i", ("num_elem_in_blk1", "num_nod_per_el1"))[:] = ((1, 2, 3), (2, 4, 3))
         electron_name = "log_e" if canonical else "log_ne"
         _names(f.createVariable("name_nod_var", "c", ("num_nod_var", "len_string")),
-               (electron_name, "log_energy", "potential"))
+               (electron_name, "log_e_energy", "potential"))
         f.createVariable("vals_nod_var1", "d", ("time_step", "num_nodes"))[:] = np.full((nt, 4), -20.)
         f.createVariable("vals_nod_var2", "d", ("time_step", "num_nodes"))[:] = np.full((nt, 4), -20. + np.log(3.))
         f.createVariable("vals_nod_var3", "d", ("time_step", "num_nodes"))[:] = np.tile([0., 1., 0., 1.], (nt, 1))
@@ -93,7 +93,7 @@ def test_native_8_species_and_correct_density_conversion(tmp_path):
     assert result["mode"] == "2d-map"
     assert result["field_ranges"]["potential"]["units"] == "V"
     assert result["field_ranges"]["T_e"]["units"] == "eV"
-    assert "log_energy" in result["field_sources"]["T_e"]
+    assert "log_e_energy" in result["field_sources"]["T_e"]
     assert result["row_capacities"] == [4, 4, 2]
     assert result["colormap"] == "rainbow"
     assert result["density_color_scale"] == "linear"
@@ -124,7 +124,7 @@ def test_canonical_exodus_density_fields_map_and_trace(tmp_path):
                          ("O-", "log_Om"), ("O+", "log_Op")):
         assert field in result["field_sources"][label]
         assert result["species_density_ranges"][label]["max_m3"] > 0
-    assert "log_energy-log_e" in result["field_sources"]["T_e"]
+    assert "log_e_energy-log_e" in result["field_sources"]["T_e"]
     assert output.stat().st_size > 1000
 
     traces = _native_traces(exodus, (inp,), None)
@@ -132,7 +132,7 @@ def test_canonical_exodus_density_fields_map_and_trace(tmp_path):
                          ("O-", "log_Om"), ("O+", "log_Op")):
         assert field in traces["sources"][label]
         assert len(traces["series"][label]) == 2
-    assert "log_energy-log_e" in traces["sources"]["T_e"]
+    assert "log_e_energy-log_e" in traces["sources"]["T_e"]
 
 
 def test_exodus_rejects_ambiguous_archive_and_canonical_states(tmp_path):

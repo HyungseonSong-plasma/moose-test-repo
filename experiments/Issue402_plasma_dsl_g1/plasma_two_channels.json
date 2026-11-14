@@ -1,0 +1,79 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1
+    }
+  },
+  "equations": {
+    "EI-405": "e + O2 -> 2e + O2p",
+    "EI-406": "e + O2 -> 2e + O2p"
+  },
+  "reactions": [
+    {
+      "id": "EI-405",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "O2p": 1
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 12.4
+    },
+    {
+      "id": "EI-406",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "O2p": 1
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 17
+    }
+  ],
+  "transport_coefficients": {
+    "drift_diffusion": {
+      "e": {
+        "model": "constant",
+        "mobility": 1,
+        "diffusivity": 1
+      }
+    }
+  }
+}

@@ -55,3 +55,10 @@ python3 "$PILOT/public_option_s6_p2.py" \
   --historical "$HIST" --binary "$ROOT/physics_app/physics-opt" \
   --expected-head "$EXPECTED_HEAD" --evidence "$EVIDENCE"
 echo ISSUE402_OPTION_ONLY_S6_417_941_PUBLIC_P2_PASS
+
+# Additional no-timestep P2: real S6 channel-rate providers, replacing nine
+# legacy electron chemistry source Kernels in disposable scratch only.
+python3 "$PILOT/public_chemistry_s6_p2.py" \
+  --historical "$HIST" --binary "$ROOT/physics_app/physics-opt" \
+  --expected-head "$EXPECTED_HEAD" --evidence "$EVIDENCE"
+echo ISSUE402_CHEMISTRY_S6_417_941_PUBLIC_P2_PASS

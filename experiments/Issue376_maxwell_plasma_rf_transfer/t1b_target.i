@@ -118,12 +118,12 @@ maxwell_solution_file = 'results_t1b/maxwell.e'
 
 [Kernels]
   [energy_time]
-    type = PhysicsFEMLogMolarTimeDerivative
+    type = FEMLogMolarTimeDerivative
     variable = log_energy
     block = plasma
   []
 
-  # Positive RF heating is kept separate from PhysicsFEMLogMolarElectronJouleHeating.
+  # Positive RF heating is kept separate from FEMLogMolarElectronJouleHeating.
   # MatBodyForce has weak form -(test, source), so a positive material property
   # appears as a positive RHS source in the electron-energy balance.
   [rf_heating]

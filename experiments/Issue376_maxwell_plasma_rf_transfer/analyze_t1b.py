@@ -133,13 +133,13 @@ def main() -> int:
         "type = SolutionAux",
         "type = MatBodyForce",
         "material_property = q_rf_eV_mol",
-        "PhysicsFEMLogMolarTimeDerivative",
+        "FEMLogMolarTimeDerivative",
         "faraday_J_per_eV_mol = 96485.33212331001",
     ]
     for token in required:
         if token not in input_text:
             failures.append(f"missing T1B contract token: {token}")
-    if "type = PhysicsFEMLogMolarElectronJouleHeating" in input_text:
+    if "type = FEMLogMolarElectronJouleHeating" in input_text:
         failures.append("T1B isolated RF source unexpectedly instantiates electrostatic Joule heating")
 
     report = {
@@ -184,7 +184,7 @@ def main() -> int:
         "implementation": {
             "field_import": "standard MOOSE SolutionUserObject + SolutionAux",
             "source_injection": "standard MOOSE MatBodyForce",
-            "destination": "FEM LAGRANGE log_energy / PhysicsFEMLogMolarTimeDerivative",
+            "destination": "FEM LAGRANGE log_energy / FEMLogMolarTimeDerivative",
             "custom_cpp_added": False,
             "electrostatic_joule_double_counted": False,
         },

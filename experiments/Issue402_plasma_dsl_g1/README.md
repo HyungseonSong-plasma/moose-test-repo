@@ -1,23 +1,121 @@
+## 2026-11-12 canonical transport Materials — current contract
+
+**Supersedes earlier 2026-11-10 electron lookup/closure Material prose below.**
+The two canonical **transport-coefficient** calculator classes are:
+
+- `DDMaterial`: one species at a time, explicit `model=constant` for
+  physical `mobility`/`diffusivity`, or `model=lookup` with a verified
+  three-column table on the fixed `mean_en_solved` axis, bounds policy and reduced/physical units.
+  Produces `<species>_mobility` and `<species>_diffusivity` and, for e,
+  the unchanged Maxwellian 5/3 electron energy transport projection.
+- `NVMaterial`: heavy-species NavierStokes mixture diffusion and thermal
+  diffusion using the unchanged `PhysicsThermalDiffusionMaterial` binary
+  collision/charged-pair computation.
+
+Retired C++ implementations: `ElectronTransportLookupMaterial`,
+`PhysicsThermalDiffusionMaterial`, `PhysicsElectronTransportCoefficients`,
+and the overlapping `ElectronClosureMaterial`. Both old electron-lookup
+MOOSE factory aliases are now **removed** (including the Physics-prefixed
+spelling); use `DDMaterial` directly. The thermal-diffusion-to-`NVMaterial`
+alias remains a separate contract. The old combined ElectronClosureMaterial
+type is retired.
+Electron state and mean-energy calculation is now separately owned by
+`PhysicsElectronMeanEnergyMaterial` when needed.
+
+`DDMaterial (model=functor)` remains only for **existing nonconstant ion
+Functor providers** in pinned S6 C/D inputs until an independently verified
+lookup/constant replacement exists; it does not calculate coefficients.
+The redundant `PlasmaChargeTransportMaterial` is now retired;
+`PhysicsPlasmaChargeDensityMaterial` owns charge density and FV Poisson
+Functors, while the FV/FEM Kernels own face/volume drift and correction.
+Current `PoissonEq` FEM can consume the existing
+`poisson_charge_source` via explicit `charge_source_functor` and
+`FunctorKernel`; the old `charge_source_material` Material Property
+path is retained as a mutually exclusive compatibility option. Do not change original heavy-ion coefficients, invent an Einstein
+relation, or assume historical S6 P3 inputs are ready.
+
+See `docs/development/2026-11-12_issue402_dd_nv_material_consolidation.md`
+for source deletion audit, units, example inputs and Native/science gates.
+No P3, no merge, `SCIENCE_HOLD`.
+
+---
+
+## 2026-11-12 canonical S6 provider and energy state names
+
+The active #402 Chemistry S6-417 and S6-941 templates no longer create
+`R_EI02`/`R_EI17`/`R_EI415` compatibility alias Materials. Instead the
+scratch-only staging script rewrites the archived provider definitions and
+all consumers to those canonical progress names in the **disposable** staged
+input layers. `DDContinuityEq`, `DDEnergyEq`, electron wall BC coupling
+and new plotting/tracing readers use the solved state `log_e_energy`.
+Archived source/provenance and historical scientific tests remain immutable
+reference evidence. No coefficient, rate or equation numerical change is
+implied; Native P2 and science parity must pass separately.
+
+---
+
+## 2026-11-12 canonical Chemistry and DriftDiffusion equation class names
+
+The Chemistry JSON parser and signed source projector are now implemented
+together in `physics_app/include/physics/plasma/Chemistry.h` and
+`physics_app/src/physics/plasma/Chemistry.C`.
+The main Physics class is `Plasma::Chemistry`, with an internal
+`Plasma::ChemistryData` validated catalogue and a thin `ChemistryAction`
+owning the shared `[Plasmas]/files` input. Previous separate source files
+for the parser and chemistry Physics class are removed; no C++ aliases.
+
+The drift-diffusion equation classes are `Plasma::DDContinuityEq` and
+`Plasma::DDEnergyEq`, in matching `.h/.C` files. MOOSE input paths
+still use `[DriftDiffusion]/[Continuity]` and `[DriftDiffusion]/[Energy]`.
+No reaction ID, charge, energy-source sign, or solver equation was renamed.
+Review requires a new exact-head Native P1/P2; science gates stay HOLD.
+
+---
+## 2026-11-12 stacked Chemistry JSON source + energy implementation candidate
+
+This **separate unmerged candidate** uses `[Physics]/[Plasmas]/files` as the
+shared species/reaction catalogue. The high-level `fem_charge_numbers` and
+`fvm_charge_numbers` parameters are removed from `DDContinuityEq`; its existing
+low-level drift-diffusion `charge_number` receives the JSON value. Each
+reaction has a stable ID, equation/structured stoichiometry, unique progress
+name, and required signed `electron_energy_change_eV`. Duplicate equations
+are allowed (different IDs); duplicate IDs/progress owners are rejected.
+
+`Chemistry` now generates aggregate `S_<species>_molar` and
+`Q_e_molar_eV` AD Functors from **already owned** progress Functors; it does
+not create new kinetic reaction rates. `DDContinuityEq` and `DDEnergyEq`
+consume these as RHS `FunctorKernel` terms when Chemistry is enabled.
+Two *synthetic, not physically assigned* EI-405/EI-406 ionization channels
+show `+R_EI405 + R_EI406` in electron particle Source and
+`-12.4*R_EI405 - 17.0*R_EI406` in electron energy Source.
+Old S6 B/C artifacts and the independent `prepare_s6_single_kernel_migration.py`
+are unchanged. S6 D remains **no chemistry generation** until complete
+all-species/energy parity and owner-gate verification. This is not a P3 or
+scientific acceptance. Native P1/P2 is required before approval.
+
+---
+
 # Plasma input checks
 
 MOOSE parses five plasma Physics actions. Some actions now generate
 existing solver operator types when their activation parameters are supplied,
-while validation-only inputs do not create an equation. The first generated
-DriftDiffusion slice handles FEM electrons; FV heavy-species transport remains
-Native and is NOT generated by this option contract.
+while validation-only inputs do not create an equation. The generated DriftDiffusion slice handles FEM electron conservative time and
+transport Kernels together; FV heavy-species transport remains Native and is
+NOT generated by this option contract.
 
 | Input path under `Physics/Plasmas` | C++ action | What it checks |
 | --- | --- | --- |
-| `Transport/DriftDiffusion/Continuity` | `Plasma::ContinuityEq` | Species and existing FEM/FV solver variables |
-| `Transport/DriftDiffusion/Energy` | `Plasma::EnergyPhysics` | Electron species and existing FEM energy variable |
-| `Transport/Chemistry` | `Plasma::ChemistryPhysics` | Unique reactions and one progress name per reaction |
+| `Transport/DriftDiffusion/Continuity` | `Plasma::DDContinuityEq` | Species and existing FEM/FV solver variables |
+| `Transport/DriftDiffusion/Energy` | `Plasma::DDEnergyEq` | Electron species and existing FEM energy variable |
+| `Transport/Chemistry` | `Plasma::Chemistry` | Unique reactions and one progress name per reaction |
 | `Poisson` | `Plasma::PoissonPhysics` | Existing electric potential solver variable |
 | `Maxwell` | `Plasma::MaxwellPhysics` | Existing real/imaginary fields, matching variable families and positive frequency |
 
 All actions share the `PlasmaInterface` validation base class. The
-`owner_mode` input has been removed. These actions **always use existing
-solver objects**, without adding a physics equation, source, boundary
-condition or changing numerical parameters. In particular, the chemistry
+`owner_mode` input has been removed. These actions reuse already registered MOOSE solver operator types and
+existing physical fields/materials. When explicitly activated, they may add
+Kernels/BCs/Materials, but do not introduce a new equation, time law, source
+coefficient, boundary physics or numerical parameter. In particular, the chemistry
 action verifies the reaction-to-progress name mapping, not the existence,
 units or ownership of the underlying rate functors.
 
@@ -49,11 +147,14 @@ whether supported solver operators are generated. A validation-only block
 without activating parameters does not add terms.
 
 - **Continuity:** `fem_potential` and matched signed charge vectors enable
-  `PhysicsFEMLogMolarDriftDiffusion` for each FEM species. The lower-level
+  `FEMLogMolarTimeDerivative` **and** `FEMLogMolarDriftDiffusion`
+  for each FEM species. Generated names use `<species_id>_time` and
+  `<species_id>_transport` (for the S6 electron, `e_time` and `e_transport`). The lower-level
   Kernel's `mobility` and `diffusion` Functors are resolved automatically to
   `<species_id>_mobility` and `<species_id>_diffusivity`. The Physics input
-  has **no** user `mobility`/`diffusivity` keys. The original time derivative,
-  source, wall and FV heavy-ion terms remain external. No new scientific
+  has **no** user `mobility`/`diffusivity` keys. Once the new FEM generator is
+  activated, the old explicit electron time derivative must be absent; reaction
+  sources, wall and FV heavy-ion terms remain external. No new scientific
   coefficients, FV transport generators or defaults are inferred.
 - **Energy:** `rf_heating_material` creates a `MatBodyForce` source
   in an existing FEM electron-energy equation. The material property
@@ -80,6 +181,57 @@ the physics. The `rf_generated.i` versus `rf_explicit.i` comparison
 checks that the Maxwell action generates the same solver operator as
 explicit MOOSE objects. This is not full S6 scientific parity.
 
+## 2026-11-12 canonical FEM Kernel naming (no factory aliases)
+
+The active header/source are `FEMPlasmaTransport.h/.C`. Registered class/type
+names are `FEMLogMolarTimeDerivative`, `FEMLogMolarDriftDiffusion` and
+`FEMLogMolarElectronJouleHeating`. The original `PhysicsFEM...` types are
+**not** registered and do not have compatibility aliases. The transient
+and positive-`dt` guards and conservative time residual remain unchanged.
+
+Original archived S6 source decks retain historical `type` declarations.
+The public B/D runners will translate only **disposable staged copies**
+to the new type names with separate per-file SHA and conversion counts;
+this is not a solver-side alias or production input modification.
+The generated-TimeKernel P2 fixture uses `Transient`, since MOOSE does
+not provide a `TIME` vector tag to a `Steady` executioner.
+
+## 2026-11-12 e_time completion candidate — scoped change, not scientific acceptance
+
+The source-backed active `DDContinuityEq` implementation now generates two
+existing FEM operators under the **same** `fem_potential` plus signed-charge
+activation contract, with no new user-facing input option:
+
+- `e_time`: `FEMLogMolarTimeDerivative` for `log_e`, assigned the
+  exact `plasma` block. Its original Native `ne_time` type computes
+  `(exp(u_new) - exp(u_old))/dt` (backward-Euler conservative molar density).
+- `e_transport`: the existing
+  `FEMLogMolarDriftDiffusion` generator with the same verified
+  mobility/diffusivity functors, charge sign and potential.
+- `check_integrity` rejects more than one **same-type FEM time** Kernel
+  or more than one drift-diffusion Kernel for each generated variable; this
+  protects against accidental simultaneous Native and Physics ownership.
+- The public `S6-417/D` / `S6-941/D` staging program requires **exactly one**
+  source `[ne_time]` with `type = FEMLogMolarTimeDerivative`,
+  `variable = log_ne`, `block = plasma`. Only its disposable candidate
+  input deletes this block, canonicalizes `log_ne → log_e`, and leaves the
+  immutable archived B/C evidence, RF/PID, chemistry, FV ions, wall BCs,
+  energy and all other options unchanged. Source/staged hashes and the deleted
+  Native block's SHA-256 remain in the migration record. Ambiguous or absent
+  time ownership fails **before** scratch-file writes.
+
+**Checks:** source-level ownership/negative tests and the same pinned
+`physics-opt` P1/P2 job (including a new duplicate-`e_time` negative fixture)
+are mandatory. They are not full numerical equivalence. The previous
+400 W / 100 µs S6/D runtime [#43124474950](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43124474950)
+exercised the **prior** implementation, so it does **not** validate this
+additional generated time operator. No costly P3 re-run or full B-vs-new-D
+scientific/parity claim is implied by this change.
+
+This section supersedes earlier prose describing the FEM time derivative as
+necessarily Native-retained for the new D candidate. The archived
+single-`ne_transport` migration scripts and frozen inputs stay intact.
+
 ## Species-owned DriftDiffusion transport providers (2026-11-10 current rule)
 
 The user-approved canonical Functor names are derived from the solver-safe
@@ -88,15 +240,11 @@ species identifier, with case preserved: `e_mobility` / `e_diffusivity`,
 `Om_diffusivity`, `Op_mobility` / `Op_diffusivity`.
 Neither list order nor user-specified coefficient strings define these names.
 
-`ElectronClosureMaterial` and `ElectronTransportLookupMaterial`
-publish canonical electron names using the **same AD table closure** that
-produces the existing `electron_mobility` and `electron_diffusion` outputs.
-The latter are preserved for old native S6 and other inputs. The
-`PlasmaChargeTransportMaterial` publishes species-keyed ion aliases
-from its **already supplied** ion-mobility and ion-diffusion Functors when
-it owns those species. These aliases are unscaled; `rho_diffusivity_<id>`
-remains the separate density-weighted FV coefficient and must not be
-substituted for `<id>_diffusivity`.
+`DDMaterial` publishes canonical electron coefficients using one AD lookup
+closure, including `electron_mobility` and `electron_diffusion` outputs
+still consumed by Native transport kernels. These are live Functor interfaces,
+not factory aliases. Lookup energy is always `mean_en_solved`; input options
+`coordinate`, `mean_energy`, and `property_table_file` are removed. The new DDMaterial supplies canonical ion mobility/diffusivity aliases from existing Native AD Functors when explicit raw source names are bound. PlasmaChargeTransportMaterial no longer publishes these coefficient aliases; its separate rho_diffusivity_<id> diagnostic is density-weighted and not a physical D coefficient. See the DDMaterial charged-FV consumer trace document for the remaining original Native input and P3 gates.
 
 An input must still provide actual coefficient producers. Never fabricate a
 missing Functor, silently choose a legacy provider by species name, replace
@@ -120,7 +268,7 @@ new optional Physics blocks; do not edit the immutable historical P3 decks.
 The archived S6-417/941 heavy-ion coefficients originate in an existing
 `ADGenericFunctorMaterial`, not the modern charge-transport owner. The
 review-only new-option D overlay therefore instantiates three controlled
-`SpeciesTransportAliasMaterial` bridges: O2p from
+`DDMaterial (model=functor)` bridges: O2p from
 `ion_mobility/ion_diffusion`, Om from
 `negative_ion_mobility/negative_ion_diffusion`, and Op from
 `atomic_positive_ion_mobility/atomic_positive_ion_diffusion`.
@@ -132,7 +280,7 @@ aliases are published by the existing electron lookup/closure producer.
 
 The completed S6-417 and S6-941 runs contain an explicit `ne_transport`
 FEM log-molar drift-diffusion Kernel. The archive-based preparation program
-moves **only this one existing Kernel** into `ContinuityEq` and
+moves **only this one existing Kernel** into `DDContinuityEq` and
 preserves its name, parameters and `plasma` block restriction.
 The original electron time derivative, energy, chemistry, ion FV equations,
 Poisson/MultiApps, controls, materials and all wall conditions remain native.
@@ -205,7 +353,7 @@ input layers, upload private tables or run from PR CI with secrets. It
 verifies each original input digest and the private-rate hashes before
 execution. The candidate removes only `ne_transport` from a newly
 created input beside the originals and recreates it via
-`ContinuityEq`. Generated temporary candidate inputs are removed
+`DDContinuityEq`. Generated temporary candidate inputs are removed
 after execution.
 
 On a trusted runner with capacity for two OCI containers, the **417 and 941
@@ -227,10 +375,10 @@ Keep `SCIENCE_HOLD` even after numerical parity is proven.
 
 ## 2026-11-10 option-first Continuity experiment (separate stacked draft)
 
-This experiment changes only the `ContinuityEq` **input contract** and
+This experiment changes only the `DDContinuityEq` **input contract** and
 internal names, not any Material or Functor registration, source code or
 physical coefficient values. The generated lower-level
-`PhysicsFEMLogMolarDriftDiffusion` parameter remains named `diffusion`.
+`FEMLogMolarDriftDiffusion` parameter remains named `diffusion`.
 The user-visible **Physics option** is now `diffusivity`; it can still point
 to the existing `electron_diffusion` functor. Changing that provider to
 `electron_diffusivity` is deliberately deferred.
@@ -240,7 +388,7 @@ to the existing `electron_diffusion` functor. Changing that provider to
   `e -> log_e`, `O2p -> log_O2p`, `Om -> log_Om`, `Op -> log_Op`.
   The synthetic `baseline.i` and all active native fixtures use these names
   consistently for Variables, Kernel, boundary, Energy, Poisson and Maxwell.
-- **No legacy solver-state option exists in ContinuityEq.** For public S6
+- **No legacy solver-state option exists in DDContinuityEq.** For public S6
   P2 only, immutable B input layers remain byte-for-byte original, while the
   isolated D scratch workspace rewrites its **temporary copies** of the ten
   input layers from `log_ne/log_ni/log_nm/log_nop` to
@@ -341,16 +489,28 @@ remain untouched.
 
 ## Material/Functor class and filename rename (2026-11-10)
 
+> **Superseded by 2026-11-12 DDMaterial cleanup:** historical notes below about
+> electron lookup class aliases no longer describe executable factory inputs.
+> Use only `DDMaterial model=lookup table_file=...`; lookup energy is fixed
+> to `mean_en_solved`.
+
+
+> **Historical snapshot, superseded:** the subsequent 2026-11-10
+> statements about a `PlasmaChargeTransportMaterial` factory alias
+> are no longer current. The class and its alias have now been retired
+> in Draft PR #523; charged transport and Poisson charge have separate
+> owners. This does not alter immutable archived S6 inputs.
+
 The canonical C++ Material classes and their corresponding `.h` / `.C`
 files no longer carry the redundant `Physics` prefix:
 `ElectronClosureMaterial`, `ElectronTransportLookupMaterial`,
-`PlasmaChargeTransportMaterial`, and `SpeciesTransportAliasMaterial`.
+`PlasmaChargeTransportMaterial`, and `DDMaterial (model=functor)`.
 They remain registered under the existing `PhysicsApp` label. Each also
 registers its former `Physics*` MOOSE object type as a compatibility alias,
 so historical B/C decks and existing third-party inputs retain their exact
 factory lookup. The public S6 D-only input uses the new canonical type;
 the positive smoke fixture intentionally keeps the old type to test alias
-resolution. The `ContinuityEq` class is a MOOSE PhysicsBase action,
+resolution. The `DDContinuityEq` class is a MOOSE PhysicsBase action,
 not a Material/Functor; its name and registered Physics syntax are unchanged.
 
 
@@ -358,7 +518,7 @@ not a Material/Functor; its name and registered Physics syntax are unchanged.
 
 - The active Oxygen14 map/trace reader and Issue493 public Reference overlay
   now expect **canonical** `log_e/log_O2p/log_Om/log_Op` for new
-  ContinuityEq runs. Historical `log_ne/log_ni/log_nm/log_nop` is supported
+  DDContinuityEq runs. Historical `log_ne/log_ni/log_nm/log_nop` is supported
   **only when recorded in a read-only archived Exodus**; neither the solver
   nor its input schema has an alias/compatibility mode. Mixed on-disk names
   for the same species fail closed. Electron temperature uses the field

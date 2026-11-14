@@ -236,8 +236,11 @@ def check() -> None:
     _require(electron, "type = PhysicsElectronMeanEnergyMaterial", "electron-energy oracle")
     _require(electron, "electron_energy_density = mean_en", "electron-energy oracle")
     _require(electron, "electron_density = n_e", "electron-energy oracle")
-    _require(electron, "type = PhysicsElectronTransportLookupMaterial", "electron transport")
-    _require(electron, "mean_energy = mean_en_solved", "electron transport")
+    _require(electron, "type = DDMaterial", "electron transport")
+    _require(electron, "model = lookup", "electron transport")
+    _require(electron, "table_file =", "electron transport")
+    if "property_table_file" in electron or "mean_energy = mean_en_solved" in electron:
+        raise AssertionError("retired lookup input option found")
     _require(electron, "bounds_policy = error", "electron transport")
     if "bounds_policy = clamp" in electron or "bounds_policy = floor" in electron:
         raise AssertionError("non-strict electron transport lookup found")

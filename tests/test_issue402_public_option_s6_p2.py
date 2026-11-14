@@ -14,7 +14,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 PILOT = ROOT / "experiments" / "Issue402_plasma_dsl_g1"
 PUBLIC = ROOT / "experiments" / "Issue493_s6_boltzmann"
-EXPECTED_OVERLAY = "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
+EXPECTED_OVERLAY = "dcac4502c6bece4481651f97879699c27be994c97a6b09ad4443aca9c2edd544"
 
 
 def extract_overlay():
@@ -36,11 +36,12 @@ def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
     assert "legacy_s6_state_names" not in overlay
-    assert overlay.count("type = SpeciesTransportAliasMaterial") == 3
+    assert overlay.count("type = DDMaterial") == 3
+    assert overlay.count("model = functor") == 3
     assert "mobility_source = ion_mobility" in overlay
     assert "diffusivity_source = ion_diffusion" in overlay
-    assert "fem_charge_numbers = '-1'" in overlay
-    assert "fvm_charge_numbers = '1 -1 1'" in overlay
+    assert "files = plasma_species_only.json" in overlay
+    assert "fem_charge_numbers" not in overlay and "fvm_charge_numbers" not in overlay
     # Provider names are derived in ContinuityEq, not user input.
     assert "fem_potential = potential" in overlay
     for forbidden in ("variables =", "fem_kernel_names", "fvm_kernel_names",
@@ -81,9 +82,14 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     archived.mkdir()
     staged.mkdir()
     ordered = []
-    sample = ("variable = log_ne\\n"
-              "coupled = 'log_ni log_nm log_nop'\\n"
-              "similar_name = log_ne_custom\\n")
+    sample = ("variable = log_ne\n"
+              "coupled = 'log_ni log_nm log_nop'\n"
+              "similar_name = log_ne_custom\n"
+              "  [ne_time]\n"
+              "    type = PhysicsFEMLogMolarTimeDerivative\n"
+              "    variable = log_ne\n"
+              "    block = plasma\n"
+              "  []\n")
     for index in range(10):
         name = f"layer_{index}.i"
         content = sample if index == 0 else f"# original {index}\\n"
@@ -94,7 +100,11 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     ordered.append("chem/migrated_continuity.i")
 
     report = namespace["canonicalize_staged_D_inputs"](staged, ordered)
-    assert report["status"] == "SCRATCH_ONLY_CANONICAL_STATE_REWRITE"
+    assert report["status"] == "SCRATCH_ONLY_CANONICAL_STATE_AND_TIME_OWNER_REWRITE"
+    assert report["removed_native_time"]["source_layer"] == "layer_0.i"
+    assert report["removed_native_time"]["old_name"] == "ne_time"
+    assert report["removed_native_time"]["generated_name"] == "e_time"
+    assert report["removed_native_time"]["kernel_type"] == "PhysicsFEMLogMolarTimeDerivative"
     assert report["changed_reference_count"] == 4
     assert report["files"]["layer_0.i"]["original_sha256"] == (
         hashlib.sha256(sample.encode()).hexdigest())
@@ -104,12 +114,97 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     assert "variable = log_e" in migrated
     assert "coupled = 'log_O2p log_Om log_Op'" in migrated
     assert "similar_name = log_ne_custom" in migrated
+    assert "[ne_time]" not in migrated
+    assert "PhysicsFEMLogMolarTimeDerivative" not in migrated
     assert report["files"]["layer_0.i"]["staged_sha256"] == (
         hashlib.sha256(migrated.encode()).hexdigest())
+    # A malformed, absent, or duplicated Native time term must fail BEFORE
+    # any scratch file is rewritten. Never turn an ambiguous input into PASS.
+    from pytest import raises
+    time_block = ("  [ne_time]\n"
+                  "    type = PhysicsFEMLogMolarTimeDerivative\n"
+                  "    variable = log_ne\n"
+                  "    block = plasma\n"
+                  "  []\n")
+    for fault, defective, extra in (
+        ("missing", sample.replace(time_block, ""), ""),
+        ("changed", sample.replace("    block = plasma\n", "    block = other\n"), ""),
+        ("duplicate", sample, time_block),
+    ):
+        damaged = tmp_path / fault
+        damaged.mkdir()
+        for index in range(10):
+            name = f"layer_{index}.i"
+            body = defective if index == 0 else f"# original {index}\n"
+            if index == 1:
+                body += extra
+            (damaged / name).write_text(body)
+        (damaged / "migrated_continuity.i").write_text("PINNED_SIDECAR")
+        snapshot = {name.name: name.read_bytes() for name in damaged.iterdir()}
+        with raises(ValueError):
+            namespace["canonicalize_staged_D_inputs"](damaged, ordered)
+        assert snapshot == {name.name: name.read_bytes() for name in damaged.iterdir()}
+
     # The original decks are still byte-identical and cannot be confused
     # with the scratch-only canonical migration.
     assert all((archived / f"layer_{i}.i").read_text() ==
                (sample if i == 0 else f"# original {i}\\n") for i in range(10))
+
+
+
+def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path):
+    """The old B input is immutable; only temporary B/D type fields change."""
+    import re
+    import pytest
+
+    path = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(path.read_text())
+    assignments = [
+        node for node in tree.body if isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id in
+                {"RENAMED_FEM_KERNEL_TYPES", "_FEM_TYPE_LINE"} for t in node.targets)
+    ]
+    fun = next(node for node in tree.body
+               if isinstance(node, ast.FunctionDef) and node.name == "remap_staged_fem_types")
+    assert len(assignments) == 2
+    namespace = {"re": re, "Path": Path, "hashlib": hashlib}
+    exec(compile(ast.Module(body=assignments + [fun], type_ignores=[]),
+                 str(path), "exec"), namespace)
+
+    archived = tmp_path / "archive"
+    staged = tmp_path / "scratch"
+    archived.mkdir()
+    staged.mkdir()
+    source = (
+        "[Kernels]\n"
+        "  [ne_time]\n    type = PhysicsFEMLogMolarTimeDerivative\n"
+        "    variable = log_ne\n  []\n"
+        "  [ne_transport]\n    type = PhysicsFEMLogMolarDriftDiffusion\n"
+        "    variable = log_ne\n  []\n"
+        "  [energy_joule]\n    type = PhysicsFEMLogMolarElectronJouleHeating\n"
+        "    variable = log_energy\n  []\n[]\n"
+    )
+    ordered = []
+    for i in range(10):
+        name = f"layer_{i}.i"
+        data = source if i == 0 else f"# control {i}\n"
+        (archived / name).write_text(data)
+        (staged / name).write_text(data)
+        ordered.append(f"chem/{name}")
+    result = namespace["remap_staged_fem_types"](staged, ordered)
+    assert result["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
+    assert all(count == 1 for count in result["totals"].values())
+    migrated = (staged / "layer_0.i").read_text()
+    for old, new in namespace["RENAMED_FEM_KERNEL_TYPES"].items():
+        assert "type = " + old not in migrated
+        assert "type = " + new in migrated
+        assert "type = " + old in (archived / "layer_0.i").read_text()
+    assert result["files"]["layer_0.i"]["original_sha256"] == hashlib.sha256(source.encode()).hexdigest()
+    snapshot = {p.name: p.read_bytes() for p in staged.iterdir()}
+    with pytest.raises(ValueError, match="layer count"):
+        namespace["remap_staged_fem_types"](staged, ordered[:-1])
+    assert snapshot == {p.name: p.read_bytes() for p in staged.iterdir()}
+
 
 
 def test_full_s6_p2_provenance_and_no_solver_execution():
@@ -229,6 +324,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
+        "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(
@@ -240,6 +336,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         ),
         "run_one": lambda *_args: {"P2": "PASS", "exit_code": 0, "syntax_ok": True},
         "tempfile": SimpleNamespace(TemporaryDirectory=lambda **_kwargs: CleanupFault()),
+        "shutil": SimpleNamespace(copy2=lambda _src, dst: Path(dst).write_text("{}")),
     }
     exec(compile(module, str(PILOT / "public_option_s6_p2.py"), "exec"), options)
     report = options["execute"](tmp_path, tmp_path / "physics-opt", source, evidence)

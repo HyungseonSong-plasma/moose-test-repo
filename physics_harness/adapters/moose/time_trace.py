@@ -203,7 +203,7 @@ def _native_traces(exodus: Path, inputs: Sequence[Path], gas_temperature_k: floa
             sources["potential"] = "nodal potential: axisymmetric RZ volume mean"
         else:
             unavailable["potential"] = "nodal potential absent"
-        energy_log = read_nodal("log_energy")
+        energy_log = read_nodal("log_e_energy")
         if ne is not None and energy_log is not None:
             with np.errstate(over="ignore", under="ignore", invalid="ignore"):
                 te = (2 / 3) * np.exp(energy_log - ne_log)
@@ -214,11 +214,11 @@ def _native_traces(exodus: Path, inputs: Sequence[Path], gas_temperature_k: floa
                 raise DefaultPlotError("nonpositive total electron inventory")
             series["T_e"] = nodal_integral(ne * te) / ne_int
             sources["T_e"] = (
-                f"nodal T_e=(2/3)exp(log_energy-{electron_field}), "
+                f"nodal T_e=(2/3)exp(log_e_energy-{electron_field}), "
                 "electron-number-weighted RZ mean"
             )
         else:
-            unavailable["T_e"] = f"nodal {LOG_NAMES['e-']}/log_energy absent"
+            unavailable["T_e"] = f"nodal {LOG_NAMES['e-']}/log_e_energy absent"
 
         global_names = _names(np.asarray(f.variables["name_glo_var"][:]).copy()) if "name_glo_var" in f.variables else []
         if len(global_names) != len(set(global_names)):

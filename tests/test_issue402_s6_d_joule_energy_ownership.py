@@ -101,10 +101,10 @@ def test_canonical_d_overlay_does_not_add_a_second_energy_owner():
 
 
 def test_joule_residual_and_rf_material_have_distinct_sign_and_units():
-    transport = (ROOT / "physics_app/src/kernels/PhysicsFEMPlasmaTransport.C").read_text()
-    assert "PhysicsFEMLogMolarElectronJouleHeating::computeQpResidual()" in transport
+    transport = (ROOT / "physics_app/src/kernels/FEMPlasmaTransport.C").read_text()
+    assert "FEMLogMolarElectronJouleHeating::computeQpResidual()" in transport
     body = transport.split(
-        "PhysicsFEMLogMolarElectronJouleHeating::computeQpResidual()", 1
+        "FEMLogMolarElectronJouleHeating::computeQpResidual()", 1
     )[1]
     assert "const ADReal c_e = exp(_log_electron_density[_qp]);" in body
     assert "const ADRealVectorValue electric_field = -_grad_potential[_qp];" in body
@@ -117,8 +117,8 @@ def test_joule_residual_and_rf_material_have_distinct_sign_and_units():
     assert "enabled*scale*0.5*sigma_real_rf_t6*(E_real_rf_t6^2 + E_imag_rf_t6^2)/F" in rf_src
     assert "type = MatBodyForce" in rf_src
     assert "material_property = q_rf_eV_mol_t6" in rf_src
-    action = (ROOT / "physics_app/src/physics/plasma/EnergyPhysics.C").read_text()
-    assert 'if (!isParamValid("rf_heating_material"))' in action
+    action = (ROOT / "physics_app/src/physics/plasma/DDEnergyEq.C").read_text()
+    assert 'if (isParamValid("rf_heating_material"))' in action
     assert 'requireUniqueFEKernel("MatBodyForce"' in action
 
 
@@ -128,12 +128,12 @@ def test_retired_physical_state_joule_cpp_is_absent_but_log_molar_stays():
     Electrostatic log-molar electron heating and RF MatBodyForce remain active.
     A drift-kernel removal was merged separately in PR #513.
     """
-    transport = (ROOT / "physics_app/src/kernels/PhysicsFEMPlasmaTransport.C").read_text()
-    header = (ROOT / "physics_app/include/kernels/PhysicsFEMPlasmaTransport.h").read_text()
+    transport = (ROOT / "physics_app/src/kernels/FEMPlasmaTransport.C").read_text()
+    header = (ROOT / "physics_app/include/kernels/FEMPlasmaTransport.h").read_text()
     for text in (transport, header):
         assert "PhysicsFEMElectronJouleHeating" not in text
-        assert "PhysicsFEMLogMolarElectronJouleHeating" in text
+        assert "FEMLogMolarElectronJouleHeating" in text
         assert "PhysicsFEMPlasmaDriftDiffusion" not in text
-    assert 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronJouleHeating);' in transport
-    assert "PhysicsFEMLogMolarElectronJouleHeating::computeQpResidual()" in transport
-    assert 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarDriftDiffusion);' in transport
+    assert 'registerMooseObject("PhysicsApp", FEMLogMolarElectronJouleHeating);' in transport
+    assert "FEMLogMolarElectronJouleHeating::computeQpResidual()" in transport
+    assert 'registerMooseObject("PhysicsApp", FEMLogMolarDriftDiffusion);' in transport

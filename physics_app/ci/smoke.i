@@ -10,7 +10,19 @@
 []
 
 [AuxVariables]
-  [background_density]
+  [smoke_functor_value]
+    family = MONOMIAL
+    order = CONSTANT
+  []
+[]
+
+# Exercise a built-in MOOSE AuxKernel through an AD Functor instead of
+# depending on a one-off PhysicsApp background-density class.
+[FunctorMaterials]
+  [smoke_constant_functor]
+    type = ADGenericFunctorMaterial
+    prop_names = 'smoke_functor'
+    prop_values = '1.0'
   []
 []
 
@@ -22,9 +34,11 @@
 []
 
 [AuxKernels]
-  [background_density]
-    type = PhysicsBackgroundDensity
-    variable = background_density
+  [sample_smoke_functor]
+    type = FunctorAux
+    variable = smoke_functor_value
+    functor = smoke_functor
+    execute_on = 'INITIAL TIMESTEP_END'
   []
 []
 

@@ -72,9 +72,9 @@
   []
 
   [electron_transport]
-    type = PhysicsElectronTransportLookupMaterial
-    property_table_file = '../../experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
-    mean_energy = mean_en_solved
+    type = DDMaterial
+    model = lookup
+    table_file = '../../experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
     pressure = p
     gas_temperature = T_g
     bounds_policy = error

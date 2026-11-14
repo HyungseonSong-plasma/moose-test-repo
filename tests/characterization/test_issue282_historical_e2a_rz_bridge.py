@@ -151,13 +151,12 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
         assert historical in original
         assert current in projected
         dirname = "materials" if "Material" in current and "FV" not in current else "fvkernels"
-        # The research projection is immutable: preserve the historical
-        # PhysicsElectronTransportLookupMaterial input type. In the current
-        # source, it resolves through an explicit MOOSE factory alias.
-        canonical = (
-            "ElectronTransportLookupMaterial"
-            if current == "PhysicsElectronTransportLookupMaterial" else current
-        )
+        # Historical type-only projection is byte-pinned and cannot be
+        # rewritten to the new factory API without breaking source evidence.
+        # The old electron lookup token remains IN THE ARCHIVED PROJECTION,
+        # but is deliberately not registered by the current PhysicsApp.
+        retired_lookup = current == "PhysicsElectronTransportLookupMaterial"
+        canonical = "DDMaterial" if retired_lookup else current
         candidate = ROOT / "physics_app" / "src" / dirname / f"{canonical}.C"
         assert candidate.is_file(), f"missing current PhysicsApp source: {candidate}"
         source = candidate.read_text(encoding="utf-8")
@@ -165,11 +164,14 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
             rf'register(?:AD)?MooseObject\(\s*"PhysicsApp"\s*,\s*{re.escape(canonical)}\s*\)\s*;',
             source,
         )
-        if current != canonical:
+        if retired_lookup:
             assert (
-                f'registerMooseObjectAliased("PhysicsApp", {canonical}, "{current}");'
-                in source
-            )
+                'registerMooseObjectAliased("PhysicsApp", DDMaterial, '
+                '"PhysicsElectronTransportLookupMaterial");'
+            ) not in source
+            # The frozen research-only projection is *not* runnable under
+            # the retired input API; migrate parameters in a new study.
+
     assert all(
         not m.group("name").startswith("QPX")
         for m in TYPE_LINE.finditer(projected)

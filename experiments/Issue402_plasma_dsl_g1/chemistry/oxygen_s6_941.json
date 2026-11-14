@@ -1,0 +1,24 @@
+{
+  "species": {},
+  "equations": {
+    "EI-941": "e + O -> 2e + Op"
+  },
+  "reactions": [
+    {
+      "id": "EI-941",
+      "reactants": {
+        "e": 1,
+        "O": 1
+      },
+      "products": {
+        "e": 2,
+        "Op": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S4-401-941_op_ionization_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 13.62
+    }
+  ]
+}

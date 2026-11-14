@@ -1,0 +1,25 @@
+{
+  "species": {},
+  "equations": {
+    "EI-417": "e + O2 -> 2e + Op + O"
+  },
+  "reactions": [
+    {
+      "id": "EI-417",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "Op": 1,
+        "O": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S4-401-417_op_ionization_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 17
+    }
+  ]
+}

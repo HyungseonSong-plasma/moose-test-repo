@@ -25,12 +25,12 @@ base.MESH = r'''[Mesh]
 def build_case() -> str:
     text = base.fem()
 
-    old_particle = f"""  [electron_sheath]\n    type = PhysicsFEMLogMolarElectronGroundedSheathBC\n    variable = log_ne\n    log_energy = log_energy\n    potential = potential\n    boundary = '{base.EWALL}'\n  []\n"""
-    new_particle = f"""  [electron_sheath]\n    type = PhysicsFEMLogMolarElectronNoSheathSuppressionBC\n    variable = log_ne\n    log_energy = log_energy\n    boundary = '{base.EWALL}'\n  []\n"""
+    old_particle = f"""  [electron_sheath]\n    type = PhysicsFEMLogMolarElectronGroundedSheathBC\n    variable = log_ne\n    log_e_energy = log_e_energy\n    potential = potential\n    boundary = '{base.EWALL}'\n  []\n"""
+    new_particle = f"""  [electron_sheath]\n    type = PhysicsFEMLogMolarElectronNoSheathSuppressionBC\n    variable = log_ne\n    log_e_energy = log_e_energy\n    boundary = '{base.EWALL}'\n  []\n"""
     text = replace_once(text, old_particle, new_particle, "electron particle wall BC")
 
-    old_energy = f"""  [electron_energy_sheath]\n    type = PhysicsFEMLogMolarElectronGroundedSheathEnergyBC\n    variable = log_energy\n    log_electron_density = log_ne\n    potential = potential\n    boundary = '{base.EWALL}'\n  []\n"""
-    new_energy = f"""  [electron_energy_sheath]\n    type = PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC\n    variable = log_energy\n    log_electron_density = log_ne\n    boundary = '{base.EWALL}'\n  []\n"""
+    old_energy = f"""  [electron_energy_sheath]\n    type = PhysicsFEMLogMolarElectronGroundedSheathEnergyBC\n    variable = log_e_energy\n    log_electron_density = log_ne\n    potential = potential\n    boundary = '{base.EWALL}'\n  []\n"""
+    new_energy = f"""  [electron_energy_sheath]\n    type = PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC\n    variable = log_e_energy\n    log_electron_density = log_ne\n    boundary = '{base.EWALL}'\n  []\n"""
     text = replace_once(text, old_energy, new_energy, "electron-energy wall BC")
 
     if base.DT != 1.0e-9 or base.NSTEPS != 100:

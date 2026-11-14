@@ -1,0 +1,29 @@
+{
+  "species": {
+    "A": {
+      "elements": {},
+      "charge_number": 0
+    },
+    "B": {
+      "elements": {},
+      "charge_number": 0
+    }
+  },
+  "equations": {},
+  "reactions": [],
+  "transport_coefficients": {
+    "navier_stokes": {
+      "transport_data_file": "../../physics_app/ci/plasma_closures_heavy_transport.txt",
+      "temperature": "T_g",
+      "pressure": "p",
+      "species": [
+        "A",
+        "B"
+      ],
+      "mass_fractions": [
+        "Y_A",
+        "Y_B"
+      ]
+    }
+  }
+}

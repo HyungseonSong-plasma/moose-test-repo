@@ -40,6 +40,7 @@ def test_exact_main_trigger_and_isolated_d_run_contract():
     assert "run_public_option_s6_p2.sh" not in text
     assert 'option.p2.stage(ROOT, historical, case, "C", staged, manifest)' in script
     assert "canonicalize_staged_D_inputs" in script
+    assert "option.remap_staged_fem_types" in script
     assert "option.run_one(" in script  # same binary must pass P2 before P3
     assert "verify_native_csv(csv_file)" in script
     assert "verify_canonical_exodus(exodus)" in script

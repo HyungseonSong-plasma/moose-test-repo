@@ -22,8 +22,11 @@ for path in ("src/actions/PlasmaClosuresAction.C",
              "include/actions/PlasmaClosuresAction.h"):
     assert not (ROOT / path).exists(), f"Retired PlasmaClosures Action still exists: {path}"
 
-# Independent MOOSE capabilities must remain available.
-assert (ROOT / "src/convergence/DeltaPhiMultiAppConvergence.C").is_file()
-assert (ROOT / "include/convergence/DeltaPhiMultiAppConvergence.h").is_file()
-assert 'registerSyntax("ContinuityEq",' in app
+# The custom potential-iterate convergence owner has also been retired.
+# Native MOOSE MultiApps and their built-in convergence objects remain available.
+for path in ("src/convergence/DeltaPhiMultiAppConvergence.C",
+             "include/convergence/DeltaPhiMultiAppConvergence.h"):
+    assert not (ROOT / path).exists(), f"Retired convergence object still exists: {path}"
+
+assert 'registerSyntax("DDContinuityEq",' in app
 print("RETIRED_GUMMEL_ACTION_CONTRACT: PASS")
