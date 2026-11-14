@@ -2,6 +2,39 @@
 
 ## Current S6 hybrid JSON / Native input (2026-11-14)
 
+**Gas-state owner / pressure initial condition update (2026-11-14).**
+The `[Physics]/[Plasmas]` input supplies exactly
+`pressure = 1.333223684` [Pa] and `temperature = 300` [K] plus
+`state_model = ideal_gas`. On the S6 Native Navier-Stokes deck, the
+solver variable is named **`pressure`**. The root pressure value is its
+only FV initial condition (`FVConstantIC`). MOOSE's solved FV pressure
+variable itself implements the AD `pressure` Functor; the root
+Action must **never** register a competing `pressure` material Functor.
+The root `temperature` Functor is constant. `n_g` uses the **live**
+pressure and root temperature, `pressure/(k_B*temperature)`.
+
+The scratch-only preflight checks the immutable archived `[Variables]/[p]`
+initial condition, historical fixed gas constant Material, and native outlet
+pressure boundary, then atomically derives the canonical inputs. It renames
+all `p` and `T_g_fixed` consumers to `pressure` and `temperature`,
+retires the original `p` IC and `p_fixed/T_g_fixed` constant entries,
+and couples the outlet-pressure Function to the root `pressure` value
+through MOOSE input brace substitution. There is no second editable gas
+parameter. The archived 400-W neutral mass, velocity, mass-fraction,
+and wall equations remain in place. **Root pressure is an IC, not a
+permanent fixed Dirichlet field**; the Navier-Stokes pressure can evolve.
+
+The archived neutral-mixture solution remains owned by Native. The new
+root Action deliberately does **not** create an independent `rho_g`/full
+mixture closure for S6 because its seven-species JSON does not contain
+the complete neutral mass-fraction catalogue; fabricating one would
+change physics. When no pressure solver variable is provided, the existing
+complete root ideal-gas mixture workflow remains separately supported.
+Any partial mixture metadata with an S6 solved `pressure` fails closed.
+Both full S6 100-us reruns and science acceptance require separate gates.
+
+
+
 For the **hybrid P3/P4** path, exactly **one complete JSON file per scientific
 variant** is passed to `[Physics]/[Plasmas]/files`:
 
