@@ -14,12 +14,14 @@ HRateCoefMaterial::validParams()
   params.addClassDescription(
       "Computes JSON-defined heavy volume rate laws and publishes canonical R_H* Functors.");
   params.addRequiredParam<FileName>("chemistry_file", "Canonical [Plasmas]/files JSON mechanism.");
-  params.addRequiredParam<MooseFunctorName>("density", "Heavy-mixture density [kg/m^3].");
+  params.addParam<MooseFunctorName>("density", "Heavy-mixture density [kg/m^3] for mass-fraction mode.");
   params.addRequiredParam<MooseFunctorName>("temperature", "Heavy-particle temperature [K].");
   params.addRequiredParam<std::vector<std::string>>(
-      "species", "Heavy species in the JSON whose mass fractions are provided.");
-  params.addRequiredParam<std::vector<MooseFunctorName>>(
-      "mass_fractions", "Mass-fraction Functors in species order.");
+      "species", "Heavy reactant species with either mass fractions or molar concentrations.");
+  params.addParam<std::vector<MooseFunctorName>>(
+      "mass_fractions", "Legacy live mass-fraction Functors in species order.");
+  params.addParam<std::vector<MooseFunctorName>>(
+      "reactant_concentrations", "Live molar concentration Functors [mol/m^3] in species order.");
   params.addParam<std::vector<std::string>>(
       "active_reactions", {},
       "Optional JSON reaction IDs; if empty, select compatible heavy volume laws.");
@@ -28,14 +30,24 @@ HRateCoefMaterial::validParams()
 
 HRateCoefMaterial::HRateCoefMaterial(const InputParameters & parameters)
   : FunctorMaterial(parameters),
-    _density(getFunctor<ADReal>("density")),
     _temperature(getFunctor<ADReal>("temperature")),
     _chemistry(std::vector<std::string>{getParam<FileName>("chemistry_file")})
 {
   const auto names = getParam<std::vector<std::string>>("species");
   const auto fractions = getParam<std::vector<MooseFunctorName>>("mass_fractions");
-  if (names.size() != fractions.size())
-    paramError("mass_fractions", "species and mass_fractions sizes differ");
+  const auto concentrations =
+      getParam<std::vector<MooseFunctorName>>("reactant_concentrations");
+  const bool direct = !concentrations.empty();
+  if (direct == !fractions.empty() ||
+      names.size() != (direct ? concentrations.size() : fractions.size()))
+    paramError("reactant_concentrations",
+               "Select exactly one complete species-aligned concentration or mass-fraction mode.");
+  if (!direct)
+  {
+    if (!isParamValid("density"))
+      paramError("density", "Mass-fraction mode requires heavy-mixture density.");
+    _density = &getFunctor<ADReal>("density");
+  }
 
   for (std::size_t i = 0; i < names.size(); ++i)
   {
@@ -51,7 +63,10 @@ HRateCoefMaterial::HRateCoefMaterial(const InputParameters & parameters)
     {
       paramError("species", error.what());
     }
-    _mass_fractions[names[i]] = &getFunctorByName<ADReal>(fractions[i]);
+    if (direct)
+      _concentrations[names[i]] = &getFunctorByName<ADReal>(concentrations[i]);
+    else
+      _mass_fractions[names[i]] = &getFunctorByName<ADReal>(fractions[i]);
   }
 
   const auto requested = getParam<std::vector<std::string>>("active_reactions");
@@ -113,7 +128,10 @@ HRateCoefMaterial::concentration(const std::string & species,
   if (it == _mass_fractions.end())
     mooseError("No mass fraction for reaction species ", species);
   const auto mass = _chemistry.species(species).molar_mass_kg_mol;
-  return _density(r, state) * (*(it->second))(r, state) / mass;
+  if (const auto direct = _concentrations.find(species);
+      direct != _concentrations.end())
+    return (*direct->second)(r, state);
+  return (*_density)(r, state) * (*(it->second))(r, state) / mass;
 }
 
 template <typename SpaceArg, typename StateArg>
