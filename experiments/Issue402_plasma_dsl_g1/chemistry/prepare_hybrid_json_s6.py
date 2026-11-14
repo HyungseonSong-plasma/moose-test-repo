@@ -781,6 +781,14 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     if "fem_potential = potential" not in template or (
         template.count("fem_potential = potential") != 2):
         raise ValueError("HYBRID_FULL_FEM_CONTINUITY_AND_ENERGY_NOT_ENABLED")
+    # Human-reviewed P3 overlay is the exact solver-consumed byte sequence,
+    # not a separate approximation. Compare against independent construction
+    # and refuse a changed or missing reviewed input before touching scratch.
+    reviewed_overlay = ROOT / "chemistry" / f"s6_{case}_hybrid_integrate_p3.i"
+    reviewed_bytes = reviewed_overlay.read_bytes()
+    if reviewed_bytes != template.encode("utf-8"):
+        raise ValueError("HYBRID_REVIEWED_P3_INPUT_DRIFT")
+    template = reviewed_bytes.decode("utf-8")
 
     # All changes are isolated to the scratch input. The original Native
     # coefficient material is the SOLE owner; all legacy consumers are
