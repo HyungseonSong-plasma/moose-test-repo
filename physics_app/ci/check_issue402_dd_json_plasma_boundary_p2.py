@@ -87,7 +87,14 @@ def synthetic_s6(variant: str) -> dict:
     assert sum(bc["type"] == "FEMElectronEnergySheathBC"
                for entry in data["boundaries"].values()
                for bc in entry["bcs"].values()) == 4
-    data["species"]["e"] = copy.deepcopy(DATA["species"]["e"])
+    # The original S6 JSON uses electron LOOKUP transport. Keep that model
+    # and its reduced coefficient convention, substituting only public
+    # synthetic table bytes. Do not silently test constant transport instead.
+    electron = data["species"]["e"]
+    assert electron["transport_coef"] == "lookup"
+    assert electron["energy_transport_coef"] == "fluid"
+    assert electron["table_units"] == "reduced"
+    electron["table_file"] = "plasma_closures_transport_table.txt"
     for name, spec in data["species"].items():
         if name == "e":
             continue
@@ -134,6 +141,9 @@ def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool
     )
     (work / "json_surface_rate_p2.json").write_text(LEGACY_DATA, encoding="utf-8")
     (work / "plasma_closures_rate_a.txt").write_text(KINETIC_TABLE, encoding="utf-8")
+    (work / "plasma_closures_transport_table.txt").write_text(
+        (CI / "plasma_closures_transport_table.txt").read_text(encoding="utf-8"),
+        encoding="utf-8")
     result = subprocess.run([str(exe), "--check-input", "-i", "input.i"],
                             cwd=work, text=True, capture_output=True, check=False)
     combined = result.stdout + result.stderr
