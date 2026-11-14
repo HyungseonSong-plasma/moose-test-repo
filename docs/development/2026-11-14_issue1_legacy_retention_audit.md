@@ -12,8 +12,8 @@ The current source-ownership pytest and the two historical H3/H5 scripts no long
 from `experiments/Issue1_reactor_o2plus_integration/` on this branch:
 
 - `tests/test_issue402_retired_charge_poisson_ownership.py` checks current source ownership rather than reading the historical `self_consistent_2d.i`.
-- `.github/scripts/issue197_h3_migration_audit.py` now stages `tests/fixtures/issue1_legacy_consumers/issue197_h3/`.
-- `.github/scripts/issue199_h5_known_charge.py` now stages `tests/fixtures/issue1_legacy_consumers/issue199_h5/`.
+- `.github/scripts/issue197_h3_migration_audit.py` now stages `experiments/historical_issue1_diagnostic_replays/issue197_h3/`.
+- `.github/scripts/issue199_h5_known_charge.py` now stages `experiments/historical_issue1_diagnostic_replays/issue199_h5/`.
 
 Both new fixture input blobs match the respective frozen historical input blobs exactly:
 `9906040c450e28b3f1de8628c3936cf3ad1dec74` (#197) and

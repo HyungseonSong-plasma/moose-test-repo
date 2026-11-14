@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_ROOT = ROOT / "tests/fixtures/issue1_legacy_consumers"
+FIXTURE_ROOT = ROOT / "experiments/historical_issue1_diagnostic_replays"
 
 SNAPSHOTS = (
     (
@@ -51,10 +51,11 @@ def test_standalone_historical_diagnostic_fixture(
 
     caller = (ROOT / script).read_text()
     assert (
-        f"SOURCE = ROOT / 'tests/fixtures/issue1_legacy_consumers/{fixture_dir}'"
+        f"SOURCE = ROOT / 'experiments/historical_issue1_diagnostic_replays/{fixture_dir}'"
         in caller
     )
     assert "experiments/Issue1_reactor_o2plus_integration" not in caller
+    assert not (ROOT / "tests/fixtures/issue1_legacy_consumers").exists()
 
     # Once history is retired, this file may be absent. The snapshot must
     # continue to work without it; while present, guard source identity.

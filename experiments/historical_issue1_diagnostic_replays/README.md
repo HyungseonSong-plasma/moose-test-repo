@@ -1,6 +1,6 @@
-# Issue #1 standalone diagnostic input fixtures
+# Issue #1 standalone diagnostic replay input cases
 
-These are **byte-for-byte snapshots**, not regenerated or physics-updated inputs.
+These are **byte-for-byte snapshots**, not regenerated or physics-updated inputs.\nMOOSE runtime inputs belong under `experiments/`, not in the pytest namespace.
 They preserve the two historical Issue #1 source decks independently for the
 closed Issue #197 (H3 migration) and Issue #199 (H5 known-charge) diagnostic
 runners. The original Issue #1 experiment inputs and closure evidence remain
