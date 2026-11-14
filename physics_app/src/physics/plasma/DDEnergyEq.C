@@ -218,47 +218,7 @@ DDEnergyEq::addFunctorMaterials()
   assignBlocks(mean, _blocks);
   getProblem().addFunctorMaterial(mean_type, name() + "_mean_energy", mean);
 
-  // JSON declares which existing sheath BCs are used; the physical flux
-  // calculation stays exclusively inside ESWallFluxMaterial.C.
-  bool sheath_wall = false;
-  for (const auto & [group, boundary] : chemistryData().boundaries())
-    for (const auto & [bc_name, bc] : boundary.bcs)
-    {
-      (void)group;
-      (void)bc_name;
-      if (bc.type != "FEMElectronSheathBC" &&
-          bc.type != "FEMElectronEnergySheathBC")
-        continue;
-      if (bc.wall_number_flux != "electron_wall_number_flux" ||
-          (bc.type == "FEMElectronEnergySheathBC" && bc.mean_energy != "e_energy_eV"))
-        paramError("fem_potential",
-                   "Automatic JSON electron sheath BCs require canonical "
-                   "electron_wall_number_flux and e_energy_eV providers.");
-      sheath_wall = true;
-    }
-  if (!sheath_wall)
-    return;
 
-  // The FEM state log_e stores ln(c_e [mol/m^3]); sheath physics consumes
-  // number density [1/m^3]. Construct a state-dependent AD Functor, not a
-  // constant value or another wall-flux implementation.
-  const std::string density_type = "ADParsedFunctorMaterial";
-  auto density = getFactory().getValidParams(density_type);
-  density.set<std::string>("property_name") = "n_e_physical";
-  density.set<std::vector<std::string>>("functor_names") = {"log_e"};
-  density.set<std::vector<std::string>>("functor_symbols") = {"c"};
-  density.set<std::string>("expression") = "6.02214076e23*exp(c)";
-  assignBlocks(density, _blocks);
-  getProblem().addFunctorMaterial(density_type, name() + "_number_density", density);
-
-  const std::string wall_type = "ESWallFluxMaterial";
-  auto wall = getFactory().getValidParams(wall_type);
-  wall.set<MooseFunctorName>("electron_density") = "n_e_physical";
-  wall.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
-  wall.set<MooseFunctorName>("potential") = getParam<VariableName>("fem_potential");
-  wall.set<bool>("use_element_gradient_for_potential") = true;
-  assignBlocks(wall, _blocks);
-  getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall);
 }
 
 }
