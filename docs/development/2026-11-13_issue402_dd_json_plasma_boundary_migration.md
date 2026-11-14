@@ -112,8 +112,9 @@ duplicate Flux Material factory was created.
 `fem_species` and `fvm_species` in the MOOSE `.i` select **species IDs only**.
 The retired positional syntax `fem_species = 'e 1e15'` is not supported.
 
-For FEM and FVM continuity, each `species.<id>` JSON object may declare
-`initial_number_density` in **particles/m^3**. The parser rejects null,
+For every FEM or FVM species selected by `DDContinuityEq`, the merged
+`species.<id>` JSON record **must declare** `initial_number_density` in
+**particles/m^3**. The parser rejects null,
 strings, NaN/non-finite, zero and negative densities. Repeated species
 declarations across mechanism JSON files must agree on explicitly given
 values; missing metadata merges without replacing an existing value.
@@ -150,12 +151,13 @@ Example (other required JSON mechanism keys omitted here):
 []
 ```
 
-If the JSON initial number density is present, `DDContinuityEq.C`
-automatically creates `log_<id>` as `MooseVariable` (FEM) or
-`MooseVariableFVReal` (FVM) and initializes it through `ConstantIC` or
-`FVConstantIC` with `ln(n_initial/N_A)`. Missing JSON metadata leaves
-the existing explicit variable/IC ownership intact. JSON automatic IC
-plus an already declared variable is an error, not a silent override.
+`DDContinuityEq.C` always creates each selected `log_<id>` as a
+`MooseVariable` (FEM) or `MooseVariableFVReal` (FVM), initialized through
+`ConstantIC` or `FVConstantIC` with `ln(n_initial/N_A)`. If any selected
+species has no merged JSON `initial_number_density`, construction fails
+immediately with a species-specific error **even if external `[Variables]`
+and `[ICs]` declare the same state**. A duplicate external solver variable
+is independently rejected; there is no external-IC fallback.
 
 The FEM electron continuity path generates its existing conservative
 log-molar time derivative, drift/diffusion and optional Chemistry sources;
@@ -175,7 +177,10 @@ integration, missing lazy Functors or production scientific parity.
 
 Historical source inputs and S6 production references remain immutable;
 current scratch staging must not silently change their physics or provenance.
-Only the active JSON + .i interface and synthetic P2 cases are migrated.
+Earlier S6 inputs that depend on absent initial-density JSON fields now fail
+under this stricter contract until their mutable staging supplies explicit,
+provenance-checked initial densities. Only the active JSON + .i interface
+and synthetic P2 cases are migrated.
 
 ## 6. Evidence and release gates
 
