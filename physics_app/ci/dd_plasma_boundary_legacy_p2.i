@@ -41,6 +41,7 @@
   []
   [electron_wall_flux]
     type = ESWallFluxMaterial
+    species_id = e
     electron_density = n_e_physical
     mean_energy = e_energy_eV
     potential = potential
@@ -52,26 +53,26 @@
     type = FEMElectronSheathBC
     variable = log_e
     boundary = left
-    wall_number_flux = electron_wall_number_flux
+    wall_number_flux = e_wall_number_flux
   []
   [electron_energy_wafer]
     type = FEMElectronEnergySheathBC
     variable = log_e_energy
     boundary = left
-    wall_number_flux = electron_wall_number_flux
+    wall_number_flux = e_wall_number_flux
     mean_energy = e_energy_eV
   []
   [electron_cover]
     type = FEMElectronSheathBC
     variable = log_e
     boundary = bottom
-    wall_number_flux = electron_wall_number_flux
+    wall_number_flux = e_wall_number_flux
   []
   [electron_energy_cover]
     type = FEMElectronEnergySheathBC
     variable = log_e_energy
     boundary = bottom
-    wall_number_flux = electron_wall_number_flux
+    wall_number_flux = e_wall_number_flux
     mean_energy = e_energy_eV
   []
 []
