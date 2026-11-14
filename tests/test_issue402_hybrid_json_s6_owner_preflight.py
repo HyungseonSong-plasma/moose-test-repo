@@ -100,6 +100,11 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
         "ALL_NON_GENERATED_PHYSICS_INPUTS_UNCHANGED"
     )
     data = json.loads((stage / "hybrid_s6_transport.json").read_text())
+    # The C++ ChemistryData parser validates each file independently,
+    # including a transport-only sidecar with no new reaction owners.
+    assert set(data) == {"species", "equations", "reactions"}
+    assert data["equations"] == {}
+    assert data["reactions"] == []
     assert set(data["species"]) == {"e", "O2p", "Om", "Op"}
     assert data["species"]["e"]["transport_coef"] == "lookup"
     assert data["species"]["e"]["energy_transport_coef"] == "fluid"
