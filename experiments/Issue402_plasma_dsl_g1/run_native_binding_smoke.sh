@@ -340,8 +340,16 @@ echo "PLASMA_DD_NV_MATERIALS_P2_PASS"
 
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
   set +e
-  native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
-    > "$EVIDENCE/$item.log" 2>&1
+  # Only Poisson's FV-versus-FEM negative needs the pre-existing baseline
+  # log_O2p variable. Deprecated DD options, species and chemistry errors
+  # must be tested without baseline's conflicting manual log_e/log_O2p.
+  if [[ "$item" == invalid_poisson_variable ]]; then
+    native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
+      > "$EVIDENCE/$item.log" 2>&1
+  else
+    native --check-input -i "$PILOT/$item.i" \
+      > "$EVIDENCE/$item.log" 2>&1
+  fi
   code=$?
   set -e
   case "$item" in
