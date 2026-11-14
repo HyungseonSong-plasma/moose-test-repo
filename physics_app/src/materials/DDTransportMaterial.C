@@ -34,7 +34,7 @@ DDTransportMaterial::validParams()
       "fluid_energy",
       true,
       "Enable 5/3 electron energy transport from the same particle mobility "
-      "and diffusivity. Physics/JSON sets this from e_energy.type=fluid.");
+      "and diffusivity. Physics/JSON sets this from species.e.energy_transport_coef=fluid.");
   params.addParam<MooseEnum>("table_units", MooseEnum("reduced physical", "reduced"),
                              "Reduced values mu*N_n/D*N_n or physical mu/D.");
   params.addParam<MooseFunctorName>("pressure", "Neutral-gas pressure [Pa] for reduced tables.");
