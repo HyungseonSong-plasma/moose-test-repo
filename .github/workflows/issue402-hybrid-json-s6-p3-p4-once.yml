@@ -2,6 +2,7 @@
 # JSON generates electron/ion initial states and electron FEM DD+energy. Native
 # input preserves untouched RF, Poisson, neutral, ion FV, wall, chemistry rates.
 # Historical sources and protected private rate archives are never mutated.
+# Pre-P1 P0 reproduces 10-object scratch cutover on the real S6 native base.
 # Time integration/P4 diagnostics are NOT a science-equivalence acceptance.
 name: Issue402 JSON hybrid 400W S6 Native P3 P4 once
 run-name: Issue402 JSON hybrid S6-417/941 @ ${{ github.sha }}
@@ -66,6 +67,11 @@ jobs:
             control/experiments/Issue402_plasma_dsl_g1/verify_chemistry_p3_evidence.py
           python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
             --control control --mode preflight
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          cd control
+          python3 -m pytest -q tests/test_issue402_hybrid_json_s6_owner_preflight.py
+          cd ..
+          echo HYBRID_S6_FULL_STAGED_OWNER_P0_REGRESSION_PASS
           cd control
           python3 experiments/Issue402_plasma_dsl_g1/p3_chemistry_preflight.py \
             --output "$RUNNER_TEMP/hybrid_s6_static_readiness_${{ matrix.case }}.json"
