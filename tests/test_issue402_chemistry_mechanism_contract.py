@@ -195,3 +195,22 @@ def test_derived_progress_and_hidden_energy_rule_are_enforced_in_cpp():
     assert "log_\" + species + \"_energy" in energy
     assert 'addRequiredParam<VariableName>("variable"' not in energy
     assert 'getParam<VariableName>("variable")' not in energy
+
+
+def test_chemistry_electron_rhs_is_generated_with_fem_continuity():
+    """Volume electron chemistry sources are projected once into the FEM RHS."""
+    mechanism = text("physics_app/src/physics/plasma/Chemistry.C")
+    continuity = text("physics_app/src/physics/plasma/DDContinuityEq.C")
+    assert 'return !_awh.getActions<Plasma::Chemistry>().empty();' in text(
+        "physics_app/src/physics/plasma/PlasmaInterface.C")
+    assert 'reaction.domain == "volume" && reaction.net(id) != 0' in mechanism
+    assert '"S_" + id + "_molar"' in mechanism
+    assert 'source.parts.push_back("(" + std::to_string(coefficient) + ")*" + symbol);' in mechanism
+    assert 'getProblem().addFunctorMaterial(type, "chemistry_" + id + "_source", params);' in mechanism
+    assert 'if (!isParamValid("fem_potential"))' in continuity
+    assert 'if (chemistryEnabled() && mechanism.hasSpeciesSource(species[i]))' in continuity
+    assert 'source_params.set<NonlinearVariableName>("variable") = variables[i];' in continuity
+    assert 'source_params.set<MooseFunctorName>("functor") = "S_" + species[i] + "_molar";' in continuity
+    assert 'source_params.set<bool>("functor_on_rhs") = true;' in continuity
+    assert 'getProblem().addKernel(source_type, species[i] + "_source", source_params);' in continuity
+    assert 'requireUniqueFEKernel("FunctorKernel", variables[i]);' in continuity
