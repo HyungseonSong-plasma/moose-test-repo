@@ -71,6 +71,8 @@ def test_material_consumers_resolve_functor_at_evaluation_not_at_setup():
     nv=(APP/"src/physics/plasma/NVTransport.C").read_text()
     assert 'fractions.emplace_back("Y_" + id)' in nv
     assert 'if (rootGasStateEnabled())' in nv
+    assert 'rootGasStateEnabled() ? "temperature"' in nv
+    assert 'rootGasStateEnabled() ? "pressure"' in nv
 
 
 def test_sccm_one_time_flow_module_and_no_duplicate_flow_bc():

@@ -31,7 +31,7 @@
     prop_values = '101325.0 300.0 1.0'
   []
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -72,9 +72,9 @@
 []
 
 [Postprocessors]
-  [mean_en_solved_avg]
+  [e_energy_eV_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [electron_mobility_avg]

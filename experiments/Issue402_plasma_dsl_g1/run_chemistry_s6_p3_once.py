@@ -24,6 +24,8 @@ def main() -> int:
     parser.add_argument("--timeout-seconds", type=int, default=19800)
     parser.add_argument("--authorize-p3", action="store_true",
                         help="Explicitly authorize this single expensive Native P3 run.")
+    parser.add_argument("--hybrid-json", action="store_true",
+                        help="Scratch hybrid: JSON owns generated e/e-energy/ion state and DD; Native .i keeps everything else.")
     args = parser.parse_args()
     if not args.authorize_p3:
         parser.error("P3_NOT_AUTHORIZED: --authorize-p3 must be explicit")
@@ -31,11 +33,13 @@ def main() -> int:
     if readiness["status"] != "STATIC_INPUTS_READY_P3_NOT_AUTHORIZED":
         parser.error("P3_STATIC_READINESS_NOT_PASSED")
     result = run(args.case, args.historical.resolve(), args.expected_head,
-                 args.output.resolve(), args.timeout_seconds, chemistry_mode=True)
+                 args.output.resolve(), args.timeout_seconds,
+                 chemistry_mode=True, hybrid_json=args.hybrid_json)
 
     if result["P3"] != "PASS":
         return 3
-    verified = verify(args.output.resolve() / "results", args.expected_head, args.case)
+    verified = verify(args.output.resolve() / "results", args.expected_head, args.case,
+                      hybrid_json=args.hybrid_json)
     return 0 if verified["artifact_rest_receipt"] == "PENDING" else 3
 
 

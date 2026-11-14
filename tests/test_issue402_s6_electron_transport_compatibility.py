@@ -64,7 +64,7 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
     assert report["status"] == "SCRATCH_ONLY_EXACT_ELECTRON_LOOKUP_CUTOVER"
     assert report["source_layer"] == BASE
     assert report["bounds_policy"] == "clamp"
-    assert report["coordinate"] == "mean_en_solved"
+    assert report["coordinate"] == "e_energy_eV"  # new scratch DD output
     assert report["gas_temperature"] == "T_g_fixed"
     assert report["pressure"] == "p"
     assert report["table_units"] == "reduced"
@@ -84,7 +84,7 @@ def test_original_archived_lookup_ownership_and_scratch_conversion(case, variant
                  "species_id = e", "block = plasma"):
         assert electron_block.count(line) == 1
     assert "property_table_file =" not in new
-    assert "mean_energy = mean_en_solved" not in new.split("[electron_transport]")[1].split("  []")[0]
+    assert "mean_energy = e_energy_eV" not in new.split("[electron_transport]")[1].split("  []")[0]
     # Preserve original physical table, pressure, temperature and all consumers.
     assert "electron_mobility" in new and "electron_diffusion" in new
     assert new.replace("    species_id = e\n", "") != old  # truly migrated
@@ -213,7 +213,7 @@ def test_historical_and_dd_lookup_equations_agree_at_archived_table_points(
 def test_current_cpp_lookup_ownership_has_same_energy_projection():
     cpp = (ROOT / "physics_app/src/materials/DDTransportMaterial.C").read_text()
     header = (ROOT / "physics_app/include/materials/DDTransportMaterial.h").read_text()
-    for symbol in ('getFunctorByName<ADReal>("mean_en_solved")',
+    for symbol in ('getFunctorByName<ADReal>("e_energy_eV")',
                    '"electron_mobility"', '"electron_diffusion"',
                    '"electron_energy_mobility"', '"electron_energy_diffusion"',
                    '"electron_reduced_mobility"', '"electron_reduced_diffusion"',

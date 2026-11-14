@@ -22,8 +22,8 @@ REQUIRED = (
     "n_e_max",
     "mean_en_min",
     "mean_en_max",
-    "mean_en_solved_min",
-    "mean_en_solved_max",
+    "e_energy_eV_min",
+    "e_energy_eV_max",
     "electron_diffusion_avg",
     "electron_energy_diffusion_avg",
 )
@@ -55,18 +55,18 @@ def main() -> int:
     for index, row in enumerate(rows):
         ne_min = value(row, "n_e_min")
         neps_min = value(row, "mean_en_min")
-        mean_min = value(row, "mean_en_solved_min")
-        mean_max = value(row, "mean_en_solved_max")
+        mean_min = value(row, "e_energy_eV_min")
+        mean_max = value(row, "e_energy_eV_max")
         d_particle = value(row, "electron_diffusion_avg")
         d_energy = value(row, "electron_energy_diffusion_avg")
 
         assert ne_min > 0.0, f"row {index}: physical n_e must stay > 0, got {ne_min}"
         assert neps_min >= 0.0, f"row {index}: physical mean_en must stay >= 0, got {neps_min}"
         assert mean_min >= TABLE_MIN_EV, (
-            f"row {index}: mean_en_solved below real-QVT table: {mean_min} < {TABLE_MIN_EV}"
+            f"row {index}: e_energy_eV below real-QVT table: {mean_min} < {TABLE_MIN_EV}"
         )
         assert mean_max <= TABLE_MAX_EV, (
-            f"row {index}: mean_en_solved above real-QVT table: {mean_max} > {TABLE_MAX_EV}"
+            f"row {index}: e_energy_eV above real-QVT table: {mean_max} > {TABLE_MAX_EV}"
         )
         assert d_particle > 0.0, f"row {index}: electron diffusion must be positive"
         assert d_energy > 0.0, f"row {index}: electron-energy diffusion must be positive"
@@ -107,8 +107,8 @@ def main() -> int:
     print(f"PHYSICS_E7_ENERGY_INVENTORY_RELERR={energy_inventory_error:.16e}")
     print(
         "PHYSICS_E7_MEAN_ENERGY_RANGE="
-        f"{value(final, 'mean_en_solved_min'):.16e},"
-        f"{value(final, 'mean_en_solved_max'):.16e}"
+        f"{value(final, 'e_energy_eV_min'):.16e},"
+        f"{value(final, 'e_energy_eV_max'):.16e}"
     )
     print("PHYSICS_E7_REAL_QVT_CHEMISTRY_OFF_INVENTORY_PASS")
     return 0

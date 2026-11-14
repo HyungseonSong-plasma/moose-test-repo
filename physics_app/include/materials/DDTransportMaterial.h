@@ -13,9 +13,9 @@
  *
  * model=constant: physical mu [m^2/(V s)] and D [m^2/s].
  * model=functor: source-preserving AD Functor forwarding.
- * model=lookup: 1D table (mean_en_solved [eV], mobility, diffusivity),
+ * model=lookup: 1D table (e_energy_eV [eV], mobility, diffusivity),
  * interpreted as reduced mu*Nn and D*Nn or as physical values via table_units.
- * The lookup axis is always mean_en_solved; it is not configurable.
+ * The lookup axis is always e_energy_eV; it is not configurable.
  *
  * For species=e, the same closure publishes the 5/3 electron energy
  * mobility/diffusion projection. It does not calculate Chemistry rates.

@@ -1,7 +1,6 @@
 """Issue #402 species-first public Functor names (P0/source only).
 
-These checks reject swapped species consumers and accidental removal of the
-legacy inputs. Native --check-input and numerical parity are separate gates.
+These checks reject swapped species consumers and accidental duplicate wall functor ownership. Native --check-input and numerical parity are separate gates.
 """
 from pathlib import Path
 import re
@@ -58,16 +57,18 @@ def test_species_first_wall_functors_and_duplicate_owner_prevention():
     assert "S6_WALL_RETIRED_TYPE_STILL_PRESENT" in staged
 
 
-def test_electron_wall_names_and_opt_in_legacy_compatibility():
-    for f in ("PhysicsElectronWallFluxMaterial.C",
-              "PhysicsElectronAdjacentSheathWallFluxMaterial.C"):
-        src = source("physics_app/src/materials/" + f)
-        assert '"species_id", ""' in src
-        assert 'species_id != "e"' in src
-        assert 'species_id.empty() ? "electron_wall_number_flux" : "e_wall_number_flux"' in src
-        assert 'species_id.empty() ? "electron_mean_speed" : "e_mean_speed"' in src
-    sheath = source("physics_app/src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C")
+def test_canonical_electron_sheath_wall_has_one_factory_and_no_old_aliases():
+    sheath = source("physics_app/src/materials/ESWallFluxMaterial.C")
+    assert 'registerMooseObject("PhysicsApp", ESWallFluxMaterial);' in sheath
+    assert '"species_id", ""' in sheath
+    assert 'species_id != "e"' in sheath
+    assert 'species_id.empty() ? "electron_wall_number_flux" : "e_wall_number_flux"' in sheath
+    assert 'species_id.empty() ? "electron_mean_speed" : "e_mean_speed"' in sheath
     assert '"e_wall_sheath_drop_V"' in sheath
+    for obsolete in ("PhysicsElectronWallFluxMaterial",
+                     "PhysicsElectronAdjacentSheathWallFluxMaterial",
+                     "ElectronWallFluxMaterial"):
+        assert not (ROOT / "physics_app/src/materials" / (obsolete + ".C")).exists()
 
 
 def test_charge_density_canonical_output_is_opt_in():
@@ -88,9 +89,9 @@ def test_p2_wiring_for_two_species_and_electron_and_negative_mutation():
         _assert_wall_wiring(deck, species)
     assert "charge_number = -1" in _block(deck, "Om_wall")
     electron = _block(deck, "electron_wall")
-    assert "type = PhysicsElectronWallFluxMaterial" in electron
+    assert "type = ESWallFluxMaterial" in electron
     assert "species_id = e" in electron
-    assert "mean_energy = mean_en_solved" in electron
+    assert "mean_energy = e_energy_eV" in electron
     assert "functor = e_wall_number_flux" in _block(deck.split("[FVBCs]", 1)[1], "e_wall")
     # Negative control: swapping the O2p consumer to Op must fail validation.
     swapped = deck.replace("functor = O2p_wall_number_flux", "functor = Op_wall_number_flux", 1)

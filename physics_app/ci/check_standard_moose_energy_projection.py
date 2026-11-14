@@ -26,7 +26,7 @@ EI16_COEF = -(EI16_DELTA_E_EV * N_A)
 EI10_ORACLE = {
     "n_e_avg": 1.0 * N_E0,
     "mean_en_avg": 0.99198106194124 * N_E0 * MEAN_E0_EV,
-    "mean_en_solved_avg": 5.6867893526543,
+    "e_energy_eV_avg": 5.6867893526543,
     "w_O2_avg": 0.99899921866882,
     "w_O2s_avg": 0.0010007813311756,
     "R_O2s_avg": 0.0078133117564827,
@@ -34,7 +34,7 @@ EI10_ORACLE = {
 EI16_ORACLE = {
     "n_e_avg": 1.1016960590289 * N_E0,
     "mean_en_avg": 0.78606212855788 * N_E0 * MEAN_E0_EV,
-    "mean_en_solved_avg": 4.0903346174113,
+    "e_energy_eV_avg": 4.0903346174113,
     "w_O2_avg": 0.99899831129721,
     "w_O2p_avg": 0.00100168870279,
     "R_ion_O2_avg": 0.016887027897333,
@@ -92,7 +92,7 @@ EI10_INPUT = f"""[Mesh]
     expression = 'dens*wo2/0.031998'
   []
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -168,9 +168,9 @@ EI10_INPUT = f"""[Mesh]
     functor = w_O2_constraint
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [mean_en_solved_avg]
+  [e_energy_eV_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [R_O2s_avg]
@@ -245,7 +245,7 @@ EI16_INPUT = f"""[Mesh]
     expression = 'dens*wo2/0.031998'
   []
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -253,7 +253,7 @@ EI16_INPUT = f"""[Mesh]
   [ei16_rate]
     type = EIRateCoefMaterial
     rate_table_file = standard_ei16_runtime_table.txt
-    mean_energy = mean_en_solved
+    mean_energy = e_energy_eV
     electron_number_density = n_e
     target_molar_concentration = c_O2
     reaction_progress = R_ion_O2
@@ -335,9 +335,9 @@ EI16_INPUT = f"""[Mesh]
     functor = w_O2_constraint
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [mean_en_solved_avg]
+  [e_energy_eV_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [R_ion_O2_avg]

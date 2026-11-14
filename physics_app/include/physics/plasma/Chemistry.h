@@ -17,6 +17,8 @@ struct DDTransportRecord
   std::string model;
   double mobility = 0.0;
   double diffusivity = 0.0;
+  std::string mobility_source;
+  std::string diffusivity_source;
   std::string table_file;
   std::string table_units;
   std::string pressure;
@@ -39,12 +41,38 @@ struct NVTransportRecord
   bool equals(const NVTransportRecord & rhs) const;
 };
 
+// One explicitly declared mesh sideset and its electron boundary owner.
+// Aliases such as wafer and inlet are labels, not inferred mesh names.
+// A verbatim supported MOOSE BC declaration moved from an existing .i
+// [BCs] block. Its name, type, variable, and material Functor links are
+// retained, with the mesh boundary supplied by its enclosing JSON record.
+struct BoundaryBCRecord
+{
+  std::string type;
+  std::string variable;
+  std::string wall_number_flux;
+  std::string mean_energy;
+};
+
+struct BoundaryRecord
+{
+  // A single existing BC may own multiple mesh sidesets. Never split that
+  // original operator into separate objects during JSON relocation.
+  std::vector<std::string> mesh_boundaries;
+  std::map<std::string, BoundaryBCRecord> bcs;
+};
+
 struct SpeciesRecord
 {
   std::map<std::string, int> elements;
   int charge_number = 0;
   // Needed only for rate laws evaluated from heavy-species mass fractions.
   double molar_mass_kg_mol = 0.0;
+  // Initial number density [1/m^3] is required for every species selected
+  // by FEM/FVM DDContinuityEq and exclusively owns its generated variable/IC.
+  // Other species may omit it. Strictly positive (log-state cannot encode zero).
+  // No external [Variables]/[ICs] fallback for selected continuity species.
+  std::optional<double> initial_number_density;
   // Scenario-specific initial data, never the instantaneous solver state.
   // Missing is different from an explicitly zero concentration.
   std::optional<double> initial_vol_mass_fraction;
@@ -103,6 +131,11 @@ public:
   bool hasDDTransport() const { return !_dd_transport.empty(); }
   bool fluidElectronEnergyTransport() const { return _fluid_electron_energy_transport; }
   const NVTransportRecord * nvTransport() const;
+  bool hasBoundaries() const { return _has_boundaries; }
+  const std::map<std::string, BoundaryRecord> & boundaries() const
+  {
+    return _boundaries;
+  }
   // Scenario-specific heavy-species composition is stored directly in speciesRecords().
 
 private:
@@ -111,6 +144,8 @@ private:
   std::map<std::string, DDTransportRecord> _dd_transport;
   bool _fluid_electron_energy_transport = false;
   std::unique_ptr<NVTransportRecord> _nv_transport;
+  bool _has_boundaries = false;
+  std::map<std::string, BoundaryRecord> _boundaries;
 };
 
 // Chemistry owns the Physics source projector and the validated JSON data model.

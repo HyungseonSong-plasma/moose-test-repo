@@ -3,7 +3,7 @@
 #include "FunctorMaterial.h"
 
 /**
- * Electron absorbing-wall flux suppressed by a plasma-side, adjacent-cell sheath drop.
+ * Electron sheath-limited absorbing-wall flux suppressed by a plasma-side, adjacent-cell sheath drop.
  *
  * On a wall face,
  *
@@ -15,11 +15,11 @@
  * T_e=(2/3)<epsilon_e> in eV.  E_n d_perp is the first-order reconstruction of
  * phi_adjacent - phi_wall used by the Issue #395 diagnostic.
  */
-class PhysicsElectronAdjacentSheathWallFluxMaterial : public FunctorMaterial
+class ESWallFluxMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  PhysicsElectronAdjacentSheathWallFluxMaterial(const InputParameters & parameters);
+  ESWallFluxMaterial(const InputParameters & parameters);
 
 protected:
   const Moose::Functor<ADReal> & _electron_density;

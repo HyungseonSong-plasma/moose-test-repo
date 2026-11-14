@@ -175,7 +175,7 @@ parseDDTransport(const Json & value, const std::string & file)
   if (!value.is_object())
     fail(file, "drift_diffusion transport entry must be an object");
   DDTransportRecord result;
-  result.model = requiredText(value, "model", file);
+  result.model = requiredText(value, "transport_coef", file);
   if (result.model == "constant")
   {
     if (!value.contains("mobility") || !value.at("mobility").is_number() ||
@@ -186,7 +186,7 @@ parseDDTransport(const Json & value, const std::string & file)
     if (!std::isfinite(result.mobility) || !std::isfinite(result.diffusivity) ||
         result.mobility < 0.0 || result.diffusivity < 0.0)
       fail(file, "constant mobility/diffusivity must be finite and nonnegative");
-    for (const auto * excluded : {"table_file", "coordinate", "table_units",
+    for (const auto * excluded : {"table_file", "coordinate", "mean_energy", "table_units",
                                    "pressure", "gas_temperature", "bounds_policy",
                                    "mobility_source", "diffusivity_source"})
       if (value.contains(excluded))
@@ -194,11 +194,15 @@ parseDDTransport(const Json & value, const std::string & file)
   }
   else if (result.model == "functor")
   {
-    // model=functor reuses the existing canonical species coefficient AD Functors.
-    // Numeric physical constants remain model=constant with explicit mu and D.
-    if (value.size() != 1)
-      fail(file, "functor transport accepts only model; DDTransportMaterial derives "
-                 "<species>_mobility and <species>_diffusivity.");
+    // Upstream AD coefficient Functor names; numeric values require constant mode.
+    result.mobility_source = requiredText(value, "mobility", file);
+    result.diffusivity_source = requiredText(value, "diffusivity", file);
+    for (const auto * excluded : {"table_file", "table_units", "pressure",
+                                   "gas_temperature", "bounds_policy",
+                                   "coordinate", "mean_energy",
+                                   "mobility_source", "diffusivity_source"})
+      if (value.contains(excluded))
+        fail(file, std::string("functor transport forbids ") + excluded);
   }
   else if (result.model == "lookup")
   {
@@ -207,9 +211,9 @@ parseDDTransport(const Json & value, const std::string & file)
       fail(file, "lookup transport forbids constant or Functor coefficient inputs");
     result.table_file = resolveDataFile(requiredText(value, "table_file", file), file);
     // Lookup always uses the canonical solved electron mean-energy Functor:
-    // mean_en_solved. The JSON schema must not expose its coordinate name.
+    // e_energy_eV. The JSON schema must not expose its coordinate name.
     if (value.contains("coordinate") || value.contains("mean_energy"))
-      fail(file, "DD lookup coordinate is implicit: mean_en_solved; do not specify coordinate.");
+      fail(file, "DD lookup coordinate is implicit: e_energy_eV; do not specify coordinate.");
     result.table_units = requiredText(value, "table_units", file);
     if (result.table_units != "reduced" && result.table_units != "physical")
       fail(file, "lookup table_units must be 'reduced' or 'physical'");
@@ -260,6 +264,8 @@ bool
 DDTransportRecord::equals(const DDTransportRecord & rhs) const
 {
   return model == rhs.model && mobility == rhs.mobility && diffusivity == rhs.diffusivity &&
+         mobility_source == rhs.mobility_source &&
+         diffusivity_source == rhs.diffusivity_source &&
          table_file == rhs.table_file &&
          table_units == rhs.table_units && pressure == rhs.pressure &&
          gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;
@@ -325,6 +331,43 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       }
       if (it.key() == "e" && (species.charge_number != -1 || !species.elements.empty()))
         fail(file, "electron 'e' must carry -1 charge and zero nuclei");
+      // A continuity species' initial particle number density is JSON-owned,
+      // independent of heavy-gas mass fractions and energy-density ICs.
+      if (record.contains("initial_number_density"))
+      {
+        if (!record.at("initial_number_density").is_number())
+          fail(file, "initial_number_density must be numeric for " + it.key());
+        const double density = record.at("initial_number_density").get<double>();
+        if (!std::isfinite(density) || density <= 0.0)
+          fail(file, "initial_number_density must be finite and strictly positive [1/m^3] for " +
+                     it.key());
+        species.initial_number_density = density;
+      }
+      // Every DD coefficient owner lives in the species JSON record.
+      if (record.contains("transport_coef"))
+      {
+        const auto transport = parseDDTransport(record, file);
+        const auto previous = _dd_transport.find(it.key());
+        if (previous == _dd_transport.end())
+          _dd_transport.emplace(it.key(), transport);
+        else if (!previous->second.equals(transport))
+          fail(file, "conflicting species transport_coef owner for " + it.key());
+      }
+      else
+        for (const auto * key : {"mobility", "diffusivity", "table_file",
+                                  "table_units", "pressure", "gas_temperature",
+                                  "bounds_policy", "mobility_source",
+                                  "diffusivity_source"})
+          if (record.contains(key))
+            fail(file, "species '" + it.key() + "' has " + key +
+                           " without transport_coef");
+      if (record.contains("energy_transport_coef"))
+      {
+        if (it.key() != "e" || !record.at("energy_transport_coef").is_string() ||
+            record.at("energy_transport_coef").get<std::string>() != "fluid")
+          fail(file, "energy_transport_coef supports only species.e = fluid");
+        _fluid_electron_energy_transport = true;
+      }
       if (record.contains("molar_mass_kg_mol"))
       {
         if (!record.at("molar_mass_kg_mol").is_number())
@@ -389,6 +432,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       {
         if (existing->second.charge_number != species.charge_number ||
             existing->second.elements != species.elements ||
+            (existing->second.initial_number_density &&
+             species.initial_number_density &&
+             *existing->second.initial_number_density != *species.initial_number_density) ||
             (existing->second.molar_mass_kg_mol > 0.0 &&
              species.molar_mass_kg_mol > 0.0 &&
              existing->second.molar_mass_kg_mol != species.molar_mass_kg_mol) ||
@@ -409,6 +455,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
             (!existing->second.mass_fraction_functor.empty() &&
              !species.mass_fraction_variable.empty()))
           fail(file, "conflicting species identity for " + it.key());
+        if (!existing->second.initial_number_density)
+          existing->second.initial_number_density = species.initial_number_density;
         if (existing->second.molar_mass_kg_mol == 0.0)
           existing->second.molar_mass_kg_mol = species.molar_mass_kg_mol;
         if (!existing->second.initial_vol_mass_fraction)
@@ -425,8 +473,93 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     if (root.contains("gas_state"))
       fail(file, "top-level gas_state is retired; put initial composition on each species");
 
-    // Multiple chemistry files may contribute reactions independently, but
-    // coefficient owners are one per species and one per NV mixture.
+    // The top-level JSON boundaries registry relocates existing named [BCs].
+    // Absence of boundaries creates no additional BC objects.
+    // No wall law, 'open' role, or additional implicit BC is invented.
+    if (root.contains("drift_diffusion_boundary"))
+      fail(file, "drift_diffusion_boundary is retired; use boundaries with physical mesh sideset keys");
+    if (root.contains("boundaries"))
+    {
+      if (_has_boundaries)
+        fail(file, "duplicate boundaries owner across JSON files");
+      const auto & catalogue = root.at("boundaries");
+      if (!catalogue.is_object() || catalogue.empty())
+        fail(file, "boundaries must be a nonempty object");
+
+      static const std::regex identifier(R"(^[A-Za-z_][A-Za-z_0-9]*$)");
+      std::set<std::string> used_mesh_boundaries;
+      std::set<std::string> used_bc_names;
+      std::set<std::string> operator_owners;
+      for (auto group = catalogue.begin(); group != catalogue.end(); ++group)
+      {
+        // The JSON object key IS the physical mesh sideset name, e.g.
+        // "plasma_wafer". A whitespace-separated key also preserves a
+        // historical single BC owning several sidesets, without splitting it.
+        const auto & item = group.value();
+        if (!item.is_object() || item.size() != 1 ||
+            !item.contains("bcs") || !item.at("bcs").is_object())
+          fail(file, "boundaries." + group.key() +
+                         " requires exactly a bcs object; its key is the mesh boundary");
+
+        BoundaryRecord record;
+        std::istringstream input(group.key());
+        for (std::string side; input >> side;)
+          record.mesh_boundaries.push_back(side);
+        if (record.mesh_boundaries.empty())
+          fail(file, "empty boundaries mesh sideset key");
+        for (const auto & side : record.mesh_boundaries)
+          if (!std::regex_match(side, identifier) ||
+              !used_mesh_boundaries.insert(side).second)
+            fail(file, "invalid or duplicate boundaries mesh sideset: " +
+                           side);
+
+        for (auto bc = item.at("bcs").begin(); bc != item.at("bcs").end(); ++bc)
+        {
+          const auto & spec = bc.value();
+          if (!std::regex_match(bc.key(), identifier) ||
+              !used_bc_names.insert(bc.key()).second)
+            fail(file, "invalid or duplicate DriftDiffusion BC name: " + bc.key());
+          if (!spec.is_object() || !spec.contains("type") || !spec.contains("variable") ||
+              !spec.contains("wall_number_flux") || !spec.at("type").is_string() ||
+              !spec.at("variable").is_string() ||
+              !spec.at("wall_number_flux").is_string())
+            fail(file, "boundaries BC " + bc.key() +
+                           " requires type, variable, and wall_number_flux strings");
+
+          BoundaryBCRecord entry;
+          entry.type = spec.at("type").get<std::string>();
+          entry.variable = spec.at("variable").get<std::string>();
+          entry.wall_number_flux = spec.at("wall_number_flux").get<std::string>();
+          const bool particle = entry.type == "FEMElectronSheathBC";
+          const bool energy = entry.type == "FEMElectronEnergySheathBC";
+          if (!particle && !energy)
+            fail(file, "boundaries BC type is not yet supported: " +
+                           entry.type + " for " + bc.key());
+          if (spec.size() != (particle ? 3 : 4) ||
+              (energy && (!spec.contains("mean_energy") ||
+                          !spec.at("mean_energy").is_string())))
+            fail(file, "wrong named arguments in boundaries BC " + bc.key());
+          if (energy)
+            entry.mean_energy = spec.at("mean_energy").get<std::string>();
+          if (entry.variable.empty() || entry.wall_number_flux.empty() ||
+              (energy && entry.mean_energy.empty()))
+            fail(file, "empty parameter value in boundaries BC " + bc.key());
+
+          // Do not double-own a physical residual under two different labels.
+          for (const auto & side : record.mesh_boundaries)
+          {
+            const std::string key = entry.type + "/" + entry.variable + "/" + side;
+            if (!operator_owners.insert(key).second)
+              fail(file, "duplicate DriftDiffusion BC operator owner: " + key);
+          }
+          record.bcs.emplace(bc.key(), std::move(entry));
+        }
+        _boundaries.emplace(group.key(), std::move(record));
+      }
+      _has_boundaries = true;
+    }
+
+    // Drift-diffusion coefficients now live on species; Navier-Stokes stays mixture-owned.
     if (root.contains("transport_coefficients"))
     {
       const auto & coefficients = root.at("transport_coefficients");
@@ -437,34 +570,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           fail(file, "unknown transport_coefficients section: " + it.key());
 
       if (coefficients.contains("drift_diffusion"))
-      {
-        const auto & owners = coefficients.at("drift_diffusion");
-        if (!owners.is_object())
-          fail(file, "transport_coefficients.drift_diffusion must be an object");
-        for (auto it = owners.begin(); it != owners.end(); ++it)
-        {
-          if (it.key() == "e_energy")
-          {
-            // This is a closure selector, not a separate particle DD
-            // Material and not a Chemistry reaction species.
-            const auto & energy = it.value();
-            if (!energy.is_object() || energy.size() != 1 ||
-                !energy.contains("type") || !energy.at("type").is_string() ||
-                energy.at("type").get<std::string>() != "fluid")
-              fail(file, "e_energy transport requires exactly {\"type\":\"fluid\"}.");
-            if (_fluid_electron_energy_transport)
-              fail(file, "duplicate e_energy transport closure owner");
-            _fluid_electron_energy_transport = true;
-            continue;
-          }
-          const auto record = parseDDTransport(it.value(), file);
-          const auto previous = _dd_transport.find(it.key());
-          if (previous == _dd_transport.end())
-            _dd_transport.emplace(it.key(), record);
-          else if (!previous->second.equals(record))
-            fail(file, "conflicting drift_diffusion coefficient owner for " + it.key());
-        }
-      }
+        fail(file, "transport_coefficients.drift_diffusion is retired; "
+                   "declare transport_coef and mobility/diffusivity in species.<id>");
       if (coefficients.contains("navier_stokes"))
       {
         const auto record = parseNVTransport(coefficients.at("navier_stokes"), file);
@@ -637,10 +744,10 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
   }
   if (_fluid_electron_energy_transport && _dd_transport.find("e") == _dd_transport.end())
     fail("<merged plasma mechanism>",
-         "e_energy type=fluid requires an electron e drift_diffusion transport record");
+         "species.e.energy_transport_coef=fluid requires species.e.transport_coef");
   for (const auto & [id, config] : _dd_transport)
     if (_species.find(id) == _species.end())
-      fail("<merged plasma mechanism>", "transport_coefficients references unknown species: " + id);
+      fail("<merged plasma mechanism>", "species transport_coef references unknown species: " + id);
   if (_nv_transport)
     for (const auto & id : _nv_transport->species)
       if (_species.find(id) == _species.end())
@@ -841,7 +948,8 @@ PlasmasAction::validParams()
   InputParameters params = Action::validParams();
   params.addParam<std::vector<FileName>>(
       "files", {}, "Ordered JSON mechanisms shared by Plasma Chemistry and Transport.");
-  params.addParam<Real>("pressure", "Uniform gas pressure [Pa]; enables canonical Gas State.");
+  params.addParam<Real>("pressure", "Initial Navier-Stokes pressure [Pa] when a solved "
+                                    "pressure variable exists; otherwise uniform gas pressure.");
   params.addParam<Real>("temperature", "Uniform gas temperature [K]; enables canonical Gas State.");
   params.addParam<MooseEnum>("state_model", MooseEnum("ideal_gas", "ideal_gas"),
                              "Canonical mixture equation of state.");
@@ -910,11 +1018,95 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
 void
 PlasmasAction::act()
 {
+  // Root JSON is the sole ownership switch for the relocated, verbatim
+  // [BCs] blocks, independent of the DD/NV taxonomy. There is deliberately NO .i
+  // plasma_boundary toggle and NO implicit wall type interpretation.
+  // This path also works when root gas_state is not enabled.
+  if (_current_task == "add_bc" && _data.hasBoundaries())
+    for (const auto & [group, boundary] : _data.boundaries())
+      for (const auto & [name, bc] : boundary.bcs)
+      {
+        auto params = _factory.getValidParams(bc.type);
+        params.set<NonlinearVariableName>("variable") = bc.variable;
+        std::vector<BoundaryName> sidesets;
+        for (const auto & side : boundary.mesh_boundaries)
+          sidesets.emplace_back(side);
+        params.set<std::vector<BoundaryName>>("boundary") = sidesets;
+        params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
+        if (bc.type == "FEMElectronEnergySheathBC")
+          params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
+        _problem->addBoundaryCondition(bc.type, name, params);
+      }
+
   if (!gasStateEnabled() ||
       (_current_task != "add_functor_material" &&
        _current_task != "add_ics_physics" && _current_task != "add_bc" &&
        _current_task != "add_postprocessor"))
     return;
+
+  // In the archived S6 Navier-Stokes model pressure is a SOLVED FV
+  // variable, not a separately produced constant Functor. A MOOSE FV
+  // variable is itself a Functor. The root pressure parameter is its sole
+  // initial-condition value; all live consumers use that variable under
+  // the SAME name "pressure". Temperature remains root-owned and fixed.
+  //
+  // S6 has independently solved neutral mass fractions and its original
+  // neutral EOS (rho_neutral); it does not claim an equivalent complete
+  // JSON heavy-mixture catalogue. Never synthesize or renormalize missing
+  // species fractions. A partially declared root mixture fails closed.
+  if (_problem->hasVariable("pressure"))
+  {
+    bool has_root_composition = false;
+    for (const auto & [id, record] : _data.speciesRecords())
+      if (id != "e" &&
+          (record.molar_mass_kg_mol > 0.0 ||
+           record.initial_vol_mass_fraction ||
+           record.initial_inlet_mass_fraction ||
+           !record.mass_fraction_variable.empty() ||
+           !record.mass_fraction_functor.empty()))
+        has_root_composition = true;
+    if (has_root_composition)
+      paramError("files", "A solved Navier-Stokes pressure variable uses the "
+                         "Native neutral composition closure; do not activate a "
+                         "second root ideal-gas mixture owner.");
+    if (isParamValid("sccm"))
+      paramError("sccm", "A solved pressure cannot use root SCCM/mixture inlet "
+                          "without a separately verified mixture contract.");
+    if (_current_task == "add_ics_physics")
+    {
+      const auto type = "FVConstantIC";
+      auto params = _factory.getValidParams(type);
+      params.set<VariableName>("variable") = "pressure";
+      params.set<Real>("value") = getParam<Real>("pressure");
+      _problem->addFVInitialCondition(type, "plasma_initial_pressure", params);
+    }
+    else if (_current_task == "add_functor_material")
+    {
+      // MOOSE variables already provide AD Functor interfaces. Register no
+      // Functor named pressure, p, p_fixed, T or T_g_fixed.
+      const auto type = "ADGenericFunctorMaterial";
+      auto params = _factory.getValidParams(type);
+      params.set<std::vector<std::string>>("prop_names") = {"temperature"};
+      std::ostringstream temperature;
+      temperature << std::setprecision(17) << getParam<Real>("temperature");
+      params.set<std::vector<MooseFunctorName>>("prop_values") = {temperature.str()};
+      params.set<bool>("define_dot_functors") = false;
+      _problem->addFunctorMaterial(type, "plasma_gas_temperature", params);
+
+      // Keep total neutral particle density tied to the LIVE pressure
+      // Functor and root temperature, never a frozen initial snapshot.
+      auto gas = _factory.getValidParams("ADParsedFunctorMaterial");
+      gas.set<std::string>("property_name") = "n_g";
+      gas.set<std::string>("expression") =
+          "pressure/(1.380649e-23*temperature)";
+      gas.set<std::vector<std::string>>("functor_names") =
+          {"pressure", "temperature"};
+      gas.set<std::vector<std::string>>("functor_symbols") =
+          {"pressure", "temperature"};
+      _problem->addFunctorMaterial("ADParsedFunctorMaterial", "plasma_gas_n_g", gas);
+    }
+    return;
+  }
 
   // No redundant top-level gas_state list. Composition is owned by each
   // Chemistry species, including explicitly zero heavy fractions.
@@ -1062,6 +1254,8 @@ PlasmasAction::act()
     _problem->addFunctorMaterial("ADParsedFunctorMaterial", "plasma_gas_" + name, params);
   };
 
+  // Exactly one provider per gas state: root parameter pressure/temperature
+  // publishes a same-named AD Functor; no p/T compatibility aliases.
   // MOOSE's numeric MooseFunctorName is a constant AD Functor. The underlying
   // formula and value are computed once; property names and AD API are stable.
   auto literal = [](const double value)
@@ -1117,8 +1311,8 @@ PlasmasAction::act()
     paramError("files", "Invalid fixed ideal-gas mixture: ", error.what());
   }
 
-  addStatic("p", getParam<Real>("pressure"));
-  addStatic("T", getParam<Real>("temperature"));
+  addStatic("pressure", getParam<Real>("pressure"));
+  addStatic("temperature", getParam<Real>("temperature"));
   addStatic("n_g", initial.number_density_per_m3);
   addStatic("M_mix_initial", initial.molar_mass_kg_per_mol);
   addStatic("M_mix_inlet", inlet.molar_mass_kg_per_mol);
@@ -1127,7 +1321,7 @@ PlasmasAction::act()
 
   // The equation of state consumes live Y_i when NV is activated; otherwise
   // this is a constant-composition, non-evolving gas-state closure.
-  std::vector<std::string> names = {"p", "T"};
+  std::vector<std::string> names = {"pressure", "temperature"};
   std::vector<std::string> symbols = {"pressure", "temp"};
   std::string denominator;
   for (std::size_t i = 0; i < species.size(); ++i)

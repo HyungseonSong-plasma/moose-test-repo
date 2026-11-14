@@ -44,7 +44,7 @@ def test_dd_constant_lookup_units_naming_and_energy_projection():
     for removed in ('"property_table_file"', '"coordinate"', '"mean_energy"'):
         assert removed not in dd
     assert 'Lookup transport requires table_file.' in dd
-    assert 'getFunctorByName<ADReal>("mean_en_solved")' in dd
+    assert 'getFunctorByName<ADReal>("e_energy_eV")' in dd
 
 
 def test_nv_retains_unmodified_collision_integral_and_mixture_model():
@@ -75,7 +75,7 @@ def test_redundant_composite_retired_but_needed_ion_functor_bridge_remains():
     inp = (ROOT / "physics_app/ci/plasma_direct_existing_materials_smoke.i").read_text()
     assert not (SRC / "ElectronClosureMaterial.C").exists()
     assert not (INC / "ElectronClosureMaterial.h").exists()
-    assert "type = PhysicsElectronMeanEnergyMaterial" in inp
+    assert "type = ElectronEnergyMaterial" in inp
     assert "type = DDTransportMaterial" in inp
     # Existing nonconstant heavy-ion coefficient Functors still require a
     # pass-through name bridge; replacing them by constants would alter physics.

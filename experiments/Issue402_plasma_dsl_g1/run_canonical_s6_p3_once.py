@@ -64,16 +64,20 @@ def verify_canonical_exodus(exodus: Path, *, require_energy: bool = False) -> di
 
 
 def run(case: str, historical: Path, expected_head: str,
-        output: Path, timeout_seconds: int, *, chemistry_mode: bool = False) -> dict:
+        output: Path, timeout_seconds: int, *, chemistry_mode: bool = False,
+        hybrid_json: bool = False) -> dict:
     if case not in option.CASES or not (600 <= timeout_seconds <= 19800):
         raise ValueError("P3_INVALID_CASE_OR_BUDGET")
+    if hybrid_json and not chemistry_mode:
+        raise ValueError("P3_HYBRID_REQUIRES_CANONICAL_S6_CHEMISTRY")
     if output.exists():
         raise ValueError("P3_OUTPUT_ALREADY_EXISTS")
     output.mkdir(parents=True, mode=0o700)
     status = {
         "schema": "issue402_canonical_S6_D_P3_once_v1",
         "case": case, "arm": "D",
-        "physics_mode": "chemistry" if chemistry_mode else "transport_only",
+        "physics_mode": ("chemistry_hybrid_json_native" if hybrid_json else
+                         "chemistry" if chemistry_mode else "transport_only"),
         "source_sha": expected_head, "historical_sha": option.HISTORICAL_SHA,
         "oci_image": option.OCI,
         "P0": "NOT_RUN", "P1": "NOT_RUN", "P2": "NOT_RUN",
@@ -117,6 +121,27 @@ def run(case: str, historical: Path, expected_head: str,
                  "EI-2069", "H25", "EI-" + case])
             if sha(sidecar) != cutover["overlay_sha256"]:
                 raise ValueError("P3_CHEMISTRY_OVERLAY_SHA_MISMATCH")
+            if hybrid_json:
+                # JSON Physics owns only its generated FEM electron states,
+                # kernels, mobility and energy Material. The existing Native
+                # RF, Poisson, wall/charge ledger, ions and rates are retained
+                # from the staged public 400-W S6 deck. Every overlapping
+                # historical owner is validated and retired in SCRATCH only.
+                from chemistry.prepare_hybrid_json_s6 import prepare as prepare_hybrid
+                hybrid = prepare_hybrid(staged / option.p2.CHEM, ordered, case)
+                status["hybrid_json_ownership_cutover"] = hybrid
+                if sha(sidecar) != hybrid["overlay_sha256"]:
+                    raise ValueError("P3_HYBRID_OVERLAY_SHA_MISMATCH")
+                # Publish the EXACT single integrated JSON consumed by this
+                # Native solve, not only a hash of an ephemeral scratch file.
+                input_json = (staged / option.p2.CHEM /
+                              hybrid["integrated_mechanism_json"])
+                published_json = results / hybrid["integrated_mechanism_json"]
+                if sha(input_json) != hybrid["hybrid_json_sha256"]:
+                    raise ValueError("P3_INTEGRATED_JSON_PRE_SOLVE_SHA_MISMATCH")
+                shutil.copyfile(input_json, published_json)
+                if sha(published_json) != hybrid["integrated_json_source_sha256"]:
+                    raise ValueError("P3_INTEGRATED_JSON_ARTIFACT_SHA_MISMATCH")
         else:
             # Earlier D transport-only experiment, not the Chemistry P3 arm.
             shutil.copy2(ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
@@ -130,6 +155,12 @@ def run(case: str, historical: Path, expected_head: str,
         status["P2"] = p2["P2"]
         status["p2_log_sha256"] = p2["log_sha256"]
         if p2["P2"] != "PASS":
+            # Preserve the original native P2 error for controller triage.
+            # This is diagnostic only; never relax input validity or launch P3.
+            diagnostic = (output / "native_P2.log").read_text(errors="replace")
+            print("HYBRID_NATIVE_P2_FAILED " + p2.get("classification", "UNKNOWN"),
+                  flush=True)
+            print(diagnostic[-10000:], flush=True)
             raise ValueError("P3_CANONICAL_INPUT_CHECK_FAILED")
         if sha(binary) != identity["binary_sha256"]:
             raise ValueError("P3_NATIVE_BINARY_CHANGED_AFTER_P2")
@@ -181,12 +212,15 @@ def run(case: str, historical: Path, expected_head: str,
         p3_manifest.write_text(json.dumps({
             "schema": "issue493_public_p3_artifact_v1",
             "case": case, "arm": "D",
-            "physics_mode": "chemistry" if chemistry_mode else "transport_only",
+            "physics_mode": ("chemistry_hybrid_json_native" if hybrid_json else
+                             "chemistry" if chemistry_mode else "transport_only"),
             "source_sha": expected_head, "oci_image": option.OCI,
             "P3": "PASS", "science": "SCIENCE_HOLD",
             "files": {
                 name: {"sha256": sha(results / name)}
-                for name in ("plasma.e", "plasma.csv")
+                for name in (("plasma.e", "plasma.csv",
+                              f"unified_s6_{case}.json") if hybrid_json
+                             else ("plasma.e", "plasma.csv"))
             }
         }, sort_keys=True, indent=2) + "\n")
         ref = ROOT / "experiments/Issue493_s6_boltzmann/reference"
@@ -219,9 +253,13 @@ def main() -> int:
     parser.add_argument("--expected-head", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timeout-seconds", type=int, default=19800)
+    parser.add_argument("--hybrid-json", action="store_true",
+                        help="Only with --chemistry? Use run_chemistry_s6_p3_once.py.")
     a = parser.parse_args()
     return 0 if run(a.case, a.historical.resolve(), a.expected_head,
-                    a.output.resolve(), a.timeout_seconds)["P3"] == "PASS" else 3
+                    a.output.resolve(), a.timeout_seconds,
+                    chemistry_mode=a.hybrid_json,
+                    hybrid_json=a.hybrid_json)["P3"] == "PASS" else 3
 
 
 if __name__ == "__main__":

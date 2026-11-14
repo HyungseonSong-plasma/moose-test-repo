@@ -19,6 +19,7 @@ private:
   void addInitialConditions() override;
   void checkIntegrity() const override;
   void addFEKernels() override;
+  void addFunctorMaterials() override;
   bool _created_energy_variable = false;
 };
 

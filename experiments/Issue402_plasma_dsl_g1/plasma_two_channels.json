@@ -2,7 +2,10 @@
   "species": {
     "e": {
       "elements": {},
-      "charge_number": -1
+      "charge_number": -1,
+      "transport_coef": "constant",
+      "mobility": 1,
+      "diffusivity": 1
     },
     "O2": {
       "elements": {
@@ -66,14 +69,5 @@
       "units": "mol/(m^3 s)",
       "energy_loss_eV": 17
     }
-  ],
-  "transport_coefficients": {
-    "drift_diffusion": {
-      "e": {
-        "model": "constant",
-        "mobility": 1,
-        "diffusivity": 1
-      }
-    }
-  }
+  ]
 }

@@ -1,0 +1,134 @@
+# Bounded branch-specific exact-head Native P0/P1/P2 only.
+# 2026-11-14 species-local transport_coef/mobility/diffusivity/energy_transport_coef and strict JSON density.
+# P0 remains repository-local schema/wiring: unrelated full-S6 runner tests require numpy/scipy and are separate gates.
+# No new sheath flux formula or executable class; P3 and scientific parity remain SCIENCE_HOLD.
+name: Issue402 DD JSON plasma boundary P0 P1 P2 once
+run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
+on:
+  push:
+    branches: [issue-402-dd-plasma-boundary-action]
+    paths: [.github/workflows/issue402-dd-json-boundary-p0-p2-once.yml]
+permissions:
+  contents: read
+jobs:
+  dd-json-plasma-boundary:
+    name: Native DD JSON boundary owner P0-P2
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Exact source and physical-law owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f physics_app/src/physics/plasma/Chemistry.C
+          test ! -e physics_app/src/physics/plasma/PlasmaDriftDiffusionBoundaryAction.C
+          grep -Fq "boundaries()" physics_app/src/physics/plasma/Chemistry.C
+          test -f physics_app/src/bcs/FEMElectronSheathBC.C
+          test -f physics_app/src/bcs/FEMElectronEnergySheathBC.C
+          test ! -e physics_app/src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C
+          test ! -e physics_app/src/materials/ElectronWallFluxMaterial.C
+          test -f physics_app/src/materials/ESWallFluxMaterial.C
+          grep -Fq 'registerMooseObject("PhysicsApp", ESWallFluxMaterial);' physics_app/src/materials/ESWallFluxMaterial.C
+          grep -Fq '"e_energy_eV"' physics_app/src/materials/ElectronEnergyMaterial.C
+          grep -Fq '"boundaries"' physics_app/src/physics/plasma/Chemistry.C
+          test -f physics_app/src/materials/ElectronEnergyMaterial.C
+          test ! -e physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
+          test ! -e physics_app/src/materials/PhysicsElectronWallFluxMaterial.C
+          grep -Fq 'registerMooseObject("PhysicsApp", ElectronEnergyMaterial);' physics_app/src/materials/ElectronEnergyMaterial.C
+          grep -Fq 'MooseEnum("log_molar_eV", "log_molar_eV")' physics_app/src/materials/ElectronEnergyMaterial.C
+          grep -Fq 'registerMooseAction("PhysicsApp", DDEnergyEq, "add_functor_material");' physics_app/src/physics/plasma/DDEnergyEq.C
+          ! grep -Fq 'physical_eV' physics_app/src/materials/ElectronEnergyMaterial.C
+          ! grep -Fq 'physical_eV' physics_app/include/materials/ElectronEnergyMaterial.h
+          ! grep -Fq '[FunctorMaterials]' physics_app/ci/dd_plasma_boundary_json_physics_auto_p2.i
+          grep -Fq 'std::optional<double> initial_number_density;' physics_app/include/physics/plasma/Chemistry.h
+          grep -Fq 'bind_json_initial(fem, "fem_species", _fem_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'bind_json_initial(fvm, "fvm_species", _fvm_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'external [Variables]/[ICs] cannot replace it.' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'requiredText(value, "transport_coef", file)' physics_app/src/physics/plasma/Chemistry.C
+          grep -Fq 'transport_coefficients.drift_diffusion is retired' physics_app/src/physics/plasma/Chemistry.C
+          grep -Fq 'params.set<MooseFunctorName>("mobility_source") = config->mobility_source;' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'params.set<MooseFunctorName>("diffusivity_source") = config->diffusivity_source;' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'requires species.e.initial_number_density' physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
+          grep -Fq 'requires species.O2p.initial_number_density' physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
+          grep -Fq 'fem_species = e' physics_app/ci/dd_plasma_boundary_json_physics_auto_p2.i
+          ! grep -Fq "fem_species = 'e 1e15'" physics_app/ci/dd_plasma_boundary_json_physics_auto_p2.i
+          grep -Fq 'getFunctorByName<ADReal>("e_energy_eV")' physics_app/src/materials/DDTransportMaterial.C
+          echo "DD_JSON_BOUNDARY_SOURCE=$GITHUB_SHA SCIENCE_HOLD P3_NOT_RUN"
+      - name: P0 JSON boundary catalogue and existing Physics source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_issue402_dd_plasma_boundary_json.py \
+            tests/test_issue402_species_initial_density_pairs.py \
+            tests/test_issue402_dd_json_fem_fvm_wiring.py \
+            tests/test_issue402_species_transport_rule.py \
+            tests/test_issue402_material_class_names.py \
+            tests/test_issue402_s6_dd_review_package.py \
+            tests/test_issue402_energy_poisson_auto_variables.py \
+            tests/test_issue402_sccm_inlet_cpp.py \
+            tests/test_issue402_species_initial_composition.py \
+            tests/test_issue402_species_live_ic_inlet.py \
+            2>&1 | tee /tmp/issue402_dd_json_boundary_p0.log
+          echo DD_JSON_SPECIES_INITIAL_AND_FULL_ELECTRON_P0_PASS
+      - name: Native P1 Physics application build (immutable Physics vendor image)
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee /tmp/issue402_dd_json_boundary_p1.log
+          echo DD_JSON_BOUNDARY_NATIVE_P1_PASS
+      - name: Native P2 relocated JSON vs exact explicit legacy BCs and fail-closed mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              cd /workspace/physics_app/ci
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_json_p2.i
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_legacy_p2.i
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_parsed_mean_p2.i
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_json_physics_auto_p2.i
+              cd /workspace
+              python3 physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py \
+                /workspace/physics_app/physics-opt
+              cd /workspace/experiments/Issue402_plasma_dsl_g1
+              /workspace/physics_app/physics-opt --check-input -i valid_json_dd_fem_fvm_mixed_p2.i
+              /workspace/physics_app/physics-opt --check-input -i valid_json_generated_functor.i
+              /workspace/physics_app/physics-opt --check-input -i valid_json_generated_transport.i
+              echo SPECIES_LOCAL_DD_CONSTANT_LOOKUP_FUNCTOR_NATIVE_P2_PASS
+            ' 2>&1 | tee /tmp/issue402_dd_json_boundary_p2.log
+          echo DD_JSON_BOUNDARY_NATIVE_P2_PASS_P3_NOT_RUN
+      - name: Publish exact-source P0 P1 P2 logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-dd-json-boundary-${{ github.sha }}
+          path: |
+            /tmp/issue402_dd_json_boundary_p0.log
+            /tmp/issue402_dd_json_boundary_p1.log
+            /tmp/issue402_dd_json_boundary_p2.log
+          if-no-files-found: warn
+          retention-days: 30

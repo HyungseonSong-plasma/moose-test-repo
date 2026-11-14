@@ -1,4 +1,4 @@
-#include "PhysicsElectronAdjacentSheathWallFluxMaterial.h"
+#include "ESWallFluxMaterial.h"
 
 #include "FaceInfo.h"
 #include "MooseFunctorArguments.h"
@@ -8,7 +8,7 @@
 #include <cmath>
 #include <type_traits>
 
-registerMooseObject("PhysicsApp", PhysicsElectronAdjacentSheathWallFluxMaterial);
+registerMooseObject("PhysicsApp", ESWallFluxMaterial);
 
 namespace
 {
@@ -23,7 +23,7 @@ RealVectorValue
 adjacentSheathOutwardNormal(const Moose::FaceArg & face)
 {
   if (!face.fi)
-    mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial received a FaceArg without FaceInfo.");
+    mooseError("ESWallFluxMaterial received a FaceArg without FaceInfo.");
 
   RealVectorValue n = face.fi->normal();
   if (face.face_side)
@@ -32,11 +32,11 @@ adjacentSheathOutwardNormal(const Moose::FaceArg & face)
       return n;
     if (face.fi->neighborPtr() && face.face_side == face.fi->neighborPtr())
       return -n;
-    mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial received an invalid face_side.");
+    mooseError("ESWallFluxMaterial received an invalid face_side.");
   }
 
   if (face.fi->neighborPtr())
-    mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial requires a sided FaceArg on internal boundaries.");
+    mooseError("ESWallFluxMaterial requires a sided FaceArg on internal boundaries.");
 
   return n;
 }
@@ -51,7 +51,7 @@ adjacentSheathElectricField(const Moose::Functor<ADReal> & potential,
     return -potential.gradient(face, state);
 
   if (!face.fi)
-    mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial received a FaceArg without FaceInfo.");
+    mooseError("ESWallFluxMaterial received a FaceArg without FaceInfo.");
 
   if (face.face_side)
   {
@@ -59,7 +59,7 @@ adjacentSheathElectricField(const Moose::Functor<ADReal> & potential,
       return -potential.gradient(face.makeElem(), state);
     if (face.fi->neighborPtr() && face.face_side == face.fi->neighborPtr())
       return -potential.gradient(face.makeNeighbor(), state);
-    mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial received an invalid face_side.");
+    mooseError("ESWallFluxMaterial received an invalid face_side.");
   }
 
   if (!face.fi->neighborPtr())
@@ -73,7 +73,7 @@ Real
 adjacentSheathNormalDistance(const Moose::FaceArg & face, const RealVectorValue & n_out)
 {
   if (!face.fi)
-    mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial received a FaceArg without FaceInfo.");
+    mooseError("ESWallFluxMaterial received a FaceArg without FaceInfo.");
 
   Point center;
   if (face.face_side)
@@ -83,18 +83,18 @@ adjacentSheathNormalDistance(const Moose::FaceArg & face, const RealVectorValue 
     else if (face.fi->neighborPtr() && face.face_side == face.fi->neighborPtr())
       center = face.fi->neighborCentroid();
     else
-      mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial received an invalid face_side.");
+      mooseError("ESWallFluxMaterial received an invalid face_side.");
   }
   else
   {
     if (face.fi->neighborPtr())
-      mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial requires a sided FaceArg on internal boundaries.");
+      mooseError("ESWallFluxMaterial requires a sided FaceArg on internal boundaries.");
     center = face.fi->elemCentroid();
   }
 
   const Real d_perp = std::abs((center - face.fi->faceCentroid()) * n_out);
   if (d_perp <= 0.0)
-    mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial requires a positive wall-to-cell normal distance.");
+    mooseError("ESWallFluxMaterial requires a positive wall-to-cell normal distance.");
   return d_perp;
 }
 
@@ -114,7 +114,7 @@ adjacentSheathDrop(const Moose::Functor<ADReal> & potential,
 } // namespace
 
 InputParameters
-PhysicsElectronAdjacentSheathWallFluxMaterial::validParams()
+ESWallFluxMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
@@ -132,7 +132,7 @@ PhysicsElectronAdjacentSheathWallFluxMaterial::validParams()
   return params;
 }
 
-PhysicsElectronAdjacentSheathWallFluxMaterial::PhysicsElectronAdjacentSheathWallFluxMaterial(
+ESWallFluxMaterial::ESWallFluxMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _electron_density(getFunctor<ADReal>("electron_density")),
@@ -153,7 +153,7 @@ PhysicsElectronAdjacentSheathWallFluxMaterial::PhysicsElectronAdjacentSheathWall
       {
         const ADReal eps_bar = _mean_energy(r, state);
         if (MetaPhysicL::raw_value(eps_bar) <= 0.0)
-          mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial requires mean_energy > 0 eV.");
+          mooseError("ESWallFluxMaterial requires mean_energy > 0 eV.");
         return PhysicsElectronWallPhysics::meanSpeed(eps_bar);
       });
 
@@ -175,7 +175,7 @@ PhysicsElectronAdjacentSheathWallFluxMaterial::PhysicsElectronAdjacentSheathWall
         const ADReal n_e = _electron_density(r, state);
         const ADReal eps_bar = _mean_energy(r, state);
         if (MetaPhysicL::raw_value(eps_bar) <= 0.0)
-          mooseError("PhysicsElectronAdjacentSheathWallFluxMaterial requires mean_energy > 0 eV.");
+          mooseError("ESWallFluxMaterial requires mean_energy > 0 eV.");
 
         using SpaceArg = decltype(r);
         if constexpr (!isAdjacentSheathFaceArg<SpaceArg>())

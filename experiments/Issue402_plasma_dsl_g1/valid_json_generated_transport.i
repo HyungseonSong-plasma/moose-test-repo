@@ -9,13 +9,7 @@
   kernel_coverage_check = false
 []
 [Variables]
-  [log_e]
-    family = LAGRANGE
-    order = FIRST
-  []
-  [log_O2p]
-    type = MooseVariableFVReal
-  []
+  # log_e/log_O2p are generated from JSON initial_number_density.
   [potential]
     family = LAGRANGE
     order = FIRST
@@ -25,7 +19,7 @@
   # These are state/thermodynamic test Functors, not transport coefficient providers.
   [test_state]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en_solved p T_g Y_A Y_B'
+    prop_names = 'e_energy_eV p T_g Y_A Y_B'
     prop_values = '3 100 300 0.5 0.5'
   []
 []

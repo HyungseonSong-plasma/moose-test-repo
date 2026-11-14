@@ -85,7 +85,7 @@ RUNTIME_INPUT = f"""[Mesh]
     expression = 'dens*wo2/0.031998'
   []
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -93,7 +93,7 @@ RUNTIME_INPUT = f"""[Mesh]
   [r2_ionization_rate]
     type = EIRateCoefMaterial
     rate_table_file = r2_o2_ionization_runtime_table.txt
-    mean_energy = mean_en_solved
+    mean_energy = e_energy_eV
     electron_number_density = n_e
     target_molar_concentration = c_O2
     reaction_progress = R_ion_O2
@@ -169,9 +169,9 @@ RUNTIME_INPUT = f"""[Mesh]
     functor = w_O2_constraint
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [mean_en_solved_avg]
+  [e_energy_eV_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [R_ion_O2_avg]
@@ -245,8 +245,8 @@ def validate_runtime_rows(rows):
     wp_f = _f(final, "w_O2p_avg")
     wo2_i = _f(initial, "w_O2_avg")
     wo2_f = _f(final, "w_O2_avg")
-    mean_i = _f(initial, "mean_en_solved_avg")
-    mean_f = _f(final, "mean_en_solved_avg")
+    mean_i = _f(initial, "e_energy_eV_avg")
+    mean_f = _f(final, "e_energy_eV_avg")
     progress_f = _f(final, "R_ion_O2_avg")
     so2_f = _f(final, "O2_source_avg")
     so2p_f = _f(final, "O2p_source_avg")
@@ -294,14 +294,14 @@ def validate_runtime_rows(rows):
             "mean_en": eps_i,
             "w_O2": wo2_i,
             "w_O2p": wp_i,
-            "mean_en_solved_eV": mean_i,
+            "e_energy_eV_eV": mean_i,
         },
         "final": {
             "n_e": ne_f,
             "mean_en": eps_f,
             "w_O2": wo2_f,
             "w_O2p": wp_f,
-            "mean_en_solved_eV": mean_f,
+            "e_energy_eV_eV": mean_f,
             "R_ion_O2_mol_m3_s": progress_f,
             "O2_source_kg_m3_s": so2_f,
             "O2p_source_kg_m3_s": so2p_f,
@@ -338,7 +338,7 @@ def runtime_checker_self_test():
             "mean_en_avg": N_E0 * EPSILON_E0_EV,
             "w_O2p_avg": WP0,
             "w_O2_avg": 1.0 - WP0,
-            "mean_en_solved_avg": EPSILON_E0_EV,
+            "e_energy_eV_avg": EPSILON_E0_EV,
             "R_ion_O2_avg": r0,
             "O2_source_avg": -M_O2 * r0,
             "O2p_source_avg": M_O2 * r0,
@@ -349,7 +349,7 @@ def runtime_checker_self_test():
             "mean_en_avg": N_E0 * EPSILON_E0_EV,
             "w_O2p_avg": wp,
             "w_O2_avg": 1.0 - wp,
-            "mean_en_solved_avg": mean,
+            "e_energy_eV_avg": mean,
             "R_ion_O2_avg": progress,
             "O2_source_avg": -M_O2 * progress,
             "O2p_source_avg": M_O2 * progress,
@@ -363,7 +363,7 @@ def runtime_checker_self_test():
         if mutate == "shared_rate":
             bad[-1]["electron_source_avg"] *= 1.01
         elif mutate == "lookup_range":
-            bad[-1]["mean_en_solved_avg"] = LOOKUP_MAX_EV + 1.0
+            bad[-1]["e_energy_eV_avg"] = LOOKUP_MAX_EV + 1.0
         else:
             bad[-1]["w_O2p_avg"] = -1.0e-6
         try:
@@ -451,7 +451,7 @@ def _print_runtime_acceptance(evidence):
         f"n_e={final['n_e']:.12g} "
         f"w_O2={final['w_O2']:.12g} "
         f"w_O2p={final['w_O2p']:.12g} "
-        f"mean_en_eV={final['mean_en_solved_eV']:.12g} "
+        f"mean_en_eV={final['e_energy_eV_eV']:.12g} "
         f"R={final['R_ion_O2_mol_m3_s']:.12g}"
     )
     print(

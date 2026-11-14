@@ -16,7 +16,7 @@ def digest(path: Path) -> str:
             h.update(block)
     return h.hexdigest()
 
-def verify(results: Path, expected_head: str, case: str) -> dict:
+def verify(results: Path, expected_head: str, case: str, *, hybrid_json: bool = False) -> dict:
     if case not in ("417", "941") or len(expected_head) != 40:
         raise ValueError("P3_EVIDENCE_INVALID_REQUEST")
     manifest = json.loads((results / "manifest.json").read_text())
@@ -24,8 +24,9 @@ def verify(results: Path, expected_head: str, case: str) -> dict:
     for obj in (status, manifest):
         if obj.get("case") != case or obj.get("arm") != "D":
             raise ValueError("P3_EVIDENCE_CASE_OR_ARM_MISMATCH")
-        if obj.get("physics_mode") != "chemistry":
-            raise ValueError("P3_EVIDENCE_NOT_CHEMISTRY")
+        expected_mode = ("chemistry_hybrid_json_native" if hybrid_json else "chemistry")
+        if obj.get("physics_mode") != expected_mode:
+            raise ValueError("P3_EVIDENCE_NOT_CHEMISTRY_OR_HYBRID_OWNER")
         if obj.get("source_sha") != expected_head:
             raise ValueError("P3_EVIDENCE_SOURCE_MISMATCH")
         if obj.get("science") != "SCIENCE_HOLD":
@@ -46,6 +47,51 @@ def verify(results: Path, expected_head: str, case: str) -> dict:
         raise ValueError("P3_EVIDENCE_CANONICAL_ENERGY_OR_TIME_MISMATCH")
     if status.get("scratch_chemistry_cutover", {}).get("removed_count") != 9:
         raise ValueError("P3_EVIDENCE_SUPERSEDED_OWNER_COUNT_MISMATCH")
+    if hybrid_json:
+        hybrid = status.get("hybrid_json_ownership_cutover", {})
+        if hybrid.get("removed_generated_owner_count") != 10 or (
+            hybrid.get("native_owner_preservation") !=
+            "NATIVE_EQUATIONS_UNCHANGED_WITH_ROOT_PRESSURE_IC_AND_SPECIES_FUNCTORS"
+        ):
+            raise ValueError("P3_EVIDENCE_HYBRID_NATIVE_OWNER_OR_SOURCE_MISMATCH")
+        if (hybrid.get("integrated_mechanism_json") != f"unified_s6_{case}.json"
+            or hybrid.get("integrated_species_count") != 7
+            or hybrid.get("integrated_reaction_count") != 8
+            or hybrid.get("hybrid_json_sha256") !=
+                hybrid.get("integrated_json_source_sha256")):
+            raise ValueError("P3_EVIDENCE_INTEGRATED_JSON_IDENTITY_MISMATCH")
+        gas = hybrid.get("root_gas_state_pressure_initial_condition", {})
+        if (gas.get("status") !=
+                "NATIVE_PRESSURE_SOLVED_ROOT_PRESSURE_INITIAL_CONDITION"
+            or gas.get("pressure_solver_variable") != "pressure"
+            or gas.get("pressure_runtime_functor") != "pressure"
+            or gas.get("temperature_runtime_functor") != "temperature"
+            or gas.get("pressure_initial_pa") != 1.333223684
+            or gas.get("temperature_constant_k") != 300
+            or gas.get("external_pressure_functor_created") is not False
+            or gas.get("native_pressure_initial_retired") is not True
+            or gas.get("native_p_fixed_temperature_fixed_retired") is not True
+            or gas.get("root_outlet_parameter_coupled") is not True):
+            raise ValueError("P3_EVIDENCE_ROOT_PRESSURE_IC_AND_GAS_OWNER_MISMATCH")
+        canonical = hybrid.get("native_species_coefficient_binding_migration", {})
+        expected = {
+            "ion_mobility": "O2p_mobility",
+            "ion_diffusion": "O2p_diffusivity",
+            "negative_ion_mobility": "Om_mobility",
+            "negative_ion_diffusion": "Om_diffusivity",
+            "atomic_positive_ion_mobility": "Op_mobility",
+            "atomic_positive_ion_diffusion": "Op_diffusivity",
+        }
+        if (canonical.get("old_to_species_names") != expected
+            or canonical.get("constant_values_unchanged") is not True
+            or canonical.get("physics_equations_unchanged") is not True
+            or any(canonical.get("substitution_counts", {}).get(name, 0) < 2
+                   for name in expected)):
+            raise ValueError("P3_EVIDENCE_NATIVE_ION_COEFFICIENT_MIGRATION_MISMATCH")
+        if hybrid.get("overlay_sha256") != status.get("sidecar_sha256"):
+            raise ValueError("P3_EVIDENCE_HYBRID_JSON_OVERLAY_SHA_MISMATCH")
+        if hybrid.get("rebound_native_sheath_bc_count") != 8:
+            raise ValueError("P3_EVIDENCE_HYBRID_NATIVE_SHEATH_OWNER_COUNT_MISMATCH")
     if not status.get("binary_sha256") or not status.get("sidecar_sha256") or (
         not status.get("p2_log_sha256") or not status.get("p3_log_sha256")
     ):
@@ -60,6 +106,20 @@ def verify(results: Path, expected_head: str, case: str) -> dict:
         if sha != status.get(key) or sha != manifest.get("files", {}).get(filename, {}).get("sha256"):
             raise ValueError("P3_EVIDENCE_OUTPUT_SHA_MISMATCH:" + filename)
         out[filename] = sha
+    if hybrid_json:
+        name = f"unified_s6_{case}.json"
+        json_path = results / name
+        if not json_path.is_file():
+            raise ValueError("P3_EVIDENCE_INTEGRATED_SIMULATION_JSON_MISSING")
+        file_sha = digest(json_path)
+        if (file_sha != status["hybrid_json_ownership_cutover"]["hybrid_json_sha256"]
+            or file_sha != manifest.get("files", {}).get(name, {}).get("sha256")):
+            raise ValueError("P3_EVIDENCE_INTEGRATED_SIMULATION_JSON_SHA_MISMATCH")
+        data = json.loads(json_path.read_text())
+        if (len(data["species"]) != 7 or len(data["reactions"]) != 8 or
+            set(data["equations"]) != {r["id"] for r in data["reactions"]}):
+            raise ValueError("P3_EVIDENCE_INTEGRATED_SIMULATION_JSON_CONTENT_MISMATCH")
+        out[name] = file_sha
     return {"status": "BYTES_AND_PROVENANCE_PASS_UPLOAD_RECEIPT_PENDING",
             "case": case, "source_sha": expected_head, "files_sha256": out,
             "artifact_rest_receipt": "PENDING",
@@ -70,8 +130,10 @@ def main() -> int:
     parser.add_argument("--results", type=Path, required=True)
     parser.add_argument("--expected-head", required=True)
     parser.add_argument("--case", choices=("417", "941"), required=True)
+    parser.add_argument("--hybrid-json", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(verify(args.results, args.expected_head, args.case),
+    print(json.dumps(verify(args.results, args.expected_head, args.case,
+                            hybrid_json=args.hybrid_json),
                      sort_keys=True, indent=2))
     return 0
 

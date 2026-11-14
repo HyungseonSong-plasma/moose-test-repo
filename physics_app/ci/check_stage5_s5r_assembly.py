@@ -125,7 +125,7 @@ def static_check() -> dict:
         "owner_map": dict(OWNER_BLOCKS),
         "audit": audit,
         "common_heavy_temperature": "T_g",
-        "solved_mean_energy": "mean_en_solved",
+        "solved_mean_energy": "e_energy_eV",
         "strict_lookup": True,
         "deferred_channels": list(DEFERRED_TOKENS),
     }
@@ -135,7 +135,7 @@ def static_check() -> dict:
     print("zero_missing_admitted_channels=PASS")
     print("zero_unintended_channels=PASS")
     print("common_production_Tg=PASS")
-    print("strict_mean_en_solved=PASS")
+    print("strict_e_energy_eV=PASS")
     print("representative_runtime=NOT_EXECUTED")
     return result
 

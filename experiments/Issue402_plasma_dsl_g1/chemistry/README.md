@@ -1,5 +1,86 @@
 # Issue #402 — S6 Chemistry run-input preparation (not scientific acceptance)
 
+## Current S6 hybrid JSON / Native input (2026-11-14)
+
+**Gas-state owner / pressure initial condition update (2026-11-14).**
+The `[Physics]/[Plasmas]` input supplies exactly
+`pressure = 1.333223684` [Pa] and `temperature = 300` [K] plus
+`state_model = ideal_gas`. On the S6 Native Navier-Stokes deck, the
+solver variable is named **`pressure`**. The root pressure value is its
+only FV initial condition (`FVConstantIC`). MOOSE's solved FV pressure
+variable itself implements the AD `pressure` Functor; the root
+Action must **never** register a competing `pressure` material Functor.
+The root `temperature` Functor is constant. `n_g` uses the **live**
+pressure and root temperature, `pressure/(k_B*temperature)`.
+
+The scratch-only preflight checks the immutable archived `[Variables]/[p]`
+initial condition, historical fixed gas constant Material, and native outlet
+pressure boundary, then atomically derives the canonical inputs. It renames
+all `p` and `T_g_fixed` consumers to `pressure` and `temperature`,
+retires the original `p` IC and `p_fixed/T_g_fixed` constant entries,
+and couples the outlet-pressure Function to the root `pressure` value
+through MOOSE input brace substitution. There is no second editable gas
+parameter. The archived 400-W neutral mass, velocity, mass-fraction,
+and wall equations remain in place. **Root pressure is an IC, not a
+permanent fixed Dirichlet field**; the Navier-Stokes pressure can evolve.
+
+The archived neutral-mixture solution remains owned by Native. The new
+root Action deliberately does **not** create an independent `rho_g`/full
+mixture closure for S6 because its seven-species JSON does not contain
+the complete neutral mass-fraction catalogue; fabricating one would
+change physics. When no pressure solver variable is provided, the existing
+complete root ideal-gas mixture workflow remains separately supported.
+Any partial mixture metadata with an S6 solved `pressure` fails closed.
+Both full S6 100-us reruns and science acceptance require separate gates.
+
+
+
+For the **hybrid P3/P4** path, exactly **one complete JSON file per scientific
+variant** is passed to `[Physics]/[Plasmas]/files`:
+
+- `unified_s6_417.json`: species (7), all shared reactions (7) and EI-417;
+  `files = 'unified_s6_417.json'` in the disposable D-run input.
+- `unified_s6_941.json`: identical shared mechanism and EI-941 instead of
+  EI-417; `files = 'unified_s6_941.json'`.
+
+Each JSON includes `species`, `equations`, and `reactions`; there is **no
+runtime transport-only sidecar** or common+variant multi-file list. The two
+canonical input files are pinned in this directory and the exact content
+used by the solver is published in the P3/P4 result artifacts.
+`oxygen_s6_common.json` and `oxygen_s6_{417,941}.json` remain available as
+**historical mechanism source/audit inputs**. At execution, the scratch
+preparer reconstitutes all eight reactions from these originals and refuses a
+mismatch against the integrated JSON.
+
+Ion transport names follow **species ID + suffix** throughout the active
+JSON and all disposable Native coefficient producers/consumers:
+
+| Species | mobility | diffusivity |
+|---|---|---|
+| `O2p` | `O2p_mobility` | `O2p_diffusivity` |
+| `Om` | `Om_mobility` | `Om_diffusivity` |
+| `Op` | `Op_mobility` | `Op_diffusivity` |
+
+The migration validates the one original `ADGenericFunctorMaterial
+[constants]` source and remaps both its `prop_names` and every Native
+consumer using token-boundary matching (not substring replacement).
+Its `prop_values` remain exactly `1.333223684 300 10 0.25851999786435537
+10 0.25851999786435537 10 0.25851999786435537 1.0`—the mobility and
+diffusivity values **do not change**. The electron `e` retains the original
+public `lookup` table, reduced coefficients, `clamp`, and `fluid`
+energy transport. All Native RF, Poisson, wall and rate *equations* stay
+unaltered. Archived inputs, frozen scientific source, B/C cases, and
+private-rate boundaries are never edited.
+
+This contract is implemented by
+`chemistry/prepare_hybrid_json_s6.py`, checked by
+`tests/test_issue402_hybrid_json_s6_owner_preflight.py`, and exercised by
+`.github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml`.
+The reference comparison is **P4 diagnostic only**; `SCIENCE_HOLD`
+persists until separate scientific parity review.
+
+---
+
 ## What these files are
 
 - `oxygen_s6_common.json`: **7** archived shared reaction channels (EI-02, EI-17,

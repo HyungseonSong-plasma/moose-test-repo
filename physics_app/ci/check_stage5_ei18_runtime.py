@@ -140,7 +140,7 @@ def _runtime_input(mean_energy=EPSILON_E0_EV):
     expression = 'dens*wo/{M_O:.17g}'
   []
   [mean_energy_bridge]
-    type = PhysicsElectronMeanEnergyMaterial
+    type = ElectronEnergyMaterial
     electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
@@ -148,7 +148,7 @@ def _runtime_input(mean_energy=EPSILON_E0_EV):
   [ei18_rate]
     type = EIRateCoefMaterial
     rate_table_file = o_excitation_1d.txt
-    mean_energy = mean_en_solved
+    mean_energy = e_energy_eV
     electron_number_density = n_e
     target_molar_concentration = c_O
     reaction_progress = {PROGRESS}
@@ -217,9 +217,9 @@ def _runtime_input(mean_energy=EPSILON_E0_EV):
     functor = w_O_constraint
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [mean_en_solved_avg]
+  [e_energy_eV_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [R_avg]
@@ -261,7 +261,7 @@ def validate_runtime_rows(rows, table):
     ep_i, ep_f = _num(i, "mean_en_avg"), _num(f, "mean_en_avg")
     ws_i, ws_f = _num(i, "w_Os_avg"), _num(f, "w_Os_avg")
     wo_i, wo_f = _num(i, "w_O_avg"), _num(f, "w_O_avg")
-    me_i, me_f = _num(i, "mean_en_solved_avg"), _num(f, "mean_en_solved_avg")
+    me_i, me_f = _num(i, "e_energy_eV_avg"), _num(f, "e_energy_eV_avg")
     r_f = _num(f, "R_avg")
     so_f = _num(f, "O_source_avg")
     sos_f = _num(f, "Os_source_avg")
@@ -297,14 +297,14 @@ def validate_runtime_rows(rows, table):
             "mean_en": ep_i,
             "w_O": wo_i,
             "w_Os": ws_i,
-            "mean_en_solved_eV": me_i,
+            "e_energy_eV_eV": me_i,
         },
         "final": {
             "n_e": ne_f,
             "mean_en": ep_f,
             "w_O": wo_f,
             "w_Os": ws_f,
-            "mean_en_solved_eV": me_f,
+            "e_energy_eV_eV": me_f,
             "R_excitation_O_1p968_mol_m3_s": r_f,
             "O_source_kg_m3_s": so_f,
             "Os_source_kg_m3_s": sos_f,
@@ -344,7 +344,7 @@ def _fixed_point_rows(table):
             "mean_en_avg": N_E0 * EPSILON_E0_EV,
             "w_Os_avg": W_OS0,
             "w_O_avg": 1.0 - W_OS0,
-            "mean_en_solved_avg": EPSILON_E0_EV,
+            "e_energy_eV_avg": EPSILON_E0_EV,
             "R_avg": r0,
             "O_source_avg": -M_O * r0,
             "Os_source_avg": M_O * r0,
@@ -354,7 +354,7 @@ def _fixed_point_rows(table):
             "mean_en_avg": ep,
             "w_Os_avg": ws,
             "w_O_avg": 1.0 - ws,
-            "mean_en_solved_avg": mean,
+            "e_energy_eV_avg": mean,
             "R_avg": r,
             "O_source_avg": -M_O * r,
             "Os_source_avg": M_O * r,
@@ -527,7 +527,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
     print(
         "STAGE5_EI18_LOCAL_RUNTIME_PASS "
         f"R={result['final']['R_excitation_O_1p968_mol_m3_s']:.12g} "
-        f"mean_en={result['final']['mean_en_solved_eV']:.12g}"
+        f"mean_en={result['final']['e_energy_eV_eV']:.12g}"
     )
 
 

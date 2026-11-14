@@ -144,13 +144,13 @@ def _elastic_input(spec, tgas, mean_energy=MEAN_E0_EV):
 [FunctorMaterials]
   [controlled_state]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en_solved n_e_physical c_target T_gas'
+    prop_names = 'e_energy_eV n_e_physical c_target T_gas'
     prop_values = '{mean_energy:.17g} {N_E0:.17g} {C_TARGET:.17g} {tgas:.17g}'
   []
   [reaction_rate]
     type = EIRateCoefMaterial
     rate_table_file = {spec["table"]}
-    mean_energy = mean_en_solved
+    mean_energy = e_energy_eV
     electron_number_density = n_e_physical
     target_molar_concentration = c_target
     reaction_progress = {spec["progress"]}
@@ -158,7 +158,7 @@ def _elastic_input(spec, tgas, mean_energy=MEAN_E0_EV):
   [elastic_energy_source]
     type = ADParsedFunctorMaterial
     property_name = S_elastic_energy
-    functor_names = 'mean_en_solved T_gas {spec["progress"]}'
+    functor_names = 'e_energy_eV T_gas {spec["progress"]}'
     functor_symbols = 'meanE tgas rprog'
     expression = '-{physical_factor:.17g}*(0.66666666666666663*meanE-{K_B_OVER_E_EV_PER_K:.17g}*tgas)*rprog'
   []
@@ -185,7 +185,7 @@ def _elastic_input(spec, tgas, mean_energy=MEAN_E0_EV):
   []
   [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [T_gas_avg]
@@ -247,13 +247,13 @@ def _ei19_input(mean_energy=MEAN_E0_EV):
 [FunctorMaterials]
   [controlled_state]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en_solved n_e_physical c_target'
+    prop_names = 'e_energy_eV n_e_physical c_target'
     prop_values = '{mean_energy:.17g} {N_E0:.17g} {C_TARGET:.17g}'
   []
   [reaction_rate]
     type = EIRateCoefMaterial
     rate_table_file = {EI19["table"]}
-    mean_energy = mean_en_solved
+    mean_energy = e_energy_eV
     electron_number_density = n_e_physical
     target_molar_concentration = c_target
     reaction_progress = {EI19["progress"]}
@@ -281,7 +281,7 @@ def _ei19_input(mean_energy=MEAN_E0_EV):
   []
   [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = e_energy_eV
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [R_avg]
@@ -345,7 +345,7 @@ def validate_elastic_rows(rows, species, regime_id, tgas):
 
     return {
         "Tgas_K": tgas,
-        "mean_en_solved_eV": mean_f,
+        "e_energy_eV_eV": mean_f,
         "R_mol_m3_s": r_f,
         "delta_epsilon_eV_per_event": delta_e,
         "physical_source_eV_m3_s": expected_s,
@@ -382,7 +382,7 @@ def validate_ei19_rows(rows):
         raise AssertionError("EI19 energy-only sink direction failure")
 
     return {
-        "mean_en_solved_eV": mean_f,
+        "e_energy_eV_eV": mean_f,
         "lookup_k_m3_mol_s": EI19["anchor_k"],
         "R_mol_m3_s": r_f,
         "energy_loss_eV_per_event": EI19_LOSS_EV,

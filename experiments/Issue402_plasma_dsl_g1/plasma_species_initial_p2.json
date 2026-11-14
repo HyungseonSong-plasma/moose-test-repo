@@ -1,0 +1,56 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1,
+      "initial_number_density": 10000000000000000,
+      "transport_coef": "constant",
+      "mobility": 1,
+      "diffusivity": 1
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1,
+      "initial_number_density": 10000000000000000,
+      "transport_coef": "constant",
+      "mobility": 0.25,
+      "diffusivity": 0.125
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1,
+      "initial_number_density": 100000000000000,
+      "transport_coef": "constant",
+      "mobility": 0.15,
+      "diffusivity": 0.075
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1,
+      "initial_number_density": 1000000000000000,
+      "transport_coef": "constant",
+      "mobility": 0.35,
+      "diffusivity": 0.175
+    }
+  },
+  "equations": {},
+  "reactions": []
+}

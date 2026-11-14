@@ -1,0 +1,53 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1,
+      "initial_number_density": 1000000000000000,
+      "transport_coef": "constant",
+      "mobility": 0.25,
+      "diffusivity": 0.125,
+      "energy_transport_coef": "fluid"
+    }
+  },
+  "equations": {},
+  "reactions": [],
+  "boundaries": {
+    "left": {
+      "bcs": {
+        "electron_wafer": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "wall_number_flux": "electron_wall_number_flux"
+        },
+        "electron_energy_wafer": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "electron_wall_number_flux",
+          "mean_energy": "e_energy_eV"
+        }
+      }
+    },
+    "bottom": {
+      "bcs": {
+        "electron_cover": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "wall_number_flux": "electron_wall_number_flux"
+        },
+        "electron_energy_cover": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "electron_wall_number_flux",
+          "mean_energy": "e_energy_eV"
+        }
+      }
+    },
+    "right": {
+      "bcs": {}
+    },
+    "top": {
+      "bcs": {}
+    }
+  }
+}

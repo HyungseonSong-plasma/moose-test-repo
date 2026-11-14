@@ -1,6 +1,5 @@
-# Issue #402 density-paired species syntax, Native P2 only.
-# Format: species_name initial_number_density ...
-# initial_number_density in 1/m^3, must be finite and >0.
+# Negative Native P2: obsolete species + positional-density input must fail.
+# Initial number density belongs in JSON species.<id>.initial_number_density.
 # Transport coefficients are JSON-owned; physics-rate values here are synthetic.
 [Mesh]
   type = GeneratedMesh
@@ -24,7 +23,7 @@
       [DriftDiffusion]
         [Continuity]
           fem_species = 'e nan'
-          fvm_species = 'O2p 1e16 Om 1e14 Op 1e15'
+          fvm_species = 'O2p Om Op'
           fem_potential = potential
         []
       []

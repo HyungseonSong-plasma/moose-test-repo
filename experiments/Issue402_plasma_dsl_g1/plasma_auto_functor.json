@@ -8,16 +8,13 @@
       "elements": {
         "O": 2
       },
-      "charge_number": 1
+      "charge_number": 1,
+      "transport_coef": "functor",
+      "mobility": "upstream_ion_mobility",
+      "diffusivity": "upstream_ion_diffusivity",
+      "initial_number_density": 10000000000000000
     }
   },
   "equations": {},
-  "reactions": [],
-  "transport_coefficients": {
-    "drift_diffusion": {
-      "O2p": {
-        "model": "functor"
-      }
-    }
-  }
+  "reactions": []
 }
