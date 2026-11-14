@@ -214,3 +214,57 @@ def test_chemistry_electron_rhs_is_generated_with_fem_continuity():
     assert 'source_params.set<bool>("functor_on_rhs") = true;' in continuity
     assert 'getProblem().addKernel(source_type, species[i] + "_source", source_params);' in continuity
     assert 'requireUniqueFEKernel("FunctorKernel", variables[i]);' in continuity
+
+
+def test_json_rate_lookup_providers_and_electron_sheath_have_unique_owners():
+    """P0: check full e/e-energy object graph, not native P2 time integration."""
+    mechanism = text("physics_app/src/physics/plasma/Chemistry.C")
+    rate_h = text("physics_app/src/materials/HRateCoefMaterial.C")
+    continuity = text("physics_app/src/physics/plasma/DDContinuityEq.C")
+    energy = text("physics_app/src/physics/plasma/DDEnergyEq.C")
+    staging = text("experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py")
+    runner = text("experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh")
+
+    assert 'reaction.rate.table_file =' in mechanism
+    assert 'resolveDataFile(entry.at("table").get<std::string>(), file)' in mechanism
+    assert 'if (entry.contains("table_sha256") || entry.contains("target_molar_concentration"))' in mechanism
+    assert 'params.set<FileName>("rate_table_file") = reaction.rate.table_file;' in mechanism
+    assert 'params.set<MooseFunctorName>("mean_energy") = "e_energy_eV";' in mechanism
+    assert 'params.set<MooseFunctorName>("electron_number_density") = "n_e_physical";' in mechanism
+    assert 'params.set<MooseFunctorName>("target_molar_concentration") = "c_" + target;' in mechanism
+    assert 'params.set<std::string>("reaction_progress") = reaction.progress;' in mechanism
+    assert 'getProblem().addFunctorMaterial(type, "chemistry_" + reaction.progress + "_rate", params);' in mechanism
+    assert 'params.set<std::vector<MooseFunctorName>>("reactant_concentrations") = concentrations;' in mechanism
+    assert 'getProblem().addFunctorMaterial(type, name() + "_heavy_rates", params);' in mechanism
+    assert '"reactant_concentrations"' in rate_h
+    assert 'reaction.elastic_energy_loss' in mechanism
+    assert '"delta_epsilon_" +' in mechanism
+    assert '"(-1.0)*("' in mechanism
+    assert '"Q_e_molar_eV"' in mechanism
+    assert '"S_e_molar"' not in mechanism or '"S_" + id + "_molar"' in mechanism
+    assert 'wall.set<std::string>("species_id") = "e";' in continuity
+    assert 'bc.wall_number_flux != "e_wall_number_flux"' in continuity
+    assert 'getProblem().addFunctorMaterial(density_type, name() + "_number_density", density);' in continuity
+    assert continuity.index('getProblem().addFunctorMaterial(density_type') < continuity.index('if (!sheath_wall)')
+    assert '"ESWallFluxMaterial"' not in energy
+    assert '"ElectronEnergyMaterial"' in energy
+    assert '"Q_e_molar_eV"' in energy
+    assert 'retire_staged_kinetic_owners' in staging
+    assert 'HYBRID_DUPLICATE_NATIVE_RATE_OWNER_' in staging
+    assert 'source = source[:old.start()] + source[old.end():]' in staging
+    assert 'check_issue402_dd_json_plasma_boundary_p2.py' in runner
+
+    for variant in ("417", "941"):
+        source = json.loads((PILOT / f"chemistry/unified_s6_{variant}.json").read_text())
+        assert set(source) == {"species", "equations", "reactions", "boundaries"}
+        assert len(source["reactions"]) == 8
+        assert sum("table" in r for r in source["reactions"]) == 7
+        assert sum("rate" in r for r in source["reactions"]) == 1
+        assert not any("table_sha256" in r or "target_molar_concentration" in r or
+                       "provenance" in r for r in source["reactions"])
+        bcs = [bc for group in source["boundaries"].values() for bc in group["bcs"].values()]
+        assert len(bcs) == 8
+        assert {bc["type"] for bc in bcs} == {
+            "FEMElectronSheathBC", "FEMElectronEnergySheathBC"
+        }
+        assert all(bc["wall_number_flux"] == "e_wall_number_flux" for bc in bcs)
