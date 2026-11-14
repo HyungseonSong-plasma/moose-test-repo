@@ -145,6 +145,12 @@ def run(case: str, historical: Path, expected_head: str,
         status["P2"] = p2["P2"]
         status["p2_log_sha256"] = p2["log_sha256"]
         if p2["P2"] != "PASS":
+            # Preserve the original native P2 error for controller triage.
+            # This is diagnostic only; never relax input validity or launch P3.
+            diagnostic = (output / "native_P2.log").read_text(errors="replace")
+            print("HYBRID_NATIVE_P2_FAILED " + p2.get("classification", "UNKNOWN"),
+                  flush=True)
+            print(diagnostic[-10000:], flush=True)
             raise ValueError("P3_CANONICAL_INPUT_CHECK_FAILED")
         if sha(binary) != identity["binary_sha256"]:
             raise ValueError("P3_NATIVE_BINARY_CHANGED_AFTER_P2")
