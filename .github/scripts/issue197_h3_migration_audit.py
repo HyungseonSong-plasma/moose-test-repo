@@ -16,7 +16,7 @@ ROOT = Path('/workspace')
 OUT = ROOT / 'issue197-h3-results'
 CASES = OUT / 'cases'
 LOGS = OUT / 'logs'
-SOURCE = ROOT / 'experiments/Issue1_reactor_o2plus_integration/migration_only_exact_phi_ic'
+SOURCE = ROOT / 'tests/fixtures/issue1_legacy_consumers/issue197_h3'
 EXE = ROOT / 'physics_app/physics-opt'
 CASES.mkdir(parents=True, exist_ok=True)
 LOGS.mkdir(parents=True, exist_ok=True)
