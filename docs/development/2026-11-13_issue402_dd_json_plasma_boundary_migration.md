@@ -159,9 +159,57 @@ immediately with a species-specific error **even if external `[Variables]`
 and `[ICs]` declare the same state**. A duplicate external solver variable
 is independently rejected; there is no external-IC fallback.
 
+### Species-local drift-diffusion transport (this revision)
+
+The top-level JSON `transport_coefficients.drift_diffusion` object is
+**retired** and rejected. Transport configuration now belongs to the same
+`species.<id>` record as charge and initial number density:
+
+```json
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1,
+      "initial_number_density": 1e15,
+      "transport_coef": "constant",
+      "mobility": 0.25,
+      "diffusivity": 0.125,
+      "energy_transport_coef": "fluid"
+    }
+  }
+}
+```
+
+Supported `transport_coef` values are `constant`, `lookup`, and
+`functor` so the pre-existing physical laws and numerical data are preserved:
+
+- `constant`: `mobility` [m^2/(V s)] and `diffusivity` [m^2/s]
+  are required nonnegative finite numbers.
+- `functor`: `mobility` and `diffusivity` are required *upstream AD
+  Functor names*, passed to the existing `DDTransportMaterial` inputs
+  `mobility_source`/`diffusivity_source`. This Material publishes
+  the canonical `<id>_mobility`/`<id>_diffusivity` outputs without
+  inventing a new coefficient law.
+- `lookup`: the existing single `table_file` with
+  `e_energy_eV, mobility, diffusivity` columns is required, together
+  with `table_units` and (for reduced tables) `pressure` and
+  `gas_temperature`. `mobility`/`diffusivity` numeric or Functor
+  fields must be absent; the two coefficients come from the original
+  table, not from separately invented lookup laws.
+- Only `species.e.energy_transport_coef = "fluid"` is supported.
+  It activates the existing 5/3 electron energy mobility/diffusivity
+  projection and is required by the full FEM electron energy Action.
+
+`DDContinuityEq.C` still uses the same `DDTransportMaterial` factory.
+`DDEnergyEq.C` still consumes `e_energy_mobility` and
+`e_energy_diffusivity`. The optional top-level
+`transport_coefficients.navier_stokes` mixture contract is separate and
+is **not** moved to individual species by this DriftDiffusion change.
+
 The FEM electron continuity path generates its existing conservative
 log-molar time derivative, drift/diffusion and optional Chemistry sources;
-its mobility/diffusivity come from JSON `transport_coefficients`.
+its mobility/diffusivity now come from species-owned JSON transport fields.
 The full FEM electron-energy path (`fem_potential` provided) generates
 `log_e_energy`, its IC, existing time/drift/Joule kernels, mean-energy
 Material and the sheath wall provider required by JSON BCs. Electron
