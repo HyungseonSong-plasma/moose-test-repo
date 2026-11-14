@@ -64,9 +64,9 @@ def main(exe: Path):
             "charge_number": 1,
             "initial_number_density": 1e14
         }
-        fvm_data["transport_coefficients"]["drift_diffusion"]["O2p"] = {
-            "model": "constant", "mobility": 0.15, "diffusivity": 0.075
-        }
+        fvm_data["species"]["O2p"].update(
+            transport_coef="constant", mobility=0.15, diffusivity=0.075
+        )
         fvm_input = PHYSICS_AUTO_INPUT.replace(
             "fem_species = e\n          fem_potential = potential",
             "fem_species = e\n          fvm_species = O2p\n          fem_potential = potential",
@@ -143,13 +143,42 @@ def main(exe: Path):
         # The complete Physics path must not infer missing electron transport
         # or a missing electron-fluid energy closure from parser defaults.
         no_e_transport = copy.deepcopy(DATA)
-        del no_e_transport["transport_coefficients"]["drift_diffusion"]["e"]
+        del no_e_transport["species"]["e"]["transport_coef"]
+        del no_e_transport["species"]["e"]["mobility"]
+        del no_e_transport["species"]["e"]["diffusivity"]
         check(exe, root, "FULL_PHYSICS_MISSING_E_TRANSPORT",
               PHYSICS_AUTO_INPUT, no_e_transport, False)
         no_fluid_energy = copy.deepcopy(DATA)
-        del no_fluid_energy["transport_coefficients"]["drift_diffusion"]["e_energy"]
+        del no_fluid_energy["species"]["e"]["energy_transport_coef"]
         check(exe, root, "FULL_PHYSICS_MISSING_E_ENERGY_FLUID",
               PHYSICS_AUTO_INPUT, no_fluid_energy, False)
+        retired = copy.deepcopy(DATA)
+        legacy = {
+            "e": {
+                "model": retired["species"]["e"].pop("transport_coef"),
+                "mobility": retired["species"]["e"].pop("mobility"),
+                "diffusivity": retired["species"]["e"].pop("diffusivity")
+            },
+            "e_energy": {"type": retired["species"]["e"].pop("energy_transport_coef")}
+        }
+        retired["transport_coefficients"] = {"drift_diffusion": legacy}
+        check(exe, root, "RETIRED_TOP_LEVEL_DRIFT_DIFFUSION",
+              PHYSICS_AUTO_INPUT, retired, False,
+              "transport_coefficients.drift_diffusion is retired")
+        invalid_mode = copy.deepcopy(DATA)
+        invalid_mode["species"]["e"]["transport_coef"] = "unsupported"
+        check(exe, root, "INVALID_SPECIES_TRANSPORT_MODE",
+              PHYSICS_AUTO_INPUT, invalid_mode, False,
+              "transport model must be")
+        non_e_energy = copy.deepcopy(DATA)
+        non_e_energy["species"]["O2p"] = {
+            "elements": {"O": 2}, "charge_number": 1,
+            "energy_transport_coef": "fluid"
+        }
+        check(exe, root, "NON_ELECTRON_FLUID_ENERGY",
+              PHYSICS_AUTO_INPUT, non_e_energy, False,
+              "energy_transport_coef supports only species.e = fluid")
+
         check(exe, root, "PARSED_MEAN_FUNCTOR_CONSTRUCTION",
               PARSED_MEAN_INPUT, DATA, True)
         # One original BC block can own several sidesets. The JSON path
