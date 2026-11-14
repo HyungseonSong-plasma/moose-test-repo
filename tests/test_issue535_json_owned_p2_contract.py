@@ -45,3 +45,65 @@ def test_missing_initial_density_negative_mutation():
     del changed["species"]["e"]["initial_number_density"]
     assert not all(changed["species"][name].get("initial_number_density") for name in selected)
     assert all(catalogue["species"][name].get("initial_number_density") for name in selected)
+
+
+def test_p2_bridge_preserves_physical_linear_states_without_legacy_factory_mutation():
+    from physics_app.ci import check_issue402_reaction_reduction_p2_only as p2
+
+    from physics_app.ci import check_r2_o2_ionization_implementation as r2
+    from physics_app.ci import check_r3_o2s_excitation_implementation as r3
+    from physics_app.ci import check_e8_ei10_energy_runtime as e10
+    from physics_app.ci import check_e8_ei16_energy_runtime as e16
+
+    for original in (r2.RUNTIME_INPUT, r3.RUNTIME_INPUT, e10.RUNTIME_INPUT, e16.RUNTIME_INPUT):
+        assert "state_form = physical_eV" in original
+        adapted = p2._adapt_physical_mean_energy_for_p2(original)
+        assert "state_form = physical_eV" not in adapted
+        assert "state_form = log_molar_eV" in adapted
+        assert adapted.count("type = ElectronEnergyMaterial") == 1
+        assert "functor_names = 'n_e'" in adapted
+        assert "functor_names = 'mean_en'" in adapted
+        assert "expression = 'log(ne/6.02214076e23)'" in adapted
+        assert "expression = 'log(energy/6.02214076e23)'" in adapted
+        assert "property_name = issue402_p2_log_molar_e" in adapted
+        assert "property_name = issue402_p2_log_molar_energy" in adapted
+        # Exact reversible rewrite: every other operator, initial value,
+        # rate table, source, postprocessor and solver parameter is unchanged.
+        assert adapted.replace(p2._CANONICAL_P2_MEAN_BRIDGE,
+                               p2._LEGACY_MEAN_BRIDGE) == original
+
+
+def test_log_molar_bridge_preserves_energy_ratio_for_varying_physical_states():
+    import math
+    from physics_app.ci import check_issue402_reaction_reduction_p2_only as p2
+
+    for ne, energy in (
+        (1.0e16, 5.73276e16),
+        (1.4e16, 6.3e16),
+        (5.0e14, 8.0e15),
+        (2.0e18, 4.2e18),
+    ):
+        log_density = math.log(ne / p2._N_A)
+        log_energy = math.log(energy / p2._N_A)
+        canonical = math.exp(log_energy - log_density)
+        assert math.isclose(canonical, energy / ne, rel_tol=1e-13)
+
+
+def test_p2_adapter_rejects_ambiguous_or_repeated_energy_owners():
+    import pytest
+    from physics_app.ci import check_issue402_reaction_reduction_p2_only as p2
+    from physics_app.ci import check_r2_o2_ionization_implementation as r2
+
+    with pytest.raises(ValueError, match="exactly one"):
+        p2._adapt_physical_mean_energy_for_p2(
+            r2.RUNTIME_INPUT.replace("state_form = physical_eV", "state_form = log_molar_eV")
+        )
+    with pytest.raises(ValueError, match="exactly one"):
+        p2._adapt_physical_mean_energy_for_p2(r2.RUNTIME_INPUT + p2._LEGACY_MEAN_BRIDGE)
+    with pytest.raises(ValueError, match="overwrite"):
+        p2._adapt_physical_mean_energy_for_p2(
+            r2.RUNTIME_INPUT.replace(
+                "property_name = c_O2",
+                "property_name = issue402_p2_log_molar_e",
+            )
+        )
