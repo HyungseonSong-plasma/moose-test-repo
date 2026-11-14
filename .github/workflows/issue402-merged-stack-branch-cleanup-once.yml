@@ -1,0 +1,55 @@
+name: Issue402 merged stack branch cleanup (one-time)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue402-merged-stack-branch-cleanup-once.yml'
+permissions:
+  contents: write
+jobs:
+  remove_merged_heads:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all merged PRs and exact refs, then delete only eight non-running stacked heads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          repo = 'HyungseonSong-plasma/moose-test-repo'
+          assert os.environ['GITHUB_REPOSITORY'] == repo
+          assert os.environ['GITHUB_REF'] == 'refs/heads/main'
+          token = os.environ['GH_TOKEN']
+          expected = [[523,'issue-402-chemistry-json-energy-charge','ed608a23f79fe25e31041b184fa27edb21ba7385'],[524,'issue-402-species-functor-naming','d819ec267a125d1132cfa9634fbd6c13adf6ba4c'],[525,'issue-402-json-rate-unification','0a8322337a748518132fe9ad8a4c3e4833088bf1'],[526,'issue-402-rate-coef-ideal-gas','b5aee181c12375d6d2b94cd9a1ff6011943c5370'],[527,'issue-402-species-initial-composition','0ff51761bbbc9d22bcc20c848904498c1c495480'],[528,'issue-402-species-live-ic-inlet','e5e586595948919a694ecd2bb19b48dd60a4751e'],[529,'issue-402-fem-electron-sheath-rename','2f5fdcd846365f5713126cf4427481fd05f0815f'],[530,'issue-402-sccm-inlet-flow-native','e78b8fa3c3e30dbd219a2ab28730121284f666a6']]
+          base = 'https://api.github.com/repos/' + repo
+          def api(path, method='GET'):
+              req = urllib.request.Request(base+path, method=method, headers={
+                  'Authorization': 'Bearer '+token,
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  'User-Agent': 'issue402-merged-branch-pruner',
+              })
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  data = resp.read()
+                  return json.loads(data) if data else None
+          # Fail closed: validate all exact refs and PR merges before ANY deletion.
+          for num, name, sha in expected:
+              pr = api('/pulls/'+str(num))
+              assert pr['merged_at'] is not None, (num, 'not merged')
+              assert pr['base']['ref'] == 'main', (num, 'base moved')
+              assert pr['head']['ref'] == name, (num, 'head name moved')
+              assert pr['head']['sha'] == sha, (num, 'head moved')
+              ref = api('/git/ref/heads/'+name)
+              assert ref['object']['sha'] == sha, (name, 'branch advanced')
+          open_prs = api('/pulls?state=open&per_page=100')
+          open_bases = {pr['base']['ref'] for pr in open_prs}
+          open_heads = {pr['head']['ref'] for pr in open_prs}
+          for _, name, _ in expected:
+              assert name not in open_bases and name not in open_heads, (name, 'still used by open PR')
+          for num, name, sha in expected:
+              api('/git/refs/heads/'+name, method='DELETE')
+              print('DELETED_MERGED_PR_BRANCH', num, name, sha[:12])
+          print('ISSUE402_EIGHT_MERGED_BRANCHES_PRUNED')
+          PY
