@@ -102,9 +102,14 @@ def test_json_plus_minimal_i_owns_complete_fem_electron_equations_and_sheath():
     assert DATA["species"]["e"]["initial_number_density"] == 1e15
     assert "fem_potential = potential" in auto
     assert "initial_molar_energy_density_eV = 8.3e-9" in auto
-    owners = DATA["transport_coefficients"]["drift_diffusion"]
-    assert owners["e"]["model"] == "constant"
-    assert owners["e_energy"] == {"type": "fluid"}
+    electron = DATA["species"]["e"]
+    assert "transport_coefficients" not in DATA
+    assert electron["transport_coef"] == "constant"
+    assert electron["mobility"] == 0.25
+    assert electron["diffusivity"] == 0.125
+    assert electron["energy_transport_coef"] == "fluid"
+    assert '"transport_coef"' in CHEM
+    assert '"energy_transport_coef"' in CHEM
     for kernel in ("FEMLogMolarTimeDerivative", "FEMLogMolarDriftDiffusion",
                    "FEMLogMolarElectronJouleHeating"):
         assert kernel in ENERGY_ACTION
