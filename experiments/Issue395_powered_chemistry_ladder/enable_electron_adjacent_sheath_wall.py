@@ -89,7 +89,7 @@ def transform(text: str) -> tuple[str, int, int, str]:
             particle_count += 1
             return (
                 f"  [{name}]\n"
-                "    type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC\n"
+                "    type = FEMElectronSheathBC\n"
                 "    variable = log_ne\n"
                 "    wall_number_flux = electron_wall_number_flux\n"
                 f"    boundary = '{boundary}'\n"
@@ -104,7 +104,7 @@ def transform(text: str) -> tuple[str, int, int, str]:
             energy_count += 1
             return (
                 f"  [{name}]\n"
-                "    type = PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC\n"
+                "    type = FEMElectronEnergySheathBC\n"
                 "    variable = log_energy\n"
                 "    wall_number_flux = electron_wall_number_flux\n"
                 f"    mean_energy = {mean_functor}\n"
@@ -125,9 +125,9 @@ def verify(text: str, particle_count: int, energy_count: int) -> None:
         raise RuntimeError(f"expected 4 solid electron energy wall BCs, converted {energy_count}")
     if "type = PhysicsElectronAdjacentSheathWallFluxMaterial" not in text:
         raise RuntimeError("adjacent-sheath electron wall material missing")
-    if text.count("type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC") != 4:
+    if text.count("type = FEMElectronSheathBC") != 4:
         raise RuntimeError("electron particle wall BC count mismatch")
-    if text.count("type = PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC") != 4:
+    if text.count("type = FEMElectronEnergySheathBC") != 4:
         raise RuntimeError("electron energy wall BC count mismatch")
     for token in (
         "PhysicsFEMLogMolarElectronNoSheathSuppressionBC",
@@ -145,8 +145,8 @@ def verify(text: str, particle_count: int, energy_count: int) -> None:
         body = m.group("body")
         tm = TYPE_RE.search(body)
         if tm is None or tm.group("value") not in {
-            "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
-            "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC",
+            "FEMElectronSheathBC",
+            "FEMElectronEnergySheathBC",
         }:
             continue
         boundary = set(field(BOUNDARY_RE, body, f"{m.group('name')} boundary").split())
