@@ -540,8 +540,8 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
                 "transport_coef": "lookup",
                 "table_file": table_rel,
                 "table_units": "reduced",
-                "pressure": "p",
-                "gas_temperature": "T_g_fixed",
+                "pressure": "pressure",
+                "gas_temperature": "temperature",
                 "bounds_policy": "clamp",
                 "energy_transport_coef": "fluid",
             })
