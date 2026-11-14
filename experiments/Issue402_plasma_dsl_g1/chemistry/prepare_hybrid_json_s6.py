@@ -342,13 +342,19 @@ def retire_staged_kinetic_owners(edits: dict[str, str], mechanism: dict) -> tupl
                     raise ValueError("HYBRID_DUPLICATE_NATIVE_RATE_OWNER_" + progress)
                 reaction = expected[progress]
                 if "table" in reaction:
-                    if args.get("type") != "EIRateCoefMaterial":
+                    # Scratch archives contain both the retired RateCoeffMaterial
+                    # spelling and the active EIRateCoefMaterial. Verify, then
+                    # remove the historical owner; never register an alias.
+                    if args.get("type") not in {"RateCoeffMaterial", "EIRateCoefMaterial"}:
                         raise ValueError("HYBRID_RATE_FACTORY_CHANGED_" + progress)
-                    actual = args.get("rate_table_file", "").strip("'\"")
-                    if Path(actual).name != Path(reaction["table"]).name:
+                    actual = args.get("rate_table_file", "").strip("'\\\"")
+                    if actual != reaction["table"]:
+                        # Same basename in a different directory is not proof
+                        # of the same physical lookup or dimensional basis.
                         raise ValueError("HYBRID_RATE_TABLE_IDENTITY_CHANGED_" + progress)
                     if (args.get("mean_energy") != "e_energy_eV" or
-                            args.get("electron_number_density") != "n_e_physical"):
+                            args.get("electron_number_density") != "n_e_physical" or
+                            not args.get("target_molar_concentration")):
                         raise ValueError("HYBRID_NATIVE_RATE_INPUT_CHANGED_" + progress)
                 elif reaction["id"] == "H25":
                     if (args.get("type") != "ADParsedFunctorMaterial" or
@@ -375,12 +381,16 @@ def retire_staged_kinetic_owners(edits: dict[str, str], mechanism: dict) -> tupl
             removed.append({"owner": owner, "source_layer": filename,
                             "source_sha256": digest(block.group(0).encode("utf-8"))})
         updated[filename] = source
-    if any(progress in seen for progress in expected) and not all(
-            progress in seen for progress in expected):
-        raise ValueError("HYBRID_PARTIAL_NATIVE_RATE_OWNER_CUTOVER")
-    if any(energy in seen for energy in elastic) and not all(
-            energy in seen for energy in elastic):
-        raise ValueError("HYBRID_PARTIAL_NATIVE_ELASTIC_OWNER_CUTOVER")
+    missing_rate = sorted(set(expected) - set(seen))
+    missing_elastic = sorted(elastic - set(seen))
+    # A full S6 migration must prove removal of all eight historical R_k
+    # owners and both historical elastic-loss Functors, not just a subset.
+    if missing_rate:
+        raise ValueError("HYBRID_INCOMPLETE_NATIVE_RATE_OWNER_CUTOVER: " +
+                         ", ".join(missing_rate))
+    if missing_elastic:
+        raise ValueError("HYBRID_INCOMPLETE_NATIVE_ELASTIC_OWNER_CUTOVER: " +
+                         ", ".join(missing_elastic))
     return updated, {
         "native_kinetic_owners_retired": sorted(removed, key=lambda r: r["owner"]),
         "native_progress_retired_count": sum(k in seen for k in expected),
