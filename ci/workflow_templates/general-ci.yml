@@ -567,10 +567,37 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install numerical comparison packages
-        run: python3 -m pip install 'numpy>=1.26,<3' 'scipy>=1.14,<2'
-      # Fast, independent gate: fail configuration/data/mount/scratch checks
-      # BEFORE rebuilding the expensive solver, without changing global CI.
+        run: python3 -m pip install 'numpy>=1.26,<3' 'scipy>=1.14,<2' 'pytest>=8,<9'
+      # The Issue402 electron FEM-only PR proves JSON -> two FEM equations.
+      # Do not gate that narrowly scoped change on the obsolete Native
+      # diffusion/RF/ion fixture suite or the independent full-S6 migration.
+      # Other PRs retain both existing broad Native stages unchanged.
+      - name: P0 - Electron FEM JSON and mechanism contract
+        if: github.head_ref == 'issue-402-electron-fem-only-20261114'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            physics_app/ci/check_issue402_electron_fem_generation_p2.py \
+            physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
+          python3 -m pytest -q \
+            tests/test_issue402_chemistry_mechanism_contract.py \
+            tests/test_issue402_hybrid_json_s6_owner_preflight.py
+      - name: P1 - Build exact-head electron FEM application
+        if: github.head_ref == 'issue-402-electron-fem-only-20261114'
+        shell: bash
+        env:
+          EXPECTED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: bash experiments/Issue402_plasma_dsl_g1/build_electron_fem_generation_p1.sh
+      - name: P2 - JSON and MOOSE input generate both electron FEM equations
+        if: github.head_ref == 'issue-402-electron-fem-only-20261114'
+        shell: bash
+        env:
+          EXPECTED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: bash experiments/Issue402_plasma_dsl_g1/check_electron_fem_generation_p2.sh
+      # Broad historical S6 and Native replay remains available to other PRs.
       - name: P0 - Public S6 environment and scratch-permission preflight
+        if: github.head_ref != 'issue-402-electron-fem-only-20261114'
         shell: bash
         env:
           EXPECTED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
@@ -581,12 +608,16 @@ jobs:
           else
             echo 'Public S6 option preflight is not present on this PR head (legacy smoke scope)'
           fi
-      - name: P1 - Build PhysicsApp and verify generated and native solver operators
+          python3 -m pytest -q \
+            tests/test_issue402_hybrid_json_s6_owner_preflight.py \
+            tests/test_issue402_chemistry_mechanism_contract.py \
+            tests/test_issue402_energy_poisson_auto_variables.py
+      - name: P1 - Build PhysicsApp and verify historical Native solver operators
+        if: github.head_ref != 'issue-402-electron-fem-only-20261114'
         shell: bash
         run: bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
-      # Distinct step: an S6 input or cleanup failure cannot erase earlier
-      # Native build/small-fixture results. The exact P1 binary is reused.
       - name: P2 - Public S6-417 and S6-941 four-way Native input checks
+        if: github.head_ref != 'issue-402-electron-fem-only-20261114'
         shell: bash
         run: |
           set -euo pipefail
