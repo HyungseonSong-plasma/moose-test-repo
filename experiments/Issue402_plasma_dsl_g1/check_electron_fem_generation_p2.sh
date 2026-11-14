@@ -21,6 +21,8 @@ docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$PWD:/workspace" "$BASE" -lc '
   set -euo pipefail
   source /environment
+  # The bind mount is owned by the host runner, but this container runs root.
+  git config --global --add safe.directory /workspace
   python3 physics_app/ci/check_issue402_electron_fem_generation_p2.py \
     /workspace/physics_app/physics-opt \
     /workspace/experiments/Issue402_plasma_dsl_g1/evidence/electron_fem_p2_receipt.json
