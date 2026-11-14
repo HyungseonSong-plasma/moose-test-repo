@@ -9,13 +9,7 @@
   kernel_coverage_check = false
 []
 [Variables]
-  [log_e]
-    family = LAGRANGE
-    order = FIRST
-  []
-  [log_O2p]
-    type = MooseVariableFVReal
-  []
+  # log_e/log_O2p are generated from JSON initial_number_density.
   [potential]
     family = LAGRANGE
     order = FIRST
