@@ -167,9 +167,11 @@ def test_native_build_and_comparison_script():
     assert "mobility =" not in positive and "diffusivity =" not in positive
     assert "files = plasma_auto_constant.json" in positive
     json_config = json.loads((CASE / "plasma_auto_constant.json").read_text())
-    assert json_config["transport_coefficients"]["drift_diffusion"]["e"] == {
-        "model": "constant", "mobility": 1, "diffusivity": 1
+    assert {k: json_config["species"]["e"][k] for k in
+            ("transport_coef", "mobility", "diffusivity")} == {
+        "transport_coef": "constant", "mobility": 1, "diffusivity": 1
     }
+    assert "transport_coefficients" not in json_config
     assert "fem_charge_numbers" not in positive
     assert "fem_kernel_names" not in positive and "variables =" not in positive
     assert "sha256sum" in runner
