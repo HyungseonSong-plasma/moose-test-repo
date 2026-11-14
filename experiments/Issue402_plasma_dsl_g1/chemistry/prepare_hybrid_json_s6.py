@@ -24,11 +24,11 @@ ION_SOURCES = {
 # Exactly the archived common 400-W initial state, after name-only
 # canonicalization; never invent new numerical initial conditions.
 PINNED_INITIAL_LOG = {
-    "log_e": -20.216123548032986,
-    "log_O2p": -20.216123548032986,
-    "log_Om": -27.123878827015126,
-    "log_Op": -27.123878827015126,
-    "log_e_energy": -18.829829186913098,
+    "log_e": "-20.216123548032986",
+    "log_O2p": "-20.216123548032986",
+    "log_Om": "-27.123878827015126",
+    "log_Op": "-27.123878827015126",
+    "log_e_energy": "-18.829829186913098",
 }
 BLOCK = re.compile(
     r"(?m)^  \[(?P<name>[A-Za-z0-9_]+)\][ \t]*\r?\n"
@@ -138,7 +138,9 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
 
     density = {}
     for var in VAR_NAMES:
-        expected = {"initial_condition": str(PINNED_INITIAL_LOG[var]), "block": "plasma"}
+        # Compare against original full-precision .i lexical bytes, not
+        # str(float) which shortens e.g. -18.829829186913098 to -18.8298291869131.
+        expected = {"initial_condition": PINNED_INITIAL_LOG[var], "block": "plasma"}
         if var in ("log_e", "log_e_energy"):
             expected.update(family="LAGRANGE", order="FIRST")
         else:
@@ -146,7 +148,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         source, receipt = retire(source, "Variables", var, expected)
         removed.append(receipt)
         if var != "log_e_energy":
-            density[var[4:]] = math.exp(PINNED_INITIAL_LOG[var]) * N_A
+            density[var[4:]] = math.exp(float(PINNED_INITIAL_LOG[var])) * N_A
 
     for name, expected in SOURCE_KERNEL.items():
         source, receipt = retire(source, "Kernels", name, expected)
@@ -233,7 +235,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         "          fem_species = 'e'\n"
         "          fem_potential = potential\n"
         "          initial_molar_energy_density_eV = "
-        + repr(math.exp(PINNED_INITIAL_LOG["log_e_energy"])) + "\n"
+        + repr(math.exp(float(PINNED_INITIAL_LOG["log_e_energy"]))) + "\n"
         "        []", 1)
     if "[BCs]" in template or "[Kernels]" in template or "[FunctorMaterials]" in template:
         raise ValueError("HYBRID_OVERLAY_MUST_NOT_DUPLICATE_NATIVE_OWNERS")
@@ -264,7 +266,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         "removed_owners": removed,
         "changed_staged_layers": changed,
         "initial_number_densities_per_m3": density,
-        "initial_molar_energy_density_eV": math.exp(PINNED_INITIAL_LOG["log_e_energy"]),
+        "initial_molar_energy_density_eV": math.exp(float(PINNED_INITIAL_LOG["log_e_energy"])),
         "electron_transport_table_sha256": digest(table_path.read_bytes()),
         "hybrid_json_sha256": digest(json_path.read_bytes()),
         "overlay_sha256": digest(overlay.read_bytes()),
