@@ -1,4 +1,6 @@
 #include "Chemistry.h"
+#include "DDContinuityEq.h"
+#include "DDEnergyEq.h"
 #include "SCCMInletFlow.h"
 #include "IdealGasMixtureState.h"
 #include "FEProblemBase.h"
@@ -1018,25 +1020,28 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
 void
 PlasmasAction::act()
 {
-  // Root JSON is the sole ownership switch for the relocated, verbatim
-  // [BCs] blocks, independent of the DD/NV taxonomy. There is deliberately NO .i
-  // plasma_boundary toggle and NO implicit wall type interpretation.
-  // This path also works when root gas_state is not enabled.
-  if (_current_task == "add_bc" && _data.hasBoundaries())
+  // Root owns validated JSON catalogues, not the DriftDiffusion electron
+  // boundary operators. Each electron equation Physics builds its own BC.
+  if (_current_task == "check_integrity" && _data.hasBoundaries())
+  {
+    bool requires_continuity = false;
+    bool requires_energy = false;
     for (const auto & [group, boundary] : _data.boundaries())
       for (const auto & [name, bc] : boundary.bcs)
       {
-        auto params = _factory.getValidParams(bc.type);
-        params.set<NonlinearVariableName>("variable") = bc.variable;
-        std::vector<BoundaryName> sidesets;
-        for (const auto & side : boundary.mesh_boundaries)
-          sidesets.emplace_back(side);
-        params.set<std::vector<BoundaryName>>("boundary") = sidesets;
-        params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
-        if (bc.type == "FEMElectronEnergySheathBC")
-          params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
-        _problem->addBoundaryCondition(bc.type, name, params);
+        (void)group;
+        (void)name;
+        requires_continuity |= bc.type == "FEMElectronSheathBC";
+        requires_energy |= bc.type == "FEMElectronEnergySheathBC";
       }
+
+    if (requires_continuity && _awh.getActions<Plasma::DDContinuityEq>().empty())
+      paramError("files",
+                 "JSON FEMElectronSheathBC requires [Transport]/[DriftDiffusion]/[Continuity].");
+    if (requires_energy && _awh.getActions<Plasma::DDEnergyEq>().empty())
+      paramError("files",
+                 "JSON FEMElectronEnergySheathBC requires [Transport]/[DriftDiffusion]/[Energy].");
+  }
 
   if (!gasStateEnabled() ||
       (_current_task != "add_functor_material" &&
