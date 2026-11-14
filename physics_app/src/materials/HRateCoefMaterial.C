@@ -1,14 +1,14 @@
-#include "HeavyReactionRateMaterial.h"
+#include "HRateCoefMaterial.h"
 
 #include <algorithm>
 #include <cmath>
 #include <set>
 #include <stdexcept>
 
-registerMooseObject("PhysicsApp", HeavyReactionRateMaterial);
+registerMooseObject("PhysicsApp", HRateCoefMaterial);
 
 InputParameters
-HeavyReactionRateMaterial::validParams()
+HRateCoefMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
@@ -26,7 +26,7 @@ HeavyReactionRateMaterial::validParams()
   return params;
 }
 
-HeavyReactionRateMaterial::HeavyReactionRateMaterial(const InputParameters & parameters)
+HRateCoefMaterial::HRateCoefMaterial(const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _density(getFunctor<ADReal>("density")),
     _temperature(getFunctor<ADReal>("temperature")),
@@ -105,7 +105,7 @@ HeavyReactionRateMaterial::HeavyReactionRateMaterial(const InputParameters & par
 
 template <typename SpaceArg, typename StateArg>
 ADReal
-HeavyReactionRateMaterial::concentration(const std::string & species,
+HRateCoefMaterial::concentration(const std::string & species,
                                          const SpaceArg & r,
                                          const StateArg & state) const
 {
@@ -118,7 +118,7 @@ HeavyReactionRateMaterial::concentration(const std::string & species,
 
 template <typename SpaceArg, typename StateArg>
 ADReal
-HeavyReactionRateMaterial::reactionProgress(const Plasma::ReactionRecord & reaction,
+HRateCoefMaterial::reactionProgress(const Plasma::ReactionRecord & reaction,
                                             const SpaceArg & r,
                                             const StateArg & state) const
 {

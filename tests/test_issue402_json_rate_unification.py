@@ -38,7 +38,7 @@ def test_legacy_parser_and_factories_are_really_deleted():
             assert not (APP / folder / (name + ext)).exists(), (folder, name)
     for old in ("stage5_s5d_oxygen_heavy.txt", "stage5_s5e_h05_oxygen_heavy.txt"):
         assert not (DATA / old).exists()
-    for new in ("HeavyReactionRateMaterial", "SurfaceReactionMaterial"):
+    for new in ("HRateCoefMaterial", "SurfaceReactionMaterial"):
         header = (APP / "include/materials" / (new + ".h")).read_text()
         source = (APP / "src/materials" / (new + ".C")).read_text()
         assert "class " + new + " : public FunctorMaterial" in header
@@ -120,7 +120,7 @@ def test_json_stage5_inputs_use_single_canonical_rate_owner():
         assert "stage5_s5d_oxygen_heavy.txt" not in source
         assert "stage5_s5e_h05_oxygen_heavy.txt" not in source
     builder = (ROOT / filenames[0]).read_text()
-    assert 'type = HeavyReactionRateMaterial' in builder
+    assert 'type = HRateCoefMaterial' in builder
     assert "type = PhysicsReactionRateMaterial" not in builder
     for i in range(1, 6):
         assert f'"R_H{i:02d}"' in builder or f'R_H{i:02d}' in builder
@@ -146,6 +146,12 @@ def test_surface_json_keeps_wall_mass_flux_separate_from_volume_sources():
     material = (APP / "src/materials/SurfaceReactionMaterial.C").read_text()
     fixture = (APP / "ci/json_surface_rate_p2.i").read_text()
     assert "species = 'O2'" in fixture
+    assert "pressure = 1.333223684" in fixture
+    assert "temperature = 300" in fixture
+    assert "model = ideal_gas" in fixture
+    assert "temperature = T" in fixture
+    assert "density = rho_g" in fixture
+    assert data["gas_state"] == {"species": ["O2", "O"], "mass_fractions": ["Y_O2", "Y_O"]}
     assert "mass_fractions = 'Y_O2'" in fixture
     assert "surface_mass_flux_O" in fixture
     assert "_chemistry.speciesRecords()" in material

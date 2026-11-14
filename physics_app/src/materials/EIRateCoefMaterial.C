@@ -1,9 +1,9 @@
-#include "RateCoeffMaterial.h"
+#include "EIRateCoefMaterial.h"
 
-registerMooseObject("PhysicsApp", RateCoeffMaterial);
+registerMooseObject("PhysicsApp", EIRateCoefMaterial);
 
 InputParameters
-RateCoeffMaterial::validParams()
+EIRateCoefMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
@@ -21,7 +21,7 @@ RateCoeffMaterial::validParams()
   return params;
 }
 
-RateCoeffMaterial::RateCoeffMaterial(
+EIRateCoefMaterial::EIRateCoefMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _mean_energy(getFunctor<ADReal>("mean_energy")),
@@ -43,17 +43,17 @@ RateCoeffMaterial::RateCoeffMaterial(
         const ADReal n_e = _electron_number_density(r, state);
         const ADReal c_target = _target_molar_concentration(r, state);
         if (n_e.value() < 0.0)
-          mooseError("RateCoeffMaterial requires n_e >= 0 for '",
+          mooseError("EIRateCoefMaterial requires n_e >= 0 for '",
                      _reaction_progress_name,
                      "'.");
         if (c_target.value() < 0.0)
-          mooseError("RateCoeffMaterial requires c_target >= 0 for '",
+          mooseError("EIRateCoefMaterial requires c_target >= 0 for '",
                      _reaction_progress_name,
                      "'.");
 
         const ADReal k_raw = interpolateStrict(_mean_energy(r, state));
         if (k_raw.value() < 0.0)
-          mooseError("RateCoeffMaterial encountered a negative tabulated rate for '",
+          mooseError("EIRateCoefMaterial encountered a negative tabulated rate for '",
                      _reaction_progress_name,
                      "'.");
         return k_raw * (n_e / N_A) * c_target;
@@ -61,7 +61,7 @@ RateCoeffMaterial::RateCoeffMaterial(
 }
 
 ADReal
-RateCoeffMaterial::interpolateStrict(const ADReal & coordinate) const
+EIRateCoefMaterial::interpolateStrict(const ADReal & coordinate) const
 {
   const auto & x = _table.coordinate();
   const auto & y = _table.values(0);

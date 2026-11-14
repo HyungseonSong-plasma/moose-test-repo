@@ -215,7 +215,7 @@ def input_text(temperature: float) -> str:
     expression = '1.0-m2p-mo-mom-mop'
   []
   [heavy_rates]
-    type = HeavyReactionRateMaterial
+    type = HRateCoefMaterial
     chemistry_file = '{DATABASE.resolve()}'
     density = rho_const
     temperature = T_g
@@ -398,7 +398,7 @@ def input_text(temperature: float) -> str:
 
 def validate_surface(text: str) -> None:
     required = [
-        "type = HeavyReactionRateMaterial",
+        "type = HRateCoefMaterial",
         "temperature = T_g",
         "type = PhysicsFVSpeciesReactionSource",
         "property_name = S_O2p_s5d",
@@ -416,7 +416,7 @@ def validate_surface(text: str) -> None:
     for token in forbidden:
         if token in text:
             raise AssertionError(f"forbidden S5-D production token: {token}")
-    if text.count("type = HeavyReactionRateMaterial") != 1:
+    if text.count("type = HRateCoefMaterial") != 1:
         raise AssertionError("S5-D requires exactly one heavy reaction-rate owner")
     for progress in PROGRESS.values():
         if text.count(progress) < 2:
@@ -608,7 +608,7 @@ def runtime(executable: str, evidence_out: str | None, repository_sha: str | Non
         "repository_sha": repository_sha,
         "build_base_ref": build_base_ref,
         "executable_sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-        "production_owner": "HeavyReactionRateMaterial.R_H*",
+        "production_owner": "HRateCoefMaterial.R_H*",
         "source_projection": "ADParsedFunctorMaterial_from_published_progress_then_PhysicsFVSpeciesReactionSource",
         "cases": [low, high],
         "temperature_scaling": {

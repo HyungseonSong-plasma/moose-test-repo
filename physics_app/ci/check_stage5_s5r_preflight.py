@@ -42,14 +42,14 @@ EXPECTED_LEDGER = [
 ]
 
 EXPECTED_STAGE5 = {
-    "EI18_O_TO_OS": ("R_excitation_O_1p968", "RateCoeffMaterial"),
-    "EI20_O_IONIZATION": ("R_ion_O", "RateCoeffMaterial"),
+    "EI18_O_TO_OS": ("R_excitation_O_1p968", "EIRateCoefMaterial"),
+    "EI20_O_IONIZATION": ("R_ion_O", "EIRateCoefMaterial"),
     "EDETACH_OM": ("R_detach_Om", "ADParsedFunctorMaterial"),
-    "H01_OP_O2_CHARGE_TRANSFER": ("R_H01", "HeavyReactionRateMaterial"),
-    "H02_OM_OP_NEUTRALIZATION": ("R_H02", "HeavyReactionRateMaterial"),
-    "H03_OM_O2P_TO_3O": ("R_H03", "HeavyReactionRateMaterial"),
-    "H04_OM_O2P_TO_O_O2": ("R_H04", "HeavyReactionRateMaterial"),
-    "H05_OM_O_DETACHMENT": ("R_H05", "HeavyReactionRateMaterial"),
+    "H01_OP_O2_CHARGE_TRANSFER": ("R_H01", "HRateCoefMaterial"),
+    "H02_OM_OP_NEUTRALIZATION": ("R_H02", "HRateCoefMaterial"),
+    "H03_OM_O2P_TO_3O": ("R_H03", "HRateCoefMaterial"),
+    "H04_OM_O2P_TO_O_O2": ("R_H04", "HRateCoefMaterial"),
+    "H05_OM_O_DETACHMENT": ("R_H05", "HRateCoefMaterial"),
 }
 
 EXPECTED_EXCLUSIONS = {
@@ -138,7 +138,7 @@ def _check_ei01_recovery() -> None:
 
     owner = recovery.get("progress_owner", {})
     # Frozen recovery evidence stores the historical registered name.
-    # Active input uses RateCoeffMaterial, validated by the S5-R assembler.
+    # Active input uses EIRateCoefMaterial, validated by the S5-R assembler.
     if owner.get("type") != "PhysicsElectronImpactRateMaterial":
         raise AssertionError("EI01 progress owner type changed")
     if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_attachment.txt":
@@ -206,7 +206,7 @@ def check() -> None:
             historical_id = channel.split("_", 1)[0]
             if (row.get("owner") != "PhysicsReactionRateMaterial" or
                     not row.get("progress", "").startswith("reaction_rate_" + historical_id + "_") or
-                    progress != "R_" + historical_id or owner != "HeavyReactionRateMaterial"):
+                    progress != "R_" + historical_id or owner != "HRateCoefMaterial"):
                 raise AssertionError(f"historical/new Chemistry owner mismatch for {channel}")
         elif row.get("progress") != progress or row.get("owner") != owner:
             raise AssertionError(f"owner-map mismatch for {channel}")

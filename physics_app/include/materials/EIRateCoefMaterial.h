@@ -17,11 +17,11 @@
  * Downstream particle, heavy-species and electron-energy projections must consume
  * this functor and must not independently interpolate the kinetic table.
  */
-class RateCoeffMaterial : public FunctorMaterial
+class EIRateCoefMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  RateCoeffMaterial(const InputParameters & parameters);
+  EIRateCoefMaterial(const InputParameters & parameters);
 
 protected:
   ADReal interpolateStrict(const ADReal & mean_energy) const;

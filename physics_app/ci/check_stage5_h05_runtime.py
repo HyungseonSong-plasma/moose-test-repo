@@ -87,7 +87,7 @@ def runtime_input():
     expression = '1-wo-wom'
   []
   [heavy_rates]
-    type = HeavyReactionRateMaterial
+    type = HRateCoefMaterial
     chemistry_file = '{DATABASE.resolve()}'
     density = rho_const
     temperature = T_g
@@ -350,7 +350,7 @@ def self_test():
 
     text = runtime_input()
     required = (
-        "type = HeavyReactionRateMaterial",
+        "type = HRateCoefMaterial",
         "active_reactions = 'H05'",
         f"functor_names = '{PROGRESS}'",
         "type = PhysicsFVElectronReactionSource",
@@ -363,7 +363,7 @@ def self_test():
     for token in required:
         if token not in text:
             raise AssertionError(f"runtime input missing {token}")
-    if text.count("type = HeavyReactionRateMaterial") != 1:
+    if text.count("type = HRateCoefMaterial") != 1:
         raise AssertionError("H05 must have exactly one canonical progress owner")
     for forbidden in ("PhysicsFVElectronReactionEnergySource", "FVCoupledForce", "S_epsilon_h05"):
         if forbidden in text:
@@ -392,7 +392,7 @@ def static_gate():
         raise AssertionError("H05 JSON rate law drift")
     if db["species"]["e"]["charge_number"] != -1:
         raise AssertionError("H05 must declare electron stoichiometry in Chemistry JSON")
-    owner = (ROOT / "physics_app/src/materials/HeavyReactionRateMaterial.C").read_text()
+    owner = (ROOT / "physics_app/src/materials/HRateCoefMaterial.C").read_text()
     if "reaction.progress" not in owner or "addFunctorProperty<ADReal>" not in owner:
         raise AssertionError("canonical R_H05 progress owner contract changed")
     eproj = (ROOT / "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()

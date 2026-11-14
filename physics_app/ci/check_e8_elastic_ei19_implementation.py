@@ -10,8 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json"
-OWNER_H = ROOT / "physics_app/include/materials/RateCoeffMaterial.h"
-OWNER_C = ROOT / "physics_app/src/materials/RateCoeffMaterial.C"
+OWNER_H = ROOT / "physics_app/include/materials/EIRateCoefMaterial.h"
+OWNER_C = ROOT / "physics_app/src/materials/EIRateCoefMaterial.C"
 RUNTIME_CHECKER = ROOT / "physics_app/ci/check_e8_elastic_ei19_runtime.py"
 DATA_DIR = ROOT / "physics_app/data/electron_impact"
 
@@ -73,19 +73,19 @@ def _validate_table_bytes(data, spec, label):
 
 def _validate_owner_text(header, source):
     required_header = (
-        "class RateCoeffMaterial : public FunctorMaterial",
-        "RateCoeffMaterial(const InputParameters & parameters);",
+        "class EIRateCoefMaterial : public FunctorMaterial",
+        "EIRateCoefMaterial(const InputParameters & parameters);",
         "PhysicsLookupTable1D _table;",
         "const std::string _reaction_progress_name;",
     )
     required_source = (
-        'registerMooseObject("PhysicsApp", RateCoeffMaterial);',
-        'RateCoeffMaterial::validParams()',
-        'RateCoeffMaterial::RateCoeffMaterial(',
-        'RateCoeffMaterial::interpolateStrict(',
-        'mooseError("RateCoeffMaterial requires n_e >= 0',
-        'mooseError("RateCoeffMaterial requires c_target >= 0',
-        'mooseError("RateCoeffMaterial encountered a negative tabulated rate',
+        'registerMooseObject("PhysicsApp", EIRateCoefMaterial);',
+        'EIRateCoefMaterial::validParams()',
+        'EIRateCoefMaterial::EIRateCoefMaterial(',
+        'EIRateCoefMaterial::interpolateStrict(',
+        'mooseError("EIRateCoefMaterial requires n_e >= 0',
+        'mooseError("EIRateCoefMaterial requires c_target >= 0',
+        'mooseError("EIRateCoefMaterial encountered a negative tabulated rate',
         'addRequiredParam<FileName>("rate_table_file"',
         'addRequiredParam<MooseFunctorName>("mean_energy"',
         'addRequiredParam<MooseFunctorName>("electron_number_density"',
@@ -161,7 +161,7 @@ def _runtime_checker_production_surface(text):
 
 def _validate_runtime_checker_text(text):
     for required in (
-        "RateCoeffMaterial",
+        "EIRateCoefMaterial",
         "ADParsedFunctorMaterial",
         "FVCoupledForce",
         "R_elastic_O2",

@@ -5,7 +5,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "physics_app"
 RENAMED = {
-    "ElectronImpactRateMaterial": "RateCoeffMaterial",
+    "ElectronImpactRateMaterial": "EIRateCoefMaterial",
     "DDMaterial": "DDTransportMaterial",
     "NVMaterial": "NVTransportMaterial",
 }
@@ -50,7 +50,7 @@ def test_direct_checked_in_p2_inputs_only_use_canonical_material_types():
             assert not re.search(r'(?m)^\s*type\s*=\s*' + re.escape(old) + r'\s*$', content)
     assert "type = DDTransportMaterial" in inputs[0].read_text()
     assert "type = NVTransportMaterial" in inputs[0].read_text()
-    assert "type = RateCoeffMaterial" in inputs[1].read_text()
+    assert "type = EIRateCoefMaterial" in inputs[1].read_text()
 
 
 def test_frozen_s6_source_is_remapped_only_after_staging():
@@ -59,7 +59,7 @@ def test_frozen_s6_source_is_remapped_only_after_staging():
         "DDMaterial": "DDTransportMaterial",
         "NVMaterial": "NVTransportMaterial",
         "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
-        "ElectronImpactRateMaterial": "RateCoeffMaterial",
-        "PhysicsElectronImpactRateMaterial": "RateCoeffMaterial",
+        "ElectronImpactRateMaterial": "EIRateCoefMaterial",
+        "PhysicsElectronImpactRateMaterial": "EIRateCoefMaterial",
     }.items():
         assert f'"{old}": "{new}"' in source

@@ -22,8 +22,8 @@ def test_four_canonical_reaction_inputs_and_output_owners(tmp_path: Path) -> Non
         assert "PhysicsO2IonizationSourceMaterial" not in source
         assert "PhysicsO2sExcitationSourceMaterial" not in source
         assert "ADParsedFunctorMaterial" in source
-    assert "type = RateCoeffMaterial" in fixtures[0][1].read_text()
-    assert "type = RateCoeffMaterial" in fixtures[3][1].read_text()
+    assert "type = EIRateCoefMaterial" in fixtures[0][1].read_text()
+    assert "type = EIRateCoefMaterial" in fixtures[3][1].read_text()
     for old in ("ElectronImpactRateMaterial", "PhysicsElectronImpactRateMaterial"):
         assert f"type = {old}" not in fixtures[0][1].read_text()
         assert f"type = {old}" not in fixtures[3][1].read_text()

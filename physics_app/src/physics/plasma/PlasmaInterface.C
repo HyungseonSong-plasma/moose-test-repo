@@ -32,6 +32,13 @@ PlasmaInterface::chemistryData() const
 }
 
 bool
+PlasmaInterface::rootGasStateEnabled() const
+{
+  const auto owners = _awh.getActions<PlasmasAction>();
+  return owners.size() == 1 && owners.front()->gasStateEnabled();
+}
+
+bool
 PlasmaInterface::chemistryEnabled() const
 {
   return !_awh.getActions<Plasma::Chemistry>().empty();

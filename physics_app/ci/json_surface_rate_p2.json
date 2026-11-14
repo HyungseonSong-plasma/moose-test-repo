@@ -37,5 +37,15 @@
         "sticking": 0.25
       }
     }
-  ]
+  ],
+  "gas_state": {
+    "species": [
+      "O2",
+      "O"
+    ],
+    "mass_fractions": [
+      "Y_O2",
+      "Y_O"
+    ]
+  }
 }

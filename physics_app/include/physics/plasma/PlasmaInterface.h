@@ -22,6 +22,7 @@ protected:
 
   const Plasma::ChemistryData & chemistryData() const;
   bool chemistryEnabled() const;
+  bool rootGasStateEnabled() const;
 
   void validateSpeciesInputs(const std::vector<std::string> & finite_element_species,
                              const std::vector<std::string> & finite_volume_species,

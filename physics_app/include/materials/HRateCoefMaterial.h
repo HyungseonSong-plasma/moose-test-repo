@@ -14,11 +14,11 @@
  * [mol/(m^3 s)], consumed unchanged by the Chemistry source projector.
  * Electron-impact progress belongs to its separate table provider.
  */
-class HeavyReactionRateMaterial : public FunctorMaterial
+class HRateCoefMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  HeavyReactionRateMaterial(const InputParameters & parameters);
+  HRateCoefMaterial(const InputParameters & parameters);
 
 protected:
   template <typename SpaceArg, typename StateArg>
