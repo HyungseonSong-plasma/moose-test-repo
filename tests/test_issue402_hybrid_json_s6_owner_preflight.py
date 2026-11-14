@@ -15,7 +15,9 @@ import pytest
 PILOT = Path(__file__).resolve().parents[1] / "experiments/Issue402_plasma_dsl_g1"
 sys.path.insert(0, str(PILOT))
 from chemistry.prepare_hybrid_json_s6 import PINNED_INITIAL_LOG, prepare
-from chemistry.prepare_s6_run_input import canonicalize_staged_electron_lookup
+from chemistry.prepare_s6_run_input import (
+    canonicalize_staged_electron_lookup, canonicalize_staged_wall_inputs
+)
 
 
 def canonical_staged_base() -> str:
@@ -37,6 +39,8 @@ def canonical_staged_base() -> str:
         {Path("synthetic_canonical_s6_base.i"): original}
     )
     assert owner["to_type"] == "DDTransportMaterial"
+    converted, wall = canonicalize_staged_wall_inputs(converted)
+    assert wall["owner_count"] == 4
     source = converted[Path("synthetic_canonical_s6_base.i")]
     for old, new in replacements.items():
         source = re.sub(r"(?<![A-Za-z0-9_])" + re.escape(old) +
@@ -84,6 +88,11 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert isinstance(PINNED_INITIAL_LOG["log_e_energy"], str)
     report = prepare(stage, names, case)
     assert report["removed_generated_owner_count"] == 10
+    assert report["rebound_native_sheath_bc_count"] == 8
+    assert sum(x["new_type"] == "FEMElectronSheathBC"
+               for x in report["rebound_native_sheath_bcs"]) == 4
+    assert sum(x["new_type"] == "FEMElectronEnergySheathBC"
+               for x in report["rebound_native_sheath_bcs"]) == 4
     assert set(report["changed_staged_layers"]) == {
         names[0], names[-1]
     }
@@ -103,6 +112,11 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert "[log_e_energy]" not in base
     assert "[electron_transport]" not in base
     assert "[energy_time]" not in base
+    assert base.count("type = FEMElectronSheathBC") == 4
+    assert base.count("type = FEMElectronEnergySheathBC") == 4
+    assert "PhysicsFEMLogMolarElectronFieldLimitedFluxBC" not in base
+    assert "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC" not in base
+    assert "wall_number_flux = e_wall_number_flux" in base
     for native in ("[potential]", "[phi_diffusion]", "[phi_source]",
                    "[sigma_surface_current]", "[electron_wall_flux]",
                    "[ion_molar_density]", "[ni_time]"):
@@ -125,4 +139,21 @@ def test_hybrid_rejects_changed_archived_ic_before_any_file_write(
         prepare(stage, names, "417")
     assert (stage / names[0]).read_text() == modified
     assert (stage / names[-1]).read_bytes() == overlay
+    assert not (stage / "hybrid_s6_transport.json").exists()
+
+
+def test_hybrid_rejects_changed_archived_sheath_flux_before_write(tmp_path: Path):
+    stage, names, original = prepare_scratch(tmp_path, "941")
+    mutated = original.replace(
+        "wall_number_flux = e_wall_number_flux",
+        "wall_number_flux = unverified_wall_flux",
+        1,
+    )
+    assert mutated != original
+    (stage / names[0]).write_text(mutated)
+    preserved_overlay = (stage / names[-1]).read_bytes()
+    with pytest.raises(ValueError, match="HYBRID_SHEATH_BC_IDENTITY_"):
+        prepare(stage, names, "941")
+    assert (stage / names[0]).read_text() == mutated
+    assert (stage / names[-1]).read_bytes() == preserved_overlay
     assert not (stage / "hybrid_s6_transport.json").exists()
