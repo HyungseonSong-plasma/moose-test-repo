@@ -170,7 +170,11 @@ def test_native_positive_and_negative_fixtures_are_wired():
     assert "[Continuity]" in input_file
     assert "[Energy]" in input_file
     assert "SpeciesTransportAliasMaterial" not in input_file
-    assert '"transport_coefficients"' in (PILOT / "plasma_two_channels.json").read_text()
+    chemistry = json.loads((PILOT / "plasma_two_channels.json").read_text())
+    assert chemistry["species"]["e"]["transport_coef"] == "constant"
+    assert chemistry["species"]["e"]["mobility"] == 1
+    assert chemistry["species"]["e"]["diffusivity"] == 1
+    assert "transport_coefficients" not in chemistry
     assert "chemistry_two_channels.i" in runner
     assert "PLASMA_CHEMISTRY_TWO_CHANNELS_P2_PASS" in runner
     assert "invalid_chemistry_reactions" in runner
