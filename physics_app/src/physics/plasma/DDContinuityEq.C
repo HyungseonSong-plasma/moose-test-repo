@@ -368,28 +368,8 @@ DDContinuityEq::addFunctorMaterials()
   // DriftDiffusion owns electron sheath flux construction when electron FEM
   // continuity is active. Energy owns the e_energy_eV input only; the
   // physical flux law remains exclusively inside ESWallFluxMaterial.C.
-  bool sheath_wall = false;
-  for (const auto & [group, boundary] : chemistryData().boundaries())
-    for (const auto & [bc_name, bc] : boundary.bcs)
-    {
-      (void)group;
-      (void)bc_name;
-      if (bc.type != "FEMElectronSheathBC" &&
-          bc.type != "FEMElectronEnergySheathBC")
-        continue;
-      if (bc.wall_number_flux != "electron_wall_number_flux" ||
-          (bc.type == "FEMElectronEnergySheathBC" && bc.mean_energy != "e_energy_eV"))
-        paramError("fem_potential",
-                   "Automatic JSON electron sheath BCs require canonical "
-                   "electron_wall_number_flux and e_energy_eV providers.");
-      sheath_wall = true;
-    }
-  if (!sheath_wall)
-    return;
-
-  // The FEM state log_e stores ln(c_e [mol/m^3]); sheath physics consumes
-  // number density [1/m^3]. Construct a state-dependent AD Functor, not a
-  // constant value or another wall-flux implementation.
+  // The FEM state log_e stores ln(c_e [mol/m^3]). Electron-impact chemistry
+  // consumes n_e_physical with or without a sheath BC.
   const std::string density_type = "ADParsedFunctorMaterial";
   auto density = getFactory().getValidParams(density_type);
   density.set<std::string>("property_name") = "n_e_physical";
@@ -399,8 +379,28 @@ DDContinuityEq::addFunctorMaterials()
   assignBlocks(density, _blocks);
   getProblem().addFunctorMaterial(density_type, name() + "_number_density", density);
 
+  bool sheath_wall = false;
+  for (const auto & [group, boundary] : mechanism.boundaries())
+    for (const auto & [bc_name, bc] : boundary.bcs)
+    {
+      (void)group;
+      (void)bc_name;
+      if (bc.type != "FEMElectronSheathBC" &&
+          bc.type != "FEMElectronEnergySheathBC")
+        continue;
+      if (bc.wall_number_flux != "e_wall_number_flux" ||
+          (bc.type == "FEMElectronEnergySheathBC" && bc.mean_energy != "e_energy_eV"))
+        paramError("fem_potential",
+                   "Automatic JSON electron sheath BCs require canonical "
+                   "e_wall_number_flux and e_energy_eV providers.");
+      sheath_wall = true;
+    }
+  if (!sheath_wall)
+    return;
+
   const std::string wall_type = "ESWallFluxMaterial";
   auto wall = getFactory().getValidParams(wall_type);
+  wall.set<std::string>("species_id") = "e";
   wall.set<MooseFunctorName>("electron_density") = "n_e_physical";
   wall.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
   wall.set<MooseFunctorName>("potential") = getParam<VariableName>("fem_potential");
