@@ -132,11 +132,14 @@ assert "log_Op" in S6_SYNTHETIC_INPUT
 
 
 def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool,
-          expected_error: str | None = None):
+          expected_error: str | None = None, *,
+          data_filename: str = "dd_plasma_boundary_json_p2.json"):
+    # Scoped test fixture names only; fail closed rather than writing outside work.
+    assert Path(data_filename).name == data_filename and data_filename.endswith(".json")
     work = root / name.lower()
     work.mkdir(parents=True, exist_ok=True)
     (work / "input.i").write_text(source, encoding="utf-8")
-    (work / "dd_plasma_boundary_json_p2.json").write_text(
+    (work / data_filename).write_text(
         json.dumps(data) + "\n", encoding="utf-8"
     )
     (work / "json_surface_rate_p2.json").write_text(LEGACY_DATA, encoding="utf-8")
