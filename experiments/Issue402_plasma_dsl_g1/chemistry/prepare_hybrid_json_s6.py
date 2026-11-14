@@ -268,7 +268,12 @@ def canonicalize_native_ion_transport_sources(
         raise ValueError("HYBRID_MISSING_NATIVE_COEFFICIENT_CONSUMER")
     expected_props = ARCHIVED_COEFFICIENT_CONSTANTS["prop_names"]
     for old_name, new_name in NATIVE_COEFFICIENT_RENAME.items():
-        expected_props = expected_props.replace(old_name, new_name)
+        # Token boundaries matter: ion_mobility is a suffix of
+        # negative_ion_mobility and atomic_positive_ion_mobility.
+        expected_props = re.sub(
+            r"(?<![A-Za-z0-9_])" + re.escape(old_name) +
+            r"(?![A-Za-z0-9_])", new_name, expected_props
+        )
     migrated = [
         block for block in BLOCK.finditer(updated[base_name])
         if block.group("name") == "constants"
