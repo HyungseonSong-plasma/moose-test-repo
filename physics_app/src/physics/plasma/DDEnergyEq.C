@@ -216,6 +216,9 @@ DDEnergyEq::addFEBCs()
       if (!isParamValid("fem_potential"))
         paramError("fem_potential",
                    "JSON FEMElectronEnergySheathBC requires full FEM electron Energy.");
+      if (bc.variable != "log_e_energy")
+        paramError("fem_species",
+                   "JSON FEMElectronEnergySheathBC must target canonical log_e_energy.");
 
       auto params = getFactory().getValidParams(bc.type);
       params.set<NonlinearVariableName>("variable") = bc.variable;
