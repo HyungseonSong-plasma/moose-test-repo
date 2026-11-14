@@ -64,6 +64,8 @@ jobs:
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
           grep -Fq 'HYBRID_EXPECTED_EXACTLY_8_REGISTERED_SHEATH_BCS' \
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
+          grep -Fq '"equations": {}, "reactions": []' \
+            control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
           python3 -m py_compile \
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py \
             control/experiments/Issue402_plasma_dsl_g1/run_canonical_s6_p3_once.py \
