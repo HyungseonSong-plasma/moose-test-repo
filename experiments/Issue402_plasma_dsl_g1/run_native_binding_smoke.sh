@@ -91,6 +91,18 @@ native() {
   ' -- "$@"
 }
 
+# Independent P2 construction gate for Chemistry table-owned electron RHS
+# and DriftDiffusion-owned electron sheath BCs, before unrelated legacy
+# binding fixtures. No Native timestep or scientific parity is run.
+docker run --rm --entrypoint /bin/bash --user 0:0 \
+  --workdir /workspace -v "$PWD:/workspace" "$PINNED_BASE" -lc '
+  set -euo pipefail
+  source /environment
+  python3 physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py \
+    /workspace/physics_app/physics-opt
+' 2>&1 | tee "$EVIDENCE/electron_chemistry_sheath_p2.log"
+echo "ISSUE402_ELECTRON_EQUATIONS_NATIVE_P2_PASS_P3_NOT_RUN SCIENCE_HOLD"
+
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
