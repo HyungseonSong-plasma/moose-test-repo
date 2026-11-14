@@ -49,9 +49,24 @@ def main(exe: Path):
     assert exe.is_file()
     with TemporaryDirectory(prefix="issue402_bc_exact_") as folder:
         root = Path(folder)
-        check(exe, root, "JSON_PRESENT", JSON_INPUT, DATA, True)
+        # Root JSON parses/validates declarations but does not instantiate
+        # DriftDiffusion BCs without the corresponding equation Physics.
+        check(exe, root, "ROOT_ONLY_JSON_BC_REJECTED", JSON_INPUT, DATA,
+              False, "JSON FEMElectronSheathBC requires")
+        check(exe, root, "JSON_PRESENT", PHYSICS_AUTO_INPUT, DATA, True)
         check(exe, root, "PHYSICS_AUTO_LOG_E_ENERGY_AND_BCS",
               PHYSICS_AUTO_INPUT, DATA, True)
+        # A JSON electron energy BC cannot be silently ignored when its
+        # DriftDiffusion Energy Physics is absent.
+        energy_missing = PHYSICS_AUTO_INPUT.replace(
+            "        [Energy]\n          fem_species = e\n          fem_potential = potential\n          initial_molar_energy_density_eV = 8.3e-9\n        []\n",
+            "", 1
+        )
+        assert energy_missing != PHYSICS_AUTO_INPUT
+        check(exe, root, "ENERGY_BC_WITHOUT_DD_ENERGY_REJECTED",
+              energy_missing, DATA, False,
+              "JSON FEMElectronEnergySheathBC requires")
+
         # JSON owns continuity initial number density for FEM AND FVM.
         # The .i selectors contain only species IDs (no positional values).
         assert "fem_species = e" in PHYSICS_AUTO_INPUT
@@ -197,8 +212,12 @@ def main(exe: Path):
               PHYSICS_AUTO_INPUT, non_e_energy, False,
               "energy_transport_coef supports only species.e = fluid")
 
+        # A standalone manually provided mean-energy Functor is valid only
+        # when no JSON sheath BCs ask a missing DriftDiffusion owner to build them.
+        no_registry = copy.deepcopy(DATA)
+        no_registry.pop("boundaries")
         check(exe, root, "PARSED_MEAN_FUNCTOR_CONSTRUCTION",
-              PARSED_MEAN_INPUT, DATA, True)
+              PARSED_MEAN_INPUT, no_registry, True)
         # One original BC block can own several sidesets. The JSON path
         # must not split it into multiple independent operators.
         multiside = copy.deepcopy(DATA)
@@ -206,7 +225,7 @@ def main(exe: Path):
             multiside["boundaries"].pop("left")
         )
         multiside["boundaries"].pop("bottom")
-        check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", JSON_INPUT, multiside, True)
+        check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", PHYSICS_AUTO_INPUT, multiside, True)
         check(exe, root, "LEGACY_EXPLICIT_BCS", LEGACY_INPUT, DATA, True)
         # Old Material registrations, normalized state and old Functor
         # output names are deliberately retired, not compatibility aliases.
@@ -231,8 +250,6 @@ def main(exe: Path):
         # A missing Functor may remain unresolved at --check-input because
         # the residual is lazily evaluated. P0 proves the old output is not
         # registered; no unverified P2 failure is asserted for this case.
-        no_registry = copy.deepcopy(DATA)
-        no_registry.pop("boundaries")
         check(exe, root, "JSON_ABSENT_NO_GENERATED_BC", JSON_INPUT, no_registry, True)
 
         def mutate(label, fn):
