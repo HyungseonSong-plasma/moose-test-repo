@@ -306,8 +306,10 @@ DDContinuityEq::addFunctorMaterials()
     }
     else if (config->model == "functor")
     {
-      // DDTransportMaterial derives the existing canonical species Functor names.
-      // No source-name overrides are passed from the generated JSON.
+      // species.<id>.mobility/diffusivity now bind explicit upstream AD Functors,
+      // never create new physical coefficients or select numerical constants.
+      params.set<MooseFunctorName>("mobility_source") = config->mobility_source;
+      params.set<MooseFunctorName>("diffusivity_source") = config->diffusivity_source;
     }
     else
     {
