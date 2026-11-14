@@ -948,7 +948,8 @@ PlasmasAction::validParams()
   InputParameters params = Action::validParams();
   params.addParam<std::vector<FileName>>(
       "files", {}, "Ordered JSON mechanisms shared by Plasma Chemistry and Transport.");
-  params.addParam<Real>("pressure", "Uniform gas pressure [Pa]; enables canonical Gas State.");
+  params.addParam<Real>("pressure", "Initial Navier-Stokes pressure [Pa] when a solved "
+                                    "pressure variable exists; otherwise uniform gas pressure.");
   params.addParam<Real>("temperature", "Uniform gas temperature [K]; enables canonical Gas State.");
   params.addParam<MooseEnum>("state_model", MooseEnum("ideal_gas", "ideal_gas"),
                              "Canonical mixture equation of state.");
@@ -1042,6 +1043,70 @@ PlasmasAction::act()
        _current_task != "add_ics_physics" && _current_task != "add_bc" &&
        _current_task != "add_postprocessor"))
     return;
+
+  // In the archived S6 Navier-Stokes model pressure is a SOLVED FV
+  // variable, not a separately produced constant Functor. A MOOSE FV
+  // variable is itself a Functor. The root pressure parameter is its sole
+  // initial-condition value; all live consumers use that variable under
+  // the SAME name "pressure". Temperature remains root-owned and fixed.
+  //
+  // S6 has independently solved neutral mass fractions and its original
+  // neutral EOS (rho_neutral); it does not claim an equivalent complete
+  // JSON heavy-mixture catalogue. Never synthesize or renormalize missing
+  // species fractions. A partially declared root mixture fails closed.
+  if (_problem->hasVariable("pressure"))
+  {
+    bool has_root_composition = false;
+    for (const auto & [id, record] : _data.speciesRecords())
+      if (id != "e" &&
+          (record.molar_mass_kg_mol > 0.0 ||
+           record.initial_vol_mass_fraction ||
+           record.initial_inlet_mass_fraction ||
+           !record.mass_fraction_variable.empty() ||
+           !record.mass_fraction_functor.empty()))
+        has_root_composition = true;
+    if (has_root_composition)
+      paramError("files", "A solved Navier-Stokes pressure variable uses the "
+                         "Native neutral composition closure; do not activate a "
+                         "second root ideal-gas mixture owner.");
+    if (isParamValid("sccm"))
+      paramError("sccm", "A solved pressure cannot use root SCCM/mixture inlet "
+                          "without a separately verified mixture contract.");
+    if (_current_task == "add_ics_physics")
+    {
+      const auto type = "FVConstantIC";
+      auto params = _factory.getValidParams(type);
+      params.set<VariableName>("variable") = "pressure";
+      params.set<Real>("value") = getParam<Real>("pressure");
+      _problem->addFVInitialCondition(type, "plasma_initial_pressure", params);
+    }
+    else if (_current_task == "add_functor_material")
+    {
+      // MOOSE variables already provide AD Functor interfaces. Register no
+      // Functor named pressure, p, p_fixed, T or T_g_fixed.
+      const auto type = "ADGenericFunctorMaterial";
+      auto params = _factory.getValidParams(type);
+      params.set<std::vector<std::string>>("prop_names") = {"temperature"};
+      std::ostringstream temperature;
+      temperature << std::setprecision(17) << getParam<Real>("temperature");
+      params.set<std::vector<MooseFunctorName>>("prop_values") = {temperature.str()};
+      params.set<bool>("define_dot_functors") = false;
+      _problem->addFunctorMaterial(type, "plasma_gas_temperature", params);
+
+      // Keep total neutral particle density tied to the LIVE pressure
+      // Functor and root temperature, never a frozen initial snapshot.
+      auto gas = _factory.getValidParams("ADParsedFunctorMaterial");
+      gas.set<std::string>("property_name") = "n_g";
+      gas.set<std::string>("expression") =
+          "pressure/(1.380649e-23*temperature)";
+      gas.set<std::vector<std::string>>("functor_names") =
+          {"pressure", "temperature"};
+      gas.set<std::vector<std::string>>("functor_symbols") =
+          {"pressure", "temperature"};
+      _problem->addFunctorMaterial("ADParsedFunctorMaterial", "plasma_gas_n_g", gas);
+    }
+    return;
+  }
 
   // No redundant top-level gas_state list. Composition is owned by each
   // Chemistry species, including explicitly zero heavy fractions.
