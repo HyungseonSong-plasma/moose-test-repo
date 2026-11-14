@@ -10,8 +10,8 @@
       },
       "charge_number": 1,
       "transport_coef": "functor",
-      "mobility": "O2p_mobility",
-      "diffusivity": "O2p_diffusivity",
+      "mobility": "upstream_ion_mobility",
+      "diffusivity": "upstream_ion_diffusivity",
       "initial_number_density": 10000000000000000
     }
   },
