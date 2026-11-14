@@ -582,7 +582,8 @@ jobs:
             physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
           python3 -m pytest -q \
             tests/test_issue402_chemistry_mechanism_contract.py \
-            tests/test_issue402_hybrid_json_s6_owner_preflight.py
+            tests/test_issue402_hybrid_json_s6_owner_preflight.py \
+            tests/test_issue402_electron_fem_completeness.py
       - name: P1 - Build exact-head electron FEM application
         if: github.head_ref == 'issue-402-electron-fem-only-20261114'
         shell: bash
