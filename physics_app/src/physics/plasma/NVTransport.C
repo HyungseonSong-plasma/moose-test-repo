@@ -30,8 +30,8 @@ NVTransport::addFunctorMaterials()
   const std::string type = "NVTransportMaterial";
   auto params = getFactory().getValidParams(type);
   params.set<FileName>("transport_data_file") = config->transport_data_file;
-  params.set<MooseFunctorName>("temperature") = rootGasStateEnabled() ? "T" : config->temperature;
-  params.set<MooseFunctorName>("pressure") = rootGasStateEnabled() ? "p" : config->pressure;
+  params.set<MooseFunctorName>("temperature") = rootGasStateEnabled() ? "temperature" : config->temperature;
+  params.set<MooseFunctorName>("pressure") = rootGasStateEnabled() ? "pressure" : config->pressure;
   params.set<std::vector<std::string>>("species") = config->species;
   std::vector<MooseFunctorName> fractions;
   if (rootGasStateEnabled())
