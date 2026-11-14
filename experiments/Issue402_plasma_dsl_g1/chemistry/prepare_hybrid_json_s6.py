@@ -347,7 +347,7 @@ def retire_staged_kinetic_owners(edits: dict[str, str], mechanism: dict) -> tupl
                     # remove the historical owner; never register an alias.
                     if args.get("type") not in {"RateCoeffMaterial", "EIRateCoefMaterial"}:
                         raise ValueError("HYBRID_RATE_FACTORY_CHANGED_" + progress)
-                    actual = args.get("rate_table_file", "").strip().strip("\'").strip(\'"\')
+                    actual = args.get("rate_table_file", "").strip().strip("'").strip('"')
                     if actual != reaction["table"]:
                         # Same basename in a different directory is not proof
                         # of the same physical lookup or dimensional basis.
