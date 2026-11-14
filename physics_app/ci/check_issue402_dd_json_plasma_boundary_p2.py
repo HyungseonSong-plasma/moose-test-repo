@@ -20,7 +20,8 @@ PHYSICS_AUTO_INPUT = (CI / "dd_plasma_boundary_json_physics_auto_p2.i").read_tex
 LEGACY_DATA = (CI / "json_surface_rate_p2.json").read_text()
 
 
-def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool):
+def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool,
+          expected_error: str | None = None):
     work = root / name.lower()
     work.mkdir(parents=True, exist_ok=True)
     (work / "input.i").write_text(source, encoding="utf-8")
@@ -37,6 +38,10 @@ def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool
     else:
         assert result.returncode != 0 and "Syntax OK" not in combined, (
             name + " expected fail closed:\n" + combined[-4500:])
+        if expected_error:
+            assert expected_error in combined, (
+                name + " expected diagnostic '" + expected_error + "':\n" +
+                combined[-4500:])
     print("DD_JSON_BC_" + name + "_P2_PASS", flush=True)
 
 
@@ -74,7 +79,7 @@ def main(exe: Path):
         fvm_missing = copy.deepcopy(fvm_data)
         del fvm_missing["species"]["O2p"]["initial_number_density"]
         check(exe, root, "JSON_FVM_INITIAL_MISSING_WITHOUT_EXTERNAL_VARIABLE",
-              fvm_input, fvm_missing, False)
+              fvm_input, fvm_missing, False, "requires species.O2p.initial_number_density")
 
         # Fail-closed JSON schema: a log-molar solved density requires a
         # finite, strictly positive particle number density [1/m^3].
@@ -91,7 +96,7 @@ def main(exe: Path):
         no_initial = copy.deepcopy(DATA)
         del no_initial["species"]["e"]["initial_number_density"]
         check(exe, root, "JSON_INITIAL_MISSING_WITHOUT_EXTERNAL_VARIABLE",
-              PHYSICS_AUTO_INPUT, no_initial, False)
+              PHYSICS_AUTO_INPUT, no_initial, False, "requires species.e.initial_number_density")
 
         # The older external [Variables]/[ICs] fallback is deliberately
         # rejected even when a matching solver variable and IC are provided.
@@ -109,7 +114,7 @@ def main(exe: Path):
         )
         assert external_input != PHYSICS_AUTO_INPUT
         check(exe, root, "JSON_INITIAL_MISSING_DESPITE_EXTERNAL_VARIABLE_AND_IC",
-              external_input, no_initial, False)
+              external_input, no_initial, False, "requires species.e.initial_number_density")
         fvm_external_input = fvm_input.replace(
             "  [potential]\n    type = MooseVariable\n  []",
             "  [potential]\n    type = MooseVariable\n  []\n"
@@ -118,7 +123,7 @@ def main(exe: Path):
         )
         assert fvm_external_input != fvm_input
         check(exe, root, "JSON_FVM_INITIAL_MISSING_DESPITE_EXTERNAL_VARIABLE",
-              fvm_external_input, fvm_missing, False)
+              fvm_external_input, fvm_missing, False, "requires species.O2p.initial_number_density")
 
         old_input = PHYSICS_AUTO_INPUT.replace(
             "fem_species = e", "fem_species = 'e 1e15'", 1
