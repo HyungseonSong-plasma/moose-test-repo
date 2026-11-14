@@ -296,7 +296,10 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
             entry.update({"transport_coef": "functor",
                           "mobility": mu, "diffusivity": D})
         species[id] = entry
-    hybrid_json = {"species": species}
+    # Every JSON in [Plasmas]/files is validated as a complete mechanism.
+    # This transport-only overlay introduces no equations or reactions:
+    # archived public channels remain owned by the preceding JSON files.
+    hybrid_json = {"species": species, "equations": {}, "reactions": []}
     template = overlay.read_text(encoding="utf-8")
     old_files = (
         f"files = 'chemistry/oxygen_s6_common.json "
