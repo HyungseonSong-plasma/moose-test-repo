@@ -1,5 +1,7 @@
 #include "EIRateCoefMaterial.h"
 
+#include <cmath>
+
 registerMooseObject("PhysicsApp", EIRateCoefMaterial);
 
 InputParameters
@@ -29,7 +31,8 @@ EIRateCoefMaterial::EIRateCoefMaterial(
     _target_molar_concentration(getFunctor<ADReal>("target_molar_concentration")),
     _rate_table_file(getParam<FileName>("rate_table_file")),
     _reaction_progress_name(getParam<std::string>("reaction_progress")),
-    _table(_rate_table_file, 1, {2})
+    _table(_rate_table_file, 1, {2}),
+    _rate_interpolation(_table.coordinate(), _table.values(0))
 {
   constexpr Real N_A = 6.02214076e23;
 
@@ -67,6 +70,11 @@ EIRateCoefMaterial::interpolateStrict(const ADReal & coordinate) const
   const auto & y = _table.values(0);
   const Real raw = coordinate.value();
 
+  if (!std::isfinite(raw))
+    mooseError("Electron-impact progress '",
+               _reaction_progress_name,
+               "' requires finite mean electron energy.");
+
   if (raw < x.front() || raw > x.back())
     mooseError("Electron-impact progress '",
                _reaction_progress_name,
@@ -82,6 +90,5 @@ EIRateCoefMaterial::interpolateStrict(const ADReal & coordinate) const
   if (raw == x.back())
     return y.back();
 
-  const std::size_t i = _table.lowerBracket(raw);
-  return y[i] + (coordinate - x[i]) * (y[i + 1] - y[i]) / (x[i + 1] - x[i]);
+  return _rate_interpolation.sample(coordinate);
 }
