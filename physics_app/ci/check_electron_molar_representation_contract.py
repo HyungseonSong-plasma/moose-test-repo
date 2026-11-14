@@ -111,7 +111,7 @@ def self_test() -> int:
 
     retired = dict(positive)
     source = "physics_app/src/fvkernels/PhysicsFVLogMolarTransport.C"
-    retired[source] += "\nregisterMooseObject(\\"PhysicsApp\\", PhysicsFVLogMolarElectronReactionSource);"
+    retired[source] += '\nregisterMooseObject("PhysicsApp", PhysicsFVLogMolarElectronReactionSource);'
     failures = validate(retired)
     assert any("retired token reintroduced" in item for item in failures), failures
 
