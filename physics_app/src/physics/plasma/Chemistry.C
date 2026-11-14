@@ -1208,7 +1208,10 @@ PlasmasAction::act()
       {
         (void)group;
         (void)name;
-        requires_continuity |= bc.type == "FEMElectronSheathBC";
+        // Energy sheath uses the same wall-number-flux provider created by
+        // Continuity even if no particle sheath BC is present.
+        requires_continuity |= bc.type == "FEMElectronSheathBC" ||
+                               bc.type == "FEMElectronEnergySheathBC";
         requires_energy |= bc.type == "FEMElectronEnergySheathBC";
       }
 
