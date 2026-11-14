@@ -17,7 +17,7 @@ Status: DRAFT / P0–P2 verification only; **SCIENCE_HOLD** (no P3 scientific-pa
     files = oxygen_chemistry.json
     pressure = 1.333223684   # Pa = 10 mTorr
     temperature = 300        # K
-    model = ideal_gas
+    state_model = ideal_gas
   []
 []
 ```
@@ -77,3 +77,7 @@ Example: pure O2 at 10 mTorr and 300 K gives approximately `rho_g = 1.7105e-5 kg
 - P3 numerical scientific parity, charged wall semantics, global molar-mass reconciliation with the transport TXT tables, and runtime `Y_i` normalization are not established. Do not merge as a science-accepted change.
 
 Parent PR: #525. This follow-up PR: #526.
+
+### Root-state option migration (2026-11-13)
+
+`[Physics]/[Plasmas]` uses `state_model = ideal_gas` (not `model`). Every solved heavy `mass_fraction_variable` receives its JSON `initial_vol_mass_fraction` as an FVConstantIC, without an enable switch. An explicitly positive `sccm` plus named `inlet_boundaries` activates the JSON fraction FVDirichletBC on solved species; omitting `sccm` omits that inlet BC, but not the IC. The SCCM *number* currently does not determine a flow flux/velocity and must not be interpreted as a full feed-flow implementation. See the dedicated live-species IC/inlet ownership document for the separate DriftDiffusion Continuity/Energy BC survey.

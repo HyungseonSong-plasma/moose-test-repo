@@ -33,9 +33,13 @@ NVTransport::addFunctorMaterials()
   params.set<MooseFunctorName>("temperature") = rootGasStateEnabled() ? "T" : config->temperature;
   params.set<MooseFunctorName>("pressure") = rootGasStateEnabled() ? "p" : config->pressure;
   params.set<std::vector<std::string>>("species") = config->species;
-  params.set<std::vector<MooseFunctorName>>("mass_fractions") =
-      std::vector<MooseFunctorName>(config->mass_fractions.begin(),
-                                    config->mass_fractions.end());
+  std::vector<MooseFunctorName> fractions;
+  if (rootGasStateEnabled())
+    for (const auto & id : config->species)
+      fractions.emplace_back("Y_" + id); // live JSON species-state aliases
+  else
+    fractions.assign(config->mass_fractions.begin(), config->mass_fractions.end());
+  params.set<std::vector<MooseFunctorName>>("mass_fractions") = fractions;
   if (!config->electron_temperature.empty())
   {
     params.set<MooseFunctorName>("electron_temperature") = config->electron_temperature;

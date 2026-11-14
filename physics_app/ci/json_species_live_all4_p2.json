@@ -1,0 +1,98 @@
+{
+  "species": {
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.032,
+      "initial_vol_mass_fraction": 0.89,
+      "initial_inlet_mass_fraction": 1,
+      "mass_fraction_variable": "w_O2"
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.016,
+      "initial_vol_mass_fraction": 0.1,
+      "initial_inlet_mass_fraction": 0,
+      "mass_fraction_variable": "w_O"
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1,
+      "molar_mass_kg_mol": 0.016,
+      "initial_vol_mass_fraction": 0.01,
+      "initial_inlet_mass_fraction": 0,
+      "mass_fraction_variable": "w_Op"
+    }
+  },
+  "equations": {
+    "H90": "O2 -> 2O",
+    "H91": "Op + O2 -> Op + 2O"
+  },
+  "reactions": [
+    {
+      "id": "H90",
+      "domain": "surface",
+      "reactants": {
+        "O2": 1
+      },
+      "products": {
+        "O": 2
+      },
+      "units": "mol/(m^2 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      },
+      "rate": {
+        "model": "thermal_sticking",
+        "sticking": 0.25
+      }
+    },
+    {
+      "id": "H91",
+      "domain": "volume",
+      "reactants": {
+        "Op": 1,
+        "O2": 1
+      },
+      "products": {
+        "Op": 1,
+        "O": 2
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      },
+      "rate": {
+        "model": "constant",
+        "A": 1e-17,
+        "basis": "particle"
+      }
+    }
+  ],
+  "transport_coefficients": {
+    "navier_stokes": {
+      "transport_data_file": "plasma_closures_oxygen_transport.txt",
+      "temperature": "T",
+      "pressure": "p",
+      "species": [
+        "O2",
+        "O",
+        "Op"
+      ],
+      "mass_fractions": [
+        "Y_O2",
+        "Y_O",
+        "Y_Op"
+      ],
+      "electron_temperature": "T_e",
+      "electron_number_density": "n_e"
+    }
+  }
+}

@@ -75,8 +75,13 @@ def test_generated_functors_are_distinct_from_evolving_solver_state():
     inp = INPUT.read_text()
     assert 'add("Y_" + id + "_initial_vol"' in source
     assert 'add("Y_" + id + "_inlet"' in source
-    assert "if (!nv)" in source
-    assert "const auto * nv = _data.nvTransport();" in source
+    assert "if (!nv)" not in source
+    assert 'fractions.push_back("Y_" + id)' in source
+    assert 'add("Y_" + id, "live_y", {live}, {"live_y"});' in source
+    assert "sccm" in inp
+    assert "sccm = 100" in inp
+    assert "mass_fraction_variable" in source
+    assert "mass_fraction_functor" in source
     assert "NV transport species to match the complete" in source
     assert "boundaries and flow ownership remain" in source
     assert "gas_state" not in inp

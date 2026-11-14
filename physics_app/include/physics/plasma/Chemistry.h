@@ -49,6 +49,11 @@ struct SpeciesRecord
   // Missing is different from an explicitly zero concentration.
   std::optional<double> initial_vol_mass_fraction;
   std::optional<double> initial_inlet_mass_fraction;
+  // A live Y_i(t,x) owner is mandatory for root ideal_gas: either a solver
+  // mass-fraction variable, or a derived (constraint) Functor. These are
+  // NOT sources of initial or inlet values.
+  std::string mass_fraction_variable;
+  std::string mass_fraction_functor;
 };
 
 // Validated executable rate law. Empty model means the reaction progress
