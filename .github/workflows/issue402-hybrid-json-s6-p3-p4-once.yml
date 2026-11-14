@@ -4,6 +4,8 @@
 # Historical sources and protected private rate archives are never mutated.
 # Pre-P1 P0 reproduces 10-object cutover, complete 8-reaction integrated JSON
 # and canonical O2p/Om/Op Native coefficient producers and consumers.
+# Exact-prefix guard: ion_mobility is a suffix of negative_ion_mobility; P0
+# requires token-boundary validation before launching the costly Native P1.
 # Time integration/P4 diagnostics are NOT a science-equivalence acceptance.
 name: Issue402 JSON hybrid 400W S6 Native P3 P4 once
 run-name: Issue402 JSON hybrid S6-417/941 @ ${{ github.sha }}
