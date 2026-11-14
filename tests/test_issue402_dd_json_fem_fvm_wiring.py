@@ -72,8 +72,8 @@ def test_json_and_lookup_data_are_validated_fail_closed():
         ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
     functor_json = json.loads((PILOT / "plasma_auto_functor.json").read_text())
     assert functor_json["species"]["O2p"]["transport_coef"] == "functor"
-    assert functor_json["species"]["O2p"]["mobility"] == "O2p_mobility"
-    assert functor_json["species"]["O2p"]["diffusivity"] == "O2p_diffusivity"
+    assert functor_json["species"]["O2p"]["mobility"] == "upstream_ion_mobility"
+    assert functor_json["species"]["O2p"]["diffusivity"] == "upstream_ion_diffusivity"
     negative_functor = json.loads((PILOT / "invalid_json_functor_name_override_p2.json").read_text())
     assert "mobility_source" in negative_functor["species"]["O2p"]
     assert 'std::isfinite(coordinate)' in provider
