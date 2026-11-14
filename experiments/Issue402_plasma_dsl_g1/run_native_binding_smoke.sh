@@ -141,11 +141,13 @@ echo "PLASMA_JSON_OWNED_E_ION_BINDINGS_P2_PASS"
 native --check-input -i "$PILOT/generic_four_species.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
 echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# JSON-owned equation construction never stacks onto baseline.i's manual states.
+native --check-input -i "$PILOT/valid_all_physics.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
+echo "PLASMA_JSON_ALL_PHYSICS_P2_PASS"
 # Standalone positive construction check: one generated FEM transport Kernel.
 # It is a P2-only input, not an accepted physical simulation or P3 parity run.
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
+native --check-input -i "$PILOT/valid_generated_transport_options.i" \
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
@@ -311,8 +313,7 @@ done
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
-native --check-input -i "$PILOT/baseline.i" \
-  "$PILOT/valid_generated_transport_options.i" \
+native --check-input -i "$PILOT/valid_generated_transport_options.i" \
   "$PILOT/duplicate_e_time.i" > "$EVIDENCE/duplicate_e_time.log" 2>&1
 duplicate_time_exit=$?
 set -e
@@ -345,13 +346,13 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
   set -e
   case "$item" in
     invalid_overlap) expected='species listed in both groups' ;;
-    invalid_fem_fv_swap) expected='wrong type' ;;
+    invalid_fem_fv_swap) expected='Electron continuity is FEM-only' ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
     invalid_poisson_variable) expected='Poisson fem_potential requires an FEM solver variable' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
-    invalid_missing_variable) expected='was not found' ;;
+    invalid_missing_variable) expected="requires species.missing.initial_number_density" ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
     invalid_missing_fvm_charges) expected='fem_charge_numbers' ;;
@@ -370,7 +371,9 @@ echo "PLASMA_INVALID_INPUTS_REJECTED"
 mkdir -p "$EVIDENCE/baseline" "$EVIDENCE/candidate"
 native -i "$PILOT/baseline.i" "Outputs/file_base=$EVIDENCE/baseline/plasma" \
   2>&1 | tee "$EVIDENCE/baseline_run.log"
-native -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# Compare the exact same diffusion equations with only no-op Physics
+# validators. Do not compare a new electron PDE against old baseline diffusion.
+native -i "$PILOT/baseline.i" "$PILOT/legacy_noop_physics.i" \
   "Outputs/file_base=$EVIDENCE/candidate/plasma" \
   2>&1 | tee "$EVIDENCE/candidate_run.log"
 test -s "$EVIDENCE/baseline/plasma.e"
@@ -379,6 +382,7 @@ python3 "$PILOT/compare_native_outputs.py" \
   --baseline "$EVIDENCE/baseline/plasma.e" \
   --candidate "$EVIDENCE/candidate/plasma.e" \
   --output "$EVIDENCE/numerical_parity.json"
+echo "PLASMA_LEGACY_NOOP_PARITY_PASS"
 echo "PLASMA_RESULTS_MATCH"
 
 set +e
