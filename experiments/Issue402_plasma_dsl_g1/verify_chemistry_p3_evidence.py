@@ -56,6 +56,8 @@ def verify(results: Path, expected_head: str, case: str, *, hybrid_json: bool = 
             raise ValueError("P3_EVIDENCE_HYBRID_NATIVE_OWNER_OR_SOURCE_MISMATCH")
         if hybrid.get("overlay_sha256") != status.get("sidecar_sha256"):
             raise ValueError("P3_EVIDENCE_HYBRID_JSON_OVERLAY_SHA_MISMATCH")
+        if hybrid.get("rebound_native_sheath_bc_count") != 8:
+            raise ValueError("P3_EVIDENCE_HYBRID_NATIVE_SHEATH_OWNER_COUNT_MISMATCH")
     if not status.get("binary_sha256") or not status.get("sidecar_sha256") or (
         not status.get("p2_log_sha256") or not status.get("p3_log_sha256")
     ):
