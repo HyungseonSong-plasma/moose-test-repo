@@ -164,7 +164,7 @@ native --check-input -i "$PILOT/invalid_json_functor_name_override_p2.i" \
 bad_functor_status=$?
 set -e
 if [[ "$bad_functor_status" -eq 0 ]] || \
-   ! grep -Fq "functor transport accepts only model" "$EVIDENCE/invalid_json_functor_name_override_p2.log"; then
+   ! grep -Fq "functor transport forbids mobility_source" "$EVIDENCE/invalid_json_functor_name_override_p2.log"; then
   echo "::error::JSON functor source-name override was accepted or misdiagnosed" >&2
   cat "$EVIDENCE/invalid_json_functor_name_override_p2.log" >&2
   exit 28
