@@ -38,7 +38,12 @@ def test_p2_decks_and_legacy_variable_reuse():
     assert "initial_molar_energy_density_eV =" not in (CASE / "invalid_auto_energy_missing_initial_p2.i").read_text()
     assert "initial_molar_energy_density_eV = 0" in (CASE / "invalid_auto_energy_zero_initial_p2.i").read_text()
     assert "initial_potential_V = nan" in (CASE / "invalid_auto_poisson_nan_initial_p2.i").read_text()
-    assert "fem_potential = log_e" in (CASE / "valid_all_physics.i").read_text()
+    full = (CASE / "valid_all_physics.i").read_text()
+    legacy = (CASE / "legacy_noop_physics.i").read_text()
+    assert "fem_potential = potential" in full
+    assert "fem_potential = log_e" in legacy
+    assert "[Continuity]" not in legacy and "[Energy]" not in legacy
+    assert "[Chemistry]" not in legacy
     assert "fem_potential = log_O2p" in (CASE / "invalid_poisson_variable.i").read_text()
     run = (CASE / "run_native_binding_smoke.sh").read_text()
     assert "PLASMA_AUTO_ENERGY_POTENTIAL_P2_PASS" in run
