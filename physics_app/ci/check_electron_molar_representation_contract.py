@@ -8,20 +8,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 REQUIRED: dict[str, tuple[str, ...]] = {
-    "physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h": (
-        "class PhysicsFVLogMolarElectronTimeDerivative",
-        "class PhysicsFVLogMolarElectronDiffusion",
+    "physics_app/include/fvkernels/PhysicsFVLogMolarTransport.h": (
+        "class PhysicsFVLogMolarTimeDerivative",
+        "class PhysicsFVLogMolarDiffusion",
         "class PhysicsFVLogMolarElectrostaticDrift",
-        "class PhysicsFVLogMolarElectronReactionSource",
     ),
-    "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": (
-        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronTimeDerivative);',
-        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronDiffusion);',
+    "physics_app/src/fvkernels/PhysicsFVLogMolarTransport.C": (
+        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarTimeDerivative);',
+        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarDiffusion);',
         'registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectrostaticDrift);',
-        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronReactionSource);',
         "return (exp(log_c_new) - exp(log_c_old)) / _dt;",
         "const ADReal c_face = exp(_var(transported_face, state));",
-        "return -physical_number_source / avogadro_per_mol;",
     ),
     "physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.h": (
         "const bool _log_molar_state;",
@@ -50,6 +47,22 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# A removed, number-density-only FV source must not reappear in the generic
+# molar-flux implementation; Chemistry's S_<species>_molar is already molar.
+FORBIDDEN: dict[str, tuple[str, ...]] = {
+    "physics_app/include/fvkernels/PhysicsFVLogMolarTransport.h": (
+        "PhysicsFVLogMolarElectronReactionSource",
+        "PhysicsFVLogMolarElectronTimeDerivative",
+        "PhysicsFVLogMolarElectronDiffusion",
+    ),
+    "physics_app/src/fvkernels/PhysicsFVLogMolarTransport.C": (
+        "PhysicsFVLogMolarElectronReactionSource",
+        "PhysicsFVLogMolarElectronTimeDerivative",
+        "PhysicsFVLogMolarElectronDiffusion",
+        "avogadro_per_mol",
+    ),
+}
+
 
 def validate(contents: dict[str, str]) -> list[str]:
     failures: list[str] = []
@@ -61,6 +74,11 @@ def validate(contents: dict[str, str]) -> list[str]:
         for token in tokens:
             if token not in text:
                 failures.append(f"{relpath}: missing contract token: {token}")
+    for relpath, tokens in FORBIDDEN.items():
+        source = contents.get(relpath, "")
+        for token in tokens:
+            if token in source:
+                failures.append(f"{relpath}: retired token reintroduced: {token}")
     return failures
 
 
@@ -87,9 +105,15 @@ def self_test() -> int:
     assert any("if (_molar_energy_state)" in item for item in failures), failures
 
     missing = dict(positive)
-    missing.pop("physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h")
+    missing.pop("physics_app/include/fvkernels/PhysicsFVLogMolarTransport.h")
     failures = validate(missing)
     assert any(item.startswith("missing file:") for item in failures), failures
+
+    retired = dict(positive)
+    source = "physics_app/src/fvkernels/PhysicsFVLogMolarTransport.C"
+    retired[source] += "\nregisterMooseObject(\\"PhysicsApp\\", PhysicsFVLogMolarElectronReactionSource);"
+    failures = validate(retired)
+    assert any("retired token reintroduced" in item for item in failures), failures
 
     print("ELECTRON_MOLAR_REPRESENTATION_P0=PASS")
     return 0

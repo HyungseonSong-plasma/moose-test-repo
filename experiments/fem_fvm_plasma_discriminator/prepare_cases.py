@@ -345,12 +345,12 @@ def fvm():
 ''' + COMMON_MATERIALS + f'''
 [FVKernels]
   [ne_time]
-    type = PhysicsFVLogMolarElectronTimeDerivative
+    type = PhysicsFVLogMolarTimeDerivative
     variable = log_ne
     block = plasma
   []
   [ne_diffusion]
-    type = PhysicsFVLogMolarElectronDiffusion
+    type = PhysicsFVLogMolarDiffusion
     variable = log_ne
     coeff = electron_diffusion
     block = plasma
@@ -367,12 +367,12 @@ def fvm():
     block = plasma
   []
   [ni_time]
-    type = PhysicsFVLogMolarElectronTimeDerivative
+    type = PhysicsFVLogMolarTimeDerivative
     variable = log_ni
     block = plasma
   []
   [ni_diffusion]
-    type = PhysicsFVLogMolarElectronDiffusion
+    type = PhysicsFVLogMolarDiffusion
     variable = log_ni
     coeff = ion_diffusion
     block = plasma
@@ -389,12 +389,12 @@ def fvm():
     block = plasma
   []
   [energy_time]
-    type = PhysicsFVLogMolarElectronTimeDerivative
+    type = PhysicsFVLogMolarTimeDerivative
     variable = log_e_energy
     block = plasma
   []
   [energy_diffusion]
-    type = PhysicsFVLogMolarElectronDiffusion
+    type = PhysicsFVLogMolarDiffusion
     variable = log_e_energy
     coeff = electron_energy_diffusion
     block = plasma
