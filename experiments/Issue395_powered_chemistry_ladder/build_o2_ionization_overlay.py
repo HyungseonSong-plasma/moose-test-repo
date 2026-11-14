@@ -35,7 +35,7 @@ def main() -> int:
     missing = [x for x in required if x not in base]
     if missing:
         raise RuntimeError(f"EI16 base-input capability audit failed; missing {missing}")
-    if "R_ion_O2" in base or "PhysicsElectronImpactIonizationMaterial" in base:
+    if "R_ion_O2" in base:
         raise RuntimeError("EI16 requires no inherited O2-ionization owner")
 
     text = f'''# Issue #395: EI16 O2 ionization only
@@ -49,11 +49,12 @@ def main() -> int:
     block = plasma
   []
   [ei16_progress]
-    type = PhysicsElectronImpactIonizationMaterial
+    type = RateCoeffMaterial
     rate_table_file = {a.ei16_table}
     mean_energy = mean_en_solved
     electron_number_density = n_e_physical
-    o2_molar_concentration = c_O2_EI16
+    target_molar_concentration = c_O2_EI16
+    reaction_progress = R_ion_O2
     block = plasma
   []
   [ei16_electron_source]

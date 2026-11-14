@@ -10,8 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json"
-OWNER_H = ROOT / "physics_app/include/materials/PhysicsElectronImpactRateMaterial.h"
-OWNER_C = ROOT / "physics_app/src/materials/PhysicsElectronImpactRateMaterial.C"
+OWNER_H = ROOT / "physics_app/include/materials/RateCoeffMaterial.h"
+OWNER_C = ROOT / "physics_app/src/materials/RateCoeffMaterial.C"
 RUNTIME_CHECKER = ROOT / "physics_app/ci/check_e8_elastic_ei19_runtime.py"
 DATA_DIR = ROOT / "physics_app/data/electron_impact"
 
@@ -73,20 +73,19 @@ def _validate_table_bytes(data, spec, label):
 
 def _validate_owner_text(header, source):
     required_header = (
-        "class ElectronImpactRateMaterial : public FunctorMaterial",
-        "ElectronImpactRateMaterial(const InputParameters & parameters);",
-        "using PhysicsElectronImpactRateMaterial = ElectronImpactRateMaterial;",
+        "class RateCoeffMaterial : public FunctorMaterial",
+        "RateCoeffMaterial(const InputParameters & parameters);",
         "PhysicsLookupTable1D _table;",
         "const std::string _reaction_progress_name;",
     )
     required_source = (
-        'registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);',
-        'ElectronImpactRateMaterial::validParams()',
-        'ElectronImpactRateMaterial::ElectronImpactRateMaterial(',
-        'ElectronImpactRateMaterial::interpolateStrict(',
-        'mooseError("ElectronImpactRateMaterial requires n_e >= 0',
-        'mooseError("ElectronImpactRateMaterial requires c_target >= 0',
-        'mooseError("ElectronImpactRateMaterial encountered a negative tabulated rate',
+        'registerMooseObject("PhysicsApp", RateCoeffMaterial);',
+        'RateCoeffMaterial::validParams()',
+        'RateCoeffMaterial::RateCoeffMaterial(',
+        'RateCoeffMaterial::interpolateStrict(',
+        'mooseError("RateCoeffMaterial requires n_e >= 0',
+        'mooseError("RateCoeffMaterial requires c_target >= 0',
+        'mooseError("RateCoeffMaterial encountered a negative tabulated rate',
         'addRequiredParam<FileName>("rate_table_file"',
         'addRequiredParam<MooseFunctorName>("mean_energy"',
         'addRequiredParam<MooseFunctorName>("electron_number_density"',
@@ -104,10 +103,10 @@ def _validate_owner_text(header, source):
     for token in required_source:
         if token not in source:
             raise AssertionError(f"missing source ownership token: {token}")
-    if 'mooseError("PhysicsElectronImpactRateMaterial' in source:
-        raise AssertionError("user-facing rate-owner errors must not contain Physics prefix")
-    if "PhysicsElectronImpactRateMaterial::" in source:
-        raise AssertionError("C++ rate-owner methods must not contain Physics prefix")
+    if 'registerMooseObjectAliased(' in source:
+        raise AssertionError("legacy factory aliases must not be registered")
+    if "ElectronImpactRateMaterial::" in source:
+        raise AssertionError("the prior rate C++ class name must not remain")
     if source.count("addFunctorProperty<ADReal>(") != 1:
         raise AssertionError("rate owner must publish exactly one canonical progress functor")
     for forbidden in ("std::clamp(", "std::max(", "std::min(", "PhysicsFVElectronReactionEnergySource"):
@@ -162,7 +161,7 @@ def _runtime_checker_production_surface(text):
 
 def _validate_runtime_checker_text(text):
     for required in (
-        "PhysicsElectronImpactRateMaterial",
+        "RateCoeffMaterial",
         "ADParsedFunctorMaterial",
         "FVCoupledForce",
         "R_elastic_O2",

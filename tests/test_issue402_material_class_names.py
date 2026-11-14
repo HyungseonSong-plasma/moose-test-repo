@@ -1,7 +1,7 @@
 """Active C++ Material naming, with obsolete electron factory aliases removed.
 
 Historical immutable B/C decks are not modified. New Native inputs must use
-DDMaterial, table_file and the fixed mean_en_solved lookup axis.
+DDTransportMaterial, table_file and the fixed mean_en_solved lookup axis.
 """
 from pathlib import Path
 import ast
@@ -9,10 +9,10 @@ import hashlib
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "physics_app"
-MAPPINGS = (("PhysicsThermalDiffusionMaterial", "NVMaterial"),)
+MAPPINGS = (("PhysicsThermalDiffusionMaterial", "NVTransportMaterial"),)
 
 
-def test_material_files_and_remaining_nv_factory_alias():
+def test_material_files_have_only_canonical_factory_registration():
     for old_name, new_name in MAPPINGS:
         h = BASE / "include/materials" / (new_name + ".h")
         c = BASE / "src/materials" / (new_name + ".C")
@@ -26,10 +26,7 @@ def test_material_files_and_remaining_nv_factory_alias():
         assert f"class {old_name}" not in header
         assert f'#include "{new_name}.h"' in source
         assert f'registerMooseObject("PhysicsApp", {new_name});' in source
-        assert (
-            f'registerMooseObjectAliased("PhysicsApp", '
-            f'{new_name}, "{old_name}");'
-        ) in source
+        assert "registerMooseObjectAliased(" not in source
         assert f"{new_name}::validParams()" in source
 
 
@@ -42,7 +39,7 @@ def test_retired_plasma_closures_action_preserves_material_factories():
     # Legacy combined electron lookup/state implementation is retired.
     assert not (BASE / "src/materials/ElectronClosureMaterial.C").exists()
     assert not (BASE / "include/materials/ElectronClosureMaterial.h").exists()
-    assert "type = DDMaterial" in (BASE / "ci/plasma_direct_existing_materials_smoke.i").read_text()
+    assert "type = DDTransportMaterial" in (BASE / "ci/plasma_direct_existing_materials_smoke.i").read_text()
 
 
 def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
@@ -57,13 +54,13 @@ def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
                    if isinstance(item, ast.Assign)
                    and any(isinstance(target, ast.Name) and target.id == "OVERLAY"
                            for target in item.targets))
-    assert overlay.count("type = DDMaterial") == 3
+    assert overlay.count("type = DDTransportMaterial") == 3
     assert overlay.count("model = functor") == 3
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "dcac4502c6bece4481651f97879699c27be994c97a6b09ad4443aca9c2edd544"
+        "edf3f8e8194927e93783d136066799d60df2673af9245d6d4b990fb7d267b513"
     )
-    dd = (BASE / "src/materials/DDMaterial.C").read_text()
-    assert 'registerMooseObject("PhysicsApp", DDMaterial);' in dd
+    dd = (BASE / "src/materials/DDTransportMaterial.C").read_text()
+    assert 'registerMooseObject("PhysicsApp", DDTransportMaterial);' in dd
     for obsolete in ("ElectronTransportLookupMaterial",
                      "PhysicsElectronTransportLookupMaterial",
                      '"property_table_file"', '"coordinate"', '"mean_energy"'):
@@ -74,7 +71,7 @@ def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
                     "electron_energy_joule_smoke.i",
                     "electron_energy_real_qvt_inventory_smoke.i"):
         text = (BASE / "ci" / fixture).read_text()
-        assert "type = DDMaterial" in text
+        assert "type = DDTransportMaterial" in text
         assert "model = lookup" in text
         assert "table_file =" in text
         for obsolete in ("PhysicsElectronTransportLookupMaterial",
@@ -82,7 +79,7 @@ def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
             assert obsolete not in text
     assert not (BASE / "src/materials/PlasmaChargeTransportMaterial.C").exists()
     assert not (BASE / "include/materials/PlasmaChargeTransportMaterial.h").exists()
-    assert (BASE / "src/materials/NVMaterial.C").is_file()
+    assert (BASE / "src/materials/NVTransportMaterial.C").is_file()
     assert not (BASE / "src/materials/SpeciesTransportAliasMaterial.C").exists()
     assert not (BASE / "include/materials/SpeciesTransportAliasMaterial.h").exists()
 

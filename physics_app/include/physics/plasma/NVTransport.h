@@ -4,7 +4,7 @@
 
 namespace Plasma
 {
-/** Generates the heavy-species NVMaterial from validated shared JSON only. */
+/** Generates the heavy-species NVTransportMaterial from validated shared JSON only. */
 class NVTransport : public PlasmaInterface
 {
 public:

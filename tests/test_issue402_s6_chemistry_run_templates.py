@@ -174,7 +174,24 @@ def test_guarded_scratch_cutover_retains_native_nonchem_operators(tmp_path, vari
     assert len(ordered) == 10
     ordered.append("migrated_continuity.i")
     for basename in ordered[:-1]:
-        (tmp_path / basename).write_text(fake_layer(removals.get(basename, {})))
+        source = fake_layer(removals.get(basename, {}))
+        if basename == ordered[0]:
+            # The actual archived S6 base owns exactly one retired electron
+            # lookup Material. Include its full verified signature in this
+            # synthetic chemistry regression, not a silent missing-owner skip.
+            electron = (
+                "  [electron_transport]\n"
+                "    type = PhysicsElectronTransportLookupMaterial\n"
+                "    property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'\n"
+                "    mean_energy = mean_en_solved\n"
+                "    pressure = p\n"
+                "    gas_temperature = T_g_fixed\n"
+                "    bounds_policy = clamp\n"
+                "    block = plasma\n"
+                "  []\n"
+            )
+            source = source.replace("[]\n[Kernels]", electron + "[]\n[Kernels]", 1)
+        (tmp_path / basename).write_text(source)
     overlay = tmp_path / ordered[-1]
     overlay.write_text("ORIGINAL OVERLAY - DO NOT USE")
     result = helper.prepare(tmp_path, ordered, variant)

@@ -339,10 +339,10 @@ DDContinuityEq::addFunctorMaterials()
     const auto * config = mechanism.ddTransport(id);
     if (!config)
       continue; // Existing Native coefficient owners remain during S6 parity migration.
-    const std::string type = "DDMaterial";
+    const std::string type = "DDTransportMaterial";
     auto params = getFactory().getValidParams(type);
     params.set<std::string>("species_id") = id;
-    // The backend and DDMaterial share lookup/constant/functor modes.
+    // The backend and DDTransportMaterial share lookup/constant/functor modes.
     // "functor" consumes canonical species-owned AD coefficient providers;
     // "constant" requires explicit numerical coefficients in the JSON.
     params.set<MooseEnum>("model") = config->model;
@@ -355,7 +355,7 @@ DDContinuityEq::addFunctorMaterials()
     }
     else if (config->model == "functor")
     {
-      // DDMaterial derives the existing canonical species Functor names.
+      // DDTransportMaterial derives the existing canonical species Functor names.
       // No source-name overrides are passed from the generated JSON.
     }
     else

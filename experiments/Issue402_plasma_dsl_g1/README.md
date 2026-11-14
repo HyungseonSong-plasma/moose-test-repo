@@ -3,12 +3,12 @@
 **Supersedes earlier 2026-11-10 electron lookup/closure Material prose below.**
 The two canonical **transport-coefficient** calculator classes are:
 
-- `DDMaterial`: one species at a time, explicit `model=constant` for
+- `DDTransportMaterial`: one species at a time, explicit `model=constant` for
   physical `mobility`/`diffusivity`, or `model=lookup` with a verified
   three-column table on the fixed `mean_en_solved` axis, bounds policy and reduced/physical units.
   Produces `<species>_mobility` and `<species>_diffusivity` and, for e,
   the unchanged Maxwellian 5/3 electron energy transport projection.
-- `NVMaterial`: heavy-species NavierStokes mixture diffusion and thermal
+- `NVTransportMaterial`: heavy-species NavierStokes mixture diffusion and thermal
   diffusion using the unchanged `PhysicsThermalDiffusionMaterial` binary
   collision/charged-pair computation.
 
@@ -16,13 +16,13 @@ Retired C++ implementations: `ElectronTransportLookupMaterial`,
 `PhysicsThermalDiffusionMaterial`, `PhysicsElectronTransportCoefficients`,
 and the overlapping `ElectronClosureMaterial`. Both old electron-lookup
 MOOSE factory aliases are now **removed** (including the Physics-prefixed
-spelling); use `DDMaterial` directly. The thermal-diffusion-to-`NVMaterial`
-alias remains a separate contract. The old combined ElectronClosureMaterial
-type is retired.
+spelling); use `DDTransportMaterial` directly. The thermal-diffusion-to-`NVTransportMaterial`
+alias is retired; no obsolete Material factory names are registered.
+The old combined ElectronClosureMaterial type is retired.
 Electron state and mean-energy calculation is now separately owned by
 `PhysicsElectronMeanEnergyMaterial` when needed.
 
-`DDMaterial (model=functor)` remains only for **existing nonconstant ion
+`DDTransportMaterial (model=functor)` remains only for **existing nonconstant ion
 Functor providers** in pinned S6 C/D inputs until an independently verified
 lookup/constant replacement exists; it does not calculate coefficients.
 The redundant `PlasmaChargeTransportMaterial` is now retired;
@@ -161,7 +161,7 @@ without activating parameters does not add terms.
   must already have the equation's correct units.
 - **Chemistry:** `rate_table_files`, `mean_energy`,
   `electron_number_density`, and `target_molar_concentrations`
-  create existing strict-table `PhysicsElectronImpactRateMaterial` objects.
+  create existing strict-table `RateCoeffMaterial` objects.
   Reaction source projection remains external.
 - **Poisson:** `charge_source_material` creates `Diffusion` and
   `MatBodyForce`. The property must supply `rho/epsilon0`
@@ -240,11 +240,11 @@ species identifier, with case preserved: `e_mobility` / `e_diffusivity`,
 `Om_diffusivity`, `Op_mobility` / `Op_diffusivity`.
 Neither list order nor user-specified coefficient strings define these names.
 
-`DDMaterial` publishes canonical electron coefficients using one AD lookup
+`DDTransportMaterial` publishes canonical electron coefficients using one AD lookup
 closure, including `electron_mobility` and `electron_diffusion` outputs
 still consumed by Native transport kernels. These are live Functor interfaces,
 not factory aliases. Lookup energy is always `mean_en_solved`; input options
-`coordinate`, `mean_energy`, and `property_table_file` are removed. The new DDMaterial supplies canonical ion mobility/diffusivity aliases from existing Native AD Functors when explicit raw source names are bound. PlasmaChargeTransportMaterial no longer publishes these coefficient aliases; its separate rho_diffusivity_<id> diagnostic is density-weighted and not a physical D coefficient. See the DDMaterial charged-FV consumer trace document for the remaining original Native input and P3 gates.
+`coordinate`, `mean_energy`, and `property_table_file` are removed. The new DDTransportMaterial supplies canonical ion mobility/diffusivity aliases from existing Native AD Functors when explicit raw source names are bound. PlasmaChargeTransportMaterial no longer publishes these coefficient aliases; its separate rho_diffusivity_<id> diagnostic is density-weighted and not a physical D coefficient. See the DDTransportMaterial charged-FV consumer trace document for the remaining original Native input and P3 gates.
 
 An input must still provide actual coefficient producers. Never fabricate a
 missing Functor, silently choose a legacy provider by species name, replace
@@ -268,7 +268,7 @@ new optional Physics blocks; do not edit the immutable historical P3 decks.
 The archived S6-417/941 heavy-ion coefficients originate in an existing
 `ADGenericFunctorMaterial`, not the modern charge-transport owner. The
 review-only new-option D overlay therefore instantiates three controlled
-`DDMaterial (model=functor)` bridges: O2p from
+`DDTransportMaterial (model=functor)` bridges: O2p from
 `ion_mobility/ion_diffusion`, Om from
 `negative_ion_mobility/negative_ion_diffusion`, and Op from
 `atomic_positive_ion_mobility/atomic_positive_ion_diffusion`.
@@ -489,9 +489,9 @@ remain untouched.
 
 ## Material/Functor class and filename rename (2026-11-10)
 
-> **Superseded by 2026-11-12 DDMaterial cleanup:** historical notes below about
+> **Superseded by 2026-11-12 DDTransportMaterial cleanup:** historical notes below about
 > electron lookup class aliases no longer describe executable factory inputs.
-> Use only `DDMaterial model=lookup table_file=...`; lookup energy is fixed
+> Use only `DDTransportMaterial model=lookup table_file=...`; lookup energy is fixed
 > to `mean_en_solved`.
 
 
@@ -504,7 +504,7 @@ remain untouched.
 The canonical C++ Material classes and their corresponding `.h` / `.C`
 files no longer carry the redundant `Physics` prefix:
 `ElectronClosureMaterial`, `ElectronTransportLookupMaterial`,
-`PlasmaChargeTransportMaterial`, and `DDMaterial (model=functor)`.
+`PlasmaChargeTransportMaterial`, and `DDTransportMaterial (model=functor)`.
 They remain registered under the existing `PhysicsApp` label. Each also
 registers its former `Physics*` MOOSE object type as a compatibility alias,
 so historical B/C decks and existing third-party inputs retain their exact
@@ -536,3 +536,5 @@ not a Material/Functor; its name and registered Physics syntax are unchanged.
   the pinned immutable C-only P3 artifacts. The workflow starts **only**
   after its own workflow YAML reaches `main`; PR validation only
   checks the runner's schema, safety and unit tests.
+
+Canonical rename (2026-11-13): `RateCoeffMaterial`, `DDTransportMaterial` and `NVTransportMaterial` are the only registered object types and the sole C++ class/file names. Their former type names are **not** registered as compatibility aliases. New checked-in inputs and JSON-initiated Material creation use the canonical types directly; pinned archived B/C S6 input bytes are never rewritten, and disposable staged copies remap original Material type fields before Native P2. P3/P4 remain unauthorized and `SCIENCE_HOLD` is unchanged.

@@ -85,16 +85,33 @@ RUNTIME_INPUT = f"""[Mesh]
     state_form = physical_eV
   []
   [ei16_rate]
-    type = PhysicsElectronImpactIonizationMaterial
+    type = RateCoeffMaterial
     rate_table_file = e8_ei16_runtime_table.txt
     mean_energy = mean_en_solved
     electron_number_density = n_e
-    o2_molar_concentration = c_O2
+    target_molar_concentration = c_O2
+    reaction_progress = R_ion_O2
   []
   [ei16_particle_projection]
-    type = PhysicsO2IonizationSourceMaterial
-    reaction_progress = R_ion_O2
-    o2_molar_mass = 0.031998
+    type = ADParsedFunctorMaterial
+    property_name = O2_ionization_mass_source
+    functor_names = 'R_ion_O2'
+    functor_symbols = 'rr'
+    expression = '-0.031998*rr'
+  []
+  [ei16_particle_projection_o2p_ionization_source]
+    type = ADParsedFunctorMaterial
+    property_name = O2p_ionization_mass_source
+    functor_names = 'R_ion_O2'
+    functor_symbols = 'rr'
+    expression = '0.031998*rr'
+  []
+  [ei16_particle_projection_electron_ionization_source]
+    type = ADParsedFunctorMaterial
+    property_name = electron_ionization_number_source
+    functor_names = 'R_ion_O2'
+    functor_symbols = 'rr'
+    expression = '6.02214076e23*rr'
   []
 []
 

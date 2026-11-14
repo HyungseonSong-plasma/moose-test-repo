@@ -1,4 +1,4 @@
-# Issue402 P2: DDMaterial publishes O2p/Om/Op mobility and diffusivity,
+# Issue402 P2: DDTransportMaterial publishes O2p/Om/Op mobility and diffusivity,
 # while PhysicsPlasmaChargeDensityMaterial owns all charge-related Functors.
 # The retired PlasmaChargeTransportMaterial is deliberately absent.
 # Synthetic values; --check-input only, not a Native P3 simulation.
@@ -18,21 +18,21 @@
     prop_values = '1 1e16 1e-4 1e-5 1e-5 0.002 0.003 0.004 0.005 0.006 0.007'
   []
   [O2p_coefficients]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = O2p
     model = functor
     mobility_source = ion_mobility
     diffusivity_source = ion_diffusion
   []
   [Om_coefficients]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = Om
     model = functor
     mobility_source = negative_ion_mobility
     diffusivity_source = negative_ion_diffusion
   []
   [Op_coefficients]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = Op
     model = functor
     mobility_source = atomic_positive_ion_mobility

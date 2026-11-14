@@ -168,3 +168,117 @@ historical name remain in the guarded archive-to-scratch canonicalization
 contract and in provenance/tests verifying old immutable evidence; the run
 itself contains only canonical state and progress Functor names. Historical
 input archives and previous solver output are **not** rewritten.
+
+
+## S6-417/941 archived electron transport lookup compatibility (2026-11-13)
+
+The preserved public B/C decks have exactly one original
+\`[FunctorMaterials]/[electron_transport]\` in the common base input:
+\`PhysicsElectronTransportLookupMaterial\`. Original parameters are exactly
+\`property_table_file='../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'\`,
+\`mean_energy=mean_en_solved\`, \`pressure=p\`,
+\`gas_temperature=T_g_fixed\`, \`bounds_policy=clamp\`, \`block=plasma\`.
+The \`clamp\` policy and \`T_g_fixed\` input are **required historical behavior**;
+do not silently substitute \`error\` or \`T_g\`.
+
+\`prepare_s6_run_input.py\` now performs a **strict, scratch-only conversion**
+after validating the exact owner and all original parameter values. The
+disposable D copy becomes \`DDMaterial\` with \`species_id=e\`,
+\`model=lookup\`, the *same original* \`table_file\`, \`table_units=reduced\`,
+\`pressure=p\`, \`gas_temperature=T_g_fixed\`, \`bounds_policy=clamp\`,
+\`fluid_energy=true\`, \`block=plasma\`. No B/C archive file, physical
+transport table or kinetic rate provider is rewritten. Any altered original
+table path, coordinate, pressure, temperature, bounds policy, duplicate owner
+or unknown factory fails closed.
+
+Both historical and new C++ implementations interpolate the same reduced
+electron mobility/diffusivity and divide by
+\`N_n = p/(k_B*T_g)\` for physical coefficients; electron energy transport
+uses \`5/3\` times the particle coefficients. For the accepted positive
+pressure/temperature domain, source-level equations match. Their exception
+behavior differs for unphysical/invalid transport values and is *not*
+claimed equivalent.
+
+**Public-data caveat:** The committed original electron_moments.txt contains
+100 rows (Git blob \`bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a\`). The
+historical 400 W native preparation *intentionally replaces it* with the pinned
+42-row public initial-mixture table (Git blob
+\`aa05aadde111e4ba435185954a64a4b7dbbf2d45\`) in the scratch
+historical checkout. Validation checks **both distinct inputs**, table
+positivity/ordering and bounded interpolation; neither should be confused
+with the review-only synthetic e_transport.txt.
+
+- Original B/C S6-417/941 block identity:
+  [P0 source audit #43402376955](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43402376955)
+  PASS.
+- Source-bound [P0/P1/native P2 #43403730997](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43403730997)
+  on \`2c79d2327367aeaa078726af0b3df5c9dc9d4a5f\`:
+  **613 P0 PASS**, public 400 W mesh PASS, exact-source Native P1
+  PASS. Both full 11-layer S6-417/941 Native P2 still **HOLD at that historical run**.
+  The previous first parser error
+  \`PhysicsElectronTransportLookupMaterial is not a registered object\`
+  has disappeared. The new first parser error in both cases is
+  \`PhysicsLowerDSurfaceCurrentProbeAux is not a registered object\`,
+  a **separate retired lower-D diagnostic AuxKernel**. Do not restore
+  its C++ factory or drop its diagnostic ownership without independent
+  verification.
+- The exact native log and manifest for this run are in
+  [artifact #14026497410](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43403730997/artifacts/14026497410).
+  Python formula/fixture parity and Native \`--check-input\` do **not** prove
+  numerical temporal parity, actual old/new C++ face-value parity or full
+  science acceptance. No P3, no merge; \`SCIENCE_HOLD\` remains.
+
+
+
+## Native S6 D base with obsolete D1 debugging absent by construction (2026-11-13)
+
+**Operator scope:** Issue397 D1 diagnostics were temporary instruments for a
+resolved defect. Their 9 surface-current probes, 5 geometry probes, and
+14 AuxVariables are not required in the target D model. No numerical parity
+or independent review of these now-retired outputs is required. Physical
+`PhysicsLowerDSurfaceCurrent`, sheath/Wall/RF sources and transport remain.
+
+**Source of truth:** The original public B/C S6-417 and S6-941 archives
+remain SHA-pinned and unmodified. Both public C variants share exactly the same
+original C0 physics base (`SHA256:
+66548d33947b227ca29849b0c52146100887d1795a66e0f90df11a94199fc5bf`).
+A **one-time** archival migration produced
+`experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i`
+(`SHA256:
+e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd`).
+Generation was source-bound, verified exactly 14 debug AuxKernels and 14 paired
+AuxVariables were removed, and confirmed physical owners were preserved.
+[One-time generation evidence #43419992876](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43419992876).
+
+**Production input creation:** All four known D input entrypoints now use
+`public_p2_check.stage(..., d_base_source=.../native/s6_c0_physics_base_no_d1.i)`:
+`run_chemistry_s6_p2_only.py`, `public_chemistry_s6_p2.py`,
+`public_option_s6_p2.py` (D arm only) and
+`run_canonical_s6_p3_once.py` (future, separately authorized P3).
+The staged D base therefore **never contains** the obsolete debug Aux objects.
+Historical B/C `stage()` with no override retains its original byte-identical
+deck. The historical `issue397_d1_instrument.py` is a provenance-only
+generator; the active D path never invokes it.
+
+The former `suspend_staged_retired_d1_observations()`, its 14-entry maps,
+`audit_final_native_d1_debug_absence()`, recurring pre/post-write scans and
+their dedicated negative-control tests have **all been deleted**. The active
+input is not created with diagnostics and then stripped; no per-run D1
+cleanup or absence scan is executed. A compact P0 source SHA pin and direct
+staging regression cover fixture integrity and B/C non-interference without
+rebuilding the obsolete debug analysis.
+
+**Historical transition evidence:** Prior active-input run
+[#43418084078](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43418084078)
+passed P0 641, Native P1, and Native S6-417/941 P2 using temporary filtering
+and scanning. That was a transitional implementation and has been superseded
+by the direct-source construction above; it must **not** be cited as proof
+that the final refactored path ran until its own exact-source CI completes.
+
+**Remaining science gates:** Native `--check-input` is an input-validity
+check, not a numerical time-integration, face-value parity or scientific
+mechanism-provenance check. `SCIENCE_HOLD` stays active; P3/P4 remain
+`NOT_RUN`, PR #524 remains Draft stacked onto PR #523, and no merge is
+authorized by the D1 cleanup alone.
+
+**Final direct-source verification**: [Actions #43421515139](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43421515139), exact implementation SHA `0fd8a97bf5cf720eb0625b20aa9160a7fcb0efe8`: **623 P0 PASS**, public mesh PASS, source-bound Native P1 PASS, and **S6-417 plus S6-941 active Native P2 both PASS (`Syntax OK`, exit 0)**. [Immutable logs/receipts #14034922005](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43421515139/artifacts/14034922005). Every D entrypoint uses the pinned prebuilt source; the per-run D1 strip and scan stages do not exist. One-shot CI files are subsequently removed, without modifying tested implementation. `SCIENCE_HOLD`, no P3/P4 and no merge.

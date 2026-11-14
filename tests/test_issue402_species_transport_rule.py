@@ -37,7 +37,7 @@ def test_user_drift_diffusion_transport_coefficient_options_are_removed():
 
 def test_mean_energy_bridge_and_dd_transport_are_distinct_providers():
     mean = text("physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C")
-    dd = text("physics_app/src/materials/DDMaterial.C")
+    dd = text("physics_app/src/materials/DDTransportMaterial.C")
     assert 'getParam<MooseFunctorName>("mean_energy_output")' in mean
     assert "electron_energy_density" in mean and "electron_density" in mean
     assert 'addFunctorProperty<ADReal>("electron_mobility", particle_mu)' in dd
@@ -45,8 +45,8 @@ def test_mean_energy_bridge_and_dd_transport_are_distinct_providers():
     assert not (ROOT / "physics_app/src/materials/ElectronClosureMaterial.C").exists()
 
 def test_lookup_axis_is_fixed_to_solved_mean_energy_and_aliases_are_removed():
-    src = text("physics_app/src/materials/DDMaterial.C")
-    header = text("physics_app/include/materials/DDMaterial.h")
+    src = text("physics_app/src/materials/DDTransportMaterial.C")
+    header = text("physics_app/include/materials/DDTransportMaterial.h")
     assert 'getFunctorByName<ADReal>("mean_en_solved")' in src
     assert 'const Moose::Functor<ADReal> * _mean_energy = nullptr;' in header
     assert '(*_mean_energy)(r, state)' in header
@@ -58,9 +58,9 @@ def test_lookup_axis_is_fixed_to_solved_mean_energy_and_aliases_are_removed():
 
 
 def test_dd_material_unifies_constant_and_lookup_with_electron_energy_projection():
-    src = text("physics_app/src/materials/DDMaterial.C")
-    header = text("physics_app/include/materials/DDMaterial.h")
-    assert 'registerMooseObject("PhysicsApp", DDMaterial);' in src
+    src = text("physics_app/src/materials/DDTransportMaterial.C")
+    header = text("physics_app/include/materials/DDTransportMaterial.h")
+    assert 'registerMooseObject("PhysicsApp", DDTransportMaterial);' in src
     assert '"lookup constant functor"' in src
     assert '"mobility"' in src and '"diffusivity"' in src
     assert 'std::make_unique<PhysicsLookupTable1D>' in src
@@ -76,7 +76,7 @@ def test_dd_material_unifies_constant_and_lookup_with_electron_energy_projection
 
 
 def test_ddmaterial_is_only_canonical_species_coefficient_publisher():
-    dd = text("physics_app/src/materials/DDMaterial.C")
+    dd = text("physics_app/src/materials/DDTransportMaterial.C")
     retired = ROOT / "physics_app/src/materials/PlasmaChargeTransportMaterial.C"
     assert not retired.exists()
     assert not (ROOT / "physics_app/include/materials/PlasmaChargeTransportMaterial.h").exists()
@@ -85,7 +85,7 @@ def test_ddmaterial_is_only_canonical_species_coefficient_publisher():
     assert 'getFunctor<ADReal>("mobility_source")' in dd
     assert 'getFunctor<ADReal>("diffusivity_source")' in dd
     fixture = text("experiments/Issue402_plasma_dsl_g1/charge_core_ddmaterial_owner_p2.i")
-    assert fixture.count("type = DDMaterial") == 3
+    assert fixture.count("type = DDTransportMaterial") == 3
     assert "type = PlasmaChargeTransportMaterial" not in fixture
     assert "type = PhysicsPlasmaChargeDensityMaterial" in fixture
     for sp in ("O2p", "Om", "Op"):
@@ -141,7 +141,7 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
                    if isinstance(node, ast.Assign) and any(
                        isinstance(target, ast.Name) and target.id == "OVERLAY"
                        for target in node.targets))
-    assert overlay.count("type = DDMaterial") == 3
+    assert overlay.count("type = DDTransportMaterial") == 3
     assert overlay.count("model = functor") == 3
     assert "mobility =" not in overlay and "diffusivity =" not in overlay
     assert "fem_species = 'e'" in overlay
@@ -153,7 +153,7 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
         assert f"mobility_source = {source}_mobility" in overlay
         assert f"diffusivity_source = {source}_diffusion" in overlay
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "dcac4502c6bece4481651f97879699c27be994c97a6b09ad4443aca9c2edd544"
+        "edf3f8e8194927e93783d136066799d60df2673af9245d6d4b990fb7d267b513"
     )
     # Protected original P3 inputs and their native old provider spelling
     # remain outside this migration PR.

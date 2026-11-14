@@ -103,7 +103,7 @@ def verify_inventory(inputs: list[Path], case: str) -> None:
         raise ValueError("Excluded legacy chemistry or rate owner detected")
     added = inputs[-1].read_text()
     extra = CASES[case]
-    for token in ("type = PhysicsElectronImpactRateMaterial",
+    for token in ("type = RateCoeffMaterial",
                   f"rate_table_file = 'private_rates/{extra['rate']}'",
                   f"reaction_progress = {extra['owner']}",
                   "variable = log_ne", "variable = log_energy",

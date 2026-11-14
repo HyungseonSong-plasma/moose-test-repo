@@ -21,8 +21,6 @@ WP0 = 1.0e-3
 K_O2S = 4.71e8
 
 CONTRACT = Path("docs/development/2026-09-10_issue17_r3_o2s_excitation_contract.json")
-RATE = Path("physics_app/src/materials/PhysicsElectronImpactO2sExcitationMaterial.C")
-PROJ = Path("physics_app/src/materials/PhysicsO2sExcitationSourceMaterial.C")
 
 RUNTIME_INPUT = f"""[Mesh]
   [mesh]
@@ -82,14 +80,25 @@ RUNTIME_INPUT = f"""[Mesh]
     state_form = physical_eV
   []
   [r3_o2s_rate]
-    type = PhysicsElectronImpactO2sExcitationMaterial
-    electron_number_density = n_e
-    o2_molar_concentration = c_O2
+    type = ADParsedFunctorMaterial
+    property_name = R_O2s
+    functor_names = 'n_e c_O2'
+    functor_symbols = 'ne co2'
+    expression = '4.71e8*(ne/6.02214076e23)*co2'
   []
   [r3_o2s_projection]
-    type = PhysicsO2sExcitationSourceMaterial
-    reaction_progress = R_O2s
-    o2_molar_mass = 0.031998
+    type = ADParsedFunctorMaterial
+    property_name = O2_o2s_excitation_mass_source
+    functor_names = 'R_O2s'
+    functor_symbols = 'rr'
+    expression = '-0.031998*rr'
+  []
+  [r3_o2s_projection_o2s_excitation_source]
+    type = ADParsedFunctorMaterial
+    property_name = O2s_excitation_mass_source
+    functor_names = 'R_O2s'
+    functor_symbols = 'rr'
+    expression = '0.031998*rr'
   []
 []
 
@@ -315,51 +324,24 @@ def runtime_checker_self_test():
 
 def static_implementation_gate():
     contract = json.loads(CONTRACT.read_text())
-    rate = RATE.read_text()
-    proj = PROJ.read_text()
-
-    assert 'registerMooseObject("PhysicsApp", PhysicsElectronImpactO2sExcitationMaterial);' in rate
-    assert 'addFunctorProperty<ADReal>(\n      "R_O2s"' in rate
-    assert '_electron_number_density(getFunctor<ADReal>("electron_number_density"))' in rate
-    assert '_o2_molar_concentration(getFunctor<ADReal>("o2_molar_concentration"))' in rate
-    assert 'return K_O2S * (n_e / N_A) * c_o2;' in rate
-    assert 'requires n_e >= 0' in rate and 'requires c_O2 >= 0' in rate
-
-    match = re.search(r"constexpr Real K_O2S = ([0-9.eE+-]+);", rate)
-    assert match, "frozen R3 coefficient is not explicit in the canonical rate owner"
-    implementation_k = float(match.group(1))
     canonical_k = contract["constant_surrogate_model"][
         "canonical_physics_molar_coefficient_m3_per_mol_s"
     ]
-    assert implementation_k == canonical_k == K_O2S
-
-    for forbidden in (
-        "O2_o2s_excitation_mass_source",
-        "O2s_excitation_mass_source",
-        "electron_O2s",
-        "electron_energy",
-        "0.977",
-        "9.97",
+    assert canonical_k == K_O2S
+    # The current EI10 owner is parsed AD algebra, not a custom C++ factory.
+    assert "type = ADParsedFunctorMaterial" in RUNTIME_INPUT
+    assert "property_name = R_O2s" in RUNTIME_INPUT
+    assert "functor_names = 'n_e c_O2'" in RUNTIME_INPUT
+    assert "expression = '4.71e8*(ne/6.02214076e23)*co2'" in RUNTIME_INPUT
+    for field, expression in (
+        ("O2_o2s_excitation_mass_source", "-0.031998*rr"),
+        ("O2s_excitation_mass_source", "0.031998*rr"),
     ):
-        assert forbidden not in rate
-
-    assert 'registerMooseObject("PhysicsApp", PhysicsO2sExcitationSourceMaterial);' in proj
-    assert '_reaction_progress(getFunctor<ADReal>("reaction_progress"))' in proj
-    assert '"O2_o2s_excitation_mass_source"' in proj
-    assert '"O2s_excitation_mass_source"' in proj
-    assert 'return -_o2_molar_mass * R;' in proj
-    assert 'return _o2_molar_mass * R;' in proj
-    for forbidden in (
-        "K_O2S",
-        "4.71e8",
-        "N_A",
-        "mean_energy",
-        "electron_number_density",
-        "electron_energy",
-        "0.977",
-        "9.97",
-    ):
-        assert forbidden not in proj
+        assert f"property_name = {field}" in RUNTIME_INPUT
+        assert f"expression = '{expression}'" in RUNTIME_INPUT
+    assert RUNTIME_INPUT.count("functor_names = 'R_O2s'") == 2
+    assert "type = PhysicsElectronImpactO2sExcitationMaterial" not in RUNTIME_INPUT
+    assert "type = PhysicsO2sExcitationSourceMaterial" not in RUNTIME_INPUT
 
     R = canonical_k * (N_E0 / N_A) * (RHO * 0.999 / M_O2)
     s_o2 = -M_O2 * R

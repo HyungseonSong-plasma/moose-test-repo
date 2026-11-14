@@ -131,7 +131,7 @@ def validate_inventory(paths: list[Path], case: str) -> None:
     if reaction_id != "H25":
         for required in (f"rate_table_file = 'private_rates/{x['rate']}'",
                          f"reaction_progress = {x['owner']}",
-                         "type = PhysicsElectronImpactRateMaterial",
+                         "type = RateCoeffMaterial",
                          "variable = log_energy"):
             if required not in extra:
                 raise ValueError(f"Missing original electron-impact source: {required}")

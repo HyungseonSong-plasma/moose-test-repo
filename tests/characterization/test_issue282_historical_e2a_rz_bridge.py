@@ -156,7 +156,7 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
         # The old electron lookup token remains IN THE ARCHIVED PROJECTION,
         # but is deliberately not registered by the current PhysicsApp.
         retired_lookup = current == "PhysicsElectronTransportLookupMaterial"
-        canonical = "DDMaterial" if retired_lookup else current
+        canonical = "DDTransportMaterial" if retired_lookup else current
         candidate = ROOT / "physics_app" / "src" / dirname / f"{canonical}.C"
         assert candidate.is_file(), f"missing current PhysicsApp source: {candidate}"
         source = candidate.read_text(encoding="utf-8")
@@ -166,7 +166,7 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
         )
         if retired_lookup:
             assert (
-                'registerMooseObjectAliased("PhysicsApp", DDMaterial, '
+                'registerMooseObjectAliased("PhysicsApp", DDTransportMaterial, '
                 '"PhysicsElectronTransportLookupMaterial");'
             ) not in source
             # The frozen research-only projection is *not* runnable under

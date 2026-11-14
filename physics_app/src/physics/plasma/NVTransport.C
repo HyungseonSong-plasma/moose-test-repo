@@ -27,7 +27,7 @@ NVTransport::addFunctorMaterials()
   const auto * config = chemistryData().nvTransport();
   if (!config)
     mooseError("Missing navier_stokes transport configuration");
-  const std::string type = "NVMaterial";
+  const std::string type = "NVTransportMaterial";
   auto params = getFactory().getValidParams(type);
   params.set<FileName>("transport_data_file") = config->transport_data_file;
   params.set<MooseFunctorName>("temperature") = config->temperature;

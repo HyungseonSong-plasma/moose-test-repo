@@ -1,6 +1,6 @@
 """Retirement guard for the legacy PlasmaClosures input Action.
 
-S6-417/941 D stages the SHA-pinned public C decks, rewrites solver state
+S6-417/941 D stages a clean canonical physics base alongside pinned public C layers, rewrites solver state
 tokens only in scratch, and adds a DDContinuityEq-only overlay. The old
 PlasmaClosures composition Action must not be a dependency of those runs.
 This test does not execute a native solver or claim scientific parity.
@@ -44,7 +44,10 @@ def test_canonical_s6_d_public_layers_do_not_use_plasma_closures(case):
 
 def test_d_stages_c_layers_without_composition_overlay():
     script = (PILOT / "run_canonical_s6_p3_once.py").read_text()
-    assert 'option.p2.stage(ROOT, historical, case, "C", staged, manifest)' in script
+    assert 'ordered = option.p2.stage(' in script
+    assert 'ROOT, historical, case, "C", staged, manifest,' in script
+    assert 'd_base_source=d_base)' in script
+    assert 's6_c0_physics_base_no_d1.i' in script
     assert "option.canonicalize_staged_D_inputs" in script
     source = (PILOT / "public_option_s6_p2.py").read_text()
     script_ast = ast.parse(source)
@@ -67,8 +70,8 @@ def test_retired_action_is_absent_independent_material_objects_remain():
     for retired in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
         assert not (APP / "src/materials" / (retired + ".C")).exists()
         assert not (APP / "include/materials" / (retired + ".h")).exists()
-    for material in ("PhysicsElectronMeanEnergyMaterial", "DDMaterial", "PhysicsElectronImpactRateMaterial",
-                     "NVMaterial", "PhysicsPlasmaChargeDensityMaterial"):
+    for material in ("PhysicsElectronMeanEnergyMaterial", "DDTransportMaterial", "RateCoeffMaterial",
+                     "NVTransportMaterial", "PhysicsPlasmaChargeDensityMaterial"):
         source = APP / "src/materials" / (material + ".C")
         header = APP / "include/materials" / (material + ".h")
         assert source.is_file() and header.is_file()
@@ -82,9 +85,9 @@ def test_existing_native_smoke_uses_direct_materials_without_code_generation():
     assert "[PlasmaClosures]" not in fixture
     assert "PhysicsElectronKineticsMaterial" not in fixture
     assert "PhysicsHeavyTransportMaterial" not in fixture
-    assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
-    assert "type = NVMaterial" in fixture
-    assert "type = DDMaterial" in fixture
+    assert fixture.count("type = RateCoeffMaterial") == 2
+    assert "type = NVTransportMaterial" in fixture
+    assert "type = DDTransportMaterial" in fixture
     assert "type = PhysicsElectronMeanEnergyMaterial" in fixture
     assert "type = ElectronClosureMaterial" not in fixture
     assert "type = PhysicsPlasmaChargeDensityMaterial" in fixture

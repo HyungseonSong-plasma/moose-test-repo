@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare and validate BOTH full Native S6 Chemistry input stacks without P3.
+"""Prepare and validate active Native S6 Chemistry input stacks without P3.
 
 Prerequisites (external to this command):
 - exact committed PhysicsApp HEAD already built as physics_app/physics-opt;
@@ -8,7 +8,8 @@ Prerequisites (external to this command):
 - no protected/private-rate directory in the historical source.
 
 This command stages the ten historical C input layers + one Chemistry overlay
-into durable, operator-reviewable scratch copies, and runs --check-input ONLY.
+into durable, operator-reviewable scratch copies, removes exclusively proven
+obsolete D1 debug observers and runs --check-input ONLY.
 It never calls run_canonical_s6_p3_once.run, never executes a time step, and
 never publishes/merges a science result.
 """
@@ -25,6 +26,7 @@ from p3_chemistry_preflight import audit
 
 ROOT = Path(__file__).resolve().parents[2]
 CASES = ("417", "941")
+D_BASE = ROOT / "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i"
 
 
 def digest(path: Path) -> str:
@@ -72,7 +74,11 @@ def check_only(historical: Path, expected_head: str, output: Path,
             folder = output / ("S6-" + case)
             folder.mkdir()
             staged = folder / "scratch"
-            ordered = option.p2.stage(ROOT, historical, case, "C", staged, manifest)
+            # Canonical D base was prepared once from the pinned source deck.
+            # Never stage retired issue397 diagnostics just to delete them.
+            ordered = option.p2.stage(
+                ROOT, historical, case, "C", staged, manifest,
+                d_base_source=D_BASE)
             chemistry = staged / option.p2.CHEM
             migration = option.canonicalize_staged_D_inputs(chemistry, ordered)
             type_remap = option.remap_staged_fem_types(chemistry, ordered)

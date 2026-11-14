@@ -94,7 +94,13 @@ def run(case: str, historical: Path, expected_head: str,
         status["P1"] = "PASS_SOURCE_BOUND_BINARY"
         status["binary_sha256"] = identity["binary_sha256"]
         manifest = json.loads((ROOT / option.p2.DECKS / "manifest.json").read_text())
-        ordered = option.p2.stage(ROOT, historical, case, "C", staged, manifest)
+        # Both transport-only and Chemistry D P3 use the same prebuilt
+        # no-debug physics base. Historical B/C decks remain immutable.
+        d_base = (ROOT / "experiments/Issue402_plasma_dsl_g1/native/"
+                  "s6_c0_physics_base_no_d1.i")
+        ordered = option.p2.stage(
+            ROOT, historical, case, "C", staged, manifest,
+            d_base_source=d_base)
         migration = option.canonicalize_staged_D_inputs(staged / option.p2.CHEM, ordered)
         sidecar = staged / option.p2.CHEM / "migrated_continuity.i"
         status["scratch_migration"] = migration

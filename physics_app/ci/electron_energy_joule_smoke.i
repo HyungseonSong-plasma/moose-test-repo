@@ -43,7 +43,7 @@
     prop_values = '5.0 101325.0 300.0 0.0'
   []
   [electron_transport]
-    type = DDMaterial
+    type = DDTransportMaterial
     model = lookup
     table_file = electron_energy_transport_smoke_table.txt
     pressure = p

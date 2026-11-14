@@ -14,7 +14,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 PILOT = ROOT / "experiments" / "Issue402_plasma_dsl_g1"
 PUBLIC = ROOT / "experiments" / "Issue493_s6_boltzmann"
-EXPECTED_OVERLAY = "dcac4502c6bece4481651f97879699c27be994c97a6b09ad4443aca9c2edd544"
+EXPECTED_OVERLAY = "edf3f8e8194927e93783d136066799d60df2673af9245d6d4b990fb7d267b513"
 
 
 def extract_overlay():
@@ -36,7 +36,7 @@ def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
     assert "legacy_s6_state_names" not in overlay
-    assert overlay.count("type = DDMaterial") == 3
+    assert overlay.count("type = DDTransportMaterial") == 3
     assert overlay.count("model = functor") == 3
     assert "mobility_source = ion_mobility" in overlay
     assert "diffusivity_source = ion_diffusion" in overlay
@@ -193,9 +193,13 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
         ordered.append(f"chem/{name}")
     result = namespace["remap_staged_fem_types"](staged, ordered)
     assert result["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
-    assert all(count == 1 for count in result["totals"].values())
+    assert all(count == 1 for old, count in result["totals"].items()
+               if old.startswith("PhysicsFEM"))
+    assert all(count == 0 for old, count in result["totals"].items()
+               if not old.startswith("PhysicsFEM"))
     migrated = (staged / "layer_0.i").read_text()
-    for old, new in namespace["RENAMED_FEM_KERNEL_TYPES"].items():
+    for old, new in ((old, new) for old, new in namespace["RENAMED_FEM_KERNEL_TYPES"].items()
+                     if old.startswith("PhysicsFEM")):
         assert "type = " + old not in migrated
         assert "type = " + new in migrated
         assert "type = " + old in (archived / "layer_0.i").read_text()
@@ -294,7 +298,9 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "host_cleanup": "PASS",
     }))
 
-    def stage(_root, _historical, case, old_variant, staged, _manifest):
+    def stage(_root, _historical, case, old_variant, staged, _manifest, *, d_base_source=None):
+        if old_variant == "C":
+            assert d_base_source is not None and d_base_source.name == "s6_c0_physics_base_no_d1.i"
         staged.mkdir(parents=True)
         directory = staged / "chem"
         directory.mkdir()

@@ -1,14 +1,14 @@
-#include "DDMaterial.h"
+#include "DDTransportMaterial.h"
 #include "Physics.h"
 
 #include <cctype>
 #include <cmath>
 #include <stdexcept>
 
-registerMooseObject("PhysicsApp", DDMaterial);
+registerMooseObject("PhysicsApp", DDTransportMaterial);
 
 InputParameters
-DDMaterial::validParams()
+DDTransportMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription("Species-owned drift-diffusion mobility and diffusivity "
@@ -45,7 +45,7 @@ DDMaterial::validParams()
   return params;
 }
 
-DDMaterial::DDMaterial(const InputParameters & parameters)
+DDTransportMaterial::DDTransportMaterial(const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _species(getParam<std::string>("species_id")),
     _lookup(getParam<MooseEnum>("model") == "lookup"),
@@ -111,12 +111,12 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
     // through mobility/diffusivity Functors, especially with table_units=reduced.
     for (const Real coordinate : _table->coordinate())
       if (!std::isfinite(coordinate))
-        paramError("table_file", "DDMaterial lookup coordinate must be finite.");
+        paramError("table_file", "DDTransportMaterial lookup coordinate must be finite.");
     for (std::size_t column = 0; column < 2; ++column)
       for (const Real coefficient : _table->values(column))
         if (!std::isfinite(coefficient) || coefficient < 0.0)
           paramError("table_file",
-                     "DDMaterial lookup coefficients must be finite and nonnegative.");
+                     "DDTransportMaterial lookup coefficients must be finite and nonnegative.");
     if (_reduced)
     {
       if (!isParamValid("pressure") || !isParamValid("gas_temperature"))
@@ -202,24 +202,24 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
 }
 
 ADReal
-DDMaterial::interpolate(const ADReal & coordinate, std::size_t value_index) const
+DDTransportMaterial::interpolate(const ADReal & coordinate, std::size_t value_index) const
 {
   const auto & x = _table->coordinate();
   const auto & y = _table->values(value_index);
   const Real raw = coordinate.value();
 
   if (!std::isfinite(raw))
-    mooseError("DDMaterial lookup coordinate must be finite.");
+    mooseError("DDTransportMaterial lookup coordinate must be finite.");
   if (raw < x.front())
   {
     if (_bounds_policy == BoundsPolicy::Error)
-      mooseError("DDMaterial lookup coordinate ", raw, " is below ", x.front(), ".");
+      mooseError("DDTransportMaterial lookup coordinate ", raw, " is below ", x.front(), ".");
     return y.front();
   }
   if (raw > x.back())
   {
     if (_bounds_policy == BoundsPolicy::Error)
-      mooseError("DDMaterial lookup coordinate ", raw, " is above ", x.back(), ".");
+      mooseError("DDTransportMaterial lookup coordinate ", raw, " is above ", x.back(), ".");
     return y.back();
   }
   if (raw == x.front()) return y.front();

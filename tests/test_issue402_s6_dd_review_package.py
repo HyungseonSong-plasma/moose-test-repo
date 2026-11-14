@@ -26,7 +26,7 @@ def test_review_json_all_reactions_and_transport_bindings():
         assert f"files = 'chemistry/review_s6_{variant}_full.json'" in text
         assert "fem_species = 'e'" in text and "fvm_species = 'O2p Om Op'" in text
         assert "[FunctorMaterials]" not in text
-        assert text.count("type = DDMaterial")==0
+        assert text.count("type = DDTransportMaterial")==0
         assert "NOT a standalone" in text or "not a standalone" in text
 
 def test_provisional_transport_is_not_misrepresented():

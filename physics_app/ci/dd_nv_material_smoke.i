@@ -15,14 +15,14 @@
     prop_values = '3 300 100 0.5 0.5'
   []
   [electron_constant]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = e
     model = constant
     mobility = 0.25
     diffusivity = 0.125
   []
   [ion_table]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = O2p
     model = lookup
     table_file = electron_energy_lookup_response_smoke_table.txt
@@ -30,7 +30,7 @@
     bounds_policy = error
   []
   [mixture_collision_data]
-    type = NVMaterial
+    type = NVTransportMaterial
     temperature = T_g
     pressure = p
     transport_data_file = plasma_closures_heavy_transport.txt

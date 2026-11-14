@@ -79,14 +79,25 @@ RUNTIME_INPUT = f"""[Mesh]
     state_form = physical_eV
   []
   [ei10_rate]
-    type = PhysicsElectronImpactO2sExcitationMaterial
-    electron_number_density = n_e
-    o2_molar_concentration = c_O2
+    type = ADParsedFunctorMaterial
+    property_name = R_O2s
+    functor_names = 'n_e c_O2'
+    functor_symbols = 'ne co2'
+    expression = '4.71e8*(ne/6.02214076e23)*co2'
   []
   [ei10_heavy_projection]
-    type = PhysicsO2sExcitationSourceMaterial
-    reaction_progress = R_O2s
-    o2_molar_mass = 0.031998
+    type = ADParsedFunctorMaterial
+    property_name = O2_o2s_excitation_mass_source
+    functor_names = 'R_O2s'
+    functor_symbols = 'rr'
+    expression = '-0.031998*rr'
+  []
+  [ei10_heavy_projection_o2s_excitation_source]
+    type = ADParsedFunctorMaterial
+    property_name = O2s_excitation_mass_source
+    functor_names = 'R_O2s'
+    functor_symbols = 'rr'
+    expression = '0.031998*rr'
   []
 []
 

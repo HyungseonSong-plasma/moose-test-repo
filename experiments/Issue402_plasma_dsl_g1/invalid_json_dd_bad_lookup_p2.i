@@ -1,4 +1,4 @@
-# Issue #402 synthetic P2 test: FEM + 3 FVM species use JSON-owned DDMaterial.
+# Issue #402 synthetic P2 test: FEM + 3 FVM species use JSON-owned DDTransportMaterial.
 # Species/initial number density [1/m^3] pairs are declared only in Continuity.
 # The rates, electron lookup table and ion constants below are NOT physical S6 data.
 [Mesh]

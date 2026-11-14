@@ -72,7 +72,7 @@
   []
   # One lookup owner of electron mobility, diffusivity and 5/3 energy transport.
   [electron]
-    type = DDMaterial
+    type = DDTransportMaterial
     species_id = e
     model = lookup
     pressure = gas_pressure
@@ -80,7 +80,7 @@
     table_file = plasma_closures_transport_table.txt
   []
   [reaction_A]
-    type = PhysicsElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = plasma_closures_rate_a.txt
     mean_energy = mean_en_solved
     electron_number_density = electron_number_density_physical
@@ -88,7 +88,7 @@
     reaction_progress = electron_reaction_A
   []
   [reaction_B]
-    type = PhysicsElectronImpactRateMaterial
+    type = RateCoeffMaterial
     rate_table_file = plasma_closures_rate_b.txt
     mean_energy = mean_en_solved
     electron_number_density = electron_number_density_physical
@@ -96,7 +96,7 @@
     reaction_progress = electron_reaction_B
   []
   [heavy]
-    type = NVMaterial
+    type = NVTransportMaterial
     temperature = gas_temperature
     pressure = gas_pressure
     transport_data_file = plasma_closures_heavy_transport.txt

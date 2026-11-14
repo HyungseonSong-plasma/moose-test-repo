@@ -9,7 +9,7 @@ N_A = 6.02214076e23
 CONTRACT = Path("docs/development/2026-09-10_issue26_e8_ei10_energy_contract.json")
 RUNTIME = Path("physics_app/ci/check_e8_ei10_energy_runtime.py")
 AB = Path("physics_app/ci/check_standard_moose_energy_projection.py")
-RATE = Path("physics_app/src/materials/PhysicsElectronImpactO2sExcitationMaterial.C")
+RATE = Path("physics_app/ci/check_e8_ei10_energy_runtime.py")
 CUSTOM_H = Path("physics_app/include/fvkernels/PhysicsFVElectronReactionEnergySource.h")
 CUSTOM_C = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionEnergySource.C")
 
@@ -26,8 +26,9 @@ def main():
     assert "type = PhysicsFVElectronReactionEnergySource" not in runtime
     assert "custom_energy_projector_instantiated" in ab
     assert '"FVCoupledForce"' in ab
-    assert 'addFunctorProperty<ADReal>(\n      "R_O2s"' in rate
-    assert "K_O2S = 4.71e8" in rate
+    assert 'property_name = R_O2s' in rate
+    assert "expression = '4.71e8*(ne/6.02214076e23)*co2'" in rate
+    assert "type = PhysicsElectronImpactO2sExcitationMaterial" not in rate
     coef = -0.977 * N_A / (1e16 * 5.73276)
     assert math.isclose(c["standard_moose_configuration"]["coef_at_frozen_normalization"], coef, rel_tol=1e-15)
     assert coef < 0

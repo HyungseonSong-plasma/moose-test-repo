@@ -1,0 +1,43 @@
+name: Issue402 EI10 EI16 standard reaction material reduction P0 once
+on:
+  push:
+    branches: [issue-402-species-functor-naming]
+    paths: [.github/workflows/issue402-reaction-material-reduction-p0-once.yml]
+permissions:
+  contents: read
+jobs:
+  stage5-and-r2-r3-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run full P0 and R2 R3 E8 Stage5 source semantic contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python -m pip install -q 'pydantic>=2,<3' 'pytest>=8,<9' \
+            'numpy>=1.26,<3' 'scipy>=1.14,<2' 'matplotlib>=3.8,<4' \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
+          python -m pytest -q \
+            tests/characterization/test_issue192_s5r.py \
+            tests/characterization/test_issue192_s5r_runtime.py \
+            tests/test_issue402_s6_chemistry_run_templates.py \
+            tests/test_issue402_chemistry_mechanism_contract.py
+          python physics_app/ci/check_r2_o2_ionization_implementation.py
+          python physics_app/ci/check_r3_o2s_excitation_implementation.py
+          python physics_app/ci/check_e8_ei10_energy_contract.py
+          python physics_app/ci/check_e8_ei10_energy_implementation.py
+          python physics_app/ci/check_e8_ei10_energy_runtime.py --self-test
+          python physics_app/ci/check_e8_ei16_energy_contract.py
+          python physics_app/ci/check_e8_ei16_energy_runtime.py --self-test
+          python physics_app/ci/check_standard_moose_energy_projection.py --self-test
+          python physics_app/ci/check_stage5_s5r_assembly.py --self-test
+          python physics_app/ci/check_stage5_s5r_ei16_recovery.py
+          echo "ISSUE402_REACTION_MATERIAL_REDUCTION_P0_PASS_AFTER_QUOTE_NORMALIZATION_SHA=$GITHUB_SHA"
+          echo "NO_FACTORY_DELETION_UNTIL_NATIVE_P2_PASS; SCIENCE_HOLD"
