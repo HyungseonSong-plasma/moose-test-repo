@@ -14,7 +14,9 @@ import pytest
 
 PILOT = Path(__file__).resolve().parents[1] / "experiments/Issue402_plasma_dsl_g1"
 sys.path.insert(0, str(PILOT))
-from chemistry.prepare_hybrid_json_s6 import PINNED_INITIAL_LOG, prepare
+from chemistry.prepare_hybrid_json_s6 import (
+    PINNED_INITIAL_LOG, NATIVE_COEFFICIENT_RENAME, prepare
+)
 from chemistry.prepare_s6_run_input import (
     canonicalize_staged_electron_lookup, canonicalize_staged_wall_inputs
 )
@@ -88,6 +90,14 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert isinstance(PINNED_INITIAL_LOG["log_e_energy"], str)
     report = prepare(stage, names, case)
     assert report["removed_generated_owner_count"] == 10
+    assert report["integrated_mechanism_json"] == f"unified_s6_{case}.json"
+    assert report["integrated_species_count"] == 7
+    assert report["integrated_reaction_count"] == 8
+    rename = report["native_species_coefficient_binding_migration"]
+    assert rename["old_to_species_names"] == NATIVE_COEFFICIENT_RENAME
+    assert rename["physics_equations_unchanged"] is True
+    assert rename["constant_values_unchanged"] is True
+    assert all(v >= 2 for v in rename["substitution_counts"].values())
     assert report["rebound_native_sheath_bc_count"] == 8
     assert sum(x["new_type"] == "FEMElectronSheathBC"
                for x in report["rebound_native_sheath_bcs"]) == 4
@@ -97,22 +107,28 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
         names[0], names[-1]
     }
     assert report["native_owner_preservation"] == (
-        "ALL_NON_GENERATED_PHYSICS_INPUTS_UNCHANGED"
+        "NATIVE_EQUATIONS_UNCHANGED_WITH_SPECIES_CANONICAL_COEFFICIENT_BINDINGS"
     )
-    data = json.loads((stage / "hybrid_s6_transport.json").read_text())
-    # The C++ ChemistryData parser validates each file independently,
-    # including a transport-only sidecar with no new reaction owners.
+    data = json.loads((stage / f"unified_s6_{case}.json").read_text())
     assert set(data) == {"species", "equations", "reactions"}
-    assert data["equations"] == {}
-    assert data["reactions"] == []
-    assert set(data["species"]) == {"e", "O2p", "Om", "Op"}
+    assert set(data["species"]) == {"e", "O2", "O", "O2p", "Om", "Op", "O2a"}
+    assert set(data["equations"]) == {
+        "EI-02", "EI-17", "EI-415", "EI-401", "EI-407", "EI-2069",
+        "H25", f"EI-{case}",
+    }
+    assert len(data["reactions"]) == len(data["equations"]) == 8
+    assert [reaction["id"] for reaction in data["reactions"]][-1] == f"EI-{case}"
     assert data["species"]["e"]["transport_coef"] == "lookup"
     assert data["species"]["e"]["energy_transport_coef"] == "fluid"
     assert data["species"]["e"]["table_units"] == "reduced"
     assert data["species"]["e"]["bounds_policy"] == "clamp"
-    assert data["species"]["O2p"]["mobility"] == "ion_mobility"
+    for species in ("O2p", "Om", "Op"):
+        assert data["species"][species]["transport_coef"] == "functor"
+        assert data["species"][species]["mobility"] == f"{species}_mobility"
+        assert data["species"][species]["diffusivity"] == f"{species}_diffusivity"
     assert all(data["species"][name]["initial_number_density"] > 0
                for name in ("e", "O2p", "Om", "Op"))
+    assert report["hybrid_json_sha256"] == report["integrated_json_source_sha256"]
     base = (stage / names[0]).read_text()
     assert "[log_e_energy]" not in base
     assert "[electron_transport]" not in base
@@ -122,6 +138,14 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert "PhysicsFEMLogMolarElectronFieldLimitedFluxBC" not in base
     assert "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC" not in base
     assert "wall_number_flux = e_wall_number_flux" in base
+    assert "prop_names = 'p_fixed T_g_fixed O2p_mobility O2p_diffusivity Om_mobility Om_diffusivity Op_mobility Op_diffusivity carrier_one'" in base
+    assert "prop_values = '1.333223684 300 10 0.25851999786435537 10 0.25851999786435537 10 0.25851999786435537 1.0'" in base
+    for original_name, canonical_name in NATIVE_COEFFICIENT_RENAME.items():
+        assert original_name in original
+        assert original_name not in base
+        assert canonical_name in base
+    assert "mobility = Op_mobility" in base
+    assert "coeff = Op_diffusivity" in base
     for native in ("[potential]", "[phi_diffusion]", "[phi_source]",
                    "[sigma_surface_current]", "[electron_wall_flux]",
                    "[ion_molar_density]", "[ni_time]"):
@@ -129,7 +153,8 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     for name in names[1:-1]:
         assert (stage / name).read_text() == "# Historical untouched Native layer\n"
     overlay = (stage / names[-1]).read_text()
-    assert "hybrid_s6_transport.json" in overlay
+    assert f"files = 'unified_s6_{case}.json'" in overlay
+    assert "oxygen_s6_common.json" not in overlay
     assert "initial_molar_energy_density_eV" in overlay
 
 
@@ -144,7 +169,7 @@ def test_hybrid_rejects_changed_archived_ic_before_any_file_write(
         prepare(stage, names, "417")
     assert (stage / names[0]).read_text() == modified
     assert (stage / names[-1]).read_bytes() == overlay
-    assert not (stage / "hybrid_s6_transport.json").exists()
+    assert not (stage / "unified_s6_417.json").exists()
 
 
 def test_hybrid_rejects_changed_archived_sheath_flux_before_write(tmp_path: Path):
@@ -161,4 +186,31 @@ def test_hybrid_rejects_changed_archived_sheath_flux_before_write(tmp_path: Path
         prepare(stage, names, "941")
     assert (stage / names[0]).read_text() == mutated
     assert (stage / names[-1]).read_bytes() == preserved_overlay
-    assert not (stage / "hybrid_s6_transport.json").exists()
+    assert not (stage / "unified_s6_417.json").exists()
+
+
+def test_hybrid_rejects_changed_native_ion_constant_before_write(tmp_path: Path):
+    stage, names, original = prepare_scratch(tmp_path, "941")
+    mutated = original.replace(
+        "10 0.25851999786435537 10 0.25851999786435537",
+        "10 0.25851999786435537 11 0.25851999786435537",
+        1,
+    )
+    assert mutated != original
+    (stage / names[0]).write_text(mutated)
+    overlay = (stage / names[-1]).read_bytes()
+    with pytest.raises(ValueError, match="HYBRID_NATIVE_ION_CONSTANTS_SIGNATURE_CHANGED"):
+        prepare(stage, names, "941")
+    assert (stage / names[0]).read_text() == mutated
+    assert (stage / names[-1]).read_bytes() == overlay
+    assert not (stage / "unified_s6_941.json").exists()
+
+
+def test_case_reactions_are_not_cross_mixed(tmp_path: Path):
+    stage, names, source = prepare_scratch(tmp_path, "417")
+    swapped = (PILOT / "chemistry/oxygen_s6_941.json").read_bytes()
+    (stage / "chemistry/oxygen_s6_417.json").write_bytes(swapped)
+    with pytest.raises(ValueError, match="HYBRID_INTEGRATED_VARIANT_REACTION_IDENTITY_CHANGED"):
+        prepare(stage, names, "417")
+    assert (stage / names[0]).read_text() == source
+    assert not (stage / "unified_s6_417.json").exists()
