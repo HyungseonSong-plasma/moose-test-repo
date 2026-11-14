@@ -1030,7 +1030,7 @@ Chemistry::addFunctorMaterials()
       constexpr Real electron_mass = 9.1093837015e-31;
       constexpr Real avogadro = 6.02214076e23;
       constexpr Real kb_over_ev = 8.617333262145e-5;
-      const Real factor = 3.0 * electron_mass * avogadro / molar_mass;
+      const Real factor = 3.0 * electron_mass / (molar_mass / avogadro);
       auto params = getFactory().getValidParams(parsed_type);
       params.set<std::string>("property_name") = reaction.energy_loss_functor;
       params.set<std::vector<std::string>>("functor_names") =
