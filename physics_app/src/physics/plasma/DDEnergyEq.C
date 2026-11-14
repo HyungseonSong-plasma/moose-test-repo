@@ -29,7 +29,7 @@ DDEnergyEq::validParams()
   params.addParam<VariableName>(
       "fem_potential",
       "FEM electric potential. Enables conservative energy time, drift-diffusion, "
-      "electron Joule and canonical mean-energy/JSON-wall providers.");
+      "electron Joule, canonical mean-energy and JSON electron-energy BCs.");
   params.addParam<MaterialPropertyName>(
       "rf_heating_material", "Existing electron-energy heating source in the equation's units.");
   params.addParam<Real>(
