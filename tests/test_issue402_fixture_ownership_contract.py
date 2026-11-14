@@ -105,3 +105,23 @@ def test_direct_native_materials_are_canonical_log_molar():
     from math import exp, log, isclose
     assert isclose(exp(log(3e15 / 6.02214076e23) - log(1e15 / 6.02214076e23)),
                    3.0, rel_tol=1e-14)
+
+
+def test_deprecated_option_negatives_have_independent_state_owner():
+    runner = deck("run_native_binding_smoke.sh")
+    assert 'if [[ "$item" == invalid_poisson_variable ]]' in runner
+    assert 'native --check-input -i "$PILOT/$item.i"' in runner
+    # Only Poisson requires baseline.i to prove that an existing FV log_O2p
+    # is illegal as a FEM electric potential. Deprecated-key negatives use
+    # valid JSON initialization, so their *intended* errors are never masked.
+    for name in (
+        "invalid_legacy_variables.i",
+        "invalid_legacy_kernel_names.i",
+        "invalid_incomplete_coefficients.i",
+        "invalid_missing_fvm_charges.i",
+        "invalid_wrong_charge_sign.i",
+    ):
+        s = deck(name)
+        assert "files = plasma_species_initial_p2.json" in s
+        assert "fem_species = 'e'" in s
+    assert 'fem_potential = log_O2p' in deck("invalid_poisson_variable.i")
