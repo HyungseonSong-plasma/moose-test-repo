@@ -48,8 +48,21 @@ def main(executable: Path, receipt: Path) -> None:
             assert all(entry["wall_number_flux"] == "e_wall_number_flux"
                        for entry in bc)
             assert len(data["reactions"]) == 8
+            assert data["species"]["e"]["transport_coef"] == "lookup"
+            assert data["species"]["e"]["table_units"] == "reduced"
+            assert data["species"]["e"]["table_file"] == "plasma_closures_transport_table.txt"
             verify(root, f"S6_{variant}_TWO_EQUATIONS_EIGHT_REACTIONS_EIGHT_BCS",
                    source.S6_SYNTHETIC_INPUT, data, True)
+
+        # The authentic S6 electron JSON is lookup-owned, not constant.
+        # A broken electron transport table must fail independently of
+        # Chemistry's seven synthetic EI lookup references.
+        missing_electron_transport_table = source.synthetic_s6("417")
+        missing_electron_transport_table["species"]["e"]["table_file"] = (
+            "missing_electron_transport_lookup.txt")
+        verify(root, "MISSING_ELECTRON_TRANSPORT_LOOKUP_REJECTED",
+               source.S6_SYNTHETIC_INPUT,
+               missing_electron_transport_table, False)
 
         missing_initial = copy.deepcopy(source.DATA)
         del missing_initial["species"]["e"]["initial_number_density"]
