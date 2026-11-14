@@ -86,3 +86,22 @@ def test_runner_enforces_three_separate_contracts():
     assert "invalid_fem_fv_swap) expected='Electron continuity is FEM-only'" in s
     assert 'invalid_missing_variable) expected="requires species.missing.initial_number_density"' in s
     assert 'invalid_species_density_nan_p2:requires species.nan.initial_number_density' in s
+
+
+def test_direct_native_materials_are_canonical_log_molar():
+    # Reuse the original physical Aux densities; do not replace them with a
+    # free-standing '3 eV' constant or re-enable the retired physical_eV mode.
+    s = (BASE.parents[1] / "physics_app/ci/plasma_direct_existing_materials_smoke.i").read_text()
+    assert "state_form = log_molar_eV" in s
+    assert "state_form = physical_eV" not in s
+    assert "property_name = log_e" in s
+    assert "property_name = log_e_energy" in s
+    assert "expression = 'log(ne/6.02214076e23)'" in s
+    assert "expression = 'log(we/6.02214076e23)'" in s
+    assert "electron_density = log_e" in s
+    assert "electron_energy_density = log_e_energy" in s
+    assert "electron_number_density = electron_number_density_physical" in s
+    assert "electron_energy_density_physical" in s
+    from math import exp, log, isclose
+    assert isclose(exp(log(3e15 / 6.02214076e23) - log(1e15 / 6.02214076e23)),
+                   3.0, rel_tol=1e-14)
