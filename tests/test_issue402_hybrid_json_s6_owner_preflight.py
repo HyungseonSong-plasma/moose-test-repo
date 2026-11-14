@@ -50,6 +50,56 @@ def canonical_staged_base() -> str:
     return source
 
 
+def synthetic_rate_owners(case: str) -> str:
+    """Self-contained P0 archive-shaped owners; no private table bytes."""
+    data = json.loads((PILOT / f"chemistry/unified_s6_{case}.json").read_text())
+    lines = ["[FunctorMaterials]"]
+    for reaction in data["reactions"]:
+        reaction_id = reaction["id"]
+        progress = ("R_EI" + reaction_id[3:] if reaction_id.startswith("EI-")
+                    else "R_H" + reaction_id[1:])
+        lines.append(f"  [kinetic_{progress}]")
+        if "table" in reaction:
+            # The historical 400-W EI-02 and most S6 later overlays used
+            # RateCoeffMaterial, while EI-17 already used EIRateCoefMaterial.
+            original_type = ("EIRateCoefMaterial" if reaction_id == "EI-17"
+                             else "RateCoeffMaterial")
+            target = next(id for id in reaction["reactants"] if id != "e")
+            lines.extend((
+                f"    type = {original_type}",
+                f"    rate_table_file = '{reaction['table']}'",
+                "    mean_energy = e_energy_eV",
+                "    electron_number_density = n_e_physical",
+                f"    target_molar_concentration = c_{target}_{reaction_id.replace('-', '')}",
+                f"    reaction_progress = {progress}",
+                "    block = plasma",
+            ))
+        else:
+            assert reaction_id == "H25"
+            lines.extend((
+                "    type = ADParsedFunctorMaterial",
+                "    property_name = R_H25",
+                "    functor_names = 'temperature c_Op c_O2'",
+                "    functor_symbols = 'tg cp c2'",
+                "    expression = '1.204428152e7*(300.0/tg)^0.4*cp*c2'",
+                "    block = plasma",
+            ))
+        lines.append("  []")
+    for channel in ("EI02", "EI17"):
+        lines.extend((
+            f"  [elastic_loss_{channel}]",
+            "    type = ADParsedFunctorMaterial",
+            f"    property_name = delta_epsilon_{channel}_eV",
+            "    functor_names = 'e_energy_eV temperature'",
+            "    functor_symbols = 'eps Tg'",
+            "    expression = '1*((2.0/3.0)*eps-8.617333262145e-5*Tg)'",
+            "    block = plasma",
+            "  []",
+        ))
+    lines.append("[]")
+    return "\n".join(lines) + "\n"
+
+
 def prepare_scratch(tmp_path: Path, case: str, *,
                     damage_energy_ic: bool = False) -> tuple[Path, list[str], str]:
     stage = tmp_path / "experiments" / "Issue395_powered_chemistry_ladder"
@@ -66,7 +116,10 @@ def prepare_scratch(tmp_path: Path, case: str, *,
     ] + ["migrated_continuity.i"]
     (stage / names[0]).write_text(source)
     for name in names[1:-1]:
-        (stage / name).write_text("# Historical untouched Native layer\n")
+        (stage / name).write_text(
+            synthetic_rate_owners(case) if name == names[1]
+            else "# Historical untouched Native layer\n"
+        )
     (stage / names[-1]).write_text(
         (PILOT / f"s6_{case}_chemistry_run.template.i").read_text()
     )
@@ -89,7 +142,7 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert PINNED_INITIAL_LOG["log_e_energy"] == "-18.829829186913098"
     assert isinstance(PINNED_INITIAL_LOG["log_e_energy"], str)
     report = prepare(stage, names, case)
-    assert report["removed_generated_owner_count"] == 10
+    assert report["removed_generated_owner_count"] == 12
     gas = report["root_gas_state_pressure_initial_condition"]
     assert gas["status"] == "NATIVE_PRESSURE_SOLVED_ROOT_PRESSURE_INITIAL_CONDITION"
     assert gas["pressure_initial_pa"] == 1.333223684
@@ -109,25 +162,49 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert rename["physics_equations_unchanged"] is True
     assert rename["constant_values_unchanged"] is True
     assert all(v >= 2 for v in rename["substitution_counts"].values())
+    assert report["native_kinetic_rate_cutover"]["native_progress_retired_count"] == 8
+    assert report["native_kinetic_rate_cutover"]["elastic_loss_retired_count"] == 2
+    assert report["native_kinetic_rate_cutover"]["original_rate_tables_unchanged"] is True
+    assert len(report["native_kinetic_rate_cutover"]["native_kinetic_owners_retired"]) == 10
     assert report["rebound_native_sheath_bc_count"] == 8
     assert sum(x["new_type"] == "FEMElectronSheathBC"
                for x in report["rebound_native_sheath_bcs"]) == 4
     assert sum(x["new_type"] == "FEMElectronEnergySheathBC"
                for x in report["rebound_native_sheath_bcs"]) == 4
     assert set(report["changed_staged_layers"]) == {
-        names[0], names[-1]
+        names[0], names[1], names[-1]
     }
     assert report["native_owner_preservation"] == (
         "NATIVE_EQUATIONS_UNCHANGED_WITH_ROOT_PRESSURE_IC_AND_SPECIES_FUNCTORS"
     )
     data = json.loads((stage / f"unified_s6_{case}.json").read_text())
-    assert set(data) == {"species", "equations", "reactions"}
+    assert set(data) == {"species", "equations", "reactions", "boundaries"}
     assert set(data["species"]) == {"e", "O2", "O", "O2p", "Om", "Op", "O2a"}
     assert set(data["equations"]) == {
         "EI-02", "EI-17", "EI-415", "EI-401", "EI-407", "EI-2069",
         "H25", f"EI-{case}",
     }
     assert len(data["reactions"]) == len(data["equations"]) == 8
+    assert all("provenance" not in r and "table_sha256" not in r and
+               "target_molar_concentration" not in r for r in data["reactions"])
+    assert sum("table" in r for r in data["reactions"]) == 7
+    assert sum(r.get("rate", {}).get("model") == "power_law"
+               for r in data["reactions"]) == 1
+    assert data["species"]["O2"]["mass_fraction_functor"] == "w_O2_constraint"
+    assert data["species"]["O"]["mass_fraction_functor"] == "w_O"
+    assert data["species"]["O2a"]["mass_fraction_functor"] == "w_O2s"
+    assert all(data["species"][id]["molar_mass_kg_mol"] > 0
+               for id in ("O2", "O", "O2a", "O2p", "Om", "Op"))
+    assert set(data["boundaries"]) == {
+        "plasma_electrode plasma_metal plasma_right",
+        "plasma_cover", "plasma_wafer", "plasma_focus_ring"
+    }
+    bcs = [bc for group in data["boundaries"].values()
+           for bc in group["bcs"].values()]
+    assert len(bcs) == 8
+    assert sum(b["type"] == "FEMElectronSheathBC" for b in bcs) == 4
+    assert sum(b["type"] == "FEMElectronEnergySheathBC" for b in bcs) == 4
+    assert all(b["wall_number_flux"] == "e_wall_number_flux" for b in bcs)
     assert [reaction["id"] for reaction in data["reactions"]][-1] == f"EI-{case}"
     assert data["species"]["e"]["transport_coef"] == "lookup"
     assert data["species"]["e"]["energy_transport_coef"] == "fluid"
@@ -148,11 +225,13 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert "[log_e_energy]" not in base
     assert "[electron_transport]" not in base
     assert "[energy_time]" not in base
-    assert base.count("type = FEMElectronSheathBC") == 4
-    assert base.count("type = FEMElectronEnergySheathBC") == 4
+    assert base.count("type = FEMElectronSheathBC") == 0
+    assert base.count("type = FEMElectronEnergySheathBC") == 0
+    assert "[electron_wall_flux]" not in base
+    assert "[electron_physical_density]" not in base
     assert "PhysicsFEMLogMolarElectronFieldLimitedFluxBC" not in base
     assert "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC" not in base
-    assert "wall_number_flux = e_wall_number_flux" in base
+    assert "wall_number_flux = e_wall_number_flux" not in base
     assert "prop_names = 'O2p_mobility O2p_diffusivity Om_mobility Om_diffusivity Op_mobility Op_diffusivity carrier_one'" in base
     assert "prop_values = '10 0.25851999786435537 10 0.25851999786435537 10 0.25851999786435537 1.0'" in base
     assert "[pressure]\n    type = INSFVPressureVariable" in base
@@ -168,10 +247,15 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert "mobility = Op_mobility" in base
     assert "coeff = Op_diffusivity" in base
     for native in ("[potential]", "[phi_diffusion]", "[phi_source]",
-                   "[sigma_surface_current]", "[electron_wall_flux]",
+                   "[sigma_surface_current]",
                    "[ion_molar_density]", "[ni_time]"):
         assert native in base and native in original
-    for name in names[1:-1]:
+    rates_after = (stage / names[1]).read_text()
+    assert "reaction_progress =" not in rates_after
+    assert "property_name = R_H25" not in rates_after
+    assert "delta_epsilon_EI02_eV" not in rates_after
+    assert "delta_epsilon_EI17_eV" not in rates_after
+    for name in names[2:-1]:
         assert (stage / name).read_text() == "# Historical untouched Native layer\n"
     overlay = (stage / names[-1]).read_text()
     assert f"files = 'unified_s6_{case}.json'" in overlay
@@ -181,6 +265,40 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert "oxygen_s6_common.json" not in overlay
     assert "initial_molar_energy_density_eV" in overlay
 
+
+
+@pytest.mark.parametrize("case", ["417", "941"])
+def test_s6_kinetic_cutover_rejects_same_basename_wrong_directory(tmp_path: Path, case: str):
+    stage, names, original = prepare_scratch(tmp_path, case)
+    rate_path = stage / names[1]
+    before = rate_path.read_text()
+    changed = before.replace("rate_table_file = 'o2_elastic.txt'",
+                             "rate_table_file = 'unverified/o2_elastic.txt'", 1)
+    assert changed != before
+    rate_path.write_text(changed)
+    with pytest.raises(ValueError, match="HYBRID_RATE_TABLE_IDENTITY_CHANGED_R_EI02"):
+        prepare(stage, names, case)
+    assert rate_path.read_text() == changed
+    assert (stage / names[0]).read_text() == original
+    assert not (stage / f"unified_s6_{case}.json").exists()
+
+
+@pytest.mark.parametrize("case", ["417", "941"])
+def test_s6_kinetic_cutover_rejects_missing_legacy_owner(tmp_path: Path, case: str):
+    stage, names, original = prepare_scratch(tmp_path, case)
+    rate_path = stage / names[1]
+    before = rate_path.read_text()
+    removed = re.sub(
+        r"(?m)^  \[kinetic_R_EI02\]\n(?:^    [^\n]*\n)+^  \[\]\n",
+        "", before, count=1,
+    )
+    assert removed != before
+    rate_path.write_text(removed)
+    with pytest.raises(ValueError, match="HYBRID_INCOMPLETE_NATIVE_RATE_OWNER_CUTOVER"):
+        prepare(stage, names, case)
+    assert rate_path.read_text() == removed
+    assert (stage / names[0]).read_text() == original
+    assert not (stage / f"unified_s6_{case}.json").exists()
 
 def test_hybrid_rejects_changed_archived_ic_before_any_file_write(
     tmp_path: Path,

@@ -26,12 +26,10 @@ DDEnergyEq::validParams()
       "assemble the complete conservative electron energy equation.");
   params.addParam<std::vector<std::string>>(
       "fem_species", {}, "Electron species solved with finite-element variables.");
-  params.addParam<std::vector<std::string>>(
-      "fvm_species", {}, "Electron species solved with finite-volume variables.");
   params.addParam<VariableName>(
       "fem_potential",
       "FEM electric potential. Enables conservative energy time, drift-diffusion, "
-      "electron Joule and canonical mean-energy/JSON-wall providers.");
+      "electron Joule, canonical mean-energy and JSON electron-energy BCs.");
   params.addParam<MaterialPropertyName>(
       "rf_heating_material", "Existing electron-energy heating source in the equation's units.");
   params.addParam<Real>(
@@ -44,16 +42,11 @@ DDEnergyEq::DDEnergyEq(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
   const auto & finite_element_species = getParam<std::vector<std::string>>("fem_species");
-  const auto & finite_volume_species = getParam<std::vector<std::string>>("fvm_species");
-  if (!finite_volume_species.empty())
-    paramError("fvm_species",
-               "Finite-volume electron energy is not supported by this input check yet.");
-
   if (finite_element_species.size() != 1 || finite_element_species.front() != "e")
     paramError("fem_species", "Electron energy requires fem_species = 'e'.");
 
   validateSpeciesInputs(finite_element_species,
-                        finite_volume_species,
+                        {},
                         {energyStateName(finite_element_species.front())});
   if (isParamValid("initial_molar_energy_density_eV"))
   {
@@ -123,7 +116,7 @@ DDEnergyEq::checkIntegrity() const
 {
   const auto variable = energyStateName(getParam<std::vector<std::string>>("fem_species").front());
   validateExistingSpeciesVariables(getParam<std::vector<std::string>>("fem_species"),
-                                   getParam<std::vector<std::string>>("fvm_species"),
+                                   {},
                                    {variable});
   if (isParamValid("fem_potential"))
   {
@@ -210,6 +203,36 @@ DDEnergyEq::addFEKernels()
 }
 
 void
+DDEnergyEq::addFEBCs()
+{
+  // Electron energy sheath BCs belong to the Energy Physics under DriftDiffusion.
+  // ESWallFluxMaterial remains a single provider owned by Continuity.
+  for (const auto & [group, boundary] : chemistryData().boundaries())
+    for (const auto & [bc_name, bc] : boundary.bcs)
+    {
+      (void)group;
+      if (bc.type != "FEMElectronEnergySheathBC")
+        continue;
+      if (!isParamValid("fem_potential"))
+        paramError("fem_potential",
+                   "JSON FEMElectronEnergySheathBC requires full FEM electron Energy.");
+      if (bc.variable != "log_e_energy")
+        paramError("fem_species",
+                   "JSON FEMElectronEnergySheathBC must target canonical log_e_energy.");
+
+      auto params = getFactory().getValidParams(bc.type);
+      params.set<NonlinearVariableName>("variable") = bc.variable;
+      std::vector<BoundaryName> sidesets;
+      for (const auto & side : boundary.mesh_boundaries)
+        sidesets.emplace_back(side);
+      params.set<std::vector<BoundaryName>>("boundary") = sidesets;
+      params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
+      params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
+      getProblem().addBoundaryCondition(bc.type, bc_name, params);
+    }
+}
+
+void
 DDEnergyEq::addFunctorMaterials()
 {
   // Legacy partial-input mode does not create duplicate mean-energy owners.
@@ -225,47 +248,7 @@ DDEnergyEq::addFunctorMaterials()
   assignBlocks(mean, _blocks);
   getProblem().addFunctorMaterial(mean_type, name() + "_mean_energy", mean);
 
-  // JSON declares which existing sheath BCs are used; the physical flux
-  // calculation stays exclusively inside ESWallFluxMaterial.C.
-  bool sheath_wall = false;
-  for (const auto & [group, boundary] : chemistryData().boundaries())
-    for (const auto & [bc_name, bc] : boundary.bcs)
-    {
-      (void)group;
-      (void)bc_name;
-      if (bc.type != "FEMElectronSheathBC" &&
-          bc.type != "FEMElectronEnergySheathBC")
-        continue;
-      if (bc.wall_number_flux != "electron_wall_number_flux" ||
-          (bc.type == "FEMElectronEnergySheathBC" && bc.mean_energy != "e_energy_eV"))
-        paramError("fem_potential",
-                   "Automatic JSON electron sheath BCs require canonical "
-                   "electron_wall_number_flux and e_energy_eV providers.");
-      sheath_wall = true;
-    }
-  if (!sheath_wall)
-    return;
 
-  // The FEM state log_e stores ln(c_e [mol/m^3]); sheath physics consumes
-  // number density [1/m^3]. Construct a state-dependent AD Functor, not a
-  // constant value or another wall-flux implementation.
-  const std::string density_type = "ADParsedFunctorMaterial";
-  auto density = getFactory().getValidParams(density_type);
-  density.set<std::string>("property_name") = "n_e_physical";
-  density.set<std::vector<std::string>>("functor_names") = {"log_e"};
-  density.set<std::vector<std::string>>("functor_symbols") = {"c"};
-  density.set<std::string>("expression") = "6.02214076e23*exp(c)";
-  assignBlocks(density, _blocks);
-  getProblem().addFunctorMaterial(density_type, name() + "_number_density", density);
-
-  const std::string wall_type = "ESWallFluxMaterial";
-  auto wall = getFactory().getValidParams(wall_type);
-  wall.set<MooseFunctorName>("electron_density") = "n_e_physical";
-  wall.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
-  wall.set<MooseFunctorName>("potential") = getParam<VariableName>("fem_potential");
-  wall.set<bool>("use_element_gradient_for_potential") = true;
-  assignBlocks(wall, _blocks);
-  getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall);
 }
 
 }
@@ -276,4 +259,5 @@ registerMooseAction("PhysicsApp", DDEnergyEq, "add_variables_physics");
 registerMooseAction("PhysicsApp", DDEnergyEq, "add_ics_physics");
 registerMooseAction("PhysicsApp", DDEnergyEq, "check_integrity");
 registerMooseAction("PhysicsApp", DDEnergyEq, "add_kernel");
+registerMooseAction("PhysicsApp", DDEnergyEq, "add_bc");
 registerMooseAction("PhysicsApp", DDEnergyEq, "add_functor_material");

@@ -14,6 +14,33 @@ test -f "$PILOT/valid_bindings.i"
 
 # Python-only contracts; build the existing MOOSE application, never generate source code.
 python3 physics_app/ci/check_plasma_closures_contract.py
+# P0: user-facing unified reaction metadata + electron-only BC ownership.
+# Run with Python stdlib, independently of the governed pytest job.
+python3 -m py_compile \
+  experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py \
+  physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
+python3 - <<'PY'
+import json
+from pathlib import Path
+base = Path("experiments/Issue402_plasma_dsl_g1/chemistry")
+for variant in ("417", "941"):
+    data = json.loads((base / f"unified_s6_{variant}.json").read_text())
+    assert set(data) == {"species", "equations", "reactions", "boundaries"}
+    assert len(data["reactions"]) == 8
+    assert len(data["species"]) == 7
+    assert set(data["equations"]) == {r["id"] for r in data["reactions"]}
+    assert sum("table" in r for r in data["reactions"]) == 7
+    assert sum(r.get("rate", {}).get("model") == "power_law"
+               for r in data["reactions"]) == 1
+    assert all(not set(r).intersection({"table_sha256", "target_molar_concentration",
+                                        "provenance"}) for r in data["reactions"])
+    bcs = [bc for b in data["boundaries"].values() for bc in b["bcs"].values()]
+    assert len(bcs) == 8
+    assert sum(b["type"] == "FEMElectronSheathBC" for b in bcs) == 4
+    assert sum(b["type"] == "FEMElectronEnergySheathBC" for b in bcs) == 4
+    assert all(b["wall_number_flux"] == "e_wall_number_flux" for b in bcs)
+print("ISSUE402_ELECTRON_S6_JSON_P0_PASS", flush=True)
+PY
 test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
 
 {
@@ -91,19 +118,36 @@ native() {
   ' -- "$@"
 }
 
+# Independent P2 construction gate for Chemistry table-owned electron RHS
+# and DriftDiffusion-owned electron sheath BCs, before unrelated legacy
+# binding fixtures. No Native timestep or scientific parity is run.
+docker run --rm --entrypoint /bin/bash --user 0:0 \
+  --workdir /workspace -v "$PWD:/workspace" "$PINNED_BASE" -lc '
+  set -euo pipefail
+  source /environment
+  python3 physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py \
+    /workspace/physics_app/physics-opt
+' 2>&1 | tee "$EVIDENCE/electron_chemistry_sheath_p2.log"
+echo "ISSUE402_ELECTRON_EQUATIONS_NATIVE_P2_PASS_P3_NOT_RUN SCIENCE_HOLD"
+
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
+# P2 positive: JSON owns the electron FEM and ion FV log states/ICs.
+# Do not stack these auto-created variables on baseline.i's manual [Variables].
+native --check-input -i "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
+echo "PLASMA_JSON_OWNED_E_ION_BINDINGS_P2_PASS"
 # Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
 native --check-input -i "$PILOT/generic_four_species.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
 echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# JSON-owned equation construction never stacks onto baseline.i's manual states.
+native --check-input -i "$PILOT/valid_all_physics.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
+echo "PLASMA_JSON_ALL_PHYSICS_P2_PASS"
 # Standalone positive construction check: one generated FEM transport Kernel.
 # It is a P2-only input, not an accepted physical simulation or P3 parity run.
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
+native --check-input -i "$PILOT/valid_generated_transport_options.i" \
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
@@ -220,7 +264,7 @@ echo "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED"
 
 for entry in "invalid_species_density_zero_p2:Invalid species ID for automatic naming: 0" \
              "invalid_species_density_odd_p2:Invalid species ID for automatic naming: 1e16" \
-             "invalid_species_density_nan_p2:Species 'nan' is absent from"; do
+             "invalid_species_density_nan_p2:requires species.nan.initial_number_density"; do
   item="${entry%%:*}"
   expected="${entry#*:}"
   set +e
@@ -269,8 +313,7 @@ done
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
-native --check-input -i "$PILOT/baseline.i" \
-  "$PILOT/valid_generated_transport_options.i" \
+native --check-input -i "$PILOT/valid_generated_transport_options.i" \
   "$PILOT/duplicate_e_time.i" > "$EVIDENCE/duplicate_e_time.log" 2>&1
 duplicate_time_exit=$?
 set -e
@@ -297,19 +340,27 @@ echo "PLASMA_DD_NV_MATERIALS_P2_PASS"
 
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
   set +e
-  native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
-    > "$EVIDENCE/$item.log" 2>&1
+  # Only Poisson's FV-versus-FEM negative needs the pre-existing baseline
+  # log_O2p variable. Deprecated DD options, species and chemistry errors
+  # must be tested without baseline's conflicting manual log_e/log_O2p.
+  if [[ "$item" == invalid_poisson_variable ]]; then
+    native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
+      > "$EVIDENCE/$item.log" 2>&1
+  else
+    native --check-input -i "$PILOT/negative_json_contract_base.i" "$PILOT/$item.i" \
+      > "$EVIDENCE/$item.log" 2>&1
+  fi
   code=$?
   set -e
   case "$item" in
     invalid_overlap) expected='species listed in both groups' ;;
-    invalid_fem_fv_swap) expected='wrong type' ;;
+    invalid_fem_fv_swap) expected='Electron continuity is FEM-only' ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
     invalid_poisson_variable) expected='Poisson fem_potential requires an FEM solver variable' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
-    invalid_missing_variable) expected='was not found' ;;
+    invalid_missing_variable) expected="requires species.missing.initial_number_density" ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
     invalid_missing_fvm_charges) expected='fem_charge_numbers' ;;
@@ -328,7 +379,9 @@ echo "PLASMA_INVALID_INPUTS_REJECTED"
 mkdir -p "$EVIDENCE/baseline" "$EVIDENCE/candidate"
 native -i "$PILOT/baseline.i" "Outputs/file_base=$EVIDENCE/baseline/plasma" \
   2>&1 | tee "$EVIDENCE/baseline_run.log"
-native -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# Compare the exact same diffusion equations with only no-op Physics
+# validators. Do not compare a new electron PDE against old baseline diffusion.
+native -i "$PILOT/baseline.i" "$PILOT/legacy_noop_physics.i" \
   "Outputs/file_base=$EVIDENCE/candidate/plasma" \
   2>&1 | tee "$EVIDENCE/candidate_run.log"
 test -s "$EVIDENCE/baseline/plasma.e"
@@ -337,6 +390,7 @@ python3 "$PILOT/compare_native_outputs.py" \
   --baseline "$EVIDENCE/baseline/plasma.e" \
   --candidate "$EVIDENCE/candidate/plasma.e" \
   --output "$EVIDENCE/numerical_parity.json"
+echo "PLASMA_LEGACY_NOOP_PARITY_PASS"
 echo "PLASMA_RESULTS_MATCH"
 
 set +e

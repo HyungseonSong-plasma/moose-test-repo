@@ -24,13 +24,14 @@ parameter. The archived 400-W neutral mass, velocity, mass-fraction,
 and wall equations remain in place. **Root pressure is an IC, not a
 permanent fixed Dirichlet field**; the Navier-Stokes pressure can evolve.
 
-The archived neutral-mixture solution remains owned by Native. The new
-root Action deliberately does **not** create an independent `rho_g`/full
-mixture closure for S6 because its seven-species JSON does not contain
-the complete neutral mass-fraction catalogue; fabricating one would
-change physics. When no pressure solver variable is provided, the existing
-complete root ideal-gas mixture workflow remains separately supported.
-Any partial mixture metadata with an S6 solved `pressure` fails closed.
+The archived neutral-mixture solution remains Native-owned. The root
+Action does **not** create a competing `rho_g`/full mixture closure for
+S6; it recognizes the solved `pressure` and publishes live `temperature`.
+The JSON species records now carry the molar masses and *existing*
+Native mass-fraction Functor bindings required to compute reaction-target
+concentrations from `rho_neutral`. These are kinetic input bindings,
+not permission to instantiate a second neutral-mixture equation of state.
+A separate full ideal-gas mixture remains available without Native pressure.
 Both full S6 100-us reruns and science acceptance require separate gates.
 
 
@@ -43,8 +44,10 @@ variant** is passed to `[Physics]/[Plasmas]/files`:
 - `unified_s6_941.json`: identical shared mechanism and EI-941 instead of
   EI-417; `files = 'unified_s6_941.json'`.
 
-Each JSON includes `species`, `equations`, and `reactions`; there is **no
-runtime transport-only sidecar** or common+variant multi-file list. The two
+Each JSON includes `species`, `equations`, `reactions`, and only the eight
+original electron `FEMElectronSheathBC`/`FEMElectronEnergySheathBC`
+definitions under `boundaries`; there is **no runtime transport-only
+sidecar** or common+variant multi-file list. The two
 canonical input files are pinned in this directory and the exact content
 used by the solver is published in the P3/P4 result artifacts.
 `oxygen_s6_common.json` and `oxygen_s6_{417,941}.json` remain available as
@@ -68,9 +71,12 @@ Its `prop_values` remain exactly `1.333223684 300 10 0.25851999786435537
 10 0.25851999786435537 10 0.25851999786435537 1.0`—the mobility and
 diffusivity values **do not change**. The electron `e` retains the original
 public `lookup` table, reduced coefficients, `clamp`, and `fluid`
-energy transport. All Native RF, Poisson, wall and rate *equations* stay
-unaltered. Archived inputs, frozen scientific source, B/C cases, and
-private-rate boundaries are never edited.
+energy transport. Native RF, Poisson, ion wall and neutral wall equations
+remain unchanged. The eight electron sheath BCs and existing electron wall
+flux owner migrate to DriftDiffusion, and the existing Native kinetic
+classes are *instantiated by Chemistry* from the JSON rate declarations.
+All changes are confined to disposable staged inputs; archived inputs,
+frozen scientific source, B/C cases and private-rate files are not edited.
 
 This contract is implemented by
 `chemistry/prepare_hybrid_json_s6.py`, checked by
@@ -78,6 +84,23 @@ This contract is implemented by
 `.github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml`.
 The reference comparison is **P4 diagnostic only**; `SCIENCE_HOLD`
 persists until separate scientific parity review.
+
+### Electron-only boundary ownership (2026-11-14)
+
+The canonical S6 JSON contains exactly **four electron-number sheath BCs**
+and **four electron-energy sheath BCs** on the original mesh sidesets.
+`DDContinuityEq::addFEBCs` and `DDEnergyEq::addFEBCs`, respectively,
+instantiate them. `DDContinuityEq` creates exactly one
+`ESWallFluxMaterial` with `species_id=e` and `e_wall_number_flux`.
+The staged old electron BC and wall-flux Material instances are removed
+only after input-identity comparison. **No ion FV BC, Poisson, charged
+surface-current or Navier-Stokes boundary migration is attempted.**
+
+The integrated schema contains no user-maintained rate hashes, reaction
+progress names or target concentration Functor names. A single JSON per
+variant remains the sole parameter catalogue; lookup TXT bytes remain
+external. Native P2 and P3 numerical/semantic parity are separate gates,
+and `SCIENCE_HOLD` remains in effect.
 
 ---
 
@@ -94,9 +117,15 @@ persists until separate scientific parity review.
 
 The original pinned source of channel equations, historical rate Functor names and
 electron-energy loss data is the archived S6-417/941 input sequence from Issue
-#477. The input files are unchanged. Kinetic rate tables and any private data
-are **not** embedded here. Their original progress Functor providers must
-still be supplied by the staged S6 native input layers.
+#477. The input files are unchanged. Kinetic rate tables and private bytes are **not** embedded here. JSON
+`reactions[].table` names each original lookup file (relative to the
+unified JSON), while `Chemistry` constructs the existing
+`EIRateCoefMaterial` with the internally derived `R_EI...`,
+`c_<target>`, `e_energy_eV` and `n_e_physical` inputs. H25 retains
+the historical power-law formula via the existing `HRateCoefMaterial`.
+The scratch input migrator validates and retires duplicate Native
+rate/elastic-loss providers, never substituting synthetic rates. No
+`table_sha256`, rate provenance or target-Functor name is a JSON option.
 
 ## Inputs and source signs
 
@@ -104,19 +133,21 @@ Each selected S6 mechanism contains **8** reaction IDs. All reaction progress
 Functors have `mol/(m^3 s)` units. The JSON no longer repeats `progress`:
 `Chemistry.C` derives `EI-02 → R_EI02`, `EI-415 → R_EI415`,
 `EI-2069 → R_EI2069`, `H25 → R_H25` deterministically from the ID.
-For the archived S6 inputs, the scratch-only preparation step renames
-all existing progress provider definitions and consumers (`R_elastic_O2`,
-`R_elastic_O`, `R_ion_O2`) directly to `R_EI02`, `R_EI17`,
-`R_EI415`. No temporary rate alias Materials are used and the underlying
-kinetic expressions, units and numerical values are unchanged.
+For archived S6 inputs, the scratch preparer first canonicalizes old
+progress names (`R_elastic_O2`, `R_elastic_O`, `R_ion_O2`) to
+`R_EI02`, `R_EI17`, `R_EI415`, verifies source identity, then retires
+only the staged duplicate providers when Chemistry takes ownership.
+There are no temporary rate alias Materials; the underlying Native
+interpolation, loss expressions, units and constants are retained.
 Each reaction declares `units: "mol/(m^3 s)"` and a nonnegative
 `energy_loss_eV` magnitude. The Physics Chemistry projector applies
 the **single negative sign** when constructing `Q_e_molar_eV` on the
 electron-energy RHS; the original signed physical loss is preserved.
 
-- EI-02 and EI-17: source-defined **variable positive elastic loss**
-  `delta_epsilon_EI02_eV` / `delta_epsilon_EI17_eV`. No user-defined
-  signed-wrapper FunctorMaterial is needed.
+- EI-02 and EI-17: `energy_loss_eV: {"model":"elastic"}` uses the
+  original live `e_energy_eV`, gas temperature, and species molar mass
+  to generate `delta_epsilon_EI02_eV` / `delta_epsilon_EI17_eV` once.
+  It does not require a hand-written loss Functor.
 - EI-415: 12.06; EI-401: 0; EI-407: 0.977;
   EI-2069: 5.02 eV/event lost.
 - EI-417: 17.0 **or** EI-941: 13.62 eV/event lost.

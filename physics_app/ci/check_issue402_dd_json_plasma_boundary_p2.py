@@ -18,6 +18,117 @@ LEGACY_INPUT = (CI / "dd_plasma_boundary_legacy_p2.i").read_text()
 PARSED_MEAN_INPUT = (CI / "dd_plasma_boundary_parsed_mean_p2.i").read_text()
 PHYSICS_AUTO_INPUT = (CI / "dd_plasma_boundary_json_physics_auto_p2.i").read_text()
 LEGACY_DATA = (CI / "json_surface_rate_p2.json").read_text()
+KINETIC_TABLE = (CI / "plasma_closures_rate_a.txt").read_text()
+# Synthetic kinetic-rate construction; actual private S6 tables are not used.
+KINETIC_DATA = copy.deepcopy(DATA)
+KINETIC_DATA["species"].update({
+    "O2": {
+        "elements": {"O": 2}, "charge_number": 0,
+        "molar_mass_kg_mol": 0.032,
+        "initial_vol_mass_fraction": 1.0,
+        "initial_inlet_mass_fraction": 1.0,
+        "mass_fraction_functor": "w_O2"
+    },
+    "O2p": {
+        "elements": {"O": 2}, "charge_number": 1,
+        "molar_mass_kg_mol": 0.032,
+        "initial_vol_mass_fraction": 0.0,
+        "initial_inlet_mass_fraction": 0.0,
+        "mass_fraction_functor": "w_O2p"
+    }
+})
+KINETIC_DATA["equations"] = {"EI-415": "e + O2 -> 2e + O2p"}
+KINETIC_DATA["reactions"] = [{
+    "id": "EI-415", "reactants": {"e": 1, "O2": 1},
+    "products": {"e": 2, "O2p": 1},
+    "table": "plasma_closures_rate_a.txt",
+    "units": "mol/(m^3 s)", "energy_loss_eV": 12.06
+}]
+KINETIC_INPUT = PHYSICS_AUTO_INPUT.replace(
+    "    files = dd_plasma_boundary_json_p2.json\n",
+    "    files = dd_plasma_boundary_json_p2.json\n"
+    "    pressure = 1.333223684\n    temperature = 300\n"
+    "    state_model = ideal_gas\n", 1
+).replace(
+    "    [Transport]\n      [DriftDiffusion]",
+    "    [Transport]\n      [Chemistry]\n      []\n      [DriftDiffusion]", 1
+).replace(
+    "[Executioner]\n",
+    "[FunctorMaterials]\n  [synthetic_live_composition]\n"
+    "    type = ADGenericFunctorMaterial\n"
+    "    prop_names = 'w_O2 w_O2p'\n"
+    "    prop_values = '1 0'\n  []\n[]\n[Executioner]\n", 1
+)
+assert KINETIC_INPUT != PHYSICS_AUTO_INPUT
+assert "target_molar_concentration" not in json.dumps(KINETIC_DATA)
+assert "table_sha256" not in json.dumps(KINETIC_DATA)
+
+def synthetic_s6(variant: str) -> dict:
+    """Exercise eight *real* S6 reaction definitions without private rate bytes."""
+    mechanism = json.loads((
+        CI.parents[1] / "experiments/Issue402_plasma_dsl_g1/chemistry" /
+        f"unified_s6_{variant}.json"
+    ).read_text())
+    data = copy.deepcopy(mechanism)
+    # Retain all eight original S6 electron sheath BC objects and their
+    # canonical names/variable bindings. Only map physical S6 sideset
+    # identifiers to the four public GeneratedMesh sidesets for synthetic P2.
+    original_boundaries = copy.deepcopy(data["boundaries"])
+    assert len(original_boundaries) == 4
+    data["boundaries"] = {
+        synthetic_side: entry
+        for synthetic_side, entry in zip(("left", "bottom", "right", "top"),
+                                         original_boundaries.values())
+    }
+    assert sum(len(entry["bcs"]) for entry in data["boundaries"].values()) == 8
+    assert sum(bc["type"] == "FEMElectronSheathBC"
+               for entry in data["boundaries"].values()
+               for bc in entry["bcs"].values()) == 4
+    assert sum(bc["type"] == "FEMElectronEnergySheathBC"
+               for entry in data["boundaries"].values()
+               for bc in entry["bcs"].values()) == 4
+    # The original S6 JSON uses electron LOOKUP transport. Keep that model
+    # and its reduced coefficient convention, substituting only public
+    # synthetic table bytes. Do not silently test constant transport instead.
+    electron = data["species"]["e"]
+    assert electron["transport_coef"] == "lookup"
+    assert electron["energy_transport_coef"] == "fluid"
+    assert electron["table_units"] == "reduced"
+    electron["table_file"] = "plasma_closures_transport_table.txt"
+    for name, spec in data["species"].items():
+        if name == "e":
+            continue
+        for key in ("transport_coef", "mobility", "diffusivity", "table_file",
+                    "table_units", "bounds_policy", "pressure", "gas_temperature"):
+            spec.pop(key, None)
+        spec["initial_vol_mass_fraction"] = 1.0 if name == "O2" else 0.0
+        spec["initial_inlet_mass_fraction"] = 1.0 if name == "O2" else 0.0
+        spec["mass_fraction_functor"] = "w_" + name
+    for reaction in data["reactions"]:
+        if "table" in reaction:
+            reaction["table"] = "plasma_closures_rate_a.txt"
+        assert "table_sha256" not in reaction
+        assert "target_molar_concentration" not in reaction
+    assert sum("table" in r for r in data["reactions"]) == 7
+    assert sum(r.get("rate", {}).get("model") == "power_law"
+               for r in data["reactions"]) == 1
+    assert len(data["reactions"]) == 8
+    return data
+
+
+S6_SYNTHETIC_INPUT = KINETIC_INPUT.replace(
+    "  [potential]\n    type = MooseVariable\n  []",
+    "  [potential]\n    type = MooseVariable\n  []\n"
+    "  [log_Op]\n    type = MooseVariableFVReal\n  []", 1
+).replace(
+    "prop_names = 'w_O2 w_O2p'",
+    "prop_names = 'w_O2 w_O w_O2p w_Om w_Op w_O2a'", 1
+).replace(
+    "prop_values = '1 0'",
+    "prop_values = '1 0 0 0 0 0'", 1
+)
+assert S6_SYNTHETIC_INPUT != KINETIC_INPUT
+assert "log_Op" in S6_SYNTHETIC_INPUT
 
 
 def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool,
@@ -29,6 +140,10 @@ def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool
         json.dumps(data) + "\n", encoding="utf-8"
     )
     (work / "json_surface_rate_p2.json").write_text(LEGACY_DATA, encoding="utf-8")
+    (work / "plasma_closures_rate_a.txt").write_text(KINETIC_TABLE, encoding="utf-8")
+    (work / "plasma_closures_transport_table.txt").write_text(
+        (CI / "plasma_closures_transport_table.txt").read_text(encoding="utf-8"),
+        encoding="utf-8")
     result = subprocess.run([str(exe), "--check-input", "-i", "input.i"],
                             cwd=work, text=True, capture_output=True, check=False)
     combined = result.stdout + result.stderr
@@ -49,9 +164,60 @@ def main(exe: Path):
     assert exe.is_file()
     with TemporaryDirectory(prefix="issue402_bc_exact_") as folder:
         root = Path(folder)
-        check(exe, root, "JSON_PRESENT", JSON_INPUT, DATA, True)
+        # Root JSON parses/validates declarations but does not instantiate
+        # DriftDiffusion BCs without the corresponding equation Physics.
+        check(exe, root, "ROOT_ONLY_JSON_BC_REJECTED", JSON_INPUT, DATA,
+              False, "JSON FEMElectronSheathBC requires")
+        check(exe, root, "JSON_PRESENT", PHYSICS_AUTO_INPUT, DATA, True)
         check(exe, root, "PHYSICS_AUTO_LOG_E_ENERGY_AND_BCS",
               PHYSICS_AUTO_INPUT, DATA, True)
+        wrong_particle_state = copy.deepcopy(DATA)
+        wrong_particle_state["boundaries"]["left"]["bcs"]["electron_wafer"][
+            "variable"] = "log_e_energy"
+        check(exe, root, "ELECTRON_SHEATH_WRONG_SOLVER_STATE",
+              PHYSICS_AUTO_INPUT, wrong_particle_state, False,
+              "JSON FEMElectronSheathBC must target canonical log_e")
+        wrong_energy_state = copy.deepcopy(DATA)
+        wrong_energy_state["boundaries"]["left"]["bcs"]["electron_energy_wafer"][
+            "variable"] = "log_e"
+        check(exe, root, "ENERGY_SHEATH_WRONG_SOLVER_STATE",
+              PHYSICS_AUTO_INPUT, wrong_energy_state, False,
+              "JSON FEMElectronEnergySheathBC must target canonical log_e_energy")
+        # One Chemistry action creates the EI strict-table progress R_EI415,
+        # both electron RHS FunctorKernels, and all eight? Here two BC
+        # groups exercise canonical e_wall_number_flux and energy coupling.
+        check(exe, root, "NATIVE_EI415_TABLE_BOTH_FEM_EQUATIONS",
+              KINETIC_INPUT, KINETIC_DATA, True)
+        for variant in ("417", "941"):
+            check(exe, root, "S6_" + variant + "_EIGHT_REACTION_FEM_CONSTRUCTION",
+                  S6_SYNTHETIC_INPUT, synthetic_s6(variant), True)
+        wrong_table = copy.deepcopy(KINETIC_DATA)
+        wrong_table["reactions"][0]["table"] = "missing_ei415.txt"
+        check(exe, root, "EI_RATE_MISSING_TABLE_FAIL_CLOSED",
+              KINETIC_INPUT, wrong_table, False, "table cannot be opened")
+        for forbidden in ("target_molar_concentration", "table_sha256"):
+            invalid = copy.deepcopy(KINETIC_DATA)
+            invalid["reactions"][0][forbidden] = "not-an-input-option"
+            check(exe, root, "EI_FORBIDDEN_" + forbidden.upper(),
+                  KINETIC_INPUT, invalid, False, "table metadata/target")
+        dual_owner = copy.deepcopy(KINETIC_DATA)
+        dual_owner["reactions"][0]["rate"] = {
+            "model": "constant", "A": 1.0, "basis": "molar"
+        }
+        check(exe, root, "EI_DUPLICATE_RATE_AND_TABLE_FAIL_CLOSED",
+              KINETIC_INPUT, dual_owner, False,
+              "table requires an EI volume reaction without rate")
+        # A JSON electron energy BC cannot be silently ignored when its
+        # DriftDiffusion Energy Physics is absent.
+        energy_missing = PHYSICS_AUTO_INPUT.replace(
+            "        [Energy]\n          fem_species = e\n          fem_potential = potential\n          initial_molar_energy_density_eV = 8.3e-9\n        []\n",
+            "", 1
+        )
+        assert energy_missing != PHYSICS_AUTO_INPUT
+        check(exe, root, "ENERGY_BC_WITHOUT_DD_ENERGY_REJECTED",
+              energy_missing, DATA, False,
+              "JSON FEMElectronEnergySheathBC requires")
+
         # JSON owns continuity initial number density for FEM AND FVM.
         # The .i selectors contain only species IDs (no positional values).
         assert "fem_species = e" in PHYSICS_AUTO_INPUT
@@ -75,6 +241,24 @@ def main(exe: Path):
         assert fvm_input != PHYSICS_AUTO_INPUT
         check(exe, root, "JSON_FEM_FVM_INITIAL_NUMBER_DENSITY",
               fvm_input, fvm_data, True)
+
+        # Electrons use FEM for both continuity and energy. Ion/non-electron
+        # FVM paths above remain valid; these negative controls must fail.
+        electron_fvm_continuity = PHYSICS_AUTO_INPUT.replace(
+            "fem_species = e\n          fem_potential = potential",
+            "fvm_species = e\n          fem_potential = potential", 1
+        )
+        assert electron_fvm_continuity != PHYSICS_AUTO_INPUT
+        check(exe, root, "ELECTRON_FVM_CONTINUITY_REJECTED",
+              electron_fvm_continuity, DATA, False, "Electron continuity is FEM-only")
+
+        electron_fvm_energy = PHYSICS_AUTO_INPUT.replace(
+            "        [Energy]\n          fem_species = e\n",
+            "        [Energy]\n          fem_species = e\n          fvm_species = e\n", 1
+        )
+        assert electron_fvm_energy != PHYSICS_AUTO_INPUT
+        check(exe, root, "ELECTRON_FVM_ENERGY_OPTION_REJECTED",
+              electron_fvm_energy, DATA, False)
 
         fvm_missing = copy.deepcopy(fvm_data)
         del fvm_missing["species"]["O2p"]["initial_number_density"]
@@ -179,8 +363,12 @@ def main(exe: Path):
               PHYSICS_AUTO_INPUT, non_e_energy, False,
               "energy_transport_coef supports only species.e = fluid")
 
+        # A standalone manually provided mean-energy Functor is valid only
+        # when no JSON sheath BCs ask a missing DriftDiffusion owner to build them.
+        no_registry = copy.deepcopy(DATA)
+        no_registry.pop("boundaries")
         check(exe, root, "PARSED_MEAN_FUNCTOR_CONSTRUCTION",
-              PARSED_MEAN_INPUT, DATA, True)
+              PARSED_MEAN_INPUT, no_registry, True)
         # One original BC block can own several sidesets. The JSON path
         # must not split it into multiple independent operators.
         multiside = copy.deepcopy(DATA)
@@ -188,7 +376,7 @@ def main(exe: Path):
             multiside["boundaries"].pop("left")
         )
         multiside["boundaries"].pop("bottom")
-        check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", JSON_INPUT, multiside, True)
+        check(exe, root, "MULTI_SIDESET_GROUP_UNSPLIT", PHYSICS_AUTO_INPUT, multiside, True)
         check(exe, root, "LEGACY_EXPLICIT_BCS", LEGACY_INPUT, DATA, True)
         # Old Material registrations, normalized state and old Functor
         # output names are deliberately retired, not compatibility aliases.
@@ -213,8 +401,6 @@ def main(exe: Path):
         # A missing Functor may remain unresolved at --check-input because
         # the residual is lazily evaluated. P0 proves the old output is not
         # registered; no unverified P2 failure is asserted for this case.
-        no_registry = copy.deepcopy(DATA)
-        no_registry.pop("boundaries")
         check(exe, root, "JSON_ABSENT_NO_GENERATED_BC", JSON_INPUT, no_registry, True)
 
         def mutate(label, fn):

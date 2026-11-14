@@ -19,6 +19,7 @@ MEAN_H = (APP / "include/materials/ElectronEnergyMaterial.h").read_text()
 FLUX = (APP / "src/materials/ESWallFluxMaterial.C").read_text()
 TRANSPORT = (APP / "src/materials/DDTransportMaterial.C").read_text()
 ENERGY_ACTION = (APP / "src/physics/plasma/DDEnergyEq.C").read_text()
+CONTINUITY_ACTION = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
 
 
 def _legacy_bc_definitions(text):
@@ -55,8 +56,16 @@ def test_boundaries_json_is_literal_one_to_one_bc_relocation():
 
 
 def test_exact_json_presence_owns_bc_creation():
-    assert 'if (_current_task == "add_bc" && _data.hasBoundaries())' in CHEM
-    assert "_problem->addBoundaryCondition(bc.type, name, params);" in CHEM
+    assert 'if (_current_task == "check_integrity" && _data.hasBoundaries())' in CHEM
+    assert "_problem->addBoundaryCondition(" not in CHEM
+    assert '"JSON FEMElectronSheathBC requires [Transport]/[DriftDiffusion]/[Continuity]."' in CHEM
+    assert '"JSON FEMElectronEnergySheathBC requires [Transport]/[DriftDiffusion]/[Energy]."' in CHEM
+    assert 'getProblem().addBoundaryCondition(bc.type, bc_name, params);' in CONTINUITY_ACTION
+    assert 'getProblem().addBoundaryCondition(bc.type, bc_name, params);' in ENERGY_ACTION
+    assert 'registerMooseAction("PhysicsApp", DDContinuityEq, "add_bc");' in CONTINUITY_ACTION
+    assert 'registerMooseAction("PhysicsApp", DDEnergyEq, "add_bc");' in ENERGY_ACTION
+    assert 'params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;' in CONTINUITY_ACTION
+    assert 'params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;' in ENERGY_ACTION
     assert "PlasmaDriftDiffusionBoundaryAction" not in SYN
     assert "PlasmaDriftDiffusionBoundaryAction" not in CHEM
     assert '"plasma_boundary"' not in CHEM
@@ -113,12 +122,20 @@ def test_json_plus_minimal_i_owns_complete_fem_electron_equations_and_sheath():
     for kernel in ("FEMLogMolarTimeDerivative", "FEMLogMolarDriftDiffusion",
                    "FEMLogMolarElectronJouleHeating"):
         assert kernel in ENERGY_ACTION
-    for name in ("ElectronEnergyMaterial", "ESWallFluxMaterial",
-                 "ADParsedFunctorMaterial"):
-        assert name in ENERGY_ACTION
-    assert 'params.set<MooseFunctorName>("electron_density") = "n_e_physical"' not in ENERGY_ACTION
-    assert 'wall.set<MooseFunctorName>("electron_density") = "n_e_physical"' in ENERGY_ACTION
-    assert 'density.set<std::string>("expression") = "6.02214076e23*exp(c)"' in ENERGY_ACTION
+    assert "ElectronEnergyMaterial" in ENERGY_ACTION
+    # Comments may refer to the single wall-flux provider: only executable
+    # construction must be absent from Energy. Continuity is its sole owner.
+    assert 'const std::string wall_type = "ESWallFluxMaterial";' not in ENERGY_ACTION
+    assert 'getProblem().addFunctorMaterial(wall_type' not in ENERGY_ACTION
+    assert '"e_energy_eV"' in ENERGY_ACTION or '"e_energy_eV"' in CONTINUITY_ACTION
+    assert 'const std::string wall_type = "ESWallFluxMaterial";' in CONTINUITY_ACTION
+    assert 'getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall);' in CONTINUITY_ACTION
+    assert 'wall.set<MooseFunctorName>("electron_density") = "n_e_physical"' in CONTINUITY_ACTION
+    assert 'wall.set<MooseFunctorName>("mean_energy") = "e_energy_eV"' in CONTINUITY_ACTION
+    assert 'wall.set<MooseFunctorName>("potential") = getParam<VariableName>("fem_potential");' in CONTINUITY_ACTION
+    assert 'density.set<std::string>("expression") = "6.02214076e23*exp(c)"' in CONTINUITY_ACTION
+    assert 'std::find(_fem_species.begin(), _fem_species.end(), "e")' in CONTINUITY_ACTION
+    assert 'registerMooseAction("PhysicsApp", DDContinuityEq, "add_functor_material");' in CONTINUITY_ACTION
     assert 'registerMooseAction("PhysicsApp", DDEnergyEq, "add_functor_material");' in ENERGY_ACTION
 
 

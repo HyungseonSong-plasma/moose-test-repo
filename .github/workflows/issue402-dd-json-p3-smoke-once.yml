@@ -1,10 +1,10 @@
 # Bounded one-shot P3 JSON sheath-only transient; no RF/S6 acceptance.
-# Triggered only by an explicit edit of this branch-local workflow path.
+# Triggered only when this workflow file changes on main.
 name: Issue402 DD JSON Native P3 sheath-only smoke once
 run-name: Issue402 DD JSON P3 sheath only @ ${{ github.sha }}
 on:
   push:
-    branches: [issue-402-dd-plasma-boundary-action]
+    branches: [main]
     paths: [.github/workflows/issue402-dd-json-p3-smoke-once.yml]
 permissions:
   contents: read

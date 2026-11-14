@@ -1,4 +1,4 @@
-# Bounded branch-specific exact-head Native P0/P1/P2 only.
+# Bounded, self-path-triggered Native P0/P1/P2 on main only.
 # 2026-11-14 species-local transport_coef/mobility/diffusivity/energy_transport_coef and strict JSON density.
 # P0 remains repository-local schema/wiring: unrelated full-S6 runner tests require numpy/scipy and are separate gates.
 # No new sheath flux formula or executable class; P3 and scientific parity remain SCIENCE_HOLD.
@@ -6,7 +6,7 @@ name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
 on:
   push:
-    branches: [issue-402-dd-plasma-boundary-action]
+    branches: [main]
     paths: [.github/workflows/issue402-dd-json-boundary-p0-p2-once.yml]
 permissions:
   contents: read

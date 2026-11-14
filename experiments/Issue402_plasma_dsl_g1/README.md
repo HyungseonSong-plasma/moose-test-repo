@@ -119,9 +119,15 @@ coefficient, boundary physics or numerical parameter. In particular, the chemist
 action verifies the reaction-to-progress name mapping, not the existence,
 units or ownership of the underlying rate functors.
 
-To exercise all five actions with a small simulation, supply
-`baseline.i` and `valid_all_physics.i`. The latter is intentionally a
-minimal demonstration, **not a physical multi-equation plasma model**.
+The smoke test now separates **two incompatible ownership contracts**.
+`baseline.i` plus `legacy_noop_physics.i` retains the frozen Native
+diffusion equations and compares Exodus outputs without generating extra
+plasma operators. `valid_all_physics.i` runs independently as a
+**construction-only** P2 input: JSON owns the electron continuity variable,
+Chemistry provides two synthetic progress channels, Energy owns its log
+energy state, Poisson creates the potential, and Maxwell validates its
+remaining externally supplied RF field. It is **not** a physical S6 run and
+must never be overlaid on `baseline.i`.
 
 The build uses the fixed image
 `ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008`

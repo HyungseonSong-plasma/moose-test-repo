@@ -2,6 +2,7 @@
 #include "Chemistry.h"
 #include "Physics.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <map>
@@ -42,11 +43,11 @@ DDContinuityEq::validParams()
   params.addClassDescription(
       "Bind plasma continuity species to deterministic internal state and kernel names. "
       "Supported FEM continuity generation creates the conservative log-molar time " 
-      "derivative and drift-diffusion Kernels; FV transport stays Native.");
+      "derivative and drift-diffusion Kernels; non-electron FV transport stays Native.");
   params.addParam<std::vector<std::string>>(
       "fem_species", {}, "FEM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<std::vector<std::string>>(
-      "fvm_species", {}, "FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
+      "fvm_species", {}, "Non-electron FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
   return params;
@@ -59,6 +60,11 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   // Chemistry JSON and must not be duplicated as positional .i numbers.
   _fem_species = getParam<std::vector<std::string>>("fem_species");
   _fvm_species = getParam<std::vector<std::string>>("fvm_species");
+  // Electron continuity is FEM-only. Preserve FVM variables, ICs and
+  // transport coefficients for ions and other non-electron species.
+  if (std::find(_fvm_species.begin(), _fvm_species.end(), "e") != _fvm_species.end())
+    paramError("fvm_species",
+               "Electron continuity is FEM-only; select e through fem_species.");
   const auto & fem = _fem_species;
   const auto & fvm = _fvm_species;
   const auto variables = resolvedContinuityVariables(fem, fvm);
@@ -273,6 +279,35 @@ DDContinuityEq::addFEKernels()
 }
 
 void
+DDContinuityEq::addFEBCs()
+{
+  // Only DriftDiffusion Continuity may create electron particle sheath BCs.
+  // PlasmasAction has already validated the JSON BC type and physical sidesets.
+  for (const auto & [group, boundary] : chemistryData().boundaries())
+    for (const auto & [bc_name, bc] : boundary.bcs)
+    {
+      (void)group;
+      if (bc.type != "FEMElectronSheathBC")
+        continue;
+      if (!isParamValid("fem_potential") ||
+          std::find(_fem_species.begin(), _fem_species.end(), "e") == _fem_species.end())
+        paramError("fem_species",
+                   "JSON FEMElectronSheathBC requires FEM electron continuity and fem_potential.");
+      if (bc.variable != "log_e")
+        paramError("fem_species", "JSON FEMElectronSheathBC must target canonical log_e.");
+
+      auto params = getFactory().getValidParams(bc.type);
+      params.set<NonlinearVariableName>("variable") = bc.variable;
+      std::vector<BoundaryName> sidesets;
+      for (const auto & side : boundary.mesh_boundaries)
+        sidesets.emplace_back(side);
+      params.set<std::vector<BoundaryName>>("boundary") = sidesets;
+      params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
+      getProblem().addBoundaryCondition(bc.type, bc_name, params);
+    }
+}
+
+void
 DDContinuityEq::addFunctorMaterials()
 {
   // Material ownership follows exactly the FEM and FVM species listed by
@@ -325,6 +360,55 @@ DDContinuityEq::addFunctorMaterials()
     assignBlocks(params, _blocks);
     getProblem().addFunctorMaterial(type, name() + "_" + id + "_transport_coefficients", params);
   }
+
+  // JSON-declared electron BCs need a unique drift-diffusion wall flux owner.
+  // Do not instantiate it in ions-only or partial input-binding cases.
+  if (!isParamValid("fem_potential") ||
+      std::find(_fem_species.begin(), _fem_species.end(), "e") == _fem_species.end())
+    return;
+
+  // DriftDiffusion owns electron sheath flux construction when electron FEM
+  // continuity is active. Energy owns the e_energy_eV input only; the
+  // physical flux law remains exclusively inside ESWallFluxMaterial.C.
+  // The FEM state log_e stores ln(c_e [mol/m^3]). Electron-impact chemistry
+  // consumes n_e_physical with or without a sheath BC.
+  const std::string density_type = "ADParsedFunctorMaterial";
+  auto density = getFactory().getValidParams(density_type);
+  density.set<std::string>("property_name") = "n_e_physical";
+  density.set<std::vector<std::string>>("functor_names") = {"log_e"};
+  density.set<std::vector<std::string>>("functor_symbols") = {"c"};
+  density.set<std::string>("expression") = "6.02214076e23*exp(c)";
+  assignBlocks(density, _blocks);
+  getProblem().addFunctorMaterial(density_type, name() + "_number_density", density);
+
+  bool sheath_wall = false;
+  for (const auto & [group, boundary] : mechanism.boundaries())
+    for (const auto & [bc_name, bc] : boundary.bcs)
+    {
+      (void)group;
+      (void)bc_name;
+      if (bc.type != "FEMElectronSheathBC" &&
+          bc.type != "FEMElectronEnergySheathBC")
+        continue;
+      if (bc.wall_number_flux != "e_wall_number_flux" ||
+          (bc.type == "FEMElectronEnergySheathBC" && bc.mean_energy != "e_energy_eV"))
+        paramError("fem_potential",
+                   "Automatic JSON electron sheath BCs require canonical "
+                   "e_wall_number_flux and e_energy_eV providers.");
+      sheath_wall = true;
+    }
+  if (!sheath_wall)
+    return;
+
+  const std::string wall_type = "ESWallFluxMaterial";
+  auto wall = getFactory().getValidParams(wall_type);
+  wall.set<std::string>("species_id") = "e";
+  wall.set<MooseFunctorName>("electron_density") = "n_e_physical";
+  wall.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
+  wall.set<MooseFunctorName>("potential") = getParam<VariableName>("fem_potential");
+  wall.set<bool>("use_element_gradient_for_potential") = true;
+  assignBlocks(wall, _blocks);
+  getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall);
 }
 
 } // namespace Plasma
@@ -335,4 +419,5 @@ registerMooseAction("PhysicsApp", DDContinuityEq, "add_variables_physics");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_ics_physics");
 registerMooseAction("PhysicsApp", DDContinuityEq, "check_integrity");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_kernel");
+registerMooseAction("PhysicsApp", DDContinuityEq, "add_bc");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_functor_material");

@@ -2,7 +2,7 @@ name: Issue402 Canonical JSON Heavy Surface Rate P0 P1 P2
 # Final source-bound rerun including all-species surface-flux and fail-closed mass validation.
 on:
   push:
-    branches: [issue-402-json-rate-unification]
+    branches: [main]
     paths: [.github/workflows/issue402-json-rate-native-once.yml]
 permissions:
   contents: read

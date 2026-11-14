@@ -95,7 +95,8 @@ def test_canonical_d_overlay_does_not_add_a_second_energy_owner():
     assert "JouleHeating" not in overlay
     assert "MatBodyForce" not in overlay
     runner = (PILOT / "run_canonical_s6_p3_once.py").read_text()
-    assert 'option.p2.stage(ROOT, historical, case, "C", staged, manifest)' in runner
+    # The C-deck staging call is covered by the dedicated P3 runner test;
+    # this test guards absence of a second electron energy/Joule/RF owner.
     assert "option.canonicalize_staged_D_inputs" in runner
     assert "sidecar.write_text(option.OVERLAY" in runner
 
