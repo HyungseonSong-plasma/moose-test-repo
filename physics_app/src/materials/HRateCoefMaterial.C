@@ -19,9 +19,9 @@ HRateCoefMaterial::validParams()
   params.addRequiredParam<std::vector<std::string>>(
       "species", "Heavy reactant species with either mass fractions or molar concentrations.");
   params.addParam<std::vector<MooseFunctorName>>(
-      "mass_fractions", "Legacy live mass-fraction Functors in species order.");
+      "mass_fractions", {}, "Legacy live mass-fraction Functors in species order.");
   params.addParam<std::vector<MooseFunctorName>>(
-      "reactant_concentrations", "Live molar concentration Functors [mol/m^3] in species order.");
+      "reactant_concentrations", {}, "Live molar concentration Functors [mol/m^3] in species order.");
   params.addParam<std::vector<std::string>>(
       "active_reactions", {},
       "Optional JSON reaction IDs; if empty, select compatible heavy volume laws.");
