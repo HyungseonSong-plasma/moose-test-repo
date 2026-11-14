@@ -76,6 +76,24 @@ def main(exe: Path):
         check(exe, root, "JSON_FEM_FVM_INITIAL_NUMBER_DENSITY",
               fvm_input, fvm_data, True)
 
+        # Electrons use FEM for both continuity and energy. Ion/non-electron
+        # FVM paths above remain valid; these negative controls must fail.
+        electron_fvm_continuity = PHYSICS_AUTO_INPUT.replace(
+            "fem_species = e\n          fem_potential = potential",
+            "fvm_species = e\n          fem_potential = potential", 1
+        )
+        assert electron_fvm_continuity != PHYSICS_AUTO_INPUT
+        check(exe, root, "ELECTRON_FVM_CONTINUITY_REJECTED",
+              electron_fvm_continuity, DATA, False, "Electron continuity is FEM-only")
+
+        electron_fvm_energy = PHYSICS_AUTO_INPUT.replace(
+            "        [Energy]\n          fem_species = e\n",
+            "        [Energy]\n          fem_species = e\n          fvm_species = e\n", 1
+        )
+        assert electron_fvm_energy != PHYSICS_AUTO_INPUT
+        check(exe, root, "ELECTRON_FVM_ENERGY_OPTION_REJECTED",
+              electron_fvm_energy, DATA, False)
+
         fvm_missing = copy.deepcopy(fvm_data)
         del fvm_missing["species"]["O2p"]["initial_number_density"]
         check(exe, root, "JSON_FVM_INITIAL_MISSING_WITHOUT_EXTERNAL_VARIABLE",
