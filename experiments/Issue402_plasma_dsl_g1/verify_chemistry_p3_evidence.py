@@ -51,9 +51,30 @@ def verify(results: Path, expected_head: str, case: str, *, hybrid_json: bool = 
         hybrid = status.get("hybrid_json_ownership_cutover", {})
         if hybrid.get("removed_generated_owner_count") != 10 or (
             hybrid.get("native_owner_preservation") !=
-            "ALL_NON_GENERATED_PHYSICS_INPUTS_UNCHANGED"
+            "NATIVE_EQUATIONS_UNCHANGED_WITH_SPECIES_CANONICAL_COEFFICIENT_BINDINGS"
         ):
             raise ValueError("P3_EVIDENCE_HYBRID_NATIVE_OWNER_OR_SOURCE_MISMATCH")
+        if (hybrid.get("integrated_mechanism_json") != f"unified_s6_{case}.json"
+            or hybrid.get("integrated_species_count") != 7
+            or hybrid.get("integrated_reaction_count") != 8
+            or hybrid.get("hybrid_json_sha256") !=
+                hybrid.get("integrated_json_source_sha256")):
+            raise ValueError("P3_EVIDENCE_INTEGRATED_JSON_IDENTITY_MISMATCH")
+        canonical = hybrid.get("native_species_coefficient_binding_migration", {})
+        expected = {
+            "ion_mobility": "O2p_mobility",
+            "ion_diffusion": "O2p_diffusivity",
+            "negative_ion_mobility": "Om_mobility",
+            "negative_ion_diffusion": "Om_diffusivity",
+            "atomic_positive_ion_mobility": "Op_mobility",
+            "atomic_positive_ion_diffusion": "Op_diffusivity",
+        }
+        if (canonical.get("old_to_species_names") != expected
+            or canonical.get("constant_values_unchanged") is not True
+            or canonical.get("physics_equations_unchanged") is not True
+            or any(canonical.get("substitution_counts", {}).get(name, 0) < 2
+                   for name in expected)):
+            raise ValueError("P3_EVIDENCE_NATIVE_ION_COEFFICIENT_MIGRATION_MISMATCH")
         if hybrid.get("overlay_sha256") != status.get("sidecar_sha256"):
             raise ValueError("P3_EVIDENCE_HYBRID_JSON_OVERLAY_SHA_MISMATCH")
         if hybrid.get("rebound_native_sheath_bc_count") != 8:
