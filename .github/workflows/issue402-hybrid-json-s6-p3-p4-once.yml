@@ -74,6 +74,15 @@ jobs:
           grep -Fq 'HYBRID_ROOT_PRESSURE_OUTLET_BC_IDENTITY_CHANGED' \
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
           test -s "control/experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_${{ matrix.case }}.json"
+          python3 - "control/experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_${{ matrix.case }}.json" <<'PY'
+          import json, sys
+          v=json.load(open(sys.argv[1]))
+          assert len(v["species"])==7 and len(v["reactions"])==8
+          assert v["species"]["e"]["pressure"]=="pressure"
+          assert v["species"]["e"]["gas_temperature"]=="temperature"
+          assert all(v["species"][name]["mobility"]==name+"_mobility" for name in ("O2p","Om","Op"))
+          assert all(v["species"][name]["diffusivity"]==name+"_diffusivity" for name in ("O2p","Om","Op"))
+          PY
           python3 -m py_compile \
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py \
             control/experiments/Issue402_plasma_dsl_g1/run_canonical_s6_p3_once.py \
