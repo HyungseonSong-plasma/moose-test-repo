@@ -19,6 +19,7 @@ MEAN_H = (APP / "include/materials/ElectronEnergyMaterial.h").read_text()
 FLUX = (APP / "src/materials/ESWallFluxMaterial.C").read_text()
 TRANSPORT = (APP / "src/materials/DDTransportMaterial.C").read_text()
 ENERGY_ACTION = (APP / "src/physics/plasma/DDEnergyEq.C").read_text()
+CONTINUITY_ACTION = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
 
 
 def _legacy_bc_definitions(text):
@@ -113,12 +114,17 @@ def test_json_plus_minimal_i_owns_complete_fem_electron_equations_and_sheath():
     for kernel in ("FEMLogMolarTimeDerivative", "FEMLogMolarDriftDiffusion",
                    "FEMLogMolarElectronJouleHeating"):
         assert kernel in ENERGY_ACTION
-    for name in ("ElectronEnergyMaterial", "ESWallFluxMaterial",
-                 "ADParsedFunctorMaterial"):
-        assert name in ENERGY_ACTION
-    assert 'params.set<MooseFunctorName>("electron_density") = "n_e_physical"' not in ENERGY_ACTION
-    assert 'wall.set<MooseFunctorName>("electron_density") = "n_e_physical"' in ENERGY_ACTION
-    assert 'density.set<std::string>("expression") = "6.02214076e23*exp(c)"' in ENERGY_ACTION
+    assert "ElectronEnergyMaterial" in ENERGY_ACTION
+    assert "ESWallFluxMaterial" not in ENERGY_ACTION
+    assert '"e_energy_eV"' in ENERGY_ACTION or '"e_energy_eV"' in CONTINUITY_ACTION
+    assert 'const std::string wall_type = "ESWallFluxMaterial";' in CONTINUITY_ACTION
+    assert 'getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall);' in CONTINUITY_ACTION
+    assert 'wall.set<MooseFunctorName>("electron_density") = "n_e_physical"' in CONTINUITY_ACTION
+    assert 'wall.set<MooseFunctorName>("mean_energy") = "e_energy_eV"' in CONTINUITY_ACTION
+    assert 'wall.set<MooseFunctorName>("potential") = getParam<VariableName>("fem_potential");' in CONTINUITY_ACTION
+    assert 'density.set<std::string>("expression") = "6.02214076e23*exp(c)"' in CONTINUITY_ACTION
+    assert 'std::find(_fem_species.begin(), _fem_species.end(), "e")' in CONTINUITY_ACTION
+    assert 'registerMooseAction("PhysicsApp", DDContinuityEq, "add_functor_material");' in CONTINUITY_ACTION
     assert 'registerMooseAction("PhysicsApp", DDEnergyEq, "add_functor_material");' in ENERGY_ACTION
 
 
