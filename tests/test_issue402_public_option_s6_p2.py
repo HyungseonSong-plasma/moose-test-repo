@@ -240,7 +240,12 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     assert "preflight_public_option_s6.sh" in workflow
     assert "run_public_option_s6_p2.sh" in workflow
     assert "P0 - Public S6 environment and scratch-permission preflight" in workflow
-    assert "P1 - Build PhysicsApp and verify generated and native solver operators" in workflow
+    # Full S6 remains a distinct legacy gate, not an acceptance requirement
+    # for the narrowly scoped electron FEM PR.
+    assert "P1 - Build PhysicsApp and verify historical Native solver operators" in workflow
+    assert "P1 - Build exact-head electron FEM application" in workflow
+    assert "P2 - JSON and MOOSE input generate both electron FEM equations" in workflow
+    assert "if: github.head_ref != 'issue-402-electron-fem-only-20261114'" in workflow
     assert "P2 - Public S6-417 and S6-941 four-way Native input checks" in workflow
     assert "run_public_option_s6_p2.sh" not in native  # Independent P2 CI step
     assert "native_p1_identity.json" in native
