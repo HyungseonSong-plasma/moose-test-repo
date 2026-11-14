@@ -12,7 +12,7 @@
 [FunctorMaterials]
   [synthetic_ion_coefficients]
     type = ADGenericFunctorMaterial
-    prop_names = 'O2p_mobility O2p_diffusivity'
+    prop_names = 'upstream_ion_mobility upstream_ion_diffusivity'
     prop_values = '0.2 0.05'
   []
 []
