@@ -5,14 +5,18 @@
         "O": 2
       },
       "charge_number": 0,
-      "molar_mass_kg_mol": 0.032
+      "molar_mass_kg_mol": 0.032,
+      "initial_vol_mass_fraction": 0.9,
+      "initial_inlet_mass_fraction": 1
     },
     "O": {
       "elements": {
         "O": 1
       },
       "charge_number": 0,
-      "molar_mass_kg_mol": 0.016
+      "molar_mass_kg_mol": 0.016,
+      "initial_vol_mass_fraction": 0.1,
+      "initial_inlet_mass_fraction": 0
     }
   },
   "equations": {
@@ -37,15 +41,5 @@
         "sticking": 0.25
       }
     }
-  ],
-  "gas_state": {
-    "species": [
-      "O2",
-      "O"
-    ],
-    "mass_fractions": [
-      "Y_O2",
-      "Y_O"
-    ]
-  }
+  ]
 }

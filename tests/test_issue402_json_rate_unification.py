@@ -151,7 +151,11 @@ def test_surface_json_keeps_wall_mass_flux_separate_from_volume_sources():
     assert "model = ideal_gas" in fixture
     assert "temperature = T" in fixture
     assert "density = rho_g" in fixture
-    assert data["gas_state"] == {"species": ["O2", "O"], "mass_fractions": ["Y_O2", "Y_O"]}
+    assert "gas_state" not in data
+    assert data["species"]["O2"]["initial_vol_mass_fraction"] == 0.9
+    assert data["species"]["O2"]["initial_inlet_mass_fraction"] == 1.0
+    assert data["species"]["O"]["initial_vol_mass_fraction"] == 0.1
+    assert data["species"]["O"]["initial_inlet_mass_fraction"] == 0.0
     assert "mass_fractions = 'Y_O2'" in fixture
     assert "surface_mass_flux_O" in fixture
     assert "_chemistry.speciesRecords()" in material

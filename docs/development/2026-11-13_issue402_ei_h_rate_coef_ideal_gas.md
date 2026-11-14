@@ -24,16 +24,39 @@ Status: DRAFT / P0–P2 verification only; **SCIENCE_HOLD** (no P3 scientific-pa
 
 `[Plasmas]` generates existing `ADParsedFunctorMaterial` providers for `p`, `T`, `rho_g`, `n_g`, `M_mix`. No `[GasState]` block, separate `GasStateMaterial`, or new MOOSE factory registration is needed. Without both root values, old external state Functors remain untouched (backward-compatible opt-in). When root values are set, JSON DD/Navier–Stokes transport actions use the root `p` and `T` outputs.
 
-For `rho_g`, the mechanism must identify the complete heavy-mixture mass-fraction Functors. Define once in the Chemistry JSON:
+Initial volume and inlet compositions are declared on each heavy species in the Chemistry JSON, not in a top-level `gas_state` list:
 
 ```json
-"gas_state": {
-  "species": ["O2", "O"],
-  "mass_fractions": ["Y_O2", "Y_O"]
+"species": {
+  "O2": {
+    "elements": {"O": 2}, "charge_number": 0,
+    "molar_mass_kg_mol": 0.032,
+    "initial_vol_mass_fraction": 0.9,
+    "initial_inlet_mass_fraction": 1.0
+  },
+  "O": {
+    "elements": {"O": 1}, "charge_number": 0,
+    "molar_mass_kg_mol": 0.016,
+    "initial_vol_mass_fraction": 0.1,
+    "initial_inlet_mass_fraction": 0.0
+  }
 }
 ```
 
-The JSON `species` entries must include matching positive `molar_mass_kg_mol`. A configured Navier–Stokes species/mass_fractions pair is an alternative source of the composition binding. Unknown, electron, or massless species are rejected. Conflicting gas_state declarations across files are rejected.
+The root Action requires BOTH initial values and a positive molar mass for every
+heavy species whenever the ideal-gas state is enabled. The volume and inlet
+fractions each independently sum to one. A duplicate species record across
+different JSON mechanism files must not contradict its initial or inlet data.
+
+Generated `Y_<species>_initial_vol`, `Y_<species>_inlet`, and separate `rho_g_initial`/`rho_g_inlet` and `M_mix_initial`/`M_mix_inlet` are constant
+Functor input DATA. They are **not** implicit solver initial/boundary operators:
+only active solver and boundary configurations know which variables and inlet
+boundaries exist. If no Navier–Stokes live composition is configured, the root
+Action also generates fixed `Y_<species>` from initial volume values. With
+Navier–Stokes transport active, `rho_g` uses live mass-fraction Functors
+already configured in `transport_coefficients.navier_stokes` (and verifies the
+complete heavy-species set). This conditional distinction prevents a stored
+initial fraction from silently replacing an evolving composition.
 
 ```text
 Y_i = rho_i / rho_mix                    # dimensionless mass fraction, sum(Y_i) = 1
@@ -42,7 +65,7 @@ rho_g = p / (R * T * sum(Y_i / M_i))     # kg/m^3
 n_g = p / (k_B * T)                      # particles/m^3
 ```
 
-`Y_i` values are solver Functors, not fixed constants in JSON. The parsed expression is AD-differentiable and reflects composition changes. The generic parsed material does not itself enforce runtime `sum(Y_i)=1`; the state owner must maintain physically valid nonnegative, normalized mass fractions. This is not a new species-state solver.
+`Y_i` values are solver Functors, not fixed constants in JSON. The parsed expression is AD-differentiable and reflects composition changes. The root parser enforces both stored INITIAL composition sums; the generic parsed material does not enforce runtime `sum(Y_i)=1` for evolving fields; the state owner must maintain physically valid nonnegative, normalized mass fractions. This is not a new species-state solver.
 
 Example: pure O2 at 10 mTorr and 300 K gives approximately `rho_g = 1.7105e-5 kg/m^3`, not the earlier synthetic `3.2e-5` test fixture.
 
