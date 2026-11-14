@@ -261,6 +261,10 @@ RENAMED_FEM_KERNEL_TYPES = {
     "PhysicsFEMLogMolarTimeDerivative": "FEMLogMolarTimeDerivative",
     "PhysicsFEMLogMolarDriftDiffusion": "FEMLogMolarDriftDiffusion",
     "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
+    # Historical B/C plus D scratch type fields; no old MOOSE factory aliases.
+    "PhysicsFVLogMolarElectronTimeDerivative": "PhysicsFVLogMolarTimeDerivative",
+    "PhysicsFVLogMolarElectronDiffusion": "PhysicsFVLogMolarDiffusion",
+
     # Archived S6 inputs are rewritten only after their pinned byte hashes are checked.
     "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
     "DDMaterial": "DDTransportMaterial",

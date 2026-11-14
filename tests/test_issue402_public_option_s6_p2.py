@@ -209,6 +209,11 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
         "    variable = log_ne\n  []\n"
         "  [energy_joule]\n    type = PhysicsFEMLogMolarElectronJouleHeating\n"
         "    variable = log_energy\n  []\n[]\n"
+        "[FVKernels]\n"
+        "  [ni_time]\n    type = PhysicsFVLogMolarElectronTimeDerivative\n"
+        "    variable = log_ni\n  []\n"
+        "  [ni_diffusion]\n    type = PhysicsFVLogMolarElectronDiffusion\n"
+        "    variable = log_ni\n  []\n[]\n"
     )
     ordered = []
     for i in range(10):
@@ -221,14 +226,22 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
     assert result["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
     assert all(count == 1 for old, count in result["totals"].items()
                if old.startswith("PhysicsFEM"))
+    assert result["totals"]["PhysicsFVLogMolarElectronTimeDerivative"] == 1
+    assert result["totals"]["PhysicsFVLogMolarElectronDiffusion"] == 1
     assert all(count == 0 for old, count in result["totals"].items()
-               if not old.startswith("PhysicsFEM"))
+               if not old.startswith(("PhysicsFEM", "PhysicsFVLogMolarElectron")))
     migrated = (staged / "layer_0.i").read_text()
     for old, new in ((old, new) for old, new in namespace["RENAMED_FEM_KERNEL_TYPES"].items()
                      if old.startswith("PhysicsFEM")):
         assert "type = " + old not in migrated
         assert "type = " + new in migrated
         assert "type = " + old in (archived / "layer_0.i").read_text()
+    assert "type = PhysicsFVLogMolarTimeDerivative" in migrated
+    assert "type = PhysicsFVLogMolarDiffusion" in migrated
+    assert "type = PhysicsFVLogMolarElectronTimeDerivative" not in migrated
+    assert "type = PhysicsFVLogMolarElectronDiffusion" not in migrated
+    assert "type = PhysicsFVLogMolarElectronTimeDerivative" in (archived / "layer_0.i").read_text()
+    assert "type = PhysicsFVLogMolarElectronDiffusion" in (archived / "layer_0.i").read_text()
     assert result["files"]["layer_0.i"]["original_sha256"] == hashlib.sha256(source.encode()).hexdigest()
     snapshot = {p.name: p.read_bytes() for p in staged.iterdir()}
     with pytest.raises(ValueError, match="layer count"):

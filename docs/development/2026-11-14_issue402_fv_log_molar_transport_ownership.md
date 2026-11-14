@@ -36,6 +36,11 @@ The `public_option_s6_p2.py` canonicalizer requires exactly three FV time
 and three FV diffusion type fields in the scratch first layer, rewriting
 only these disposable copies before Native P2/P3; unexpected references,
 wrong counts and out-of-base owners fail before any write.
+For B/C historical-reference `--check-input`, the shared
+`remap_staged_fem_types` step also replaces these two retired FV factory
+names **only inside scratch B/C input copies**. For D, the earlier strict
+canonicalizer has already rewritten them and the shared remap is idempotent.
+Original B/C, historical provenance and the SHA-pinned D source are untouched.
 Historical `docs/provenance/issue256-t1-t2-canonical-promotion.md` retains
 its immutable original path/blob audit; archived scientific sources remain
 untouched. Old C++ class names are intentionally *not* registered as aliases.
