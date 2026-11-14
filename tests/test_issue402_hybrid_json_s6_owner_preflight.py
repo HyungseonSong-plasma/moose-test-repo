@@ -89,7 +89,7 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert PINNED_INITIAL_LOG["log_e_energy"] == "-18.829829186913098"
     assert isinstance(PINNED_INITIAL_LOG["log_e_energy"], str)
     report = prepare(stage, names, case)
-    assert report["removed_generated_owner_count"] == 10
+    assert report["removed_generated_owner_count"] == 12
     gas = report["root_gas_state_pressure_initial_condition"]
     assert gas["status"] == "NATIVE_PRESSURE_SOLVED_ROOT_PRESSURE_INITIAL_CONDITION"
     assert gas["pressure_initial_pa"] == 1.333223684
@@ -121,13 +121,33 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
         "NATIVE_EQUATIONS_UNCHANGED_WITH_ROOT_PRESSURE_IC_AND_SPECIES_FUNCTORS"
     )
     data = json.loads((stage / f"unified_s6_{case}.json").read_text())
-    assert set(data) == {"species", "equations", "reactions"}
+    assert set(data) == {"species", "equations", "reactions", "boundaries"}
     assert set(data["species"]) == {"e", "O2", "O", "O2p", "Om", "Op", "O2a"}
     assert set(data["equations"]) == {
         "EI-02", "EI-17", "EI-415", "EI-401", "EI-407", "EI-2069",
         "H25", f"EI-{case}",
     }
     assert len(data["reactions"]) == len(data["equations"]) == 8
+    assert all("provenance" not in r and "table_sha256" not in r and
+               "target_molar_concentration" not in r for r in data["reactions"])
+    assert sum("table" in r for r in data["reactions"]) == 7
+    assert sum(r.get("rate", {}).get("model") == "power_law"
+               for r in data["reactions"]) == 1
+    assert data["species"]["O2"]["mass_fraction_functor"] == "w_O2_constraint"
+    assert data["species"]["O"]["mass_fraction_functor"] == "w_O"
+    assert data["species"]["O2a"]["mass_fraction_functor"] == "w_O2s"
+    assert all(data["species"][id]["molar_mass_kg_mol"] > 0
+               for id in ("O2", "O", "O2a", "O2p", "Om", "Op"))
+    assert set(data["boundaries"]) == {
+        "plasma_electrode plasma_metal plasma_right",
+        "plasma_cover", "plasma_wafer", "plasma_focus_ring"
+    }
+    bcs = [bc for group in data["boundaries"].values()
+           for bc in group["bcs"].values()]
+    assert len(bcs) == 8
+    assert sum(b["type"] == "FEMElectronSheathBC" for b in bcs) == 4
+    assert sum(b["type"] == "FEMElectronEnergySheathBC" for b in bcs) == 4
+    assert all(b["wall_number_flux"] == "e_wall_number_flux" for b in bcs)
     assert [reaction["id"] for reaction in data["reactions"]][-1] == f"EI-{case}"
     assert data["species"]["e"]["transport_coef"] == "lookup"
     assert data["species"]["e"]["energy_transport_coef"] == "fluid"
@@ -148,11 +168,13 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert "[log_e_energy]" not in base
     assert "[electron_transport]" not in base
     assert "[energy_time]" not in base
-    assert base.count("type = FEMElectronSheathBC") == 4
-    assert base.count("type = FEMElectronEnergySheathBC") == 4
+    assert base.count("type = FEMElectronSheathBC") == 0
+    assert base.count("type = FEMElectronEnergySheathBC") == 0
+    assert "[electron_wall_flux]" not in base
+    assert "[electron_physical_density]" not in base
     assert "PhysicsFEMLogMolarElectronFieldLimitedFluxBC" not in base
     assert "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC" not in base
-    assert "wall_number_flux = e_wall_number_flux" in base
+    assert "wall_number_flux = e_wall_number_flux" not in base
     assert "prop_names = 'O2p_mobility O2p_diffusivity Om_mobility Om_diffusivity Op_mobility Op_diffusivity carrier_one'" in base
     assert "prop_values = '10 0.25851999786435537 10 0.25851999786435537 10 0.25851999786435537 1.0'" in base
     assert "[pressure]\n    type = INSFVPressureVariable" in base
@@ -168,7 +190,7 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert "mobility = Op_mobility" in base
     assert "coeff = Op_diffusivity" in base
     for native in ("[potential]", "[phi_diffusion]", "[phi_source]",
-                   "[sigma_surface_current]", "[electron_wall_flux]",
+                   "[sigma_surface_current]",
                    "[ion_molar_density]", "[ni_time]"):
         assert native in base and native in original
     for name in names[1:-1]:
