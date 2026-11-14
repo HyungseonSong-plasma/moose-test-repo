@@ -107,3 +107,24 @@ def test_p2_adapter_rejects_ambiguous_or_repeated_energy_owners():
                 "property_name = issue402_p2_log_molar_e",
             )
         )
+
+
+def test_four_species_json_owned_p2_supersedes_legacy_external_variable_binding():
+    # The historical manual log_* solver variable fixture remains byte-identical
+    # but must not be passed to current JSON-owned Native Continuity.
+    runner = (PILOT / "run_native_binding_smoke.sh").read_text()
+    assert 'native --check-input -i "$PILOT/generic_four_species.i"' not in runner
+    assert 'native --check-input -i "$PILOT/species_density_pairs_p2.i"' in runner
+    assert "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS" in runner
+    source = (PILOT / "species_density_pairs_p2.i").read_text()
+    original = (PILOT / "generic_four_species.i").read_text()
+    assert "files = plasma_species_initial_p2.json" in source
+    assert "fem_species = e" in source
+    assert "fvm_species = 'O2p Om Op'" in source
+    assert "[Variables]" in source  # contains only independent potential
+    assert "[potential]" in source
+    assert "[log_e]" not in source
+    for sid in ("e", "O2p", "Om", "Op"):
+        assert f"[log_{sid}]" in original
+        catalogue = json.loads((PILOT / "plasma_species_initial_p2.json").read_text())
+        assert catalogue["species"][sid]["initial_number_density"] > 0
