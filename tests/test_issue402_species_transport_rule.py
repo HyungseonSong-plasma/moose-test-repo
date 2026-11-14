@@ -135,8 +135,11 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
     assert "files = plasma_auto_constant.json" in positive
     assert "[FunctorMaterials]" not in positive
     payload = json.loads(text("experiments/Issue402_plasma_dsl_g1/plasma_auto_constant.json"))
-    coefficient = payload["transport_coefficients"]["drift_diffusion"]["e"]
-    assert coefficient == {"model": "constant", "mobility": 1, "diffusivity": 1}
+    coefficient = payload["species"]["e"]
+    assert {k: coefficient[k] for k in ("transport_coef", "mobility", "diffusivity")} == {
+        "transport_coef": "constant", "mobility": 1, "diffusivity": 1
+    }
+    assert "transport_coefficients" not in payload
     py = text("experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py")
     tree = ast.parse(py)
     overlay = next(ast.literal_eval(node.value) for node in tree.body
