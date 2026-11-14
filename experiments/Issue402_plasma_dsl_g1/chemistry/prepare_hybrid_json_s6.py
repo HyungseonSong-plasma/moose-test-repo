@@ -334,7 +334,7 @@ def canonicalize_s6_root_gas_state(
         m for m in BLOCK.finditer(base)
         if m.group("name") == "neutral_outlet_p" and
         re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
-                   base[:m.start()])[-1:] == ["BCs"]
+                   base[:m.start()])[-1:] == ["FVBCs"]
     ]
     if (len(outlet_blocks) != 1 or
         parameters(outlet_blocks[0].group("body")) != ROOT_OUTLET_PRESSURE_BC):
