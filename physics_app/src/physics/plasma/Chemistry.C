@@ -292,6 +292,7 @@ ReactionRecord::net(const std::string & species) const
 }
 
 ChemistryData::ChemistryData(const std::vector<std::string> & files)
+  : _source_files(files)
 {
   std::set<std::string> reaction_ids;
   std::set<std::string> progresses;
@@ -630,6 +631,29 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       if (entry.at("units").get<std::string>() != units)
         fail(file, reaction.id + ": progress units must be " + units);
 
+      // A table is an executable EI rate owner; no metadata, checksum, or
+      // user-specified progress/target names are part of the JSON API.
+      if (entry.contains("table"))
+      {
+        if (entry.contains("rate") || reaction.domain != "volume" ||
+            reaction.id.rfind("EI-", 0) != 0 ||
+            !entry.at("table").is_string() || entry.at("table").get<std::string>().empty())
+          fail(file, reaction.id + ": table requires an EI volume reaction without rate");
+        if (reaction.reactants.size() != 2 || reaction.reactants.count("e") != 1 ||
+            reaction.reactants.at("e") != 1)
+          fail(file, reaction.id + ": table requires one electron and one heavy target");
+        for (const auto & [target, amount] : reaction.reactants)
+          if (target != "e" && (amount != 1 ||
+              _species.at(target).molar_mass_kg_mol <= 0.0))
+            fail(file, reaction.id + ": table requires a unit heavy target with molar mass");
+        reaction.rate.table_file =
+            resolveDataFile(entry.at("table").get<std::string>(), file);
+      }
+
+      if (entry.contains("table_sha256") || entry.contains("target_molar_concentration"))
+        fail(file, reaction.id +
+             ": table metadata/target Functor names are internal; declare only table");
+
       if (entry.contains("rate"))
       {
         const auto & rate = entry.at("rate");
@@ -843,8 +867,8 @@ Chemistry::validParams()
 {
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
-      "Generates one source Functor per species and one electron-energy source "
-      "from validated [Plasmas]/files reaction channels; kinetic progress remains separately owned.");
+      "Generates native electron-impact/heavy rate providers and shared species/energy "
+      "source Functors from validated [Plasmas]/files reaction channels.");
   return params;
 }
 
