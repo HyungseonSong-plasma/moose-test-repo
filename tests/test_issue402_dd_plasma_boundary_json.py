@@ -56,8 +56,16 @@ def test_boundaries_json_is_literal_one_to_one_bc_relocation():
 
 
 def test_exact_json_presence_owns_bc_creation():
-    assert 'if (_current_task == "add_bc" && _data.hasBoundaries())' in CHEM
-    assert "_problem->addBoundaryCondition(bc.type, name, params);" in CHEM
+    assert 'if (_current_task == "check_integrity" && _data.hasBoundaries())' in CHEM
+    assert "_problem->addBoundaryCondition(" not in CHEM
+    assert '"JSON FEMElectronSheathBC requires [Transport]/[DriftDiffusion]/[Continuity]."' in CHEM
+    assert '"JSON FEMElectronEnergySheathBC requires [Transport]/[DriftDiffusion]/[Energy]."' in CHEM
+    assert 'getProblem().addBoundaryCondition(bc.type, bc_name, params);' in CONTINUITY_ACTION
+    assert 'getProblem().addBoundaryCondition(bc.type, bc_name, params);' in ENERGY_ACTION
+    assert 'registerMooseAction("PhysicsApp", DDContinuityEq, "add_bc");' in CONTINUITY_ACTION
+    assert 'registerMooseAction("PhysicsApp", DDEnergyEq, "add_bc");' in ENERGY_ACTION
+    assert 'params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;' in CONTINUITY_ACTION
+    assert 'params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;' in ENERGY_ACTION
     assert "PlasmaDriftDiffusionBoundaryAction" not in SYN
     assert "PlasmaDriftDiffusionBoundaryAction" not in CHEM
     assert '"plasma_boundary"' not in CHEM
