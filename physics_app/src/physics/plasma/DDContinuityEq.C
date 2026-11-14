@@ -2,6 +2,7 @@
 #include "Chemistry.h"
 #include "Physics.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <map>
@@ -42,11 +43,11 @@ DDContinuityEq::validParams()
   params.addClassDescription(
       "Bind plasma continuity species to deterministic internal state and kernel names. "
       "Supported FEM continuity generation creates the conservative log-molar time " 
-      "derivative and drift-diffusion Kernels; FV transport stays Native.");
+      "derivative and drift-diffusion Kernels; non-electron FV transport stays Native.");
   params.addParam<std::vector<std::string>>(
       "fem_species", {}, "FEM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<std::vector<std::string>>(
-      "fvm_species", {}, "FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
+      "fvm_species", {}, "Non-electron FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
   return params;
@@ -59,6 +60,11 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   // Chemistry JSON and must not be duplicated as positional .i numbers.
   _fem_species = getParam<std::vector<std::string>>("fem_species");
   _fvm_species = getParam<std::vector<std::string>>("fvm_species");
+  // Electron continuity is FEM-only. Preserve FVM variables, ICs and
+  // transport coefficients for ions and other non-electron species.
+  if (std::find(_fvm_species.begin(), _fvm_species.end(), "e") != _fvm_species.end())
+    paramError("fvm_species",
+               "Electron continuity is FEM-only; select e through fem_species.");
   const auto & fem = _fem_species;
   const auto & fvm = _fvm_species;
   const auto variables = resolvedContinuityVariables(fem, fvm);
