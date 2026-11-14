@@ -144,22 +144,28 @@ def test_s6_uses_canonical_progress_providers_without_alias_materials():
 
 
 def test_active_energy_state_binding_is_canonical_across_bc_and_readers():
-    paths = (
-        "physics_app/src/physics/plasma/DDEnergyEq.C",
-        "physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C",
-        "physics_app/src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C",
-        "physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C",
-        "physics_harness/adapters/moose/species_plot.py",
-        "physics_harness/adapters/moose/time_trace.py",
-    )
-    for path in paths:
+    # The BC factory is deliberately species-agnostic: the owning Energy
+    # Physics connects its generic 'variable' input to the canonical log state.
+    energy = text("physics_app/src/physics/plasma/DDEnergyEq.C")
+    assert "log_energy" not in energy
+    assert 'return "log_" + species + "_energy";' in energy
+    assert 'if (bc.variable != "log_e_energy")' in energy
+    assert 'getProblem().addBoundaryCondition(bc.type, bc_name, params);' in energy
+
+    bc_path = "physics_app/src/bcs/FEMElectronEnergySheathBC.C"
+    bc = text(bc_path)
+    assert 'registerMooseObject("PhysicsApp", FEMElectronEnergySheathBC);' in bc
+    assert 'getFunctor<ADReal>("wall_number_flux")' in bc
+    assert 'getFunctor<ADReal>("mean_energy")' in bc
+    assert "log_energy" not in bc
+    assert not (APP / "src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C").exists()
+    assert not (APP / "src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C").exists()
+
+    for path in ("physics_harness/adapters/moose/species_plot.py",
+                 "physics_harness/adapters/moose/time_trace.py"):
         source = text(path)
+        assert "log_e_energy" in source
         assert "log_energy" not in source
-        if path.endswith("DDEnergyEq.C"):
-            assert 'return "log_" + species + "_energy";' in source
-        else:
-            assert "log_e_energy" in source
-    assert '"log_e_energy"' in text("physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C")
 
 
 def test_native_positive_and_negative_fixtures_are_wired():
