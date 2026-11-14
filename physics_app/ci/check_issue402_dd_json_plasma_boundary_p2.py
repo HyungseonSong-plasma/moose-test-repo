@@ -145,6 +145,18 @@ def main(exe: Path):
         check(exe, root, "JSON_PRESENT", PHYSICS_AUTO_INPUT, DATA, True)
         check(exe, root, "PHYSICS_AUTO_LOG_E_ENERGY_AND_BCS",
               PHYSICS_AUTO_INPUT, DATA, True)
+        wrong_particle_state = copy.deepcopy(DATA)
+        wrong_particle_state["boundaries"]["left"]["bcs"]["electron_wafer"][
+            "variable"] = "log_e_energy"
+        check(exe, root, "ELECTRON_SHEATH_WRONG_SOLVER_STATE",
+              PHYSICS_AUTO_INPUT, wrong_particle_state, False,
+              "JSON FEMElectronSheathBC must target canonical log_e")
+        wrong_energy_state = copy.deepcopy(DATA)
+        wrong_energy_state["boundaries"]["left"]["bcs"]["electron_energy_wafer"][
+            "variable"] = "log_e"
+        check(exe, root, "ENERGY_SHEATH_WRONG_SOLVER_STATE",
+              PHYSICS_AUTO_INPUT, wrong_energy_state, False,
+              "JSON FEMElectronEnergySheathBC must target canonical log_e_energy")
         # One Chemistry action creates the EI strict-table progress R_EI415,
         # both electron RHS FunctorKernels, and all eight? Here two BC
         # groups exercise canonical e_wall_number_flux and energy coupling.
