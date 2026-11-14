@@ -203,6 +203,33 @@ DDEnergyEq::addFEKernels()
 }
 
 void
+DDEnergyEq::addFEBCs()
+{
+  // Electron energy sheath BCs belong to the Energy Physics under DriftDiffusion.
+  // ESWallFluxMaterial remains a single provider owned by Continuity.
+  for (const auto & [group, boundary] : chemistryData().boundaries())
+    for (const auto & [bc_name, bc] : boundary.bcs)
+    {
+      (void)group;
+      if (bc.type != "FEMElectronEnergySheathBC")
+        continue;
+      if (!isParamValid("fem_potential"))
+        paramError("fem_potential",
+                   "JSON FEMElectronEnergySheathBC requires full FEM electron Energy.");
+
+      auto params = getFactory().getValidParams(bc.type);
+      params.set<NonlinearVariableName>("variable") = bc.variable;
+      std::vector<BoundaryName> sidesets;
+      for (const auto & side : boundary.mesh_boundaries)
+        sidesets.emplace_back(side);
+      params.set<std::vector<BoundaryName>>("boundary") = sidesets;
+      params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
+      params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
+      getProblem().addBoundaryCondition(bc.type, bc_name, params);
+    }
+}
+
+void
 DDEnergyEq::addFunctorMaterials()
 {
   // Legacy partial-input mode does not create duplicate mean-energy owners.
@@ -229,4 +256,5 @@ registerMooseAction("PhysicsApp", DDEnergyEq, "add_variables_physics");
 registerMooseAction("PhysicsApp", DDEnergyEq, "add_ics_physics");
 registerMooseAction("PhysicsApp", DDEnergyEq, "check_integrity");
 registerMooseAction("PhysicsApp", DDEnergyEq, "add_kernel");
+registerMooseAction("PhysicsApp", DDEnergyEq, "add_bc");
 registerMooseAction("PhysicsApp", DDEnergyEq, "add_functor_material");
