@@ -1228,11 +1228,8 @@ PlasmasAction::act()
     bool has_root_composition = false;
     for (const auto & [id, record] : _data.speciesRecords())
       if (id != "e" &&
-          (record.molar_mass_kg_mol > 0.0 ||
-           record.initial_vol_mass_fraction ||
-           record.initial_inlet_mass_fraction ||
-           !record.mass_fraction_variable.empty() ||
-           !record.mass_fraction_functor.empty()))
+          (record.initial_vol_mass_fraction ||
+           record.initial_inlet_mass_fraction))
         has_root_composition = true;
     if (has_root_composition)
       paramError("files", "A solved Navier-Stokes pressure variable uses the "
