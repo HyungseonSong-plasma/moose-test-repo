@@ -31,10 +31,10 @@ def test_plasmas_root_owns_only_p_t_and_ideal_gas_model():
     assert 'params.addParam<Real>("pressure"' in source
     assert 'params.addParam<Real>("temperature"' in source
     assert 'MooseEnum("ideal_gas", "ideal_gas")' in source
-    assert 'add("p", pressure_literal.str(), {}, {});' in source
-    assert 'add("T", temperature_literal.str(), {}, {});' in source
+    assert 'addStatic("p", getParam<Real>("pressure"));' in source
+    assert 'addStatic("T", getParam<Real>("temperature"));' in source
     assert 'add("rho_g", "pressure/(8.31446261815324*temp*(' in source
-    assert 'add("n_g", "pressure/(1.380649e-23*temp)"' in source
+    assert 'addStatic("n_g", initial.number_density_per_m3);' in source
     assert 'add("M_mix", "1/(" + denominator' in source
     assert "GasStateMaterial" not in header + source or (
         # Source comment can document why a custom class is unnecessary.
@@ -77,8 +77,8 @@ def test_surface_input_is_real_ideal_gas_wiring_and_composition():
     assert "initial_vol_mass_fraction" in parser
     assert "initial_inlet_mass_fraction" in parser
     assert "conflicting species identity for " in parser
-    assert 'add("Y_" + id + "_initial_vol"' in parser
-    assert 'add("Y_" + id + "_inlet"' in parser
+    assert 'addStatic("Y_" + id + "_initial_vol"' in parser
+    assert 'addStatic("Y_" + id + "_inlet"' in parser
     assert 'fractions.push_back("Y_" + id)' in parser
     assert 'add("Y_" + id, "live_y", {live}, {"live_y"});' in parser
     assert '"mass_fraction_variable"' in parser

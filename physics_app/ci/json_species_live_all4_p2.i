@@ -28,6 +28,8 @@
     state_model = ideal_gas
     inlet_boundaries = left
     sccm = 100
+    inlet_area = 0.05
+    standard_molar_volume = 0.0224136
     [Transport]
       [NavierStokes]
       []

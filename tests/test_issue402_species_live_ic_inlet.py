@@ -33,7 +33,7 @@ def test_root_ideal_gas_has_no_json_initial_as_live_density_input():
     assert 'add("Y_" + id, literal(*record.initial_vol_mass_fraction)' not in c
     assert 'names.push_back(fractions[i]);' in c
     assert 'add("rho_g", "pressure/(8.31446261815324*temp*(' in c
-    assert 'add("rho_g_initial"' in c and 'add("rho_g_inlet"' in c
+    assert 'addStatic("rho_g_initial"' in c and 'addStatic("rho_g_inlet"' in c
 
 
 def test_root_ic_and_bc_create_only_for_solved_species():
@@ -73,12 +73,24 @@ def test_material_consumers_resolve_functor_at_evaluation_not_at_setup():
     assert 'if (rootGasStateEnabled())' in nv
 
 
-def test_metadata_is_not_inferred_for_a_flux_boundary():
-    c=CODE.read_text()
+def test_sccm_one_time_flow_module_and_no_duplicate_flow_bc():
+    c = CODE.read_text()
+    helper = (APP / "src/physics/plasma/SCCMInletFlow.C").read_text()
     assert 'params.addParam<Real>("sccm"' in c
+    assert 'params.addParam<Real>("inlet_area"' in c
+    assert 'params.addParam<Real>("standard_molar_volume", 0.0224136' in c
+    assert '"inlet_species_bc_ownership"' in c
+    assert '"root_dirichlet external_flux"' in c
+    assert 'registerMooseAction("PhysicsApp", PlasmasAction, "add_postprocessor");' in c
+    assert 'Plasma::SCCMInletFlow::calculate(settings, inlet_species)' in c
+    assert 'for (const auto & [name, value] : feed_values)' in c
+    assert '_problem->addPostprocessor(type, name, params);' in c
+    assert 'getParam<MooseEnum>("inlet_species_bc_ownership") == "root_dirichlet"' in c
     assert 'getParam<std::vector<BoundaryName>>("inlet_boundaries")' in c
-    assert '"Does not prescribe mixture mass flux, velocity, or inlet area."' in c
-    assert 'if (isParamValid("sccm"))' in c
+    assert "const double inlet_flux = inlet_mdot / settings.inlet_area_m2;" in helper
+    assert "const double inlet_speed = inlet_flux / inlet_rho;" in helper
+    assert "state.density_kg_per_m3" in helper
+    assert '"plasma_inlet_area"' in helper and '"plasma_inlet_mdot"' in helper
 
 
 def test_all_four_materials_share_y_i_of_solver_state_in_native_fixture():
