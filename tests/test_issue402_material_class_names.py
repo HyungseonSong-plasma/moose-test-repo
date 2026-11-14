@@ -47,7 +47,7 @@ def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
     assert "files = plasma_auto_constant.json" in sample
     assert "[FunctorMaterials]" not in sample
     generated = (ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_auto_constant.json").read_text()
-    assert '"model": "constant"' in generated
+    assert '"transport_coef": "constant"' in generated
     script = (ROOT / "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py").read_text()
     tree = ast.parse(script)
     overlay = next(ast.literal_eval(item.value) for item in tree.body
