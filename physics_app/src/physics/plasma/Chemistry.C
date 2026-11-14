@@ -968,9 +968,9 @@ Chemistry::addFunctorMaterials()
       const std::string density =
           getProblem().hasVariable("pressure") ? "rho_neutral" : "rho_g";
       params.set<std::vector<std::string>>("functor_names") = {density, live_fraction};
-      params.set<std::vector<std::string>>("functor_symbols") = {"rho", "y"};
+      params.set<std::vector<std::string>>("functor_symbols") = {"rho", "w"};
       params.set<std::string>("expression") =
-          "rho*y/" + realLiteral(species.molar_mass_kg_mol);
+          "rho*w/" + realLiteral(species.molar_mass_kg_mol);
     }
     assignBlocks(params, _blocks);
     getProblem().addFunctorMaterial(parsed_type, "chemistry_" + id + "_concentration", params);
