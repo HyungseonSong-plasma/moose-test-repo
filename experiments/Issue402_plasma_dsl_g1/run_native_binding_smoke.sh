@@ -14,6 +14,33 @@ test -f "$PILOT/valid_bindings.i"
 
 # Python-only contracts; build the existing MOOSE application, never generate source code.
 python3 physics_app/ci/check_plasma_closures_contract.py
+# P0: user-facing unified reaction metadata + electron-only BC ownership.
+# Run with Python stdlib, independently of the governed pytest job.
+python3 -m py_compile \
+  experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py \
+  physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
+python3 - <<'PY'
+import json
+from pathlib import Path
+base = Path("experiments/Issue402_plasma_dsl_g1/chemistry")
+for variant in ("417", "941"):
+    data = json.loads((base / f"unified_s6_{variant}.json").read_text())
+    assert set(data) == {"species", "equations", "reactions", "boundaries"}
+    assert len(data["reactions"]) == 8
+    assert len(data["species"]) == 7
+    assert set(data["equations"]) == {r["id"] for r in data["reactions"]}
+    assert sum("table" in r for r in data["reactions"]) == 7
+    assert sum(r.get("rate", {}).get("model") == "power_law"
+               for r in data["reactions"]) == 1
+    assert all(not set(r).intersection({"table_sha256", "target_molar_concentration",
+                                        "provenance"}) for r in data["reactions"])
+    bcs = [bc for b in data["boundaries"].values() for bc in b["bcs"].values()]
+    assert len(bcs) == 8
+    assert sum(b["type"] == "FEMElectronSheathBC" for b in bcs) == 4
+    assert sum(b["type"] == "FEMElectronEnergySheathBC" for b in bcs) == 4
+    assert all(b["wall_number_flux"] == "e_wall_number_flux" for b in bcs)
+print("ISSUE402_ELECTRON_S6_JSON_P0_PASS", flush=True)
+PY
 test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
 
 {
