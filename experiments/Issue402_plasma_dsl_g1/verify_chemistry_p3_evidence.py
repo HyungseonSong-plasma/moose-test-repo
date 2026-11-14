@@ -49,11 +49,18 @@ def verify(results: Path, expected_head: str, case: str, *, hybrid_json: bool = 
         raise ValueError("P3_EVIDENCE_SUPERSEDED_OWNER_COUNT_MISMATCH")
     if hybrid_json:
         hybrid = status.get("hybrid_json_ownership_cutover", {})
-        if hybrid.get("removed_generated_owner_count") != 10 or (
+        if hybrid.get("removed_generated_owner_count") != 12 or (
             hybrid.get("native_owner_preservation") !=
             "NATIVE_EQUATIONS_UNCHANGED_WITH_ROOT_PRESSURE_IC_AND_SPECIES_FUNCTORS"
         ):
             raise ValueError("P3_EVIDENCE_HYBRID_NATIVE_OWNER_OR_SOURCE_MISMATCH")
+        # Production cutover must have exactly one Chemistry-owned R_k per
+        # channel and no duplicate legacy EI/H kinetic or elastic-loss owners.
+        kinetics = hybrid.get("native_kinetic_rate_cutover", {})
+        if (kinetics.get("native_progress_retired_count") != 8 or
+                kinetics.get("elastic_loss_retired_count") != 2 or
+                kinetics.get("original_rate_tables_unchanged") is not True):
+            raise ValueError("P3_EVIDENCE_KINETIC_SINGLE_OWNER_NOT_PROVED")
         if (hybrid.get("integrated_mechanism_json") != f"unified_s6_{case}.json"
             or hybrid.get("integrated_species_count") != 7
             or hybrid.get("integrated_reaction_count") != 8
