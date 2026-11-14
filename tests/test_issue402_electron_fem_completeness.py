@@ -165,3 +165,81 @@ def test_electron_wall_flux_is_one_owner_for_both_molar_bcs():
         assert all(bc["wall_number_flux"] == "e_wall_number_flux" for bc in bcs)
         assert all(bc["mean_energy"] == "e_energy_eV" for bc in bcs
                    if bc["type"] == "FEMElectronEnergySheathBC")
+
+
+def test_s6_p3_integrated_hybrid_inputs_are_exact_and_preserve_time_grid():
+    """Reviewable P3 input is the staged eleventh layer, never P2 solve=false.
+
+    The remaining ten Native input layers preserve the original mesh,
+    RF, Poisson, ions, surface charge, and actual transient integrator.
+    P0 structural inspection is NOT P3 execution or science acceptance.
+    """
+    import math
+    import re
+
+    pilot = CHEM.parent
+    base = (pilot / "native/s6_c0_physics_base_no_d1.i").read_text(
+        encoding="utf-8")
+    assert "[Executioner]" in base and "type = Transient" in base
+    assert "scheme = implicit-euler" in base
+    assert "solve_type = NEWTON" in base
+    assert "end_time = 1e-4" in base
+    assert "solve = false" not in base
+    assert "baseline_plasma_plus_unstructured_cover_plus_wafer.msh" in base
+    grid = re.search(r"(?m)^\s*time_sequence = '([^']+)'", base)
+    assert grid is not None
+    steps = [float(x) for x in grid.group(1).split()]
+    assert len(steps) == 461 and steps[0] == 0 and steps[-1] == 1e-4
+    assert all(a < b for a, b in zip(steps, steps[1:]))
+    assert "csv = true" in base and "exodus = true" in base
+
+    generator = (CHEM / "prepare_hybrid_json_s6.py").read_text(
+        encoding="utf-8")
+    assert "HYBRID_REVIEWED_P3_INPUT_DRIFT" in generator
+    assert 'reviewed_overlay.read_bytes()' in generator
+    for variant in ("417", "941"):
+        template = (pilot / f"s6_{variant}_chemistry_run.template.i").read_text(
+            encoding="utf-8")
+        old_files = (
+            f"files = 'chemistry/oxygen_s6_common.json "
+            f"chemistry/oxygen_s6_{variant}.json'"
+        )
+        new_files = (
+            f"files = 'unified_s6_{variant}.json'\n"
+            "    pressure = 1.333223684\n"
+            "    temperature = 300\n"
+            "    state_model = ideal_gas"
+        )
+        old_energy = (
+            "        [Energy]\n"
+            "          block = plasma\n"
+            "          fem_species = 'e'\n"
+            "        []"
+        )
+        new_energy = (
+            "        [Energy]\n"
+            "          block = plasma\n"
+            "          fem_species = 'e'\n"
+            "          fem_potential = potential\n"
+            "          initial_molar_energy_density_eV = "
+            + repr(math.exp(float("-18.829829186913098"))) + "\n"
+            "        []"
+        )
+        assert template.count(old_files) == 1
+        assert template.count(old_energy) == 1
+        expected = template.replace(old_files, new_files, 1).replace(
+            old_energy, new_energy, 1)
+        reviewed = (CHEM / f"s6_{variant}_hybrid_integrate_p3.i").read_text(
+            encoding="utf-8")
+        assert reviewed == expected
+        assert reviewed.count("fem_potential = potential") == 2
+        assert "[Continuity]" in reviewed and "[Energy]" in reviewed
+        assert "[Chemistry]" in reviewed
+        assert "solve = false" not in reviewed
+        assert "[Kernels]" not in reviewed and "[BCs]" not in reviewed
+        assert "[Executioner]" not in reviewed  # Native base owns P3 time grid
+        mechanism = json.loads((CHEM / f"unified_s6_{variant}.json").read_text())
+        assert len(mechanism["species"]) == 7
+        assert len(mechanism["reactions"]) == 8
+        assert len([bc for b in mechanism["boundaries"].values()
+                    for bc in b["bcs"].values()]) == 8
