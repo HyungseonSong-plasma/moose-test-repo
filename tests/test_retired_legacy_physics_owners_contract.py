@@ -89,7 +89,6 @@ def test_shared_fv_log_molar_transport_keeps_ion_operators_without_dead_source()
 
 def test_current_fv_ion_callers_use_only_generic_transport_classes():
     callers = (
-        "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
         "experiments/fem_fvm_plasma_discriminator/prepare_cases.py",
         "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py",
     )
@@ -99,3 +98,16 @@ def test_current_fv_ion_callers_use_only_generic_transport_classes():
         assert "PhysicsFVLogMolarDiffusion" in data
         assert "PhysicsFVLogMolarElectronTimeDerivative" not in data
         assert "PhysicsFVLogMolarElectronDiffusion" not in data
+
+
+def test_pinned_s6_base_retains_its_historical_fv_factory_names():
+    source = (ROOT / "experiments/Issue402_plasma_dsl_g1/native/"
+              "s6_c0_physics_base_no_d1.i").read_text(encoding="utf-8")
+    assert source.count("type = PhysicsFVLogMolarElectronTimeDerivative") == 3
+    assert source.count("type = PhysicsFVLogMolarElectronDiffusion") == 3
+    assert "type = PhysicsFVLogMolarTimeDerivative" not in source
+    assert "type = PhysicsFVLogMolarDiffusion" not in source
+    preparer = (ROOT / "experiments/Issue402_plasma_dsl_g1/"
+                "public_option_s6_p2.py").read_text(encoding="utf-8")
+    assert "STAGED_D_FV_LOG_MOLAR_OWNER_COUNT_CHANGED" in preparer
+

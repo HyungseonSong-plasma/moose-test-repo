@@ -26,9 +26,16 @@ class is **not** part of this retirement.
 
 Live, maintained references in Issue #3 FV dielectric fixtures/generators,
 `fem_fvm_plasma_discriminator` generators, the Issue #395 elastic-overlay
-build guard, Issue #402 disposable D Native base, electron molar P0 contract,
+build guard, Issue #402 scratch D input (not its SHA-pinned source base), electron molar P0 contract,
 retired-owner tests, and the ion-FVM hybrid workflow path filters are updated
 to the canonical names. The workflow's build/run logic is unchanged.
+The SHA256-pinned `native/s6_c0_physics_base_no_d1.i` is **byte-identical**
+to the accepted one-time source
+(`e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd`).
+The `public_option_s6_p2.py` canonicalizer requires exactly three FV time
+and three FV diffusion type fields in the scratch first layer, rewriting
+only these disposable copies before Native P2/P3; unexpected references,
+wrong counts and out-of-base owners fail before any write.
 Historical `docs/provenance/issue256-t1-t2-canonical-promotion.md` retains
 its immutable original path/blob audit; archived scientific sources remain
 untouched. Old C++ class names are intentionally *not* registered as aliases.

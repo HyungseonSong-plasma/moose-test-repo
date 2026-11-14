@@ -90,6 +90,17 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
               "    variable = log_ne\n"
               "    block = plasma\n"
               "  []\n")
+    # Exact 3-ion FV time/diffusion owner count from the pinned native C0.
+    for species in ("O2p", "Om", "Op"):
+        for term, old_type in (
+            ("time", "PhysicsFVLogMolarElectronTimeDerivative"),
+            ("diffusion", "PhysicsFVLogMolarElectronDiffusion"),
+        ):
+            sample += (f"  [{species}_{term}]\n"
+                       f"    type = {old_type}\n"
+                       f"    variable = log_{species}\n"
+                       "  []\n")
+
     for index in range(10):
         name = f"layer_{index}.i"
         content = sample if index == 0 else f"# original {index}\\n"
@@ -106,6 +117,11 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     assert report["removed_native_time"]["generated_name"] == "e_time"
     assert report["removed_native_time"]["kernel_type"] == "PhysicsFEMLogMolarTimeDerivative"
     assert report["changed_reference_count"] == 4
+    assert report["files"]["layer_0.i"]["fv_log_molar_type_substitutions"] == {
+        "PhysicsFVLogMolarElectronTimeDerivative": 3,
+        "PhysicsFVLogMolarElectronDiffusion": 3,
+    }
+
     assert report["files"]["layer_0.i"]["original_sha256"] == (
         hashlib.sha256(sample.encode()).hexdigest())
     assert (archived / "layer_0.i").read_text() == sample
@@ -115,6 +131,11 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     assert "coupled = 'log_O2p log_Om log_Op'" in migrated
     assert "similar_name = log_ne_custom" in migrated
     assert "[ne_time]" not in migrated
+    assert migrated.count("type = PhysicsFVLogMolarTimeDerivative") == 3
+    assert migrated.count("type = PhysicsFVLogMolarDiffusion") == 3
+    assert "type = PhysicsFVLogMolarElectronTimeDerivative" not in migrated
+    assert "type = PhysicsFVLogMolarElectronDiffusion" not in migrated
+
     assert "PhysicsFEMLogMolarTimeDerivative" not in migrated
     assert report["files"]["layer_0.i"]["staged_sha256"] == (
         hashlib.sha256(migrated.encode()).hexdigest())
@@ -130,6 +151,11 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
         ("missing", sample.replace(time_block, ""), ""),
         ("changed", sample.replace("    block = plasma\n", "    block = other\n"), ""),
         ("duplicate", sample, time_block),
+        ("fv_missing", sample.replace("PhysicsFVLogMolarElectronDiffusion",
+                                      "PhysicsFVLogMolarDiffusion", 1), ""),
+        ("fv_extra", sample,
+         "  [bad]\n    type = PhysicsFVLogMolarElectronDiffusion\n  []\n"),
+
     ):
         damaged = tmp_path / fault
         damaged.mkdir()

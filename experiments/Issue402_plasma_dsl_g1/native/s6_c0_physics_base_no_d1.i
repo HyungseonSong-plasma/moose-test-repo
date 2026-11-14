@@ -614,12 +614,12 @@
 
 [FVKernels]
   [ni_time]
-    type = PhysicsFVLogMolarTimeDerivative
+    type = PhysicsFVLogMolarElectronTimeDerivative
     variable = log_ni
     block = plasma
   []
   [ni_diffusion]
-    type = PhysicsFVLogMolarDiffusion
+    type = PhysicsFVLogMolarElectronDiffusion
     variable = log_ni
     coeff = ion_diffusion
     block = plasma
@@ -637,12 +637,12 @@
     block = plasma
   []
   [nm_time]
-    type = PhysicsFVLogMolarTimeDerivative
+    type = PhysicsFVLogMolarElectronTimeDerivative
     variable = log_nm
     block = plasma
   []
   [nm_diffusion]
-    type = PhysicsFVLogMolarDiffusion
+    type = PhysicsFVLogMolarElectronDiffusion
     variable = log_nm
     coeff = negative_ion_diffusion
     block = plasma
@@ -660,12 +660,12 @@
     block = plasma
   []
   [nop_time]
-    type = PhysicsFVLogMolarTimeDerivative
+    type = PhysicsFVLogMolarElectronTimeDerivative
     variable = log_nop
     block = plasma
   []
   [nop_diffusion]
-    type = PhysicsFVLogMolarDiffusion
+    type = PhysicsFVLogMolarElectronDiffusion
     variable = log_nop
     coeff = atomic_positive_ion_diffusion
     block = plasma
