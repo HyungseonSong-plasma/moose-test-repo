@@ -18,6 +18,50 @@ LEGACY_INPUT = (CI / "dd_plasma_boundary_legacy_p2.i").read_text()
 PARSED_MEAN_INPUT = (CI / "dd_plasma_boundary_parsed_mean_p2.i").read_text()
 PHYSICS_AUTO_INPUT = (CI / "dd_plasma_boundary_json_physics_auto_p2.i").read_text()
 LEGACY_DATA = (CI / "json_surface_rate_p2.json").read_text()
+KINETIC_TABLE = (CI / "plasma_closures_rate_a.txt").read_text()
+# Synthetic kinetic-rate construction; actual private S6 tables are not used.
+KINETIC_DATA = copy.deepcopy(DATA)
+KINETIC_DATA["species"].update({
+    "O2": {
+        "elements": {"O": 2}, "charge_number": 0,
+        "molar_mass_kg_mol": 0.032,
+        "initial_vol_mass_fraction": 1.0,
+        "initial_inlet_mass_fraction": 1.0,
+        "mass_fraction_functor": "w_O2"
+    },
+    "O2p": {
+        "elements": {"O": 2}, "charge_number": 1,
+        "molar_mass_kg_mol": 0.032,
+        "initial_vol_mass_fraction": 0.0,
+        "initial_inlet_mass_fraction": 0.0,
+        "mass_fraction_functor": "w_O2p"
+    }
+})
+KINETIC_DATA["equations"] = {"EI-415": "e + O2 -> 2e + O2p"}
+KINETIC_DATA["reactions"] = [{
+    "id": "EI-415", "reactants": {"e": 1, "O2": 1},
+    "products": {"e": 2, "O2p": 1},
+    "table": "plasma_closures_rate_a.txt",
+    "units": "mol/(m^3 s)", "energy_loss_eV": 12.06
+}]
+KINETIC_INPUT = PHYSICS_AUTO_INPUT.replace(
+    "    files = dd_plasma_boundary_json_p2.json\n",
+    "    files = dd_plasma_boundary_json_p2.json\n"
+    "    pressure = 1.333223684\n    temperature = 300\n"
+    "    state_model = ideal_gas\n", 1
+).replace(
+    "    [Transport]\n      [DriftDiffusion]",
+    "    [Transport]\n      [Chemistry]\n      []\n      [DriftDiffusion]", 1
+).replace(
+    "[Executioner]\n",
+    "[FunctorMaterials]\n  [synthetic_live_composition]\n"
+    "    type = ADGenericFunctorMaterial\n"
+    "    prop_names = 'w_O2 w_O2p'\n"
+    "    prop_values = '1 0'\n  []\n[]\n[Executioner]\n", 1
+)
+assert KINETIC_INPUT != PHYSICS_AUTO_INPUT
+assert "target_molar_concentration" not in json.dumps(KINETIC_DATA)
+assert "table_sha256" not in json.dumps(KINETIC_DATA)
 
 
 def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool,
@@ -29,6 +73,7 @@ def check(exe: Path, root: Path, name: str, source: str, data: dict, valid: bool
         json.dumps(data) + "\n", encoding="utf-8"
     )
     (work / "json_surface_rate_p2.json").write_text(LEGACY_DATA, encoding="utf-8")
+    (work / "plasma_closures_rate_a.txt").write_text(KINETIC_TABLE, encoding="utf-8")
     result = subprocess.run([str(exe), "--check-input", "-i", "input.i"],
                             cwd=work, text=True, capture_output=True, check=False)
     combined = result.stdout + result.stderr
@@ -56,6 +101,27 @@ def main(exe: Path):
         check(exe, root, "JSON_PRESENT", PHYSICS_AUTO_INPUT, DATA, True)
         check(exe, root, "PHYSICS_AUTO_LOG_E_ENERGY_AND_BCS",
               PHYSICS_AUTO_INPUT, DATA, True)
+        # One Chemistry action creates the EI strict-table progress R_EI415,
+        # both electron RHS FunctorKernels, and all eight? Here two BC
+        # groups exercise canonical e_wall_number_flux and energy coupling.
+        check(exe, root, "NATIVE_EI415_TABLE_BOTH_FEM_EQUATIONS",
+              KINETIC_INPUT, KINETIC_DATA, True)
+        wrong_table = copy.deepcopy(KINETIC_DATA)
+        wrong_table["reactions"][0]["table"] = "missing_ei415.txt"
+        check(exe, root, "EI_RATE_MISSING_TABLE_FAIL_CLOSED",
+              KINETIC_INPUT, wrong_table, False, "table cannot be opened")
+        for forbidden in ("target_molar_concentration", "table_sha256"):
+            invalid = copy.deepcopy(KINETIC_DATA)
+            invalid["reactions"][0][forbidden] = "not-an-input-option"
+            check(exe, root, "EI_FORBIDDEN_" + forbidden.upper(),
+                  KINETIC_INPUT, invalid, False, "table metadata/target")
+        dual_owner = copy.deepcopy(KINETIC_DATA)
+        dual_owner["reactions"][0]["rate"] = {
+            "model": "constant", "A": 1.0, "basis": "molar"
+        }
+        check(exe, root, "EI_DUPLICATE_RATE_AND_TABLE_FAIL_CLOSED",
+              KINETIC_INPUT, dual_owner, False,
+              "table requires an EI volume reaction without rate")
         # A JSON electron energy BC cannot be silently ignored when its
         # DriftDiffusion Energy Physics is absent.
         energy_missing = PHYSICS_AUTO_INPUT.replace(
