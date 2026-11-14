@@ -85,3 +85,4 @@ def test_runner_enforces_three_separate_contracts():
     assert 'PLASMA_LEGACY_NOOP_PARITY_PASS' in s
     assert "invalid_fem_fv_swap) expected='Electron continuity is FEM-only'" in s
     assert 'invalid_missing_variable) expected="requires species.missing.initial_number_density"' in s
+    assert 'invalid_species_density_nan_p2:requires species.nan.initial_number_density' in s
