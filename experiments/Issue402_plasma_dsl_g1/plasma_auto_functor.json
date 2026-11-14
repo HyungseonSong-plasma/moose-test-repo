@@ -11,7 +11,8 @@
       "charge_number": 1,
       "transport_coef": "functor",
       "mobility": "O2p_mobility",
-      "diffusivity": "O2p_diffusivity"
+      "diffusivity": "O2p_diffusivity",
+      "initial_number_density": 10000000000000000
     }
   },
   "equations": {},
