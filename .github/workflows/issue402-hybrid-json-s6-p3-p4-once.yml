@@ -1,0 +1,182 @@
+# Issue402: guarded public-only, source-bound 400W S6 hybrid JSON+Native P3/P4.
+# JSON generates electron/ion initial states and electron FEM DD+energy. Native
+# input preserves untouched RF, Poisson, neutral, ion FV, wall, chemistry rates.
+# Historical sources and protected private rate archives are never mutated.
+# Time integration/P4 diagnostics are NOT a science-equivalence acceptance.
+name: Issue402 JSON hybrid 400W S6 Native P3 P4 once
+run-name: Issue402 JSON hybrid S6-417/941 @ ${{ github.sha }}
+on:
+  push:
+    branches: [issue-402-dd-plasma-boundary-action]
+    paths: [.github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue402-hybrid-s6-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  hybrid-native-s6:
+    name: 400W 100us native JSON+Native hybrid S6-${{ matrix.case }} P3/P4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: ['417', '941']
+    env:
+      HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+    steps:
+      - name: Checkout exact feature-branch hybrid PhysicsApp
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout pinned immutable historical public input source
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: P0 strict SHA, hybrid ownership source and public chemistry preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C control rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C historical rev-parse HEAD)" = "$HISTORICAL_SHA"
+          test ! -e historical/"$CHEM"/private_rates
+          grep -Fq "$OCI" control/physics_app/dependencies.lock
+          test -f control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
+          python3 -m py_compile \
+            control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py \
+            control/experiments/Issue402_plasma_dsl_g1/run_canonical_s6_p3_once.py \
+            control/experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p3_once.py \
+            control/experiments/Issue402_plasma_dsl_g1/verify_chemistry_p3_evidence.py
+          python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
+            --control control --mode preflight
+          cd control
+          python3 experiments/Issue402_plasma_dsl_g1/p3_chemistry_preflight.py \
+            --output "$RUNNER_TEMP/hybrid_s6_static_readiness_${{ matrix.case }}.json"
+          echo "HYBRID_JSON_S6_P0_PASS CASE=${{ matrix.case }} SOURCE=$GITHUB_SHA"
+      - name: Install pinned public P3-P4 scientific analysis dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Prepare public 400W Python runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+      - name: Prepare original public 400W mesh and electron moments without private rates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$SRC" | cut -d ' ' -f1)" = \
+            35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA="$HISTORICAL_SHA"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          test ! -e "$CHEM/private_rates"
+          echo HYBRID_S6_PUBLIC_ORIGINAL_MESH_P0_PASS
+      - name: P1 exact-source Native PhysicsApp build with pinned vendor image
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          mkdir -p experiments/Issue402_plasma_dsl_g1/evidence
+          docker pull "$OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
+          python3 - "$GITHUB_SHA" "$OCI" <<'PY'
+          import hashlib, json, pathlib, sys
+          def hash_file(path):
+              h=hashlib.sha256()
+              with open(path,"rb") as f:
+                  for x in iter(lambda:f.read(1<<20),b""):h.update(x)
+              return h.hexdigest()
+          root=pathlib.Path("experiments/Issue402_plasma_dsl_g1/evidence")
+          binary=pathlib.Path("physics_app/physics-opt")
+          receipt={
+            "schema":"issue402.native_p1.job_local.v1",
+            "reusable_scope":"same_exact_head_ci_job_only",
+            "source_sha":sys.argv[1],
+            "oci_image":sys.argv[2],
+            "binary_sha256":hash_file(binary),
+            "build_log_sha256":hash_file(root/"native_build.log"),
+            "P1":"PASS","P3":"NOT_RUN","science":"SCIENCE_HOLD",
+          }
+          target=root/"native_p1_identity.json"
+          if target.exists():raise ValueError("P1_SOURCE_IDENTITY_ALREADY_EXISTS")
+          target.write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+          print("HYBRID_S6_NATIVE_P1_SOURCE_SHA="+sys.argv[1])
+          PY
+      - name: Native exact-head 11-layer hybrid S6 P2 then genuine 400W 100us P3 and P4
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          test ! -e "$RUNNER_TEMP/hybrid_S6_${{ matrix.case }}"
+          python3 experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p3_once.py \
+            --case "${{ matrix.case }}" \
+            --historical ../historical \
+            --expected-head "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/hybrid_S6_${{ matrix.case }}" \
+            --timeout-seconds 18000 \
+            --hybrid-json \
+            --authorize-p3 \
+            2>&1 | tee "$RUNNER_TEMP/hybrid_S6_${{ matrix.case }}_command.log"
+          python3 - "$RUNNER_TEMP/hybrid_S6_${{ matrix.case }}/results/status.json" <<'PY'
+          import json, pathlib, sys
+          x=json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert x["P0"]=="PASS" and x["P2"]=="PASS" and x["P3"]=="PASS"
+          assert x["P4"]=="DIAGNOSTIC_ONLY"
+          assert x["physics_mode"]=="chemistry_hybrid_json_native"
+          assert x["science"]=="SCIENCE_HOLD"
+          assert x["canonical_fields"]["frames"]==461
+          assert x["hybrid_json_ownership_cutover"]["removed_generated_owner_count"]==10
+          print("HYBRID_S6_P3_REAL_100US_AND_P4_REFERENCE_DIAGNOSTIC_PASS")
+          PY
+      - name: Always upload hybrid S6 source-bound P2/P3/P4 evidence, never staged protected rates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-hybrid-S6-${{ matrix.case }}-P3-P4-${{ github.sha }}
+          retention-days: 45
+          compression-level: 3
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/hybrid_S6_${{ matrix.case }}/results/**
+            ${{ runner.temp }}/hybrid_S6_${{ matrix.case }}/native_P2.log
+            ${{ runner.temp }}/hybrid_S6_${{ matrix.case }}/native_P3.log
+            ${{ runner.temp }}/hybrid_S6_${{ matrix.case }}_command.log
+            ${{ runner.temp }}/hybrid_s6_static_readiness_${{ matrix.case }}.json
+            control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
