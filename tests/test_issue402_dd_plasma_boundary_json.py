@@ -123,7 +123,10 @@ def test_json_plus_minimal_i_owns_complete_fem_electron_equations_and_sheath():
                    "FEMLogMolarElectronJouleHeating"):
         assert kernel in ENERGY_ACTION
     assert "ElectronEnergyMaterial" in ENERGY_ACTION
-    assert "ESWallFluxMaterial" not in ENERGY_ACTION
+    # Comments may refer to the single wall-flux provider: only executable
+    # construction must be absent from Energy. Continuity is its sole owner.
+    assert 'const std::string wall_type = "ESWallFluxMaterial";' not in ENERGY_ACTION
+    assert 'getProblem().addFunctorMaterial(wall_type' not in ENERGY_ACTION
     assert '"e_energy_eV"' in ENERGY_ACTION or '"e_energy_eV"' in CONTINUITY_ACTION
     assert 'const std::string wall_type = "ESWallFluxMaterial";' in CONTINUITY_ACTION
     assert 'getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall);' in CONTINUITY_ACTION
