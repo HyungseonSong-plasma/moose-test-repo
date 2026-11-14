@@ -69,6 +69,10 @@ jobs:
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
           grep -Fq 'canonicalize_native_ion_transport_sources' \
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
+          grep -Fq 'canonicalize_s6_root_gas_state' \
+            control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
+          grep -Fq 'HYBRID_ROOT_PRESSURE_OUTLET_BC_IDENTITY_CHANGED' \
+            control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
           test -s "control/experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_${{ matrix.case }}.json"
           python3 -m py_compile \
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py \
