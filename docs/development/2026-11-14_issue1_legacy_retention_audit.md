@@ -87,3 +87,42 @@ the current Physics executable is not claimed to accept them without a checked b
 
 **Current outcome:** two direct diagnostic path dependencies decoupled; six canonical
 experiment manifests and two shared checkers retained; no deletion authorized.
+
+## Isolated P0 verification (2026-11-14)
+
+**Validated code/fixture source commit:** `cbf80b18e0e792fc759f12d3bda0f59f9dd49b63`.
+
+- The exact two pytest modules were reproduced with checked Git blob IDs
+  `d84d7f8df12cf5ab628ae4d58c7134f6c8ffd879` (fixture checks) and
+  `a474bc41e2ebcf31447e673fe55b4f265c59d785` (#402 source guard).
+- The two frozen MOOSE inputs reproduced the original Git blobs
+  `9906040c450e28b3f1de8628c3936cf3ad1dec74` (#197) and
+  `5b20df8337828f74d40b122d2745310d46aa1b71` (#199).
+- `python -m pytest -q --collect-only` on the two exact modules collected
+  **7/7** cases without collection errors.
+- `python -m pytest -q tests/test_issue1_legacy_consumer_fixtures.py`
+  returned **4 passed** in an isolated local subset. The two historical
+  diagnostic script files in that isolated subset were *minimal SOURCE-line
+  stand-ins*, **not full byte-identical scripts**; actual script SOURCE
+  assignments were independently inspected from the remote exact branch.
+  Do not misinterpret this as an exact GitHub checkout pytest run.
+- Deliberately corrupting the #197 fixture made the integrity test fail
+  (expected nonzero exit). Restoring the fixture and reverting the #199 script
+  path to the deprecated Issue #1 directory caused the path-ownership test
+  to fail (expected nonzero exit). After restoration, **4/4 passed** again.
+- An independent remote exact-source check evaluated **28/28** explicit
+  assertions from the Issue #402 source-ownership tests against the registered
+  Physics C++ sources, factory check, and current Issue #402 input fixture.
+  This was source assertion parity, **not a completed #402 pytest run**.
+- The remote Git tree verified both replay inputs live under
+  `experiments/historical_issue1_diagnostic_replays/`, no copies remain
+  under `tests/fixtures/issue1_legacy_consumers/`, and original Issue #1
+  source assets are still present.
+
+**Validation classification:** `ISOLATED_P0_PASS / EXACT_HEAD_REPO_PYTEST_NOT_RUN /
+REPOSITORY_CI_PENDING / NATIVE_P2_P3_NOT_RUN / DELETE_HOLD`.
+
+The repository's full GitHub CI is triggered by pull requests to `main`
+and includes costly Native PhysicsApp jobs. No PR, full CI, Native build,
+P2 or P3 was triggered in this verification cut. The isolated local run
+cannot authorize deletion or science parity promotion.
