@@ -16,7 +16,7 @@ def digest(path: Path) -> str:
             h.update(block)
     return h.hexdigest()
 
-def verify(results: Path, expected_head: str, case: str) -> dict:
+def verify(results: Path, expected_head: str, case: str, *, hybrid_json: bool = False) -> dict:
     if case not in ("417", "941") or len(expected_head) != 40:
         raise ValueError("P3_EVIDENCE_INVALID_REQUEST")
     manifest = json.loads((results / "manifest.json").read_text())
@@ -24,8 +24,9 @@ def verify(results: Path, expected_head: str, case: str) -> dict:
     for obj in (status, manifest):
         if obj.get("case") != case or obj.get("arm") != "D":
             raise ValueError("P3_EVIDENCE_CASE_OR_ARM_MISMATCH")
-        if obj.get("physics_mode") != "chemistry":
-            raise ValueError("P3_EVIDENCE_NOT_CHEMISTRY")
+        expected_mode = ("chemistry_hybrid_json_native" if hybrid_json else "chemistry")
+        if obj.get("physics_mode") != expected_mode:
+            raise ValueError("P3_EVIDENCE_NOT_CHEMISTRY_OR_HYBRID_OWNER")
         if obj.get("source_sha") != expected_head:
             raise ValueError("P3_EVIDENCE_SOURCE_MISMATCH")
         if obj.get("science") != "SCIENCE_HOLD":
@@ -46,6 +47,15 @@ def verify(results: Path, expected_head: str, case: str) -> dict:
         raise ValueError("P3_EVIDENCE_CANONICAL_ENERGY_OR_TIME_MISMATCH")
     if status.get("scratch_chemistry_cutover", {}).get("removed_count") != 9:
         raise ValueError("P3_EVIDENCE_SUPERSEDED_OWNER_COUNT_MISMATCH")
+    if hybrid_json:
+        hybrid = status.get("hybrid_json_ownership_cutover", {})
+        if hybrid.get("removed_generated_owner_count") != 10 or (
+            hybrid.get("native_owner_preservation") !=
+            "ALL_NON_GENERATED_PHYSICS_INPUTS_UNCHANGED"
+        ):
+            raise ValueError("P3_EVIDENCE_HYBRID_NATIVE_OWNER_OR_SOURCE_MISMATCH")
+        if hybrid.get("overlay_sha256") != status.get("sidecar_sha256"):
+            raise ValueError("P3_EVIDENCE_HYBRID_JSON_OVERLAY_SHA_MISMATCH")
     if not status.get("binary_sha256") or not status.get("sidecar_sha256") or (
         not status.get("p2_log_sha256") or not status.get("p3_log_sha256")
     ):
@@ -70,8 +80,10 @@ def main() -> int:
     parser.add_argument("--results", type=Path, required=True)
     parser.add_argument("--expected-head", required=True)
     parser.add_argument("--case", choices=("417", "941"), required=True)
+    parser.add_argument("--hybrid-json", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(verify(args.results, args.expected_head, args.case),
+    print(json.dumps(verify(args.results, args.expected_head, args.case,
+                            hybrid_json=args.hybrid_json),
                      sort_keys=True, indent=2))
     return 0
 
