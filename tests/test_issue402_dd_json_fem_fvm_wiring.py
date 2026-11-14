@@ -13,16 +13,17 @@ PILOT = ROOT / "experiments/Issue402_plasma_dsl_g1"
 def test_json_drives_species_transport_without_i_material_blocks():
     deck = (PILOT / "valid_json_dd_fem_fvm_mixed_p2.i").read_text()
     data = json.loads((PILOT / "json_dd_fem_fvm_mixed_p2.json").read_text())
-    owners = data["transport_coefficients"]["drift_diffusion"]
+    assert "transport_coefficients" not in data
+    owners = {k: v for k, v in data["species"].items() if "transport_coef" in v}
     assert set(owners) == {"e", "O2p", "Om", "Op"}
-    assert owners["e"]["model"] == "lookup"
+    assert owners["e"]["transport_coef"] == "lookup"
     assert "coordinate" not in owners["e"]
     assert owners["e"]["table_units"] == "reduced"
-    assert owners["Om"]["model"] == "lookup"
+    assert owners["Om"]["transport_coef"] == "lookup"
     assert "coordinate" not in owners["Om"]
     assert owners["Om"]["table_units"] == "physical"
     for ion in ("O2p", "Op"):
-        assert owners[ion]["model"] == "constant"
+        assert owners[ion]["transport_coef"] == "constant"
         assert owners[ion]["mobility"] >= 0
         assert owners[ion]["diffusivity"] >= 0
     assert owners["Om"]["table_file"] == "lookup_om_physical_p2.txt"
@@ -49,6 +50,8 @@ def test_continuity_maps_both_species_families_to_ddmaterial():
     assert "species.insert(species.end(), fvm.begin(), fvm.end())" in code
     assert 'getProblem().addFunctorMaterial(type, name() + "_" + id + "_transport_coefficients", params)' in code
     assert 'params.set<MooseEnum>("model") = config->model' in code
+    assert 'params.set<MooseFunctorName>("mobility_source") = config->mobility_source' in code
+    assert 'params.set<MooseFunctorName>("diffusivity_source") = config->diffusivity_source' in code
     assert 'params.set<FileName>("table_file") = config->table_file' in code
     assert 'params.set<Real>("mobility") = config->mobility' in code
     assert 'params.set<Real>("diffusivity") = config->diffusivity' in code
@@ -61,17 +64,22 @@ def test_json_and_lookup_data_are_validated_fail_closed():
     assert "std::isfinite(result.mobility)" in parser
     assert "std::isfinite(result.diffusivity)" in parser
     assert "DDTransportMaterial lookup coefficients must be finite and nonnegative" in provider
-    assert "functor transport accepts only model" in parser
+    assert 'requiredText(value, "transport_coef", file)' in parser
+    assert 'requiredText(value, "mobility", file)' in parser
+    assert 'requiredText(value, "diffusivity", file)' in parser
+    assert "transport_coefficients.drift_diffusion is retired" in parser
     assert 'params.set<MooseEnum>("model") = config->model' in (
         ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
     functor_json = json.loads((PILOT / "plasma_auto_functor.json").read_text())
-    assert functor_json["transport_coefficients"]["drift_diffusion"]["O2p"] == {"model": "functor"}
+    assert functor_json["species"]["O2p"]["transport_coef"] == "functor"
+    assert functor_json["species"]["O2p"]["mobility"] == "O2p_mobility"
+    assert functor_json["species"]["O2p"]["diffusivity"] == "O2p_diffusivity"
     negative_functor = json.loads((PILOT / "invalid_json_functor_name_override_p2.json").read_text())
-    assert "mobility_source" in negative_functor["transport_coefficients"]["drift_diffusion"]["O2p"]
+    assert "mobility_source" in negative_functor["species"]["O2p"]
     assert 'std::isfinite(coordinate)' in provider
     missing = json.loads((PILOT / "invalid_json_dd_missing_om_p2.json").read_text())
-    assert "Om" not in missing["transport_coefficients"]["drift_diffusion"]
-    assert "Om" in json.loads((PILOT / "json_dd_fem_fvm_mixed_p2.json").read_text())["transport_coefficients"]["drift_diffusion"]
+    assert "transport_coef" not in missing["species"]["Om"]
+    assert "transport_coef" in json.loads((PILOT / "json_dd_fem_fvm_mixed_p2.json").read_text())["species"]["Om"]
     assert "require_json_transport" not in (
         PILOT / "invalid_json_dd_missing_om_p2.i").read_text()
     assert "lookup_om_invalid_p2.txt" in (
