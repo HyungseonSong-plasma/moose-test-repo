@@ -132,8 +132,11 @@ echo "ISSUE402_ELECTRON_EQUATIONS_NATIVE_P2_PASS_P3_NOT_RUN SCIENCE_HOLD"
 
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
+# P2 positive: JSON owns the electron FEM and ion FV log states/ICs.
+# Do not stack these auto-created variables on baseline.i's manual [Variables].
+native --check-input -i "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
+echo "PLASMA_JSON_OWNED_E_ION_BINDINGS_P2_PASS"
 # Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
 native --check-input -i "$PILOT/generic_four_species.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
