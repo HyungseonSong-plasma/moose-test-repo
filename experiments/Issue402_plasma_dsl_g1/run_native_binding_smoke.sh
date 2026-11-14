@@ -347,7 +347,7 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
       > "$EVIDENCE/$item.log" 2>&1
   else
-    native --check-input -i "$PILOT/$item.i" \
+    native --check-input -i "$PILOT/negative_json_contract_base.i" "$PILOT/$item.i" \
       > "$EVIDENCE/$item.log" 2>&1
   fi
   code=$?
