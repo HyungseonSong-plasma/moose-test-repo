@@ -60,6 +60,10 @@ jobs:
           test ! -e historical/"$CHEM"/private_rates
           grep -Fq "$OCI" control/physics_app/dependencies.lock
           test -f control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
+          grep -Fq 'migrate_exact_s6_fem_sheath' \
+            control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
+          grep -Fq 'HYBRID_EXPECTED_EXACTLY_8_REGISTERED_SHEATH_BCS' \
+            control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py
           python3 -m py_compile \
             control/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py \
             control/experiments/Issue402_plasma_dsl_g1/run_canonical_s6_p3_once.py \
@@ -71,7 +75,7 @@ jobs:
           cd control
           python3 -m pytest -q tests/test_issue402_hybrid_json_s6_owner_preflight.py
           cd ..
-          echo HYBRID_S6_FULL_STAGED_OWNER_P0_REGRESSION_PASS
+          echo HYBRID_S6_FULL_STAGED_OWNER_AND_EIGHT_SHEATH_BC_P0_PASS
           cd control
           python3 experiments/Issue402_plasma_dsl_g1/p3_chemistry_preflight.py \
             --output "$RUNNER_TEMP/hybrid_s6_static_readiness_${{ matrix.case }}.json"
