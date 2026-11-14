@@ -16,10 +16,26 @@ import re
 N_A = 6.02214076e23
 ROOT = Path(__file__).resolve().parents[1]
 VAR_NAMES = ("log_e", "log_O2p", "log_Om", "log_Op", "log_e_energy")
-ION_SOURCES = {
-    "O2p": ("ion_mobility", "ion_diffusion"),
-    "Om": ("negative_ion_mobility", "negative_ion_diffusion"),
-    "Op": ("atomic_positive_ion_mobility", "atomic_positive_ion_diffusion"),
+# Only the disposable Native input is migrated. The historical source
+# material still provides exactly the same physical coefficients; old names
+# are never published in the active hybrid configuration.
+NATIVE_COEFFICIENT_RENAME = {
+    "ion_mobility": "O2p_mobility",
+    "ion_diffusion": "O2p_diffusivity",
+    "negative_ion_mobility": "Om_mobility",
+    "negative_ion_diffusion": "Om_diffusivity",
+    "atomic_positive_ion_mobility": "Op_mobility",
+    "atomic_positive_ion_diffusion": "Op_diffusivity",
+}
+ARCHIVED_COEFFICIENT_CONSTANTS = {
+    "type": "ADGenericFunctorMaterial",
+    "prop_names": ("'p_fixed T_g_fixed ion_mobility ion_diffusion "
+                   "negative_ion_mobility negative_ion_diffusion "
+                   "atomic_positive_ion_mobility atomic_positive_ion_diffusion "
+                   "carrier_one'"),
+    "prop_values": ("'1.333223684 300 10 0.25851999786435537 "
+                    "10 0.25851999786435537 10 0.25851999786435537 1.0'"),
+    "block": "plasma",
 }
 # Exactly the archived common 400-W initial state, after name-only
 # canonicalization; never invent new numerical initial conditions.
@@ -205,6 +221,74 @@ def migrate_exact_s6_fem_sheath(source: str) -> tuple[str, list[dict]]:
     return source, sorted(report, key=lambda x: x["owner"])
 
 
+ 
+def canonicalize_native_ion_transport_sources(
+    layered: dict[str, str], base_name: str
+) -> tuple[dict[str, str], dict]:
+    """Rename both coefficient producers and consumers; never change values.
+
+    Strictly verify the one original Native source Material before any write.
+    Each mutation is one-to-one lexical substitution in scratch input files.
+    """
+    original_base = layered[base_name]
+    matches = []
+    for block in BLOCK.finditer(original_base):
+        if block.group("name") != "constants":
+            continue
+        roots = re.findall(
+            r"(?m)^\[([A-Za-z0-9_]+)\]\s*$", original_base[:block.start()])
+        if roots and roots[-1] == "FunctorMaterials":
+            matches.append(block)
+    if len(matches) != 1 or parameters(matches[0].group("body")) != (
+        ARCHIVED_COEFFICIENT_CONSTANTS
+    ):
+        raise ValueError("HYBRID_NATIVE_ION_CONSTANTS_SIGNATURE_CHANGED")
+    original_hash = digest(matches[0].group(0).encode("utf-8"))
+    counts = {old: 0 for old in NATIVE_COEFFICIENT_RENAME}
+    updated = {}
+    touched = []
+    for filename, source in layered.items():
+        old_source = source
+        for old_name, new_name in NATIVE_COEFFICIENT_RENAME.items():
+            source, count = re.subn(
+                r"(?<![A-Za-z0-9_])" + re.escape(old_name) +
+                r"(?![A-Za-z0-9_])", new_name, source
+            )
+            counts[old_name] += count
+        for old_name in NATIVE_COEFFICIENT_RENAME:
+            if re.search(r"(?<![A-Za-z0-9_])" + re.escape(old_name) +
+                         r"(?![A-Za-z0-9_])", source):
+                raise ValueError("HYBRID_UNMIGRATED_NATIVE_COEFFICIENT_" + old_name)
+        updated[filename] = source
+        if source != old_source:
+            touched.append(filename)
+    # Every original constant is published exactly once and consumed by at
+    # least the corresponding Native wall/transport operator.
+    if any(count < 2 for count in counts.values()):
+        raise ValueError("HYBRID_MISSING_NATIVE_COEFFICIENT_CONSUMER")
+    expected_props = ARCHIVED_COEFFICIENT_CONSTANTS["prop_names"]
+    for old_name, new_name in NATIVE_COEFFICIENT_RENAME.items():
+        expected_props = expected_props.replace(old_name, new_name)
+    migrated = [
+        block for block in BLOCK.finditer(updated[base_name])
+        if block.group("name") == "constants"
+    ]
+    if len(migrated) != 1 or parameters(migrated[0].group("body")) != {
+        **ARCHIVED_COEFFICIENT_CONSTANTS, "prop_names": expected_props
+    }:
+        raise ValueError("HYBRID_NATIVE_ION_CONSTANTS_VALUE_OR_OWNER_CHANGED")
+    return updated, {
+        "old_to_species_names": NATIVE_COEFFICIENT_RENAME,
+        "substitution_counts": counts,
+        "changed_staged_native_layers": sorted(touched),
+        "archived_constants_block_sha256": original_hash,
+        "canonical_constants_block_sha256":
+            digest(migrated[0].group(0).encode("utf-8")),
+        "constant_values_unchanged": True,
+        "physics_equations_unchanged": True,
+    }
+
+
 def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     if case not in ("417", "941"):
         raise ValueError("HYBRID_CASE_NOT_417_OR_941")
@@ -292,14 +376,53 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
                 "energy_transport_coef": "fluid",
             })
         else:
-            mu, D = ION_SOURCES[id]
-            entry.update({"transport_coef": "functor",
-                          "mobility": mu, "diffusivity": D})
+            entry.update({
+                "transport_coef": "functor",
+                "mobility": id + "_mobility",
+                "diffusivity": id + "_diffusivity",
+            })
         species[id] = entry
-    # Every JSON in [Plasmas]/files is validated as a complete mechanism.
-    # This transport-only overlay introduces no equations or reactions:
-    # archived public channels remain owned by the preceding JSON files.
-    hybrid_json = {"species": species, "equations": {}, "reactions": []}
+    # The integrated mechanism carries ALL seven species (neutrals too),
+    # all seven common and one variant reaction, and all four transport
+    # records. Construct the expected document from the pinned original
+    # public mechanisms and compare against the reviewed in-repo JSON.
+    if set(variant["equations"]) != {f"EI-{case}"} or (
+        len(variant["reactions"]) != 1 or
+        variant["reactions"][0]["id"] != f"EI-{case}"
+    ):
+        raise ValueError("HYBRID_INTEGRATED_VARIANT_REACTION_IDENTITY_CHANGED")
+    if (set(common["equations"]) & set(variant["equations"])) or any(
+        r["id"] in {x["id"] for x in common["reactions"]}
+        for r in variant["reactions"]
+    ):
+        raise ValueError("HYBRID_INTEGRATED_REACTION_COLLISION")
+    all_species = {key: dict(value) for key, value in common["species"].items()}
+    for id, value in species.items():
+        all_species[id].update(value)
+    expected_json = {
+        "species": all_species,
+        "equations": {**common["equations"], **variant["equations"]},
+        "reactions": [*common["reactions"], *variant["reactions"]],
+    }
+    if (len(expected_json["species"]) != 7 or
+        len(expected_json["reactions"]) != 8 or
+        len(expected_json["equations"]) != 8 or
+        {r["id"] for r in expected_json["reactions"]} !=
+            set(expected_json["equations"])):
+        raise ValueError("HYBRID_INTEGRATED_MECHANISM_COMPLETENESS_ERROR")
+    unified_name = f"unified_s6_{case}.json"
+    unified_source = ROOT / "chemistry" / unified_name
+    unified_raw = unified_source.read_bytes()
+    integrated_json = json.loads(unified_raw)
+    if integrated_json != expected_json:
+        raise ValueError("HYBRID_INTEGRATED_JSON_DIFFERS_FROM_PINNED_MECHANISM")
+    if any(
+        integrated_json["species"][id].get("mobility") != f"{id}_mobility" or
+        integrated_json["species"][id].get("diffusivity") != f"{id}_diffusivity"
+        for id in ("O2p", "Om", "Op")
+    ):
+        raise ValueError("HYBRID_INTEGRATED_ION_SOURCE_CONTRACT_MISMATCH")
+
     template = overlay.read_text(encoding="utf-8")
     old_files = (
         f"files = 'chemistry/oxygen_s6_common.json "
@@ -308,7 +431,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     if template.count(old_files) != 1:
         raise ValueError("HYBRID_S6_MECHANISM_FILES_NOT_PINNED")
     template = template.replace(
-        old_files, old_files[:-1] + " hybrid_s6_transport.json'", 1)
+        old_files, f"files = '{unified_name}'", 1)
     energy_section = (
         "        [Energy]\n"
         "          block = plasma\n"
@@ -332,25 +455,43 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         template.count("fem_potential = potential") != 2):
         raise ValueError("HYBRID_FULL_FEM_CONTINUITY_AND_ENERGY_NOT_ENABLED")
 
+    # All changes are isolated to the scratch input. The original Native
+    # coefficient material is the SOLE owner; all legacy consumers are
+    # rebound to the same numbers under species-prefixed identifiers.
+    native_inputs = {
+        n: (source if n == first.name else
+            (staged_chem_dir / n).read_text(encoding="utf-8"))
+        for n in names[:-1]
+    }
+    native_inputs, ion_rename_receipt = canonicalize_native_ion_transport_sources(
+        native_inputs, first.name
+    )
     before = {n: digest((staged_chem_dir / n).read_bytes()) for n in names}
-    # All preconditions above execute before ANY write. Only the disposable
-    # base/overlay/JSON sidecar are changed. Original 10 archived B/C layers
-    # and the source checkout are immutable.
-    json_path = staged_chem_dir / "hybrid_s6_transport.json"
+    # Validate all inputs and source identities before any scratch write.
+    json_path = staged_chem_dir / unified_name
     if json_path.exists():
-        raise ValueError("HYBRID_JSON_OUTPUT_ALREADY_EXISTS")
-    first.write_text(source, encoding="utf-8")
+        raise ValueError("HYBRID_INTEGRATED_JSON_OUTPUT_ALREADY_EXISTS")
+    for n, revised in native_inputs.items():
+        if digest(revised.encode("utf-8")) != before[n]:
+            (staged_chem_dir / n).write_text(revised, encoding="utf-8")
     overlay.write_text(template, encoding="utf-8")
-    json_path.write_text(json.dumps(hybrid_json, sort_keys=True, indent=2) + "\n")
+    json_path.write_bytes(unified_raw)
     after = {n: digest((staged_chem_dir / n).read_bytes()) for n in names}
     changed = [n for n in names if before[n] != after[n]]
-    if set(changed) != {first.name, overlay.name}:
+    expected_changed = set(ion_rename_receipt["changed_staged_native_layers"])
+    expected_changed.update((first.name, overlay.name))
+    if set(changed) != expected_changed:
         raise ValueError("HYBRID_UNEXPECTED_NATIVE_LAYER_EDIT: " + repr(changed))
     return {
         "schema": "issue402_s6_hybrid_json_native_owner_migration_v1",
         "case": case,
         "status": "SCRATCH_HYBRID_PREPARED_NO_SOLVE",
-        "native_owner_preservation": "ALL_NON_GENERATED_PHYSICS_INPUTS_UNCHANGED",
+        "native_owner_preservation":
+            "NATIVE_EQUATIONS_UNCHANGED_WITH_SPECIES_CANONICAL_COEFFICIENT_BINDINGS",
+        "native_species_coefficient_binding_migration": ion_rename_receipt,
+        "integrated_mechanism_json": unified_name,
+        "integrated_reaction_count": len(integrated_json["reactions"]),
+        "integrated_species_count": len(integrated_json["species"]),
         "removed_generated_owner_count": len(removed),
         "removed_owners": removed,
         "rebound_native_sheath_bcs": sheath_bc_rebinds,
@@ -360,6 +501,8 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         "initial_molar_energy_density_eV": math.exp(float(PINNED_INITIAL_LOG["log_e_energy"])),
         "electron_transport_table_sha256": digest(table_path.read_bytes()),
         "hybrid_json_sha256": digest(json_path.read_bytes()),
+        "integrated_json_source_sha256": digest(unified_raw),
+        "original_canonical_s6_base_sha256": original_sha,
         "overlay_sha256": digest(overlay.read_bytes()),
         "science_acceptance": "HOLD",
     }
