@@ -1,5 +1,6 @@
 # Bounded branch-specific exact-head Native P0/P1/P2 only.
 # 2026-11-14 species-local transport_coef/mobility/diffusivity/energy_transport_coef and strict JSON density.
+# P0 remains repository-local schema/wiring: unrelated full-S6 runner tests require numpy/scipy and are separate gates.
 # No new sheath flux formula or executable class; P3 and scientific parity remain SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
@@ -72,8 +73,6 @@ jobs:
             tests/test_issue402_species_transport_rule.py \
             tests/test_issue402_material_class_names.py \
             tests/test_issue402_s6_dd_review_package.py \
-            tests/test_issue402_g1_external_species_binding.py \
-            tests/test_issue402_chemistry_mechanism_contract.py \
             tests/test_issue402_energy_poisson_auto_variables.py \
             tests/test_issue402_sccm_inlet_cpp.py \
             tests/test_issue402_species_initial_composition.py \
