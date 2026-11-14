@@ -294,6 +294,171 @@ def canonicalize_native_ion_transport_sources(
     }
 
 
+# The only user-configured gas values are in [Physics]/[Plasmas].
+# These historical constants are checked exactly before they are retired.
+ROOT_PRESSURE_PA = "1.333223684"
+ROOT_TEMPERATURE_K = "300"
+ROOT_PRESSURE_VARIABLE = {
+    "type": "INSFVPressureVariable",
+    "initial_condition": ROOT_PRESSURE_PA,
+    "block": "plasma",
+}
+ROOT_OUTLET_PRESSURE_BC = {
+    "type": "INSFVOutletPressureBC",
+    "variable": "p",
+    "boundary": "outlet",
+    "function": ROOT_PRESSURE_PA,
+}
+
+
+def canonicalize_s6_root_gas_state(
+    layered: dict[str, str], base_name: str
+) -> tuple[dict[str, str], dict]:
+    """Use root pressure as pressure FV IC, then pressure FV Functor at runtime.
+
+    The original .i input is immutable; every mutation is scratch-only.
+    No independent p/p_fixed/T_g_fixed coefficient producers survive.
+    """
+    base = layered[base_name]
+    pressure_blocks = [
+        m for m in BLOCK.finditer(base)
+        if m.group("name") == "p" and
+        re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
+                   base[:m.start()])[-1:] == ["Variables"]
+    ]
+    if (len(pressure_blocks) != 1 or
+        parameters(pressure_blocks[0].group("body")) != ROOT_PRESSURE_VARIABLE):
+        raise ValueError("HYBRID_ROOT_PRESSURE_VARIABLE_IC_IDENTITY_CHANGED")
+
+    outlet_blocks = [
+        m for m in BLOCK.finditer(base)
+        if m.group("name") == "neutral_outlet_p" and
+        re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
+                   base[:m.start()])[-1:] == ["BCs"]
+    ]
+    if (len(outlet_blocks) != 1 or
+        parameters(outlet_blocks[0].group("body")) != ROOT_OUTLET_PRESSURE_BC):
+        raise ValueError("HYBRID_ROOT_PRESSURE_OUTLET_BC_IDENTITY_CHANGED")
+
+    constant_blocks = [
+        m for m in BLOCK.finditer(base)
+        if m.group("name") == "constants" and
+        re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
+                   base[:m.start()])[-1:] == ["FunctorMaterials"]
+    ]
+    if len(constant_blocks) != 1:
+        raise ValueError("HYBRID_ROOT_GAS_CONSTANT_OWNER_COUNT_CHANGED")
+    original = parameters(constant_blocks[0].group("body"))
+    expected = {
+        **ARCHIVED_COEFFICIENT_CONSTANTS,
+        "prop_names": ("'p_fixed T_g_fixed O2p_mobility O2p_diffusivity "
+                       "Om_mobility Om_diffusivity Op_mobility Op_diffusivity "
+                       "carrier_one'"),
+    }
+    if original != expected:
+        raise ValueError("HYBRID_ROOT_GAS_CONSTANT_IDENTITY_CHANGED")
+
+    # Remove the two old state providers, retaining all original ion and
+    # carrier numbers in the identical order and with identical precision.
+    constants = constant_blocks[0]
+    ctext = constants.group(0)
+    ctext = ctext.replace("p_fixed T_g_fixed ", "", 1)
+    ctext = ctext.replace(
+        "1.333223684 300 10 0.25851999786435537",
+        "10 0.25851999786435537", 1)
+    if ctext == constants.group(0):
+        raise ValueError("HYBRID_ROOT_GAS_CONSTANT_REWRITE_FAILED")
+
+    # The native outlet pressure must follow the SAME root input parameter
+    # (not another editable 1.333223684). MOOSE's standard brace replacement
+    # reads the root parameter without creating another source or Functor.
+    outlet = outlet_blocks[0]
+    otext = outlet.group(0).replace(
+        "    function = " + ROOT_PRESSURE_PA,
+        "    function = ${Physics/Plasmas/pressure}", 1)
+    if otext == outlet.group(0):
+        raise ValueError("HYBRID_ROOT_OUTLET_COUPLING_REWRITE_FAILED")
+
+    # Source order matters. All offsets refer to the original staged base.
+    pressure = pressure_blocks[0]
+    ptext = pressure.group(0).replace(
+        "    initial_condition = " + ROOT_PRESSURE_PA + "\n", "", 1)
+    if ptext == pressure.group(0):
+        raise ValueError("HYBRID_ROOT_PRESSURE_INITIAL_CONDITION_RETIRE_FAILED")
+    for match, replacement in sorted(
+        ((constants, ctext), (outlet, otext), (pressure, ptext)),
+        key=lambda pair: pair[0].start(),
+        reverse=True
+    ):
+        base = base[:match.start()] + replacement + base[match.end():]
+
+    migrated = dict(layered)
+    migrated[base_name] = base
+    touched = []
+    counts = {"p": 0, "T_g_fixed": 0}
+    for filename, source in migrated.items():
+        before = source
+        for old, new in (("p", "pressure"), ("T_g_fixed", "temperature")):
+            source, count = re.subn(
+                r"(?<![A-Za-z0-9_])" + re.escape(old) +
+                r"(?![A-Za-z0-9_])", new, source)
+            counts[old] += count
+        for token in ("p", "p_fixed", "T_g_fixed"):
+            if re.search(r"(?<![A-Za-z0-9_])" + re.escape(token) +
+                         r"(?![A-Za-z0-9_])", source):
+                raise ValueError("HYBRID_ROOT_GAS_LEGACY_OWNER_REMAINS_" + token)
+        migrated[filename] = source
+        if source != layered[filename]:
+            touched.append(filename)
+    if counts["p"] < 15 or counts["T_g_fixed"] < 5:
+        raise ValueError("HYBRID_ROOT_GAS_CONSUMER_COVERAGE_INCOMPLETE")
+
+    expected_names = (
+        "'O2p_mobility O2p_diffusivity Om_mobility Om_diffusivity "
+        "Op_mobility Op_diffusivity carrier_one'")
+    expected_values = (
+        "'10 0.25851999786435537 10 0.25851999786435537 "
+        "10 0.25851999786435537 1.0'")
+    new_constants = [
+        m for m in BLOCK.finditer(migrated[base_name])
+        if m.group("name") == "constants"
+    ]
+    if (len(new_constants) != 1 or
+        parameters(new_constants[0].group("body")) != {
+            **ARCHIVED_COEFFICIENT_CONSTANTS,
+            "prop_names": expected_names,
+            "prop_values": expected_values,
+        }):
+        raise ValueError("HYBRID_ROOT_GAS_ION_TRANSPORT_VALUES_CHANGED")
+    if "[pressure]\n    type = INSFVPressureVariable" not in migrated[base_name]:
+        raise ValueError("HYBRID_ROOT_PRESSURE_SOLVER_VARIABLE_MISSING")
+    if "    initial_condition = 1.333223684" in migrated[base_name]:
+        raise ValueError("HYBRID_DUPLICATE_PRESSURE_INITIAL_CONDITION")
+    if "function = ${Physics/Plasmas/pressure}" not in migrated[base_name]:
+        raise ValueError("HYBRID_ROOT_OUTLET_SOURCE_MISSING")
+
+    return migrated, {
+        "status": "NATIVE_PRESSURE_SOLVED_ROOT_PRESSURE_INITIAL_CONDITION",
+        "pressure_initial_pa": float(ROOT_PRESSURE_PA),
+        "temperature_constant_k": float(ROOT_TEMPERATURE_K),
+        "pressure_solver_variable": "pressure",
+        "pressure_runtime_functor": "pressure",
+        "temperature_runtime_functor": "temperature",
+        "external_pressure_functor_created": False,
+        "native_pressure_initial_retired": True,
+        "native_p_fixed_temperature_fixed_retired": True,
+        "root_outlet_parameter_coupled": True,
+        "changed_staged_native_layers": sorted(touched),
+        "substitution_counts": counts,
+        "original_pressure_block_sha256":
+            digest(pressure.group(0).encode("utf-8")),
+        "original_outlet_block_sha256":
+            digest(outlet.group(0).encode("utf-8")),
+    }
+
+
+
+
 def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     if case not in ("417", "941"):
         raise ValueError("HYBRID_CASE_NOT_417_OR_941")
@@ -436,7 +601,11 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     if template.count(old_files) != 1:
         raise ValueError("HYBRID_S6_MECHANISM_FILES_NOT_PINNED")
     template = template.replace(
-        old_files, f"files = '{unified_name}'", 1)
+        old_files,
+        f"files = '{unified_name}'\n"
+        f"    pressure = {ROOT_PRESSURE_PA}\n"
+        f"    temperature = {ROOT_TEMPERATURE_K}\n"
+        "    state_model = ideal_gas", 1)
     energy_section = (
         "        [Energy]\n"
         "          block = plasma\n"
@@ -471,6 +640,9 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     native_inputs, ion_rename_receipt = canonicalize_native_ion_transport_sources(
         native_inputs, first.name
     )
+    native_inputs, gas_state_receipt = canonicalize_s6_root_gas_state(
+        native_inputs, first.name
+    )
     before = {n: digest((staged_chem_dir / n).read_bytes()) for n in names}
     # Validate all inputs and source identities before any scratch write.
     json_path = staged_chem_dir / unified_name
@@ -484,6 +656,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     after = {n: digest((staged_chem_dir / n).read_bytes()) for n in names}
     changed = [n for n in names if before[n] != after[n]]
     expected_changed = set(ion_rename_receipt["changed_staged_native_layers"])
+    expected_changed.update(gas_state_receipt["changed_staged_native_layers"])
     expected_changed.update((first.name, overlay.name))
     if set(changed) != expected_changed:
         raise ValueError("HYBRID_UNEXPECTED_NATIVE_LAYER_EDIT: " + repr(changed))
@@ -492,8 +665,9 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         "case": case,
         "status": "SCRATCH_HYBRID_PREPARED_NO_SOLVE",
         "native_owner_preservation":
-            "NATIVE_EQUATIONS_UNCHANGED_WITH_SPECIES_CANONICAL_COEFFICIENT_BINDINGS",
+            "NATIVE_EQUATIONS_UNCHANGED_WITH_ROOT_PRESSURE_IC_AND_SPECIES_FUNCTORS",
         "native_species_coefficient_binding_migration": ion_rename_receipt,
+        "root_gas_state_pressure_initial_condition": gas_state_receipt,
         "integrated_mechanism_json": unified_name,
         "integrated_reaction_count": len(integrated_json["reactions"]),
         "integrated_species_count": len(integrated_json["species"]),
