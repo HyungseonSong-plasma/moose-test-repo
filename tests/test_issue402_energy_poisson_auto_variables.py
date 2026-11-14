@@ -43,3 +43,24 @@ def test_p2_decks_and_legacy_variable_reuse():
     run = (CASE / "run_native_binding_smoke.sh").read_text()
     assert "PLASMA_AUTO_ENERGY_POTENTIAL_P2_PASS" in run
     assert "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED" in run
+
+
+def test_electron_fem_only_and_non_electron_fvm_preserved():
+    """The electron FVM DSL is retired; ion FVM creation remains active."""
+    continuity = (APP / "DDContinuityEq.C").read_text()
+    energy = (APP / "DDEnergyEq.C").read_text()
+    p2 = (ROOT / "physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py").read_text()
+
+    assert '"fvm_species"' not in energy
+    assert 'validateSpeciesInputs(finite_element_species,\n                        {},' in energy
+    assert 'validateExistingSpeciesVariables(getParam<std::vector<std::string>>("fem_species"),\n                                   {},' in energy
+    assert 'std::find(_fvm_species.begin(), _fvm_species.end(), "e")' in continuity
+    assert 'Electron continuity is FEM-only' in continuity
+    assert 'generate(_fvm_initial_number_densities, true, "fvm_species");' in continuity
+    assert 'generate(_fvm_initial_number_densities, true);' in continuity
+    assert 'validate(_fvm_species, "fvm_species", "FVM");' in continuity
+    assert 'species.insert(species.end(), fvm.begin(), fvm.end());' in continuity
+    for marker in ("JSON_FEM_FVM_INITIAL_NUMBER_DENSITY",
+                   "ELECTRON_FVM_CONTINUITY_REJECTED",
+                   "ELECTRON_FVM_ENERGY_OPTION_REJECTED"):
+        assert marker in p2
