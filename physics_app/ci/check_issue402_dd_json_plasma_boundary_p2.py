@@ -70,7 +70,23 @@ def synthetic_s6(variant: str) -> dict:
         f"unified_s6_{variant}.json"
     ).read_text())
     data = copy.deepcopy(mechanism)
-    data["boundaries"] = copy.deepcopy(DATA["boundaries"])
+    # Retain all eight original S6 electron sheath BC objects and their
+    # canonical names/variable bindings. Only map physical S6 sideset
+    # identifiers to the four public GeneratedMesh sidesets for synthetic P2.
+    original_boundaries = copy.deepcopy(data["boundaries"])
+    assert len(original_boundaries) == 4
+    data["boundaries"] = {
+        synthetic_side: entry
+        for synthetic_side, entry in zip(("left", "bottom", "right", "top"),
+                                         original_boundaries.values())
+    }
+    assert sum(len(entry["bcs"]) for entry in data["boundaries"].values()) == 8
+    assert sum(bc["type"] == "FEMElectronSheathBC"
+               for entry in data["boundaries"].values()
+               for bc in entry["bcs"].values()) == 4
+    assert sum(bc["type"] == "FEMElectronEnergySheathBC"
+               for entry in data["boundaries"].values()
+               for bc in entry["bcs"].values()) == 4
     data["species"]["e"] = copy.deepcopy(DATA["species"]["e"])
     for name, spec in data["species"].items():
         if name == "e":
