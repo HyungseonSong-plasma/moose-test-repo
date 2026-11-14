@@ -264,7 +264,7 @@ echo "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED"
 
 for entry in "invalid_species_density_zero_p2:Invalid species ID for automatic naming: 0" \
              "invalid_species_density_odd_p2:Invalid species ID for automatic naming: 1e16" \
-             "invalid_species_density_nan_p2:Species 'nan' is absent from"; do
+             "invalid_species_density_nan_p2:requires species.nan.initial_number_density"; do
   item="${entry%%:*}"
   expected="${entry#*:}"
   set +e
