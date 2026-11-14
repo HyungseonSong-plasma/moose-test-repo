@@ -132,6 +132,16 @@ def run(case: str, historical: Path, expected_head: str,
                 status["hybrid_json_ownership_cutover"] = hybrid
                 if sha(sidecar) != hybrid["overlay_sha256"]:
                     raise ValueError("P3_HYBRID_OVERLAY_SHA_MISMATCH")
+                # Publish the EXACT single integrated JSON consumed by this
+                # Native solve, not only a hash of an ephemeral scratch file.
+                input_json = (staged / option.p2.CHEM /
+                              hybrid["integrated_mechanism_json"])
+                published_json = results / hybrid["integrated_mechanism_json"]
+                if sha(input_json) != hybrid["hybrid_json_sha256"]:
+                    raise ValueError("P3_INTEGRATED_JSON_PRE_SOLVE_SHA_MISMATCH")
+                shutil.copyfile(input_json, published_json)
+                if sha(published_json) != hybrid["integrated_json_source_sha256"]:
+                    raise ValueError("P3_INTEGRATED_JSON_ARTIFACT_SHA_MISMATCH")
         else:
             # Earlier D transport-only experiment, not the Chemistry P3 arm.
             shutil.copy2(ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
@@ -208,7 +218,9 @@ def run(case: str, historical: Path, expected_head: str,
             "P3": "PASS", "science": "SCIENCE_HOLD",
             "files": {
                 name: {"sha256": sha(results / name)}
-                for name in ("plasma.e", "plasma.csv")
+                for name in (("plasma.e", "plasma.csv",
+                              f"unified_s6_{case}.json") if hybrid_json
+                             else ("plasma.e", "plasma.csv"))
             }
         }, sort_keys=True, indent=2) + "\n")
         ref = ROOT / "experiments/Issue493_s6_boltzmann/reference"
