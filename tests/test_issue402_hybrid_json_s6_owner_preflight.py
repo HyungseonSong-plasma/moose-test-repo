@@ -90,6 +90,17 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert isinstance(PINNED_INITIAL_LOG["log_e_energy"], str)
     report = prepare(stage, names, case)
     assert report["removed_generated_owner_count"] == 10
+    gas = report["root_gas_state_pressure_initial_condition"]
+    assert gas["status"] == "NATIVE_PRESSURE_SOLVED_ROOT_PRESSURE_INITIAL_CONDITION"
+    assert gas["pressure_initial_pa"] == 1.333223684
+    assert gas["temperature_constant_k"] == 300
+    assert gas["pressure_solver_variable"] == "pressure"
+    assert gas["pressure_runtime_functor"] == "pressure"
+    assert gas["temperature_runtime_functor"] == "temperature"
+    assert gas["external_pressure_functor_created"] is False
+    assert gas["native_pressure_initial_retired"] is True
+    assert gas["native_p_fixed_temperature_fixed_retired"] is True
+    assert gas["root_outlet_parameter_coupled"] is True
     assert report["integrated_mechanism_json"] == f"unified_s6_{case}.json"
     assert report["integrated_species_count"] == 7
     assert report["integrated_reaction_count"] == 8
@@ -107,7 +118,7 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
         names[0], names[-1]
     }
     assert report["native_owner_preservation"] == (
-        "NATIVE_EQUATIONS_UNCHANGED_WITH_SPECIES_CANONICAL_COEFFICIENT_BINDINGS"
+        "NATIVE_EQUATIONS_UNCHANGED_WITH_ROOT_PRESSURE_IC_AND_SPECIES_FUNCTORS"
     )
     data = json.loads((stage / f"unified_s6_{case}.json").read_text())
     assert set(data) == {"species", "equations", "reactions"}
@@ -138,8 +149,14 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert "PhysicsFEMLogMolarElectronFieldLimitedFluxBC" not in base
     assert "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC" not in base
     assert "wall_number_flux = e_wall_number_flux" in base
-    assert "prop_names = 'p_fixed T_g_fixed O2p_mobility O2p_diffusivity Om_mobility Om_diffusivity Op_mobility Op_diffusivity carrier_one'" in base
-    assert "prop_values = '1.333223684 300 10 0.25851999786435537 10 0.25851999786435537 10 0.25851999786435537 1.0'" in base
+    assert "prop_names = 'O2p_mobility O2p_diffusivity Om_mobility Om_diffusivity Op_mobility Op_diffusivity carrier_one'" in base
+    assert "prop_values = '10 0.25851999786435537 10 0.25851999786435537 10 0.25851999786435537 1.0'" in base
+    assert "[pressure]\n    type = INSFVPressureVariable" in base
+    assert "initial_condition = 1.333223684" not in base
+    assert "function = ${Physics/Plasmas/pressure}" in base
+    assert "pressure = pressure" in base
+    assert "temperature = temperature" in base
+    assert "T_g_fixed" not in base and "p_fixed" not in base
     for original_name, canonical_name in NATIVE_COEFFICIENT_RENAME.items():
         assert original_name in original
         assert original_name not in base
@@ -154,6 +171,9 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
         assert (stage / name).read_text() == "# Historical untouched Native layer\n"
     overlay = (stage / names[-1]).read_text()
     assert f"files = 'unified_s6_{case}.json'" in overlay
+    assert "pressure = 1.333223684" in overlay
+    assert "temperature = 300" in overlay
+    assert "state_model = ideal_gas" in overlay
     assert "oxygen_s6_common.json" not in overlay
     assert "initial_molar_energy_density_eV" in overlay
 
@@ -214,3 +234,29 @@ def test_case_reactions_are_not_cross_mixed(tmp_path: Path):
         prepare(stage, names, "417")
     assert (stage / names[0]).read_text() == source
     assert not (stage / "unified_s6_417.json").exists()
+
+
+def test_hybrid_rejects_changed_archived_pressure_ic_before_writing(tmp_path: Path):
+    stage, names, original = prepare_scratch(tmp_path, "417")
+    mutated = original.replace("initial_condition = 1.333223684",
+                               "initial_condition = 1.333223685", 1)
+    assert mutated != original
+    (stage / names[0]).write_text(mutated)
+    overlay = (stage / names[-1]).read_bytes()
+    with pytest.raises(ValueError, match="HYBRID_ROOT_PRESSURE_VARIABLE_IC_IDENTITY_CHANGED"):
+        prepare(stage, names, "417")
+    assert (stage / names[0]).read_text() == mutated
+    assert (stage / names[-1]).read_bytes() == overlay
+    assert not (stage / "unified_s6_417.json").exists()
+
+
+def test_hybrid_rejects_changed_archived_pressure_outlet(tmp_path: Path):
+    stage, names, original = prepare_scratch(tmp_path, "941")
+    mutated = original.replace("    function = 1.333223684",
+                               "    function = 1.333223685", 1)
+    assert mutated != original
+    (stage / names[0]).write_text(mutated)
+    with pytest.raises(ValueError, match="HYBRID_ROOT_PRESSURE_OUTLET_BC_IDENTITY_CHANGED"):
+        prepare(stage, names, "941")
+    assert (stage / names[0]).read_text() == mutated
+    assert not (stage / "unified_s6_941.json").exists()
