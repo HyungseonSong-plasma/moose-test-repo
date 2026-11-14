@@ -1,5 +1,5 @@
 # Bounded branch-specific exact-head Native P0/P1/P2 only.
-# 2026-11-13 strict JSON required initial density for every selected FEM/FVM species.
+# 2026-11-14 species-local transport_coef/mobility/diffusivity/energy_transport_coef and strict JSON density.
 # No new sheath flux formula or executable class; P3 and scientific parity remain SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
@@ -50,6 +50,10 @@ jobs:
           grep -Fq 'bind_json_initial(fem, "fem_species", _fem_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
           grep -Fq 'bind_json_initial(fvm, "fvm_species", _fvm_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
           grep -Fq 'external [Variables]/[ICs] cannot replace it.' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'requiredText(value, "transport_coef", file)' physics_app/src/physics/plasma/Chemistry.C
+          grep -Fq 'transport_coefficients.drift_diffusion is retired' physics_app/src/physics/plasma/Chemistry.C
+          grep -Fq 'params.set<MooseFunctorName>("mobility_source") = config->mobility_source;' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'params.set<MooseFunctorName>("diffusivity_source") = config->diffusivity_source;' physics_app/src/physics/plasma/DDContinuityEq.C
           grep -Fq 'requires species.e.initial_number_density' physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
           grep -Fq 'requires species.O2p.initial_number_density' physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
           grep -Fq 'fem_species = e' physics_app/ci/dd_plasma_boundary_json_physics_auto_p2.i
@@ -65,6 +69,11 @@ jobs:
             tests/test_issue402_dd_plasma_boundary_json.py \
             tests/test_issue402_species_initial_density_pairs.py \
             tests/test_issue402_dd_json_fem_fvm_wiring.py \
+            tests/test_issue402_species_transport_rule.py \
+            tests/test_issue402_material_class_names.py \
+            tests/test_issue402_s6_dd_review_package.py \
+            tests/test_issue402_g1_external_species_binding.py \
+            tests/test_issue402_chemistry_mechanism_contract.py \
             tests/test_issue402_energy_poisson_auto_variables.py \
             tests/test_issue402_sccm_inlet_cpp.py \
             tests/test_issue402_species_initial_composition.py \
@@ -106,6 +115,11 @@ jobs:
               cd /workspace
               python3 physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py \
                 /workspace/physics_app/physics-opt
+              cd /workspace/experiments/Issue402_plasma_dsl_g1
+              /workspace/physics_app/physics-opt --check-input -i valid_json_dd_fem_fvm_mixed_p2.i
+              /workspace/physics_app/physics-opt --check-input -i valid_json_generated_functor.i
+              /workspace/physics_app/physics-opt --check-input -i valid_json_generated_transport.i
+              echo SPECIES_LOCAL_DD_CONSTANT_LOOKUP_FUNCTOR_NATIVE_P2_PASS
             ' 2>&1 | tee /tmp/issue402_dd_json_boundary_p2.log
           echo DD_JSON_BOUNDARY_NATIVE_P2_PASS_P3_NOT_RUN
       - name: Publish exact-source P0 P1 P2 logs
