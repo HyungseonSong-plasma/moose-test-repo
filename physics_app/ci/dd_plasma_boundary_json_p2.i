@@ -1,4 +1,4 @@
-# Issue402 verbatim BC JSON migration fixture; no .i selector.
+# Issue402 root-only JSON BC control: must fail closed without DriftDiffusion Physics.
 # GeneratedMesh sideset mapping: left=wafer, bottom=cover, right=inlet, top=outlet.
 [Mesh]
   type = GeneratedMesh
