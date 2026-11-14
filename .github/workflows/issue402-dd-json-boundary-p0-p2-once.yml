@@ -1,5 +1,5 @@
 # Bounded branch-specific exact-head Native P0/P1/P2 only.
-# 2026-11-13 canonical log_molar_eV energy and JSON-owned FEM/FVM initial densities.
+# 2026-11-13 strict JSON required initial density for every selected FEM/FVM species.
 # No new sheath flux formula or executable class; P3 and scientific parity remain SCIENCE_HOLD.
 name: Issue402 DD JSON plasma boundary P0 P1 P2 once
 run-name: Issue402 DD JSON plasma boundary exact ${{ github.sha }}
@@ -47,8 +47,11 @@ jobs:
           ! grep -Fq 'physical_eV' physics_app/include/materials/ElectronEnergyMaterial.h
           ! grep -Fq '[FunctorMaterials]' physics_app/ci/dd_plasma_boundary_json_physics_auto_p2.i
           grep -Fq 'std::optional<double> initial_number_density;' physics_app/include/physics/plasma/Chemistry.h
-          grep -Fq 'bind_json_initial(fem, _fem_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
-          grep -Fq 'bind_json_initial(fvm, _fvm_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'bind_json_initial(fem, "fem_species", _fem_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'bind_json_initial(fvm, "fvm_species", _fvm_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'external [Variables]/[ICs] cannot replace it.' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'requires species.e.initial_number_density' physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
+          grep -Fq 'requires species.O2p.initial_number_density' physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py
           grep -Fq 'fem_species = e' physics_app/ci/dd_plasma_boundary_json_physics_auto_p2.i
           ! grep -Fq "fem_species = 'e 1e15'" physics_app/ci/dd_plasma_boundary_json_physics_auto_p2.i
           grep -Fq 'getFunctorByName<ADReal>("e_energy_eV")' physics_app/src/materials/DDTransportMaterial.C
