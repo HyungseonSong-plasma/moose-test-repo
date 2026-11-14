@@ -159,7 +159,11 @@ def test_active_energy_state_binding_is_canonical_across_bc_and_readers():
     assert 'getFunctor<ADReal>("mean_energy")' in bc
     assert "log_energy" not in bc
     assert not (APP / "src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C").exists()
-    assert not (APP / "src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C").exists()
+    # The alternative thermal-only BC is still registered but is not a
+    # generated JSON electron sheath operator; retain its canonical coupling.
+    thermal = text("physics_app/src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C")
+    assert '"log_e_energy"' in thermal
+    assert '"log_energy"' not in thermal
 
     for path in ("physics_harness/adapters/moose/species_plot.py",
                  "physics_harness/adapters/moose/time_trace.py"):
