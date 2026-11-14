@@ -132,6 +132,10 @@ def test_approved_hybrid_owner_cutover_is_exact_and_native_fallback_untouched(
     assert data["species"]["e"]["transport_coef"] == "lookup"
     assert data["species"]["e"]["energy_transport_coef"] == "fluid"
     assert data["species"]["e"]["table_units"] == "reduced"
+    assert data["species"]["e"]["pressure"] == "pressure"
+    assert data["species"]["e"]["gas_temperature"] == "temperature"
+    assert "T_g_fixed" not in json.dumps(data)
+    assert '"pressure": "p"' not in json.dumps(data)
     assert data["species"]["e"]["bounds_policy"] == "clamp"
     for species in ("O2p", "Om", "Op"):
         assert data["species"][species]["transport_coef"] == "functor"
