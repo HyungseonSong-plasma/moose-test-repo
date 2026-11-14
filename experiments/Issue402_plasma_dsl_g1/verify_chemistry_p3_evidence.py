@@ -51,7 +51,7 @@ def verify(results: Path, expected_head: str, case: str, *, hybrid_json: bool = 
         hybrid = status.get("hybrid_json_ownership_cutover", {})
         if hybrid.get("removed_generated_owner_count") != 10 or (
             hybrid.get("native_owner_preservation") !=
-            "NATIVE_EQUATIONS_UNCHANGED_WITH_SPECIES_CANONICAL_COEFFICIENT_BINDINGS"
+            "NATIVE_EQUATIONS_UNCHANGED_WITH_ROOT_PRESSURE_IC_AND_SPECIES_FUNCTORS"
         ):
             raise ValueError("P3_EVIDENCE_HYBRID_NATIVE_OWNER_OR_SOURCE_MISMATCH")
         if (hybrid.get("integrated_mechanism_json") != f"unified_s6_{case}.json"
@@ -60,6 +60,19 @@ def verify(results: Path, expected_head: str, case: str, *, hybrid_json: bool = 
             or hybrid.get("hybrid_json_sha256") !=
                 hybrid.get("integrated_json_source_sha256")):
             raise ValueError("P3_EVIDENCE_INTEGRATED_JSON_IDENTITY_MISMATCH")
+        gas = hybrid.get("root_gas_state_pressure_initial_condition", {})
+        if (gas.get("status") !=
+                "NATIVE_PRESSURE_SOLVED_ROOT_PRESSURE_INITIAL_CONDITION"
+            or gas.get("pressure_solver_variable") != "pressure"
+            or gas.get("pressure_runtime_functor") != "pressure"
+            or gas.get("temperature_runtime_functor") != "temperature"
+            or gas.get("pressure_initial_pa") != 1.333223684
+            or gas.get("temperature_constant_k") != 300
+            or gas.get("external_pressure_functor_created") is not False
+            or gas.get("native_pressure_initial_retired") is not True
+            or gas.get("native_p_fixed_temperature_fixed_retired") is not True
+            or gas.get("root_outlet_parameter_coupled") is not True):
+            raise ValueError("P3_EVIDENCE_ROOT_PRESSURE_IC_AND_GAS_OWNER_MISMATCH")
         canonical = hybrid.get("native_species_coefficient_binding_migration", {})
         expected = {
             "ion_mobility": "O2p_mobility",
