@@ -94,9 +94,9 @@ def synthetic_s6(variant: str) -> dict:
 
 
 S6_SYNTHETIC_INPUT = KINETIC_INPUT.replace(
-    "  [potential]\\n    type = MooseVariable\\n  []",
-    "  [potential]\\n    type = MooseVariable\\n  []\\n"
-    "  [log_Op]\\n    type = MooseVariableFVReal\\n  []", 1
+    "  [potential]\n    type = MooseVariable\n  []",
+    "  [potential]\n    type = MooseVariable\n  []\n"
+    "  [log_Op]\n    type = MooseVariableFVReal\n  []", 1
 ).replace(
     "prop_names = 'w_O2 w_O2p'",
     "prop_names = 'w_O2 w_O w_O2p w_Om w_Op w_O2a'", 1
