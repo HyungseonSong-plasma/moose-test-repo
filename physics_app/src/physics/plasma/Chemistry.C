@@ -1189,6 +1189,8 @@ PlasmasAction::act()
     _problem->addFunctorMaterial("ADParsedFunctorMaterial", "plasma_gas_" + name, params);
   };
 
+  // Exactly one provider per gas state: root parameter pressure/temperature
+  // publishes a same-named AD Functor; no p/T compatibility aliases.
   // MOOSE's numeric MooseFunctorName is a constant AD Functor. The underlying
   // formula and value are computed once; property names and AD API are stable.
   auto literal = [](const double value)
@@ -1244,8 +1246,8 @@ PlasmasAction::act()
     paramError("files", "Invalid fixed ideal-gas mixture: ", error.what());
   }
 
-  addStatic("p", getParam<Real>("pressure"));
-  addStatic("T", getParam<Real>("temperature"));
+  addStatic("pressure", getParam<Real>("pressure"));
+  addStatic("temperature", getParam<Real>("temperature"));
   addStatic("n_g", initial.number_density_per_m3);
   addStatic("M_mix_initial", initial.molar_mass_kg_per_mol);
   addStatic("M_mix_inlet", inlet.molar_mass_kg_per_mol);
@@ -1254,7 +1256,7 @@ PlasmasAction::act()
 
   // The equation of state consumes live Y_i when NV is activated; otherwise
   // this is a constant-composition, non-evolving gas-state closure.
-  std::vector<std::string> names = {"p", "T"};
+  std::vector<std::string> names = {"pressure", "temperature"};
   std::vector<std::string> symbols = {"pressure", "temp"};
   std::string denominator;
   for (std::size_t i = 0; i < species.size(); ++i)
