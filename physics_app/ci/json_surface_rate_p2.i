@@ -33,7 +33,7 @@
     type = SurfaceReactionMaterial
     chemistry_file = json_surface_rate_p2.json
     density = rho_g
-    temperature = T
+    temperature = temperature
     species = 'O2'
     mass_fractions = 'Y_O2'
     active_reactions = 'H90'
