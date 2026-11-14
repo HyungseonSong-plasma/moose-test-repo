@@ -293,6 +293,8 @@ DDContinuityEq::addFEBCs()
           std::find(_fem_species.begin(), _fem_species.end(), "e") == _fem_species.end())
         paramError("fem_species",
                    "JSON FEMElectronSheathBC requires FEM electron continuity and fem_potential.");
+      if (bc.variable != "log_e")
+        paramError("fem_species", "JSON FEMElectronSheathBC must target canonical log_e.");
 
       auto params = getFactory().getValidParams(bc.type);
       params.set<NonlinearVariableName>("variable") = bc.variable;
