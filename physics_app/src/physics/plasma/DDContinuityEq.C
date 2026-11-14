@@ -318,8 +318,8 @@ DDContinuityEq::addFunctorMaterials()
       params.set<std::string>("bounds_policy") = config->bounds_policy;
       if (config->table_units == "reduced")
       {
-        params.set<MooseFunctorName>("pressure") = rootGasStateEnabled() ? "p" : config->pressure;
-        params.set<MooseFunctorName>("gas_temperature") = rootGasStateEnabled() ? "T" : config->gas_temperature;
+        params.set<MooseFunctorName>("pressure") = rootGasStateEnabled() ? "pressure" : config->pressure;
+        params.set<MooseFunctorName>("gas_temperature") = rootGasStateEnabled() ? "temperature" : config->gas_temperature;
       }
     }
     assignBlocks(params, _blocks);
