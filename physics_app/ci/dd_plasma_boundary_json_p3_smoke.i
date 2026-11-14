@@ -85,6 +85,7 @@
   nl_max_its = 20
 []
 [Outputs]
+  file_base = plasma
   exodus = true
   csv = true
 []
