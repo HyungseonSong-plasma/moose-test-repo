@@ -63,7 +63,7 @@ def test_standalone_historical_diagnostic_fixture(
         assert historical_path.read_bytes() == payload
 
 
-@pytest.mark.parametrize("fixture_dir,filename,blob_sha,*_", SNAPSHOTS)
+@pytest.mark.parametrize("fixture_dir,filename,blob_sha", [row[:3] for row in SNAPSHOTS])
 def test_snapshot_identity_detects_a_mutation(
     fixture_dir: str, filename: str, blob_sha: str
 ) -> None:
