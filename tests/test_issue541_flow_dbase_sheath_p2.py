@@ -75,6 +75,28 @@ def test_flow_sheath_scratch_4_plus_4_is_exact_and_archived_source_unchanged(
     assert hashlib.sha256(ARCHIVED.read_bytes()).hexdigest() == immutable_sha
 
 
+def test_flow_sheath_preflight_is_read_only_and_hybrid_is_wired(
+    tmp_path: Path,
+) -> None:
+    original = _canonical_source()
+    expected, owners = migrate_exact_s6_fem_sheath(original)
+    chemistry, ordered, scratch = _stage(tmp_path, original)
+    report = rebind_preserved_native_sheath(chemistry, ordered, apply=False)
+    assert report["status"] == "P2_SCRATCH_PREFLIGHT_EXACT_4_PLUS_4_SHEATH"
+    assert report["owners"] == owners
+    assert report["before_sha256"] == hashlib.sha256(
+        original.encode("utf-8")
+    ).hexdigest()
+    assert report["after_sha256"] == hashlib.sha256(
+        expected.encode("utf-8")
+    ).hexdigest()
+    assert scratch.read_text(encoding="utf-8") == original
+    driver = (PILOT / "run_chemistry_s6_p2_only.py").read_text()
+    assert "prepare_hybrid(chemistry, ordered, case)" in driver
+    assert '"scratch_hybrid_json_cutover": hybrid' in driver
+    assert "rebind_preserved_native_sheath(" in driver
+
+
 @pytest.mark.parametrize("mutation", ["wall_flux", "boundary", "class", "duplicate"])
 def test_flow_sheath_refuses_mutated_owners_without_writing(
     tmp_path: Path, mutation: str,
