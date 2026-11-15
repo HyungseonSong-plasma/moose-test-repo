@@ -93,6 +93,11 @@ jobs:
                 --source-sha "$RUN_SOURCE_SHA"
             ' 2>&1 | tee /tmp/issue402_dd_json_p3_transient.log
           test -s issue402_dd_json_p3_evidence/status.json
+          python3 ci/guards/issue541_arch_dd_p3_result_gate.py \
+            --evidence issue402_dd_json_p3_evidence \
+            --source-sha "$GITHUB_SHA" \
+            --binary physics_app/physics-opt \
+            --repository .
           echo P3_BOUNDED_JSON_SHEATH_REAL_TRANSIENT_PASS_SCIENCE_HOLD
       - name: Upload P3 source-bound Exodus, CSV, diagnostics, and failure evidence
         if: always()
