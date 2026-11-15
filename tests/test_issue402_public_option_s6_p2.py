@@ -299,6 +299,65 @@ def test_s6_mean_energy_log_molar_remap_preserves_source_and_rejects_wrong_seman
 
 
 
+def test_exact_s6_electron_lookup_cutover_is_wired_into_native_p2(tmp_path):
+    """Use the independently tested historical S6 lookup adapter in P2 scratch."""
+    import importlib.util
+    import pytest
+
+    path = PILOT / "public_option_s6_p2.py"
+    spec = importlib.util.spec_from_file_location("issue541_s6_p2_lookup_runner", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    source_path = PILOT / "native/s6_c0_physics_base_no_d1.i"
+    original = source_path.read_text(encoding="utf-8")
+    assert original.count("type = PhysicsElectronTransportLookupMaterial") == 1
+    source_snapshot = source_path.read_bytes()
+    staged = tmp_path / "scratch"
+    staged.mkdir()
+    base = source_path.name
+    ordered = [f"chem/{base}"] + [f"chem/extra_{i}.i" for i in range(9)]
+    (staged / base).write_text(original, encoding="utf-8")
+    for i in range(9):
+        (staged / f"extra_{i}.i").write_text(f"# original {i}\n")
+
+    report = module.remap_staged_electron_lookup(staged, ordered)
+    assert report["status"] == "SCRATCH_ONLY_EXACT_ELECTRON_LOOKUP_CUTOVER"
+    assert report["source_layer"] == base
+    assert report["table_units"] == "reduced"
+    assert report["fluid_energy"] is True
+    assert report["bounds_policy"] == "clamp"
+    assert report["P3"] == "NOT_RUN" and report["science"] == "SCIENCE_HOLD"
+    changed = (staged / base).read_text(encoding="utf-8")
+    assert "type = PhysicsElectronTransportLookupMaterial" not in changed
+    block = changed.split("  [electron_transport]\n", 1)[1].split("  []", 1)[0]
+    for expected in (
+        "type = DDTransportMaterial", "species_id = e", "model = lookup",
+        "table_units = reduced", "fluid_energy = true", "bounds_policy = clamp",
+        "pressure = p", "gas_temperature = T_g_fixed",
+        "table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
+    ):
+        assert expected in block
+    assert "property_table_file" not in block and "mean_energy =" not in block
+    assert source_path.read_bytes() == source_snapshot
+
+    # Reject an unproved historical bounds change and preserve the entire
+    # scratch directory unchanged even when validation fails.
+    owner, rest = original.split("  [electron_transport]\n", 1)
+    content, suffix = rest.split("  []", 1)
+    assert "bounds_policy = clamp" in content
+    bad = owner + "  [electron_transport]\n" + content.replace(
+        "bounds_policy = clamp", "bounds_policy = error", 1
+    ) + "  []" + suffix
+    (staged / base).write_text(bad, encoding="utf-8")
+    before = {item.name: item.read_bytes() for item in staged.iterdir()}
+    with pytest.raises(ValueError, match="S6_ELECTRON_LOOKUP_IDENTITY_UNPROVED"):
+        module.remap_staged_electron_lookup(staged, ordered)
+    assert before == {item.name: item.read_bytes() for item in staged.iterdir()}
+    assert source_path.read_bytes() == source_snapshot
+
+
 def test_full_s6_p2_provenance_and_no_solver_execution():
     script = (PILOT / "public_option_s6_p2.py").read_text()
     shell = PILOT / "run_public_option_s6_p2.sh"
@@ -419,6 +478,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "validate_overlay": lambda: None,
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
+        "remap_staged_electron_lookup": lambda *_args: {"status": "SYNTHETIC_LOOKUP_REMAP"},
         "remap_staged_mean_energy": lambda *_args: {"status": "SYNTHETIC_MEAN_ENERGY_REMAP"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
