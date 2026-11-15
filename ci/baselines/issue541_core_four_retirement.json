@@ -51,8 +51,8 @@
       "original_p3": "NOT_RUN",
       "source_event": "push:branch-specific,self-path",
       "required_marker": "ISSUE402_SCCM_STATIC_GAS_NATIVE_P2_PASS_P3_NOT_RUN",
-      "retirement": "KEEP_HOLD",
-      "reason": "Replacement exact-head P0/P1/P2 verified and independent byte custody verified; candidate removal needs a scoped same-HEAD gate.",
+      "retirement": "RETIRED_VERIFIED",
+      "reason": "Original branch absent on refreshed GitHub branch search; self-file-only push with no dispatch/call, no other repository code references; all historical P0/P1/P2 faithfully reexecuted at 37aa27e7 and original run 43505864550 artifact ZIP archived and readback SHA matched; removal is source-HEAD CI gated.",
       "original_success": {
         "run_id": 43505864550,
         "source_sha": "e78b8fa3c3e30dbd219a2ab28730121284f666a6",
@@ -67,7 +67,9 @@
         "readback_bytes": 1880,
         "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
       },
-      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND"
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "retirement_candidate_source_head": "d6346a9dea92e935cdd55818e651d47564fb1a2b",
+      "rollback_original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611"
     },
     {
       "path": ".github/workflows/issue402-species-initial-composition-native-once.yml",
