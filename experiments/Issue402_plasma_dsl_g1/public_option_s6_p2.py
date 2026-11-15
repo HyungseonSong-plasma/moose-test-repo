@@ -284,6 +284,57 @@ def remap_staged_fem_types(chemistry: Path, ordered: list[str]) -> dict:
 
 
 
+def remap_staged_electron_lookup(chemistry: Path, ordered: list[str]) -> dict:
+    """Re-use the already mutation-tested, exact historical S6 lookup cutover.
+
+    Only a scratch copy changes. The source B/C deck remains archived and
+    immutable; a mismatched table/pressure/temperature/bounds/owner fails
+    before any staged file is written.
+    """
+    if len(ordered) not in (10, 11):
+        raise ValueError("Unexpected S6 layer count for electron lookup cutover")
+    names = [Path(item).name for item in ordered]
+    if (len(set(names)) != len(names)
+            or any(name != item.split("/")[-1] or not name.endswith(".i")
+                   for name, item in zip(names, ordered))):
+        raise ValueError("Unsafe/duplicate S6 lookup layer")
+
+    spec = importlib.util.spec_from_file_location(
+        "issue402_s6_lookup_cutover",
+        ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("Canonical S6 lookup migration helper missing")
+    canonical = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(canonical)
+
+    original = {chemistry / name: (chemistry / name).read_text(encoding="utf-8")
+                for name in names}
+    revised, receipt = canonical.canonicalize_staged_electron_lookup(original)
+    if set(revised) != set(original):
+        raise ValueError("Canonical S6 lookup cutover changed the layer inventory")
+    changed = [path for path in original if original[path] != revised[path]]
+    if (len(changed) != 1 or changed[0].name != names[0]
+            or receipt["source_layer"] != names[0]):
+        raise ValueError("Canonical S6 lookup owner was not the pinned first layer")
+    owner = changed[0]
+    if ("type = PhysicsElectronTransportLookupMaterial" in revised[owner]
+            or revised[owner].count("type = DDTransportMaterial") <
+               original[owner].count("type = DDTransportMaterial") + 1):
+        raise ValueError("Retired S6 lookup owner remains after cutover")
+
+    # The helper's exact-source identity and negative mutations are independently
+    # tested in tests/test_issue402_s6_electron_transport_compatibility.py.
+    for path in changed:
+        path.write_text(revised[path], encoding="utf-8")
+    receipt["files"] = {
+        owner.name: {
+            "original_sha256": hashlib.sha256(original[owner].encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(revised[owner].encode("utf-8")).hexdigest(),
+        }
+    }
+    return receipt
+
+
 def remap_staged_mean_energy(chemistry: Path, ordered: list[str]) -> dict:
     """Rebind only a proven log-molar legacy mean-energy owner in disposable B/D decks.
 
@@ -541,6 +592,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
                         scratch_types = remap_staged_fem_types(staged / p2.CHEM, ordered)
+                        scratch_lookup = remap_staged_electron_lookup(staged / p2.CHEM, ordered)
                         scratch_mean_energy = remap_staged_mean_energy(staged / p2.CHEM, ordered)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
@@ -548,6 +600,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             log, timeout_seconds)
                         report["checks"][case][variant]["layers"] = len(ordered)
                         report["checks"][case][variant]["scratch_fem_type_remap"] = scratch_types
+                        report["checks"][case][variant]["scratch_lookup_cutover"] = scratch_lookup
                         report["checks"][case][variant]["scratch_mean_energy_cutover"] = scratch_mean_energy
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
