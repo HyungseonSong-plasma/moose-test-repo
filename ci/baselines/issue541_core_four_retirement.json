@@ -1,0 +1,65 @@
+{
+  "schema": "issue541.core_four.retirement_contract.v1",
+  "source_pr": 544,
+  "source_head": "d18a802e41cf3c5b152f21ff13374cd622fe9c5a",
+  "science": "SCIENCE_HOLD",
+  "p3": "NOT_REQUESTED",
+  "ownership": "CORE_END_TO_END",
+  "replacement": {
+    "p0_job": "issue402_core_four_p0",
+    "native_job": "issue402_core_four_native_p2",
+    "native_runner": "physics_app/ci/run_issue541_core_four_native_p2.py",
+    "ci": ".github/workflows/ci.yml",
+    "required_build_base": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "workflows": [
+    {
+      "path": ".github/workflows/issue402-dd-json-boundary-p0-p2-once.yml",
+      "original_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+      "historical_branch": "issue-402-dd-plasma-boundary-action",
+      "branch_present_at_2026_11_15": true,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "DD_JSON_BOUNDARY_NATIVE_P2_PASS_P3_NOT_RUN",
+      "retirement": "KEEP_HOLD",
+      "reason": "Original run/artifact and external/dynamic consumer preservation not yet independently proven; replacement must pass exact head."
+    },
+    {
+      "path": ".github/workflows/issue402-sccm-fixed-gas-p0-p2-once.yml",
+      "original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611",
+      "historical_branch": "issue-402-sccm-inlet-flow-native",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "ISSUE402_SCCM_STATIC_GAS_NATIVE_P2_PASS_P3_NOT_RUN",
+      "retirement": "KEEP_HOLD",
+      "reason": "Original run/artifact and external/dynamic consumer preservation not yet independently proven; replacement must pass exact head."
+    },
+    {
+      "path": ".github/workflows/issue402-species-initial-composition-native-once.yml",
+      "original_blob": "f11aa0de000fb05bcc587798400313558a6cb58a",
+      "historical_branch": "issue-402-species-initial-composition",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "SPECIES_INITIAL_VOLUME_INLET_NATIVE_P2_PASS",
+      "retirement": "KEEP_HOLD",
+      "reason": "Original run/artifact and external/dynamic consumer preservation not yet independently proven; replacement must pass exact head."
+    },
+    {
+      "path": ".github/workflows/issue402-species-live-ic-inlet-native-once.yml",
+      "original_blob": "c6068680c0c7083e38ec03d86c5433eb49db94bf",
+      "historical_branch": "issue-402-species-live-ic-inlet",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS",
+      "retirement": "KEEP_HOLD",
+      "reason": "Original run/artifact and external/dynamic consumer preservation not yet independently proven; replacement must pass exact head."
+    }
+  ]
+}
