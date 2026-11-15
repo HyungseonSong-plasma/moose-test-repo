@@ -3,6 +3,7 @@
 These tests do not replace building or running the solver.
 """
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,18 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "physics_app"
 CASE = ROOT / "experiments/Issue402_plasma_dsl_g1"
+
+
+def json_owned_negative_routes(runner: str) -> set[str]:
+    """Parse selected negative cases whose check-input must use JSON-owned IC."""
+    assert "for item in invalid_overlap" in runner
+    branch = runner.split("for item in invalid_overlap", 1)[1].split("  set +e", 1)[0]
+    predicate = re.search(r"if \\[\\[(.*?)\\]\\]; then", branch, flags=re.S)
+    assert predicate, "Missing negative-input route predicate"
+    after = branch[predicate.end():]
+    assert 'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")' in after
+    assert 'input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")' in after
+    return set(re.findall(r'"\\$item"\\s*==\\s*(invalid_[a-z_]+)', predicate.group(1)))
 
 
 def sources():
@@ -195,7 +208,7 @@ def test_retired_kernel_name_negative_reaches_forbidden_option():
     assert "fem_species" not in invalid and "fvm_species" not in invalid
     assert "block = plasma" not in invalid
     assert "files = plasma_species_initial_p2.json" in positive
-    assert 'if [[ "$item" == invalid_legacy_kernel_names || "$item" == invalid_missing_fvm_charges || "$item" == invalid_incomplete_coefficients ]]; then' in runner
+    assert "invalid_legacy_kernel_names" in json_owned_negative_routes(runner)
     assert 'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")' in runner
     assert 'native --check-input -i "${input_decks[@]}"' in runner
     assert "invalid_legacy_kernel_names) expected='fem_kernel_names'" in runner
@@ -212,7 +225,7 @@ def test_retired_positional_charge_negative_uses_json_sole_source():
     assert data["species"]["e"]["charge_number"] == -1
     assert data["species"]["O2p"]["charge_number"] == 1
     assert "invalid_missing_fvm_charges) expected='fem_charge_numbers'" in runner
-    assert "invalid_missing_fvm_charges ]]; then" in runner
+    assert "invalid_missing_fvm_charges" in json_owned_negative_routes(runner)
 
 
 def test_retired_transport_coefficients_fail_on_specific_obsolete_option():
@@ -224,8 +237,32 @@ def test_retired_transport_coefficients_fail_on_specific_obsolete_option():
     assert "diffusivity = 'electron_diffusion'" in negative
     assert "fem_species" not in negative and "fvm_species" not in negative
     assert "files = plasma_species_initial_p2.json" in positive
-    assert 'invalid_incomplete_coefficients ]]; then' in runner
+    assert "invalid_incomplete_coefficients" in json_owned_negative_routes(runner)
     assert "invalid_incomplete_coefficients) expected='mobility'" in runner
+
+
+def test_retired_wrong_charge_negative_uses_json_owned_base():
+    """Do not let the missing-density error mask retired charge-vector options."""
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    negative = (CASE / "invalid_wrong_charge_sign.i").read_text()
+    assert "invalid_wrong_charge_sign" in json_owned_negative_routes(runner)
+    assert "fem_charge_numbers = '1'" in negative
+    assert "fvm_charge_numbers = '1'" in negative
+    assert "files = plasma_species_only.json" not in negative
+    assert "fem_species" not in negative and "fvm_species" not in negative
+    assert "invalid_wrong_charge_sign) expected='fem_charge_numbers'" in runner
+
+
+def test_json_owned_negative_routing_detects_removed_case():
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "invalid_wrong_charge_sign" in json_owned_negative_routes(runner)
+    mutated = runner.replace(
+        '"$item" == invalid_wrong_charge_sign',
+        '"$item" == invalid_wrong_charge_sign_removed',
+        1,
+    )
+    assert mutated != runner
+    assert "invalid_wrong_charge_sign" not in json_owned_negative_routes(mutated)
 
 
 def test_native_build_and_comparison_script():
