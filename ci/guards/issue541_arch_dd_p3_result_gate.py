@@ -184,9 +184,26 @@ def self_test() -> None:
         with tempfile.TemporaryDirectory() as temp:
             evidence, source, binary, repository, samples = synthetic(Path(temp))
             mutation(evidence, samples)
+            if label in {"missing_midpoint", "duplicate_midpoint", "nonfinite_energy"}:
+                # Rehash to prevent digest failure from masking the time-grid assertion.
+                lane_file = evidence / LANE / "receipt.json"
+                lane_data = read_json(lane_file)
+                lane_data["csv_sha256"] = digest(evidence / LANE / "plasma.csv")
+                lane_file.write_text(json.dumps(lane_data))
+                report_file = evidence / "status.json"
+                report_data = read_json(report_file)
+                report_data["lanes"][LANE] = lane_data
+                report_file.write_text(json.dumps(report_data))
             try:
                 verify(evidence, source, binary, repository)
-            except (ValueError, KeyError, FileNotFoundError):
+            except (ValueError, KeyError, FileNotFoundError) as exc:
+                expected = {
+                    "missing_midpoint": "P3_MISSING_OR_EXTRA_TIMESTEP",
+                    "duplicate_midpoint": "P3_INCOMPLETE_OR_DUPLICATE_TIMESTEP_GRID",
+                    "nonfinite_energy": "P3_NONFINITE_CSV",
+                }.get(label)
+                if expected is not None:
+                    require(str(exc) == expected, "WRONG_MUTATION_IDENTITY_" + label)
                 continue
             raise AssertionError("UNREJECTED_SYNTHETIC_MUTATION: " + label)
     print("ISSUE541_ARCH_DD_P3_RESULT_NEGATIVE_MUTATIONS_8_REJECTED_SYNTHETIC_ONLY")
