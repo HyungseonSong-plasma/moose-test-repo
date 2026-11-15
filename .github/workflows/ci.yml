@@ -719,6 +719,103 @@ jobs:
           python3 -m pytest -q tests/characterization/test_issue192_s5r.py tests/characterization/test_issue192_s5r_runtime.py
           echo "JSON_HEAVY_SURFACE_P0_PASS; P3=NOT_RUN; SCIENCE_HOLD"
 
+  # Package 2 / FLOW: source-bound, real P1/P2 replacement of historical
+  # issue402-rate-coef-ideal-gas-native-once.yml (P3 never run).
+  issue402_flow_ideal_native_p2:
+    name: Issue402 EI/H ideal-gas direct Native P2 (no P3)
+    if: github.event_name == 'pull_request' && github.event.action != 'edited'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    permissions:
+      contents: read
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact FLOW package source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Validate original YAML and fail-closed Native P2 invocation contract
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          grep -Fq "$OCI" physics_app/dependencies.lock
+          test ! -e physics_app/physics-opt
+          python3 ci/guards/issue541_flow_ideal_native_p2_contract.py --self-test
+          python3 ci/guards/issue541_flow_ideal_native_p2_contract.py --check
+      - name: Build real exact-head PhysicsApp and run original P2 cases in same OCI
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          mkdir -p evidence
+          docker pull "$OCI"
+          docker run --rm --user 0:0 --entrypoint /bin/bash --workdir /workspace \
+            -v "$PWD:/workspace" -e "EXPECTED_HEAD=$EXPECTED_HEAD" -e "PINNED_BASE=$OCI" \
+            "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils" \
+                > evidence/flow_ideal_native_build.log 2>&1 || {
+                  tail -n 100 evidence/flow_ideal_native_build.log; exit 1;
+                }
+              test -x physics_app/physics-opt
+              python3 - <<'"'"'PY'"'"'
+          import hashlib,json,os,pathlib,subprocess
+          root=pathlib.Path("/workspace")
+          exe=root/"physics_app/physics-opt"
+          h=hashlib.sha256()
+          with exe.open("rb") as f:
+              for chunk in iter(lambda:f.read(1048576),b""):
+                  h.update(chunk)
+          sha=subprocess.check_output(["git","rev-parse","HEAD"],cwd=root,text=True).strip()
+          assert sha == os.environ["EXPECTED_HEAD"]
+          identity={"schema":"issue541.flow.ideal_native_p1.v1",
+                    "source_sha":sha,"oci_image":os.environ["PINNED_BASE"],
+                    "binary_sha256":h.hexdigest(),"P1":"PASS",
+                    "P3":"NOT_RUN","science":"SCIENCE_HOLD"}
+          (root/"evidence/flow_ideal_native_p1_identity.json").write_text(
+              json.dumps(identity,indent=2,sort_keys=True)+"\n")
+          print("ISSUE402_FLOW_IDEAL_NATIVE_P1_SOURCE_BOUND_PASS")
+          PY
+              python3 -m physics_app.ci.check_issue402_json_rate_native_p2 \
+                --executable /workspace/physics_app/physics-opt \
+                --p1-identity /workspace/evidence/flow_ideal_native_p1_identity.json
+              python3 - <<'"'"'PY'"'"'
+          from pathlib import Path
+          from physics_app.ci.check_issue402_json_rate_native_p2 import run_check
+          exe=Path("/workspace/physics_app/physics-opt")
+          source=Path("/workspace/physics_app/ci/plasma_direct_existing_materials_smoke.i")
+          run_check(exe,source,source.parent)
+          print("ISSUE402_FLOW_IDEAL_DIRECT_P2_PASS")
+          PY
+              echo "ISSUE402_FLOW_IDEAL_NATIVE_P2_PASS; P3=NOT_RUN; SCIENCE_HOLD"
+            ' 2>&1 | tee evidence/flow_ideal_native_p2.log
+      - name: Preserve exact-head P1 identity and P2 syntax-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-flow-ideal-native-${{ github.event.pull_request.head.sha }}
+          path: |
+            evidence/flow_ideal_native_build.log
+            evidence/flow_ideal_native_p1_identity.json
+            evidence/flow_ideal_native_p2.log
+          if-no-files-found: warn
+          retention-days: 30
+
   # Reusable, governed CI gate for native plasma solver-object changes.
   plasma_native_regression:
     if: >-
