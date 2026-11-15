@@ -211,6 +211,93 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
 
 
 
+
+def test_s6_mean_energy_log_molar_remap_preserves_source_and_rejects_wrong_semantics(tmp_path):
+    """The retired producer and consumers change only in disposable S6 P2 copies."""
+    import re
+
+    script = (PILOT / "public_option_s6_p2.py").read_text()
+    tree = ast.parse(script)
+    functions = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "remap_staged_mean_energy"
+    ]
+    assert len(functions) == 1
+    ns = {"re": re, "Path": Path, "hashlib": hashlib}
+    exec(compile(ast.Module(body=functions, type_ignores=[]),
+                 str(PILOT / "public_option_s6_p2.py"), "exec"), ns)
+    convert = ns["remap_staged_mean_energy"]
+
+    archived = tmp_path / "original"
+    staged = tmp_path / "scratch"
+    archived.mkdir()
+    staged.mkdir()
+    original = (
+        "  [mean_energy]\n"
+        "    type = PhysicsElectronMeanEnergyMaterial\n"
+        "    electron_energy_density = log_energy\n"
+        "    electron_density = log_ne\n"
+        "    state_form = log_molar_eV\n"
+        "    mean_energy_output = mean_en_solved\n"
+        "    block = plasma\n"
+        "  []\n"
+        "  [energy_consumer]\n"
+        "    mean_energy = mean_en_solved\n"
+        "  []\n"
+    )
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        content = original if i == 0 else f"# original layer {i}\n"
+        (archived / f"layer_{i}.i").write_text(content)
+        (staged / f"layer_{i}.i").write_text(content)
+    result = convert(staged, ordered)
+    assert result["status"] == "SCRATCH_ONLY_LOG_MOLAR_MEAN_ENERGY_CUTOVER"
+    assert result["consumer_renames"] == 1
+    assert result["producer_layer"] == "layer_0.i"
+    after = (staged / "layer_0.i").read_text()
+    assert "type = ElectronEnergyMaterial" in after
+    assert "mean_energy = e_energy_eV" in after
+    assert "mean_energy_output" not in after
+    assert "state_form = log_molar_eV" in after
+    assert "electron_energy_density = log_energy" in after
+    assert (archived / "layer_0.i").read_text() == original
+    assert result["files"]["layer_0.i"]["original_sha256"] == (
+        hashlib.sha256(original.encode()).hexdigest()
+    )
+    assert result["files"]["layer_0.i"]["staged_sha256"] == (
+        hashlib.sha256(after.encode()).hexdigest()
+    )
+
+    # Unsupported historical representations, competing/changed producers,
+    # absent consumers or duplicate owners must HOLD before any writes.
+    faulty = (
+        ("normalized", original.replace("state_form = log_molar_eV",
+                                         "state_form = normalized"), ""),
+        ("physical", original.replace("state_form = log_molar_eV",
+                                       "state_form = physical_eV"), ""),
+        ("wrong_output", original.replace("mean_energy_output = mean_en_solved",
+                                           "mean_energy_output = alternate"), ""),
+        ("extra_option", original.replace("    block = plasma\n",
+                                           "    energy_reference_eV = 1\n    block = plasma\n"), ""),
+        ("already_new", original.replace("PhysicsElectronMeanEnergyMaterial",
+                                          "ElectronEnergyMaterial"), ""),
+        ("no_consumer", original.replace("mean_energy = mean_en_solved",
+                                          "mean_energy = unrelated"), ""),
+        ("duplicate", original, original),
+    )
+    for label, bad, extra in faulty:
+        scratch = tmp_path / f"negative_{label}"
+        scratch.mkdir()
+        for i in range(10):
+            content = bad if i == 0 else (extra if i == 1 and extra else f"# layer {i}\n")
+            (scratch / f"layer_{i}.i").write_text(content)
+        snapshot = {p.name: p.read_bytes() for p in scratch.iterdir()}
+        with pytest.raises(ValueError):
+            convert(scratch, ordered)
+        assert snapshot == {p.name: p.read_bytes() for p in scratch.iterdir()}
+
+
+
 def test_full_s6_p2_provenance_and_no_solver_execution():
     script = (PILOT / "public_option_s6_p2.py").read_text()
     shell = PILOT / "run_public_option_s6_p2.sh"
@@ -331,6 +418,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "validate_overlay": lambda: None,
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
+        "remap_staged_mean_energy": lambda *_args: {"status": "SYNTHETIC_MEAN_ENERGY_REMAP"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(
