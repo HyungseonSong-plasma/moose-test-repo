@@ -1,0 +1,86 @@
+{
+  "schema": "issue402.s6.hybrid.reference_receipt.v1",
+  "source_repo": "HyungseonSong-plasma/moose-test-repo",
+  "source_commit": "af4a9e896328386723e8bbb957f334e1d83fe75e",
+  "main_implementation_merge": "ff270fa3cc4ce7a6e7f7aa8cf5d5b3674558f1f7",
+  "main_at_inventory": "71e112eb05d4645c82aab8861b99d6952ac4ac3e",
+  "run_id": 43587161603,
+  "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43587161603",
+  "workflow_conclusion": "failure_post_solve_inline_path_validation",
+  "post_solve_failure": "quoted Python heredoc used literal Path(\"$RUNNER_TEMP\") instead of os.environ[\"RUNNER_TEMP\"]",
+  "reference_role": "PUBLIC_DIAGNOSTIC_REGRESSION_ONLY",
+  "science": "SCIENCE_HOLD",
+  "reference_timestamp": "UNKNOWN",
+  "reference_coordinates": "ASSUMED_R_0_TO_25_Z_0_TO_44_CM",
+  "physics_mode": "chemistry_hybrid_json_native",
+  "model_scope": "hybrid S6 JSON/FEM electron + surviving Native ion FV, RF, Poisson, sheath BCs, rate progress, neutral mixture; not standalone JSON",
+  "expected_frames": 461,
+  "expected_end_s": 0.0001,
+  "retention": {
+    "github_expires_by": "2026-12-29T15:48:51Z",
+    "durable_backup": "NOT_PROVEN",
+    "cannot_retire_unique_p3_p4_replay_until_preserved": true
+  },
+  "cases": {
+    "417": {
+      "artifact_id": 14117371106,
+      "artifact_name": "issue402-hybrid-S6-417-P3-P4-af4a9e896328386723e8bbb957f334e1d83fe75e",
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43587161603/artifacts/14117371106",
+      "archive_sha256": "563800ba985c3966d24aa0196fbe8ce46c9e1f5f1a1936685c6b5ff76c77a195",
+      "archive_bytes": 98686127,
+      "expires_at": "2026-12-29T14:09:44Z",
+      "archive_results_prefix": "_temp/hybrid_S6_417/results/",
+      "binary_sha256": "21a4fac4ee2d0e83d628399f8d2c5054a85691968d67bbcf8057835a29a3d853",
+      "oci_image": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+      "p1_identity_path": "moose-test-repo/moose-test-repo/control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json",
+      "output_sha256": {
+        "manifest.json": "da0817eb8e4931d836c473bf2b301eba790ffe18f937d3b2c81fecaa10c98e76",
+        "status.json": "c15631fbdff49fc6a9c51f9c238ba274667b84299f62f0187b46ffa2b6ebcd0c",
+        "reference_comparison/metrics.json": "f27fb2f0897b0fe76dd0d3579c4df30ed0f2375d0543f34d689f86930ec8ddfb",
+        "plasma.e": "8a0ad6f98d00fcd77d4be4093e43789298fff5963a709bc79ad0c8e78d688d89",
+        "plasma.csv": "4591242b0f80ef1e4ae2bbabec41343cbb4bc17d6e407cccd00eeb0ce63e2fe8",
+        "unified_s6_417.json": "8f1f0e72038829b00fa50f4d6d68bec5c86015e2f400918379539cf9b767c7bc"
+      },
+      "log_sha256": {
+        "native_P2.log": "69fea66be94dd3a811243c49513bc7622bca2e8d31a919c5b5639c258ea58516",
+        "native_P3.log": "069cad9633e6b383cec3968cd7db9d4c247fa9cbd0a26ad431187efcb7d188f3"
+      },
+      "p4": {
+        "native_peak_over_reference_peak": 1.0224145157537288,
+        "horizontal_relative_l2": 0.06848464101507847,
+        "vertical_relative_l2": 0.03930191280350551
+      },
+      "csv_columns": 137
+    },
+    "941": {
+      "artifact_id": 14120049502,
+      "artifact_name": "issue402-hybrid-S6-941-P3-P4-af4a9e896328386723e8bbb957f334e1d83fe75e",
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43587161603/artifacts/14120049502",
+      "archive_sha256": "87150a4b7db1647aa6a46731335ea1efa28a2998558cedd83df08d707c210d7e",
+      "archive_bytes": 98635164,
+      "expires_at": "2026-12-29T15:48:51Z",
+      "archive_results_prefix": "_temp/hybrid_S6_941/results/",
+      "binary_sha256": "8cddb80bd0c0e0da4d137bb8785e47321af9e6f0cd708e8ac88f8b18a843dc07",
+      "oci_image": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+      "p1_identity_path": "moose-test-repo/moose-test-repo/control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json",
+      "output_sha256": {
+        "manifest.json": "071ab52d9a32260d75321397009711ab015271cc3a2ec6f8dcef0e603c34f902",
+        "status.json": "f9642dfc191bce8e55e4c600977393cc2e5dda37c80a55d713fee3108a7f9df8",
+        "reference_comparison/metrics.json": "86106cd0c24f1abf70ac359cd3dba724eae75445ec76ab4a156dc8ac1ed712c7",
+        "plasma.e": "7fc529dea8dbd67386512147a74e4bb1a2e0a099b587cca36504afcfce1bcacb",
+        "plasma.csv": "c8daa7ed6d09156f87141eefe4b4564ee0b87fbfdd5d9c894324fff6185ef117",
+        "unified_s6_941.json": "fc3e1d35ce0c20657f6ed3db125bb9a79251150467e0aec48c079a6dcadb3973"
+      },
+      "log_sha256": {
+        "native_P2.log": "277b1e1600b71b29b50db75f435bd262f9e11f1135dbe83c162991dba530ca33",
+        "native_P3.log": "d520c4e21245dc9caf374b83bde5ad96196d3a3dc8300e92cb5bc65bfdcc0b82"
+      },
+      "p4": {
+        "native_peak_over_reference_peak": 1.0199766679131463,
+        "horizontal_relative_l2": 0.06904315414600136,
+        "vertical_relative_l2": 0.039490758948861567
+      },
+      "csv_columns": 140
+    }
+  }
+}
