@@ -327,7 +327,7 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
   set -e
   case "$item" in
     invalid_overlap) expected='species listed in both groups' ;;
-    invalid_fem_fv_swap) expected='wrong type' ;;
+    invalid_fem_fv_swap) expected="Species 'O2p' has JSON initial_number_density and an existing solver variable 'log_O2p'" ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
