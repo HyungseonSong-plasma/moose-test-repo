@@ -720,6 +720,188 @@ jobs:
           echo "JSON_HEAVY_SURFACE_P0_PASS; P3=NOT_RUN; SCIENCE_HOLD"
 
   # Reusable, governed CI gate for native plasma solver-object changes.
+  # Issue #541 CORE independent full replacement of four legacy branch-only
+  # P0/P1/P2 workflows. No P3, science acceptance, or automatic deletion.
+  issue402_core_four_p0:
+    name: Issue541 CORE four boundary SCCM composition inlet P0 (no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact event head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify source, all four original contracts and tamper mutations
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 ci/guards/issue541_core_four_contract.py --self-test
+          python3 ci/guards/issue541_core_four_contract.py --check
+          test ! -e physics_app/src/physics/plasma/PlasmaDriftDiffusionBoundaryAction.C
+          test -e physics_app/src/physics/plasma/SCCMInletFlow.C
+          test -e physics_app/src/physics/plasma/IdealGasMixtureState.C
+          test -e physics_app/src/bcs/FEMElectronSheathBC.C
+          test -e physics_app/src/bcs/FEMElectronEnergySheathBC.C
+          test ! -e physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
+          test ! -e physics_app/src/materials/PhysicsElectronWallFluxMaterial.C
+          test ! -e physics_app/src/materials/RateCoeffMaterial.C
+          test ! -e physics_app/src/materials/HeavyReactionRateMaterial.C
+          test -e physics_app/src/materials/EIRateCoefMaterial.C
+          test -e physics_app/src/materials/HRateCoefMaterial.C
+          grep -Fq 'std::optional<double> initial_number_density;' physics_app/include/physics/plasma/Chemistry.h
+          grep -Fq 'bind_json_initial(fem, "fem_species", _fem_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'bind_json_initial(fvm, "fvm_species", _fvm_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq '"boundaries"' physics_app/src/physics/plasma/Chemistry.C
+          grep -Fq 'MooseEnum("log_molar_eV", "log_molar_eV")' physics_app/src/materials/ElectronEnergyMaterial.C
+          echo ISSUE541_CORE_FOUR_P0_SOURCE_PROVENANCE_PASS
+      - name: Set up historical P0 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install exact P0 scientific contract dependencies
+        run: python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+      - name: Run union of all four original P0 test targets and Stage5 controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pytest -q \
+            tests/test_issue402_dd_plasma_boundary_json.py \
+            tests/test_issue402_species_initial_density_pairs.py \
+            tests/test_issue402_dd_json_fem_fvm_wiring.py \
+            tests/test_issue402_species_transport_rule.py \
+            tests/test_issue402_material_class_names.py \
+            tests/test_issue402_s6_dd_review_package.py \
+            tests/test_issue402_energy_poisson_auto_variables.py \
+            tests/test_issue402_sccm_inlet_cpp.py \
+            tests/test_issue402_sccm_inlet_flow.py \
+            tests/test_issue402_species_initial_composition.py \
+            tests/test_issue402_species_live_ic_inlet.py \
+            tests/test_issue402_rate_coef_ideal_gas.py \
+            tests/test_issue402_fem_electron_sheath_bc_retirement.py \
+            tests/test_issue402_json_rate_unification.py \
+            tests/test_electron_impact_rate_material_prefix.py \
+            tests/test_issue402_no_legacy_material_registration.py \
+            tests/test_issue402_reaction_reduction_p2_only.py \
+            tests/test_issue402_retired_plasma_closures.py \
+            tests/characterization/test_issue395_ei17_overlay.py \
+            2>&1 | tee /tmp/issue541_core_four_p0.log
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --static
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --self-test
+          python3 physics_app/ci/check_stage5_h05_runtime.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
+          python3 -m pytest -q \
+            tests/characterization/test_issue192_s5r.py \
+            tests/characterization/test_issue192_s5r_runtime.py
+          python3 physics_app/ci/audit_issue402_initial_composition_routes.py \
+            --json-output /tmp/issue541_core_four_routes.json \
+            --markdown-output /tmp/issue541_core_four_routes.md \
+            --fail-on-legacy
+          echo ISSUE541_CORE_FOUR_ALL_HISTORICAL_P0_PASS_P3_NOT_RUN
+      - name: Store four-workflow P0 and inventory evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-core-four-p0-${{ github.run_id }}
+          path: |
+            /tmp/issue541_core_four_p0.log
+            /tmp/issue541_core_four_routes.json
+            /tmp/issue541_core_four_routes.md
+          if-no-files-found: warn
+          retention-days: 30
+
+  issue402_core_four_native_p2:
+    name: Issue541 CORE four native source-bound P1 P2 (no P3)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      PINNED_OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact source and assert pinned OCI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify source and exact build image
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          grep -Fq 'sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008' physics_app/dependencies.lock
+          docker --version
+          mkdir -p experiments/Issue402_plasma_dsl_g1/evidence/core_four
+      - name: P1 - build one exact-head Physics binary for all four
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$PINNED_OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$PINNED_OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/core_four/p1.log
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          binary = Path("physics_app/physics-opt")
+          assert binary.is_file()
+          data = {
+            "source_sha": os.environ["EXPECTED_HEAD"],
+            "oci_image": os.environ["PINNED_OCI"],
+            "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+            "P1": "PASS",
+          }
+          Path("experiments/Issue402_plasma_dsl_g1/evidence/core_four/p1_identity.json").write_text(
+            json.dumps(data, sort_keys=True, indent=2) + "\n"
+          )
+          print("ISSUE541_CORE_FOUR_NATIVE_P1_PASS", data["source_sha"])
+          PY
+      - name: P2 - run four full original Native checks and fail-closed mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e EXPECTED_HEAD -e PINNED_OCI \
+            -v "$PWD:/workspace" "$PINNED_OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              python3 physics_app/ci/run_issue541_core_four_native_p2.py \
+                --executable /workspace/physics_app/physics-opt \
+                --source "$EXPECTED_HEAD" \
+                --oci "$PINNED_OCI" \
+                --identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/core_four/p1_identity.json
+              echo "P3=NOT_RUN; SCIENCE_HOLD"
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/core_four/p2.log
+      - name: Publish exact-head P1/P2 source-bound evidence (no P3)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-core-four-native-${{ github.run_id }}
+          path: experiments/Issue402_plasma_dsl_g1/evidence/core_four/**
+          if-no-files-found: warn
+          retention-days: 30
+
   plasma_native_regression:
     if: >-
       github.event_name == 'pull_request' &&
