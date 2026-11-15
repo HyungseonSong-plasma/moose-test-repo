@@ -178,15 +178,14 @@ def self_test() -> None:
         ("fake_science", lambda ev, s: (ev/"status.json").write_text(
             (ev/"status.json").read_text().replace('"HOLD"', '"ACCEPTED"'))),
         ("forged_source", lambda ev, s: (ev/"status.json").write_text(
-            (ev/"status.json").read_text().replace('"a"*40', '"0"*40'))),
+            (ev/"status.json").read_text().replace("a"*40, "0"*40))),
     )
     for label, mutation in mutations:
         with tempfile.TemporaryDirectory() as temp:
             evidence, source, binary, repository, samples = synthetic(Path(temp))
             mutation(evidence, samples)
             try:
-                verify(evidence, source if label != "forged_source" else "0"*40,
-                       binary, repository)
+                verify(evidence, source, binary, repository)
             except (ValueError, KeyError, FileNotFoundError):
                 continue
             raise AssertionError("UNREJECTED_SYNTHETIC_MUTATION: " + label)
@@ -205,8 +204,8 @@ def main() -> int:
         self_test()
         if args.evidence is None:
             return 0
-    p.error("--evidence, --source-sha, --binary and --repository required" if
-            not all((args.evidence, args.source_sha, args.binary, args.repository)) else "")
+    if not all((args.evidence, args.source_sha, args.binary, args.repository)):
+        p.error("--evidence, --source-sha, --binary and --repository are required")
     try:
         report = verify(args.evidence.resolve(), args.source_sha,
                         args.binary.resolve(), args.repository.resolve())
