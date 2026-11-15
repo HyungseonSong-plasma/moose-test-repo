@@ -335,6 +335,52 @@ def remap_staged_electron_lookup(chemistry: Path, ordered: list[str]) -> dict:
     return receipt
 
 
+def remap_staged_wall_owners(chemistry: Path, ordered: list[str]) -> dict:
+    """Apply the existing ownership-tested S6 wall migration to scratch only.
+
+    A legacy wall output may be renamed only when its original species,
+    density, signed charge, owning Material, and every consumer are verified.
+    This is P2 construction compatibility, never proof of P3 wall-law parity.
+    """
+    if len(ordered) not in (10, 11):
+        raise ValueError("Unexpected S6 layer count for wall cutover")
+    names = [Path(item).name for item in ordered]
+    if (len(names) != len(set(names))
+            or any(name != item.split("/")[-1] or not name.endswith(".i")
+                   for name, item in zip(names, ordered))):
+        raise ValueError("Unsafe or duplicate S6 wall layer")
+
+    spec = importlib.util.spec_from_file_location(
+        "issue402_s6_wall_cutover",
+        ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("Canonical S6 wall migration helper missing")
+    canonical = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(canonical)
+    original = {chemistry / name: (chemistry / name).read_text(encoding="utf-8")
+                for name in names}
+    revised, receipt = canonical.canonicalize_staged_wall_inputs(original)
+    if set(original) != set(revised):
+        raise ValueError("Canonical S6 wall cutover changed layer inventory")
+    if (receipt.get("status") != "SCRATCH_ONLY_SPECIES_WALL_NAMES"
+            or not receipt.get("wall_material_owners")
+            or receipt.get("P3") != "NOT_RUN"
+            or receipt.get("science") != "SCIENCE_HOLD"):
+        raise ValueError("Canonical S6 wall owner or scientific HOLD is missing")
+    changed = [path for path in original if original[path] != revised[path]]
+    if not changed:
+        raise ValueError("No original S6 wall owner/consumer was transformed")
+    for path in changed:
+        path.write_text(revised[path], encoding="utf-8")
+    receipt["files"] = {
+        path.name: {
+            "original_sha256": hashlib.sha256(original[path].encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(revised[path].encode("utf-8")).hexdigest(),
+        } for path in changed
+    }
+    return receipt
+
+
 def remap_staged_mean_energy(chemistry: Path, ordered: list[str]) -> dict:
     """Rebind only a proven log-molar legacy mean-energy owner in disposable B/D decks.
 
@@ -593,6 +639,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                                 raise ValueError("Staged D sidecar SHA is incorrect")
                         scratch_types = remap_staged_fem_types(staged / p2.CHEM, ordered)
                         scratch_lookup = remap_staged_electron_lookup(staged / p2.CHEM, ordered)
+                        scratch_wall = remap_staged_wall_owners(staged / p2.CHEM, ordered)
                         scratch_mean_energy = remap_staged_mean_energy(staged / p2.CHEM, ordered)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
@@ -601,6 +648,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         report["checks"][case][variant]["layers"] = len(ordered)
                         report["checks"][case][variant]["scratch_fem_type_remap"] = scratch_types
                         report["checks"][case][variant]["scratch_lookup_cutover"] = scratch_lookup
+                        report["checks"][case][variant]["scratch_wall_cutover"] = scratch_wall
                         report["checks"][case][variant]["scratch_mean_energy_cutover"] = scratch_mean_energy
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
