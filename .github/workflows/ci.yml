@@ -804,6 +804,17 @@ jobs:
             --markdown-output /tmp/issue541_core_four_routes.md \
             --fail-on-legacy
           echo ISSUE541_CORE_FOUR_ALL_HISTORICAL_P0_PASS_P3_NOT_RUN
+      - name: Run recovered repository P0 tests before blocked global validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pytest -q \
+            tests/test_issue402_g1_external_species_binding.py \
+            tests/test_issue402_chemistry_mechanism_contract.py \
+            tests/test_issue541_native_exodus_parity_oracle.py \
+            tests/test_issue402_public_option_s6_p2.py \
+            2>&1 | tee /tmp/issue541_recovered_p0.log
+          echo ISSUE541_RECOVERED_P0_PASS_P3_NOT_RUN
       - name: Store four-workflow P0 and inventory evidence
         if: always()
         uses: actions/upload-artifact@v4
