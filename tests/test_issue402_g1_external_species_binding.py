@@ -119,6 +119,10 @@ def test_continuity_e_time_is_generated_from_existing_species_without_new_option
     assert "type = FEMLogMolarTimeDerivative" in duplicate
     assert "variable = log_e" in duplicate
     assert "duplicate_e_time.i" in runner
+    # The duplicate-owner negative must be based on the current JSON state;
+    # a missing initial_number_density must not mask the kernel collision.
+    assert '"$PILOT/valid_generated_transport_json_p2.i" \\' in runner
+    assert '  "$PILOT/duplicate_e_time.i"' in runner
     assert "PLASMA_DUPLICATE_E_TIME_REJECTED" in runner
 
 

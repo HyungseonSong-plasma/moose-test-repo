@@ -292,8 +292,9 @@ done
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
-native --check-input -i "$PILOT/baseline.i" \
-  "$PILOT/valid_generated_transport_options.i" \
+# The current JSON-owned P2 generates exactly one e_time. Overlay an
+# intentionally duplicate Native kernel without the retired external IC deck.
+native --check-input -i "$PILOT/valid_generated_transport_json_p2.i" \
   "$PILOT/duplicate_e_time.i" > "$EVIDENCE/duplicate_e_time.log" 2>&1
 duplicate_time_exit=$?
 set -e
