@@ -13,6 +13,7 @@ ENTRYPOINTS = {
     "samuel-branch-delete.yml": {"push"},
     # Explicit, SHA+approval-gated ARCH P3 entrypoint; never a one-shot push.
     "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
+    "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
