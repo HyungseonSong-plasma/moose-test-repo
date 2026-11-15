@@ -117,8 +117,11 @@ native --check-input -i "$PILOT/valid_bindings.i" \
 native --check-input -i "$PILOT/species_density_pairs_p2.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
 echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# Distinct synthetic full-Action P2: JSON creates selected e/O2p initial states
+# and Physics owns the electron energy/Poisson/RF kernels. Never merge baseline.
+native --check-input -i "$PILOT/valid_all_physics_json_p2.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
+echo "PLASMA_ALL_PHYSICS_JSON_OWNED_P2_PASS"
 # Standalone positive construction check: one generated FEM transport Kernel.
 # It is a P2-only input, not an accepted physical simulation or P3 parity run.
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
@@ -346,7 +349,10 @@ echo "PLASMA_INVALID_INPUTS_REJECTED"
 mkdir -p "$EVIDENCE/baseline" "$EVIDENCE/candidate"
 native -i "$PILOT/baseline.i" "Outputs/file_base=$EVIDENCE/baseline/plasma" \
   2>&1 | tee "$EVIDENCE/baseline_run.log"
-native -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# Tiny diffusion parity is an intentionally different contract: adding an
+# otherwise inert root Action must NOT modify the external Native equations.
+# The archived all-physics overlay is no longer valid as a no-op numerical run.
+native -i "$PILOT/baseline.i" "$PILOT/noop_physics_root_overlay.i" \
   "Outputs/file_base=$EVIDENCE/candidate/plasma" \
   2>&1 | tee "$EVIDENCE/candidate_run.log"
 test -s "$EVIDENCE/baseline/plasma.e"
