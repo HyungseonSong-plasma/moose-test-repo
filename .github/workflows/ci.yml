@@ -604,6 +604,87 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+
+  issue541_arch_dd_native_p2:
+    name: Issue541 ARCH DD JSON sheath exact-source Native P1/P2 (no P3)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact ARCH package source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Prepare valid and deliberately missing-density JSON fixtures
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          grep -Fq "$OCI" physics_app/dependencies.lock
+          test ! -e issue541_arch_p2_scratch
+          mkdir issue541_arch_p2_scratch issue541_arch_p2_logs
+          python3 - <<'PY'
+          import json, pathlib, shutil
+          scratch=pathlib.Path('issue541_arch_p2_scratch')
+          original=pathlib.Path('physics_app/ci/dd_plasma_boundary_json_p2.json')
+          d=json.loads(original.read_text())
+          assert d['species']['e']['initial_number_density'] > 0
+          assert d['species']['e']['energy_transport_coef'] == 'fluid'
+          assert d['boundaries']['left']['bcs'] and d['boundaries']['bottom']['bcs']
+          del d['species']['e']['initial_number_density']
+          (scratch/'dd_plasma_boundary_json_p2.json').write_text(json.dumps(d,indent=2,sort_keys=True)+'\n')
+          shutil.copyfile('physics_app/ci/dd_plasma_boundary_json_p3_smoke.i',scratch/'input.i')
+          assert 'num_steps = 2' in (scratch/'input.i').read_text()
+          PY
+          echo ISSUE541_ARCH_DD_P2_FIXTURE_PREPARED
+      - name: Build pinned exact-source Native and assert both DD P2 outcomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+              sha256sum physics_app/physics-opt > issue541_arch_p2_logs/binary_sha256.txt
+              cd physics_app/ci
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_json_p3_smoke.i > /workspace/issue541_arch_p2_logs/dd_valid.log 2>&1
+              grep -Fq "Syntax OK" /workspace/issue541_arch_p2_logs/dd_valid.log
+              cd /workspace/issue541_arch_p2_scratch
+              set +e
+              /workspace/physics_app/physics-opt --check-input -i input.i > /workspace/issue541_arch_p2_logs/dd_missing_ic.log 2>&1
+              exit_code=$?
+              set -e
+              test "$exit_code" -ne 0
+              grep -Fq "requires species.e.initial_number_density" /workspace/issue541_arch_p2_logs/dd_missing_ic.log
+              echo ISSUE541_ARCH_DD_NATIVE_P1_P2_VALID_AND_NEGATIVE_PASS_NO_P3
+            ' 2>&1 | tee issue541_arch_p2_logs/native_build_and_check.log
+      - name: Upload bounded P1/P2 logs on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-arch-dd-p1-p2-${{ github.event.pull_request.head.sha }}
+          path: issue541_arch_p2_logs/**
+          if-no-files-found: warn
+          retention-days: 30
+
   issue541_arch_replay_p0:
     name: Issue541 ARCH independent P3 source and manual replay P0 (no Native)
     if: >-
