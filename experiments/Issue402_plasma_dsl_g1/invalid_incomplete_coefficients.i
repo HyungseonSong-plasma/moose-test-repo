@@ -1,7 +1,7 @@
-# Negative option contract: direct mobility/diffusivity vectors are retired.
-# The source JSON owns transport coefficients. Overlay the modern standalone
-# valid_generated_transport_json_p2.i so missing JSON IC/external variables
-# cannot mask the intended unsupported-option rejection.
+# Negative P2: the retired positional coefficient vectors no longer belong
+# to Continuity. e is JSON-initialized by the standalone transport base;
+# this overlay must fail on forbidden mobility, not missing e initial density.
+# Keep both obsolete option names to preserve the historical regression.
 [Physics]
   [Plasmas]
     [Transport]
