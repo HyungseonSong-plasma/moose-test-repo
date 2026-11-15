@@ -128,11 +128,13 @@ jobs:
           python3 physics_app/ci/check_e8_ei10_energy_implementation.py
           python3 physics_app/ci/check_e8_ei16_energy_contract.py
           python3 physics_app/ci/check_standard_moose_energy_projection.py --self-test
-          for name in RateCoeffMaterial DDTransportMaterial NVTransportMaterial; do
+          # The historical RateCoeffMaterial owner has itself been retired:
+          # the maintained EI/H rate owners are separate canonical classes.
+          for name in EIRateCoefMaterial HRateCoefMaterial DDTransportMaterial NVTransportMaterial; do
             test -f "physics_app/include/materials/$name.h"
             test -f "physics_app/src/materials/$name.C"
           done
-          for name in ElectronImpactRateMaterial PhysicsElectronImpactRateMaterial DDMaterial NVMaterial PhysicsThermalDiffusionMaterial; do
+          for name in RateCoeffMaterial ElectronImpactRateMaterial PhysicsElectronImpactRateMaterial DDMaterial NVMaterial PhysicsThermalDiffusionMaterial; do
             test ! -e "physics_app/include/materials/$name.h"
             test ! -e "physics_app/src/materials/$name.C"
           done
