@@ -707,8 +707,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          python3 -m py_compile ci/guards/issue541_arch_replay_p0.py
+          python3 -m py_compile ci/guards/issue541_arch_replay_p0.py ci/guards/issue541_arch_dd_p3_result_gate.py
           python3 ci/guards/issue541_arch_replay_p0.py --self-test --check
+          python3 ci/guards/issue541_arch_dd_p3_result_gate.py --self-test
           python3 ci/guards/workflow_surface_guard.py --self-test
           echo ISSUE541_ARCH_P3_REPLACEMENT_P0_PASS_NO_LIVE_P3_SCIENCE_HOLD
 
