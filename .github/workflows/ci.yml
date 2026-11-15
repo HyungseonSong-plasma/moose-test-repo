@@ -539,6 +539,33 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # Exact-head static receipt, independent of legacy workflow-surface failures.
+  # Actual P3/P4 archived ZIP bytes are verified offline with both --artifact flags.
+  issue402_s6_reference_receipt:
+    name: Issue402 S6 P3/P4 reference receipt (no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify pinned reference receipt, Python and mutation sentinels
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 -m py_compile \
+            ci/guards/verify_issue402_s6_hybrid_baseline.py \
+            experiments/Issue402_plasma_dsl_g1/verify_chemistry_p3_evidence.py
+          python3 ci/guards/verify_issue402_s6_hybrid_baseline.py --manifest-check --self-test
+          echo ISSUE402_S6_REFERENCE_STATIC_CONTRACT_PASS
+
   # Reusable, governed CI gate for native plasma solver-object changes.
   plasma_native_regression:
     if: >-
