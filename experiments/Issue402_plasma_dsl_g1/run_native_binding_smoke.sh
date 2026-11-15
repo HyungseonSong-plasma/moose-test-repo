@@ -124,7 +124,9 @@ native --check-input -i "$PILOT/valid_all_physics_json_p2.i" \
 echo "PLASMA_ALL_PHYSICS_JSON_OWNED_P2_PASS"
 # Standalone positive construction check: one generated FEM transport Kernel.
 # It is a P2-only input, not an accepted physical simulation or P3 parity run.
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
+# Modern generated option-first transport uses a standalone JSON-owned
+# electron log-molar IC. The retired baseline overlay remains as source history.
+native --check-input -i "$PILOT/valid_generated_transport_json_p2.i" \
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
