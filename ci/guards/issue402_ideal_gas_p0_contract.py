@@ -85,7 +85,7 @@ def self_test() -> None:
         broken = job.replace(token, "REMOVED_HISTORICAL_P0_OWNER", 1)
         assert validate(broken), token
     for token in ("test \"$(git rev-parse HEAD)\" = \"$EXPECTED_HEAD\"", "P3=NOT_RUN"):
-        assert validate(job.replace(token, "", 1)), token
+        assert validate(job.replace(token, "")), token
     for forbidden in ("|| true", "docker run", "continue-on-error:"):
         assert validate(job + "\n" + forbidden), forbidden
     print("ISSUE402_IDEAL_GAS_P0_MUTATION_SELF_TEST=PASS")
