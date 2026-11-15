@@ -110,7 +110,7 @@ def self_test(m: dict, ci: str, native: str):
         ("P0_TARGET", ci.replace("tests/test_issue402_species_live_ic_inlet.py", "tests/REMOVED.py", 1)),
         ("NATIVE_JOB", ci.replace("  issue402_core_four_native_p2:", "  BROKEN_CORE_NATIVE:", 1)),
         ("NATIVE_P2", native.replace("DD_JSON_BOUNDARY_NATIVE_P2_PASS_P3_NOT_RUN", "MISSING_DD_P2", 1)),
-        ("P3_PROMOTION", ci.replace("P3=NOT_RUN", "P3=PASS", 1)),
+        ("P3_PROMOTION", ci.replace("echo \"P3=NOT_RUN; SCIENCE_HOLD\"", "echo \"P3=PASS; SCIENCE_ACCEPTED\"", 1)),
     ):
         try:
             check(m, alternate if label in ("P0_TARGET", "NATIVE_JOB", "P3_PROMOTION") else ci,
