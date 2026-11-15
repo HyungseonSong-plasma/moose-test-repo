@@ -47,7 +47,7 @@ def job_text(ci: str) -> str:
     if ci.count(marker) != 1:
         return ""
     return marker + ci.split(marker, 1)[1].split(
-        "\n  # Reusable, governed CI gate", 1
+        "\n  plasma_native_regression:", 1
     )[0]
 
 
