@@ -55,12 +55,28 @@
 []
 
 [FunctorMaterials]
-  # Mean energy and temperature are state closures, not transport coefficients.
+  # Physical FV Aux states remain the sole EI/H reaction-density inputs.
+  # ElectronEnergyMaterial accepts only log-molar states; a test-only
+  # representation bridge preserves e_energy_eV = energy_physical/ne_physical.
+  [electron_log_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = electron_log_molar_density
+    functor_names = 'electron_number_density_physical'
+    functor_symbols = 'ne'
+    expression = 'log(ne/6.02214076e23)'
+  []
+  [electron_log_molar_energy]
+    type = ADParsedFunctorMaterial
+    property_name = electron_log_molar_energy
+    functor_names = 'electron_energy_density_physical'
+    functor_symbols = 'energy'
+    expression = 'log(energy/6.02214076e23)'
+  []
   [electron_mean_energy]
     type = ElectronEnergyMaterial
-    state_form = physical_eV
-    electron_density = electron_number_density_physical
-    electron_energy_density = electron_energy_density_physical
+    state_form = log_molar_eV
+    electron_density = electron_log_molar_density
+    electron_energy_density = electron_log_molar_energy
   []
   [electron_temperature]
     type = ADParsedFunctorMaterial
