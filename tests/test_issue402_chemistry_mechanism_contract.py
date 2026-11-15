@@ -185,6 +185,25 @@ def test_native_positive_and_negative_fixtures_are_wired():
     assert progress_from_id(negative["reactions"][0]["id"]) == progress_from_id(negative["reactions"][1]["id"])
 
 
+def test_s6_catalogue_synthetic_p2_initial_is_not_archival_initial():
+    """S6-417/941 catalogue P2 must bind e without modifying archival JSON."""
+    common = json.loads((PILOT / "chemistry/oxygen_s6_common.json").read_text())
+    synthetic = json.loads((PILOT / "chemistry/oxygen_s6_p2_transport.json").read_text())
+    assert "initial_number_density" not in common["species"]["e"]
+    assert set(synthetic["species"]) == {"e"}
+    assert synthetic["species"]["e"]["initial_number_density"] == 1e16
+    assert synthetic["equations"] == {}
+    assert synthetic["reactions"] == []
+    for case in ("417", "941"):
+        archived = json.loads((PILOT / f"chemistry/oxygen_s6_{case}.json").read_text())
+        assert archived["species"] == {}
+        assert len(archived["reactions"]) == 1
+        deck = (PILOT / f"chemistry_s6_{case}_catalogue_p2.i").read_text()
+        assert f"chemistry/oxygen_s6_{case}.json" in deck
+        assert "chemistry/oxygen_s6_p2_transport.json" in deck
+        assert "Rate values below are SYNTHETIC" in deck
+
+
 def test_derived_progress_and_hidden_energy_rule_are_enforced_in_cpp():
     chem = text("physics_app/src/physics/plasma/Chemistry.C")
     energy = text("physics_app/src/physics/plasma/DDEnergyEq.C")
