@@ -22,7 +22,10 @@ from pathlib import Path
 
 import public_option_s6_p2 as option
 from chemistry.prepare_s6_run_input import prepare
-from chemistry.prepare_hybrid_json_s6 import migrate_exact_s6_fem_sheath
+from chemistry.prepare_hybrid_json_s6 import (
+    migrate_exact_s6_fem_sheath,
+    prepare as prepare_hybrid,
+)
 from p3_chemistry_preflight import audit
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,7 +37,7 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def rebind_preserved_native_sheath(chemistry: Path, ordered: list[str]) -> dict:
+def rebind_preserved_native_sheath(chemistry: Path, ordered: list[str], *, apply: bool = True) -> dict:
     """P2 scratch-only 4+4 registered BC rebind, with exact physical-owner checks.
 
     Source/history remain immutable. This migration checks boundary, variable,
@@ -63,9 +66,11 @@ def rebind_preserved_native_sheath(chemistry: Path, ordered: list[str]) -> dict:
         raise ValueError("FLOW_S6_SHEATH_4_PLUS_4_OWNER_CONTRACT_CHANGED")
     before_sha = hashlib.sha256(original.encode("utf-8")).hexdigest()
     after_sha = hashlib.sha256(converted.encode("utf-8")).hexdigest()
-    base.write_text(converted, encoding="utf-8")
+    if apply:
+        base.write_text(converted, encoding="utf-8")
     return {
-        "status": "P2_SCRATCH_ONLY_EXACT_4_PLUS_4_REGISTERED_SHEATH_REBIND",
+        "status": ("P2_SCRATCH_ONLY_EXACT_4_PLUS_4_REGISTERED_SHEATH_REBIND"
+                   if apply else "P2_SCRATCH_PREFLIGHT_EXACT_4_PLUS_4_SHEATH"),
         "source_layer": base_name,
         "before_sha256": before_sha,
         "after_sha256": after_sha,
@@ -127,13 +132,24 @@ def check_only(historical: Path, expected_head: str, output: Path,
             migration = option.canonicalize_staged_D_inputs(chemistry, ordered)
             type_remap = option.remap_staged_fem_types(chemistry, ordered)
             cutover = prepare(chemistry, ordered, case)
-            # The maintained PhysicsApp still registers the same 4+4
-            # physical wall laws under canonical names. Check all eight
-            # original boundaries/functors before changing scratch only.
-            sheath_rebind = rebind_preserved_native_sheath(chemistry, ordered)
+            # Independently prove all eight BC source/boundary/flux fields
+            # before the integrated JSON migration touches disposable inputs.
+            sheath_preflight = rebind_preserved_native_sheath(
+                chemistry, ordered, apply=False
+            )
+            # Legacy Chemistry JSON does not own initial density/energy.
+            # The reviewed hybrid migration moves the archived exact ICs and
+            # unchanged Native wall/ion/gas contracts into the modern schema.
+            hybrid = prepare_hybrid(chemistry, ordered, case)
+            if (hybrid["rebound_native_sheath_bc_count"] != 8 or
+                hybrid["rebound_native_sheath_bcs"] != sheath_preflight["owners"] or
+                hybrid["integrated_species_count"] != 7 or
+                hybrid["integrated_reaction_count"] != 8 or
+                hybrid["science_acceptance"] != "HOLD"):
+                raise ValueError("FLOW_S6_HYBRID_SOURCE_CONTRACT_CHANGED")
             overlay = chemistry / "migrated_continuity.i"
-            if digest(overlay) != cutover["overlay_sha256"]:
-                raise ValueError("P2_CHEMISTRY_OVERLAY_CONTENT_CHANGED")
+            if digest(overlay) != hybrid["overlay_sha256"]:
+                raise ValueError("P2_HYBRID_CHEMISTRY_OVERLAY_CONTENT_CHANGED")
             # No implicit JSON DD transport cutover: original S6 Native ion
             # coefficients and Poisson owner remain exactly as staged.
             if not all((staged / relative).is_file() for relative in ordered):
@@ -150,7 +166,8 @@ def check_only(historical: Path, expected_head: str, output: Path,
                 "scratch_canonicalization": migration,
                 "scratch_fem_type_remap": type_remap,
                 "scratch_chemistry_cutover": cutover,
-                "scratch_sheath_bc_rebind": sheath_rebind,
+                "scratch_sheath_bc_rebind": sheath_preflight,
+                "scratch_hybrid_json_cutover": hybrid,
                 "overlay_sha256": digest(overlay),
                 "P3": "NOT_RUN",
             }
