@@ -333,7 +333,7 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
     invalid_poisson_variable) expected='Poisson fem_potential requires an FEM solver variable' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
-    invalid_missing_variable) expected='was not found' ;;
+    invalid_missing_variable) expected="Selected species 'missing' requires species.missing.initial_number_density" ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
     invalid_missing_fvm_charges) expected='fem_charge_numbers' ;;
