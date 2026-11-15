@@ -82,6 +82,16 @@ jobs:
         run: |
           set -euo pipefail
           test ! -e issue402_dd_json_p3_evidence
+          # The Native runner writes evidence as container root, whereas this
+          # validation job runs as the non-root GitHub runner. Restore ownership
+          # on success OR failure so the result gate can persist its receipt and
+          # actions/upload-artifact can preserve the actual failure diagnostics.
+          restore_evidence_ownership() {
+            if [[ -d issue402_dd_json_p3_evidence ]]; then
+              sudo chown -R "$(id -u):$(id -g)" issue402_dd_json_p3_evidence
+            fi
+          }
+          trap restore_evidence_ownership EXIT
           docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
             --workdir /workspace -v "$PWD:/workspace" \
             --env "RUN_SOURCE_SHA=$GITHUB_SHA" "$OCI" -lc '
@@ -92,6 +102,8 @@ jobs:
                 --output /workspace/issue402_dd_json_p3_evidence \
                 --source-sha "$RUN_SOURCE_SHA"
             ' 2>&1 | tee /tmp/issue402_dd_json_p3_transient.log
+          restore_evidence_ownership
+          test -w issue402_dd_json_p3_evidence
           test -s issue402_dd_json_p3_evidence/status.json
           python3 ci/guards/issue541_arch_dd_p3_result_gate.py \
             --evidence issue402_dd_json_p3_evidence \
