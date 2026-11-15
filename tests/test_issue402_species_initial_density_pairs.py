@@ -80,6 +80,8 @@ def test_retired_positional_initials_fail_closed_and_archival_sources_remain_unt
     assert "fem_species = 'e nan'" in malformed
     # JSON initializes the active species so the absent 'nan' error is probed.
     assert "files = plasma_species_initial_p2.json" in malformed
+    assert "Selected species 'nan' requires species.nan.initial_number_density" in (
+        PILOT / "run_native_binding_smoke.sh").read_text()
     runner = (PILOT / "run_native_binding_smoke.sh").read_text()
     for case in (
         "species_density_pairs_p2",
