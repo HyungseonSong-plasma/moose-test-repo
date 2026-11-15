@@ -719,6 +719,7 @@ jobs:
           python3 -m pytest -q tests/characterization/test_issue192_s5r.py tests/characterization/test_issue192_s5r_runtime.py
           echo "JSON_HEAVY_SURFACE_P0_PASS; P3=NOT_RUN; SCIENCE_HOLD"
 
+  # Reusable, governed CI gate for native plasma solver-object changes.
   # Package 2 / FLOW: source-bound, real P1/P2 replacement of historical
   # issue402-rate-coef-ideal-gas-native-once.yml (P3 never run).
   issue402_flow_ideal_native_p2:
@@ -816,7 +817,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  # Reusable, governed CI gate for native plasma solver-object changes.
   plasma_native_regression:
     if: >-
       github.event_name == 'pull_request' &&
