@@ -8,20 +8,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 REQUIRED: dict[str, tuple[str, ...]] = {
-    "physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h": (
-        "class PhysicsFVLogMolarElectronTimeDerivative",
-        "class PhysicsFVLogMolarElectronDiffusion",
+    "physics_app/include/fvkernels/PhysicsFVLogMolarTransport.h": (
+        "class PhysicsFVLogMolarTimeDerivative",
+        "class PhysicsFVLogMolarDiffusion",
         "class PhysicsFVLogMolarElectrostaticDrift",
-        "class PhysicsFVLogMolarElectronReactionSource",
     ),
-    "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": (
-        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronTimeDerivative);',
-        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronDiffusion);',
+    "physics_app/src/fvkernels/PhysicsFVLogMolarTransport.C": (
+        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarTimeDerivative);',
+        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarDiffusion);',
         'registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectrostaticDrift);',
-        'registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronReactionSource);',
         "return (exp(log_c_new) - exp(log_c_old)) / _dt;",
         "const ADReal c_face = exp(_var(transported_face, state));",
-        "return -physical_number_source / avogadro_per_mol;",
     ),
     "physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.h": (
         "const bool _log_molar_state;",
@@ -49,6 +46,12 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "PhysicsGroundedElectronSheath::primaryEnergyFluxHat(",
     ),
 }
+
+
+RETIRED = (
+    "physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h",
+    "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+)
 
 
 def validate(contents: dict[str, str]) -> list[str]:
@@ -87,7 +90,7 @@ def self_test() -> int:
     assert any("if (_molar_energy_state)" in item for item in failures), failures
 
     missing = dict(positive)
-    missing.pop("physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h")
+    missing.pop("physics_app/include/fvkernels/PhysicsFVLogMolarTransport.h")
     failures = validate(missing)
     assert any(item.startswith("missing file:") for item in failures), failures
 
@@ -103,6 +106,13 @@ def main() -> int:
         return self_test()
 
     failures = validate(load(ROOT))
+    for relpath in RETIRED:
+        if (ROOT / relpath).exists():
+            failures.append(f"retired file still exists: {relpath}")
+    for relpath in ("physics_app/include/fvkernels/PhysicsFVLogMolarTransport.h", "physics_app/src/fvkernels/PhysicsFVLogMolarTransport.C"):
+        source = (ROOT / relpath).read_text(encoding="utf-8") if (ROOT / relpath).is_file() else ""
+        if "PhysicsFVLogMolarElectron" in source:
+            failures.append(f"retired class remains in: {relpath}")
     if failures:
         print("ELECTRON_MOLAR_REPRESENTATION_CONTRACT=FAIL")
         for failure in failures:

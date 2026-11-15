@@ -22,7 +22,7 @@ REQUIRED_BASE_TOKENS = (
     "property_name = w_O2_constraint",
     "T_g_fixed",
     "type = FEMLogMolarTimeDerivative",
-    "type = PhysicsFVLogMolarElectronTimeDerivative",
+    "type = PhysicsFVLogMolarTimeDerivative",
 )
 
 def args() -> argparse.Namespace:

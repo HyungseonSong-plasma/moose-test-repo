@@ -1,45 +1,40 @@
-#include "PhysicsFVLogMolarElectronTransport.h"
+#include "PhysicsFVLogMolarTransport.h"
 
 #include "FEProblemBase.h"
 #include "RelationshipManager.h"
 #include "metaphysicl/raw_type.h"
 
+#include <algorithm>
 #include <cmath>
 
-registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronTimeDerivative);
-registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronDiffusion);
+registerMooseObject("PhysicsApp", PhysicsFVLogMolarTimeDerivative);
+registerMooseObject("PhysicsApp", PhysicsFVLogMolarDiffusion);
 registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectrostaticDrift);
-registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronReactionSource);
-
-namespace
-{
-constexpr Real avogadro_per_mol = 6.02214076e23;
-}
 
 InputParameters
-PhysicsFVLogMolarElectronTimeDerivative::validParams()
+PhysicsFVLogMolarTimeDerivative::validParams()
 {
   auto params = FVElementalKernel::validParams();
   params.addClassDescription(
-      "Conservative backward-Euler molar balance reconstructed from c_e=exp(log_e) mol/m^3.");
+      "Conservative backward-Euler molar balance reconstructed from c=exp(log_c) mol/m^3.");
   params.set<MultiMooseEnum>("vector_tags") = "time";
   params.set<MultiMooseEnum>("matrix_tags") = "system time";
   return params;
 }
 
-PhysicsFVLogMolarElectronTimeDerivative::PhysicsFVLogMolarElectronTimeDerivative(
+PhysicsFVLogMolarTimeDerivative::PhysicsFVLogMolarTimeDerivative(
     const InputParameters & parameters)
   : FVElementalKernel(parameters)
 {
 }
 
 ADReal
-PhysicsFVLogMolarElectronTimeDerivative::computeQpResidual()
+PhysicsFVLogMolarTimeDerivative::computeQpResidual()
 {
   if (!_subproblem.isTransient())
-    mooseError("PhysicsFVLogMolarElectronTimeDerivative requires transient execution.");
+    mooseError("PhysicsFVLogMolarTimeDerivative requires transient execution.");
   if (_dt <= 0.0)
-    mooseError("PhysicsFVLogMolarElectronTimeDerivative requires dt > 0.");
+    mooseError("PhysicsFVLogMolarTimeDerivative requires dt > 0.");
 
   using std::exp;
   const auto elem = makeElemArg(_current_elem);
@@ -49,13 +44,13 @@ PhysicsFVLogMolarElectronTimeDerivative::computeQpResidual()
 }
 
 InputParameters
-PhysicsFVLogMolarElectronDiffusion::validParams()
+PhysicsFVLogMolarDiffusion::validParams()
 {
   auto params = FVFluxKernel::validParams();
   params += FVDiffusionInterpolationInterface::validParams();
   params.addClassDescription(
-      "Orthogonal FV electron diffusion reconstructed from c_e=exp(log_e), returned in molar flux units.");
-  params.addRequiredParam<MooseFunctorName>("coeff", "Electron diffusion coefficient [m^2/s].");
+      "Orthogonal FV species diffusion reconstructed from c=exp(log_c), returned in molar flux units.");
+  params.addRequiredParam<MooseFunctorName>("coeff", "Species diffusion coefficient [m^2/s].");
   MooseEnum coeff_interp_method("average harmonic", "harmonic");
   params.addParam<MooseEnum>(
       "coeff_interp_method", coeff_interp_method, "Face interpolation method for diffusivity.");
@@ -70,7 +65,7 @@ PhysicsFVLogMolarElectronDiffusion::validParams()
   return params;
 }
 
-PhysicsFVLogMolarElectronDiffusion::PhysicsFVLogMolarElectronDiffusion(
+PhysicsFVLogMolarDiffusion::PhysicsFVLogMolarDiffusion(
     const InputParameters & parameters)
   : FVFluxKernel(parameters),
     FVDiffusionInterpolationInterface(parameters),
@@ -81,7 +76,7 @@ PhysicsFVLogMolarElectronDiffusion::PhysicsFVLogMolarElectronDiffusion(
 }
 
 ADReal
-PhysicsFVLogMolarElectronDiffusion::computeQpResidual()
+PhysicsFVLogMolarDiffusion::computeQpResidual()
 {
   using namespace Moose::FV;
   using std::exp;
@@ -107,14 +102,14 @@ PhysicsFVLogMolarElectrostaticDrift::validParams()
 {
   auto params = FVFluxKernel::validParams();
   params.addClassDescription(
-      "Electrostatic FV drift reconstructed from c_e=exp(log_e), preserving "
+      "Electrostatic FV drift reconstructed from c=exp(log_c), preserving "
       "PhysicsFVElectrostaticDrift face/upwind semantics and returning molar flux. "
       "For a continuous FEM potential, use_element_gradient_for_potential averages the two "
       "adjacent element gradients at an interior FV face instead of requesting a FaceArg gradient.");
   params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");
   params.addRequiredParam<MooseFunctorName>("mobility", "Positive mobility magnitude [m^2/(V s)].");
   params.addRequiredParam<MooseFunctorName>(
-      "carrier", "Multiplicative carrier functor; use 1 for electron molar concentration.");
+      "carrier", "Multiplicative carrier functor; use 1 for log-molar species concentration.");
   params.addRequiredParam<Real>("charge_number", "Signed charge number z.");
   params.addParam<bool>(
       "use_element_gradient_for_potential",
@@ -237,29 +232,4 @@ PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
                &limiter_time);
   const ADReal c_face = exp(_var(transported_face, state));
   return carrier_face * c_face * drift_normal;
-}
-
-InputParameters
-PhysicsFVLogMolarElectronReactionSource::validParams()
-{
-  auto params = FVElementalKernel::validParams();
-  params.addClassDescription(
-      "Converts a signed physical electron number source to molar source for the log-molar equation.");
-  params.addRequiredParam<MooseFunctorName>(
-      "number_source", "Signed physical electron number source [1/(m^3 s)]. Positive is production.");
-  return params;
-}
-
-PhysicsFVLogMolarElectronReactionSource::PhysicsFVLogMolarElectronReactionSource(
-    const InputParameters & parameters)
-  : FVElementalKernel(parameters), _number_source(getFunctor<ADReal>("number_source"))
-{
-}
-
-ADReal
-PhysicsFVLogMolarElectronReactionSource::computeQpResidual()
-{
-  const ADReal physical_number_source =
-      _number_source(makeElemArg(_current_elem), determineState());
-  return -physical_number_source / avogadro_per_mol;
 }

@@ -81,7 +81,7 @@ def check_only(historical: Path, expected_head: str, output: Path,
                 d_base_source=D_BASE)
             chemistry = staged / option.p2.CHEM
             migration = option.canonicalize_staged_D_inputs(chemistry, ordered)
-            type_remap = option.remap_staged_fem_types(chemistry, ordered)
+            type_remap = option.remap_staged_legacy_types(chemistry, ordered)
             cutover = prepare(chemistry, ordered, case)
             overlay = chemistry / "migrated_continuity.i"
             if digest(overlay) != cutover["overlay_sha256"]:
@@ -100,7 +100,7 @@ def check_only(historical: Path, expected_head: str, output: Path,
                 "check_input": checked,
                 "staged_inputs": ordered,
                 "scratch_canonicalization": migration,
-                "scratch_fem_type_remap": type_remap,
+                "scratch_legacy_type_remap": type_remap,
                 "scratch_chemistry_cutover": cutover,
                 "overlay_sha256": digest(overlay),
                 "P3": "NOT_RUN",

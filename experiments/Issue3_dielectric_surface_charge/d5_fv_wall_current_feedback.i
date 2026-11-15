@@ -175,23 +175,23 @@
 
 [FVKernels]
   [ion_time]
-    type = PhysicsFVLogMolarElectronTimeDerivative
+    type = PhysicsFVLogMolarTimeDerivative
     variable = log_ni
     block = 1
   []
   [ion_zero_transport]
-    type = PhysicsFVLogMolarElectronDiffusion
+    type = PhysicsFVLogMolarDiffusion
     variable = log_ni
     coeff = zero_diffusion
     block = 1
   []
   [electron_time]
-    type = PhysicsFVLogMolarElectronTimeDerivative
+    type = PhysicsFVLogMolarTimeDerivative
     variable = log_ne
     block = 1
   []
   [electron_zero_transport]
-    type = PhysicsFVLogMolarElectronDiffusion
+    type = PhysicsFVLogMolarDiffusion
     variable = log_ne
     coeff = zero_diffusion
     block = 1

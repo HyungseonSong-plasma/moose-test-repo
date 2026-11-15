@@ -168,20 +168,20 @@ def build(gamma: float) -> str:
 
 [FVKernels]
   [ion_time]
-    type = PhysicsFVLogMolarElectronTimeDerivative
+    type = PhysicsFVLogMolarTimeDerivative
     variable = log_ni
   []
   [ion_zero_transport]
-    type = PhysicsFVLogMolarElectronDiffusion
+    type = PhysicsFVLogMolarDiffusion
     variable = log_ni
     coeff = zero_diffusion
   []
   [electron_time]
-    type = PhysicsFVLogMolarElectronTimeDerivative
+    type = PhysicsFVLogMolarTimeDerivative
     variable = log_ne
   []
   [electron_zero_transport]
-    type = PhysicsFVLogMolarElectronDiffusion
+    type = PhysicsFVLogMolarDiffusion
     variable = log_ne
     coeff = zero_diffusion
   []
