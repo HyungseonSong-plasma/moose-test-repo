@@ -56,6 +56,12 @@ def validate(m, dd, s6, old, surface):
  need("issue402_dd_json_p3_evidence/**" in dd and ".issue402_dd_json_p3_evidence/**" not in dd, "DD_HIDDEN_ARTIFACT")
  need("num_steps = 2" in dd and "run_issue402_dd_json_p3_smoke.py" in dd, "DD_P3")
  need("ci/guards/issue541_arch_dd_p3_result_gate.py" in dd and "--source-sha" in dd and "--binary" in dd, "DD_STRICT_OUTPUT_ORACLE")
+ need('trap restore_evidence_ownership EXIT' in dd and
+      'sudo chown -R "$(id -u):$(id -g)" issue402_dd_json_p3_evidence' in dd and
+      '          restore_evidence_ownership\n          test -w issue402_dd_json_p3_evidence' in dd and
+      dd.index("test -w issue402_dd_json_p3_evidence") <
+      dd.index("python3 ci/guards/issue541_arch_dd_p3_result_gate.py"),
+      "DD_ROOT_OWNED_EVIDENCE_UNWRITABLE")
  need("case: ['417', '941']" in s6 and "--authorize-p3" in s6 and "--hybrid-json" in s6, "S6_TWO_CASE")
  need('Path(os.environ["RUNNER_TEMP"])' in s6 and 'Path("$RUNNER_TEMP")' not in s6, "S6_TEMP_PATH")
 
@@ -75,7 +81,11 @@ def self_test():
           (dd,s6.replace("case: ['417', '941']","case: ['417']",1)),
           (dd,s6.replace('Path(os.environ["RUNNER_TEMP"])','Path("$RUNNER_TEMP")',1)),
           (dd,s6.replace('test "$APPROVAL" = "'+PHRASES[1]+'"',"true",1)),
-          (dd.replace("ci/guards/issue541_arch_dd_p3_result_gate.py", "missing_dd_oracle", 1),s6)]
+          (dd.replace("ci/guards/issue541_arch_dd_p3_result_gate.py", "missing_dd_oracle", 1),s6),
+          (dd.replace("trap restore_evidence_ownership EXIT","trap : EXIT",1),s6),
+          (dd.replace('sudo chown -R "$(id -u):$(id -g)" issue402_dd_json_p3_evidence',"true",1),s6),
+          (dd.replace('          restore_evidence_ownership\n          test -w issue402_dd_json_p3_evidence',
+                      '          true\n          test -w issue402_dd_json_p3_evidence',1),s6)]
  for i,(a,b) in enumerate(cases):
   try: validate(m,a,b,old,surface)
   except ValueError: continue
@@ -85,7 +95,7 @@ def self_test():
   try: validate(mutant,dd,s6,old,surface)
   except ValueError: continue
   raise ValueError("UNREJECTED_RECEIPT_MUTATION_"+str(i))
- print("ISSUE541_ARCH_P3_NEGATIVE_MUTATIONS_11_REJECTED")
+ print("ISSUE541_ARCH_P3_NEGATIVE_MUTATIONS_14_REJECTED")
 
 def main():
  ap=argparse.ArgumentParser()
