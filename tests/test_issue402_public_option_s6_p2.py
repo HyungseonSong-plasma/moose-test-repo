@@ -215,6 +215,7 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
 def test_s6_mean_energy_log_molar_remap_preserves_source_and_rejects_wrong_semantics(tmp_path):
     """The retired producer and consumers change only in disposable S6 P2 copies."""
     import re
+    import pytest
 
     script = (PILOT / "public_option_s6_p2.py").read_text()
     tree = ast.parse(script)
