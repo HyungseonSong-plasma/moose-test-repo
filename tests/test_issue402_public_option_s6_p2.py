@@ -358,6 +358,52 @@ def test_exact_s6_electron_lookup_cutover_is_wired_into_native_p2(tmp_path):
     assert source_path.read_bytes() == source_snapshot
 
 
+def test_actual_s6_native_wall_cutover_preserves_archive_and_rejects_charge_flip(tmp_path):
+    """The P2 caller must preserve owner identity and reject a flipped ion sign."""
+    import importlib.util
+    import runpy
+    import pytest
+
+    path = PILOT / "public_option_s6_p2.py"
+    spec = importlib.util.spec_from_file_location("issue541_s6_native_wall_runner", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    examples = runpy.run_path(str(ROOT / "tests/test_issue402_s6_wall_naming_staging.py"))
+    producer = examples["ION_PRODUCER"]
+    consumers = examples["CONSUMERS"]
+    staged = tmp_path / "scratch"
+    staged.mkdir()
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    (staged / "layer_0.i").write_text(producer)
+    (staged / "layer_1.i").write_text(consumers)
+    for i in range(2, 10):
+        (staged / f"layer_{i}.i").write_text(f"# layer {i}\n")
+    untouched = {p.name: p.read_bytes() for p in staged.iterdir()}
+
+    report = module.remap_staged_wall_owners(staged, ordered)
+    assert report["status"] == "SCRATCH_ONLY_SPECIES_WALL_NAMES"
+    assert report["owner_count"] == 4
+    assert {v["species_id"] for v in report["wall_material_owners"]} == {
+        "e", "O2p", "Om", "Op"}
+    assert report["P3"] == "NOT_RUN" and report["science"] == "SCIENCE_HOLD"
+    assert "type = PhysicsIonWallTotalFluxMaterial" not in (staged / "layer_0.i").read_text()
+    assert "type = PhysicsIonWallFluxMaterial" in (staged / "layer_0.i").read_text()
+    assert "functor = Op_wall_number_flux" in (staged / "layer_1.i").read_text()
+    assert (staged / "layer_0.i").read_bytes() != untouched["layer_0.i"]
+
+    # A flipped sign must stop before rewriting any staged consumer/source.
+    wrong = producer.replace("charge_number = -1", "charge_number = 1", 1)
+    assert wrong != producer
+    (staged / "layer_0.i").write_text(wrong)
+    (staged / "layer_1.i").write_text(consumers)
+    snapshot = {p.name: p.read_bytes() for p in staged.iterdir()}
+    with pytest.raises(ValueError, match="S6_WALL_CHARGE_IDENTITY_UNPROVED"):
+        module.remap_staged_wall_owners(staged, ordered)
+    assert snapshot == {p.name: p.read_bytes() for p in staged.iterdir()}
+
+
 def test_full_s6_p2_provenance_and_no_solver_execution():
     script = (PILOT / "public_option_s6_p2.py").read_text()
     shell = PILOT / "run_public_option_s6_p2.sh"
@@ -479,6 +525,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
         "remap_staged_electron_lookup": lambda *_args: {"status": "SYNTHETIC_LOOKUP_REMAP"},
+        "remap_staged_wall_owners": lambda *_args: {"status": "SYNTHETIC_WALL_REMAP"},
         "remap_staged_mean_energy": lambda *_args: {"status": "SYNTHETIC_MEAN_ENERGY_REMAP"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
