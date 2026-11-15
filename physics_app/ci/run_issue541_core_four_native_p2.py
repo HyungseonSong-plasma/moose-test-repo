@@ -11,10 +11,14 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[2]
+# Direct script invocation sets sys.path[0]=physics_app/ci; add the repository
+# root before importing existing physics_app.ci Stage5 source generators.
+sys.path.insert(0, str(ROOT))
 CI = ROOT / "physics_app/ci"
 PINNED = "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
 
