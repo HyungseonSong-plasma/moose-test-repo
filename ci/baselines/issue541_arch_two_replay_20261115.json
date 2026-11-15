@@ -1,0 +1,84 @@
+{
+  "schema": "issue541.arch.two_p3_workflow_retention.v1",
+  "package": "ARCH",
+  "authority_issue": 541,
+  "retirement_issue": 535,
+  "source_main_head": "71e112eb05d4645c82aab8861b99d6952ac4ac3e",
+  "immutable_p3_science_status": "SCIENCE_HOLD",
+  "workflows": {
+    "dd_json_two_step": {
+      "old_path": ".github/workflows/issue402-dd-json-p3-smoke-once.yml",
+      "old_blob": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
+      "trigger_branch": "issue-402-dd-plasma-boundary-action",
+      "old_trigger": "push_self_yaml_only",
+      "historical_source_sha": "2354f69ec7c0f8f0a90e0b931cc42fd28804dc07",
+      "historical_run_id": 43536220786,
+      "historical_run_conclusion": "failure",
+      "native_p1_observed": "PASS",
+      "native_p3_observed": "P3_NATIVE_SHEATH_SOLVE_UNRESOLVED",
+      "input_scope": "2 real timesteps of synthetic sheath electron continuity and energy; no RF or full S6",
+      "historical_artifact_id": 14090046268,
+      "historical_artifact_expires_utc": "2026-12-14T00:48:01Z",
+      "historical_original_zip_sha256": "d7ccb403173ef7a831e3ec9ad31a6c74c49c54dda20dfa839fe11b3331c572a4",
+      "historical_original_zip_bytes": 1550,
+      "original_zip_members": [
+        "tmp/issue402_dd_json_p3_native_build.log",
+        "tmp/issue402_dd_json_p3_transient.log"
+      ],
+      "artifact_evidence_gap": "Hidden .issue402_dd_json_p3_evidence outputs were excluded from historical artifact; no status.json/Exodus/CSV in original ZIP",
+      "backup": "INDEPENDENT_PRIVATE_COPY_READBACK_SHA256_VERIFIED",
+      "backup_drive_file_id": "1kcw5K_gvmyeydTDuddIHs3VHZCMhQCaL",
+      "archive_worm": "NOT_PROVEN",
+      "candidate_path": ".github/workflows/issue541-arch-dd-p3-replay.yml",
+      "replay_proof": "NOT_EXECUTED_ON_CANDIDATE_EXACT_HEAD",
+      "retirement": "KEEP_HOLD",
+      "unresolved": [
+        "Historical P3 native exit != 0",
+        "No successful exact-head maintained two-timestep replay",
+        "Dynamic/external caller-zero not proven",
+        "Backup ZIP contains logs only"
+      ]
+    },
+    "s6_hybrid_two_case": {
+      "old_path": ".github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml",
+      "old_blob": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
+      "trigger_branch": "issue-402-dd-plasma-boundary-action",
+      "old_trigger": "push_self_yaml_only",
+      "historical_source_sha": "af4a9e896328386723e8bbb957f334e1d83fe75e",
+      "immutable_public_historical_checkout_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+      "historical_run_id": 43587161603,
+      "historical_run_conclusion": "failure_after_native_solve",
+      "original_artifacts": {
+        "417": {
+          "id": 14117371106,
+          "sha256": "563800ba985c3966d24aa0196fbe8ce46c9e1f5f1a1936685c6b5ff76c77a195",
+          "bytes": 98686127,
+          "expires_utc": "2026-12-29T14:09:44Z"
+        },
+        "941": {
+          "id": 14120049502,
+          "sha256": "87150a4b7db1647aa6a46731335ea1efa28a2998558cedd83df08d707c210d7e",
+          "bytes": 98635164,
+          "expires_utc": "2026-12-29T15:48:51Z"
+        }
+      },
+      "native_p3_observed": "TWO_CASE_461_FINITE_ROWS_100US_SCIENCE_HOLD",
+      "p4": "DIAGNOSTIC_ONLY",
+      "backup": "INDEPENDENT_PRIVATE_COPY_READBACK_SHA256_VERIFIED",
+      "original_zip_backup_report": "docs/development/2026-11-15_issue541_arch_s6_retention_readback.md (PR #543, included in integration #544)",
+      "archive_worm": "NOT_PROVEN",
+      "candidate_path": ".github/workflows/issue541-arch-s6-p3-p4-replay.yml",
+      "replay_proof": "NOT_EXECUTED_ON_CANDIDATE_EXACT_HEAD",
+      "retirement": "KEEP_HOLD",
+      "unresolved": [
+        "Unique 400W/100us 417+941 maintained replay not proven",
+        "Dynamic/external caller-zero not proven",
+        "Historical run exit was red after solve due quoted RUNNER_TEMP",
+        "Science acceptance remains HOLD"
+      ]
+    }
+  },
+  "maintainer_approval": "EXPLICIT_APPROVAL_REQUIRED_BEFORE_LIVE_P3",
+  "workflow_dispatch_not_available_until_default_branch": "TRUE",
+  "overall": "TWO_REPLAY_CANDIDATES_STAGED_KEEP_HOLD"
+}
