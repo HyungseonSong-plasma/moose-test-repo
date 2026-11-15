@@ -18,8 +18,22 @@
   "expected_end_s": 0.0001,
   "retention": {
     "github_expires_by": "2026-12-29T15:48:51Z",
-    "durable_backup": "NOT_PROVEN",
-    "cannot_retire_unique_p3_p4_replay_until_preserved": true
+    "durable_backup": "INDEPENDENT_BACKUP_READBACK_VERIFIED",
+    "cannot_retire_unique_p3_p4_replay_until_preserved": true,
+    "independent_copy": {
+      "provider": "Google Drive",
+      "visibility": "OWNER_ONLY_NON_SHARED",
+      "readback_verified_date": "2026-11-15",
+      "folder_url": "https://drive.google.com/drive/folders/1KbxP1TjW1u-9cRttyLelo3M2hXjrAAKb",
+      "source_record": "docs/development/2026-11-15_issue541_arch_s6_retention_readback.md",
+      "access_requirement": "STORAGE_OWNER",
+      "maintenance_free_worm_archive": "NOT_PROVEN"
+    },
+    "replay_contract": {
+      "unique_100us_two_case_p3_p4": "KEEP_HOLD",
+      "maintained_independent_replacement": "NOT_PROVEN",
+      "science": "SCIENCE_HOLD"
+    }
   },
   "cases": {
     "417": {
@@ -50,7 +64,12 @@
         "horizontal_relative_l2": 0.06848464101507847,
         "vertical_relative_l2": 0.03930191280350551
       },
-      "csv_columns": 137
+      "csv_columns": 137,
+      "independent_copy": {
+        "url": "https://drive.google.com/file/d/1jDJIgLRyuk-Gpy2AhBYJmN3t2OjWdnZX/view",
+        "readback_sha256": "563800ba985c3966d24aa0196fbe8ce46c9e1f5f1a1936685c6b5ff76c77a195",
+        "readback_bytes": 98686127
+      }
     },
     "941": {
       "artifact_id": 14120049502,
@@ -80,7 +99,12 @@
         "horizontal_relative_l2": 0.06904315414600136,
         "vertical_relative_l2": 0.039490758948861567
       },
-      "csv_columns": 140
+      "csv_columns": 140,
+      "independent_copy": {
+        "url": "https://drive.google.com/file/d/1E7xzCeMqIUhBFHov1WsvDKBPkEB1PURf/view",
+        "readback_sha256": "87150a4b7db1647aa6a46731335ea1efa28a2998558cedd83df08d707c210d7e",
+        "readback_bytes": 98635164
+      }
     }
   }
 }

@@ -52,6 +52,50 @@ def member_sha(z, name):
     with z.open(name) as f:
         return digest(f)
 
+def check_retention(b):
+    """Independently read-back original ZIP bytes != maintained P3/P4 replay."""
+    ret = b.get("retention", {})
+    require(ret.get("durable_backup") ==
+            "INDEPENDENT_BACKUP_READBACK_VERIFIED", "BACKUP_READBACK_STATUS")
+    require(ret.get("cannot_retire_unique_p3_p4_replay_until_preserved") is True,
+            "LEGACY_REPLAY_PROTECTION")
+    independent = ret.get("independent_copy", {})
+    require(independent.get("provider") == "Google Drive" and
+            independent.get("visibility") == "OWNER_ONLY_NON_SHARED" and
+            independent.get("readback_verified_date") == "2026-11-15" and
+            independent.get("folder_url") ==
+                "https://drive.google.com/drive/folders/1KbxP1TjW1u-9cRttyLelo3M2hXjrAAKb" and
+            independent.get("source_record") ==
+                "docs/development/2026-11-15_issue541_arch_s6_retention_readback.md" and
+            independent.get("maintenance_free_worm_archive") == "NOT_PROVEN",
+            "BACKUP_PROVENANCE_NOT_VERIFIED")
+    replay = ret.get("replay_contract", {})
+    require(replay.get("unique_100us_two_case_p3_p4") == "KEEP_HOLD" and
+            replay.get("maintained_independent_replacement") == "NOT_PROVEN" and
+            replay.get("science") == "SCIENCE_HOLD",
+            "UNIQUE_P3_P4_REPLAY_UNPROVEN")
+    cases = b.get("cases", {})
+    require(set(cases) == {"417", "941"}, "ARCHIVE_CASE_SET")
+    for case, expected in {
+        "417": {
+            "url": "https://drive.google.com/file/d/1jDJIgLRyuk-Gpy2AhBYJmN3t2OjWdnZX/view",
+            "sha": ZIP_SHA["417"], "bytes": 98686127,
+        },
+        "941": {
+            "url": "https://drive.google.com/file/d/1E7xzCeMqIUhBFHov1WsvDKBPkEB1PURf/view",
+            "sha": ZIP_SHA["941"], "bytes": 98635164,
+        },
+    }.items():
+        c = cases[case]
+        stored = c.get("independent_copy", {})
+        require(c.get("archive_sha256") == expected["sha"] and
+                c.get("archive_bytes") == expected["bytes"] and
+                stored.get("url") == expected["url"] and
+                stored.get("readback_sha256") == expected["sha"] and
+                stored.get("readback_bytes") == expected["bytes"],
+                "BACKUP_CASE_READBACK_MISMATCH:" + case)
+
+
 def load_receipt():
     b = json.loads(RECEIPT.read_text(encoding="utf-8"))
     require(b.get("schema") == "issue402.s6.hybrid.reference_receipt.v1", "SCHEMA")
@@ -63,10 +107,7 @@ def load_receipt():
     require(b.get("reference_coordinates") == "ASSUMED_R_0_TO_25_Z_0_TO_44_CM", "REFERENCE_COORDINATES")
     require(b.get("physics_mode") == "chemistry_hybrid_json_native", "MODE")
     require(b.get("expected_frames") == 461 and b.get("expected_end_s") == 0.0001, "FRAMES")
-    retention = b.get("retention", {})
-    require(retention.get("durable_backup") == "NOT_PROVEN" and
-            retention.get("cannot_retire_unique_p3_p4_replay_until_preserved") is True,
-            "REPLAY_RETENTION_HOLD")
+    check_retention(b)
     require(set(b.get("cases", {})) == {"417", "941"}, "CASE_SET")
     for case in ("417", "941"):
         r = b["cases"][case]
@@ -272,6 +313,30 @@ def self_test(b):
             pass
         else:
             raise AssertionError("OWNER_MUTATION_NOT_DETECTED:" + name)
+    # The private ARCH readback must be independently evidenced and must
+    # never imply a proven maintained full P3/P4 replay or science acceptance.
+    check_retention(b)
+    for label, keypath, altered in (
+        ("BACKUP_UNPROVEN", ("retention", "durable_backup"), "NOT_PROVEN"),
+        ("BACKUP_PUBLIC", ("retention", "independent_copy", "visibility"), "PUBLIC"),
+        ("BACKUP_MISSING", ("cases", "417", "independent_copy", "url"), ""),
+        ("BACKUP_TAMPER", ("cases", "941", "independent_copy", "readback_sha256"), "0"*64),
+        ("BACKUP_SIZE_TAMPER", ("cases", "417", "independent_copy", "readback_bytes"), 0),
+        ("REPLAY_PROMOTION", ("retention", "replay_contract", "unique_100us_two_case_p3_p4"), "RETIRED"),
+        ("SCIENCE_PROMOTION", ("retention", "replay_contract", "science"), "ACCEPTED"),
+    ):
+        bad = deepcopy(b)
+        target = bad
+        for part in keypath[:-1]:
+            target = target[part]
+        target[keypath[-1]] = altered
+        try:
+            check_retention(bad)
+        except ReferenceError:
+            pass
+        else:
+            raise AssertionError("RETENTION_MUTATION_UNDETECTED:" + label)
+    print("ISSUE402_S6_RETENTION_READBACK_MUTATION_SELF_TEST=PASS")
     print("ISSUE402_S6_REFERENCE_MUTATION_SELF_TEST=PASS")
 
 def main():
