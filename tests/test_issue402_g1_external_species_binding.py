@@ -18,12 +18,12 @@ def json_owned_negative_routes(runner: str) -> set[str]:
     """Parse selected negative cases whose check-input must use JSON-owned IC."""
     assert "for item in invalid_overlap" in runner
     branch = runner.split("for item in invalid_overlap", 1)[1].split("  set +e", 1)[0]
-    predicate = re.search(r"if \\[\\[(.*?)\\]\\]; then", branch, flags=re.S)
+    predicate = re.search(r"if \[\[(.*?)\]\]; then", branch, flags=re.S)
     assert predicate, "Missing negative-input route predicate"
     after = branch[predicate.end():]
     assert 'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")' in after
     assert 'input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")' in after
-    return set(re.findall(r'"\\$item"\\s*==\\s*(invalid_[a-z_]+)', predicate.group(1)))
+    return set(re.findall(r'"\$item"\s*==\s*(invalid_[a-z_]+)', predicate.group(1)))
 
 
 def sources():
