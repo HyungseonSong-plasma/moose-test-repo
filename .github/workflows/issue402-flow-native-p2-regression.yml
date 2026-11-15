@@ -7,6 +7,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/issue402-flow-native-p2-regression.yml'
+      - '.github/workflows/issue402-rate-coef-ideal-gas-native-once.yml'
+      - '.github/workflows/issue402-reaction-reduction-native-once.yml'
       - 'physics_app/**'
       - 'experiments/Issue402_plasma_dsl_g1/**'
       - 'tests/test_issue402_reaction_reduction_p2_only.py'
@@ -25,6 +27,7 @@ jobs:
     env:
       OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
       HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      LEGACY_YAML_ARCHIVE_SHA: 71e112eb05d4645c82aab8861b99d6952ac4ac3e
       CHEM: experiments/Issue395_powered_chemistry_ladder
       EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
       PINNED_BASE: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
@@ -47,14 +50,22 @@ jobs:
           path: historical
           fetch-depth: 1
           persist-credentials: false
+      - name: Checkout pinned pre-retirement workflow evidence
+        uses: actions/checkout@v4
+        with:
+          ref: 71e112eb05d4645c82aab8861b99d6952ac4ac3e
+          path: retired_workflow_archive
+          fetch-depth: 1
+          persist-credentials: false
       - name: P0 - pin active and historical source, OCI and old workflow SHA
         shell: bash
         run: |
           set -euo pipefail
           test "$(git -C control rev-parse HEAD)" = "$EXPECTED_HEAD"
           test "$(git -C historical rev-parse HEAD)" = "$HISTORICAL_SHA"
-          test "$(git -C control hash-object .github/workflows/issue402-rate-coef-ideal-gas-native-once.yml)" = 64164c097ec8f7831e67b80b317144cd97ba9ee8
-          test "$(git -C control hash-object .github/workflows/issue402-reaction-reduction-native-once.yml)" = 91313152e7e7df3bd0256a2180f489774cfa6171
+          test "$(git -C retired_workflow_archive rev-parse HEAD)" = "$LEGACY_YAML_ARCHIVE_SHA"
+          test "$(git -C retired_workflow_archive hash-object .github/workflows/issue402-rate-coef-ideal-gas-native-once.yml)" = 64164c097ec8f7831e67b80b317144cd97ba9ee8
+          test "$(git -C retired_workflow_archive hash-object .github/workflows/issue402-reaction-reduction-native-once.yml)" = 91313152e7e7df3bd0256a2180f489774cfa6171
           test ! -d historical/"$CHEM"/private_rates
           test ! -e control/physics_app/physics-opt
           grep -Fq "$OCI" control/physics_app/dependencies.lock
