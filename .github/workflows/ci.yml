@@ -604,6 +604,33 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  issue541_arch_replay_p0:
+    name: Issue541 ARCH independent P3 source and manual replay P0 (no Native)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify exact P3 source, retention, manual authorization, and negative mutations
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          python3 -m py_compile ci/guards/issue541_arch_replay_p0.py
+          python3 ci/guards/issue541_arch_replay_p0.py --self-test --check
+          python3 ci/guards/workflow_surface_guard.py --self-test
+          echo ISSUE541_ARCH_P3_REPLACEMENT_P0_PASS_NO_LIVE_P3_SCIENCE_HOLD
+
   artifact-api-probe:
     name: Artifact CreateArtifact API probe (1 day, no Native)
     if: github.event_name == 'pull_request' && github.event.action != 'edited'
