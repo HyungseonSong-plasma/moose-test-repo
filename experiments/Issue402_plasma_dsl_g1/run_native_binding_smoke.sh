@@ -91,6 +91,21 @@ native() {
   ' -- "$@"
 }
 
+# Canonical replacement for the historical JSON-rate one-shot Native P2 cases.
+# Use the exact same physics-opt binary and immutable OCI as P1 and later S6 P2.
+# H01-H04, H05 and the actual JSON surface-rate input do not execute timesteps.
+docker run --rm --entrypoint /bin/bash --user 0:0 \
+  --workdir /workspace -v "$PWD:/workspace" \
+  -e "EXPECTED_HEAD=$(git rev-parse HEAD)" \
+  -e "PINNED_BASE=$PINNED_BASE" "$PINNED_BASE" -lc '
+  set -euo pipefail
+  source /environment
+  python3 -m physics_app.ci.check_issue402_json_rate_native_p2 \
+    --executable /workspace/physics_app/physics-opt \
+    --p1-identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
+' 2>&1 | tee "$EVIDENCE/issue402_json_rate_native_p2.log"
+echo "ISSUE402_JSON_RATE_SHARED_NATIVE_P2_PASS"
+
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
