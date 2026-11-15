@@ -39,7 +39,12 @@ def extract_job(workflow: str) -> str:
     parts = workflow.split(marker)
     if len(parts) != 2:
         return ""
-    return marker + parts[1].split("\n  # Reusable, governed CI gate", 1)[0]
+    tail = parts[1].splitlines(keepends=True)
+    # Test this job only; following independent jobs may have overlapping targets.
+    for i, line in enumerate(tail):
+        if line.startswith("  ") and not line.startswith("   ") and line.strip().endswith(":") and not line.lstrip().startswith("#"):
+            return marker + "".join(tail[:i])
+    return marker + "".join(tail)
 
 
 def validate(job: str, legacy: str | None) -> list[str]:
