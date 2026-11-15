@@ -108,10 +108,13 @@ echo "ISSUE402_JSON_RATE_SHARED_NATIVE_P2_PASS"
 
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
+# JSON-owned log-molar solver variables and initial density: standalone P2 only.
+# Legacy baseline.i declares external variables/ICs and cannot be overlaid.
+native --check-input -i "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
-# Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
-native --check-input -i "$PILOT/generic_four_species.i" \
+# Verify canonical names e/O2p/Om/Op through the JSON-owned four-species P2 fixture.
+# Preserve the older generic_four_species.i as historical input evidence.
+native --check-input -i "$PILOT/species_density_pairs_p2.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
 echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
