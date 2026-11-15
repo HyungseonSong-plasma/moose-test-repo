@@ -195,10 +195,24 @@ def test_retired_kernel_name_negative_reaches_forbidden_option():
     assert "fem_species" not in invalid and "fvm_species" not in invalid
     assert "block = plasma" not in invalid
     assert "files = plasma_species_initial_p2.json" in positive
-    assert 'if [[ "$item" == invalid_legacy_kernel_names ]]; then' in runner
+    assert 'if [[ "$item" == invalid_legacy_kernel_names || "$item" == invalid_missing_fvm_charges ]]; then' in runner
     assert 'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")' in runner
     assert 'native --check-input -i "${input_decks[@]}"' in runner
     assert "invalid_legacy_kernel_names) expected='fem_kernel_names'" in runner
+
+
+def test_retired_positional_charge_negative_uses_json_sole_source():
+    negative = (CASE / "invalid_missing_fvm_charges.i").read_text()
+    positive = (CASE / "valid_generated_transport_json_p2.i").read_text()
+    data = json.loads((CASE / "plasma_species_initial_p2.json").read_text())
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "fem_charge_numbers = '-1'" in negative
+    assert "fem_species" not in negative and "block = plasma" not in negative
+    assert "files = plasma_species_initial_p2.json" in positive
+    assert data["species"]["e"]["charge_number"] == -1
+    assert data["species"]["O2p"]["charge_number"] == 1
+    assert "invalid_missing_fvm_charges) expected='fem_charge_numbers'" in runner
+    assert "invalid_missing_fvm_charges ]]; then" in runner
 
 
 def test_native_build_and_comparison_script():
