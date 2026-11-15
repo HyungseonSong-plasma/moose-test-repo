@@ -93,10 +93,12 @@ native() {
 
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
+# Chemistry JSON owns the initial states. Never merge legacy baseline variables.
+native --check-input -i "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
-# Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
-native --check-input -i "$PILOT/generic_four_species.i" \
+# Verify JSON-owned canonical names e/O2p/Om/Op in the standalone P2 fixture.
+# Historical generic_four_species.i remains unchanged provenance only.
+native --check-input -i "$PILOT/species_density_pairs_p2.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
 echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
