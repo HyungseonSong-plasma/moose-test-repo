@@ -186,6 +186,21 @@ def test_unknown_species_negative_fails_on_specific_missing_json_record():
     assert "invalid_missing_variable) expected=\"Selected species 'missing' requires species.missing.initial_number_density\"" in runner
 
 
+def test_retired_kernel_name_negative_reaches_forbidden_option():
+    """Missing JSON IC may not mask an obsolete explicit FEM kernel option."""
+    invalid = (CASE / "invalid_legacy_kernel_names.i").read_text()
+    positive = (CASE / "valid_generated_transport_json_p2.i").read_text()
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "fem_kernel_names = 'ne_transport'" in invalid
+    assert "fem_species" not in invalid and "fvm_species" not in invalid
+    assert "block = plasma" not in invalid
+    assert "files = plasma_species_initial_p2.json" in positive
+    assert 'if [[ "$item" == invalid_legacy_kernel_names ]]; then' in runner
+    assert 'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")' in runner
+    assert 'native --check-input -i "${input_decks[@]}"' in runner
+    assert "invalid_legacy_kernel_names) expected='fem_kernel_names'" in runner
+
+
 def test_native_build_and_comparison_script():
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
     assert "physics-opt" in runner and "make -C physics_app -j2" in runner
