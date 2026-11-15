@@ -5,7 +5,8 @@
       "charge_number": -1,
       "transport_coef": "constant",
       "mobility": 1,
-      "diffusivity": 1
+      "diffusivity": 1,
+      "initial_number_density": 10000000000000000
     },
     "O2": {
       "elements": {
