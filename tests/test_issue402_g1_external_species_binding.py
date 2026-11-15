@@ -157,6 +157,22 @@ def test_example_inputs(filename, expected):
     assert "schema_version" not in text
 
 
+def test_swapped_discretization_negative_requires_json_sole_owner_diagnostic():
+    """A wrong-type legacy state cannot bypass the current JSON owner guard."""
+    fixture = (CASE / "invalid_fem_fv_swap.i").read_text()
+    baseline = (CASE / "baseline.i").read_text()
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    source = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
+    assert "files = plasma_species_initial_p2.json" in fixture
+    assert "fem_species = 'O2p'" in fixture
+    assert "fvm_species = 'e'" in fixture
+    assert "[log_O2p]" in baseline and "type = MooseVariableFVReal" in baseline
+    assert "[log_e]" in baseline and "family = LAGRANGE" in baseline
+    assert "invalid_fem_fv_swap) expected=\"Species 'O2p' has JSON initial_number_density and an existing solver variable 'log_O2p'\"" in runner
+    assert 'if (variableExists(variable, /*error_if_aux=*/true))' in source
+    assert '"JSON is the sole initial-state owner."' in source
+
+
 def test_native_build_and_comparison_script():
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
     assert "physics-opt" in runner and "make -C physics_app -j2" in runner
