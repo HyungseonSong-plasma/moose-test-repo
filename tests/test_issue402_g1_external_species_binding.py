@@ -173,6 +173,19 @@ def test_swapped_discretization_negative_requires_json_sole_owner_diagnostic():
     assert '"JSON is the sole initial-state owner."' in source
 
 
+def test_unknown_species_negative_fails_on_specific_missing_json_record():
+    """The old external-variable negative now probes the JSON sole-source rule."""
+    fixture = (CASE / "invalid_missing_variable.i").read_text()
+    json_data = json.loads((CASE / "plasma_species_initial_p2.json").read_text())
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "files = plasma_species_initial_p2.json" in fixture
+    assert "fem_species = 'missing'" in fixture
+    assert "fvm_species = 'O2p'" in fixture
+    assert "missing" not in json_data["species"]
+    assert json_data["species"]["O2p"]["initial_number_density"] > 0
+    assert "invalid_missing_variable) expected=\"Selected species 'missing' requires species.missing.initial_number_density\"" in runner
+
+
 def test_native_build_and_comparison_script():
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
     assert "physics-opt" in runner and "make -C physics_app -j2" in runner
