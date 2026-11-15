@@ -283,6 +283,115 @@ def remap_staged_fem_types(chemistry: Path, ordered: list[str]) -> dict:
     }
 
 
+
+def remap_staged_mean_energy(chemistry: Path, ordered: list[str]) -> dict:
+    """Rebind only a proven log-molar legacy mean-energy owner in disposable B/D decks.
+
+    Old and new classes both compute exp(log_energy - log_density) [eV]
+    in log_molar_eV mode. Their output Functor names differ; rebind all
+    consumers in the same staged layer set. Unsupported representations HOLD.
+    """
+    if len(ordered) not in (10, 11):
+        raise ValueError("Unexpected S6 input layer count for mean-energy remap")
+    legacy_type = re.compile(
+        r"(?m)^[ \t]*type[ \t]*=[ \t]*PhysicsElectronMeanEnergyMaterial[ \t]*$"
+    )
+    canonical_type = re.compile(
+        r"(?m)^[ \t]*type[ \t]*=[ \t]*ElectronEnergyMaterial[ \t]*$"
+    )
+    owner_block = re.compile(
+        r"(?m)^  \[(?P<owner>[A-Za-z_][A-Za-z0-9_]*)\][ \t]*\r?\n"
+        r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+        r"^  \[\][ \t]*(?:\r?\n|$)"
+    )
+    output_token = re.compile(
+        r"(?<![A-Za-z0-9_])mean_en_solved(?![A-Za-z0-9_])"
+    )
+    original_layers: dict[str, str] = {}
+    found = []
+    for relative in ordered:
+        name = Path(relative).name
+        if name != relative.split("/")[-1] or not name.endswith(".i") or name in original_layers:
+            raise ValueError("Unsafe or duplicate staged mean-energy layer")
+        source = (chemistry / name).read_text(encoding="utf-8")
+        original_layers[name] = source
+        if canonical_type.search(source):
+            raise ValueError("Unexpected existing canonical ElectronEnergyMaterial")
+        matches = list(legacy_type.finditer(source))
+        if matches:
+            if len(matches) != 1:
+                raise ValueError("Duplicate archived mean-energy Material types")
+            blocks = [m for m in owner_block.finditer(source)
+                      if legacy_type.search(m.group("body"))]
+            if len(blocks) != 1:
+                raise ValueError("Unknown archived mean-energy Material block layout")
+            owner = blocks[0]
+            pairs = re.findall(
+                r"(?m)^    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)$",
+                owner.group("body"))
+            params = dict(pairs)
+            if (len(pairs) != len(owner.group("body").splitlines())
+                or len(params) != len(pairs)
+                or set(params) - {
+                    "type", "state_form", "electron_energy_density", "electron_density",
+                    "mean_energy_output", "block"}):
+                raise ValueError("Unknown archived mean-energy owner parameters")
+            if (params.get("type", "").strip() != "PhysicsElectronMeanEnergyMaterial"
+                or params.get("state_form", "").strip() != "log_molar_eV"
+                or params.get("electron_energy_density", "").strip() not in ("log_energy", "log_e_energy")
+                or params.get("electron_density", "").strip() not in ("log_ne", "log_e")
+                or params.get("mean_energy_output", "mean_en_solved").strip() != "mean_en_solved"):
+                raise ValueError("Archived mean-energy representation or output differs")
+            found.append((name, owner))
+    if len(found) != 1:
+        raise ValueError("Expected exactly one archived mean-energy producer")
+    writes = []
+    files = {}
+    total_references = 0
+    for name, source in original_layers.items():
+        updated = source
+        if name == found[0][0]:
+            owner = found[0][1]
+            before = owner.group(0)
+            after = re.sub(
+                r"(?m)^(    type[ \t]*=[ \t]*)PhysicsElectronMeanEnergyMaterial([ \t]*\r?$)",
+                r"\1ElectronEnergyMaterial\2", before)
+            # New material owns the fixed e_energy_eV name; the retired option
+            # mean_energy_output must not leak into the new Native input.
+            after = re.sub(
+                r"(?m)^    mean_energy_output[ \t]*=[ \t]*mean_en_solved[ \t]*\r?\n",
+                "", after)
+            if after == before or legacy_type.search(after):
+                raise ValueError("Failed to replace archived mean-energy owner")
+            updated = source[:owner.start()] + after + source[owner.end():]
+        if re.search(
+            r"(?m)^[ \t]*(?:property_name|mean_energy_output)[ \t]*=[ \t]*mean_en_solved[ \t]*$",
+            updated
+        ):
+            raise ValueError("Competing archived mean-energy output owner")
+        updated, n = output_token.subn("e_energy_eV", updated)
+        total_references += n
+        files[name] = {
+            "original_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(updated.encode("utf-8")).hexdigest(),
+            "functor_reference_replacements": n,
+        }
+        writes.append((chemistry / name, updated))
+    if not total_references:
+        raise ValueError("No archived mean-energy Functor consumers found")
+    # Validate every layer before writing any scratch file; archives are untouched.
+    for target, updated in writes:
+        if target.read_text(encoding="utf-8") != updated:
+            target.write_text(updated, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_LOG_MOLAR_MEAN_ENERGY_CUTOVER",
+        "producer_layer": found[0][0],
+        "consumer_renames": total_references,
+        "files": files,
+    }
+
+
+
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
     if git_head(ROOT) != expected_head or git_head(historical) != HISTORICAL_SHA:
         raise ValueError("Candidate or historical Git source HEAD mismatch")
@@ -432,12 +541,14 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
                         scratch_types = remap_staged_fem_types(staged / p2.CHEM, ordered)
+                        scratch_mean_energy = remap_staged_mean_energy(staged / p2.CHEM, ordered)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
                             binary, identity["binary_sha256"], staged, ordered,
                             log, timeout_seconds)
                         report["checks"][case][variant]["layers"] = len(ordered)
                         report["checks"][case][variant]["scratch_fem_type_remap"] = scratch_types
+                        report["checks"][case][variant]["scratch_mean_energy_cutover"] = scratch_mean_energy
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                     except Exception as exc:
