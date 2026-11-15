@@ -47,7 +47,13 @@ def extract_job(workflow: str) -> str:
     marker = "  " + JOB + ":"
     if workflow.count(marker) != 1:
         return ""
-    return marker + workflow.split(marker, 1)[1].split("\n  # Reusable, governed CI gate", 1)[0]
+    tail = workflow.split(marker, 1)[1].splitlines(keepends=True)
+    # Stop at the next top-level YAML job, not at a shared section comment.
+    # Adjacent independent jobs may reuse identical pytest paths.
+    for i, line in enumerate(tail):
+        if line.startswith("  ") and not line.startswith("   ") and line.strip().endswith(":") and not line.lstrip().startswith("#"):
+            return marker + "".join(tail[:i])
+    return marker + "".join(tail)
 
 
 def validate(job: str) -> list[str]:
