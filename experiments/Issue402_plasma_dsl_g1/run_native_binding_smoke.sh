@@ -322,7 +322,7 @@ echo "PLASMA_DD_NV_MATERIALS_P2_PASS"
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
   # The obsolete fem_kernel_names option must be checked against the modern
   # JSON-owned generated transport input; old baseline masks it via missing IC.
-  if [[ "$item" == invalid_legacy_kernel_names || "$item" == invalid_missing_fvm_charges ]]; then
+  if [[ "$item" == invalid_legacy_kernel_names || "$item" == invalid_missing_fvm_charges || "$item" == invalid_incomplete_coefficients ]]; then
     input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")
   else
     input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")
