@@ -17,7 +17,7 @@ This file supplies MOOSE/Physics-specific sources, routing inputs, and report ad
 2. read central_skills.json + CENTRAL_SKILLS.md;
 3. verify the exact central revision and OS = Samuel;
 4. verify/read central ESSENTIAL_RULES.md;
-5. load session-bootstrap + state-refresh from that same revision;
+5. load session-bootstrap + state-refresh + mandatory problem-oriented-response and its contract from that same revision;
 6. verify/read pinned skills/catalog.json and skills/capability-registry.json, and record capability routing readiness independently from visible tools;
 7. read OPERATING_CORE.md;
 8. recover the active issue/bounded-work STATE and immediate obligation;
@@ -59,6 +59,8 @@ state-refresh
 controller-throughput
 controller-lifecycle
 ```
+
+When PR creation is requested, trigger `GITHUB_PR_CREATE` / `pull-request-create` at the exact pinned revision. Require the head repository's `automation/samuel/repository-mutation-policy.json` branch preflight before invoking `github-connector`, confirm the current head/base and absent duplicate PR, then read back the Draft PR identity. No automatic merge or safety-denial bypass.
 
 When the immediate obligation requires the durable generic controller, trigger `research-controller`; when it requires PR merge, trigger `pull-request-merge` / `GITHUB_PR_MERGE` and use Samuel capability routing.
 
