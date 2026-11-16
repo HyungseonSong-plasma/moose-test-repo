@@ -16,6 +16,7 @@ import math
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -92,6 +93,7 @@ def lane(binary: Path, root: Path, name: str, json_data: dict, deck: str) -> dic
         "status": "UNRESOLVED",
         "p2": "NOT_RUN",
         "p3": "NOT_RUN",
+        "native_p3_attempted": False,
     }
     try:
         check = execute([str(binary), "--check-input", "-i", "input.i"],
@@ -100,10 +102,14 @@ def lane(binary: Path, root: Path, name: str, json_data: dict, deck: str) -> dic
         if check or "Syntax OK" not in check_text:
             raise ValueError("P3_NATIVE_INPUT_PRECHECK_FAILED")
         receipt["p2"] = "PASS"
+        receipt["native_p3_attempted"] = True
+        receipt["p3"] = "ATTEMPTED_UNVERIFIED"
         exit_code = execute([str(binary), "-i", "input.i"],
                             work, work / "native_p3.log", 180)
         receipt["solver_exit"] = exit_code
+        receipt["native_log_sha256"] = digest(work / "native_p3.log")
         if exit_code:
+            receipt["p3"] = "ATTEMPTED_FAILED"
             raise ValueError("P3_NATIVE_TRANSIENT_SOLVER_NONZERO")
         if not (work / "plasma.e").is_file() or (work / "plasma.e").stat().st_size <= 100:
             raise ValueError("P3_EXODUS_MISSING")
@@ -115,18 +121,74 @@ def lane(binary: Path, root: Path, name: str, json_data: dict, deck: str) -> dic
     except Exception as exc:
         receipt["status"] = "P3_UNRESOLVED_OR_FAIL"
         receipt["blocker"] = str(exc)[:180]
+        # The original P3 archive omitted the inner Native log. Future failed
+        # attempts must report a bounded diagnostic and retain the full log
+        # in the existing visible, always-upload evidence directory.
+        native_log = work / "native_p3.log"
+        if native_log.is_file():
+            receipt["native_log_sha256"] = digest(native_log)
+            receipt["native_failure_tail"] = native_log.read_text(
+                encoding="utf-8", errors="replace")[-2048:]
     (work / "receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     print(name + ": " + receipt["status"] +
           (" " + receipt["blocker"] if "blocker" in receipt else ""), flush=True)
     return receipt
 
 
+def self_test() -> None:
+    """Mock-only failure classifications; no Physics app or P3 solve."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        binary = root / "fake-physics-opt"
+        binary.write_text(
+            "#!/usr/bin/env python3\n"
+            "import sys\n"
+            "if '--check-input' in sys.argv:\n"
+            "    print('Syntax OK: synthetic P2 only')\n"
+            "    sys.exit(0)\n"
+            "print('SYNTHETIC_FAILURE_42: no real P3 was run')\n"
+            "sys.exit(42)\n")
+        binary.chmod(0o755)
+        result = lane(binary, root / "failure", "json_sheath_wall",
+                      {"synthetic": True}, "[Mesh]\n[]\n")
+        assert result["status"] == "P3_UNRESOLVED_OR_FAIL"
+        assert result["p2"] == "PASS"
+        assert result["native_p3_attempted"] is True
+        assert result["p3"] == "ATTEMPTED_FAILED"
+        assert result["solver_exit"] == 42
+        assert result["blocker"] == "P3_NATIVE_TRANSIENT_SOLVER_NONZERO"
+        assert "SYNTHETIC_FAILURE_42" in result["native_failure_tail"]
+        native = root / "failure" / "json_sheath_wall" / "native_p3.log"
+        assert native.is_file() and digest(native) == result["native_log_sha256"]
+
+        precheck = root / "fake-precheck-rejection"
+        precheck.write_text(
+            "#!/usr/bin/env python3\\n"
+            "print('SYNTHETIC_P2_REJECTION')\\n"
+            "raise SystemExit(23)\\n")
+        precheck.chmod(0o755)
+        no_p3 = lane(precheck, root / "precheck", "json_sheath_wall",
+                     {"synthetic": True}, "[Mesh]\n[]\n")
+        assert no_p3["status"] == "P3_UNRESOLVED_OR_FAIL"
+        assert no_p3["p2"] == "NOT_RUN" and no_p3["p3"] == "NOT_RUN"
+        assert no_p3["native_p3_attempted"] is False
+        assert no_p3["blocker"] == "P3_NATIVE_INPUT_PRECHECK_FAILED"
+        assert not (root / "precheck" / "json_sheath_wall" / "native_p3.log").exists()
+    print("ISSUE541_DD_P3_FAILURE_DIAGNOSTIC_NEGATIVE_2_PASS_NO_NATIVE")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--source-sha", required=True)
+    parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--binary", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--source-sha")
     args = parser.parse_args()
+    if args.self_test:
+        self_test()
+        return 0
+    if not (args.binary and args.output and args.source_sha):
+        parser.error("--binary, --output and --source-sha are required for real P3")
     binary = args.binary.resolve()
     if not binary.is_file() or not binary.stat().st_size:
         parser.error("P3_NATIVE_BINARY_MISSING")
