@@ -430,8 +430,8 @@ def test_both_s6_native_sheath_variants_strict_eight_owner_cutover(tmp_path):
         staged = legacy.replace("electron_wall_number_flux", "e_wall_number_flux")
         staged = staged.replace("mean_en_solved", "e_energy_eV")
         if variant == "D":
+            # This option migrates continuity only; native energy stays log_energy.
             staged = re.sub(r"\blog_ne\b", "log_e", staged)
-            staged = re.sub(r"\blog_energy\b", "log_e_energy", staged)
         names = [base_file.name] + [f"other_{i}.i" for i in range(9)]
         ordered = [f"chem/{name}" for name in names]
         for i, name in enumerate(names):
@@ -448,6 +448,11 @@ def test_both_s6_native_sheath_variants_strict_eight_owner_cutover(tmp_path):
         assert revised.count("type = FEMElectronSheathBC") == 4
         assert revised.count("type = FEMElectronEnergySheathBC") == 4
         assert old_particle not in revised and old_energy not in revised
+        # Only eight class names change, not the energy/boundary/flux owners.
+        assert (revised.replace("type = FEMElectronSheathBC",
+                                "type = " + old_particle)
+                       .replace("type = FEMElectronEnergySheathBC",
+                                "type = " + old_energy)) == staged
         assert result["original_sha256"] == hashlib.sha256(unmodified[base_file.name]).hexdigest()
         assert result["staged_sha256"] == hashlib.sha256(revised.encode()).hexdigest()
         assert all((staging / name).read_bytes() == unmodified[name] for name in names[1:])
@@ -463,6 +468,9 @@ def test_both_s6_native_sheath_variants_strict_eight_owner_cutover(tmp_path):
                     owner.replace(expected, replacement, 1) + "  []" + suffix)
 
         faulty_sources = (
+            corrupt_only_bc_owner("electron_energy_sheath",
+                                  "variable = log_energy",
+                                  "variable = log_e_energy"),
             corrupt_only_bc_owner("electron_cover_dielectric",
                                   "boundary = 'plasma_cover'",
                                   "boundary = 'plasma_fake'"),
