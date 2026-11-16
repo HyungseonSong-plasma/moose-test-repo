@@ -175,6 +175,7 @@ def verify(record, api):
     require(job.get("status") == "completed" and job.get("conclusion") == "success",
             "N5_JOB_FAILED_OR_INCOMPLETE")
     require(job.get("name") == record.get("job_name"), "JOB_NAME_MISMATCH")
+    require(job.get("head_sha") in (None, source), "JOB_HEAD_SHA_MISMATCH")
     require(record.get("workflow_result") == run.get("conclusion"),
             "WORKFLOW_RESULT_MISMATCH")
     require(record.get("workflow_result") in {"success", "failure", "cancelled",
@@ -367,7 +368,7 @@ def self_test():
         pass
     else:
         raise AssertionError("MERGE_ANCESTRY_FALSE_PASS")
-    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=19; SCIENCE_HOLD")
+    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=20; SCIENCE_HOLD")
 
 
 def audit_live(args):
@@ -415,6 +416,7 @@ def main():
     group = ap.add_mutually_exclusive_group(required=True)
     group.add_argument("--self-test", action="store_true")
     group.add_argument("--audit-live", action="store_true")
+    group.add_argument("--verify-record", metavar="JSON_FILE")
     ap.add_argument("--repo", default=REPOSITORY)
     ap.add_argument("--run-id", type=int)
     ap.add_argument("--job-id", type=int)
@@ -427,6 +429,12 @@ def main():
     try:
         if args.self_test:
             self_test()
+        elif args.verify_record:
+            doc = json.loads(Path(args.verify_record).read_text(encoding="utf-8"))
+            identity = doc.get("identity", doc)
+            result = verify(identity, GitHub(args.repo))
+            print("ISSUE541_EVIDENCE_IDENTITY_REPLAY=PASS " +
+                  json.dumps(result, sort_keys=True))
         else:
             require(all(type(x) is int and x > 0 for x in
                         (args.run_id, args.job_id, args.artifact_id, args.pr_number)),
