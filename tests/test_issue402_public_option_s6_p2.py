@@ -220,6 +220,104 @@ def test_s6_D_json_initials_retire_exact_native_solver_owners(tmp_path):
         assert snapshot == {file.name: file.read_bytes() for file in folder.iterdir()}
 
 
+
+def test_B_retired_D1_observers_removed_only_when_exactly_self_contained(tmp_path):
+    """Historical observer source and negative inputs are never rewritten."""
+    import importlib.util
+    import pytest
+
+    spec = importlib.util.spec_from_file_location(
+        "s6_B_diagnostics", PILOT / "public_option_s6_p2.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    instrument_path = ROOT / "experiments/Issue395_powered_chemistry_ladder/issue397_d1_instrument.py"
+    source_text = instrument_path.read_bytes()
+    original = "source control byte identity"
+    fields = {
+        "wafer_net_current_probe": "wafer_net_surface_current_density",
+        "d1_gamma_o2_positive": "ion_wall_number_flux",
+        "d1_gamma_o_positive": "atomic_positive_ion_wall_number_flux",
+        "d1_gamma_o_negative": "negative_ion_wall_number_flux",
+        "d1_gamma_electron": "electron_wall_number_flux",
+        "d1_sheath_drop_V": "electron_sheath_drop_V",
+        "d1_ne_m3": "n_e_physical",
+        "d1_mean_energy_eV": "mean_en_solved",
+        "d1_electron_mean_speed_m_s": "electron_mean_speed",
+    }
+    geometry = {
+        "d1_normal_r": "normal_r", "d1_normal_z": "normal_z",
+        "d1_owner": "owner", "d1_d_perp_m": "d_perp", "d1_e_n_V_m": "e_n",
+    }
+    vars_text = "".join(
+        "  [" + name + "]\n    family = MONOMIAL\n"
+        "    order = CONSTANT\n    block = wafer_surface\n  []\n"
+        for name in (*fields, *geometry))
+    kernel_text = ""
+    for name, functor in fields.items():
+        kernel_text += (
+            f"  [{name}_kernel]\n    type = PhysicsLowerDSurfaceCurrentProbeAux\n"
+            f"    variable = {name}\n    surface_current_density = {functor}\n"
+            "    block = wafer_surface\n"
+            "    execute_on = 'INITIAL TIMESTEP_END'\n  []\n"
+        )
+    for name, comp in geometry.items():
+        kernel_text += (
+            f"  [{name}_kernel]\n    type = PhysicsWaferD1GeometryProbeAux\n"
+            f"    variable = {name}\n"
+            "    surface_current_density = wafer_net_surface_current_density\n"
+            f"    potential = potential\n    component = {comp}\n"
+            "    block = wafer_surface\n"
+            "    execute_on = 'INITIAL TIMESTEP_END'\n  []\n"
+        )
+    physical = (
+        "[Kernels]\n  [sigma_surface_current]\n"
+        "    type = PhysicsLowerDSurfaceCurrent\n    variable = sigma_s\n  []\n[]\n"
+        "[BCs]\n  [cover_surface_charge_poisson]\n"
+        "    type = PhysicsADSurfaceChargePoissonBC\n    variable = potential\n  []\n[]\n"
+    )
+    base = ("[AuxVariables]\n" + vars_text + "[]\n[AuxKernels]\n" +
+            kernel_text + "[]\n" + physical)
+    names = ["original.i"] + [f"other_{i}.i" for i in range(9)]
+    ordered = ["chem/" + name for name in names]
+
+    def stage(label, contents=base, extra=""):
+        folder = tmp_path / label
+        folder.mkdir()
+        (folder / names[0]).write_text(contents)
+        for i, name in enumerate(names[1:]):
+            (folder / name).write_text(extra if i == 0 else f"# layer {i}\n")
+        return folder
+
+    original_folder = stage("original")
+    snapshot = {file.name: file.read_bytes() for file in original_folder.iterdir()}
+    receipt = module.retire_staged_B_d1_observations(original_folder, ordered)
+    assert receipt["status"] == "SCRATCH_ONLY_B_RETIRED_D1_OBSERVERS_REMOVED"
+    assert receipt["observer_pairs"] == 14
+    assert receipt["science"] == "SCIENCE_HOLD"
+    assert receipt["B_historical_observation_parity"] == "NOT_CLAIMED"
+    after = (original_folder / names[0]).read_text()
+    assert "type = PhysicsLowerDSurfaceCurrent\n" in after
+    assert "type = PhysicsADSurfaceChargePoissonBC\n" in after
+    assert "PhysicsLowerDSurfaceCurrentProbeAux" not in after
+    assert "PhysicsWaferD1GeometryProbeAux" not in after
+    assert all((original_folder / name).read_bytes() == snapshot[name]
+               for name in names[1:])
+    for label, contents, extra in (
+        ("wrong_functor", base.replace("surface_current_density = ion_wall_number_flux",
+                                       "surface_current_density = fake_flux"), ""),
+        ("wrong_owner", base.replace("block = wafer_surface", "block = wrong", 1), ""),
+        ("extra_consumer", base, "observe = d1_gamma_electron\n"),
+        ("duplicate", base + kernel_text, ""),
+    ):
+        folder = stage(label, contents, extra)
+        before = {file.name: file.read_bytes() for file in folder.iterdir()}
+        with pytest.raises(ValueError):
+            module.retire_staged_B_d1_observations(folder, ordered)
+        assert before == {file.name: file.read_bytes() for file in folder.iterdir()}
+    assert instrument_path.read_bytes() == source_text
+
+
 def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path):
     """The old B input is immutable; only temporary B/D type fields change."""
     import re
@@ -688,6 +786,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "CASES": ("417", "941"),
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
+        "retire_staged_B_d1_observations": lambda *_args: {"status": "SYNTHETIC_B_RETIREMENT"},
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "reconcile_staged_D_json_initials": lambda *_args: {"status": "SYNTHETIC_JSON_INITIALS"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
