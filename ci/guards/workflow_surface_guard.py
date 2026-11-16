@@ -13,6 +13,8 @@ ENTRYPOINTS = {
     "samuel-branch-delete.yml": {"push"},
     # Registered on main by PR #616: DD manual P3 is now REQUIRED.
     "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
+    # Registered on main by PR #645: both S6 cases are now REQUIRED manual-only.
+    "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
@@ -26,8 +28,6 @@ REUSABLE = {
 OPTIONAL_ENTRYPOINTS = {
     # FLOW #548: source-bound P0/P1/P2 only (no push).
     "issue402-flow-native-p2-regression.yml": {"pull_request", "workflow_dispatch"},
-    # ARCH S6 P3 remains a separately reviewed optional manual route.
-    "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
 }
 FORBIDDEN_EVENTS = {
     "issue_comment", "issues", "discussion", "discussion_comment",
@@ -217,6 +217,19 @@ def self_test() -> int:
         assert any("issue541-arch-dd-p3-replay.yml: events=" in error for error in check(root))
         dd_manual.write_text(dd_bytes, encoding="utf-8")
         assert not check(root), check(root)
+        # S6 is now registered on main too: reject missing, changed or
+        # additional automatic events independently of DD and FLOW.
+        s6_manual = workflow_dir / "issue541-arch-s6-p3-p4-replay.yml"
+        s6_bytes = s6_manual.read_text(encoding="utf-8")
+        s6_manual.unlink()
+        assert any("missing canonical workflow files:" in error and
+                   "issue541-arch-s6-p3-p4-replay.yml" in error for error in check(root))
+        s6_manual.write_text(s6_bytes.replace("  workflow_dispatch:", "  push:", 1), encoding="utf-8")
+        assert any("issue541-arch-s6-p3-p4-replay.yml: events=" in error for error in check(root))
+        s6_manual.write_text(s6_bytes.replace("  workflow_dispatch:", "  workflow_dispatch:\n  push:", 1), encoding="utf-8")
+        assert any("issue541-arch-s6-p3-p4-replay.yml: events=" in error for error in check(root))
+        s6_manual.write_text(s6_bytes, encoding="utf-8")
+        assert not check(root), check(root)
         ci_path = workflow_dir / "ci.yml"
         valid_ci = ci_path.read_text(encoding="utf-8")
         ci_path.write_text(valid_ci.replace("edited, ", ""), encoding="utf-8")
@@ -252,7 +265,7 @@ def self_test() -> int:
         assert any("self-path-triggered" in error for error in check(root))
         (workflow_dir / one_shot_name).unlink()
 
-        # Remaining FLOW/S6 draft routes stay optional; registered DD is required.
+        # FLOW remains optional; both registered DD and S6 are required.
         assert not check(root), check(root)
         for name, allowed_events in OPTIONAL_ENTRYPOINTS.items():
             path = workflow_dir / name
