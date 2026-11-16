@@ -15,16 +15,36 @@ CASE = ROOT / "experiments/Issue402_plasma_dsl_g1"
 
 
 def json_owned_negative_routes(runner: str) -> set[str]:
-    """Parse selected negative cases whose check-input must use JSON-owned IC."""
-    assert "for item in invalid_overlap" in runner
-    branch = runner.split("for item in invalid_overlap", 1)[1].split("  set +e", 1)[0]
-    predicate = re.search(r"if \[\[(.*?)\]\]; then", branch, flags=re.S)
-    assert predicate, "Missing negative-input route predicate"
-    after = branch[predicate.end():]
-    assert 'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")' in after
-    assert 'input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")' in after
-    return set(re.findall(r'"\$item"\s*==\s*(invalid_[a-z_]+)', predicate.group(1)))
+    """Identify scheduled negative cases routed to the JSON-owned P2 deck."""
+    loop = re.search(
+        r'for item in (?P<items>invalid_[^\n]*); do\n(?P<body>.*?)\n  set \+e',
+        runner,
+        re.S,
+    )
+    assert loop, "Missing negative-input loop"
+    branch = re.search(
+        r'if \[\[(?P<predicate>.*?)\]\]; then\s*'
+        r'(?P<json_arm>.*?)\s*else\s*'
+        r'(?P<baseline_arm>.*?)\s*fi\s*',
+        loop.group("body"),
+        re.S,
+    )
+    assert branch, "Missing negative-input route predicate/arms"
+    assert branch.group("json_arm").strip() == (
+        'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")'
+    ), "JSON-owned negative route must use the JSON-owned P2 deck"
+    assert branch.group("baseline_arm").strip() == (
+        'input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")'
+    ), "Other negative cases must use baseline deck"
 
+    clauses = re.split(r'\s*\|\|\s*', branch.group("predicate"))
+    routed = set()
+    for clause in clauses:
+        match = re.fullmatch(r'\s*"\$item"\s*==\s*(invalid_[a-z_]+)\s*', clause)
+        assert match, f"Expected OR of exact negative case names, got {clause!r}"
+        routed.add(match.group(1))
+    scheduled = set(loop.group("items").split())
+    return routed & scheduled
 
 def sources():
     base_header = (APP / "include/physics/plasma/PlasmaInterface.h").read_text()
@@ -253,17 +273,71 @@ def test_retired_wrong_charge_negative_uses_json_owned_base():
     assert "invalid_wrong_charge_sign) expected='fem_charge_numbers'" in runner
 
 
-def test_json_owned_negative_routing_detects_removed_case():
+@pytest.mark.parametrize(
+    "case",
+    [
+        "invalid_legacy_kernel_names",
+        "invalid_missing_fvm_charges",
+        "invalid_incomplete_coefficients",
+        "invalid_wrong_charge_sign",
+    ],
+)
+def test_json_owned_negative_routing_detects_removed_case(case):
+    """Mutate each JSON-owned branch, not just the charge-vector case."""
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
-    assert "invalid_wrong_charge_sign" in json_owned_negative_routes(runner)
+    assert case in json_owned_negative_routes(runner)
+    mutated = runner.replace(f'"$item" == {case}', f'"$item" == {case}_removed', 1)
+    assert mutated != runner
+    assert case not in json_owned_negative_routes(mutated)
+
+
+def test_json_owned_negative_routing_detects_unscheduled_case():
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
     mutated = runner.replace(
-        '"$item" == invalid_wrong_charge_sign',
-        '"$item" == invalid_wrong_charge_sign_removed',
+        "invalid_incomplete_coefficients invalid_wrong_charge_sign; do",
+        "invalid_incomplete_coefficients; do",
         1,
     )
     assert mutated != runner
     assert "invalid_wrong_charge_sign" not in json_owned_negative_routes(mutated)
 
+
+@pytest.mark.parametrize(
+    "old_deck,new_deck,expected",
+    [
+        ("valid_generated_transport_json_p2.i", "baseline.i", "JSON-owned"),
+        ("baseline.i", "valid_generated_transport_json_p2.i", "baseline"),
+    ],
+)
+def test_json_owned_negative_routing_rejects_wrong_branch_deck(
+    old_deck, new_deck, expected
+):
+    """Switching either conditional arm must fail instead of false-PASS."""
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    old = f'input_decks=("$PILOT/{old_deck}" "$PILOT/$item.i")'
+    new = f'input_decks=("$PILOT/{new_deck}" "$PILOT/$item.i")'
+    assert old in runner
+    with pytest.raises(AssertionError, match=expected):
+        json_owned_negative_routes(runner.replace(old, new, 1))
+
+
+def test_json_owned_negative_routing_rejects_and_predicate():
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    original = 'invalid_incomplete_coefficients || "$item" == invalid_wrong_charge_sign'
+    mutated = 'invalid_incomplete_coefficients && "$item" == invalid_wrong_charge_sign'
+    assert original in runner
+    with pytest.raises(AssertionError, match="Expected OR"):
+        json_owned_negative_routes(runner.replace(original, mutated, 1))
+
+
+def test_json_owned_negative_routing_checks_all_expected_cases():
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert json_owned_negative_routes(runner) == {
+        "invalid_legacy_kernel_names",
+        "invalid_missing_fvm_charges",
+        "invalid_incomplete_coefficients",
+        "invalid_wrong_charge_sign",
+    }
 
 def test_native_build_and_comparison_script():
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
