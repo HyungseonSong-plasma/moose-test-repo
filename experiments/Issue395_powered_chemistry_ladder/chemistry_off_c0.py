@@ -22,7 +22,7 @@ EXPECTED_EEDF = "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653
 # These are known chemistry owner signatures, not a complete source classifier.
 REACTION_SIGNATURES = (
     re.compile(r"(?i)\breaction_progress\s*="),
-    re.compile(r"(?i)\btype\s*=\s*\w*(?:ElectronImpact|Reaction|Ionization|Attachment|Detachment|Dissociation|Chemistry)\w*"),
+    re.compile(r"(?i)\btype\s*=\s*\w*(?:ElectronImpact|RateCoeff|Reaction|Ionization|Attachment|Detachment|Dissociation|Chemistry)\w*"),
     re.compile(r"(?i)\b(?:property_name|functor_names|source|functor|v)\s*=\s*['\"]?\s*(?:R_(?:EI\d+|H\d+|ion\w*|attach\w*|diss\w*|elastic\w*)|S_\w*(?:EI\d+|chem\w*|ion\w*|attach\w*|diss\w*|elastic\w*))\b"),
     re.compile(r"(?i)\bchem(?:24|25)_\w+"),
 )
