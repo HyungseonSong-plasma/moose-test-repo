@@ -374,6 +374,118 @@ python3 "$PILOT/compare_native_outputs.py" \
   --output "$EVIDENCE/numerical_parity.json"
 echo "PLASMA_RESULTS_MATCH"
 
+# #5: mutate COPIES of the actual physics-opt-produced Exodus files and prove
+# that the same exact-head comparator rejects false parity. The native outputs
+# and original scientific inputs remain untouched. This is the tiny-fixture
+# contract only, never full S6/P3 scientific equivalence.
+python3 - "$EVIDENCE" "$PILOT/compare_native_outputs.py" "$(git rev-parse HEAD)" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+import numpy as np
+from scipy.io import netcdf_file
+
+evidence, oracle, head = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+baseline = evidence / "baseline/plasma.e"
+candidate = evidence / "candidate/plasma.e"
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+before = {"baseline": sha(baseline), "candidate": sha(candidate)}
+receipt = {
+    "schema": "issue541.native_parity_negative_controls.v1",
+    "source_sha": head,
+    "baseline_exodus_sha256": before["baseline"],
+    "candidate_exodus_sha256": before["candidate"],
+    "scope": "actual tiny Native diffusion output, not S6/P3/science",
+    "result": "NOT_EVALUATED",
+    "controls": {},
+}
+
+with tempfile.TemporaryDirectory(prefix="issue541_parity_", dir=evidence) as workspace:
+    scratch = Path(workspace)
+
+    def must_reject(case, ref_file, candidate_file, expected_reason):
+        report_path = scratch / (case + ".json")
+        process = subprocess.run(
+            [sys.executable, str(oracle), "--baseline", str(ref_file),
+             "--candidate", str(candidate_file), "--output", str(report_path)],
+            capture_output=True, text=True, check=False)
+        if not report_path.is_file():
+            raise RuntimeError(f"{case}: comparator did not produce a report")
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        if (process.returncode == 0 or
+                report.get("result") != "NATIVE_PARITY_NOT_PROVEN" or
+                expected_reason not in report.get("reason", "")):
+            raise RuntimeError(
+                f"{case}: invalid Native Exodus data accepted/misdiagnosed: "
+                f"exit={process.returncode}, report={report}, stderr={process.stderr}")
+        receipt["controls"][case] = {
+            "status": "PASS_EXPECTED_REJECTION",
+            "reason": report["reason"],
+            "baseline_sha256": sha(ref_file),
+            "candidate_sha256": sha(candidate_file),
+        }
+
+    # Negative 1: change one physical state value in an actual solver output.
+    # This is not a synthetic netCDF file or a parser-only check.
+    perturbed = scratch / "perturbed_candidate.e"
+    shutil.copyfile(candidate, perturbed)
+    with netcdf_file(perturbed, "a", mmap=False) as exodus:
+        names = sorted(name for name in exodus.variables
+                       if name.startswith("vals_nod_var")
+                       and name[len("vals_nod_var"):].isdigit())
+        if not names:
+            raise RuntimeError("No actual Native nodal state available to perturb")
+        values = np.array(exodus.variables[names[0]].data, copy=True)
+        if not values.size or not np.isfinite(values).all():
+            raise RuntimeError("No finite Native state to perturb")
+        original = float(values.flat[0])
+        values.flat[0] = original + 1.0 + abs(original) * 1e-3
+        exodus.variables[names[0]][:] = values
+    if sha(perturbed) == before["candidate"]:
+        raise RuntimeError("Native perturbation did not change Exodus bytes")
+    must_reject("numeric_state_mutation", baseline, perturbed,
+                "Numerical discrepancy")
+
+    # Negative 2: a new unrecognised physical field in BOTH outputs must
+    # not be silently skipped just because the inventories still match.
+    first = scratch / "extra_reference.e"
+    second = scratch / "extra_candidate.e"
+    shutil.copyfile(baseline, first)
+    shutil.copyfile(baseline, second)
+    for path in (first, second):
+        with netcdf_file(path, "a", mmap=False) as exodus:
+            name = "vals_nset_var1ns1"
+            if name in exodus.variables or "time_whole" not in exodus.variables:
+                raise RuntimeError("Unexpected original Native output layout")
+            times = exodus.variables["time_whole"]
+            extra = exodus.createVariable(name, "d", times.dimensions)
+            extra[:] = np.zeros_like(np.asarray(times.data), dtype=float)
+    must_reject("same_unrecognised_physical_field", first, second,
+                "Unsupported Exodus physical field")
+
+# Guard original Native provenance against mutation during negative controls.
+if sha(baseline) != before["baseline"] or sha(candidate) != before["candidate"]:
+    raise RuntimeError("Native parity negative control modified original output")
+if set(receipt["controls"]) != {
+    "numeric_state_mutation", "same_unrecognised_physical_field"
+}:
+    raise RuntimeError("Native parity negative control coverage incomplete")
+receipt["result"] = "NATIVE_PARITY_FALSE_PASS_REJECTED"
+(evidence / "native_parity_negative_controls.json").write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+print(receipt["result"])
+PY
+
 set +e
 native --check-input -i "$PILOT/rf_explicit.i" "$PILOT/duplicate_maxwell.i" \
   > "$EVIDENCE/duplicate_maxwell.log" 2>&1
