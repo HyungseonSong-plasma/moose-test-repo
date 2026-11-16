@@ -301,10 +301,10 @@ def test_B_D1_observers_rebound_only_when_exactly_self_contained(tmp_path):
     assert "type = PhysicsLowerDSurfaceCurrent\n" in after
     assert "type = PhysicsADSurfaceChargePoissonBC\n" in after
     assert after == base.replace(
-        "    type = PhysicsLowerDSurfaceCurrentProbeAux\\n",
-        "    type = LowerDSurfaceCurrentProbeAux\\n").replace(
-        "    type = PhysicsWaferD1GeometryProbeAux\\n",
-        "    type = WaferD1GeometryProbeAux\\n")
+        "    type = PhysicsLowerDSurfaceCurrentProbeAux\n",
+        "    type = LowerDSurfaceCurrentProbeAux\n").replace(
+        "    type = PhysicsWaferD1GeometryProbeAux\n",
+        "    type = WaferD1GeometryProbeAux\n")
     assert after.count("type = LowerDSurfaceCurrentProbeAux") == len(fields)
     assert after.count("type = WaferD1GeometryProbeAux") == len(geometry)
     assert "PhysicsLowerDSurfaceCurrentProbeAux" not in after
