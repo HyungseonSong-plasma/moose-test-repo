@@ -488,6 +488,32 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
                if renamed[name] == 0]
     if missing:
         raise ValueError("Expected original S6 progress providers: " + ", ".join(missing))
+
+    # The same exact eight owner-checked FEM sheath BCs are used by the
+    # option-only and Chemistry D routes. Only scratch type names change;
+    # do not create PhysicsApp aliases or adjust flux/boundary/energy laws.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "issue402_s6_exact_sheath_contract",
+        PILOT / "chemistry/prepare_hybrid_json_s6.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_CHEMISTRY_SHEATH_DONOR_MISSING")
+    sheath = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sheath)
+    first = staged_chem_dir / Path(ordered[0]).name
+    original_sheath_source = edits[first]
+    for item in ordered[1:-1]:
+        text = edits[staged_chem_dir / Path(item).name]
+        if any(re.search(r"(?m)^    type\s*=\s*" + re.escape(old) + r"\s*$",
+                         text) for old in sheath.OLD_SHEATH_TYPES.values()):
+            raise ValueError("S6_CHEMISTRY_SHEATH_SECONDARY_RETIRED_OWNER")
+    migrated_sheath_source, sheath_receipts = sheath.migrate_exact_s6_fem_sheath(
+        original_sheath_source)
+    if (len(sheath_receipts) != 8 or
+            any("PhysicsFEMLogMolarElectron" in receipt["new_type"]
+                for receipt in sheath_receipts)):
+        raise ValueError("S6_CHEMISTRY_SHEATH_INCOMPLETE_MIGRATION")
+    edits[first] = migrated_sheath_source
     template = (PILOT / f"s6_{variant}_chemistry_run.template.i").read_text()
     common = COMMON.read_bytes()
     selected = (PILOT / f"chemistry/oxygen_s6_{variant}.json").read_bytes()
@@ -517,6 +543,14 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         "canonical_name_replacements": renamed,
         "scratch_electron_lookup_cutover": lookup_cutover,
         "scratch_wall_functor_cutover": wall_cutover,
+        "scratch_sheath_bc_cutover": {
+            "status": "SCRATCH_ONLY_EIGHT_REGISTERED_SHEATH_TYPES",
+            "owner_count": len(sheath_receipts),
+            "owners": sheath_receipts,
+            "source_sha256": sha(original_sheath_source.encode()),
+            "staged_sha256": sha(migrated_sheath_source.encode()),
+            "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
+        },
         "overlay_sha256": sha(template.encode()),
         "common_mechanism_sha256": sha(common),
         "variant_mechanism_sha256": sha(selected),
