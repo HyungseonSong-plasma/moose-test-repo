@@ -106,6 +106,30 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
 ' 2>&1 | tee "$EVIDENCE/issue402_json_rate_native_p2.log"
 echo "ISSUE402_JSON_RATE_SHARED_NATIVE_P2_PASS"
 
+# Issue #541 task #3: genuine FEM signed-charge residual-response discriminator.
+# Separate synthetic one-step P3 control: not public S6 or science acceptance.
+# The P1 executable, OCI and exact source must match this job's identity receipt.
+docker run --rm --entrypoint /bin/bash --user 0:0 \
+  --workdir /workspace -v "$PWD:/workspace" \
+  -e "EXPECTED_HEAD=$(git rev-parse HEAD)" \
+  -e "PINNED_BASE=$PINNED_BASE" "$PINNED_BASE" -lc '
+  set -euo pipefail
+  source /environment
+  git config --global --add safe.directory /workspace
+  python3 -m physics_app.ci.check_issue402_signed_fem_residual_native \
+    --self-test
+  python3 -m physics_app.ci.check_issue402_signed_fem_residual_native \
+    --executable /workspace/physics_app/physics-opt \
+    --p1-identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json \
+    --expected-head "$EXPECTED_HEAD" --oci-image "$PINNED_BASE" \
+    --output-dir /workspace/experiments/Issue402_plasma_dsl_g1/evidence/charge_residual
+' 2>&1 | tee "$EVIDENCE/issue541_task3_charge_residual_native.log"
+test -s "$EVIDENCE/charge_residual/receipt.json"
+echo "ISSUE541_TASK3_JSON_SIGNED_FEM_RESIDUAL_NATIVE_VERIFIED"
+
+
+
+
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
 # JSON-owned log-molar solver variables and initial density: standalone P2 only.
