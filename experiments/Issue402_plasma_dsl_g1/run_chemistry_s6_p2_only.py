@@ -23,8 +23,8 @@ from pathlib import Path
 import public_option_s6_p2 as option
 from chemistry.prepare_s6_run_input import prepare
 from chemistry.prepare_hybrid_json_s6 import (
+    SHEATH_BC_SPEC,
     migrate_exact_s6_fem_sheath,
-    prepare as prepare_hybrid,
 )
 from p3_chemistry_preflight import audit
 
@@ -132,24 +132,33 @@ def check_only(historical: Path, expected_head: str, output: Path,
             migration = option.canonicalize_staged_D_inputs(chemistry, ordered)
             type_remap = option.remap_staged_fem_types(chemistry, ordered)
             cutover = prepare(chemistry, ordered, case)
-            # Independently prove all eight BC source/boundary/flux fields
-            # before the integrated JSON migration touches disposable inputs.
-            sheath_preflight = rebind_preserved_native_sheath(
-                chemistry, ordered, apply=False
-            )
-            # Legacy Chemistry JSON does not own initial density/energy.
-            # The reviewed hybrid migration moves the archived exact ICs and
-            # unchanged Native wall/ion/gas contracts into the modern schema.
-            hybrid = prepare_hybrid(chemistry, ordered, case)
-            if (hybrid["rebound_native_sheath_bc_count"] != 8 or
-                hybrid["rebound_native_sheath_bcs"] != sheath_preflight["owners"] or
-                hybrid["integrated_species_count"] != 7 or
-                hybrid["integrated_reaction_count"] != 8 or
-                hybrid["science_acceptance"] != "HOLD"):
-                raise ValueError("FLOW_S6_HYBRID_SOURCE_CONTRACT_CHANGED")
+            # prepare() already checks the exact archived eight BC owner
+            # signatures, rebinds their registered types, and transfers four
+            # initial states to Chemistry JSON in one scratch-only cutover.
+            # Reapplying migrate_exact_s6_fem_sheath/prepare_hybrid here would
+            # reject the *already converted* type and duplicate that cutover.
+            # Verify its source-bound receipt, not a second migration.
+            sheath_receipt = cutover["scratch_sheath_bc_cutover"]
+            owners = sheath_receipt["owners"]
+            expected_types = {
+                name: new_type for name, (new_type, _boundary)
+                in SHEATH_BC_SPEC.items()
+            }
+            if (sheath_receipt["status"] !=
+                    "SCRATCH_ONLY_EIGHT_REGISTERED_SHEATH_TYPES" or
+                sheath_receipt["owner_count"] != 8 or len(owners) != 8 or
+                {item["owner"]: item["new_type"] for item in owners} !=
+                    expected_types or
+                any(item["old_block_sha256"] ==
+                    item["new_block_sha256"] for item in owners) or
+                sheath_receipt["source_sha256"] ==
+                    sheath_receipt["staged_sha256"] or
+                cutover["scratch_json_initial_cutover"]["owner_count"] != 4 or
+                cutover["science"] != "SCIENCE_HOLD"):
+                raise ValueError("FLOW_S6_SHEATH_CUTOVER_RECEIPT_CHANGED")
             overlay = chemistry / "migrated_continuity.i"
-            if digest(overlay) != hybrid["overlay_sha256"]:
-                raise ValueError("P2_HYBRID_CHEMISTRY_OVERLAY_CONTENT_CHANGED")
+            if digest(overlay) != cutover["overlay_sha256"]:
+                raise ValueError("P2_CHEMISTRY_OVERLAY_CONTENT_CHANGED")
             # No implicit JSON DD transport cutover: original S6 Native ion
             # coefficients and Poisson owner remain exactly as staged.
             if not all((staged / relative).is_file() for relative in ordered):
@@ -166,8 +175,7 @@ def check_only(historical: Path, expected_head: str, output: Path,
                 "scratch_canonicalization": migration,
                 "scratch_fem_type_remap": type_remap,
                 "scratch_chemistry_cutover": cutover,
-                "scratch_sheath_bc_rebind": sheath_preflight,
-                "scratch_hybrid_json_cutover": hybrid,
+                "scratch_sheath_bc_rebind": sheath_receipt,
                 "overlay_sha256": digest(overlay),
                 "P3": "NOT_RUN",
             }
