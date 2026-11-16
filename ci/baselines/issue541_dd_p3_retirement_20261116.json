@@ -1,0 +1,71 @@
+{
+  "schema": "issue541.dd_p3.original_staged_retirement.v1",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "state": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+  "science": "SCIENCE_HOLD",
+  "final_retired_verified": false,
+  "original": {
+    "path": ".github/workflows/issue402-dd-json-p3-smoke-once.yml",
+    "git_blob": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
+    "source_copy_path": "docs/development/archive/issue402-dd-json-p3-smoke-once.yml.txt",
+    "source_copy_git_blob": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
+    "legacy_trigger_ref": "issue-402-dd-plasma-boundary-action",
+    "historical_head_at_stage": "632aa2376cad03faa271bad2986c664086842225",
+    "external_callers": "UNVERIFIED_OPERATOR_RISK_ACCEPTED"
+  },
+  "replacement": {
+    "path": ".github/workflows/issue541-arch-dd-p3-replay.yml",
+    "blob": "342069640ed958898a4d28585fdf4eead545a0ad",
+    "trigger": "workflow_dispatch_ONLY",
+    "typed_approval": "ISSUE541_DD_TWO_STEP_P3_APPROVED",
+    "exact_sha": true,
+    "registered_on_default_branch": true,
+    "default_branch_registration_pr": 616,
+    "default_branch_registration_merge_commit": "dd08540238ead52fee2038c4542fb67ca8e1aff6"
+  },
+  "dd_native_p3": {
+    "run_id": 43911477519,
+    "source_sha": "e0a1a9f7ec92d555f4da50af1ae2b87d046746a5",
+    "two_timesteps_completed": true,
+    "artifact_id": 14247572989,
+    "bytes": 16167,
+    "sha256": "1e2c52623a0ba1936a8c44ae69a1f2c273526a5b96048325288f6854de1d47da",
+    "drive_file_id": "1REOmp30hqVl069EqShs_5mR58yOa0L7S"
+  },
+  "old_original_failed_artifact": {
+    "run_id": 43536220786,
+    "artifact_id": 14090046268,
+    "bytes": 1550,
+    "sha256": "d7ccb403173ef7a831e3ec9ad31a6c74c49c54dda20dfa839fe11b3331c572a4",
+    "drive_file_id": "1kcw5K_gvmyeydTDuddIHs3VHZCMhQCaL"
+  },
+  "s6_reference": {
+    "run_id": 43902067509,
+    "source_sha": "c82d0d98e1e4033c24297ff752270c10200f3bc1",
+    "artifacts": [
+      {
+        "case": "417",
+        "id": 14243685279,
+        "bytes": 635777,
+        "sha256": "5ed26e8cd52e1a8b64164c733cd7452850b542f5c3e4e2cab18b6f3e4f8a8bf8",
+        "drive_file_id": "1X_L6I88FY0oyfj73rmt-8aSlM0vRiSQw"
+      },
+      {
+        "case": "941",
+        "id": 14243116086,
+        "bytes": 635729,
+        "sha256": "6f20edfa50d64921af495f21aa9e533d910fe98a5696224f7888c5d1da654098",
+        "drive_file_id": "1cKDwUi_tF5W1JlccdF9fCiuZetFexT-v"
+      }
+    ]
+  },
+  "custody": {
+    "provider": "GOOGLE_DRIVE_PRIVATE",
+    "folder_id": "1b-Y-vdwrFZjFn0S-XMTyU-TbYoNUdobA",
+    "readback": "REMOTE_DOWNLOAD_SHA256_AND_ZIP_CRC_MATCH_ALL_THREE",
+    "worm_lock": "NOT_PROVEN",
+    "retention": "NO_GITHUB_ACTIONS_EXPIRY_IN_SEPARATE_DRIVE_COPY__MUTABLE_OWNER_FILE"
+  },
+  "historical_ref_cutover": "PENDING_SEPARATE_EXACT_SHA_VERIFICATION",
+  "main_merged": false
+}

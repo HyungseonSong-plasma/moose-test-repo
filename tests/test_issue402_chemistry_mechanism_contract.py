@@ -144,22 +144,39 @@ def test_s6_uses_canonical_progress_providers_without_alias_materials():
 
 
 def test_active_energy_state_binding_is_canonical_across_bc_and_readers():
-    paths = (
-        "physics_app/src/physics/plasma/DDEnergyEq.C",
-        "physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C",
+    # The original electron dielectric-energy BC was retired: its source is
+    # absent by contract. The remaining PhysicsFEMPlasmaWallBCs owner is the
+    # ion wall only and must not be required to reference electron energy.
+    direct_energy_consumers = (
         "physics_app/src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C",
-        "physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C",
         "physics_harness/adapters/moose/species_plot.py",
         "physics_harness/adapters/moose/time_trace.py",
     )
-    for path in paths:
+    energy = text("physics_app/src/physics/plasma/DDEnergyEq.C")
+    assert "log_energy" not in energy
+    assert 'return "log_" + species + "_energy";' in energy
+    for path in direct_energy_consumers:
         source = text(path)
         assert "log_energy" not in source
-        if path.endswith("DDEnergyEq.C"):
-            assert 'return "log_" + species + "_energy";' in source
-        else:
-            assert "log_e_energy" in source
-    assert '"log_e_energy"' in text("physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C")
+        assert "log_e_energy" in source
+
+    # The canonical energy-sheath BC obtains its mean energy through a
+    # Functor, not through a hard-coded variable name. The diagnostic
+    # no-suppression BC obtains energy from its own solved _u state.
+    sheath = text("physics_app/src/bcs/FEMElectronEnergySheathBC.C")
+    assert 'registerMooseObject("PhysicsApp", FEMElectronEnergySheathBC);' in sheath
+    assert 'getFunctor<ADReal>("mean_energy")' in sheath
+    assert 'getFunctor<ADReal>("wall_number_flux")' in sheath
+    diagnostic = text(
+        "physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC.C"
+    )
+    assert 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC);' in diagnostic
+    assert 'exp(_u[_qp] - _log_electron_density[_qp])' in diagnostic
+
+    ion_wall = text("physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C")
+    assert 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarIonWallBC);' in ion_wall
+    assert "log_e_energy" not in ion_wall
+    assert not (APP / "src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C").exists()
 
 
 def test_native_positive_and_negative_fixtures_are_wired():
@@ -183,6 +200,25 @@ def test_native_positive_and_negative_fixtures_are_wired():
     assert [r["id"] for r in negative["reactions"]] == ["EI-405", "EI-405"]
     assert all("progress" not in r for r in negative["reactions"])
     assert progress_from_id(negative["reactions"][0]["id"]) == progress_from_id(negative["reactions"][1]["id"])
+
+
+def test_s6_catalogue_synthetic_p2_initial_is_not_archival_initial():
+    """S6-417/941 catalogue P2 must bind e without modifying archival JSON."""
+    common = json.loads((PILOT / "chemistry/oxygen_s6_common.json").read_text())
+    synthetic = json.loads((PILOT / "chemistry/oxygen_s6_p2_transport.json").read_text())
+    assert "initial_number_density" not in common["species"]["e"]
+    assert set(synthetic["species"]) == {"e"}
+    assert synthetic["species"]["e"]["initial_number_density"] == 1e16
+    assert synthetic["equations"] == {}
+    assert synthetic["reactions"] == []
+    for case in ("417", "941"):
+        archived = json.loads((PILOT / f"chemistry/oxygen_s6_{case}.json").read_text())
+        assert archived["species"] == {}
+        assert len(archived["reactions"]) == 1
+        deck = (PILOT / f"chemistry_s6_{case}_catalogue_p2.i").read_text()
+        assert f"chemistry/oxygen_s6_{case}.json" in deck
+        assert "chemistry/oxygen_s6_p2_transport.json" in deck
+        assert "Rate values below are SYNTHETIC" in deck
 
 
 def test_derived_progress_and_hidden_energy_rule_are_enforced_in_cpp():

@@ -95,7 +95,9 @@ def test_canonical_d_overlay_does_not_add_a_second_energy_owner():
     assert "JouleHeating" not in overlay
     assert "MatBodyForce" not in overlay
     runner = (PILOT / "run_canonical_s6_p3_once.py").read_text()
-    assert 'option.p2.stage(ROOT, historical, case, "C", staged, manifest)' in runner
+    assert 'ordered = option.p2.stage(\n' in runner
+    assert 'ROOT, historical, case, "C", staged, manifest,' in runner
+    assert 'd_base_source=d_base)' in runner
     assert "option.canonicalize_staged_D_inputs" in runner
     assert "sidecar.write_text(option.OVERLAY" in runner
 

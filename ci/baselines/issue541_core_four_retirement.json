@@ -1,0 +1,254 @@
+{
+  "schema": "issue541.core_four.retirement_contract.v1",
+  "source_pr": 544,
+  "source_head": "d18a802e41cf3c5b152f21ff13374cd622fe9c5a",
+  "science": "SCIENCE_HOLD",
+  "p3": "NOT_REQUESTED",
+  "ownership": "CORE_END_TO_END",
+  "replacement": {
+    "p0_job": "issue402_core_four_p0",
+    "native_job": "issue402_core_four_native_p2",
+    "native_runner": "physics_app/ci/run_issue541_core_four_native_p2.py",
+    "ci": ".github/workflows/ci.yml",
+    "required_build_base": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "source_verified_head": "2599f54a240abe1b7a1f49c97806fc39ab801426",
+    "source_verified_run": 43835330764,
+    "verification_receipt": {
+      "claim": "PRIOR_COMPLETED_EXACT_HEAD_P0_P1_P2_ONLY",
+      "repository": "HyungseonSong-plasma/moose-test-repo",
+      "pr_number": 553,
+      "head_sha": "2599f54a240abe1b7a1f49c97806fc39ab801426",
+      "workflow_name": "Repository CI",
+      "workflow_run_id": 43835330764,
+      "run_attempt": 1,
+      "event": "pull_request",
+      "run_conclusion": "failure",
+      "p0": {
+        "job_name": "Issue541 CORE four boundary SCCM composition inlet P0 (no Native)",
+        "job_id": 133190406985,
+        "conclusion": "success",
+        "artifact_id": 14209559995,
+        "artifact_name": "issue541-core-four-p0-43835330764",
+        "artifact_expires_at": "2026-12-16T08:57:06Z"
+      },
+      "native_p1_p2": {
+        "job_name": "Issue541 CORE four native source-bound P1 P2 (no P3)",
+        "job_id": 133190407225,
+        "conclusion": "success",
+        "artifact_id": 14210708034,
+        "artifact_name": "issue541-core-four-native-43835330764",
+        "artifact_expires_at": "2026-12-16T09:02:15Z"
+      },
+      "other_gates": {
+        "validate": {
+          "job_id": 133190406807,
+          "conclusion": "failure",
+          "reason": "WORKFLOW_SURFACE_GUARD"
+        },
+        "plasma_native_regression": {
+          "job_id": 133190406590,
+          "conclusion": "failure",
+          "reason": "PUBLIC_S6_417_941_P2_HOLD"
+        }
+      },
+      "p3": "NOT_RUN",
+      "science": "SCIENCE_HOLD",
+      "freshness_policy": "NEW_HEAD_REQUIRES_NEW_EXACT_HEAD_RUN_AND_JOB_RECEIPTS",
+      "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43835330764",
+      "run_status": "completed",
+      "supersedes": {
+        "head_sha": "2df75852699531c8b6d469ec447d09a90e9a3738",
+        "workflow_run_id": 43833166262
+      }
+    }
+  },
+  "workflows": [
+    {
+      "path": ".github/workflows/issue402-dd-json-boundary-p0-p2-once.yml",
+      "original_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+      "historical_branch": "issue-402-dd-plasma-boundary-action",
+      "branch_present_at_2026_11_15": true,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "DD_JSON_BOUNDARY_NATIVE_P2_PASS_P3_NOT_RUN",
+      "retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+      "reason": "A1 historic self-path removed by reviewed PR #606 at 632aa2376cad03faa271bad2986c664086842225; original 2026-11-15 branch-present fact retained. Operator declares no external callers, original SHA and independent ZIP backed up, CORE P0/real P1/P2 replacement source-bound evidence from pre-merge candidate PASS; final integrated-head verification and acceptance explicitly deferred. Historical shared branch and distinct ARCH P3 owners retained.",
+      "original_success": {
+        "run_id": 43533803916,
+        "source_sha": "5c976546e78594caef86740ee58d3f641c78cdda",
+        "artifact_id": 14088768015,
+        "zip_sha256": "de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27",
+        "zip_bytes": 2072,
+        "expires_at": "2026-12-14T00:29:14Z"
+      },
+      "independent_backup": {
+        "url": "https://drive.google.com/file/d/1OsADIq21_JU4Z4O65t_Hl-_AwjM6Nxf0/view",
+        "readback_sha256": "de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27",
+        "readback_bytes": 2072,
+        "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
+      },
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_STILL_EXISTS",
+      "a1_owner_retirement": {
+        "mode": "OPERATOR_DECLARED_A1_NO_EXTERNAL_CALLERS__STAGED_ONLY",
+        "operator_statement": "외부 호출자는 존재하지 않으니까, 그걸로 처리를 하자.",
+        "statement_source": "CURRENT_USER_CONVERSATION_2026-11-16",
+        "attestation_type": "USER_DECLARATION_NOT_INDEPENDENT_GITHUB_AUDIT",
+        "static_census": "FIVE_CONNECTED_REPOS_DEFAULT_BRANCH_A1_SELF_PATH_ONLY",
+        "historic_actions_runs": 19,
+        "historic_events": "ALL_PUSH_REPO_OWNER",
+        "historical_branch": "issue-402-dd-plasma-boundary-action",
+        "historical_head_before": "b3f3b6e09b83828343fc0bc097f5a4edce9207e7",
+        "original_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+        "historic_a1_file": "ABSENT_ON_LIVE_HISTORICAL_REF",
+        "old_ref_cutover_pr": 606,
+        "old_ref_cutover_head": "08086bd563f76d1b6bd86d4274679791f801136d",
+        "old_ref_cutover_state": "MERGED_READBACK_VERIFIED",
+        "old_ref_cutover_scope": "EXACTLY_ONE_A1_YAML_DELETION",
+        "original_artifact_id": 14088768015,
+        "historical_zip_sha256": "de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27",
+        "independent_drive_backup": "1OsADIq21_JU4Z4O65t_Hl-_AwjM6Nxf0",
+        "original_zip_bytes": 2072,
+        "backup_readback": "MATCHED_BYTES_SHA256_VALID_ZIP",
+        "archive_worm": "NOT_PROVEN",
+        "a2_unchanged": "RETIRED_VERIFIED_AND_ABSENT_ON_LIVE_BRANCH",
+        "p3_dd_blob": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
+        "p3_s6_blob": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
+        "shared_branch_deletion": "NOT_AUTHORIZED",
+        "replacement_job": "issue402_core_four_native_p2",
+        "replacement_p0_job": "issue402_core_four_p0",
+        "replacement_oci_sha256": "2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+        "last_verified_run": 43872131969,
+        "last_verified_sha": "8dcec2c195b683d795d162ab6825da1366c932d2",
+        "last_verified_native_job": 133315748335,
+        "last_verified_native_artifact_id": 14227174075,
+        "last_verified_group_a_mutations": 59,
+        "final_candidate_exact_head_ci": "DEFERRED_BY_USER_AFTER_SOURCE_CHANGE",
+        "proposed_retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+        "accepted_retirement": false,
+        "p3": "NOT_RUN",
+        "science": "SCIENCE_HOLD",
+        "old_ref_merge_commit": "632aa2376cad03faa271bad2986c664086842225",
+        "historical_head_after": "632aa2376cad03faa271bad2986c664086842225"
+      },
+      "rollback_original_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+      "wave1c_caller_zero": "USER_DECLARED_NO_EXTERNAL_CALLERS_NOT_GITHUB_PROVEN",
+      "wave1c_integration": "HOLD_PENDING_FINAL_VALIDATION_AND_ACCEPTANCE"
+    },
+    {
+      "path": ".github/workflows/issue402-sccm-fixed-gas-p0-p2-once.yml",
+      "original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611",
+      "historical_branch": "issue-402-sccm-inlet-flow-native",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "ISSUE402_SCCM_STATIC_GAS_NATIVE_P2_PASS_P3_NOT_RUN",
+      "retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+      "reason": "Original absent in #578 candidate, not in main. Independent historic SCCM success 43505864550 and original ZIP 14077346147; exact #578 9e71762 CORE P0 and real Physics P1/P2 SUCCESS (CI 43853584740, jobs 133252079406/133252079180, artifacts 14219701647/14219962212). Replacement source-bound Native retains SCCM positive, all-four live, 20+ negative composition/IC/SCCM/boundary controls. Historical trigger branch absent; dynamic/off-platform caller-zero unverified. Current merged integration and global guard red; staged only.",
+      "original_success": {
+        "run_id": 43505864550,
+        "source_sha": "e78b8fa3c3e30dbd219a2ab28730121284f666a6",
+        "artifact_id": 14077346147,
+        "zip_sha256": "9980ada10e2ef8bf49fac0f71b559cf1f9592ff41f0476577b209f45e196d304",
+        "zip_bytes": 1880,
+        "expires_at": "2026-12-13T21:00:07Z"
+      },
+      "independent_backup": {
+        "url": "https://drive.google.com/file/d/1ANMZfpvAwUi-ozaDYKDuwKMwjJSzBxMT/view",
+        "readback_sha256": "9980ada10e2ef8bf49fac0f71b559cf1f9592ff41f0476577b209f45e196d304",
+        "readback_bytes": 1880,
+        "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
+      },
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "retirement_candidate_source_head": "d6346a9dea92e935cdd55818e651d47564fb1a2b",
+      "rollback_original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611",
+      "wave1d_caller_zero": "UNVERIFIED",
+      "wave1d_integration": "HOLD",
+      "wave1d_current_run": 43853584740
+    },
+    {
+      "path": ".github/workflows/issue402-species-initial-composition-native-once.yml",
+      "original_blob": "f11aa0de000fb05bcc587798400313558a6cb58a",
+      "historical_branch": "issue-402-species-initial-composition",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "SPECIES_INITIAL_VOLUME_INLET_NATIVE_P2_PASS",
+      "retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+      "reason": "Isolated D2 deletion and exact-source tests recovered from #558 at 436c5b1c (CI 43835541341, jobs 133191130258 and 133191130353 SUCCESS, artifacts 14210712331/14211160676). #578 9e71762 CORE P0/P1/P2 also SUCCESS (CI 43853584740). Current Wave1-D branch has staged original deletion, not integrated main acceptance; historical trigger branch absent, static main search only own YAML, external/dynamic caller-zero unverified. No P3/science acceptance.",
+      "original_success": {
+        "run_id": 43468688669,
+        "source_sha": "0ff51761bbbc9d22bcc20c848904498c1c495480",
+        "artifact_id": 14059970866,
+        "zip_sha256": "836776e154de813c7b4e67b8a78d586ff01ad9e28c3ce1a3f6c837721f7d2072",
+        "zip_bytes": 30673,
+        "expires_at": "2026-12-13T17:06:26Z"
+      },
+      "independent_backup": {
+        "url": "https://drive.google.com/file/d/1upBNduXJk-XxSt1uUyXVomlP4Hkc_6Ve/view",
+        "readback_sha256": "836776e154de813c7b4e67b8a78d586ff01ad9e28c3ce1a3f6c837721f7d2072",
+        "readback_bytes": 30673,
+        "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
+      },
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "retirement_candidate_source_head": "2df75852699531c8b6d469ec447d09a90e9a3738",
+      "replacement_parent_ci_run": 43835541341,
+      "rollback_original_blob": "f11aa0de000fb05bcc587798400313558a6cb58a",
+      "wave1d_caller_zero": "UNVERIFIED",
+      "wave1d_integration": "HOLD",
+      "wave1d_source_run": 43835541341
+    },
+    {
+      "path": ".github/workflows/issue402-species-live-ic-inlet-native-once.yml",
+      "original_blob": "c6068680c0c7083e38ec03d86c5433eb49db94bf",
+      "historical_branch": "issue-402-species-live-ic-inlet",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS",
+      "retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+      "reason": "Independent D3 deletion from #558 at 436c5b1c (CI 43835541341, CORE P0 133191130258 and real Native P1/P2 133191130353 SUCCESS, artifacts 14210712331/14211160676); source-bound four-live-species and missing SCCM/boundary/derived-state rejections verified again #578 9e71762 (CI 43853584740 CORE jobs SUCCESS). Staged only on Draft, original main untouched; trigger branch absent, dynamic/off-platform caller-zero unverified, final integration and other guard gates HOLD.",
+      "original_success": {
+        "run_id": 43492369825,
+        "source_sha": "e5e586595948919a694ecd2bb19b48dd60a4751e",
+        "artifact_id": 14070227642,
+        "zip_sha256": "b3c596707eb7deb6ce20e6f6d42fbb394a404064a14de4a91f3a5e8b691c3376",
+        "zip_bytes": 31731,
+        "expires_at": "2026-12-13T19:32:31Z"
+      },
+      "independent_backup": {
+        "url": "https://drive.google.com/file/d/1LsTjdZwjtsC3Xqgk5Oa2qjqAMC_FZ_WW/view",
+        "readback_sha256": "b3c596707eb7deb6ce20e6f6d42fbb394a404064a14de4a91f3a5e8b691c3376",
+        "readback_bytes": 31731,
+        "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
+      },
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "retirement_candidate_source_head": "845ce60d197747069ccb4f82961498c1f7445444",
+      "replacement_parent_ci_run": 43835541341,
+      "rollback_original_blob": "c6068680c0c7083e38ec03d86c5433eb49db94bf",
+      "wave1d_caller_zero": "UNVERIFIED",
+      "wave1d_integration": "HOLD",
+      "wave1d_source_run": 43835541341
+    }
+  ],
+  "backup": {
+    "provider": "Google Drive",
+    "folder_url": "https://drive.google.com/drive/folders/1XBu94Z7HnMkIAOhSfRi-e3G_XIx_T9bc",
+    "visibility": "OWNER_ONLY_NOT_SHARED",
+    "readback_date": "2026-11-15",
+    "readback": "SHA256_AND_SIZE_VERIFIED",
+    "permanent_worm": "NOT_PROVEN"
+  },
+  "wave1d": {
+    "base_pr": 578,
+    "base_head": "9e71762a5f45ab755481720e8beba314f59cd021",
+    "donor_pr": 558,
+    "donor_head": "436c5b1c43a6f6ddb1b629c81f6c7d97fbfaf9a9",
+    "status": "STAGED_ONLY_NOT_MERGED",
+    "science": "SCIENCE_HOLD",
+    "p3": "NOT_RUN"
+  }
+}

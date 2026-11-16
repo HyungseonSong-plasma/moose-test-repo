@@ -1,0 +1,79 @@
+{
+  "schema": "issue541.completed_tasks.integration_provenance.v1",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "date": "2026-11-16",
+  "status": "REVIEW_ONLY_NOT_MERGED",
+  "source_branch": "issue-541-ci-template-sync-20261115",
+  "source_pr": 553,
+  "source_commit": "34a3539477071d56027c60b1f19d0b502b2e9733",
+  "independent_allowlist_pr": 556,
+  "independent_allowlist_commit": "62e1400f1e8ffabb6f3c45345689e0cca15a7d91",
+  "base_main_commit": "71e112eb05d4645c82aab8861b99d6952ac4ac3e",
+  "scope_note": "Inherits unmerged #553 CORE/FLOW/ARCH dependencies; not a five-file cherry-pick, do not merge to main or retire parent while dependent work is open.",
+  "claims": [
+    {
+      "task": 1,
+      "scope": "CI template synchronization and harness source contract",
+      "files": {
+        ".github/workflows/ci.yml": "4d0a128da904f90fde79825f2bb7492bb1005083",
+        "ci/workflow_templates/general-ci.yml": "4d0a128da904f90fde79825f2bb7492bb1005083"
+      },
+      "proof": "Same Git blob and prior exact-source harness self-test/check PASS, 43839529668"
+    },
+    {
+      "task": 2,
+      "scope": "JSON-owned wrong_charge_sign fail-closed Native negative path",
+      "files": {
+        "experiments/Issue402_plasma_dsl_g1/invalid_wrong_charge_sign.i": "8dfbcfebed9e218796c18a1011cbba51edacc0a3",
+        "experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh": "8a73d2b6601b5411ac3bc8bfa81ba1d1eb344b8b"
+      },
+      "proof": "Native job 133204451685 in 43839529668 reports invalid_wrong_charge_sign expected rejection PASS"
+    },
+    {
+      "task": 4,
+      "scope": "JSON-owned External Species Binding negative routing and mutations",
+      "files": {
+        "tests/test_issue402_g1_external_species_binding.py": "6ea4896672953fca4208c07b973eb7b4ff3afbd4"
+      },
+      "proof": "Prior exact-source CI 43839529668 CORE P0 pytest source-bound PASS; specific mutation coverage present"
+    },
+    {
+      "task": 5,
+      "scope": "Numerical Parity False PASS fail-closed negative controls",
+      "files": {
+        "experiments/Issue402_plasma_dsl_g1/compare_native_outputs.py": "d5b9bb964782f96fadb91bfa393f033489baf050",
+        "tests/test_issue541_native_exodus_parity_oracle.py": "0546f257231bb9fad82941547fecdf5e98b46da2"
+      },
+      "proof": "Native job 133204451685 in 43839529668 reports NATIVE_PARITY_FALSE_PASS_REJECTED and TINY_DIFFUSION_NATIVE_NUMERICAL_PARITY_PASS"
+    },
+    {
+      "task": 9,
+      "scope": "FLOW/ARCH optional workflow allowlist, deny unexpected events",
+      "files": {
+        "ci/guards/workflow_surface_guard.py": "477d6fdeca77edc01b3f40e4942475d2a575353d"
+      },
+      "proof": "Donor #556 exact blob imported via CAS to this branch; new-HEAD --self-test and --check still required"
+    }
+  ],
+  "upstream_evidence": {
+    "repository_ci_run": 43839529668,
+    "source_commit": "34a3539477071d56027c60b1f19d0b502b2e9733",
+    "native_job": 133204451685,
+    "core_native_job": 133204451509,
+    "validate_job": 133204451530,
+    "native_conclusion": "success",
+    "core_native_conclusion": "success",
+    "validate_conclusion": "failure",
+    "global_guard": "FAIL; inherited legacy workflow violations + other validate gates"
+  },
+  "required_current_head_checks": [
+    "ci/workflow_harness.py --self-test and --check",
+    "ci/guards/workflow_surface_guard.py --self-test and --check (no waiver; non-Group-A violations remain)",
+    "focused pytest and mutation tests for tasks 2,4,5,9",
+    "real plasma_native_regression and CORE P1/P2",
+    "No automatic merge or cleanup of upstream PRs/branches until downstream dependency audit"
+  ],
+  "branch_cleanup_policy": "Do not close or delete #553 or #554 until dependent PRs (#566/#572 and other task integrations) are retargeted/verified; #556 may be marked superseded only after new exact-head CI evidence. GitHub PR history is closed, not deleted.",
+  "science": "SCIENCE_HOLD",
+  "p3": "NOT_RUN"
+}

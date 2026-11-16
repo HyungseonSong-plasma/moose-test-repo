@@ -22,6 +22,10 @@ from pathlib import Path
 
 import public_option_s6_p2 as option
 from chemistry.prepare_s6_run_input import prepare
+from chemistry.prepare_hybrid_json_s6 import (
+    SHEATH_BC_SPEC,
+    migrate_exact_s6_fem_sheath,
+)
 from p3_chemistry_preflight import audit
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,6 +35,51 @@ D_BASE = ROOT / "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def rebind_preserved_native_sheath(chemistry: Path, ordered: list[str], *, apply: bool = True) -> dict:
+    """P2 scratch-only 4+4 registered BC rebind, with exact physical-owner checks.
+
+    Source/history remain immutable. This migration checks boundary, variable,
+    e_wall_number_flux and mean-energy ownership before any scratch write.
+    """
+    base_name = (
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_"
+        "100us_dt1000ns__C0_chemistry_off.i"
+    )
+    if len(ordered) != 11 or Path(ordered[0]).name != base_name:
+        raise ValueError("FLOW_S6_DBASE_ORDER_OR_SOURCE_CHANGED")
+    base = chemistry / base_name
+    if not base.is_file() or base.is_symlink():
+        raise ValueError("FLOW_S6_DBASE_SCRATCH_SOURCE_MISSING")
+    original = base.read_text(encoding="utf-8")
+    converted, owners = migrate_exact_s6_fem_sheath(original)
+    counts = {
+        "FEMElectronSheathBC": sum(x["new_type"] == "FEMElectronSheathBC" for x in owners),
+        "FEMElectronEnergySheathBC": sum(
+            x["new_type"] == "FEMElectronEnergySheathBC" for x in owners
+        ),
+    }
+    if len(owners) != 8 or counts != {
+        "FEMElectronSheathBC": 4, "FEMElectronEnergySheathBC": 4
+    } or original == converted:
+        raise ValueError("FLOW_S6_SHEATH_4_PLUS_4_OWNER_CONTRACT_CHANGED")
+    before_sha = hashlib.sha256(original.encode("utf-8")).hexdigest()
+    after_sha = hashlib.sha256(converted.encode("utf-8")).hexdigest()
+    if apply:
+        base.write_text(converted, encoding="utf-8")
+    return {
+        "status": ("P2_SCRATCH_ONLY_EXACT_4_PLUS_4_REGISTERED_SHEATH_REBIND"
+                   if apply else "P2_SCRATCH_PREFLIGHT_EXACT_4_PLUS_4_SHEATH"),
+        "source_layer": base_name,
+        "before_sha256": before_sha,
+        "after_sha256": after_sha,
+        "owners": owners,
+        "counts": counts,
+        "physics_equations_changed": False,
+        "P3": "NOT_RUN",
+        "science": "SCIENCE_HOLD",
+    }
 
 
 def check_only(historical: Path, expected_head: str, output: Path,
@@ -83,6 +132,30 @@ def check_only(historical: Path, expected_head: str, output: Path,
             migration = option.canonicalize_staged_D_inputs(chemistry, ordered)
             type_remap = option.remap_staged_fem_types(chemistry, ordered)
             cutover = prepare(chemistry, ordered, case)
+            # prepare() already checks the exact archived eight BC owner
+            # signatures, rebinds their registered types, and transfers four
+            # initial states to Chemistry JSON in one scratch-only cutover.
+            # Reapplying migrate_exact_s6_fem_sheath/prepare_hybrid here would
+            # reject the *already converted* type and duplicate that cutover.
+            # Verify its source-bound receipt, not a second migration.
+            sheath_receipt = cutover["scratch_sheath_bc_cutover"]
+            owners = sheath_receipt["owners"]
+            expected_types = {
+                name: new_type for name, (new_type, _boundary)
+                in SHEATH_BC_SPEC.items()
+            }
+            if (sheath_receipt["status"] !=
+                    "SCRATCH_ONLY_EIGHT_REGISTERED_SHEATH_TYPES" or
+                sheath_receipt["owner_count"] != 8 or len(owners) != 8 or
+                {item["owner"]: item["new_type"] for item in owners} !=
+                    expected_types or
+                any(item["old_block_sha256"] ==
+                    item["new_block_sha256"] for item in owners) or
+                sheath_receipt["source_sha256"] ==
+                    sheath_receipt["staged_sha256"] or
+                cutover["scratch_json_initial_cutover"]["owner_count"] != 4 or
+                cutover["science"] != "SCIENCE_HOLD"):
+                raise ValueError("FLOW_S6_SHEATH_CUTOVER_RECEIPT_CHANGED")
             overlay = chemistry / "migrated_continuity.i"
             if digest(overlay) != cutover["overlay_sha256"]:
                 raise ValueError("P2_CHEMISTRY_OVERLAY_CONTENT_CHANGED")
@@ -102,6 +175,7 @@ def check_only(historical: Path, expected_head: str, output: Path,
                 "scratch_canonicalization": migration,
                 "scratch_fem_type_remap": type_remap,
                 "scratch_chemistry_cutover": cutover,
+                "scratch_sheath_bc_rebind": sheath_receipt,
                 "overlay_sha256": digest(overlay),
                 "P3": "NOT_RUN",
             }

@@ -27,11 +27,15 @@ RETIRED_BCS = (
     "PhysicsFEMElectronGroundedSheathBC",
     "PhysicsFEMElectronGroundedSheathEnergyBC",
     "PhysicsFEMIonWallBC",
-)
-ACTIVE_BCS = (
     "PhysicsFEMLogMolarElectronGroundedSheathBC",
     "PhysicsFEMLogMolarElectronGroundedSheathEnergyBC",
-    "PhysicsFEMLogMolarIonWallBC",
+    "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+    "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC",
+)
+ACTIVE_BCS = ("PhysicsFEMLogMolarIonWallBC",)
+ACTIVE_ELECTRON_BCS = (
+    "FEMElectronSheathBC",
+    "FEMElectronEnergySheathBC",
 )
 
 
@@ -50,6 +54,27 @@ def test_active_log_molar_wall_boundary_conditions_remain():
         assert f'class {name} : public ADIntegratedBC' in header
         assert f'registerMooseObject("PhysicsApp", {name});' in source
         assert f'{name}::computeQpResidual()' in source
+
+    # The retired composite grounded/field-limited electron classes are
+    # replaced by two explicitly registered 4+4 flux-preserving BC owners.
+    for name in ACTIVE_ELECTRON_BCS:
+        path = APP / f"src/bcs/{name}.C"
+        assert path.is_file(), f"Maintained electron sheath BC absent: {path}"
+        text = path.read_text(encoding="utf-8")
+        assert f"class {name} : public ADIntegratedBC" in text
+        assert text.count(f'registerMooseObject("PhysicsApp", {name});') == 1
+        assert f"{name}::computeQpResidual()" in text
+        assert 'getFunctor<ADReal>("wall_number_flux")' in text
+        assert "hasFaceSide(*fi, true)" in text
+        assert "hasFaceSide(*fi, false)" in text
+        for retired in RETIRED_BCS:
+            assert f'registerMooseObject("PhysicsApp", {retired});' not in text
+    assert "/ PHYSICS_CONSTANTS::N_A" in (
+        APP / "src/bcs/FEMElectronSheathBC.C"
+    ).read_text(encoding="utf-8")
+    assert "(2.5 * Te)" in (
+        APP / "src/bcs/FEMElectronEnergySheathBC.C"
+    ).read_text(encoding="utf-8")
 
 
 def test_active_wall_and_surface_charge_owners_remain():

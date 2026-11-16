@@ -11,9 +11,9 @@ ENTRYPOINTS = {
     "sol-runtime-integration.yml": {"push", "pull_request"},
     "ion-fvm-hybrid-staged-dt.yml": {"push", "pull_request", "workflow_dispatch"},
     "samuel-branch-delete.yml": {"push"},
-    # Exact-source, owner-approved DD P3 only; no automatic trigger.
+    # Registered on main by PR #616: DD manual P3 is now REQUIRED.
     "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
-    # S6: two-case 100us manual source-bound replay; NEVER scheduled/auto-run.
+    # Registered on main by PR #645: both S6 cases are now REQUIRED manual-only.
     "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
@@ -21,6 +21,13 @@ REUSABLE = {
     "physics-runtime-producer.yml": {"workflow_call"},
     "physics-runtime-consumer.yml": {"workflow_call"},
     "physics-runtime-strip-estimate.yml": {"workflow_call"},
+}
+# Draft-lane routes are checked by exact filename and event when present, but
+# are not required until their separately verified implementation is merged.
+# No historical branch-only one-shot policy is waived.
+OPTIONAL_ENTRYPOINTS = {
+    # FLOW #548: source-bound P0/P1/P2 only (no push).
+    "issue402-flow-native-p2-regression.yml": {"pull_request", "workflow_dispatch"},
 }
 FORBIDDEN_EVENTS = {
     "issue_comment", "issues", "discussion", "discussion_comment",
@@ -131,7 +138,7 @@ def check(root: Path) -> list[str]:
     expected = set(ENTRYPOINTS) | set(REUSABLE)
     errors: list[str] = []
     one_shots = sorted(name for name in actual if ONE_SHOT_NAME.fullmatch(name))
-    extra = sorted(actual - expected - set(one_shots))
+    extra = sorted(actual - expected - set(OPTIONAL_ENTRYPOINTS) - set(one_shots))
     missing = sorted(expected - actual)
     if extra:
         errors.append(f"unauthorized workflow files: {extra}")
@@ -140,7 +147,7 @@ def check(root: Path) -> list[str]:
         errors.extend(one_shot_errors(name, path.read_text(encoding="utf-8")))
     if missing:
         errors.append(f"missing canonical workflow files: {missing}")
-    for name, expected_events in {**ENTRYPOINTS, **REUSABLE}.items():
+    for name, expected_events in {**ENTRYPOINTS, **REUSABLE, **OPTIONAL_ENTRYPOINTS}.items():
         path = workflow_dir / name
         if not path.is_file():
             continue
@@ -197,6 +204,32 @@ def self_test() -> int:
             body = "name: x\non:\n" + "".join(f"  {event}:\n" for event in sorted(allowed_events)) + "jobs: {}\n"
             (workflow_dir / name).write_text(body)
         assert not check(root), check(root)
+        # DD registration on default main is binding: absence, disabling or
+        # adding push to its maintained manual trigger is a policy failure.
+        dd_manual = workflow_dir / "issue541-arch-dd-p3-replay.yml"
+        dd_bytes = dd_manual.read_text(encoding="utf-8")
+        dd_manual.unlink()
+        assert any("missing canonical workflow files:" in error and
+                   "issue541-arch-dd-p3-replay.yml" in error for error in check(root))
+        dd_manual.write_text(dd_bytes.replace("  workflow_dispatch:", "  push:", 1), encoding="utf-8")
+        assert any("issue541-arch-dd-p3-replay.yml: events=" in error for error in check(root))
+        dd_manual.write_text(dd_bytes.replace("  workflow_dispatch:", "  workflow_dispatch:\n  push:", 1), encoding="utf-8")
+        assert any("issue541-arch-dd-p3-replay.yml: events=" in error for error in check(root))
+        dd_manual.write_text(dd_bytes, encoding="utf-8")
+        assert not check(root), check(root)
+        # S6 is now registered on main too: reject missing, changed or
+        # additional automatic events independently of DD and FLOW.
+        s6_manual = workflow_dir / "issue541-arch-s6-p3-p4-replay.yml"
+        s6_bytes = s6_manual.read_text(encoding="utf-8")
+        s6_manual.unlink()
+        assert any("missing canonical workflow files:" in error and
+                   "issue541-arch-s6-p3-p4-replay.yml" in error for error in check(root))
+        s6_manual.write_text(s6_bytes.replace("  workflow_dispatch:", "  push:", 1), encoding="utf-8")
+        assert any("issue541-arch-s6-p3-p4-replay.yml: events=" in error for error in check(root))
+        s6_manual.write_text(s6_bytes.replace("  workflow_dispatch:", "  workflow_dispatch:\n  push:", 1), encoding="utf-8")
+        assert any("issue541-arch-s6-p3-p4-replay.yml: events=" in error for error in check(root))
+        s6_manual.write_text(s6_bytes, encoding="utf-8")
+        assert not check(root), check(root)
         ci_path = workflow_dir / "ci.yml"
         valid_ci = ci_path.read_text(encoding="utf-8")
         ci_path.write_text(valid_ci.replace("edited, ", ""), encoding="utf-8")
@@ -231,6 +264,28 @@ def self_test() -> int:
         )
         assert any("self-path-triggered" in error for error in check(root))
         (workflow_dir / one_shot_name).unlink()
+
+        # FLOW remains optional; both registered DD and S6 are required.
+        assert not check(root), check(root)
+        for name, allowed_events in OPTIONAL_ENTRYPOINTS.items():
+            path = workflow_dir / name
+            body = "name: staged\non:\n" + "".join(
+                f"  {event}:\n" for event in sorted(allowed_events)
+            ) + "jobs: {}\n"
+            path.write_text(body, encoding="utf-8")
+            assert not check(root), (name, check(root))
+            # A previously approved route with an extra push must fail.
+            path.write_text(body.replace("on:\n", "on:\n  push:\n", 1), encoding="utf-8")
+            assert any(f"{name}: events=" in error for error in check(root)), name
+            path.write_text(body, encoding="utf-8")
+        assert not check(root), check(root)
+        rogue = workflow_dir / "issue541-arch-rogue-p3.yml"
+        rogue.write_text("name: unsafe\non:\n  workflow_dispatch:\njobs: {}\n", encoding="utf-8")
+        assert any("unauthorized workflow files:" in error for error in check(root))
+        rogue.unlink()
+        for name in OPTIONAL_ENTRYPOINTS:
+            (workflow_dir / name).unlink()
+        assert not check(root), check(root)
 
         (workflow_dir / "bad.yml").write_text("name: bad\non:\n  issue_comment:\njobs: {}\n")
         assert check(root)

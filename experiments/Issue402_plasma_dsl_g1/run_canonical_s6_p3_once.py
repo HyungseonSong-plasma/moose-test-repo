@@ -8,7 +8,9 @@ acceptance is permitted. One 100-us/461-frame solve per requested case.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
+import math
 import importlib.util
 import json
 import os
@@ -30,7 +32,8 @@ def sha(path: Path) -> str:
     return option.sha_file(path)
 
 
-def verify_canonical_exodus(exodus: Path, *, require_energy: bool = False) -> dict:
+def verify_canonical_exodus(exodus: Path, *, require_energy: bool = False,
+                            bounded_three_steps: bool = False) -> dict:
     """Require the new solver to emit canonical fields, not archived aliases."""
     import numpy as np
     from scipy.io import netcdf_file
@@ -53,7 +56,13 @@ def verify_canonical_exodus(exodus: Path, *, require_energy: bool = False) -> di
             if elements.count(expected) != 1 or archived in elements:
                 raise ValueError("P3_NONCANONICAL_ION_STATE")
         times = np.asarray(handle.variables["time_whole"][:], dtype=float)
-        if len(times) != 461 or abs(float(times[-1]) - 1e-4) > 1e-9:
+        expected_count = 4 if bounded_three_steps else 461
+        expected_time = 3e-9 if bounded_three_steps else 1e-4
+        if (len(times) != expected_count or
+                abs(float(times[0])) > 1e-15 or
+                abs(float(times[-1]) - expected_time) > (1e-12 if bounded_three_steps else 1e-9) or
+                any(not math.isfinite(float(v)) for v in times) or
+                any(float(b) <= float(a) for a, b in zip(times, times[1:]))):
             raise ValueError("P3_EXODUS_TIMEGRID_MISMATCH")
         result = {"nodal_electron": "log_e",
                   "elemental_ions": ["log_O2p", "log_Om", "log_Op"],
@@ -63,9 +72,33 @@ def verify_canonical_exodus(exodus: Path, *, require_energy: bool = False) -> di
         return result
 
 
+def verify_bounded_three_step_csv(path: Path) -> None:
+    """Initial point plus exactly three finite, positive-time real Native steps."""
+    with path.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames or "time" not in reader.fieldnames:
+            raise ValueError("P3_3STEP_CSV_HEADER_MISSING")
+        rows = list(reader)
+    if len(rows) != 4:
+        raise ValueError("P3_3STEP_CSV_MUST_HAVE_INITIAL_PLUS_THREE_ROWS")
+    times = []
+    for row in rows:
+        if any(value is None or not value.strip() or
+               not math.isfinite(float(value)) for value in row.values()):
+            raise ValueError("P3_3STEP_CSV_NONFINITE_OR_MISSING")
+        times.append(float(row["time"]))
+    if (abs(times[0]) > 1e-15 or abs(times[-1] - 3e-9) > 1e-12 or
+            any(b <= a for a, b in zip(times, times[1:]))):
+        raise ValueError("P3_3STEP_CSV_TIMEGRID_MISMATCH")
+
+
 def run(case: str, historical: Path, expected_head: str,
         output: Path, timeout_seconds: int, *, chemistry_mode: bool = False,
-        hybrid_json: bool = False) -> dict:
+        hybrid_json: bool = False,
+        bounded_three_steps: bool = False) -> dict:
+    if bounded_three_steps and (not hybrid_json or not chemistry_mode or
+                               timeout_seconds > 3600):
+        raise ValueError("P3_3STEP_REQUIRES_HYBRID_AND_BOUNDED_BUDGET")
     if case not in option.CASES or not (600 <= timeout_seconds <= 19800):
         raise ValueError("P3_INVALID_CASE_OR_BUDGET")
     if hybrid_json and not chemistry_mode:
@@ -128,7 +161,8 @@ def run(case: str, historical: Path, expected_head: str,
                 # from the staged public 400-W S6 deck. Every overlapping
                 # historical owner is validated and retired in SCRATCH only.
                 from chemistry.prepare_hybrid_json_s6 import prepare as prepare_hybrid
-                hybrid = prepare_hybrid(staged / option.p2.CHEM, ordered, case)
+                hybrid = prepare_hybrid(staged / option.p2.CHEM, ordered, case,
+                                        chemistry_cutover=cutover)
                 status["hybrid_json_ownership_cutover"] = hybrid
                 if sha(sidecar) != hybrid["overlay_sha256"]:
                     raise ValueError("P3_HYBRID_OVERLAY_SHA_MISMATCH")
@@ -181,7 +215,9 @@ def run(case: str, historical: Path, expected_head: str,
              "trap 'rm -rf /case/.jitcache' EXIT; "
              "exec /workspace/physics_app/physics-opt -i " +
              " ".join(shlex.quote(value) for value in ordered) +
-             " Outputs/file_base=canonical_p3/run/plasma"),
+             " Outputs/file_base=canonical_p3/run/plasma" +
+             (" Executioner/num_steps=3 Executioner/end_time=3e-9"
+              if bounded_three_steps else "")),
         ]
         with (output / "native_P3.log").open("wb") as logfile:
             try:
@@ -197,15 +233,19 @@ def run(case: str, historical: Path, expected_head: str,
         csv_file = simulated / "plasma.csv"
         if not exodus.is_file() or not csv_file.is_file():
             raise ValueError("P3_EXODUS_OR_CSV_MISSING")
-        verify_native_csv(csv_file)
+        if bounded_three_steps:
+            verify_bounded_three_step_csv(csv_file)
+        else:
+            verify_native_csv(csv_file)
         status["canonical_fields"] = (
-            verify_canonical_exodus(exodus, require_energy=True)
+            verify_canonical_exodus(exodus, require_energy=True,
+                                    bounded_three_steps=bounded_three_steps)
             if chemistry_mode else verify_canonical_exodus(exodus))
         published_exodus = results / "plasma.e"
         published_csv = results / "plasma.csv"
         shutil.copyfile(exodus, published_exodus)
         shutil.copyfile(csv_file, published_csv)
-        status["P3"] = "PASS"
+        status["P3"] = "BOUNDED_3_STEP_PASS" if bounded_three_steps else "PASS"
         status["native_exodus_sha256"] = sha(published_exodus)
         status["native_csv_sha256"] = sha(published_csv)
         p3_manifest = results / "manifest.json"
@@ -215,7 +255,8 @@ def run(case: str, historical: Path, expected_head: str,
             "physics_mode": ("chemistry_hybrid_json_native" if hybrid_json else
                              "chemistry" if chemistry_mode else "transport_only"),
             "source_sha": expected_head, "oci_image": option.OCI,
-            "P3": "PASS", "science": "SCIENCE_HOLD",
+            "P3": status["P3"], "science": "SCIENCE_HOLD",
+            "native_steps": 3 if bounded_three_steps else None,
             "files": {
                 name: {"sha256": sha(results / name)}
                 for name in (("plasma.e", "plasma.csv",
@@ -223,6 +264,11 @@ def run(case: str, historical: Path, expected_head: str,
                              else ("plasma.e", "plasma.csv"))
             }
         }, sort_keys=True, indent=2) + "\n")
+        if bounded_three_steps:
+            status["P4"] = "NOT_RUN"
+            status["status"] = "BOUNDED_3_STEP_PASS_SCIENCE_HOLD"
+            status["native_steps"] = 3
+            return status
         ref = ROOT / "experiments/Issue493_s6_boltzmann/reference"
         overlay = analyze(
             exodus=published_exodus, csv_file=published_csv,
