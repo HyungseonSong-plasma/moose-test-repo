@@ -128,7 +128,10 @@ def run(case: str, historical: Path, expected_head: str,
                 # from the staged public 400-W S6 deck. Every overlapping
                 # historical owner is validated and retired in SCRATCH only.
                 from chemistry.prepare_hybrid_json_s6 import prepare as prepare_hybrid
-                hybrid = prepare_hybrid(staged / option.p2.CHEM, ordered, case)
+                hybrid = prepare_hybrid(
+                    staged / option.p2.CHEM, ordered, case,
+                    chemistry_cutover=cutover,
+                )
                 status["hybrid_json_ownership_cutover"] = hybrid
                 if sha(sidecar) != hybrid["overlay_sha256"]:
                     raise ValueError("P3_HYBRID_OVERLAY_SHA_MISMATCH")
