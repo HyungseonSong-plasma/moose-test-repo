@@ -317,12 +317,12 @@ def reconcile_staged_D_json_initials(chemistry: Path, ordered: list[str]) -> dic
 
 
 
-def retire_staged_B_d1_observations(chemistry: Path, ordered: list[str]) -> dict:
-    """Remove only exact historical D1 observer pairs from disposable B P2.
+def rebind_staged_B_d1_observations(chemistry: Path, ordered: list[str]) -> dict:
+    """Preserve and rebind exact historical D1 observers in disposable B P2.
 
     No physics kernel, surface-charge owner, mesh or time control may change.
-    Historical B and scientific D1 output provenance remain immutable and
-    must NOT be promoted from this diagnostic-free construction check.
+    Historical B and scientific D1 output provenance remain immutable; the
+    scratch-only observation type rebinding cannot prove numerical parity.
     """
     if (len(ordered) != 10 or len({Path(item).name for item in ordered}) != 10
             or any(Path(item).name != item.split("/")[-1] or
@@ -386,14 +386,34 @@ def retire_staged_B_d1_observations(chemistry: Path, ordered: list[str]) -> dict
     if any(re.search(r"(?m)^    type\s*=\s*" + re.escape(old) + r"\s*$",
                      remaining) for old in retired_types):
         raise ValueError("S6_B_D1_UNKNOWN_RETIRED_OBSERVER_REMAINS")
-    # This is NOT an original-archive P2 check, nor a P3 scientific replay.
-    first.write_text(remaining, encoding="utf-8")
+    # Preserve all 14 validated lower-D observations; replace the two
+    # unregistered factory names only in a disposable B P2 scratch layer.
+    # The virtual removal above proves exact historical owners and excludes
+    # additional live consumers, but is never written to disk.
+    observer_types = {
+        "PhysicsLowerDSurfaceCurrentProbeAux":
+            (1 + len(instrument.FIELDS), "LowerDSurfaceCurrentProbeAux"),
+        "PhysicsWaferD1GeometryProbeAux":
+            (len(instrument.GEOM), "WaferD1GeometryProbeAux"),
+    }
+    staged_input = original
+    for old_type, (expected_count, new_type) in observer_types.items():
+        old_line = "    type = " + old_type + "\n"
+        if original.count(old_line) != expected_count:
+            raise ValueError("S6_B_D1_REBIND_OWNER_COUNT_" + old_type)
+        staged_input = staged_input.replace(old_line, "    type = " + new_type + "\n")
+    if any(old_type in staged_input for old_type in observer_types):
+        raise ValueError("S6_B_D1_RETIRED_FACTORY_REMAINS")
+    # This is input-construction compatibility, not original-archive/P3
+    # scientific or historical observable-value parity.
+    first.write_text(staged_input, encoding="utf-8")
     return {
-        "status": "SCRATCH_ONLY_B_RETIRED_D1_OBSERVERS_REMOVED",
+        "status": "SCRATCH_ONLY_B_D1_OBSERVERS_REBOUND",
         "observer_pairs": len(receipts),
+        "factory_type_rebindings": sum(count for count, _ in observer_types.values()),
         "native_source_sha256": hashlib.sha256(original.encode()).hexdigest(),
-        "native_staged_sha256": hashlib.sha256(remaining.encode()).hexdigest(),
-        "retired_owner_sha256": receipts,
+        "native_staged_sha256": hashlib.sha256(staged_input.encode()).hexdigest(),
+        "validated_historical_owner_sha256": receipts,
         "B_historical_observation_parity": "NOT_CLAIMED",
         "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
     }
@@ -919,9 +939,9 @@ def execute(historical: Path, binary: Path, expected_head: str,
                                   "s6_c0_physics_base_no_d1.i") if variant == "D" else None
                         ordered = p2.stage(ROOT, historical, case, old_variant,
                                            staged, manifest, d_base_source=d_base)
-                        scratch_retired_B = None
+                        scratch_rebound_B = None
                         if variant == "B":
-                            scratch_retired_B = retire_staged_B_d1_observations(
+                            scratch_rebound_B = rebind_staged_B_d1_observations(
                                 staged / p2.CHEM, ordered)
                         if variant == "D":
                             overlay = staged / p2.CHEM / "migrated_continuity.i"
@@ -956,8 +976,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         report["checks"][case][variant]["scratch_wall_cutover"] = scratch_wall
                         report["checks"][case][variant]["scratch_mean_energy_cutover"] = scratch_mean_energy
                         report["checks"][case][variant]["scratch_sheath_bc_cutover"] = scratch_sheath
-                        if scratch_retired_B is not None:
-                            report["checks"][case][variant]["scratch_B_d1_retirement"] = scratch_retired_B
+                        if scratch_rebound_B is not None:
+                            report["checks"][case][variant]["scratch_B_d1_observer_rebind"] = scratch_rebound_B
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                             report["checks"][case][variant]["scratch_json_initials"] = scratch_initials

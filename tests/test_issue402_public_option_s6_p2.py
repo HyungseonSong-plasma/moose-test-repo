@@ -221,7 +221,7 @@ def test_s6_D_json_initials_retire_exact_native_solver_owners(tmp_path):
 
 
 
-def test_B_retired_D1_observers_removed_only_when_exactly_self_contained(tmp_path):
+def test_B_D1_observers_rebound_only_when_exactly_self_contained(tmp_path):
     """Historical observer source and negative inputs are never rewritten."""
     import importlib.util
     import pytest
@@ -291,14 +291,22 @@ def test_B_retired_D1_observers_removed_only_when_exactly_self_contained(tmp_pat
 
     original_folder = stage("original")
     snapshot = {file.name: file.read_bytes() for file in original_folder.iterdir()}
-    receipt = module.retire_staged_B_d1_observations(original_folder, ordered)
-    assert receipt["status"] == "SCRATCH_ONLY_B_RETIRED_D1_OBSERVERS_REMOVED"
+    receipt = module.rebind_staged_B_d1_observations(original_folder, ordered)
+    assert receipt["status"] == "SCRATCH_ONLY_B_D1_OBSERVERS_REBOUND"
     assert receipt["observer_pairs"] == 14
+    assert receipt["factory_type_rebindings"] == 14
     assert receipt["science"] == "SCIENCE_HOLD"
     assert receipt["B_historical_observation_parity"] == "NOT_CLAIMED"
     after = (original_folder / names[0]).read_text()
     assert "type = PhysicsLowerDSurfaceCurrent\n" in after
     assert "type = PhysicsADSurfaceChargePoissonBC\n" in after
+    assert after == base.replace(
+        "    type = PhysicsLowerDSurfaceCurrentProbeAux\n",
+        "    type = LowerDSurfaceCurrentProbeAux\n").replace(
+        "    type = PhysicsWaferD1GeometryProbeAux\n",
+        "    type = WaferD1GeometryProbeAux\n")
+    assert after.count("type = LowerDSurfaceCurrentProbeAux") == len(fields)
+    assert after.count("type = WaferD1GeometryProbeAux") == len(geometry)
     assert "PhysicsLowerDSurfaceCurrentProbeAux" not in after
     assert "PhysicsWaferD1GeometryProbeAux" not in after
     assert all((original_folder / name).read_bytes() == snapshot[name]
@@ -313,7 +321,7 @@ def test_B_retired_D1_observers_removed_only_when_exactly_self_contained(tmp_pat
         folder = stage(label, contents, extra)
         before = {file.name: file.read_bytes() for file in folder.iterdir()}
         with pytest.raises(ValueError):
-            module.retire_staged_B_d1_observations(folder, ordered)
+            module.rebind_staged_B_d1_observations(folder, ordered)
         assert before == {file.name: file.read_bytes() for file in folder.iterdir()}
     assert instrument_path.read_bytes() == source_text
 
@@ -786,7 +794,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "CASES": ("417", "941"),
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
-        "retire_staged_B_d1_observations": lambda *_args: {"status": "SYNTHETIC_B_RETIREMENT"},
+        "rebind_staged_B_d1_observations": lambda *_args: {"status": "SYNTHETIC_B_OBSERVER_REBIND"},
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "reconcile_staged_D_json_initials": lambda *_args: {"status": "SYNTHETIC_JSON_INITIALS"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
