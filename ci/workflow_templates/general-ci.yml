@@ -44,6 +44,9 @@ jobs:
           python3 -m py_compile ci/guards/issue541_evidence_identity_guard.py
           python3 ci/guards/issue541_evidence_identity_guard.py --self-test
       - name: Verify real historical #578 CORE Native PR HEAD provenance (scope only)
+        # PR_HEAD requires a still-open PR. Once #578 is merged, preserve its
+        # accepted premerge receipt and run the separate merged-CI audit below.
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 578 }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
