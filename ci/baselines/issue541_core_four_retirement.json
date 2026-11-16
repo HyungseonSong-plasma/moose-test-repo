@@ -164,8 +164,8 @@
       "original_p3": "NOT_RUN",
       "source_event": "push:branch-specific,self-path",
       "required_marker": "FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS",
-      "retirement": "KEEP_HOLD",
-      "reason": "Replacement exact-head P0/P1/P2 verified and independent byte custody verified; candidate removal needs a scoped same-HEAD gate.",
+      "retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+      "reason": "Independent D3 deletion from #558 at 436c5b1c (CI 43835541341, CORE P0 133191130258 and real Native P1/P2 133191130353 SUCCESS, artifacts 14210712331/14211160676); source-bound four-live-species and missing SCCM/boundary/derived-state rejections verified again #578 9e71762 (CI 43853584740 CORE jobs SUCCESS). Staged only on Draft, original main untouched; trigger branch absent, dynamic/off-platform caller-zero unverified, final integration and other guard gates HOLD.",
       "original_success": {
         "run_id": 43492369825,
         "source_sha": "e5e586595948919a694ecd2bb19b48dd60a4751e",
@@ -180,7 +180,13 @@
         "readback_bytes": 31731,
         "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
       },
-      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND"
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "retirement_candidate_source_head": "845ce60d197747069ccb4f82961498c1f7445444",
+      "replacement_parent_ci_run": 43835541341,
+      "rollback_original_blob": "c6068680c0c7083e38ec03d86c5433eb49db94bf",
+      "wave1d_caller_zero": "UNVERIFIED",
+      "wave1d_integration": "HOLD",
+      "wave1d_source_run": 43835541341
     }
   ],
   "backup": {
