@@ -113,10 +113,10 @@ def s6_staged_absence_evidence(readme: str, replay: str) -> bool:
     """S6-only staged-removal proof; never promote DD or A1 retirement."""
     if not all(marker in readme for marker in S6_STAGED_MARKERS):
         return False
-    if "\\non:\\n" not in replay:
+    if "\non:\n" not in replay:
         return False
-    trigger = replay.split("\\non:\\n", 1)[1].split("\\npermissions:", 1)[0]
-    return (trigger.startswith("  workflow_dispatch:\\n") and
+    trigger = replay.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
+    return (trigger.startswith("  workflow_dispatch:\n") and
             all(event not in trigger for event in
                 ("  push:", "  pull_request:", "  schedule:")) and
             "ISSUE541_S6_400W_100US_BOTH_CASES_APPROVED" in replay and
