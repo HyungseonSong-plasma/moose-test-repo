@@ -432,8 +432,8 @@ def remap_staged_sheath_bcs(
         is_energy = registered == "FEMElectronEnergySheathBC"
         expected = {
             "type": canonical.OLD_SHEATH_TYPES[registered],
-            "variable": ("log_energy" if variant == "B" else "log_e_energy")
-                        if is_energy else ("log_ne" if variant == "B" else "log_e"),
+            "variable": ("log_energy" if is_energy else
+                         ("log_ne" if variant == "B" else "log_e")),
             "wall_number_flux": "e_wall_number_flux",
             "boundary": boundary,
         }
@@ -467,10 +467,42 @@ def remap_staged_sheath_bcs(
            for old in legacy_types):
         raise ValueError("S6_SHEATH_UNREGISTERED_TYPE_REMAINS")
     if variant == "D":
-        # Reconcile verbatim against the existing independently tested D
-        # migration. This prevents drift between the two current P2 routes.
-        donor_revised, donor_receipts = canonical.migrate_exact_s6_fem_sheath(source)
-        if donor_revised != revised or len(donor_receipts) != 8:
+        # This P2 option overlays continuity only. Its energy equation is
+        # still native log_energy; the hybrid donor generates log_e_energy.
+        # Compare a BC-local view only, without rewriting actual D inputs.
+        energy_owners = {
+            name for name, (kind, _boundary) in canonical.SHEATH_BC_SPEC.items()
+            if kind == "FEMElectronEnergySheathBC"
+        }
+
+        def hybrid_energy_bc_view(input_text: str) -> str:
+            matches = []
+            for item in canonical.BLOCK.finditer(input_text):
+                if item.group("name") not in energy_owners:
+                    continue
+                roots = re.findall(
+                    r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
+                    input_text[:item.start()])
+                if roots[-1:] != ["BCs"]:
+                    continue
+                if item.group(0).count("    variable = log_energy\n") != 1:
+                    raise ValueError("S6_SHEATH_D_NATIVE_ENERGY_OWNER_MISMATCH")
+                matches.append(item)
+            if len(matches) != 4:
+                raise ValueError("S6_SHEATH_D_EXPECTED_FOUR_ENERGY_OWNERS")
+            for item in reversed(matches):
+                before = item.group(0)
+                view = before.replace(
+                    "    variable = log_energy\n",
+                    "    variable = log_e_energy\n", 1)
+                input_text = (input_text[:item.start()] +
+                              view + input_text[item.end():])
+            return input_text
+
+        donor_revised, donor_receipts = canonical.migrate_exact_s6_fem_sheath(
+            hybrid_energy_bc_view(source))
+        if (donor_revised != hybrid_energy_bc_view(revised)
+                or len(donor_receipts) != 8):
             raise ValueError("S6_SHEATH_DONOR_REPLAY_MISMATCH")
 
     # All eight blocks are verified before the single scratch write.
