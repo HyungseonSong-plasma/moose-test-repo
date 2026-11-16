@@ -218,7 +218,7 @@ def self_test(m: dict, archives: dict[str, bytes], ci: str,
         test = record["replacement"]["required_p0_tests"][0]
         scoped = job_content(ci, CASES[case]["p0_job"])
         require(test in scoped, "SELFTEST_FIXTURE_MISSING:" + case)
-        scoped_bad = scoped.replace(test, "REMOVED_" + test, 1)
+        scoped_bad = scoped.replace(test, "REMOVED_HISTORICAL_TEST", 1)
         reject("DROPPED_TEST_" + case, m,
                test_ci=ci.replace(scoped, scoped_bad, 1))
     bad = copy.deepcopy(m)
