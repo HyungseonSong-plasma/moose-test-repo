@@ -163,9 +163,9 @@ def self_test() -> None:
 
         precheck = root / "fake-precheck-rejection"
         precheck.write_text(
-            "#!/usr/bin/env python3\\n"
-            "print('SYNTHETIC_P2_REJECTION')\\n"
-            "raise SystemExit(23)\\n")
+            "#!/usr/bin/env python3\n"
+            "print('SYNTHETIC_P2_REJECTION')\n"
+            "raise SystemExit(23)\n")
         precheck.chmod(0o755)
         no_p3 = lane(precheck, root / "precheck", "json_sheath_wall",
                      {"synthetic": True}, "[Mesh]\n[]\n")
