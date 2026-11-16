@@ -1,0 +1,264 @@
+name: Issue402 FLOW maintained EI-H and reaction-reduction Native P2
+
+# Governed, exact-source replacement for TWO historic, branch-only Native
+# one-shots. This P0/P1/P2 gate never executes solver time steps/P3.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue402-flow-native-p2-regression.yml'
+      - '.github/workflows/issue402-rate-coef-ideal-gas-native-once.yml'
+      - '.github/workflows/issue402-reaction-reduction-native-once.yml'
+      - 'physics_app/**'
+      - 'experiments/Issue402_plasma_dsl_g1/**'
+      - 'tests/test_issue402_reaction_reduction_p2_only.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flow-native-p2:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      LEGACY_YAML_ARCHIVE_SHA: 71e112eb05d4645c82aab8861b99d6952ac4ac3e
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      PINNED_BASE: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+    steps:
+      - name: Checkout exact active source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: control
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout pinned public historical S6 source
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout pinned pre-retirement workflow evidence
+        uses: actions/checkout@v4
+        with:
+          ref: 71e112eb05d4645c82aab8861b99d6952ac4ac3e
+          path: retired_workflow_archive
+          fetch-depth: 1
+          persist-credentials: false
+      - name: P0 - pin active and historical source, OCI and old workflow SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C control rev-parse HEAD)" = "$EXPECTED_HEAD"
+          test "$(git -C historical rev-parse HEAD)" = "$HISTORICAL_SHA"
+          test "$(git -C retired_workflow_archive rev-parse HEAD)" = "$LEGACY_YAML_ARCHIVE_SHA"
+          test "$(git -C retired_workflow_archive hash-object .github/workflows/issue402-rate-coef-ideal-gas-native-once.yml)" = 64164c097ec8f7831e67b80b317144cd97ba9ee8
+          test "$(git -C retired_workflow_archive hash-object .github/workflows/issue402-reaction-reduction-native-once.yml)" = 91313152e7e7df3bd0256a2180f489774cfa6171
+          test ! -d historical/"$CHEM"/private_rates
+          test ! -e control/physics_app/physics-opt
+          grep -Fq "$OCI" control/physics_app/dependencies.lock
+          python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py --control control --mode preflight
+          echo "FLOW_NATIVE_P0_SOURCE_PIN_PASS P3=NOT_RUN SCIENCE_HOLD"
+      - name: Set up source-bound P0 Python dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install historical public S6 P2 Python requirements
+        run: >-
+          python3 -m pip install --disable-pip-version-check --quiet
+          'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          -r control/requirements-evidence-engine.txt
+          -r control/requirements-ontology.txt
+      - name: P0 - verify Native rate fixture mutation guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          python3 -m physics_app.ci.check_issue402_json_rate_native_p2 --self-test
+          python3 -m physics_app.ci.check_issue402_reaction_reduction_p2_only --self-test
+          python3 -m pytest -q \
+            tests/test_issue402_reaction_reduction_p2_only.py \
+            tests/test_issue541_flow_dbase_sheath_p2.py \
+            tests/test_issue402_hybrid_json_s6_owner_preflight.py
+          echo "FLOW_REACTION_REDUCTION_P0_PASS P3=NOT_RUN SCIENCE_HOLD"
+      - name: P0 - execute full historical EI10/EI16 reaction reduction source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          export ISSUE402_HISTORICAL_PUBLIC_TABLE="$GITHUB_WORKSPACE/historical/.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt"
+          test -s "$ISSUE402_HISTORICAL_PUBLIC_TABLE"
+          python3 -m pytest -q \
+            tests/test_issue402_d_base_staging.py \
+            tests/test_issue402_s6_electron_transport_compatibility.py \
+            tests/test_issue402_wall_semantic_parity.py \
+            tests/test_issue402_species_functor_naming.py \
+            tests/test_issue402_s6_wall_naming_staging.py \
+            tests/test_retired_legacy_physics_owners_contract.py \
+            tests/test_issue402_s6_chemistry_run_templates.py \
+            tests/test_issue402_full_s6_p2_only.py \
+            tests/test_electron_impact_rate_material_prefix.py \
+            tests/test_issue402_retired_plasma_closures.py \
+            tests/test_issue402_reaction_reduction_p2_only.py \
+            tests/characterization/test_issue192_s5r.py \
+            tests/characterization/test_issue192_s5r_runtime.py \
+            tests/test_issue402_material_class_names.py \
+            tests/test_issue402_transport_material_consolidation.py \
+            tests/test_issue402_species_transport_rule.py \
+            tests/test_issue402_dd_json_fem_fvm_wiring.py \
+            tests/test_issue402_public_option_s6_p2.py \
+            tests/test_issue402_no_legacy_material_registration.py
+          python3 physics_app/ci/check_plasma_closures_contract.py
+          python3 physics_app/ci/check_e8_elastic_ei19_implementation.py
+          python3 physics_app/ci/check_r2_o2_ionization_implementation.py
+          python3 physics_app/ci/check_r3_o2s_excitation_implementation.py
+          python3 physics_app/ci/check_e8_ei10_energy_contract.py
+          python3 physics_app/ci/check_e8_ei10_energy_implementation.py
+          python3 physics_app/ci/check_e8_ei16_energy_contract.py
+          python3 physics_app/ci/check_standard_moose_energy_projection.py --self-test
+          # The historical RateCoeffMaterial owner has itself been retired:
+          # the maintained EI/H rate owners are separate canonical classes.
+          for name in EIRateCoefMaterial HRateCoefMaterial DDTransportMaterial NVTransportMaterial; do
+            test -f "physics_app/include/materials/$name.h"
+            test -f "physics_app/src/materials/$name.C"
+          done
+          for name in RateCoeffMaterial ElectronImpactRateMaterial PhysicsElectronImpactRateMaterial DDMaterial NVMaterial PhysicsThermalDiffusionMaterial; do
+            test ! -e "physics_app/include/materials/$name.h"
+            test ! -e "physics_app/src/materials/$name.C"
+          done
+          echo "FLOW_EI10_EI16_ORIGINAL_REDUCTION_FULL_P0_PASS P3=NOT_RUN SCIENCE_HOLD"
+      - name: P0 - prepare original pinned public 400W historical mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$SRC" | cut -d' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA="$HISTORICAL_SHA"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          test ! -e "$CHEM/private_rates"
+          echo "FLOW_PINNED_PUBLIC_S6_400W_MESH_P0_PASS"
+      - name: P1 - build exact source PhysicsApp in pinned OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          mkdir -p experiments/Issue402_plasma_dsl_g1/evidence
+          docker pull "$OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
+          python3 - "$EXPECTED_HEAD" "$OCI" <<'PY'
+          import hashlib, json, pathlib, sys
+          sha,oci=sys.argv[1:]
+          E=pathlib.Path("experiments/Issue402_plasma_dsl_g1/evidence")
+          def digest(path):
+              h=hashlib.sha256()
+              with open(path,"rb") as f:
+                  for chunk in iter(lambda:f.read(1048576),b""):h.update(chunk)
+              return h.hexdigest()
+          assert not (E/"native_p1_identity.json").exists()
+          (E/"native_p1_identity.json").write_text(json.dumps({
+              "schema":"issue402.native_p1.job_local.v1",
+              "source_sha":sha,
+              "oci_image":oci,
+              "binary_sha256":digest("physics_app/physics-opt"),
+              "build_log_sha256":digest(E/"native_build.log"),
+              "reusable_scope":"same_exact_head_ci_job_only",
+              "P1":"PASS", "P3":"NOT_RUN", "science":"SCIENCE_HOLD"
+          },indent=2,sort_keys=True)+"\n")
+          PY
+          echo "FLOW_NATIVE_SOURCE_BOUND_P1_PASS"
+      - name: P2 - exact binary EI-H ideal-gas and direct existing material
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e EXPECTED_HEAD="$EXPECTED_HEAD" -e PINNED_BASE="$OCI" \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              python3 -m physics_app.ci.check_issue402_json_rate_native_p2 \
+                --executable /workspace/physics_app/physics-opt \
+                --p1-identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
+              cd /workspace/physics_app/ci
+              /workspace/physics_app/physics-opt --check-input -i plasma_direct_existing_materials_smoke.i
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/flow_ideal_gas_direct_native_p2.log
+          echo "FLOW_IDEAL_GAS_DIRECT_MATERIAL_NATIVE_P2_PASS P3=NOT_RUN SCIENCE_HOLD"
+      - name: P2 - EI10 EI16 four-fixture Native reduction
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              python3 -m physics_app.ci.check_issue402_reaction_reduction_p2_only \
+                --executable /workspace/physics_app/physics-opt
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/flow_reduction_native_p2.log
+          echo "FLOW_EI10_EI16_FOUR_FIXTURE_NATIVE_P2_PASS P3=NOT_RUN SCIENCE_HOLD"
+      - name: P2 - public pinned D-base 417 and 941 Native input only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          python3 experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py \
+            --historical ../historical --expected-head "$EXPECTED_HEAD" \
+            --case both --output "$RUNNER_TEMP/flow_issue402_dbase_native_p2" \
+            --timeout-seconds 600 \
+            2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/flow_dbase_native_p2_driver.log
+          python3 - "$RUNNER_TEMP/flow_issue402_dbase_native_p2/readiness.json" "$EXPECTED_HEAD" <<'PY'
+          import json, pathlib, sys
+          j=json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert j["source_sha"] == sys.argv[2]
+          assert j["historical_sha"] == "29d1acc6ef7969908b86719e4b95c73a1565136d"
+          assert j["P2"] == "PASS"
+          assert set(j["cases"]) == {"417","941"}
+          assert all(j["cases"][x]["P2"] == "PASS" for x in ("417","941"))
+          assert j["P3"] == "NOT_RUN" and j["science"] == "SCIENCE_HOLD"
+          print("FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS P3_NOT_RUN SCIENCE_HOLD")
+          PY
+      - name: Upload source-bound, public P1/P2 evidence (no mesh or rates)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-flow-native-p2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            control/experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
+            control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
+            control/experiments/Issue402_plasma_dsl_g1/evidence/flow_ideal_gas_direct_native_p2.log
+            control/experiments/Issue402_plasma_dsl_g1/evidence/flow_reduction_native_p2.log
+            control/experiments/Issue402_plasma_dsl_g1/evidence/flow_dbase_native_p2_driver.log
+            ${{ runner.temp }}/flow_issue402_dbase_native_p2/readiness.json
+            ${{ runner.temp }}/flow_issue402_dbase_native_p2/S6-417/native_P2.log
+            ${{ runner.temp }}/flow_issue402_dbase_native_p2/S6-941/native_P2.log
+          if-no-files-found: warn
+          retention-days: 30
