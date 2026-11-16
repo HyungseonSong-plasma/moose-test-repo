@@ -83,6 +83,21 @@ class GitHub:
             raise EvidenceRejected(
                 "GITHUB_METADATA_HTTP_" + str(exc.code) + ":" + path) from exc
 
+    def job_log(self, job_id):
+        path = "/actions/jobs/" + str(job_id) + "/logs"
+        req = urllib.request.Request(
+            self.base + path,
+            headers={"Accept": "application/vnd.github+json",
+                     "User-Agent": "issue541-evidence-identity-v1",
+                     **({"Authorization": "Bearer " + self.token} if self.token else {})})
+        try:
+            opener = urllib.request.build_opener(ArtifactRedirect())
+            with opener.open(req, timeout=75) as response:
+                return response.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            raise EvidenceRejected(
+                "GITHUB_JOB_LOG_HTTP_" + str(exc.code) + ":" + str(job_id)) from exc
+
     def download(self, artifact_id):
         path = "/actions/artifacts/" + str(artifact_id) + "/zip"
         req = urllib.request.Request(
@@ -101,6 +116,16 @@ class GitHub:
 
 def sha(value, n=40):
     return isinstance(value, str) and bool((SHA40 if n == 40 else SHA64).fullmatch(value))
+
+
+def checkout_from_job_log(log):
+    """Runner-observed git checkout SHA, read independently from GitHub log."""
+    require(isinstance(log, str), "CHECKOUT_LOG_UNAVAILABLE")
+    hits = re.findall(
+        r"\[command\]/usr/bin/git checkout --progress --force ([0-9a-f]{40})\b",
+        log)
+    require(len(hits) == 1, "INDEPENDENT_CHECKOUT_LOG_MISSING_OR_AMBIGUOUS")
+    return hits[0]
 
 
 def zip_files(blob):
@@ -185,7 +210,12 @@ def verify(record, api):
     require(run.get("id") == record["workflow_run_id"], "N4_RUN_ID_INVALID")
     require(run.get("run_attempt") == record["run_attempt"], "RUN_ATTEMPT_MISMATCH")
     require(run.get("event") == record["event_name"], "RUN_EVENT_MISMATCH")
-    require(run.get("head_sha") == source, "N11_RUN_SOURCE_SHA_MISMATCH")
+    # pull_request run.head_sha identifies PR source even when checkout uses
+    # the temporary refs/pull/N/merge commit. Keep these distinct.
+    expected_run_head = (record.get("pr_head_sha")
+                         if kind == "PR_MERGE_REF" else source)
+    require(run.get("head_sha") == expected_run_head,
+            "N11_RUN_SOURCE_SHA_MISMATCH")
     require(run.get("status") == "completed", "RUN_NOT_COMPLETE")
     require(pr.get("number") == record["pr_number"], "N3_PR_NUMBER_MISMATCH")
     require(pr.get("base", {}).get("ref") == "main", "PR_TARGET_MISMATCH")
@@ -203,7 +233,18 @@ def verify(record, api):
     require(job.get("status") == "completed" and job.get("conclusion") == "success",
             "N5_JOB_FAILED_OR_INCOMPLETE")
     require(job.get("name") == record.get("job_name"), "JOB_NAME_MISMATCH")
-    require(job.get("head_sha") in (None, source), "JOB_HEAD_SHA_MISMATCH")
+    require(job.get("head_sha") in (None, expected_run_head),
+            "JOB_HEAD_SHA_MISMATCH")
+    independent_checkout = checkout_from_job_log(api.job_log(job["id"]))
+    require(independent_checkout == record["checkout_sha"],
+            "N1_GITHUB_JOB_LOG_CHECKOUT_MISMATCH")
+    # Checkout alone is not a passing assertion. Read the job step result
+    # independently of the artifact's self-reported source_sha.
+    assert_step = next(
+        (step for step in job.get("steps", [])
+         if step.get("name") == "Verify source and exact build image"), None)
+    require(assert_step is not None and assert_step.get("conclusion") == "success",
+            "N1_CHECKOUT_ASSERTION_STEP_NOT_PROVEN")
     require(record.get("workflow_result") == run.get("conclusion"),
             "WORKFLOW_RESULT_MISMATCH")
     require(record.get("workflow_result") in {"success", "failure", "cancelled",
@@ -251,7 +292,7 @@ def verify(record, api):
             "ARTIFACT_NAME_OR_ID_MISMATCH")
     require(artifact.get("expired") is False, "N15_ARTIFACT_EXPIRED")
     require(artifact.get("workflow_run", {}).get("id") == run["id"] and
-            artifact.get("workflow_run", {}).get("head_sha") == source,
+            artifact.get("workflow_run", {}).get("head_sha") == run.get("head_sha"),
             "N3_N15_ARTIFACT_WRONG_RUN_OR_HEAD")
     blob = api.download(art_record["id"])
     digest = hashlib.sha256(blob).hexdigest()
@@ -267,8 +308,10 @@ def verify(record, api):
     except (ValueError, UnicodeDecodeError) as exc:
         raise EvidenceRejected("INNER_IDENTITY_INVALID") from exc
     require(identity.get("source_sha") == source, "N1_N11_INNER_SOURCE_SHA_MISMATCH")
-    require(identity.get("checkout_sha", identity.get("source_sha")) ==
-            record["checkout_sha"], "N1_INNER_CHECKOUT_SHA_MISMATCH")
+    # Legacy artifacts may omit inner checkout_sha. That is NOT used
+    # to attest checkout: verified GitHub job logs/steps are mandatory.
+    require(identity.get("checkout_sha") in (None, record["checkout_sha"]),
+            "N1_INNER_CHECKOUT_SHA_MISMATCH")
     require(identity.get("P1") == "PASS", "N6_P1_IDENTITY_NOT_PASS")
     require(identity.get("oci_image") == record["oci_digest"] and
             identity.get("binary_sha256") == record["binary_sha256"],
@@ -300,6 +343,8 @@ class MockGitHub:
         return self.data[path]
     def download(self, artifact_id):
         return self.blob
+    def job_log(self, job_id):
+        return self.data["/actions/jobs/" + str(job_id) + "/logs"]
 
 
 def sample():
@@ -335,7 +380,11 @@ def sample():
                               "pull_requests": [{"number": 578}]},
         "/actions/runs/101/jobs?per_page=100&filter=latest":
             {"jobs": [{"id": 201, "run_id": 101, "name": "CORE Native",
-                       "status": "completed", "conclusion": "success"}]},
+                       "status": "completed", "conclusion": "success",
+                       "steps": [{"name": "Verify source and exact build image",
+                                  "conclusion": "success"}]}]},
+        "/actions/jobs/201/logs":
+            "[command]/usr/bin/git checkout --progress --force " + source + "\n",
         "/actions/artifacts/301": {"id": 301, "name": "core-native", "expired": False,
                                     "workflow_run": {"id": 101, "head_sha": source}},
         "/branches/main": {"commit": {"sha": "f" * 40}},
@@ -433,7 +482,7 @@ def audit_live(args):
     record = {
         "schema": SCHEMA, "repository": args.repo, "evidence_kind": args.kind,
         "source_sha": args.expected_sha,
-        "checkout_sha": identity.get("checkout_sha", identity.get("source_sha")),
+        "checkout_sha": checkout_from_job_log(api.job_log(args.job_id)),
         "pr_head_sha": pr["head"]["sha"], "pr_merge_ref_sha": None,
         "merged_commit_sha": pr.get("merge_commit_sha") if pr.get("merged") else None,
         "workflow_run_id": args.run_id, "job_id": args.job_id,
