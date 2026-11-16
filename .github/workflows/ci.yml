@@ -1164,17 +1164,23 @@ jobs:
           set -e
           cat /tmp/issue541_group_a_surface.log
           test "$status" -ne 0
-          for name in issue402-dd-json-boundary-p0-p2-once.yml; do
+          # Two independent ARCH P3 originals remain, not bypassed or silently
+          # reactivated; A1 is staged absent, A2 already retired.
+          for name in issue402-dd-json-p3-smoke-once.yml issue402-hybrid-json-s6-p3-p4-once.yml; do
             grep -Fq "$name: one-shot must target branches: [main]" /tmp/issue541_group_a_surface.log
           done
+          test ! -e .github/workflows/issue402-dd-json-boundary-p0-p2-once.yml
           test ! -e .github/workflows/issue402-legacy-symbol-audit-once.yml
-          if grep -Fq 'issue402-legacy-symbol-audit-once.yml: one-shot must target branches: [main]' /tmp/issue541_group_a_surface.log; then
-            echo '::error::retired A2 still violates global workflow surface'
-            exit 1
-          fi
+          for retired in issue402-dd-json-boundary-p0-p2-once.yml issue402-legacy-symbol-audit-once.yml; do
+            if grep -Fq "$retired: one-shot must target branches: [main]" /tmp/issue541_group_a_surface.log; then
+              echo "::error::staged or retired original still violates global surface: $retired"
+              exit 1
+            fi
+          done
+          test "$(grep -c ': one-shot must target branches: \[main\]' /tmp/issue541_group_a_surface.log)" -eq 2
           test ! -e .github/workflows/issue402-rate-coef-ideal-gas-native-once.yml
           test ! -e .github/workflows/issue402-reaction-material-reduction-p0-once.yml
-          echo 'ISSUE541_GROUP_A_GLOBAL_SURFACE_GUARD=FAIL_EXPECTED; A1_VIOLATIONS=1; A2_RETIRED_VERIFIED=1; A3_A4_STAGED_DELETIONS=2; NO_WAIVER'
+          echo 'ISSUE541_GROUP_A_GLOBAL_SURFACE_GUARD=FAIL_EXPECTED; A1_STAGED_ONLY=1; A2_RETIRED_VERIFIED=1; ARCH_P3_ORIGINAL_VIOLATIONS=2; A3_A4_STAGED=2; NO_WAIVER'
       - name: Preserve source-bound Group A audit and guard output
         if: always()
         uses: actions/upload-artifact@v4

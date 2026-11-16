@@ -72,6 +72,9 @@ WAVE1_C_PER_CASE = json.loads(r'''{"A1":{"historical_run_id":43533803916,"histor
 # This is a recorded, fail-closed staging receipt, not CALLER_ZERO_PROVEN.
 WAVE1_C_CLOSURE = json.loads(r'''{"A1":{"mode":"STAGED_LEGACY_BRANCH_SHUTDOWN_REVIEW_ONLY","retention":"PRIVATE_INDEPENDENT_COPY_READBACK","proof_date":"2026-11-16","historical_branch":"issue-402-dd-plasma-boundary-action","historical_branch_head":"af4a9e896328386723e8bbb957f334e1d83fe75e","branch_shared_with_p3":true,"branch_must_not_be_deleted":true,"original_workflows_reviewed":45,"branch_write_route":"PUSH_EXACT_SELF_PATH_ONLY","declared_dispatch_or_call_route":false,"cross_branch_external_or_dynamic_callers":"UNVERIFIED","caller_zero_proven":false,"prereq_draft_pr":588,"prereq_draft_head":"85d6968f5155e25eabfca8b503828979d9509506","prereq_base":"issue-402-dd-plasma-boundary-action","prereq_state":"OPEN_DRAFT_NOT_MERGED","prereq_scope":"EXACTLY_TWO_A1_A2_FILES_REMOVED_FROM_CANDIDATE_BRANCH_ONLY","untouched_p3_dd_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","untouched_p3_s6_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","original_sha":"bbebff910db3e5659014368043a50b99273d2cdc","artifact_backup":{"drive_file_id":"1OsADIq21_JU4Z4O65t_Hl-_AwjM6Nxf0","github_artifact_id":14088768015,"bytes":2072,"sha256":"de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27","independent_zip_readback":"EXACT_BINARY_AND_HASH_PASS","worm":"NOT_PROVEN"},"final_deletion_authorized":false,"decision":"KEEP_HOLD","science":"SCIENCE_HOLD","p3":"NOT_RUN"},"A2":{"mode":"STAGED_LEGACY_BRANCH_SHUTDOWN_REVIEW_ONLY","retention":"PRIVATE_INDEPENDENT_COPY_READBACK","proof_date":"2026-11-16","historical_branch":"issue-402-dd-plasma-boundary-action","historical_branch_head":"af4a9e896328386723e8bbb957f334e1d83fe75e","branch_shared_with_p3":true,"branch_must_not_be_deleted":true,"original_workflows_reviewed":45,"branch_write_route":"PUSH_EXACT_SELF_PATH_ONLY","declared_dispatch_or_call_route":false,"cross_branch_external_or_dynamic_callers":"UNVERIFIED","caller_zero_proven":false,"prereq_draft_pr":588,"prereq_draft_head":"85d6968f5155e25eabfca8b503828979d9509506","prereq_base":"issue-402-dd-plasma-boundary-action","prereq_state":"OPEN_DRAFT_NOT_MERGED","prereq_scope":"EXACTLY_TWO_A1_A2_FILES_REMOVED_FROM_CANDIDATE_BRANCH_ONLY","untouched_p3_dd_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","untouched_p3_s6_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","original_sha":"1931f0b9909507979826812f346d3353f12e333b","artifact_backup":null,"final_deletion_authorized":false,"decision":"KEEP_HOLD","science":"SCIENCE_HOLD","p3":"NOT_RUN"}}''')
 
+# A1 user-declared off-platform caller absence: STAGED ONLY; old ref not yet cut over.
+A1_OWNER_RETIREMENT = json.loads(r'''{"mode":"OPERATOR_DECLARED_A1_NO_EXTERNAL_CALLERS__STAGED_ONLY","operator_statement":"외부 호출자는 존재하지 않으니까, 그걸로 처리를 하자.","statement_source":"CURRENT_USER_CONVERSATION_2026-11-16","attestation_type":"USER_DECLARATION_NOT_INDEPENDENT_GITHUB_AUDIT","static_census":"FIVE_CONNECTED_REPOS_DEFAULT_BRANCH_A1_SELF_PATH_ONLY","historic_actions_runs":19,"historic_events":"ALL_PUSH_REPO_OWNER","historical_branch":"issue-402-dd-plasma-boundary-action","historical_head_before":"b3f3b6e09b83828343fc0bc097f5a4edce9207e7","original_blob":"bbebff910db3e5659014368043a50b99273d2cdc","historic_a1_file":"ABSENT_ON_LIVE_HISTORICAL_REF","old_ref_cutover_pr":606,"old_ref_cutover_head":"08086bd563f76d1b6bd86d4274679791f801136d","old_ref_cutover_state":"MERGED_READBACK_VERIFIED","old_ref_cutover_scope":"EXACTLY_ONE_A1_YAML_DELETION","original_artifact_id":14088768015,"historical_zip_sha256":"de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27","independent_drive_backup":"1OsADIq21_JU4Z4O65t_Hl-_AwjM6Nxf0","original_zip_bytes":2072,"backup_readback":"MATCHED_BYTES_SHA256_VALID_ZIP","archive_worm":"NOT_PROVEN","a2_unchanged":"RETIRED_VERIFIED_AND_ABSENT_ON_LIVE_BRANCH","p3_dd_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","p3_s6_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","shared_branch_deletion":"NOT_AUTHORIZED","replacement_job":"issue402_core_four_native_p2","replacement_p0_job":"issue402_core_four_p0","replacement_oci_sha256":"2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008","last_verified_run":43872131969,"last_verified_sha":"8dcec2c195b683d795d162ab6825da1366c932d2","last_verified_native_job":133315748335,"last_verified_native_artifact_id":14227174075,"last_verified_group_a_mutations":59,"final_candidate_exact_head_ci":"DEFERRED_BY_USER_AFTER_SOURCE_CHANGE","proposed_retirement":"STAGED_DELETE_KEEP_HOLD_INTEGRATION","accepted_retirement":false,"p3":"NOT_RUN","science":"SCIENCE_HOLD","old_ref_merge_commit":"632aa2376cad03faa271bad2986c664086842225","historical_head_after":"632aa2376cad03faa271bad2986c664086842225"}''')
+
 # A2-only owner attestation and independently read-back historical cutover.
 # This is a pinned release receipt; the exact source HEAD is rechecked by CI.
 A2_OWNER_RETIREMENT = json.loads(r'''{"mode":"OWNER_ATTESTED_A2_SELF_PATH_RETIREMENT","attestation":"REPOSITORY_OWNER_CONFIRMS_NO_EXTERNAL_PAT_OR_PRIVATE_CONTROLLER","attestation_basis":"OPERATOR_DECLARATION_AND_REVIEWED_GITHUB_CODE_AND_RUN_HISTORY","attestation_comment_id":6917594646,"original_blob":"1931f0b9909507979826812f346d3353f12e333b","historical_branch":"issue-402-dd-plasma-boundary-action","historical_head_before":"af4a9e896328386723e8bbb957f334e1d83fe75e","historical_head_after":"b3f3b6e09b83828343fc0bc097f5a4edce9207e7","historical_a2_file":"ABSENT","historical_pr":602,"original_workflow_id":417813582,"original_success_run":43522731185,"original_artifact":"NONE_PUBLISHED","observed_a2_push_runs":5,"observed_a2_actors":"HyungseonSong-plasma","same_branch_a1_blob":"bbebff910db3e5659014368043a50b99273d2cdc","same_branch_p3_dd_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","same_branch_p3_s6_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","legacy_branch_retained":true,"integration_pr":578,"integration_review_pr":605,"integration_base_before_delete":"860dd366e191a20124b0eae85d369498738233d6","maintained_job":"issue402_legacy_p0_inventory","maintained_run_id":43870291280,"maintained_job_id":133309345787,"maintained_p0":"PASS_81_PASSED_13_SKIPPED","maintained_inventory":"SELF_TEST_AND_CHECK_PASS","group_a_job_id":133309345622,"group_a_negative_mutations_before":49,"global_surface_guard":"STILL_FAILS_A1_AND_TWO_ARCH_P3_UNWAIVED","p3":"NOT_RUN","science":"SCIENCE_HOLD"}''')
@@ -159,8 +162,27 @@ def inspect(root: Path, doc: dict) -> list[str]:
                             else "issue402_reaction_material_p0")
             if ci_file.is_file() and "  " + expected_job + ":" not in ci_file.read_text(encoding="utf-8"):
                 errors.append(id_ + " maintained P0 owner not in canonical CI")
+        elif id_ == "A1":
+            # This is an isolated staged deletion, not a global or old-ref retirement.
+            if source_path.exists():
+                errors.append("A1 staged original was reintroduced")
+            if record.get("a1_owner_retirement") != A1_OWNER_RETIREMENT:
+                errors.append("A1 owner source/caller/provenance stage receipt falsified")
+            for p3name, blob in (
+                ("issue402-dd-json-p3-smoke-once.yml", A1_OWNER_RETIREMENT["p3_dd_blob"]),
+                ("issue402-hybrid-json-s6-p3-p4-once.yml", A1_OWNER_RETIREMENT["p3_s6_blob"]),
+            ):
+                p3source = root / ".github/workflows" / p3name
+                if not p3source.is_file() or git_blob_sha(p3source.read_bytes()) != blob:
+                    errors.append("A1 associated ARCH P3 original changed/missing: " + p3name)
+            ci_file = root / ".github/workflows/ci.yml"
+            ci_text = ci_file.read_text(encoding="utf-8") if ci_file.is_file() else ""
+            for needed in ("  issue402_core_four_p0:", "  issue402_core_four_native_p2:",
+                           "run_issue541_core_four_native_p2.py", "make -C physics_app -j2"):
+                if needed not in ci_text:
+                    errors.append("A1 maintained P0/P1/P2 replacement route disconnected: " + needed)
         elif id_ == "A2":
-            # The only approved absent original: operator-attested P0-only A2.
+            # The approved absent P0-only A2; do not change its ownership.
             # Do not generalize this exception to A1 or the ARCH P3 originals.
             if source_path.exists():
                 errors.append("A2 legacy workflow reintroduced after verified shutdown")
@@ -202,16 +224,17 @@ def inspect(root: Path, doc: dict) -> list[str]:
             errors.append(id_ + " missing source-bound replacement receipt")
         if id_ in A1_A2_SAME_HEAD_PROOFS:
             # A historical success job does not override red global CI or
-            # the verified still-present live legacy-branch entrypoint.
+            # independently verified historical A1 self-path removal; the shared
+            # branch remains because two independent P3 workflows still own it.
             observed = ({
                 "head": A2_OWNER_RETIREMENT["historical_head_after"],
                 "workflow_blob": None,
                 "entrypoint": "A2_SELF_PATH_REMOVED",
                 "observed_on": "2026-11-16",
             } if id_ == "A2" else {
-                "head": A1_A2_LIVE_HEAD,
-                "workflow_blob": sha,
-                "entrypoint": "PUSH_SELF_PATH_STILL_PRESENT",
+                "head": A1_OWNER_RETIREMENT["historical_head_after"],
+                "workflow_blob": None,
+                "entrypoint": "A1_SELF_PATH_REMOVED",
                 "observed_on": "2026-11-16",
             })
             if record.get("live_branch_readback") != observed:
@@ -225,7 +248,23 @@ def inspect(root: Path, doc: dict) -> list[str]:
                 errors.append(id_ + " Wave1-C branch/caller/CI/retention audit missing or falsified")
             if record.get("wave1_c_closure") != WAVE1_C_CLOSURE[id_]:
                 errors.append(id_ + " Wave1-C independent backup or source-branch cutover evidence falsified")
-        if id_ == "A2":
+        if id_ == "A1":
+            if record.get("decision") != "STAGED_DELETE_KEEP_HOLD_INTEGRATION":
+                errors.append("A1 premature final retirement/rollback of staged status")
+            if record.get("caller_state") != "OWNER_DECLARED_NO_EXTERNAL_CALLERS__A1_OLD_REF_CUTOVER_MERGED":
+                errors.append("A1 owner attestation scope/state falsified")
+            if record.get("blockers") != [
+                "Final integrated #578 exact-source CI/Native and retirement acceptance deferred by operator; A1 remains staged HOLD",
+                "Independent ARCH DD P3 and hybrid S6 P3/P4 workflow surface policies remain unresolved and unwaived",
+            ]:
+                errors.append("A1 incomplete integration/old-ref HOLD not disclosed")
+            if record.get("remaining_non_a1_gates") != [
+                "ARCH DD P3 original not retired",
+                "ARCH hybrid S6 P3/P4 original not retired",
+                "Global Workflow Surface Guard still FAIL while ARCH originals remain",
+            ]:
+                errors.append("A1 remaining ARCH P3 global holds hidden")
+        elif id_ == "A2":
             if record.get("decision") != "RETIRED_VERIFIED":
                 errors.append("A2 expected owner-attested retirement disposition missing")
             if record.get("caller_state") != "OWNER_ATTESTED_NO_EXTERNAL_PAT_PRIVATE_CONTROLLER__SELF_PATH_DISABLED":
@@ -335,6 +374,20 @@ def self_test(root: Path, original: dict) -> None:
         del record["staged_candidate"]
         probes.append(("missing FLOW replacement custody " + id_, mutated))
     for key, fake_value in (
+        ("attestation_type", "GITHUB_INDEPENDENTLY_VERIFIED"),
+        ("original_blob", "0" * 40),
+        ("old_ref_cutover_head", "0" * 40),
+        ("old_ref_cutover_state", "MERGED_AND_ACCEPTED"),
+        ("backup_readback", "UNVERIFIED"),
+        ("p3_dd_blob", "0" * 40),
+        ("p3_s6_blob", "0" * 40),
+        ("accepted_retirement", True),
+    ):
+        mutated = copy.deepcopy(original)
+        record = next(x for x in mutated["workflows"] if x["id"] == "A1")
+        record["a1_owner_retirement"][key] = fake_value
+        probes.append(("A1 owner/stage receipt falsified " + key, mutated))
+    for key, fake_value in (
         ("attestation", "NOT_ATTESTED"),
         ("attestation_comment_id", 0),
         ("historical_head_after", "0" * 40),
@@ -356,8 +409,15 @@ def self_test(root: Path, original: dict) -> None:
     probes.append(("A2 falsely declares global clearance", mutated))
     for label, fake in probes:
         assert inspect(root, fake), "negative mutation not rejected: " + label
+    # Archived original A1 Git blob is retained in git/independent ZIP provenance,
+    # but must no longer be a file on this integration candidate.
     first = original["workflows"][0]
-    raw = (root / first["path"]).read_text(encoding="utf-8")
+    assert not (root / first["path"]).exists(), "A1_PREMATURE_REINTRODUCTION"
+    raw = ("name: A1 Original Trigger\non:\n  push:\n"
+           "    branches: [" + first["historical_branch"] + "]\n"
+           "    paths: [" + first["path"] + "]\n"
+           "permissions:\n  contents: read\n")
+    assert not check_trigger(raw, first["path"], first["historical_branch"])
     assert check_trigger(raw.replace(first["historical_branch"], "main", 1),
                          first["path"], first["historical_branch"])
     assert check_trigger(raw.replace("    paths:", "    paths_disabled:", 1),
@@ -384,7 +444,7 @@ def main() -> int:
         for record in doc["workflows"]:
             print(record["id"] + " " + record["decision"] + " | " +
                   record["caller_state"] + " | original=" + record["original_blob"])
-        print("ISSUE541_GROUP_A_LEDGER=PASS RETIREMENTS=1 A2_ONLY GLOBAL_SURFACE_GUARD_NOT_WAIVED")
+        print("ISSUE541_GROUP_A_LEDGER=PASS RETIREMENTS=1_A2_ONLY; A1=STAGED_DELETE_HOLD; GLOBAL_SURFACE_GUARD_NOT_WAIVED")
     return 0
 
 
