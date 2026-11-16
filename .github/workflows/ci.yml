@@ -1062,3 +1062,58 @@ jobs:
           done
           echo "::error::Artifact CreateArtifact returned id but REST did not expose it"
           exit 1
+
+  # Read-only Group A retirement audit; global workflow_surface_guard remains authoritative.
+  issue541_group_a_evidence:
+    name: Issue541 Group A evidence and negative controls (no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Bind Group A audit to exact source HEAD
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - name: Validate Group A evidence and rejection mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_group_a_retirement.py --self-test
+          python3 ci/guards/issue541_group_a_retirement.py --check
+      - name: Validate workflow generation and surface self-tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/workflow_harness.py --self-test
+          python3 ci/workflow_harness.py --check
+          python3 ci/guards/workflow_surface_guard.py --self-test
+      - name: Record the still-failing global guard without waiving it
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          python3 ci/guards/workflow_surface_guard.py --check > /tmp/issue541_group_a_surface.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/issue541_group_a_surface.log
+          test "$status" -ne 0
+          for name in issue402-dd-json-boundary-p0-p2-once.yml issue402-legacy-symbol-audit-once.yml issue402-rate-coef-ideal-gas-native-once.yml issue402-reaction-material-reduction-p0-once.yml; do
+            grep -Fq "$name: one-shot must target branches: [main]" /tmp/issue541_group_a_surface.log
+          done
+          echo 'ISSUE541_GROUP_A_GLOBAL_SURFACE_GUARD=FAIL_EXPECTED; GROUP_A_VIOLATIONS=4; NO_WAIVER'
+      - name: Preserve source-bound Group A audit and guard output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-group-a-audit-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ci/baselines/issue541_group_a_retirement.json
+            /tmp/issue541_group_a_surface.log
+          if-no-files-found: warn
+          retention-days: 30
