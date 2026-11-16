@@ -13,6 +13,7 @@ ENTRYPOINTS = {
     "samuel-branch-delete.yml": {"push"},
     # Bounded source-SHA + typed approval manual ARCH DD P3 entrypoint.
     "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
+    "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
