@@ -455,15 +455,26 @@ def test_both_s6_native_sheath_variants_strict_eight_owner_cutover(tmp_path):
 
         # Wrong boundary, source flux, mean energy or old factory must stop
         # BEFORE any scratch file is written; never silently "fix" physics.
+        def corrupt_only_bc_owner(name, expected, replacement):
+            prefix, body = staged.split(f"  [{name}]\n", 1)
+            owner, suffix = body.split("  []", 1)
+            assert expected in owner, (name, expected)
+            return (prefix + f"  [{name}]\n" +
+                    owner.replace(expected, replacement, 1) + "  []" + suffix)
+
         faulty_sources = (
-            staged.replace("boundary = 'plasma_cover'",
-                           "boundary = 'plasma_fake'", 1),
-            staged.replace("wall_number_flux = e_wall_number_flux",
-                           "wall_number_flux = fake_flux", 1),
-            staged.replace("mean_energy = e_energy_eV",
-                           "mean_energy = fake_energy", 1),
-            staged.replace("type = " + old_particle,
-                           "type = FEMElectronSheathBC", 1),
+            corrupt_only_bc_owner("electron_cover_dielectric",
+                                  "boundary = 'plasma_cover'",
+                                  "boundary = 'plasma_fake'"),
+            corrupt_only_bc_owner("electron_sheath",
+                                  "wall_number_flux = e_wall_number_flux",
+                                  "wall_number_flux = fake_flux"),
+            corrupt_only_bc_owner("electron_energy_sheath",
+                                  "mean_energy = e_energy_eV",
+                                  "mean_energy = fake_energy"),
+            corrupt_only_bc_owner("electron_sheath",
+                                  "type = " + old_particle,
+                                  "type = FEMElectronSheathBC"),
         )
         for number, bad in enumerate(faulty_sources):
             assert bad != staged, number
