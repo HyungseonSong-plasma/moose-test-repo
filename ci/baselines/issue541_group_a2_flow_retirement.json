@@ -136,5 +136,63 @@
     "P4": "NOT_RUN",
     "SCIENCE": "SCIENCE_HOLD",
     "ARCH_P3_ORIGINALS": "KEEP_HOLD"
+  },
+  "wave2_evidence": {
+    "schema": "issue541.wave2_8_a_2.repository_visible_audit.v1",
+    "audit_date": "2026-11-16",
+    "observed_integration_source_sha": "860dd366e191a20124b0eae85d369498738233d6",
+    "originals": {
+      "A3": {
+        "historical_branch_observation": "NOT_FOUND",
+        "historical_branch_run_total": 4,
+        "original_workflow_run_ids": [
+          43461593885,
+          43463870372,
+          43464123958
+        ],
+        "original_workflow_events": "ALL_PUSH",
+        "original_workflow_actors": "HyungseonSong-plasma",
+        "successful_original_run": 43464123958,
+        "successful_original_source_sha": "b5aee181c12375d6d2b94cd9a1ff6011943c5370",
+        "fresh_github_artifact_readback": {
+          "artifact_id": 14058320821,
+          "zip_bytes": 1426,
+          "zip_sha256": "85fb89e0dda2f11fbfea10de2bf964e0b75a9f02f0b52e4fd3823fd759b03c9c",
+          "zip_integrity": "PASS",
+          "entries": [
+            "issue402_json_rates_native_build.log",
+            "issue402_json_rates_native_p2.log"
+          ],
+          "expires_at": "2026-12-13T16:40:46Z",
+          "worm_permanence": "NOT_PROVEN"
+        }
+      },
+      "A4": {
+        "historical_branch_observation": "NOT_FOUND",
+        "historical_branch_run_total": 40,
+        "original_workflow_run_ids": [
+          43427534411,
+          43427738396,
+          43428078424,
+          43428302896
+        ],
+        "original_workflow_events": "ALL_PUSH",
+        "original_workflow_actors": "HyungseonSong-plasma",
+        "successful_original_run": 43428302896,
+        "successful_original_source_sha": "238ca2017be6dc24303fca166c0b0f0ed24d4773",
+        "successful_run_artifact_count": 0
+      }
+    },
+    "limitations": {
+      "search_and_events": "REPOSITORY_VISIBLE_EVIDENCE_ONLY",
+      "external_controller_or_api_callers": "NOT_ATTESTED",
+      "cross_branch_or_off_platform_dynamic_push": "NOT_PROVEN_ABSENT",
+      "caller_zero": "NOT_PROVEN",
+      "A3_retirement": "KEEP_HOLD_INTEGRATION",
+      "A4_retirement": "KEEP_HOLD_INTEGRATION",
+      "main_merged": false,
+      "P3": "NOT_RUN",
+      "science": "SCIENCE_HOLD"
+    }
   }
 }
