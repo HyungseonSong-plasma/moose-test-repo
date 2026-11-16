@@ -11,6 +11,8 @@ ENTRYPOINTS = {
     "sol-runtime-integration.yml": {"push", "pull_request"},
     "ion-fvm-hybrid-staged-dt.yml": {"push", "pull_request", "workflow_dispatch"},
     "samuel-branch-delete.yml": {"push"},
+    # Registered on main by PR #616: DD manual P3 is now REQUIRED.
+    "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
@@ -24,8 +26,7 @@ REUSABLE = {
 OPTIONAL_ENTRYPOINTS = {
     # FLOW #548: source-bound P0/P1/P2 only (no push).
     "issue402-flow-native-p2-regression.yml": {"pull_request", "workflow_dispatch"},
-    # ARCH #551: P3 approval and exact SHA are checked by separate P0 contracts.
-    "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
+    # ARCH S6 P3 remains a separately reviewed optional manual route.
     "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
 }
 FORBIDDEN_EVENTS = {
@@ -203,6 +204,19 @@ def self_test() -> int:
             body = "name: x\non:\n" + "".join(f"  {event}:\n" for event in sorted(allowed_events)) + "jobs: {}\n"
             (workflow_dir / name).write_text(body)
         assert not check(root), check(root)
+        # DD registration on default main is binding: absence, disabling or
+        # adding push to its maintained manual trigger is a policy failure.
+        dd_manual = workflow_dir / "issue541-arch-dd-p3-replay.yml"
+        dd_bytes = dd_manual.read_text(encoding="utf-8")
+        dd_manual.unlink()
+        assert any("missing canonical workflow files:" in error and
+                   "issue541-arch-dd-p3-replay.yml" in error for error in check(root))
+        dd_manual.write_text(dd_bytes.replace("  workflow_dispatch:", "  push:", 1), encoding="utf-8")
+        assert any("issue541-arch-dd-p3-replay.yml: events=" in error for error in check(root))
+        dd_manual.write_text(dd_bytes.replace("  workflow_dispatch:", "  workflow_dispatch:\n  push:", 1), encoding="utf-8")
+        assert any("issue541-arch-dd-p3-replay.yml: events=" in error for error in check(root))
+        dd_manual.write_text(dd_bytes, encoding="utf-8")
+        assert not check(root), check(root)
         ci_path = workflow_dir / "ci.yml"
         valid_ci = ci_path.read_text(encoding="utf-8")
         ci_path.write_text(valid_ci.replace("edited, ", ""), encoding="utf-8")
@@ -238,7 +252,7 @@ def self_test() -> int:
         assert any("self-path-triggered" in error for error in check(root))
         (workflow_dir / one_shot_name).unlink()
 
-        # Staged FLOW/ARCH entrypoints remain optional until actually imported.
+        # Remaining FLOW/S6 draft routes stay optional; registered DD is required.
         assert not check(root), check(root)
         for name, allowed_events in OPTIONAL_ENTRYPOINTS.items():
             path = workflow_dir / name
