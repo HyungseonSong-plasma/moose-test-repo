@@ -10,6 +10,8 @@ ENTRYPOINTS = {
     "refactor.yml": {"workflow_dispatch"},
     "sol-runtime-integration.yml": {"push", "pull_request"},
     "ion-fvm-hybrid-staged-dt.yml": {"push", "pull_request", "workflow_dispatch"},
+    # Explicitly governed P0/P1/P2-only Issue402 FLOW replacement (no push).
+    "issue402-flow-native-p2-regression.yml": {"pull_request", "workflow_dispatch"},
     "samuel-branch-delete.yml": {"push"},
 }
 REUSABLE = {
@@ -146,6 +148,19 @@ def check(root: Path) -> list[str]:
         forbidden = observed & FORBIDDEN_EVENTS
         if forbidden:
             errors.append(f"{name}: forbidden conversational events={sorted(forbidden)}")
+        if name == "issue402-flow-native-p2-regression.yml":
+            # The native gate must not run on an arbitrary push or unreviewed
+            # fork checkout; only governed main PRs/manual source-bound runs.
+            body = path.read_text(encoding="utf-8")
+            if "    branches: [main]" not in body:
+                errors.append(f"{name}: Native P2 PR must target main")
+            trusted = (
+                "github.event_name != 'pull_request' ||"
+                "\n      github.event.pull_request.head.repo.full_name =="
+                " 'HyungseonSong-plasma/moose-test-repo'"
+            )
+            if trusted not in body:
+                errors.append(f"{name}: Native P2 same-repo trust gate missing")
         if name == "ci.yml":
             workflow_text = path.read_text(encoding="utf-8")
             pr_types = pull_request_types(workflow_text)
@@ -180,12 +195,19 @@ def self_test() -> int:
             for event in sorted(allowed_events):
                 if name == "ci.yml" and event == "pull_request":
                     body += "  pull_request:\n    branches: [main]\n    types: [" + ", ".join(sorted(REQUIRED_CI_PULL_REQUEST_TYPES)) + "]\n"
+                elif name == "issue402-flow-native-p2-regression.yml" and event == "pull_request":
+                    body += "  pull_request:\n    branches: [main]\n"
                 else:
                     body += f"  {event}:\n"
             if name == "ci.yml":
                 body += "jobs:\n"
                 for job in sorted(REQUIRED_CI_EDIT_FILTER_JOBS):
                     body += f"  {job}:\n    if: >-\n      github.event_name != 'pull_request' ||\n      github.event.action != 'edited' ||\n      github.event.changes.base != null\n    runs-on: ubuntu-latest\n    steps: []\n"
+            elif name == "issue402-flow-native-p2-regression.yml":
+                body += ("jobs:\n  flow-native-p2:\n    if: >-\n"
+                         "      github.event_name != 'pull_request' ||\n"
+                         "      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'\n"
+                         "    runs-on: ubuntu-latest\n    steps: []\n")
             else:
                 body += "jobs:\n  x:\n    runs-on: ubuntu-latest\n    steps: []\n"
             (workflow_dir / name).write_text(body)
@@ -204,6 +226,17 @@ def self_test() -> int:
         filter_errors = [error for error in check(root) if "job-level if=" in error]
         assert len(filter_errors) == 1, filter_errors
         ci_path.write_text(valid_ci, encoding="utf-8")
+        assert not check(root), check(root)
+        flow = workflow_dir / "issue402-flow-native-p2-regression.yml"
+        valid_flow = flow.read_text(encoding="utf-8")
+        flow.write_text(valid_flow.replace("branches: [main]", "branches: [other]", 1))
+        assert any("Native P2 PR must target main" in e for e in check(root))
+        flow.write_text(valid_flow.replace(
+            "github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'",
+            "true", 1,
+        ))
+        assert any("Native P2 same-repo trust gate missing" in e for e in check(root))
+        flow.write_text(valid_flow)
         assert not check(root), check(root)
         one_shot_name = "issue310-example-once.yml"
         (workflow_dir / one_shot_name).write_text(
