@@ -415,7 +415,7 @@ def test_native_parity_receipt_rejects_mutated_real_exodus_data():
     assert "NATIVE_PARITY_NOT_PROVEN" in runner
     assert "Unsupported Exodus physical field" in runner
     assert "Numerical discrepancy" in runner
-    assert "original Native output" in runner
+    assert "Native parity negative control modified original output" in runner
     assert "sha(baseline) != before" in runner
     assert "sha(candidate) != before" in runner
     assert "NATIVE_PARITY_FALSE_PASS_REJECTED" in runner
