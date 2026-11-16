@@ -61,6 +61,13 @@ A1_A2_SAME_HEAD_PROOFS = {
   }
 }
 
+# Wave1-C 2026-11-16 immutable GitHub snapshot. Caller-zero is explicitly
+# UNVERIFIED; A1/A2 originals must remain while the old push branch and
+# independent P3 consumers remain. This gate is not a live API read.
+WAVE1_C_FIXED = json.loads(r'''{"audit_id":"wave1-c-20261116-live-github-readback","historical_branch_head":"af4a9e896328386723e8bbb957f334e1d83fe75e","historical_branch_comparison":"BEHIND_MAIN_13_AHEAD_0","branch_pr_531":"CLOSED_MERGED_EXACT_HEAD","branch_protected_metadata":false,"detailed_branch_protection":"UNVERIFIED_403_INTEGRATION_FORBIDDEN","other_same_branch_p3_workflows":[".github/workflows/issue402-dd-json-p3-smoke-once.yml",".github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml"],"default_branch_static_caller_search":"SELF_YAML_ONLY_NOT_CALLER_ZERO","original_trigger":"PUSH_EXACT_BRANCH_AND_SELF_PATH_ONLY","workflow_call":"NOT_DECLARED_IN_ORIGINAL","workflow_dispatch":"NOT_DECLARED_IN_ORIGINAL","repository_dispatch":"NOT_DECLARED_IN_ORIGINAL","workflow_run":"NOT_DECLARED_IN_ORIGINAL","cross_branch_dynamic_callers":"UNVERIFIED","external_api_gh_controller_callers":"UNVERIFIED","integration_pr":578,"integration_head":"9e71762a5f45ab755481720e8beba314f59cd021","integration_ci_run":43853584740,"integration_ci_conclusion":"FAILURE","group_a_p0_job":133252079431,"group_a_p0_conclusion":"SUCCESS_27_NEGATIVE_MUTATIONS","global_surface_guard":"FAIL_SIX_OTHER_AND_A1_A2_ORIGINAL_BRANCH_VIOLATIONS","disposition":"KEEP_HOLD_NO_ORIGINAL_REMOVAL_NO_BRANCH_DELETE","science":"SCIENCE_HOLD_P3_NOT_RUN"}''')
+WAVE1_C_PER_CASE = json.loads(r'''{"A1":{"historical_run_id":43533803916,"historical_run_conclusion":"SUCCESS","artifact_custody":"ARTIFACT_14088768015_UNEXPIRED_EXPIRES_2026-12-14_BACKUP_NOT_REHASHED","replacement_p0_job":133252079406,"replacement_native_p1_p2_job":133252079180,"replacement_job_conclusion":"SUCCESS","distinct_red_gate":"EXTERNAL_DYNAMIC_CALLER_ZERO_NOT_PROVEN; LEGACY_PUSH_BRANCH_PRESENT; SOURCE_CI_RED; P3_BRANCH_SHARED; FULL_PRESERVATION_UNPROVEN"},"A2":{"historical_run_id":43522731185,"historical_run_conclusion":"SUCCESS","artifact_custody":"NO_ARTIFACT_PUBLISHED_IN_ORIGINAL_RUN","replacement_p0_job":133252079239,"replacement_native_p1_p2_job":null,"replacement_job_conclusion":"SUCCESS","distinct_red_gate":"EXTERNAL_DYNAMIC_CALLER_ZERO_NOT_PROVEN; LEGACY_PUSH_BRANCH_PRESENT; SOURCE_CI_RED; P3_BRANCH_SHARED; FULL_PRESERVATION_UNPROVEN"}}''')
+
+
 def git_blob_sha(raw: bytes) -> str:
     return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
 
@@ -178,6 +185,11 @@ def inspect(root: Path, doc: dict) -> list[str]:
                 errors.append(id_ + " active legacy branch receipt missing or falsified")
             if record.get("same_head_revalidation") != A1_A2_SAME_HEAD_PROOFS[id_]:
                 errors.append(id_ + " same-head CI/job provenance missing or falsified")
+        if id_ in WAVE1_C_PER_CASE:
+            expected_wave1 = dict(WAVE1_C_FIXED)
+            expected_wave1.update(WAVE1_C_PER_CASE[id_])
+            if record.get("wave1_c_followup") != expected_wave1:
+                errors.append(id_ + " Wave1-C branch/caller/CI/retention audit missing or falsified")
         if record.get("decision") != "KEEP_HOLD":
             errors.append(id_ + " retirement promoted without accepted caller-zero/integrated proof")
         if not isinstance(record.get("blockers"), list) or not record["blockers"]:
@@ -227,6 +239,21 @@ def self_test(root: Path, original: dict) -> None:
         record = next(x for x in mutated["workflows"] if x["id"] == id_)
         record["same_head_revalidation"]["job_id"] = 0
         probes.append(("missing exact job provenance " + id_, mutated))
+    # New Wave1-C fail-closed controls: changing any unproved caller status,
+    # branch/P3 ownership, original artifact custody, or red CI must reject.
+    for id_ in ("A1", "A2"):
+        for key, tampered in (
+            ("historical_branch_head", "0" * 40),
+            ("external_api_gh_controller_callers", "ZERO_PROVEN"),
+            ("global_surface_guard", "PASS"),
+            ("artifact_custody", "VERIFIED_IMMUTABLE"),
+            ("other_same_branch_p3_workflows", []),
+            ("integration_head", "0" * 40),
+        ):
+            mutated = copy.deepcopy(original)
+            record = next(x for x in mutated["workflows"] if x["id"] == id_)
+            record["wave1_c_followup"][key] = tampered
+            probes.append(("Wave1-C falsified " + id_ + " " + key, mutated))
     for id_ in ("A3", "A4"):
         mutated = copy.deepcopy(original)
         record = next(x for x in mutated["workflows"] if x["id"] == id_)
