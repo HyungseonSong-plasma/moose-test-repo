@@ -368,7 +368,25 @@ def self_test():
         pass
     else:
         raise AssertionError("MERGE_ANCESTRY_FALSE_PASS")
-    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=20; SCIENCE_HOLD")
+    # N7: a declared file is absent from the *actual* ZIP, even when a
+    # malicious receipt supplies the correct SHA-256 of that incomplete ZIP.
+    incomplete = io.BytesIO()
+    with zipfile.ZipFile(incomplete, "w") as archive:
+        archive.writestr("p1_identity.json", json.dumps({
+            "source_sha": r["source_sha"], "P1": "PASS",
+            "oci_image": r["oci_digest"],
+            "binary_sha256": r["binary_sha256"]}))
+        archive.writestr("p1.log", "built")
+    missing_blob = incomplete.getvalue()
+    missing_record = copy.deepcopy(r)
+    missing_record["artifact"]["sha256"] = hashlib.sha256(missing_blob).hexdigest()
+    try:
+        verify(missing_record, MockGitHub(d, missing_blob))
+    except EvidenceRejected:
+        pass
+    else:
+        raise AssertionError("N7_MISSING_REAL_ZIP_FILE_FALSE_PASS")
+    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=21; SCIENCE_HOLD")
 
 
 def audit_live(args):
