@@ -80,8 +80,8 @@
       "original_p3": "NOT_RUN",
       "source_event": "push:branch-specific,self-path",
       "required_marker": "SPECIES_INITIAL_VOLUME_INLET_NATIVE_P2_PASS",
-      "retirement": "KEEP_HOLD",
-      "reason": "Replacement exact-head P0/P1/P2 verified and independent byte custody verified; candidate removal needs a scoped same-HEAD gate.",
+      "retirement": "RETIRED_VERIFIED",
+      "reason": "Original push-only self-path trigger branch is absent in refreshed 2026-11-16 branch search; no callable dispatch/reuse event in original YAML, and default-branch code search returned the original YAML only. Original P0/P1/P2 run 43468688669 and artifact 14059970866 have independent owner-private ZIP SHA-256 readback. Replacement CORE four actual Native P1/P2 and P0 passed at parent source 2df75852699531c8b6d469ec447d09a90e9a3738 (Repository CI 43833166262). Exact deletion-HEAD P0/P1/P2 and integrated review remain mandatory before final acceptance; no P3/science acceptance.",
       "original_success": {
         "run_id": 43468688669,
         "source_sha": "0ff51761bbbc9d22bcc20c848904498c1c495480",
@@ -96,7 +96,10 @@
         "readback_bytes": 30673,
         "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
       },
-      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND"
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "retirement_candidate_source_head": "2df75852699531c8b6d469ec447d09a90e9a3738",
+      "rollback_original_blob": "f11aa0de000fb05bcc587798400313558a6cb58a",
+      "replacement_parent_ci_run": 43833166262
     },
     {
       "path": ".github/workflows/issue402-species-live-ic-inlet-native-once.yml",
