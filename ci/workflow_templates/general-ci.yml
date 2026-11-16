@@ -820,6 +820,7 @@ jobs:
             tests/test_issue402_chemistry_mechanism_contract.py \
             tests/test_issue541_native_exodus_parity_oracle.py \
             tests/test_issue402_public_option_s6_p2.py \
+            tests/test_issue402_s6_chemistry_run_templates.py \
             2>&1 | tee /tmp/issue541_recovered_p0.log
           echo ISSUE541_RECOVERED_P0_PASS_P3_NOT_RUN
       - name: Store four-workflow P0 and inventory evidence
