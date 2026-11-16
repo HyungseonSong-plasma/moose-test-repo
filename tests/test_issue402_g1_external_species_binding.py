@@ -403,6 +403,29 @@ def test_real_solver_object_wiring():
     assert "rf_builder_parity.json" in (CASE / "run_native_binding_smoke.sh").read_text()
 
 
+def test_native_parity_receipt_rejects_mutated_real_exodus_data():
+    """Actual Native outputs must be rechecked with fail-closed negative probes."""
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert 'echo "PLASMA_RESULTS_MATCH"' in runner
+    assert 'echo "PLASMA_RESULTS_MATCH"' not in runner.split(
+        'echo "PLASMA_RESULTS_MATCH"', 1)[1].split('PY', 1)[0]
+    assert "native_parity_negative_controls.json" in runner
+    assert "numeric_state_mutation" in runner
+    assert "same_unrecognised_physical_field" in runner
+    assert "NATIVE_PARITY_NOT_PROVEN" in runner
+    assert "Unsupported Exodus physical field" in runner
+    assert "Numerical discrepancy" in runner
+    assert "original Native output" in runner
+    assert "sha(baseline) != before" in runner
+    assert "sha(candidate) != before" in runner
+    assert "NATIVE_PARITY_FALSE_PASS_REJECTED" in runner
+    assert runner.index('echo "PLASMA_RESULTS_MATCH"') < runner.index(
+        'print(receipt["result"])')
+    # The false-PASS controls must finish before the unrelated RF/P3 stages.
+    assert runner.index('print(receipt["result"])') < runner.index(
+        'native --check-input -i "$PILOT/rf_explicit.i"')
+
+
 def test_generated_physics_requires_explicit_inputs():
     source_dir = APP / "src/physics/plasma"
     activating_parameters = {
