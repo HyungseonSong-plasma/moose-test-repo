@@ -348,6 +348,75 @@ def verify(record, api):
             "verified_at": datetime.now(timezone.utc).isoformat()}
 
 
+def verify_historic_merged_ci(api, pr_number, run_id, job_id, artifact_id,
+                              expected_sha):
+    """Actual merged-main Repository CI, explicitly NOT a Native/P2 receipt.
+
+    Artifacts created before the v1 identity schema may lack internal
+    source_sha, so preserve distinct RUN_BOUND_ONLY provenance. Native
+    and science remain HOLD / NOT_RUN in this restricted evidence class.
+    """
+    require(sha(expected_sha), "MERGED_CI_SHA_INVALID")
+    pr = api.get("/pulls/" + str(pr_number))
+    run = api.get("/actions/runs/" + str(run_id))
+    jobs = api.get("/actions/runs/" + str(run_id) +
+                   "/jobs?per_page=100&filter=latest")
+    artifact = api.get("/actions/artifacts/" + str(artifact_id))
+    require(pr.get("number") == pr_number and
+            pr.get("merged") is True and pr.get("merged_at") and
+            pr.get("base", {}).get("ref") == "main" and
+            pr.get("merge_commit_sha") == expected_sha,
+            "MERGED_CI_PR_NOT_MERGED_AT_SHA")
+    current = api.get("/branches/main").get("commit", {}).get("sha")
+    require(sha(current), "MERGED_CI_MAIN_SHA_MISSING")
+    ancestry = api.get("/compare/" + expected_sha + "..." + current)
+    require(ancestry.get("status") in {"identical", "ahead"} and
+            ancestry.get("behind_by") == 0, "MERGED_CI_NOT_MAIN_ANCESTOR")
+    require(run.get("id") == run_id and run.get("event") == "push" and
+            run.get("head_branch") == "main" and
+            run.get("head_sha") == expected_sha and
+            run.get("status") == "completed" and
+            run.get("conclusion") == "success" and
+            run.get("name") == "Repository CI",
+            "MERGED_CI_PUSH_RUN_NOT_VERIFIED")
+    require(isinstance(jobs.get("jobs"), list), "MERGED_CI_JOB_LIST_INVALID")
+    job = next((x for x in jobs["jobs"] if x.get("id") == job_id), None)
+    require(job is not None and job.get("run_id") == run_id and
+            job.get("name") == "validate" and
+            job.get("status") == "completed" and
+            job.get("conclusion") == "success", "MERGED_CI_VALIDATE_NOT_PASS")
+    require(artifact.get("id") == artifact_id and
+            artifact.get("expired") is False and
+            artifact.get("workflow_run", {}).get("id") == run_id and
+            artifact.get("workflow_run", {}).get("head_sha") == expected_sha,
+            "MERGED_CI_ARTIFACT_OWNERSHIP_INVALID")
+    blob = api.download(artifact_id)
+    digest = hashlib.sha256(blob).hexdigest()
+    published = artifact.get("digest")
+    if published is not None:
+        require(published == "sha256:" + digest, "MERGED_CI_ZIP_DIGEST_INVALID")
+    members = zip_files(blob)
+    require(bool(members) and all(bool(v) for v in members.values()),
+            "MERGED_CI_ZIP_CONTENT_MISSING")
+    # Historical archive is from the authoritative GitHub run, but its inner
+    # payload has no required v1 source/checkout attestation. Do not reuse
+    # this class as POST_MERGE_NATIVE or v1 full-content-identity proof.
+    return {
+        "schema": SCHEMA, "evidence_kind": "MERGED_COMMIT",
+        "validation_scope": "REPOSITORY_CI_ONLY",
+        "status": "CI_PROVENANCE_VERIFIED_NATIVE_NOT_PROVEN",
+        "source_sha": expected_sha, "checkout_sha": None,
+        "merged_commit_sha": expected_sha, "pr_number": pr_number,
+        "workflow_run_id": run_id, "job_id": job_id,
+        "workflow_result": "success",
+        "artifact_id": artifact_id, "artifact_name": artifact.get("name"),
+        "artifact_sha256": digest, "artifact_provenance": "GITHUB_RUN_BOUND_ONLY",
+        "p1_result": "NOT_RUN", "p2_result": "NOT_RUN",
+        "p3_result": "NOT_RUN", "science": "SCIENCE_HOLD",
+        "verified_at": datetime.now(timezone.utc).isoformat()
+    }
+
+
 class MockGitHub:
     """Synthetic only: exercised by --self-test, not exposed to production CLI."""
     def __init__(self, data, blob):
@@ -436,6 +505,12 @@ def self_test():
         ("N16", lambda a, b: a.update(workflow_result="success")),
         ("N17", lambda a, b: b["/actions/runs/101"].update(head_sha="e" * 40)),
         ("N18", lambda a, b: a.update(oci_digest="other@sha256:" + "b" * 64)),
+        ("N25_LOG_WRONG_CHECKOUT", lambda a, b: b.update(
+            {"/actions/jobs/201/logs":
+             "[command]/usr/bin/git checkout --progress --force " + "e" * 40 + "\n"})),
+        ("N26_ASSERTION_STEP_FAILED", lambda a, b:
+         b["/actions/runs/101/jobs?per_page=100&filter=latest"]
+         ["jobs"][0]["steps"][0].update(conclusion="failure")),
     ]
     for name, mutate in cases:
         rr, dd = copy.deepcopy(r), copy.deepcopy(d)
@@ -516,7 +591,7 @@ def self_test():
         pass
     else:
         raise AssertionError("N7_MISSING_REAL_ZIP_FILE_FALSE_PASS")
-    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=24; SCIENCE_HOLD")
+    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=26; SCIENCE_HOLD")
 
 
 def audit_live(args):
@@ -565,6 +640,7 @@ def main():
     group.add_argument("--self-test", action="store_true")
     group.add_argument("--audit-live", action="store_true")
     group.add_argument("--verify-record", metavar="JSON_FILE")
+    group.add_argument("--audit-merged-ci", action="store_true")
     ap.add_argument("--repo", default=REPOSITORY)
     ap.add_argument("--run-id", type=int)
     ap.add_argument("--job-id", type=int)
@@ -577,6 +653,18 @@ def main():
     try:
         if args.self_test:
             self_test()
+        elif args.audit_merged_ci:
+            require(all(type(x) is int and x > 0 for x in
+                        (args.run_id, args.job_id, args.artifact_id, args.pr_number)),
+                    "MERGED_CI_IDENTIFIERS_REQUIRED")
+            result = verify_historic_merged_ci(
+                GitHub(args.repo), args.pr_number, args.run_id, args.job_id,
+                args.artifact_id, args.expected_sha)
+            if args.output:
+                Path(args.output).write_text(
+                    json.dumps(result, indent=2, sort_keys=True) + "\n")
+            print("ISSUE541_HISTORIC_MERGED_CI=" +
+                  json.dumps(result, sort_keys=True))
         elif args.verify_record:
             doc = json.loads(Path(args.verify_record).read_text(encoding="utf-8"))
             identity = doc.get("identity", doc)
