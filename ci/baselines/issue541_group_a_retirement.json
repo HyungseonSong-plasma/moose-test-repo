@@ -2,7 +2,7 @@
   "schema": "issue541.workflow_surface.group_a_evidence.v1",
   "repository": "HyungseonSong-plasma/moose-test-repo",
   "baseline_main_sha": "71e112eb05d4645c82aab8861b99d6952ac4ac3e",
-  "review_scope": "Group A 4-record read-only audit: A1/A2 retained KEEP_HOLD; A3/A4 staged in independent FLOW A-2 with mandatory source-bound guard and KEEP_HOLD_INTEGRATION.",
+  "review_scope": "Group A 4-record audit: A1 KEEP_HOLD, A2 owner-attested P0-only retired exact historical self-path, A3/A4 staged in independent FLOW A-2. Global Surface Guard must remain fail-closed for A1/ARCH P3.",
   "science": "SCIENCE_HOLD",
   "p3": "NOT_RUN",
   "source_date": "2026-11-16",
@@ -153,7 +153,7 @@
       "path": ".github/workflows/issue402-legacy-symbol-audit-once.yml",
       "original_blob": "1931f0b9909507979826812f346d3353f12e333b",
       "historical_branch": "issue-402-dd-plasma-boundary-action",
-      "branch_observed": "PRESENT",
+      "branch_observed": "NOT_FOUND",
       "trigger": "push / exact legacy branch / self-YAML path only",
       "original_run_id": 43522731185,
       "original_source_sha": "e631c9f8a1d2489e3025c9e677259fde3ba9735a",
@@ -172,17 +172,13 @@
         "conclusion": "success",
         "route": ".github/workflows/ci.yml / issue402_legacy_p0_inventory"
       },
-      "caller_state": "ACTIVE_LEGACY_PUSH_BRANCH__EXTERNAL_DYNAMIC_UNPROVEN",
-      "decision": "KEEP_HOLD",
-      "blockers": [
-        "Exact historical push branch remains present with same original YAML at af4a9e896328",
-        "External/dynamic caller-zero is unproven; a main-based code-search miss is insufficient",
-        "Maintained replacement is verified at 34a353947707 on unmerged Draft #553; no conflict-free integration and global validate PASS"
-      ],
+      "caller_state": "OWNER_ATTESTED_NO_EXTERNAL_PAT_PRIVATE_CONTROLLER__SELF_PATH_DISABLED",
+      "decision": "RETIRED_VERIFIED",
+      "blockers": [],
       "live_branch_readback": {
-        "head": "af4a9e896328386723e8bbb957f334e1d83fe75e",
-        "workflow_blob": "1931f0b9909507979826812f346d3353f12e333b",
-        "entrypoint": "PUSH_SELF_PATH_STILL_PRESENT",
+        "head": "b3f3b6e09b83828343fc0bc097f5a4edce9207e7",
+        "workflow_blob": null,
+        "entrypoint": "A2_SELF_PATH_REMOVED",
         "observed_on": "2026-11-16"
       },
       "same_head_revalidation": {
@@ -258,7 +254,47 @@
         "decision": "KEEP_HOLD",
         "science": "SCIENCE_HOLD",
         "p3": "NOT_RUN"
-      }
+      },
+      "a2_owner_retirement": {
+        "mode": "OWNER_ATTESTED_A2_SELF_PATH_RETIREMENT",
+        "attestation": "REPOSITORY_OWNER_CONFIRMS_NO_EXTERNAL_PAT_OR_PRIVATE_CONTROLLER",
+        "attestation_basis": "OPERATOR_DECLARATION_AND_REVIEWED_GITHUB_CODE_AND_RUN_HISTORY",
+        "attestation_comment_id": 6917594646,
+        "original_blob": "1931f0b9909507979826812f346d3353f12e333b",
+        "historical_branch": "issue-402-dd-plasma-boundary-action",
+        "historical_head_before": "af4a9e896328386723e8bbb957f334e1d83fe75e",
+        "historical_head_after": "b3f3b6e09b83828343fc0bc097f5a4edce9207e7",
+        "historical_a2_file": "ABSENT",
+        "historical_pr": 602,
+        "original_workflow_id": 417813582,
+        "original_success_run": 43522731185,
+        "original_artifact": "NONE_PUBLISHED",
+        "observed_a2_push_runs": 5,
+        "observed_a2_actors": "HyungseonSong-plasma",
+        "same_branch_a1_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+        "same_branch_p3_dd_blob": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
+        "same_branch_p3_s6_blob": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
+        "legacy_branch_retained": true,
+        "integration_pr": 578,
+        "integration_review_pr": 605,
+        "integration_base_before_delete": "860dd366e191a20124b0eae85d369498738233d6",
+        "maintained_job": "issue402_legacy_p0_inventory",
+        "maintained_run_id": 43870291280,
+        "maintained_job_id": 133309345787,
+        "maintained_p0": "PASS_81_PASSED_13_SKIPPED",
+        "maintained_inventory": "SELF_TEST_AND_CHECK_PASS",
+        "group_a_job_id": 133309345622,
+        "group_a_negative_mutations_before": 49,
+        "global_surface_guard": "STILL_FAILS_A1_AND_TWO_ARCH_P3_UNWAIVED",
+        "p3": "NOT_RUN",
+        "science": "SCIENCE_HOLD"
+      },
+      "remaining_non_a2_gates": [
+        "A1 DD JSON Boundary one-shot KEEP_HOLD",
+        "ARCH DD P3 one-shot KEEP_HOLD",
+        "ARCH Hybrid S6 P3/P4 one-shot KEEP_HOLD",
+        "Global validate remains red until separate authorized closures"
+      ]
     },
     {
       "id": "A3",
