@@ -70,8 +70,10 @@ def physical_fields(exodus):
                 for i, field_name in enumerate(global_names):
                     fields[("global", field_name)] = data[:, i]
                 continue
-            elif name.startswith(("vals_nod_var", "vals_elem_var", "vals_glo_var")):
-                raise ValueError(f"Unsupported unlabelled Exodus physical field: {name}")
+            elif name.startswith("vals_"):
+                # A physical data family that this oracle cannot identify is
+                # not evidence of parity, even if both files contain it.
+                raise ValueError(f"Unsupported Exodus physical field: {name}")
         if key is not None:
             if key in fields:
                 raise ValueError(f"Duplicate Exodus physical field identity: {key}")
@@ -81,6 +83,15 @@ def physical_fields(exodus):
                         ("global", global_names)):
         if names and not any(key[0] == kind for key in fields):
             raise ValueError(f"Exodus {kind} names exist without values")
+        if kind in {"nodal", "elemental"}:
+            # Checking just the candidate/ref inventory would incorrectly
+            # PASS when the same declared physical field is absent from BOTH.
+            # An elemental name must have values on at least one block;
+            # per-block applicability is not necessarily uniform.
+            recorded = {key[-1] for key in fields if key[0] == kind}
+            missing = set(names) - recorded
+            if missing:
+                raise ValueError(f"Exodus {kind} names without values: {sorted(missing)}")
     if not any(key[0] in {"nodal", "elemental", "global"} for key in fields):
         raise ValueError("No physical Exodus state variables found")
     return {"nodal": set(nodal), "elemental": set(elemental),
