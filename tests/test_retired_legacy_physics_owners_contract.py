@@ -20,6 +20,8 @@ RETIRED_FILES = (
     "include/materials/PhysicsInverseCrossSection.h",
     "src/materials/PhysicsTotalCrossSection.C",
     "include/materials/PhysicsTotalCrossSection.h",
+    "src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+    "include/fvkernels/PhysicsFVLogMolarElectronTransport.h",
     "src/utils/PhysicsUtils.C",
     "include/utils/PhysicsUtils.h",
 )
@@ -57,6 +59,55 @@ def test_active_wall_and_surface_charge_owners_remain():
         "src/functormaterials/PhysicsIonWallFluxMaterial.C",
         "src/kernels/PhysicsLowerDSurfaceCurrent.C",
         "src/bcs/PhysicsADSurfaceChargePoissonBC.C",
-        "src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "src/fvkernels/PhysicsFVLogMolarTransport.C",
     ):
         assert (APP / rel).is_file(), f"Active physics owner missing: {rel}"
+
+
+def test_shared_fv_log_molar_transport_keeps_ion_operators_without_dead_source():
+    source = (APP / "src/fvkernels/PhysicsFVLogMolarTransport.C").read_text(encoding="utf-8")
+    header = (APP / "include/fvkernels/PhysicsFVLogMolarTransport.h").read_text(encoding="utf-8")
+    for name in (
+        "PhysicsFVLogMolarTimeDerivative",
+        "PhysicsFVLogMolarDiffusion",
+        "PhysicsFVLogMolarElectrostaticDrift",
+    ):
+        assert f"class {name} :" in header
+        assert f'registerMooseObject("PhysicsApp", {name});' in source
+    for removed in (
+        "PhysicsFVLogMolarElectronReactionSource",
+        "PhysicsFVLogMolarElectronTimeDerivative",
+        "PhysicsFVLogMolarElectronDiffusion",
+    ):
+        assert removed not in header and removed not in source
+    assert "return (exp(log_c_new) - exp(log_c_old)) / _dt;" in source
+    assert "return -coeff_face * (c_neighbor - c_elem) / _face_info->dCNMag();" in source
+    assert "_charge_number * mobility_face * (electric_field * _normal)" in source
+    assert "const ADReal c_face = exp(_var(transported_face, state));" in source
+    assert "use_element_gradient_for_potential" in source
+
+
+def test_current_fv_ion_callers_use_only_generic_transport_classes():
+    callers = (
+        "experiments/fem_fvm_plasma_discriminator/prepare_cases.py",
+        "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py",
+    )
+    for rel in callers:
+        data = (ROOT / rel).read_text(encoding="utf-8")
+        assert "PhysicsFVLogMolarTimeDerivative" in data
+        assert "PhysicsFVLogMolarDiffusion" in data
+        assert "PhysicsFVLogMolarElectronTimeDerivative" not in data
+        assert "PhysicsFVLogMolarElectronDiffusion" not in data
+
+
+def test_pinned_s6_base_retains_its_historical_fv_factory_names():
+    source = (ROOT / "experiments/Issue402_plasma_dsl_g1/native/"
+              "s6_c0_physics_base_no_d1.i").read_text(encoding="utf-8")
+    assert source.count("type = PhysicsFVLogMolarElectronTimeDerivative") == 3
+    assert source.count("type = PhysicsFVLogMolarElectronDiffusion") == 3
+    assert "type = PhysicsFVLogMolarTimeDerivative" not in source
+    assert "type = PhysicsFVLogMolarDiffusion" not in source
+    preparer = (ROOT / "experiments/Issue402_plasma_dsl_g1/"
+                "public_option_s6_p2.py").read_text(encoding="utf-8")
+    assert "STAGED_D_FV_LOG_MOLAR_OWNER_COUNT_CHANGED" in preparer
+

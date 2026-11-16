@@ -90,6 +90,17 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
               "    variable = log_ne\n"
               "    block = plasma\n"
               "  []\n")
+    # Exact 3-ion FV time/diffusion owner count from the pinned native C0.
+    for species in ("O2p", "Om", "Op"):
+        for term, old_type in (
+            ("time", "PhysicsFVLogMolarElectronTimeDerivative"),
+            ("diffusion", "PhysicsFVLogMolarElectronDiffusion"),
+        ):
+            sample += (f"  [{species}_{term}]\n"
+                       f"    type = {old_type}\n"
+                       f"    variable = log_{species}\n"
+                       "  []\n")
+
     for index in range(10):
         name = f"layer_{index}.i"
         content = sample if index == 0 else f"# original {index}\\n"
@@ -106,6 +117,11 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     assert report["removed_native_time"]["generated_name"] == "e_time"
     assert report["removed_native_time"]["kernel_type"] == "PhysicsFEMLogMolarTimeDerivative"
     assert report["changed_reference_count"] == 4
+    assert report["files"]["layer_0.i"]["fv_log_molar_type_substitutions"] == {
+        "PhysicsFVLogMolarElectronTimeDerivative": 3,
+        "PhysicsFVLogMolarElectronDiffusion": 3,
+    }
+
     assert report["files"]["layer_0.i"]["original_sha256"] == (
         hashlib.sha256(sample.encode()).hexdigest())
     assert (archived / "layer_0.i").read_text() == sample
@@ -115,6 +131,11 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
     assert "coupled = 'log_O2p log_Om log_Op'" in migrated
     assert "similar_name = log_ne_custom" in migrated
     assert "[ne_time]" not in migrated
+    assert migrated.count("type = PhysicsFVLogMolarTimeDerivative") == 3
+    assert migrated.count("type = PhysicsFVLogMolarDiffusion") == 3
+    assert "type = PhysicsFVLogMolarElectronTimeDerivative" not in migrated
+    assert "type = PhysicsFVLogMolarElectronDiffusion" not in migrated
+
     assert "PhysicsFEMLogMolarTimeDerivative" not in migrated
     assert report["files"]["layer_0.i"]["staged_sha256"] == (
         hashlib.sha256(migrated.encode()).hexdigest())
@@ -130,6 +151,11 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
         ("missing", sample.replace(time_block, ""), ""),
         ("changed", sample.replace("    block = plasma\n", "    block = other\n"), ""),
         ("duplicate", sample, time_block),
+        ("fv_missing", sample.replace("PhysicsFVLogMolarElectronDiffusion",
+                                      "PhysicsFVLogMolarDiffusion", 1), ""),
+        ("fv_extra", sample,
+         "  [bad]\n    type = PhysicsFVLogMolarElectronDiffusion\n  []\n"),
+
     ):
         damaged = tmp_path / fault
         damaged.mkdir()
@@ -183,6 +209,11 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
         "    variable = log_ne\n  []\n"
         "  [energy_joule]\n    type = PhysicsFEMLogMolarElectronJouleHeating\n"
         "    variable = log_energy\n  []\n[]\n"
+        "[FVKernels]\n"
+        "  [ni_time]\n    type = PhysicsFVLogMolarElectronTimeDerivative\n"
+        "    variable = log_ni\n  []\n"
+        "  [ni_diffusion]\n    type = PhysicsFVLogMolarElectronDiffusion\n"
+        "    variable = log_ni\n  []\n[]\n"
     )
     ordered = []
     for i in range(10):
@@ -195,14 +226,22 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
     assert result["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
     assert all(count == 1 for old, count in result["totals"].items()
                if old.startswith("PhysicsFEM"))
+    assert result["totals"]["PhysicsFVLogMolarElectronTimeDerivative"] == 1
+    assert result["totals"]["PhysicsFVLogMolarElectronDiffusion"] == 1
     assert all(count == 0 for old, count in result["totals"].items()
-               if not old.startswith("PhysicsFEM"))
+               if not old.startswith(("PhysicsFEM", "PhysicsFVLogMolarElectron")))
     migrated = (staged / "layer_0.i").read_text()
     for old, new in ((old, new) for old, new in namespace["RENAMED_FEM_KERNEL_TYPES"].items()
                      if old.startswith("PhysicsFEM")):
         assert "type = " + old not in migrated
         assert "type = " + new in migrated
         assert "type = " + old in (archived / "layer_0.i").read_text()
+    assert "type = PhysicsFVLogMolarTimeDerivative" in migrated
+    assert "type = PhysicsFVLogMolarDiffusion" in migrated
+    assert "type = PhysicsFVLogMolarElectronTimeDerivative" not in migrated
+    assert "type = PhysicsFVLogMolarElectronDiffusion" not in migrated
+    assert "type = PhysicsFVLogMolarElectronTimeDerivative" in (archived / "layer_0.i").read_text()
+    assert "type = PhysicsFVLogMolarElectronDiffusion" in (archived / "layer_0.i").read_text()
     assert result["files"]["layer_0.i"]["original_sha256"] == hashlib.sha256(source.encode()).hexdigest()
     snapshot = {p.name: p.read_bytes() for p in staged.iterdir()}
     with pytest.raises(ValueError, match="layer count"):

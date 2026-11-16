@@ -34,6 +34,9 @@ def canonical_staged_base() -> str:
         "mean_en_solved": "e_energy_eV",
         "PhysicsElectronMeanEnergyMaterial": "ElectronEnergyMaterial",
         "PhysicsFEMLogMolarTimeDerivative": "FEMLogMolarTimeDerivative",
+        "PhysicsFVLogMolarElectronTimeDerivative": "PhysicsFVLogMolarTimeDerivative",
+        "PhysicsFVLogMolarElectronDiffusion": "PhysicsFVLogMolarDiffusion",
+
         "PhysicsFEMLogMolarDriftDiffusion": "FEMLogMolarDriftDiffusion",
         "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
     }

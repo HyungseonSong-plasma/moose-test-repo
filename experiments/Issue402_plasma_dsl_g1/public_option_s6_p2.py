@@ -143,6 +143,13 @@ def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
         "block": "plasma",
     }
     first_layer = Path(ordered[0]).name
+    # Strictly rewrite only staged D copies; the immutable one-time base is SHA-pinned.
+    fv_type_renames = {
+        "PhysicsFVLogMolarElectronTimeDerivative": "PhysicsFVLogMolarTimeDerivative",
+        "PhysicsFVLogMolarElectronDiffusion": "PhysicsFVLogMolarDiffusion",
+    }
+    expected_first_layer_fv = {key: 3 for key in fv_type_renames}
+
     changes: dict[str, dict] = {}
     pending: list[tuple[Path, str]] = []
     removed_time: list[dict] = []
@@ -184,11 +191,36 @@ def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
         if re.search(r"(?m)^[ \t]*\[ne_transport\][ \t]*$", source):
             raise ValueError("Staged D input still contains the original ne_transport")
 
+        fv_type_counts = {
+            old: len(re.findall(r"(?m)^[ \t]*type[ \t]*=[ \t]*" +
+                                re.escape(old) + r"[ \t]*$", source))
+            for old in fv_type_renames
+        }
+        for old, count in fv_type_counts.items():
+            all_tokens = len(re.findall(r"(?<![A-Za-z0-9_])" +
+                                        re.escape(old) + r"(?![A-Za-z0-9_])", source))
+            if all_tokens != count:
+                raise ValueError("Unexpected retired FV transport token outside type field: " + old)
+        if name == first_layer:
+            if fv_type_counts != expected_first_layer_fv:
+                raise ValueError("STAGED_D_FV_LOG_MOLAR_OWNER_COUNT_CHANGED")
+        elif any(fv_type_counts.values()):
+            raise ValueError("STAGED_D_FV_LOG_MOLAR_TYPE_OUTSIDE_BASE")
+
         observed = {old: len(re.findall(
             r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])", source))
             for old in CANONICAL_STATE_NAMES}
         converted = _STATE_TOKEN.sub(
             lambda match: CANONICAL_STATE_NAMES[match.group()], source)
+        for old, new in fv_type_renames.items():
+            converted, count = re.subn(
+                r"(?m)^([ \t]*type[ \t]*=[ \t]*)" + re.escape(old) + r"([ \t]*)$",
+                lambda match, new=new: match.group(1) + new + match.group(2),
+                converted,
+            )
+            if count != fv_type_counts[old]:
+                raise ValueError("STAGED_D_FV_LOG_MOLAR_REWRITE_INCOMPLETE")
+
         if _STATE_TOKEN.search(converted) or "[ne_time]" in converted:
             raise ValueError("Staged D retains a legacy state or time owner")
 
@@ -198,6 +230,10 @@ def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
             "original_sha256": hashlib.sha256(before).hexdigest(),
             "staged_sha256": hashlib.sha256(converted.encode("utf-8")).hexdigest(),
             "state_name_substitutions": {k: v for k, v in observed.items() if v},
+            "fv_log_molar_type_substitutions": {
+                k: v for k, v in fv_type_counts.items() if v
+            },
+
         }
 
     # Fail before writing any copy if ownership or source identity is unclear.
@@ -225,6 +261,10 @@ RENAMED_FEM_KERNEL_TYPES = {
     "PhysicsFEMLogMolarTimeDerivative": "FEMLogMolarTimeDerivative",
     "PhysicsFEMLogMolarDriftDiffusion": "FEMLogMolarDriftDiffusion",
     "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
+    # Historical B/C plus D scratch type fields; no old MOOSE factory aliases.
+    "PhysicsFVLogMolarElectronTimeDerivative": "PhysicsFVLogMolarTimeDerivative",
+    "PhysicsFVLogMolarElectronDiffusion": "PhysicsFVLogMolarDiffusion",
+
     # Archived S6 inputs are rewritten only after their pinned byte hashes are checked.
     "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
     "DDMaterial": "DDTransportMaterial",
