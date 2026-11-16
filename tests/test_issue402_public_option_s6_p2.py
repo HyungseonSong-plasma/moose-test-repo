@@ -183,6 +183,20 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
         "    variable = log_ne\n  []\n"
         "  [energy_joule]\n    type = PhysicsFEMLogMolarElectronJouleHeating\n"
         "    variable = log_energy\n  []\n[]\n"
+        "[BCs]\n"
+        "  [electron_bc]\n"
+        "    type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC\n"
+        "    variable = log_ne\n"
+        "    wall_number_flux = e_wall_number_flux\n"
+        "    boundary = left\n"
+        "  []\n"
+        "  [electron_energy_bc]\n"
+        "    type = PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC\n"
+        "    variable = log_energy\n"
+        "    wall_number_flux = e_wall_number_flux\n"
+        "    mean_energy = e_energy_eV\n"
+        "    boundary = left\n"
+        "  []\n[]\n"
     )
     ordered = []
     for i in range(10):
@@ -330,7 +344,10 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
+        "migrate_staged_D_json_initial": lambda *_args: {"status": "SYNTHETIC_JSON_INITIAL"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
+        "migrate_staged_electron_closure": lambda *_args: {"status": "SYNTHETIC_CLOSURE"},
+        "migrate_staged_wall_owners": lambda *_args: {"status": "SYNTHETIC_WALL_AUDIT"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(
@@ -356,3 +373,467 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
     assert durable["P2"] == "PASS"
     assert durable["status"] == "HOLD_INFRASTRUCTURE_CLEANUP"
     assert durable["P3"] == "NOT_RUN"
+
+
+def test_s6_log_molar_closure_cutover_is_exact_and_fail_closed(tmp_path):
+    """The old S6 mean-energy equation and public lookup get scratch-only owners."""
+    import re
+    import pytest
+
+    path = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(path.read_text())
+    declarations = [node for node in tree.body
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == "_S6_CLOSURE_BLOCK"
+                            for t in node.targets)]
+    functions = [node for node in tree.body
+                 if isinstance(node, ast.FunctionDef)
+                 and node.name == "migrate_staged_electron_closure"]
+    assert len(declarations) == len(functions) == 1
+    namespace = {"re": re, "Path": Path, "hashlib": hashlib}
+    exec(compile(ast.Module(body=declarations + functions, type_ignores=[]),
+                 str(path), "exec"), namespace)
+    transform = namespace["migrate_staged_electron_closure"]
+
+    for variant in ("B", "D"):
+        folder = tmp_path / variant
+        folder.mkdir()
+        electron = "log_ne" if variant == "B" else "log_e"
+        source = (
+            "[FunctorMaterials]\n"
+            "  [mean_energy]\n"
+            "    type = PhysicsElectronMeanEnergyMaterial\n"
+            "    electron_energy_density = log_energy\n"
+            f"    electron_density = {electron}\n"
+            "    state_form = log_molar_eV\n"
+            "    block = plasma\n"
+            "  []\n"
+            "  [electron_transport]\n"
+            "    type = PhysicsElectronTransportLookupMaterial\n"
+            "    property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'\n"
+            "    mean_energy = mean_en_solved\n"
+            "    pressure = p\n"
+            "    gas_temperature = T_g_fixed\n"
+            "    bounds_policy = clamp\n"
+            "    block = plasma\n"
+            "  []\n"
+            "[]\n"
+        )
+        ordered = [f"chem/layer_{i}.i" for i in range(10)]
+        for i in range(10):
+            (folder / f"layer_{i}.i").write_text(
+                source if i == 0 else
+                ("[Postprocessors]\n  [mean]\n"
+                 "    functor = mean_en_solved\n  []\n[]\n") if i == 1
+                else f"# unchanged {i}\n")
+        if variant == "D":
+            ordered.append("chem/migrated_continuity.i")
+            (folder / "migrated_continuity.i").write_text(
+                "[Physics]\n  [Plasmas]\n  []\n[]\n")
+
+        originals = {p.name: p.read_bytes() for p in folder.iterdir()}
+        result = transform(folder, ordered, variant)
+        assert result["status"] == "SCRATCH_ONLY_LOG_MOLAR_CLOSURE_MIGRATED"
+        assert set(result["owners"]) == {"mean_energy", "electron_transport"}
+        assert result["consumer_renames"] == 1
+        assert result["P3"] == "NOT_RUN" and result["science"] == "SCIENCE_HOLD"
+        changed = (folder / "layer_0.i").read_text()
+        assert "type = ElectronEnergyMaterial" in changed
+        assert f"electron_density = {electron}" in changed
+        assert "type = DDTransportMaterial" in changed
+        assert "table_units = reduced" in changed
+        assert "fluid_energy = true" in changed
+        assert "property_table_file" not in changed
+        assert "mean_en_solved" not in (folder / "layer_1.i").read_text()
+        assert "functor = e_energy_eV" in (folder / "layer_1.i").read_text()
+        if variant == "D":
+            assert (folder / "migrated_continuity.i").read_bytes() == originals["migrated_continuity.i"]
+
+        for param, wrong in (("state_form = log_molar_eV", "state_form = normalized"),
+                             ("bounds_policy = clamp", "bounds_policy = extrapolate"),
+                             ("    block = plasma", "    block = air")):
+            broken = tmp_path / f"{variant}_{param.split()[0]}_{wrong.split()[-1]}"
+            broken.mkdir()
+            for name, data in originals.items():
+                (broken / name).write_bytes(data)
+            first = broken / "layer_0.i"
+            first.write_text(first.read_text().replace(param, wrong, 1))
+            snapshot = {p.name: p.read_bytes() for p in broken.iterdir()}
+            with pytest.raises(ValueError, match="IDENTITY_UNPROVED"):
+                transform(broken, ordered, variant)
+            assert snapshot == {p.name: p.read_bytes() for p in broken.iterdir()}
+
+
+
+def test_s6_D_json_initial_ownership_retires_only_pinned_native_states(tmp_path):
+    """Synthetic scratch inputs: exact historical logs become physical JSON values."""
+    import json
+    import importlib.util
+    import math
+    import re
+    import pytest
+
+    path = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(path.read_text())
+    declarations = [
+        node for node in tree.body if isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "_S6_D_INITIAL_VARIABLE"
+                for t in node.targets)
+    ]
+    functions = [node for node in tree.body
+                 if isinstance(node, ast.FunctionDef)
+                 and node.name == "migrate_staged_D_json_initial"]
+    assert len(declarations) == 1 and len(functions) == 1
+    namespace = {
+        "ROOT": ROOT, "Path": Path, "hashlib": hashlib, "json": json,
+        "math": math, "re": re, "importlib": importlib,
+        "sha_file": lambda path: hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+    exec(compile(ast.Module(body=declarations + functions, type_ignores=[]),
+                 str(path), "exec"), namespace)
+    migrate = namespace["migrate_staged_D_json_initial"]
+
+    folder = tmp_path / "scratch"
+    folder.mkdir()
+    pinned = {
+        "log_e": "-20.216123548032986",
+        "log_O2p": "-20.216123548032986",
+        "log_Om": "-27.123878827015126",
+        "log_Op": "-27.123878827015126",
+    }
+    blocks = []
+    for name, initial in pinned.items():
+        props = (
+            ("    family = LAGRANGE\n    order = FIRST\n") if name == "log_e"
+            else ("    type = MooseVariableFVReal\n")
+        )
+        blocks.append(
+            f"  [{name}]\n" + props
+            + f"    initial_condition = {initial}\n"
+            + "    block = plasma\n  []\n"
+        )
+    full_input = "[Variables]\n" + "".join(blocks) + (
+        "  [log_energy]\n    family = LAGRANGE\n"
+        "    order = FIRST\n    initial_condition = -18.829829186913098\n"
+        "    block = plasma\n  []\n[]\n"
+    )
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        (folder / f"layer_{i}.i").write_text(
+            full_input if i == 0 else f"# untouched control {i}\n"
+        )
+    ordered.append("chem/migrated_continuity.i")
+    (folder / "migrated_continuity.i").write_text("OPTION_OVERLAY_STAYS_UNTOUCHED\n")
+    original_json = PILOT / "plasma_species_only.json"
+    (folder / "plasma_species_only.json").write_bytes(original_json.read_bytes())
+
+    source = {p.name: p.read_bytes() for p in folder.iterdir()}
+    result = migrate(folder, ordered)
+    assert result["status"] == "SCRATCH_ONLY_ARCHIVED_NATIVE_DENSITIES_TO_JSON"
+    assert result["P3"] == "NOT_RUN" and result["science"] == "SCIENCE_HOLD"
+    assert set(result["retired_native_variable_owners"]) == set(pinned)
+    assert "  [log_energy]\n" in (folder / "layer_0.i").read_text()
+    for name in pinned:
+        assert "  [" + name + "]\n" not in (folder / "layer_0.i").read_text()
+    assert (folder / "migrated_continuity.i").read_bytes() == source["migrated_continuity.i"]
+    assert (folder / "layer_1.i").read_bytes() == source["layer_1.i"]
+    staged = json.loads((folder / "plasma_species_only.json").read_text())
+    for species, name in (("e", "log_e"), ("O2p", "log_O2p"),
+                          ("Om", "log_Om"), ("Op", "log_Op")):
+        expected = math.exp(float(pinned[name])) * 6.02214076e23
+        assert staged["species"][species]["initial_number_density"] == expected
+    assert original_json.read_bytes() == source["plasma_species_only.json"]
+
+    for label, old, new in (
+        ("modified_e", "initial_condition = -20.216123548032986",
+         "initial_condition = -20.216123548032985"),
+        ("wrong_block", "    block = plasma", "    block = vacuum"),
+    ):
+        malformed = tmp_path / label
+        malformed.mkdir()
+        for name, data in source.items():
+            (malformed / name).write_bytes(data)
+        first = malformed / "layer_0.i"
+        first.write_text(first.read_text().replace(old, new, 1))
+        snapshot = {p.name: p.read_bytes() for p in malformed.iterdir()}
+        with pytest.raises(ValueError, match="SOURCE_CONTRACT_CHANGED"):
+            migrate(malformed, ordered)
+        assert snapshot == {p.name: p.read_bytes() for p in malformed.iterdir()}
+
+    missing = tmp_path / "missing_native"
+    missing.mkdir()
+    for name, data in source.items():
+        (missing / name).write_bytes(data)
+    first = missing / "layer_0.i"
+    first.write_text(first.read_text().replace(blocks[0], "", 1))
+    snapshot = {p.name: p.read_bytes() for p in missing.iterdir()}
+    with pytest.raises(ValueError, match="MISSING_PINNED_NATIVE_STATES"):
+        migrate(missing, ordered)
+    assert snapshot == {p.name: p.read_bytes() for p in missing.iterdir()}
+
+
+
+def test_lowerD_surface_current_probe_semantics_and_scratch_type_only(tmp_path):
+    """B keeps its wall-current observation, without a retired factory alias."""
+    import re
+
+    modern = "LowerDSurfaceCurrentProbeAux"
+    old = "PhysicsLowerDSurfaceCurrentProbeAux"
+    app = ROOT / "physics_app"
+    header = (app / "include/auxkernels" / (modern + ".h")).read_text()
+    source = (app / "src/auxkernels" / (modern + ".C")).read_text()
+    assert "class " + modern + " : public AuxKernel" in header
+    assert f'registerMooseObject("PhysicsApp", {modern});' in source
+    assert f'registerMooseObject("PhysicsApp", {old});' not in source
+    assert "interior_parent()" in source
+    assert "getHigherDSide(_current_elem)" in source
+    assert "_surface_current_density.hasFaceSide(*fi, true)" in source
+    assert "_surface_current_density.hasFaceSide(*fi, false)" in source
+    assert "if (on_elem == on_neighbor)" in source
+    assert "_surface_current_density(face_arg, Moose::currentState())" in source
+    assert "return MetaPhysicL::raw_value" in source
+
+    path = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(path.read_text())
+    declarations = [n for n in tree.body if isinstance(n, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id in
+                            {"RENAMED_FEM_KERNEL_TYPES", "_FEM_TYPE_LINE"}
+                            for t in n.targets)]
+    fun = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+           and n.name == "remap_staged_fem_types"]
+    assert len(declarations) == 2 and len(fun) == 1
+    namespace = {"re": re, "Path": Path, "hashlib": hashlib}
+    exec(compile(ast.Module(body=declarations + fun, type_ignores=[]),
+                 str(path), "exec"), namespace)
+    assert namespace["RENAMED_FEM_KERNEL_TYPES"][old] == modern
+    staged = tmp_path / "scratch"
+    staged.mkdir()
+    original = (
+        "[AuxKernels]\n"
+        "  [wafer_net_current_probe_kernel]\n"
+        f"    type = {old}\n"
+        "    variable = wafer_net_current_probe\n"
+        "    surface_current_density = wafer_net_surface_current_density\n"
+        "    block = wafer_surface\n"
+        "    execute_on = 'INITIAL TIMESTEP_END'\n"
+        "  []\n[]\n"
+    )
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        (staged / f"layer_{i}.i").write_text(original if i == 0
+                                            else f"# unchanged {i}\n")
+    receipt = namespace["remap_staged_fem_types"](staged, ordered)
+    assert receipt["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
+    assert receipt["totals"][old] == 1
+    expected = original.replace("type = " + old, "type = " + modern)
+    assert (staged / "layer_0.i").read_text() == expected
+    assert receipt["files"]["layer_0.i"]["original_sha256"] == (
+        hashlib.sha256(original.encode()).hexdigest())
+
+
+
+def test_wafer_D1_geometry_probe_keeps_plasma_side_observation_contract(tmp_path):
+    """Retired diagnostic tokens map to equivalent canonical observer, not no-op."""
+    import re
+
+    app = ROOT / "physics_app"
+    modern, old = "WaferD1GeometryProbeAux", "PhysicsWaferD1GeometryProbeAux"
+    source = (app / "src/auxkernels" / (modern + ".C")).read_text()
+    header = (app / "include/auxkernels" / (modern + ".h")).read_text()
+    assert f"class {modern} : public AuxKernel" in header
+    assert f'registerMooseObject("PhysicsApp", {modern});' in source
+    assert f'registerMooseObject("PhysicsApp", {old});' not in source
+    for marker in (
+        "getHigherDSide(_current_elem)", "_surface_current_density.hasFaceSide(*fi, true)",
+        "_surface_current_density.hasFaceSide(*fi, false)",
+        "if (on_elem == on_neighbor)",
+        'MooseEnum("normal_r normal_z owner d_perp e_n")',
+        'if (_component == "normal_r")',
+        'if (_component == "normal_z")',
+        'if (_component == "owner")',
+        'if (_component == "d_perp")',
+        "_potential.gradient(face_arg.makeElem()",
+        "_potential.gradient(face_arg.makeNeighbor()",
+    ):
+        assert marker in source, marker
+
+    script = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(script.read_text())
+    declarations = [
+        n for n in tree.body if isinstance(n, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id in
+                {"RENAMED_FEM_KERNEL_TYPES", "_FEM_TYPE_LINE"}
+                for t in n.targets)
+    ]
+    fun = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+           and n.name == "remap_staged_fem_types"]
+    namespace = {"Path": Path, "re": re, "hashlib": hashlib}
+    exec(compile(ast.Module(body=declarations + fun, type_ignores=[]),
+                 str(script), "exec"), namespace)
+    assert namespace["RENAMED_FEM_KERNEL_TYPES"][old] == modern
+    folder = tmp_path / "staged"
+    folder.mkdir()
+    original = (
+        "[AuxKernels]\n"
+        "  [wafer_d1_normal_r_kernel]\n"
+        f"    type = {old}\n"
+        "    variable = wafer_d1_normal_r\n"
+        "    surface_current_density = wafer_net_surface_current_density\n"
+        "    potential = potential\n"
+        "    component = normal_r\n"
+        "    block = wafer_surface\n"
+        "    execute_on = 'INITIAL TIMESTEP_END'\n"
+        "  []\n[]\n"
+    )
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        (folder / f"layer_{i}.i").write_text(
+            original if i == 0 else f"# unused {i}\n"
+        )
+    result = namespace["remap_staged_fem_types"](folder, ordered)
+    assert result["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
+    assert result["totals"][old] == 1
+    assert (folder / "layer_0.i").read_text() == (
+        original.replace("type = " + old, "type = " + modern)
+    )
+
+
+
+def test_s6_chemistry_json_initial_transfer_retains_seven_pinned_channels(tmp_path):
+    """Chemistry's disposable common JSON gains only four original Native ICs.
+
+    The original seven-channel mechanism, all neutral species, and the
+    variant-dependent eighth reaction are not copied into a new owner or
+    silently replaced.
+    """
+    import importlib.util
+    import json
+    import math
+    import re
+    import pytest
+
+    pilot_script = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(pilot_script.read_text())
+    declarations = [
+        n for n in tree.body if isinstance(n, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "_S6_D_INITIAL_VARIABLE"
+                for t in n.targets)
+    ]
+    functions = [
+        n for n in tree.body if isinstance(n, ast.FunctionDef)
+        and n.name == "migrate_staged_D_json_initial"
+    ]
+    assert len(declarations) == len(functions) == 1
+    scope = {
+        "ROOT": ROOT, "Path": Path, "hashlib": hashlib,
+        "json": json, "math": math, "re": re,
+        "importlib": __import__("importlib"),
+        "sha_file": lambda path: hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+    exec(compile(ast.Module(body=declarations + functions, type_ignores=[]),
+                 str(pilot_script), "exec"), scope)
+    migrate = scope["migrate_staged_D_json_initial"]
+
+    folder = tmp_path / "chemistry-scratch"
+    chemistry = folder / "chemistry"
+    chemistry.mkdir(parents=True)
+    original_json = PILOT / "chemistry/oxygen_s6_common.json"
+    original_document = json.loads(original_json.read_text())
+    assert len(original_document["reactions"]) == 7
+    assert len(original_document["equations"]) == 7
+    (chemistry / "oxygen_s6_common.json").write_bytes(original_json.read_bytes())
+
+    variant_source = PILOT / "chemistry/oxygen_s6_417.json"
+    (chemistry / "oxygen_s6_417.json").write_bytes(variant_source.read_bytes())
+    logs = {
+        "log_e": "-20.216123548032986",
+        "log_O2p": "-20.216123548032986",
+        "log_Om": "-27.123878827015126",
+        "log_Op": "-27.123878827015126",
+    }
+    variables = "[Variables]\n"
+    for name, initial in logs.items():
+        declaration = ("    family = LAGRANGE\n    order = FIRST\n"
+                       if name == "log_e" else
+                       "    type = MooseVariableFVReal\n")
+        variables += (
+            "  [" + name + "]\n" + declaration
+            + "    initial_condition = " + initial + "\n"
+            + "    block = plasma\n  []\n"
+        )
+    variables += "  [log_e_energy]\n    family = LAGRANGE\n[]\n"
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        (folder / f"layer_{i}.i").write_text(
+            variables if i == 0 else f"# untouched {i}\n"
+        )
+    ordered.append("chem/migrated_continuity.i")
+    (folder / "migrated_continuity.i").write_text("# option-only sidecar\n")
+    sources = {p.relative_to(folder): p.read_bytes()
+               for p in folder.rglob("*") if p.is_file()}
+
+    result = migrate(folder, ordered, chemistry_common=True)
+    assert result["status"] == "SCRATCH_ONLY_ARCHIVED_NATIVE_DENSITIES_TO_JSON"
+    assert result["json_relative_name"] == "chemistry/oxygen_s6_common.json"
+    assert result["science"] == "SCIENCE_HOLD"
+    assert result["P3"] == "NOT_RUN"
+    assert set(result["retired_native_variable_owners"]) == set(logs)
+    updated = json.loads((chemistry / "oxygen_s6_common.json").read_text())
+    assert updated["equations"] == original_document["equations"]
+    assert updated["reactions"] == original_document["reactions"]
+    assert set(updated["species"]) == set(original_document["species"])
+    for species in ("O2", "O", "O2a"):
+        assert updated["species"][species] == original_document["species"][species]
+    for species, variable in (("e", "log_e"), ("O2p", "log_O2p"),
+                              ("Om", "log_Om"), ("Op", "log_Op")):
+        expected = math.exp(float(logs[variable])) * 6.02214076e23
+        assert updated["species"][species]["initial_number_density"] == expected
+        assert {k: v for k, v in updated["species"][species].items()
+                if k != "initial_number_density"} == original_document["species"][species]
+    first = (folder / "layer_0.i").read_text()
+    assert "[log_e_energy]" in first
+    for name in logs:
+        assert "[" + name + "]" not in first
+    assert (chemistry / "oxygen_s6_417.json").read_bytes() == (
+        variant_source.read_bytes()
+    )
+    assert original_json.read_bytes() == sources[Path("chemistry/oxygen_s6_common.json")]
+
+    # Each mutation must fail *before* rewriting any disposable input.
+    for fault in ("changed_ic", "changed_source_charge", "missing_ic"):
+        broken = tmp_path / fault
+        for name, data in sources.items():
+            destination = broken / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(data)
+        if fault == "changed_ic":
+            old_path = broken / "layer_0.i"
+            old_path.write_text(old_path.read_text().replace(
+                "initial_condition = -20.216123548032986",
+                "initial_condition = -20.216123548032985", 1))
+        elif fault == "missing_ic":
+            old_path = broken / "layer_0.i"
+            old_path.write_text(old_path.read_text().replace(
+                "  [log_e]\n    family = LAGRANGE\n"
+                "    order = FIRST\n"
+                "    initial_condition = -20.216123548032986\n"
+                "    block = plasma\n  []\n", "", 1))
+        else:
+            common = broken / "chemistry/oxygen_s6_common.json"
+            data = json.loads(common.read_text())
+            data["species"]["e"]["charge_number"] = 1
+            common.write_text(json.dumps(data))
+        before = {p.relative_to(broken): p.read_bytes()
+                  for p in broken.rglob("*") if p.is_file()}
+        with pytest.raises(ValueError,
+                           match=("SOURCE_JSON_IDENTITY_CHANGED" if fault == "changed_source_charge"
+                                  else "MISSING_PINNED_NATIVE_STATES" if fault == "missing_ic"
+                                  else "SOURCE_CONTRACT_CHANGED")):
+            migrate(broken, ordered, chemistry_common=True)
+        assert before == {p.relative_to(broken): p.read_bytes()
+                          for p in broken.rglob("*") if p.is_file()}
+
+    chemistry_runner = (PILOT / "public_chemistry_s6_p2.py").read_text()
+    assert "option.migrate_staged_D_json_initial(" in chemistry_runner
+    assert "chemistry_common=True" in chemistry_runner
+    assert '"scratch_json_initial": scratch_initial' in chemistry_runner

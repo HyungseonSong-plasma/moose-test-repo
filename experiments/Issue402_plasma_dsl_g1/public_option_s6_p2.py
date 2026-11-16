@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -217,6 +218,140 @@ def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
 
 
 
+
+# The D continuity action now owns initial solver states. Retire the four
+# pinned Native variable declarations only from isolated P2 scratch. The
+# numerical values are taken from the archived log-molar states, not invented
+# test constants; the immutable source, B inputs and source JSON are unchanged.
+_S6_D_INITIAL_VARIABLE = re.compile(
+    r"(?m)^  \[(?P<name>log_e|log_O2p|log_Om|log_Op)\][ \t]*\r?\n"
+    r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+    r"^  \[\][ \t]*(?:\r?\n|$)"
+)
+
+
+def migrate_staged_D_json_initial(chemistry: Path, ordered: list[str],
+                                  *, chemistry_common: bool = False) -> dict:
+    """Transfer precisely pinned log-molar Native ICs to D's Chemistry JSON.
+
+    All checks run before writing either disposable .i or JSON. No fallback to
+    guessed density, external [Variables]/[ICs], or an implicit zero state.
+    """
+    if len(ordered) != 11 or Path(ordered[-1]).name != "migrated_continuity.i":
+        raise ValueError("S6_D_INITIAL_UNEXPECTED_INPUT_ORDER")
+    names = [Path(name).name for name in ordered]
+    if (len(set(names)) != 11 or
+            any(name != item.split("/")[-1] or not name.endswith(".i")
+                for item, name in zip(ordered, names))):
+        raise ValueError("S6_D_INITIAL_UNSAFE_LAYER")
+    original_file = chemistry / names[0]
+    relative_json = ("chemistry/oxygen_s6_common.json" if chemistry_common
+                     else "plasma_species_only.json")
+    staged_json = chemistry / relative_json
+    source_json = ROOT / "experiments/Issue402_plasma_dsl_g1" / relative_json
+    if staged_json.read_bytes() != source_json.read_bytes():
+        raise ValueError("S6_D_INITIAL_SOURCE_JSON_IDENTITY_CHANGED")
+    parsed = json.loads(staged_json.read_text(encoding="utf-8"))
+    if set(parsed) != {"species", "equations", "reactions"}:
+        raise ValueError("S6_D_INITIAL_UNEXPECTED_SPECIES_DOCUMENT")
+    if chemistry_common:
+        if (set(parsed["species"]) != {"e", "O2", "O", "O2p", "Om", "Op", "O2a"} or
+                len(parsed["equations"]) != 7 or len(parsed["reactions"]) != 7):
+            raise ValueError("S6_D_INITIAL_CHEMISTRY_MECHANISM_CHANGED")
+    elif parsed["equations"] != {} or parsed["reactions"] != []:
+        raise ValueError("S6_D_INITIAL_UNEXPECTED_SPECIES_DOCUMENT")
+
+    pinned_path = (ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/"
+                   "prepare_hybrid_json_s6.py")
+    spec = importlib.util.spec_from_file_location("issue402_s6_d_initial_pins", pinned_path)
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_D_INITIAL_PINS_UNAVAILABLE")
+    pinned = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(pinned)
+    labels = {"e": "log_e", "O2p": "log_O2p",
+              "Om": "log_Om", "Op": "log_Op"}
+    expected_logs = {
+        "log_e": "-20.216123548032986",
+        "log_O2p": "-20.216123548032986",
+        "log_Om": "-27.123878827015126",
+        "log_Op": "-27.123878827015126",
+    }
+    if (not all(pinned.PINNED_INITIAL_LOG.get(k) == v
+                for k, v in expected_logs.items()) or
+            pinned.N_A != 6.02214076e23):
+        raise ValueError("S6_D_INITIAL_ARCHIVE_PINS_CHANGED")
+    changes = {}
+    seen = {}
+    rewritten = []
+    for name in names:
+        path = chemistry / name
+        source = path.read_text(encoding="utf-8")
+        matches = list(_S6_D_INITIAL_VARIABLE.finditer(source))
+        for match in reversed(matches):
+            variable = match.group("name")
+            if name != names[0] or variable in seen:
+                raise ValueError("S6_D_INITIAL_DUPLICATE_OR_MOVED_VARIABLE")
+            properties = {}
+            for line in match.group("body").splitlines():
+                item = re.fullmatch(r"    ([A-Za-z_]+)[ \t]*=[ \t]*([^\r\n]+)", line)
+                if not item or item.group(1) in properties:
+                    raise ValueError("S6_D_INITIAL_INVALID_VARIABLE_PARAMETERS")
+                properties[item.group(1)] = item.group(2).strip()
+            expected = {"initial_condition": expected_logs[variable],
+                        "block": "plasma"}
+            if variable == "log_e":
+                expected.update(family="LAGRANGE", order="FIRST")
+            else:
+                expected["type"] = "MooseVariableFVReal"
+            if properties != expected:
+                raise ValueError("S6_D_INITIAL_SOURCE_CONTRACT_CHANGED: " + variable)
+            seen[variable] = {
+                "source_layer": name,
+                "source_block_sha256": hashlib.sha256(match.group(0).encode()).hexdigest(),
+                "archived_log_molar": expected_logs[variable],
+            }
+            source = source[:match.start()] + source[match.end():]
+        if any(_S6_D_INITIAL_VARIABLE.finditer(source)):
+            raise ValueError("S6_D_INITIAL_UNRETIRED_VARIABLE")
+        changes[name] = {
+            "original_sha256": sha_file(path),
+            "staged_sha256": hashlib.sha256(source.encode()).hexdigest(),
+        }
+        rewritten.append((path, source))
+    if set(seen) != set(expected_logs):
+        raise ValueError("S6_D_INITIAL_MISSING_PINNED_NATIVE_STATES")
+
+    densities = {}
+    for species, variable in labels.items():
+        record = parsed["species"].get(species)
+        if not isinstance(record, dict) or set(record) != {"elements", "charge_number"}:
+            raise ValueError("S6_D_INITIAL_SPECIES_OR_OWNER_CHANGED: " + species)
+        number_density = math.exp(float(expected_logs[variable])) * pinned.N_A
+        if not math.isfinite(number_density) or number_density <= 0.0:
+            raise ValueError("S6_D_INITIAL_INVALID_NUMBER_DENSITY")
+        record["initial_number_density"] = number_density
+        densities[species] = number_density
+
+    output = json.dumps(parsed, sort_keys=True, indent=2) + "\n"
+    original_json_sha = sha_file(staged_json)
+    for path, source in rewritten:
+        if path.read_text(encoding="utf-8") != source:
+            path.write_text(source, encoding="utf-8")
+    staged_json.write_text(output, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_ARCHIVED_NATIVE_DENSITIES_TO_JSON",
+        "retired_native_variable_owners": seen,
+        "densities_number_per_m3": densities,
+        "json_relative_name": relative_json,
+        "json_original_sha256": original_json_sha,
+        "json_staged_sha256": sha_file(staged_json),
+        "staged_layers": changes,
+        "science": "SCIENCE_HOLD",
+        "P3": "NOT_RUN",
+    }
+
+
+
 # Historical archived decks retain old factory names only as provenance.
 # No old Material object aliases are registered in the application.
 # Rename the explicit type fields in disposable B/D scratch copies. No factory
@@ -225,6 +360,15 @@ RENAMED_FEM_KERNEL_TYPES = {
     "PhysicsFEMLogMolarTimeDerivative": "FEMLogMolarTimeDerivative",
     "PhysicsFEMLogMolarDriftDiffusion": "FEMLogMolarDriftDiffusion",
     "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
+    # Historical and current ADIntegratedBC residuals/required Functors match:
+    # particle flux/N_A and energy flux/N_A * (5/2)*(2/3)*mean_energy.
+    # Rename only the disposable public P2 input type fields, not the factory.
+    "PhysicsFEMLogMolarElectronFieldLimitedFluxBC": "FEMElectronSheathBC",
+    "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC": "FEMElectronEnergySheathBC",
+    # Preserve lower-D current observation with the same plasma-side FaceArg.
+    # Only B/D staged type tokens change: the retired factory stays unregistered.
+    "PhysicsLowerDSurfaceCurrentProbeAux": "LowerDSurfaceCurrentProbeAux",
+    "PhysicsWaferD1GeometryProbeAux": "WaferD1GeometryProbeAux",
     # Archived S6 inputs are rewritten only after their pinned byte hashes are checked.
     "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
     "DDMaterial": "DDTransportMaterial",
@@ -281,6 +425,182 @@ def remap_staged_fem_types(chemistry: Path, ordered: list[str]) -> dict:
         "totals": totals,
         "files": files,
     }
+
+
+
+# The archived S6 closures use log-molar electron states, but their old
+# factory/output names are not registered in the present PhysicsApp.
+# Transform disposable public P2 B/D inputs only. No old factory alias, no
+# new physics model, and no claim of P3 or physical S6 equivalence.
+_S6_CLOSURE_BLOCK = re.compile(
+    r"(?m)^  \[(?P<name>mean_energy|electron_transport)\][ \t]*\r?\n"
+    r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+    r"^  \[\][ \t]*(?:\r?\n|$)"
+)
+
+
+def migrate_staged_electron_closure(chemistry: Path, ordered: list[str],
+                                    variant: str) -> dict:
+    """Fail-closed, provenance-recorded S6 P2 mean energy + lookup cutover."""
+    if variant not in ("B", "D") or len(ordered) != (10 if variant == "B" else 11):
+        raise ValueError("Unexpected S6 closure variant or input layer count")
+    if variant == "D" and Path(ordered[-1]).name != "migrated_continuity.i":
+        raise ValueError("Unexpected D option sidecar")
+    files = [chemistry / Path(name).name for name in ordered]
+    if any(Path(name).name != name.split("/")[-1] or
+           not name.endswith(".i") for name in ordered):
+        raise ValueError("Unsafe S6 closure input layer")
+    found = {}
+    changes = {}
+    writes = []
+    replaced_consumers = 0
+    for path in files:
+        original = path.read_text(encoding="utf-8")
+        revised = original
+        matches = list(_S6_CLOSURE_BLOCK.finditer(original))
+        for match in reversed(matches):
+            owner = match.group("name")
+            if owner in found:
+                raise ValueError("S6_CLOSURE_DUPLICATE_OWNER: " + owner)
+            values = {}
+            for line in match.group("body").splitlines():
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                item = re.fullmatch(
+                    r"    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)", line)
+                if not item or item.group(1) in values:
+                    raise ValueError("S6_CLOSURE_INVALID_PARAMETER: " + owner)
+                values[item.group(1)] = item.group(2).strip()
+            if owner == "mean_energy":
+                expected = {
+                    "type": "PhysicsElectronMeanEnergyMaterial",
+                    "electron_energy_density": "log_energy",
+                    "electron_density": "log_ne" if variant == "B" else "log_e",
+                    "state_form": "log_molar_eV",
+                    "block": "plasma",
+                }
+                if values != expected:
+                    raise ValueError("S6_MEAN_ENERGY_IDENTITY_UNPROVED: " + repr(values))
+                body = (
+                    "    type = ElectronEnergyMaterial\n"
+                    "    electron_energy_density = log_energy\n"
+                    "    electron_density = " + expected["electron_density"] + "\n"
+                    "    state_form = log_molar_eV\n"
+                    "    block = plasma\n"
+                )
+            else:
+                expected = {
+                    "type": "PhysicsElectronTransportLookupMaterial",
+                    "property_table_file": "'../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
+                    "mean_energy": "mean_en_solved",
+                    "pressure": "p",
+                    "gas_temperature": "T_g_fixed",
+                    "bounds_policy": "clamp",
+                    "block": "plasma",
+                }
+                if values != expected:
+                    raise ValueError("S6_LOOKUP_IDENTITY_UNPROVED: " + repr(values))
+                body = (
+                    "    type = DDTransportMaterial\n"
+                    "    species_id = e\n"
+                    "    model = lookup\n"
+                    "    table_file = " + expected["property_table_file"] + "\n"
+                    "    table_units = reduced\n"
+                    "    pressure = p\n"
+                    "    gas_temperature = T_g_fixed\n"
+                    "    bounds_policy = clamp\n"
+                    "    fluid_energy = true\n"
+                    "    block = plasma\n"
+                )
+            old = match.group(0).encode("utf-8")
+            new_block = (
+                match.group(0)[:match.start("body") - match.start()]
+                + body + match.group(0)[match.end("body") - match.start():]
+            )
+            found[owner] = {
+                "source_layer": path.name,
+                "original_block_sha256": hashlib.sha256(old).hexdigest(),
+                "migrated_block_sha256": hashlib.sha256(new_block.encode("utf-8")).hexdigest(),
+            }
+            revised = revised[:match.start("body")] + body + revised[match.end("body"):]
+        revised, count = re.subn(
+            r"(?<![A-Za-z0-9_])mean_en_solved(?![A-Za-z0-9_])",
+            "e_energy_eV", revised)
+        replaced_consumers += count
+        if ("PhysicsElectronMeanEnergyMaterial" in revised or
+                "PhysicsElectronTransportLookupMaterial" in revised or
+                "mean_en_solved" in revised):
+            raise ValueError("S6_CLOSURE_RETIRED_REFERENCE_REMAINS")
+        changes[path.name] = {
+            "original_sha256": hashlib.sha256(original.encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(revised.encode("utf-8")).hexdigest(),
+        }
+        writes.append((path, revised))
+    if set(found) != {"mean_energy", "electron_transport"} or replaced_consumers == 0:
+        raise ValueError("S6_CLOSURE_OWNER_OR_CONSUMERS_MISSING")
+    # Everything above is verified before modifying any staged file.
+    for path, revised in writes:
+        if path.read_text(encoding="utf-8") != revised:
+            path.write_text(revised, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_LOG_MOLAR_CLOSURE_MIGRATED",
+        "owners": found,
+        "consumer_renames": replaced_consumers,
+        "files": changes,
+        "P3": "NOT_RUN",
+        "science": "SCIENCE_HOLD",
+    }
+
+
+
+def migrate_staged_wall_owners(chemistry: Path, ordered: list[str]) -> dict:
+    """Reuse the independently tested wall-owner audit on disposable S6 P2 copies.
+
+    Archive bytes and Chemistry/Physics C++ stay untouched. The helper proves
+    each species/charge owner before rewriting *all* wall consumer references.
+    """
+    wall_path = (ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/"
+                 "prepare_s6_run_input.py")
+    spec = importlib.util.spec_from_file_location("issue402_s6_p2_wall_audit", wall_path)
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_WALL_AUDIT_MODULE_UNAVAILABLE")
+    wall = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(wall)
+    paths = [chemistry / Path(name).name for name in ordered]
+    if any(Path(name).name != name.split("/")[-1] or
+           not name.endswith(".i") for name in ordered):
+        raise ValueError("S6_WALL_UNSAFE_STAGED_LAYER")
+    if len(paths) != len(set(paths)):
+        raise ValueError("S6_WALL_DUPLICATED_STAGED_LAYER")
+    original = {path: path.read_text(encoding="utf-8") for path in paths}
+    updated, audit = wall.canonicalize_staged_wall_inputs(original)
+    if set(updated) != set(original):
+        raise ValueError("S6_WALL_UNEXPECTED_STAGED_FILE_SET")
+    owners = audit.get("wall_material_owners", [])
+    if (audit.get("owner_count") != 4 or
+            {item["species_id"] for item in owners} != {"O2p", "Om", "Op", "e"}):
+        raise ValueError("S6_WALL_OWNER_COUNT_OR_SPECIES_UNPROVED")
+    if not audit.get("consumer_and_reference_replacements"):
+        raise ValueError("S6_WALL_CONSUMER_CUTOVER_MISSING")
+    for text in updated.values():
+        if ("PhysicsIonWallTotalFluxMaterial" in text or
+                "PhysicsElectronAdjacentSheathWallFluxMaterial" in text or
+                "PhysicsElectronWallFluxMaterial" in text):
+            raise ValueError("S6_WALL_RETIRED_FACTORY_REMAINS")
+    audit["files"] = {
+        path.name: {
+            "original_sha256": hashlib.sha256(original[path].encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(updated[path].encode("utf-8")).hexdigest(),
+        }
+        for path in paths
+    }
+    # Atomic validation before any scratch write; fail closed on every owner.
+    for path in paths:
+        if original[path] != updated[path]:
+            path.write_text(updated[path], encoding="utf-8")
+    audit["P3"] = "NOT_RUN"
+    audit["science"] = "SCIENCE_HOLD"
+    return audit
 
 
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
@@ -431,6 +751,12 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             overlay.write_text(OVERLAY, encoding="utf-8")
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
+                            scratch_initial = migrate_staged_D_json_initial(
+                                staged / p2.CHEM, ordered)
+                        scratch_closure = migrate_staged_electron_closure(
+                            staged / p2.CHEM, ordered, variant)
+                        scratch_wall = migrate_staged_wall_owners(
+                            staged / p2.CHEM, ordered)
                         scratch_types = remap_staged_fem_types(staged / p2.CHEM, ordered)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
@@ -438,8 +764,11 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             log, timeout_seconds)
                         report["checks"][case][variant]["layers"] = len(ordered)
                         report["checks"][case][variant]["scratch_fem_type_remap"] = scratch_types
+                        report["checks"][case][variant]["scratch_electron_closure"] = scratch_closure
+                        report["checks"][case][variant]["scratch_wall_owners"] = scratch_wall
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
+                            report["checks"][case][variant]["scratch_json_initial"] = scratch_initial
                     except Exception as exc:
                         report["checks"][case][variant] = {
                             "P2": "HOLD", "classification": type(exc).__name__,

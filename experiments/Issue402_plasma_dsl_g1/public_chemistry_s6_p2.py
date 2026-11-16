@@ -51,12 +51,18 @@ def execute(historical: Path, binary: Path, source_sha: str, evidence: Path) -> 
             canonical = option.canonicalize_staged_D_inputs(chemistry_dir, ordered)
             type_remap = option.remap_staged_fem_types(chemistry_dir, ordered)
             cutover = prepare(chemistry_dir, ordered, variant)
+            # Same exact archived 400 W Native density owners as the option P2.
+            # This is a separate scratch Chemistry mechanism; do not change its
+            # immutable source JSON or infer a default for missing species.
+            scratch_initial = option.migrate_staged_D_json_initial(
+                chemistry_dir, ordered, chemistry_common=True)
             log = evidence / f"s6_{variant}_chemistry_cutover_p2.log"
             verdict = option.run_one(binary, identity["binary_sha256"],
                                      staged, ordered, log, 1200)
             report["cases"][variant] = {
                 **verdict,
                 "source_cutover": cutover,
+                "scratch_json_initial": scratch_initial,
                 "scratch_canonical_state_renames": canonical,
                 "scratch_fem_type_remap": type_remap
             }
