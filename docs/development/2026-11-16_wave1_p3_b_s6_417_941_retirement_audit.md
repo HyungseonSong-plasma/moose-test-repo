@@ -4,7 +4,7 @@
 **Scope:** S6-only; no DD P3, shared CI/Guard, Wave2, Physics model, or main mutation.  
 **Decision:** **KEEP_HOLD** for the historical issue402-hybrid-json-s6-p3-p4-once.yml.  
 **Science:** SCIENCE_HOLD; P4 is DIAGNOSTIC_ONLY, never scientific acceptance.  
-**Live P3 authorization:** NOT GRANTED in this work package; **no new Native P3 dispatched**.
+**Live P3 authorization:** user explicitly approved proceeding with the two-case actual P3 on 2026-11-16 ("P3 실행을 해야만 이게 넘어가는 거면 어서 진행"). Approval does not change P4/science HOLD. The result remains NOT_RUN until source-bound jobs actually execute.
 
 ## Source identity and historical original
 
@@ -43,7 +43,7 @@ The historical ZIPs have live GitHub artifact digests matching the full SHA-256 
 
 - Indexed accessible GitHub default-branch code search found the historical YAML as its own self-push trigger and a chemistry README reference. A README mention is documentation, not an execution caller. These observations **do not** prove zero dynamic/external callers.
 - The historical branch retains the original P3 YAML. This package does not retarget its push event, remove an original, change main, weaken a global guard or delete artifacts.
-- **External PAT, private runner/Controller, Actions API invocation, alternate refs, other accessible and inaccessible repos, and off-platform writers have NOT all been proven absent for this specific S6 original.** Prior owner statements scoped to A1 cannot be silently extended to S6.
+- **Owner attestation (2026-11-16, this Wave1-P3-B work): the repository owner explicitly states that there are no external callers for the S6 original ("외부 호출자는 따로 없어").** This closes the operator-response requirement for S6 and is recorded as OWNER_ATTESTED_ABSENT, not independent machine enumeration. Indexed code search plus old self-path trigger provide narrower corroboration. Do not silently claim that unreachable private systems have been inspected. The attestation is S6-specific and independent of prior A1 statements.
 - The manual replay workflow is **not on main** as of this audit. [Draft #575](https://github.com/HyungseonSong-plasma/moose-test-repo/pull/575) proposes separately reviewed default-branch registration; it remains DRAFT/unmerged. A staged manual workflow is not a proven callable replacement.
 - RETIRED_VERIFIED requires explicit run/cost approval, valid default-branch registration, actual source-bound both-case 400W/100us P3, independent per-case artifacts/readback and rollback, protected P4 diagnostic boundary, external/dynamic caller-zero and durable retention proof. Until then the correct complete investigation verdict is **KEEP_HOLD**, not forced CI normalization.
 
