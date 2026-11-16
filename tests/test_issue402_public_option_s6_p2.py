@@ -331,6 +331,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "validate_overlay": lambda: None,
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
+        "migrate_staged_electron_closure": lambda *_args: {"status": "SYNTHETIC_CLOSURE"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(
@@ -356,3 +357,92 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
     assert durable["P2"] == "PASS"
     assert durable["status"] == "HOLD_INFRASTRUCTURE_CLEANUP"
     assert durable["P3"] == "NOT_RUN"
+
+
+def test_s6_log_molar_closure_cutover_is_exact_and_fail_closed(tmp_path):
+    """The old S6 mean-energy equation and public lookup get scratch-only owners."""
+    import re
+    import pytest
+
+    path = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(path.read_text())
+    declarations = [node for node in tree.body
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == "_S6_CLOSURE_BLOCK"
+                            for t in node.targets)]
+    functions = [node for node in tree.body
+                 if isinstance(node, ast.FunctionDef)
+                 and node.name == "migrate_staged_electron_closure"]
+    assert len(declarations) == len(functions) == 1
+    namespace = {"re": re, "Path": Path, "hashlib": hashlib}
+    exec(compile(ast.Module(body=declarations + functions, type_ignores=[]),
+                 str(path), "exec"), namespace)
+    transform = namespace["migrate_staged_electron_closure"]
+
+    for variant in ("B", "D"):
+        folder = tmp_path / variant
+        folder.mkdir()
+        electron = "log_ne" if variant == "B" else "log_e"
+        source = (
+            "[FunctorMaterials]\n"
+            "  [mean_energy]\n"
+            "    type = PhysicsElectronMeanEnergyMaterial\n"
+            "    electron_energy_density = log_energy\n"
+            f"    electron_density = {electron}\n"
+            "    state_form = log_molar_eV\n"
+            "    block = plasma\n"
+            "  []\n"
+            "  [electron_transport]\n"
+            "    type = PhysicsElectronTransportLookupMaterial\n"
+            "    property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'\n"
+            "    mean_energy = mean_en_solved\n"
+            "    pressure = p\n"
+            "    gas_temperature = T_g_fixed\n"
+            "    bounds_policy = clamp\n"
+            "    block = plasma\n"
+            "  []\n"
+            "[]\n"
+        )
+        ordered = [f"chem/layer_{i}.i" for i in range(10)]
+        for i in range(10):
+            (folder / f"layer_{i}.i").write_text(
+                source if i == 0 else
+                ("[Postprocessors]\n  [mean]\n"
+                 "    functor = mean_en_solved\n  []\n[]\n") if i == 1
+                else f"# unchanged {i}\n")
+        if variant == "D":
+            ordered.append("chem/migrated_continuity.i")
+            (folder / "migrated_continuity.i").write_text(
+                "[Physics]\n  [Plasmas]\n  []\n[]\n")
+
+        originals = {p.name: p.read_bytes() for p in folder.iterdir()}
+        result = transform(folder, ordered, variant)
+        assert result["status"] == "SCRATCH_ONLY_LOG_MOLAR_CLOSURE_MIGRATED"
+        assert set(result["owners"]) == {"mean_energy", "electron_transport"}
+        assert result["consumer_renames"] == 1
+        assert result["P3"] == "NOT_RUN" and result["science"] == "SCIENCE_HOLD"
+        changed = (folder / "layer_0.i").read_text()
+        assert "type = ElectronEnergyMaterial" in changed
+        assert f"electron_density = {electron}" in changed
+        assert "type = DDTransportMaterial" in changed
+        assert "table_units = reduced" in changed
+        assert "fluid_energy = true" in changed
+        assert "property_table_file" not in changed
+        assert "mean_en_solved" not in (folder / "layer_1.i").read_text()
+        assert "functor = e_energy_eV" in (folder / "layer_1.i").read_text()
+        if variant == "D":
+            assert (folder / "migrated_continuity.i").read_bytes() == originals["migrated_continuity.i"]
+
+        for param, wrong in (("state_form = log_molar_eV", "state_form = normalized"),
+                             ("bounds_policy = clamp", "bounds_policy = extrapolate"),
+                             ("    block = plasma", "    block = air")):
+            broken = tmp_path / f"{variant}_{param.split()[0]}_{wrong.split()[-1]}"
+            broken.mkdir()
+            for name, data in originals.items():
+                (broken / name).write_bytes(data)
+            first = broken / "layer_0.i"
+            first.write_text(first.read_text().replace(param, wrong, 1))
+            snapshot = {p.name: p.read_bytes() for p in broken.iterdir()}
+            with pytest.raises(ValueError, match="IDENTITY_UNPROVED"):
+                transform(broken, ordered, variant)
+            assert snapshot == {p.name: p.read_bytes() for p in broken.iterdir()}
