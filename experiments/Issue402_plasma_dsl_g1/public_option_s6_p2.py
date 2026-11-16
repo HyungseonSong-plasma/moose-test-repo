@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -213,6 +214,131 @@ def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
         "changed_reference_count": total,
         "removed_native_time": removed_time[0],
         "files": changes,
+    }
+
+
+
+
+# The D continuity action now owns initial solver states. Retire the four
+# pinned Native variable declarations only from isolated P2 scratch. The
+# numerical values are taken from the archived log-molar states, not invented
+# test constants; the immutable source, B inputs and source JSON are unchanged.
+_S6_D_INITIAL_VARIABLE = re.compile(
+    r"(?m)^  \[(?P<name>log_e|log_O2p|log_Om|log_Op)\][ \t]*\r?\n"
+    r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+    r"^  \[\][ \t]*(?:\r?\n|$)"
+)
+
+
+def migrate_staged_D_json_initial(chemistry: Path, ordered: list[str]) -> dict:
+    """Transfer precisely pinned log-molar Native ICs to D's Chemistry JSON.
+
+    All checks run before writing either disposable .i or JSON. No fallback to
+    guessed density, external [Variables]/[ICs], or an implicit zero state.
+    """
+    if len(ordered) != 11 or Path(ordered[-1]).name != "migrated_continuity.i":
+        raise ValueError("S6_D_INITIAL_UNEXPECTED_INPUT_ORDER")
+    names = [Path(name).name for name in ordered]
+    if (len(set(names)) != 11 or
+            any(name != item.split("/")[-1] or not name.endswith(".i")
+                for item, name in zip(ordered, names))):
+        raise ValueError("S6_D_INITIAL_UNSAFE_LAYER")
+    original_file = chemistry / names[0]
+    staged_json = chemistry / "plasma_species_only.json"
+    source_json = ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json"
+    if staged_json.read_bytes() != source_json.read_bytes():
+        raise ValueError("S6_D_INITIAL_SOURCE_JSON_IDENTITY_CHANGED")
+    parsed = json.loads(staged_json.read_text(encoding="utf-8"))
+    if (set(parsed) != {"species", "equations", "reactions"} or
+            parsed["equations"] != {} or parsed["reactions"] != []):
+        raise ValueError("S6_D_INITIAL_UNEXPECTED_SPECIES_DOCUMENT")
+
+    pinned_path = (ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/"
+                   "prepare_hybrid_json_s6.py")
+    spec = importlib.util.spec_from_file_location("issue402_s6_d_initial_pins", pinned_path)
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_D_INITIAL_PINS_UNAVAILABLE")
+    pinned = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(pinned)
+    labels = {"e": "log_e", "O2p": "log_O2p",
+              "Om": "log_Om", "Op": "log_Op"}
+    expected_logs = {
+        "log_e": "-20.216123548032986",
+        "log_O2p": "-20.216123548032986",
+        "log_Om": "-27.123878827015126",
+        "log_Op": "-27.123878827015126",
+    }
+    if (not all(pinned.PINNED_INITIAL_LOG.get(k) == v
+                for k, v in expected_logs.items()) or
+            pinned.N_A != 6.02214076e23):
+        raise ValueError("S6_D_INITIAL_ARCHIVE_PINS_CHANGED")
+    changes = {}
+    seen = {}
+    rewritten = []
+    for name in names:
+        path = chemistry / name
+        source = path.read_text(encoding="utf-8")
+        matches = list(_S6_D_INITIAL_VARIABLE.finditer(source))
+        for match in reversed(matches):
+            variable = match.group("name")
+            if name != names[0] or variable in seen:
+                raise ValueError("S6_D_INITIAL_DUPLICATE_OR_MOVED_VARIABLE")
+            properties = {}
+            for line in match.group("body").splitlines():
+                item = re.fullmatch(r"    ([A-Za-z_]+)[ \t]*=[ \t]*([^\r\n]+)", line)
+                if not item or item.group(1) in properties:
+                    raise ValueError("S6_D_INITIAL_INVALID_VARIABLE_PARAMETERS")
+                properties[item.group(1)] = item.group(2).strip()
+            expected = {"initial_condition": expected_logs[variable],
+                        "block": "plasma"}
+            if variable == "log_e":
+                expected.update(family="LAGRANGE", order="FIRST")
+            else:
+                expected["type"] = "MooseVariableFVReal"
+            if properties != expected:
+                raise ValueError("S6_D_INITIAL_SOURCE_CONTRACT_CHANGED: " + variable)
+            seen[variable] = {
+                "source_layer": name,
+                "source_block_sha256": hashlib.sha256(match.group(0).encode()).hexdigest(),
+                "archived_log_molar": expected_logs[variable],
+            }
+            source = source[:match.start()] + source[match.end():]
+        if any(_S6_D_INITIAL_VARIABLE.finditer(source)):
+            raise ValueError("S6_D_INITIAL_UNRETIRED_VARIABLE")
+        changes[name] = {
+            "original_sha256": sha_file(path),
+            "staged_sha256": hashlib.sha256(source.encode()).hexdigest(),
+        }
+        rewritten.append((path, source))
+    if set(seen) != set(expected_logs):
+        raise ValueError("S6_D_INITIAL_MISSING_PINNED_NATIVE_STATES")
+
+    densities = {}
+    for species, variable in labels.items():
+        record = parsed["species"].get(species)
+        if not isinstance(record, dict) or set(record) != {"elements", "charge_number"}:
+            raise ValueError("S6_D_INITIAL_SPECIES_OR_OWNER_CHANGED: " + species)
+        number_density = math.exp(float(expected_logs[variable])) * pinned.N_A
+        if not math.isfinite(number_density) or number_density <= 0.0:
+            raise ValueError("S6_D_INITIAL_INVALID_NUMBER_DENSITY")
+        record["initial_number_density"] = number_density
+        densities[species] = number_density
+
+    output = json.dumps(parsed, sort_keys=True, indent=2) + "\n"
+    original_json_sha = sha_file(staged_json)
+    for path, source in rewritten:
+        if path.read_text(encoding="utf-8") != source:
+            path.write_text(source, encoding="utf-8")
+    staged_json.write_text(output, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_ARCHIVED_NATIVE_DENSITIES_TO_JSON",
+        "retired_native_variable_owners": seen,
+        "densities_number_per_m3": densities,
+        "json_original_sha256": original_json_sha,
+        "json_staged_sha256": sha_file(staged_json),
+        "staged_layers": changes,
+        "science": "SCIENCE_HOLD",
+        "P3": "NOT_RUN",
     }
 
 
@@ -612,6 +738,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             overlay.write_text(OVERLAY, encoding="utf-8")
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
+                            scratch_initial = migrate_staged_D_json_initial(
+                                staged / p2.CHEM, ordered)
                         scratch_closure = migrate_staged_electron_closure(
                             staged / p2.CHEM, ordered, variant)
                         scratch_wall = migrate_staged_wall_owners(
@@ -627,6 +755,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         report["checks"][case][variant]["scratch_wall_owners"] = scratch_wall
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
+                            report["checks"][case][variant]["scratch_json_initial"] = scratch_initial
                     except Exception as exc:
                         report["checks"][case][variant] = {
                             "P2": "HOLD", "classification": type(exc).__name__,
