@@ -33,6 +33,34 @@ KNOWN_ARTIFACTS = {"A1": 14088768015, "A2": None,
                    "A3": 14058320821, "A4": None}
 
 
+# Immutable 2026-11-16 readback receipts. These are historical observations,
+# not live branch lookups and not permission to retire either workflow.
+A1_A2_LIVE_HEAD = "af4a9e896328386723e8bbb957f334e1d83fe75e"
+A1_A2_SAME_HEAD_PROOFS = {
+  "A1": {
+    "candidate_pr": 553,
+    "head": "34a3539477071d56027c60b1f19d0b502b2e9733",
+    "run_id": 43839529668,
+    "run_conclusion": "failure",
+    "job_id": 133204451509,
+    "job_name": "Issue541 CORE four native source-bound P1 P2 (no P3)",
+    "job_conclusion": "success",
+    "scope": "P0/P1/P2",
+    "p3": "NOT_RUN"
+  },
+  "A2": {
+    "candidate_pr": 553,
+    "head": "34a3539477071d56027c60b1f19d0b502b2e9733",
+    "run_id": 43839529668,
+    "run_conclusion": "failure",
+    "job_id": 133204451103,
+    "job_name": "issue402_legacy_p0_inventory",
+    "job_conclusion": "success",
+    "scope": "P0",
+    "p3": "NOT_RUN"
+  }
+}
+
 def git_blob_sha(raw: bytes) -> str:
     return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
 
@@ -109,6 +137,19 @@ def inspect(root: Path, doc: dict) -> list[str]:
             not isinstance(replacement.get("run_id"), int) or replacement["run_id"] <= 0
         ) or not re.fullmatch(r"[0-9a-f]{40}", str(replacement.get("head", ""))):
             errors.append(id_ + " missing source-bound replacement receipt")
+        if id_ in A1_A2_SAME_HEAD_PROOFS:
+            # A historical success job does not override red global CI or
+            # the verified still-present live legacy-branch entrypoint.
+            observed = {
+                "head": A1_A2_LIVE_HEAD,
+                "workflow_blob": sha,
+                "entrypoint": "PUSH_SELF_PATH_STILL_PRESENT",
+                "observed_on": "2026-11-16",
+            }
+            if record.get("live_branch_readback") != observed:
+                errors.append(id_ + " active legacy branch receipt missing or falsified")
+            if record.get("same_head_revalidation") != A1_A2_SAME_HEAD_PROOFS[id_]:
+                errors.append(id_ + " same-head CI/job provenance missing or falsified")
         if record.get("decision") != "KEEP_HOLD":
             errors.append(id_ + " retirement promoted without accepted caller-zero/integrated proof")
         if not isinstance(record.get("blockers"), list) or not record["blockers"]:
@@ -145,6 +186,19 @@ def self_test(root: Path, original: dict) -> None:
     mutated = copy.deepcopy(original)
     mutated["workflows"][0]["caller_state"] = "ZERO_PROVEN"
     probes.append(("fabricated caller zero", mutated))
+    for id_ in A1_A2_SAME_HEAD_PROOFS:
+        mutated = copy.deepcopy(original)
+        record = next(x for x in mutated["workflows"] if x["id"] == id_)
+        record["live_branch_readback"]["head"] = "0" * 40
+        probes.append(("falsified active branch " + id_, mutated))
+        mutated = copy.deepcopy(original)
+        record = next(x for x in mutated["workflows"] if x["id"] == id_)
+        record["same_head_revalidation"]["run_conclusion"] = "success"
+        probes.append(("falsified global CI pass " + id_, mutated))
+        mutated = copy.deepcopy(original)
+        record = next(x for x in mutated["workflows"] if x["id"] == id_)
+        record["same_head_revalidation"]["job_id"] = 0
+        probes.append(("missing exact job provenance " + id_, mutated))
     for label, fake in probes:
         assert inspect(root, fake), "negative mutation not rejected: " + label
     first = original["workflows"][0]

@@ -55,10 +55,27 @@
       "caller_state": "ACTIVE_LEGACY_PUSH_BRANCH__EXTERNAL_DYNAMIC_UNPROVEN",
       "decision": "KEEP_HOLD",
       "blockers": [
-        "Trigger branch exists",
-        "external/dynamic caller-zero not proven",
-        "maintained replacement not integrated in main"
-      ]
+        "Exact historical push branch remains present with same original YAML at af4a9e896328",
+        "External/dynamic caller-zero is unproven; a main-based code-search miss is insufficient",
+        "Maintained replacement is verified at 34a353947707 on unmerged Draft #553; no conflict-free integration and global validate PASS"
+      ],
+      "live_branch_readback": {
+        "head": "af4a9e896328386723e8bbb957f334e1d83fe75e",
+        "workflow_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+        "entrypoint": "PUSH_SELF_PATH_STILL_PRESENT",
+        "observed_on": "2026-11-16"
+      },
+      "same_head_revalidation": {
+        "candidate_pr": 553,
+        "head": "34a3539477071d56027c60b1f19d0b502b2e9733",
+        "run_id": 43839529668,
+        "run_conclusion": "failure",
+        "job_id": 133204451509,
+        "job_name": "Issue541 CORE four native source-bound P1 P2 (no P3)",
+        "job_conclusion": "success",
+        "scope": "P0/P1/P2",
+        "p3": "NOT_RUN"
+      }
     },
     {
       "id": "A2",
@@ -88,10 +105,27 @@
       "caller_state": "ACTIVE_LEGACY_PUSH_BRANCH__EXTERNAL_DYNAMIC_UNPROVEN",
       "decision": "KEEP_HOLD",
       "blockers": [
-        "Trigger branch exists",
-        "external/dynamic caller-zero not proven",
-        "maintained replacement not integrated in main"
-      ]
+        "Exact historical push branch remains present with same original YAML at af4a9e896328",
+        "External/dynamic caller-zero is unproven; a main-based code-search miss is insufficient",
+        "Maintained replacement is verified at 34a353947707 on unmerged Draft #553; no conflict-free integration and global validate PASS"
+      ],
+      "live_branch_readback": {
+        "head": "af4a9e896328386723e8bbb957f334e1d83fe75e",
+        "workflow_blob": "1931f0b9909507979826812f346d3353f12e333b",
+        "entrypoint": "PUSH_SELF_PATH_STILL_PRESENT",
+        "observed_on": "2026-11-16"
+      },
+      "same_head_revalidation": {
+        "candidate_pr": 553,
+        "head": "34a3539477071d56027c60b1f19d0b502b2e9733",
+        "run_id": 43839529668,
+        "run_conclusion": "failure",
+        "job_id": 133204451103,
+        "job_name": "issue402_legacy_p0_inventory",
+        "job_conclusion": "success",
+        "scope": "P0",
+        "p3": "NOT_RUN"
+      }
     },
     {
       "id": "A3",
