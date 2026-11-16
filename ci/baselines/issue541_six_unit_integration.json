@@ -1,0 +1,145 @@
+{
+  "schema": "issue541.integration.six_units.v1",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source_parent_pr": 577,
+  "base_head": "ac8f8133b9a8e59a6a3ae8316abfb701b2b4a3cf",
+  "candidate_head_before_receipt": "01a841eaa3f78301ef657ee01c410f926712c336",
+  "branch": "integration-issue541-3-7-6a-8a1-8a2-8b-20261116",
+  "review_status": "DRAFT_NOT_MERGED",
+  "scope": "CODE_INTEGRATED_VERIFICATION_NOT_PROVEN",
+  "date": "2026-11-16",
+  "science": "SCIENCE_HOLD",
+  "p3_approval": "NOT_GRANTED_FOR_ARCH_REPLAY",
+  "units": [
+    {
+      "id": "3",
+      "source_pr": 566,
+      "source_sha": "c2e65d8f388d354ad434d23618a381d5972ebb94",
+      "status": "STAGED_EXACT_BLOBS_P0_P2_AND_LIMITED_SYNTHETIC_CHECKS_PENDING_INTEGRATED_HEAD",
+      "paths": [
+        "experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh",
+        "physics_app/ci/check_issue402_signed_fem_residual_native.py"
+      ],
+      "blockers": [
+        "Same-HEAD real P1/P2 and bounded synthetic charge inversion evidence/Artifact required",
+        "Does not prove full scientific S6 compatibility or sampled assembled FEM residual"
+      ]
+    },
+    {
+      "id": "7",
+      "source_pr": 553,
+      "status": "ALREADY_PRESENT_IN_PARENT_REVALIDATE",
+      "paths": [
+        "tests/test_issue402_chemistry_mechanism_contract.py"
+      ],
+      "blockers": [
+        "Must verify no retired BC path attempted and current actual canonical sheath BC source remains asserted",
+        "Integrated P0 CI pending"
+      ]
+    },
+    {
+      "id": "6-A",
+      "source_pr": 555,
+      "source_branch": "issue-541-parity-6a-isolated-20261116",
+      "source_sha": "c6100f3552e6b3333db834c67f1b7e6b5dd7c7bc",
+      "status": "FUNCTIONALITY_PRESENT_PRESERVE_STRONGER_5_ORACLE",
+      "paths": [
+        "experiments/Issue402_plasma_dsl_g1/compare_native_outputs.py",
+        "tests/test_issue541_native_exodus_parity_oracle.py"
+      ],
+      "blockers": [
+        "Source 6-A donor has only 6 tests; inherited #577 has 8 including two False PASS negatives; DO NOT overwrite stronger inherited check",
+        "Same-HEAD reordered elemental/global named-field P0+real tiny Exodus parity required",
+        "Distinct #6-B public S6 P2 remains out of scope"
+      ]
+    },
+    {
+      "id": "8-A-1",
+      "source_pr": 572,
+      "source_sha": "a2553f81ac4c25ca6eb4bdb54808f78b64dbc568",
+      "status": "EVIDENCE_INTEGRATED_A1_A2_KEEP_HOLD",
+      "paths": [
+        "ci/baselines/issue541_group_a_retirement.json",
+        "ci/guards/issue541_group_a_retirement.py",
+        ".github/workflows/ci.yml",
+        "ci/workflow_templates/general-ci.yml"
+      ],
+      "blockers": [
+        "Original legacy push branch still live",
+        "External/dynamic caller-zero not proven; both original A1/A2 workflow files retained",
+        "Adjusted group A guard requires independent staged A3/A4 FLOW proof and never implies global guard PASS"
+      ]
+    },
+    {
+      "id": "8-A-2",
+      "source_pr": 568,
+      "flow_integration_source_pr": 574,
+      "source_sha": "703658eba271962bf2047359ad03d766b25a937a",
+      "status": "A3_A4_STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+      "original_deleted": [
+        ".github/workflows/issue402-rate-coef-ideal-gas-native-once.yml",
+        ".github/workflows/issue402-reaction-material-reduction-p0-once.yml"
+      ],
+      "original_blobs": [
+        "64164c097ec8f7831e67b80b317144cd97ba9ee8",
+        "5e433b5c56f335808e6a5cbaa771b808eef1ad45"
+      ],
+      "replacement": ".github/workflows/issue402-flow-native-p2-regression.yml",
+      "blockers": [
+        "Exact integrated HEAD Native P1/P2 and P0 negative mutations not yet observed",
+        "Private backup readback relied upon donor evidence, not newly downloaded",
+        "No verified external caller-zero or main merge approval"
+      ]
+    },
+    {
+      "id": "8-B",
+      "source_prs": [
+        563,
+        574,
+        571,
+        575
+      ],
+      "status": "FLOW_NATIVE_STAGED_DELETE_ARCH_P3_KEEP_HOLD",
+      "original_flow_deleted": ".github/workflows/issue402-reaction-reduction-native-once.yml",
+      "original_flow_blob": "91313152e7e7df3bd0256a2180f489774cfa6171",
+      "arch_originals_retained": [
+        ".github/workflows/issue402-dd-json-p3-smoke-once.yml",
+        ".github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml"
+      ],
+      "manual_replay_candidates": [
+        ".github/workflows/issue541-arch-dd-p3-replay.yml",
+        ".github/workflows/issue541-arch-s6-p3-p4-replay.yml"
+      ],
+      "blockers": [
+        "Historical DD P3 failed and complete root-cause evidence not preserved",
+        "ARCH P3 source-bound replay not executed; explicit cost/approval and default-branch availability required",
+        "FLOW original archived ZIP remains owner-private, claim not independently rehashed here",
+        "Integrated Native and P0/negative mutations must be verified; never claim science PASS"
+      ]
+    }
+  ],
+  "independent_remaining": [
+    "6-B public S6 417/941 four-way Native P2",
+    "8 related CORE species two retirements in Draft #558 remain separate",
+    "10 full Native regression",
+    "11 full validate/pytest",
+    "12 CORE legacy workflows",
+    "13 fresh HEAD evidence",
+    "14 FLOW native PR trigger",
+    "15 artifact absent fail-closed",
+    "16 PR SHA vs merged SHA",
+    "17 post-merge Native gaps",
+    "18 CORE/FLOW/ARCH integration",
+    "19 P3/science approval HOLD"
+  ],
+  "acceptance_gates": [
+    "ci/workflow_harness.py --self-test --check",
+    "ci/guards/workflow_surface_guard.py --self-test --check; classify remaining failures without waiving",
+    "ci/guards/issue541_group_a_retirement.py --self-test --check; A1/A2 HOLD, A3/A4 independent guard",
+    "FLOW source-bound P0 and actual physics-opt P1/P2 with artifacts",
+    "ARCH source-bound P0 + P1/P2, no P3 dispatch",
+    "Native parity and signed-FEM proof at new HEAD",
+    "Artifact SHA/run/HEAD correlation",
+    "No default-branch merge until independent review and science HOLD preserved"
+  ]
+}
