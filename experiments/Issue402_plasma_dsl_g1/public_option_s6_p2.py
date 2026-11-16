@@ -283,6 +283,131 @@ def remap_staged_fem_types(chemistry: Path, ordered: list[str]) -> dict:
     }
 
 
+
+# The archived S6 closures use log-molar electron states, but their old
+# factory/output names are not registered in the present PhysicsApp.
+# Transform disposable public P2 B/D inputs only. No old factory alias, no
+# new physics model, and no claim of P3 or physical S6 equivalence.
+_S6_CLOSURE_BLOCK = re.compile(
+    r"(?m)^  \[(?P<name>mean_energy|electron_transport)\][ \t]*\r?\n"
+    r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+    r"^  \[\][ \t]*(?:\r?\n|$)"
+)
+
+
+def migrate_staged_electron_closure(chemistry: Path, ordered: list[str],
+                                    variant: str) -> dict:
+    """Fail-closed, provenance-recorded S6 P2 mean energy + lookup cutover."""
+    if variant not in ("B", "D") or len(ordered) != (10 if variant == "B" else 11):
+        raise ValueError("Unexpected S6 closure variant or input layer count")
+    if variant == "D" and Path(ordered[-1]).name != "migrated_continuity.i":
+        raise ValueError("Unexpected D option sidecar")
+    files = [chemistry / Path(name).name for name in ordered]
+    if any(Path(name).name != name.split("/")[-1] or
+           not name.endswith(".i") for name in ordered):
+        raise ValueError("Unsafe S6 closure input layer")
+    found = {}
+    changes = {}
+    writes = []
+    replaced_consumers = 0
+    for path in files:
+        original = path.read_text(encoding="utf-8")
+        revised = original
+        matches = list(_S6_CLOSURE_BLOCK.finditer(original))
+        for match in reversed(matches):
+            owner = match.group("name")
+            if owner in found:
+                raise ValueError("S6_CLOSURE_DUPLICATE_OWNER: " + owner)
+            values = {}
+            for line in match.group("body").splitlines():
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                item = re.fullmatch(
+                    r"    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)", line)
+                if not item or item.group(1) in values:
+                    raise ValueError("S6_CLOSURE_INVALID_PARAMETER: " + owner)
+                values[item.group(1)] = item.group(2).strip()
+            if owner == "mean_energy":
+                expected = {
+                    "type": "PhysicsElectronMeanEnergyMaterial",
+                    "electron_energy_density": "log_energy",
+                    "electron_density": "log_ne" if variant == "B" else "log_e",
+                    "state_form": "log_molar_eV",
+                    "block": "plasma",
+                }
+                if values != expected:
+                    raise ValueError("S6_MEAN_ENERGY_IDENTITY_UNPROVED: " + repr(values))
+                body = (
+                    "    type = ElectronEnergyMaterial\n"
+                    "    electron_energy_density = log_energy\n"
+                    "    electron_density = " + expected["electron_density"] + "\n"
+                    "    state_form = log_molar_eV\n"
+                    "    block = plasma\n"
+                )
+            else:
+                expected = {
+                    "type": "PhysicsElectronTransportLookupMaterial",
+                    "property_table_file": "'../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'",
+                    "mean_energy": "mean_en_solved",
+                    "pressure": "p",
+                    "gas_temperature": "T_g_fixed",
+                    "bounds_policy": "clamp",
+                    "block": "plasma",
+                }
+                if values != expected:
+                    raise ValueError("S6_LOOKUP_IDENTITY_UNPROVED: " + repr(values))
+                body = (
+                    "    type = DDTransportMaterial\n"
+                    "    species_id = e\n"
+                    "    model = lookup\n"
+                    "    table_file = " + expected["property_table_file"] + "\n"
+                    "    table_units = reduced\n"
+                    "    pressure = p\n"
+                    "    gas_temperature = T_g_fixed\n"
+                    "    bounds_policy = clamp\n"
+                    "    fluid_energy = true\n"
+                    "    block = plasma\n"
+                )
+            old = match.group(0).encode("utf-8")
+            new_block = (
+                match.group(0)[:match.start("body") - match.start()]
+                + body + match.group(0)[match.end("body") - match.start():]
+            )
+            found[owner] = {
+                "source_layer": path.name,
+                "original_block_sha256": hashlib.sha256(old).hexdigest(),
+                "migrated_block_sha256": hashlib.sha256(new_block.encode("utf-8")).hexdigest(),
+            }
+            revised = revised[:match.start("body")] + body + revised[match.end("body"):]
+        revised, count = re.subn(
+            r"(?<![A-Za-z0-9_])mean_en_solved(?![A-Za-z0-9_])",
+            "e_energy_eV", revised)
+        replaced_consumers += count
+        if ("PhysicsElectronMeanEnergyMaterial" in revised or
+                "PhysicsElectronTransportLookupMaterial" in revised or
+                "mean_en_solved" in revised):
+            raise ValueError("S6_CLOSURE_RETIRED_REFERENCE_REMAINS")
+        changes[path.name] = {
+            "original_sha256": hashlib.sha256(original.encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(revised.encode("utf-8")).hexdigest(),
+        }
+        writes.append((path, revised))
+    if set(found) != {"mean_energy", "electron_transport"} or replaced_consumers == 0:
+        raise ValueError("S6_CLOSURE_OWNER_OR_CONSUMERS_MISSING")
+    # Everything above is verified before modifying any staged file.
+    for path, revised in writes:
+        if path.read_text(encoding="utf-8") != revised:
+            path.write_text(revised, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_LOG_MOLAR_CLOSURE_MIGRATED",
+        "owners": found,
+        "consumer_renames": replaced_consumers,
+        "files": changes,
+        "P3": "NOT_RUN",
+        "science": "SCIENCE_HOLD",
+    }
+
+
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
     if git_head(ROOT) != expected_head or git_head(historical) != HISTORICAL_SHA:
         raise ValueError("Candidate or historical Git source HEAD mismatch")
@@ -431,6 +556,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             overlay.write_text(OVERLAY, encoding="utf-8")
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
+                        scratch_closure = migrate_staged_electron_closure(
+                            staged / p2.CHEM, ordered, variant)
                         scratch_types = remap_staged_fem_types(staged / p2.CHEM, ordered)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
@@ -438,6 +565,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             log, timeout_seconds)
                         report["checks"][case][variant]["layers"] = len(ordered)
                         report["checks"][case][variant]["scratch_fem_type_remap"] = scratch_types
+                        report["checks"][case][variant]["scratch_electron_closure"] = scratch_closure
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                     except Exception as exc:
