@@ -381,6 +381,112 @@ def remap_staged_wall_owners(chemistry: Path, ordered: list[str]) -> dict:
     return receipt
 
 
+def remap_staged_sheath_bcs(
+        chemistry: Path, ordered: list[str], variant: str) -> dict:
+    """Rebind eight proven historical sheath BC owners in disposable B/D input.
+
+    This handles the actual Native P2 archived B names and D canonical names
+    separately. Only the registered BC *type* changes: never its variable,
+    physical flux, mean-energy input or boundary list. Scientific P3 remains HOLD.
+    """
+    if variant not in ("B", "D") or len(ordered) not in (10, 11):
+        raise ValueError("S6_SHEATH_UNSUPPORTED_VARIANT_OR_LAYER_COUNT")
+    names = [Path(item).name for item in ordered]
+    if (len(names) != len(set(names))
+            or any(name != item.split("/")[-1] or not name.endswith(".i")
+                   for name, item in zip(names, ordered))):
+        raise ValueError("S6_SHEATH_UNSAFE_OR_DUPLICATE_LAYER")
+
+    spec = importlib.util.spec_from_file_location(
+        "issue402_s6_sheath_contract",
+        ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_SHEATH_DONOR_CONTRACT_MISSING")
+    canonical = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(canonical)
+
+    layers = {name: (chemistry / name).read_text(encoding="utf-8")
+              for name in names}
+    # The original B/C base owns all eight named BCs. The D no-D1 base does
+    # too; reject any shifted ownership or extra archived BC in other layers.
+    base_name = names[0]
+    legacy_types = tuple(canonical.OLD_SHEATH_TYPES.values())
+    if any(re.search(r"(?m)^    type\s*=\s*(?:" +
+                     "|".join(map(re.escape, legacy_types)) + r")\s*$",
+                     layer)
+           for name, layer in layers.items() if name != base_name):
+        raise ValueError("S6_SHEATH_SECONDARY_LAYER_RETIRED_OWNER")
+
+    source = layers[base_name]
+    matched = []
+    for name, (registered, boundary) in canonical.SHEATH_BC_SPEC.items():
+        blocks = [
+            m for m in canonical.BLOCK.finditer(source)
+            if (m.group("name") == name
+                and re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
+                               source[:m.start()])[-1:] == ["BCs"])
+        ]
+        if len(blocks) != 1:
+            raise ValueError("S6_SHEATH_OWNER_COUNT_" + name + ": " + str(len(blocks)))
+        original = blocks[0]
+        is_energy = registered == "FEMElectronEnergySheathBC"
+        expected = {
+            "type": canonical.OLD_SHEATH_TYPES[registered],
+            "variable": ("log_energy" if variant == "B" else "log_e_energy")
+                        if is_energy else ("log_ne" if variant == "B" else "log_e"),
+            "wall_number_flux": "e_wall_number_flux",
+            "boundary": boundary,
+        }
+        if is_energy:
+            expected["mean_energy"] = "e_energy_eV"
+        if canonical.parameters(original.group("body")) != expected:
+            raise ValueError("S6_SHEATH_OWNER_IDENTITY_" + name)
+        matched.append((original, name, registered))
+
+    if len(matched) != 8:
+        raise ValueError("S6_SHEATH_EXPECTED_EIGHT_OWNERS")
+    revised = source
+    receipts = []
+    for original, name, registered in reversed(matched):
+        before = original.group(0)
+        old = canonical.OLD_SHEATH_TYPES[registered]
+        after = before.replace("    type = " + old + "\n",
+                               "    type = " + registered + "\n", 1)
+        if after == before:
+            raise ValueError("S6_SHEATH_TYPE_REPLACEMENT_FAILED_" + name)
+        revised = revised[:original.start()] + after + revised[original.end():]
+        receipts.append({
+            "owner": name,
+            "from_type": old,
+            "to_type": registered,
+            "old_sha256": hashlib.sha256(before.encode()).hexdigest(),
+            "new_sha256": hashlib.sha256(after.encode()).hexdigest(),
+        })
+
+    if any(re.search(r"(?m)^    type\s*=\s*" + re.escape(old) + r"\s*$", revised)
+           for old in legacy_types):
+        raise ValueError("S6_SHEATH_UNREGISTERED_TYPE_REMAINS")
+    if variant == "D":
+        # Reconcile verbatim against the existing independently tested D
+        # migration. This prevents drift between the two current P2 routes.
+        donor_revised, donor_receipts = canonical.migrate_exact_s6_fem_sheath(source)
+        if donor_revised != revised or len(donor_receipts) != 8:
+            raise ValueError("S6_SHEATH_DONOR_REPLAY_MISMATCH")
+
+    # All eight blocks are verified before the single scratch write.
+    (chemistry / base_name).write_text(revised, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_EXACT_EIGHT_SHEATH_BC_TYPE_CUTOVER",
+        "variant": variant,
+        "source_layer": base_name,
+        "owner_count": 8,
+        "owners": sorted(receipts, key=lambda row: row["owner"]),
+        "original_sha256": hashlib.sha256(source.encode()).hexdigest(),
+        "staged_sha256": hashlib.sha256(revised.encode()).hexdigest(),
+        "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
+    }
+
+
 def remap_staged_mean_energy(chemistry: Path, ordered: list[str]) -> dict:
     """Rebind only a proven log-molar legacy mean-energy owner in disposable B/D decks.
 
@@ -641,6 +747,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         scratch_lookup = remap_staged_electron_lookup(staged / p2.CHEM, ordered)
                         scratch_wall = remap_staged_wall_owners(staged / p2.CHEM, ordered)
                         scratch_mean_energy = remap_staged_mean_energy(staged / p2.CHEM, ordered)
+                        scratch_sheath = remap_staged_sheath_bcs(staged / p2.CHEM, ordered, variant)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
                             binary, identity["binary_sha256"], staged, ordered,
@@ -650,6 +757,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         report["checks"][case][variant]["scratch_lookup_cutover"] = scratch_lookup
                         report["checks"][case][variant]["scratch_wall_cutover"] = scratch_wall
                         report["checks"][case][variant]["scratch_mean_energy_cutover"] = scratch_mean_energy
+                        report["checks"][case][variant]["scratch_sheath_bc_cutover"] = scratch_sheath
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                     except Exception as exc:
