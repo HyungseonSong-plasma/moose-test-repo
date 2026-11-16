@@ -1164,11 +1164,18 @@ jobs:
           set -e
           cat /tmp/issue541_group_a_surface.log
           test "$status" -ne 0
-          # Two independent ARCH P3 originals remain, not bypassed or silently
-          # reactivated; A1 is staged absent, A2 already retired.
-          for name in issue402-dd-json-p3-smoke-once.yml issue402-hybrid-json-s6-p3-p4-once.yml; do
-            grep -Fq "$name: one-shot must target branches: [main]" /tmp/issue541_group_a_surface.log
-          done
+          # The S6 one-shot is staged absent only in a dedicated retirement
+          # candidate whose archive/replay proofs passed Group A P0 above.
+          # The independent DD one-shot is still present and policy-red:
+          # neither suppress the guard nor treat this as a global CI PASS.
+          test ! -e .github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml
+          test -f .github/workflows/issue541-arch-s6-p3-p4-replay.yml
+          test -e .github/workflows/issue402-dd-json-p3-smoke-once.yml
+          grep -Fq "issue402-dd-json-p3-smoke-once.yml: one-shot must target branches: [main]" /tmp/issue541_group_a_surface.log
+          if grep -Fq "issue402-hybrid-json-s6-p3-p4-once.yml: one-shot must target branches: [main]" /tmp/issue541_group_a_surface.log; then
+            echo "::error::staged-absent S6 original still reported as live"
+            exit 1
+          fi
           test ! -e .github/workflows/issue402-dd-json-boundary-p0-p2-once.yml
           test ! -e .github/workflows/issue402-legacy-symbol-audit-once.yml
           for retired in issue402-dd-json-boundary-p0-p2-once.yml issue402-legacy-symbol-audit-once.yml; do
@@ -1177,10 +1184,10 @@ jobs:
               exit 1
             fi
           done
-          test "$(grep -c ': one-shot must target branches: \[main\]' /tmp/issue541_group_a_surface.log)" -eq 2
+          test "$(grep -c ': one-shot must target branches: \[main\]' /tmp/issue541_group_a_surface.log)" -eq 1
           test ! -e .github/workflows/issue402-rate-coef-ideal-gas-native-once.yml
           test ! -e .github/workflows/issue402-reaction-material-reduction-p0-once.yml
-          echo 'ISSUE541_GROUP_A_GLOBAL_SURFACE_GUARD=FAIL_EXPECTED; A1_STAGED_ONLY=1; A2_RETIRED_VERIFIED=1; ARCH_P3_ORIGINAL_VIOLATIONS=2; A3_A4_STAGED=2; NO_WAIVER'
+          echo 'ISSUE541_GROUP_A_GLOBAL_SURFACE_GUARD=FAIL_EXPECTED; A1_STAGED_ONLY=1; A2_RETIRED_VERIFIED=1; S6_P3_STAGED_REMOVED=1; DD_P3_ORIGINAL_VIOLATIONS=1; A3_A4_STAGED=2; NO_WAIVER'
       - name: Preserve source-bound Group A audit and guard output
         if: always()
         uses: actions/upload-artifact@v4
