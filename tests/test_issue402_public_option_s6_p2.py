@@ -344,6 +344,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
+        "migrate_staged_D_json_initial": lambda *_args: {"status": "SYNTHETIC_JSON_INITIAL"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
         "migrate_staged_electron_closure": lambda *_args: {"status": "SYNTHETIC_CLOSURE"},
         "migrate_staged_wall_owners": lambda *_args: {"status": "SYNTHETIC_WALL_AUDIT"},
@@ -461,3 +462,111 @@ def test_s6_log_molar_closure_cutover_is_exact_and_fail_closed(tmp_path):
             with pytest.raises(ValueError, match="IDENTITY_UNPROVED"):
                 transform(broken, ordered, variant)
             assert snapshot == {p.name: p.read_bytes() for p in broken.iterdir()}
+
+
+
+def test_s6_D_json_initial_ownership_retires_only_pinned_native_states(tmp_path):
+    """Synthetic scratch inputs: exact historical logs become physical JSON values."""
+    import json
+    import importlib.util
+    import math
+    import re
+    import pytest
+
+    path = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(path.read_text())
+    declarations = [
+        node for node in tree.body if isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "_S6_D_INITIAL_VARIABLE"
+                for t in node.targets)
+    ]
+    functions = [node for node in tree.body
+                 if isinstance(node, ast.FunctionDef)
+                 and node.name == "migrate_staged_D_json_initial"]
+    assert len(declarations) == 1 and len(functions) == 1
+    namespace = {
+        "ROOT": ROOT, "Path": Path, "hashlib": hashlib, "json": json,
+        "math": math, "re": re, "importlib": importlib,
+        "sha_file": lambda path: hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+    exec(compile(ast.Module(body=declarations + functions, type_ignores=[]),
+                 str(path), "exec"), namespace)
+    migrate = namespace["migrate_staged_D_json_initial"]
+
+    folder = tmp_path / "scratch"
+    folder.mkdir()
+    pinned = {
+        "log_e": "-20.216123548032986",
+        "log_O2p": "-20.216123548032986",
+        "log_Om": "-27.123878827015126",
+        "log_Op": "-27.123878827015126",
+    }
+    blocks = []
+    for name, initial in pinned.items():
+        props = (
+            ("    family = LAGRANGE\n    order = FIRST\n") if name == "log_e"
+            else ("    type = MooseVariableFVReal\n")
+        )
+        blocks.append(
+            f"  [{name}]\n" + props
+            + f"    initial_condition = {initial}\n"
+            + "    block = plasma\n  []\n"
+        )
+    full_input = "[Variables]\n" + "".join(blocks) + (
+        "  [log_energy]\n    family = LAGRANGE\n"
+        "    order = FIRST\n    initial_condition = -18.829829186913098\n"
+        "    block = plasma\n  []\n[]\n"
+    )
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        (folder / f"layer_{i}.i").write_text(
+            full_input if i == 0 else f"# untouched control {i}\n"
+        )
+    ordered.append("chem/migrated_continuity.i")
+    (folder / "migrated_continuity.i").write_text("OPTION_OVERLAY_STAYS_UNTOUCHED\n")
+    original_json = PILOT / "plasma_species_only.json"
+    (folder / "plasma_species_only.json").write_bytes(original_json.read_bytes())
+
+    source = {p.name: p.read_bytes() for p in folder.iterdir()}
+    result = migrate(folder, ordered)
+    assert result["status"] == "SCRATCH_ONLY_ARCHIVED_NATIVE_DENSITIES_TO_JSON"
+    assert result["P3"] == "NOT_RUN" and result["science"] == "SCIENCE_HOLD"
+    assert set(result["retired_native_variable_owners"]) == set(pinned)
+    assert "  [log_energy]\n" in (folder / "layer_0.i").read_text()
+    for name in pinned:
+        assert "  [" + name + "]\n" not in (folder / "layer_0.i").read_text()
+    assert (folder / "migrated_continuity.i").read_bytes() == source["migrated_continuity.i"]
+    assert (folder / "layer_1.i").read_bytes() == source["layer_1.i"]
+    staged = json.loads((folder / "plasma_species_only.json").read_text())
+    for species, name in (("e", "log_e"), ("O2p", "log_O2p"),
+                          ("Om", "log_Om"), ("Op", "log_Op")):
+        expected = math.exp(float(pinned[name])) * 6.02214076e23
+        assert staged["species"][species]["initial_number_density"] == expected
+    assert original_json.read_bytes() == source["plasma_species_only.json"]
+
+    for label, old, new in (
+        ("modified_e", "initial_condition = -20.216123548032986",
+         "initial_condition = -20.216123548032985"),
+        ("wrong_block", "    block = plasma", "    block = vacuum"),
+    ):
+        malformed = tmp_path / label
+        malformed.mkdir()
+        for name, data in source.items():
+            (malformed / name).write_bytes(data)
+        first = malformed / "layer_0.i"
+        first.write_text(first.read_text().replace(old, new, 1))
+        snapshot = {p.name: p.read_bytes() for p in malformed.iterdir()}
+        with pytest.raises(ValueError, match="SOURCE_CONTRACT_CHANGED"):
+            migrate(malformed, ordered)
+        assert snapshot == {p.name: p.read_bytes() for p in malformed.iterdir()}
+
+    missing = tmp_path / "missing_native"
+    missing.mkdir()
+    for name, data in source.items():
+        (missing / name).write_bytes(data)
+    first = missing / "layer_0.i"
+    first.write_text(first.read_text().replace(blocks[0], "", 1))
+    snapshot = {p.name: p.read_bytes() for p in missing.iterdir()}
+    with pytest.raises(ValueError, match="MISSING_PINNED_NATIVE_STATES"):
+        migrate(missing, ordered)
+    assert snapshot == {p.name: p.read_bytes() for p in missing.iterdir()}
