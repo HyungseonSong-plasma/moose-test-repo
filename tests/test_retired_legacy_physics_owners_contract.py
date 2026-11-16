@@ -20,6 +20,8 @@ RETIRED_FILES = (
     "include/materials/PhysicsInverseCrossSection.h",
     "src/materials/PhysicsTotalCrossSection.C",
     "include/materials/PhysicsTotalCrossSection.h",
+    "src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+    "include/fvkernels/PhysicsFVLogMolarElectronTransport.h",
     "src/utils/PhysicsUtils.C",
     "include/utils/PhysicsUtils.h",
 )
@@ -57,6 +59,6 @@ def test_active_wall_and_surface_charge_owners_remain():
         "src/functormaterials/PhysicsIonWallFluxMaterial.C",
         "src/kernels/PhysicsLowerDSurfaceCurrent.C",
         "src/bcs/PhysicsADSurfaceChargePoissonBC.C",
-        "src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "src/fvkernels/PhysicsFVLogMolarTransport.C",
     ):
         assert (APP / rel).is_file(), f"Active physics owner missing: {rel}"

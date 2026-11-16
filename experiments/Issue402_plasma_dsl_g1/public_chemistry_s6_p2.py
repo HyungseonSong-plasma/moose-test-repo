@@ -49,7 +49,7 @@ def execute(historical: Path, binary: Path, source_sha: str, evidence: Path) -> 
                 d_base_source=d_base)
             chemistry_dir = staged / option.p2.CHEM
             canonical = option.canonicalize_staged_D_inputs(chemistry_dir, ordered)
-            type_remap = option.remap_staged_fem_types(chemistry_dir, ordered)
+            type_remap = option.remap_staged_legacy_types(chemistry_dir, ordered)
             cutover = prepare(chemistry_dir, ordered, variant)
             log = evidence / f"s6_{variant}_chemistry_cutover_p2.log"
             verdict = option.run_one(binary, identity["binary_sha256"],
@@ -58,7 +58,7 @@ def execute(historical: Path, binary: Path, source_sha: str, evidence: Path) -> 
                 **verdict,
                 "source_cutover": cutover,
                 "scratch_canonical_state_renames": canonical,
-                "scratch_fem_type_remap": type_remap
+                "scratch_legacy_type_remap": type_remap
             }
             (evidence / "issue402_s6_chemistry_cutover_p2.json").write_text(
                 json.dumps(report, indent=2, sort_keys=True) + "\n")

@@ -31,12 +31,12 @@ def build_case() -> str:
     fv_kernels = f"""
 [FVKernels]
   [ni_time]
-    type = PhysicsFVLogMolarElectronTimeDerivative
+    type = PhysicsFVLogMolarTimeDerivative
     variable = log_ni
     block = plasma
   []
   [ni_diffusion]
-    type = PhysicsFVLogMolarElectronDiffusion
+    type = PhysicsFVLogMolarDiffusion
     variable = log_ni
     coeff = ion_diffusion
     block = plasma

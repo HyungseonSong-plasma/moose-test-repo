@@ -162,10 +162,10 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
     assignments = [
         node for node in tree.body if isinstance(node, ast.Assign)
         and any(isinstance(t, ast.Name) and t.id in
-                {"RENAMED_FEM_KERNEL_TYPES", "_FEM_TYPE_LINE"} for t in node.targets)
+                {"RENAMED_LEGACY_TYPES", "_LEGACY_TYPE_LINE"} for t in node.targets)
     ]
     fun = next(node for node in tree.body
-               if isinstance(node, ast.FunctionDef) and node.name == "remap_staged_fem_types")
+               if isinstance(node, ast.FunctionDef) and node.name == "remap_staged_legacy_types")
     assert len(assignments) == 2
     namespace = {"re": re, "Path": Path, "hashlib": hashlib}
     exec(compile(ast.Module(body=assignments + [fun], type_ignores=[]),
@@ -182,7 +182,11 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
         "  [ne_transport]\n    type = PhysicsFEMLogMolarDriftDiffusion\n"
         "    variable = log_ne\n  []\n"
         "  [energy_joule]\n    type = PhysicsFEMLogMolarElectronJouleHeating\n"
-        "    variable = log_energy\n  []\n[]\n"
+        "    variable = log_energy\n  []\n"
+        "  [ni_time]\n    type = PhysicsFVLogMolarElectronTimeDerivative\n"
+        "    variable = log_ni\n  []\n"
+        "  [ni_diffusion]\n    type = PhysicsFVLogMolarElectronDiffusion\n"
+        "    variable = log_ni\n  []\n[]\n"
     )
     ordered = []
     for i in range(10):
@@ -191,22 +195,24 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
         (archived / name).write_text(data)
         (staged / name).write_text(data)
         ordered.append(f"chem/{name}")
-    result = namespace["remap_staged_fem_types"](staged, ordered)
+    result = namespace["remap_staged_legacy_types"](staged, ordered)
     assert result["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
     assert all(count == 1 for old, count in result["totals"].items()
                if old.startswith("PhysicsFEM"))
+    assert all(count == 1 for old, count in result["totals"].items()
+               if old.startswith("PhysicsFVLogMolarElectron"))
     assert all(count == 0 for old, count in result["totals"].items()
-               if not old.startswith("PhysicsFEM"))
+               if not old.startswith(("PhysicsFEM", "PhysicsFVLogMolarElectron")))
     migrated = (staged / "layer_0.i").read_text()
-    for old, new in ((old, new) for old, new in namespace["RENAMED_FEM_KERNEL_TYPES"].items()
-                     if old.startswith("PhysicsFEM")):
+    for old, new in ((old, new) for old, new in namespace["RENAMED_LEGACY_TYPES"].items()
+                     if old.startswith(("PhysicsFEM", "PhysicsFVLogMolarElectron"))):
         assert "type = " + old not in migrated
         assert "type = " + new in migrated
         assert "type = " + old in (archived / "layer_0.i").read_text()
     assert result["files"]["layer_0.i"]["original_sha256"] == hashlib.sha256(source.encode()).hexdigest()
     snapshot = {p.name: p.read_bytes() for p in staged.iterdir()}
     with pytest.raises(ValueError, match="layer count"):
-        namespace["remap_staged_fem_types"](staged, ordered[:-1])
+        namespace["remap_staged_legacy_types"](staged, ordered[:-1])
     assert snapshot == {p.name: p.read_bytes() for p in staged.iterdir()}
 
 
@@ -330,7 +336,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
-        "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
+        "remap_staged_legacy_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(

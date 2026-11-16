@@ -108,7 +108,7 @@ def run(case: str, historical: Path, expected_head: str,
         migration = option.canonicalize_staged_D_inputs(staged / option.p2.CHEM, ordered)
         sidecar = staged / option.p2.CHEM / "migrated_continuity.i"
         status["scratch_migration"] = migration
-        status["scratch_fem_type_remap"] = option.remap_staged_fem_types(
+        status["scratch_legacy_type_remap"] = option.remap_staged_legacy_types(
             staged / option.p2.CHEM, ordered)
         if chemistry_mode:
             from chemistry.prepare_s6_run_input import prepare
