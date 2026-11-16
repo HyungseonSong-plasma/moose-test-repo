@@ -12,6 +12,8 @@ on:
       - 'physics_app/**'
       - 'experiments/Issue402_plasma_dsl_g1/**'
       - 'tests/test_issue402_reaction_reduction_p2_only.py'
+      - 'ci/baselines/issue541_group_a2_flow_retirement.json'
+      - 'ci/guards/issue541_group_a2_flow_retirement_p0.py'
   workflow_dispatch:
 
 permissions:
@@ -86,6 +88,7 @@ jobs:
         run: |
           set -euo pipefail
           cd control
+          python3 ci/guards/issue541_group_a2_flow_retirement_p0.py --self-test --check
           python3 -m physics_app.ci.check_issue402_json_rate_native_p2 --self-test
           python3 -m physics_app.ci.check_issue402_reaction_reduction_p2_only --self-test
           python3 -m pytest -q \
