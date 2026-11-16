@@ -13,6 +13,7 @@ import csv
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -26,6 +27,8 @@ DECK_NAME = "dd_plasma_boundary_json_p3_smoke.i"
 FIELDS = ("avg_log_e", "avg_log_e_energy", "avg_e_energy_eV")
 DT = 1e-10
 STEPS = 2
+PINNED_OCI_REF = ("ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:"
+                  "2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008")
 
 
 def digest(path: Path) -> str:
@@ -59,17 +62,19 @@ def inspect_csv(path: Path) -> dict:
     with path.open(newline="", encoding="utf-8") as stream:
         reader = csv.DictReader(stream)
         rows = list(reader)
-    if len(rows) < 2:
-        raise ValueError("P3_NO_REAL_TIMESTEPS")
+    if len(rows) != STEPS + 1:
+        raise ValueError("P3_MISSING_OR_EXTRA_TIMESTEP")
     if not {"time", *FIELDS}.issubset(set(rows[0])):
         raise ValueError("P3_MISSING_ELECTRON_OR_ENERGY_POSTPROCESSORS")
     samples = []
-    for row in rows:
+    for step, row in enumerate(rows):
         values = {name: float(row[name]) for name in ("time", *FIELDS)}
         if any(not math.isfinite(value) for value in values.values()):
             raise ValueError("P3_NONFINITE_TIME_OR_ELECTRON_STATE")
         if values["avg_e_energy_eV"] <= 0:
             raise ValueError("P3_NONPOSITIVE_MEAN_ELECTRON_ENERGY")
+        if abs(values["time"] - step * DT) > DT * 1e-5:
+            raise ValueError("P3_INCOMPLETE_OR_DUPLICATE_TIMESTEP_GRID")
         samples.append(values)
     if abs(samples[-1]["time"] - DT * STEPS) > DT * 1e-5:
         raise ValueError("P3_INCOMPLETE_TRANSIENT_TIME_WINDOW")
@@ -174,6 +179,38 @@ def self_test() -> None:
         assert no_p3["native_p3_attempted"] is False
         assert no_p3["blocker"] == "P3_NATIVE_INPUT_PRECHECK_FAILED"
         assert not (root / "precheck" / "json_sheath_wall" / "native_p3.log").exists()
+    # Independent two-step time-grid checks: no actual Native P3 is run here.
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "synthetic.csv"
+        samples = [
+            {"time": i * DT, "avg_log_e": 1.0 + .1 * i,
+             "avg_log_e_energy": 2.0 + .1 * i,
+             "avg_e_energy_eV": 3.0 + .1 * i}
+            for i in range(STEPS + 1)
+        ]
+        def write_rows(rows):
+            with target.open("w", newline="", encoding="utf-8") as out:
+                w = csv.DictWriter(out, fieldnames=["time", *FIELDS])
+                w.writeheader()
+                w.writerows(rows)
+        write_rows(samples)
+        assert inspect_csv(target)["samples"] == STEPS + 1
+        for label, rows, expected in (
+            ("missing_midpoint", [samples[0], samples[2]],
+             "P3_MISSING_OR_EXTRA_TIMESTEP"),
+            ("duplicate_midpoint", [samples[0], samples[0], samples[2]],
+             "P3_INCOMPLETE_OR_DUPLICATE_TIMESTEP_GRID"),
+            ("out_of_order", [samples[0], samples[2], samples[1]],
+             "P3_INCOMPLETE_OR_DUPLICATE_TIMESTEP_GRID"),
+        ):
+            write_rows(rows)
+            try:
+                inspect_csv(target)
+            except ValueError as exc:
+                assert str(exc) == expected, (label, str(exc))
+            else:
+                raise AssertionError("P3_TIMESTEP_NEGATIVE_UNREJECTED:" + label)
+    print("ISSUE541_DD_P3_TIMESTEP_NEGATIVE_3_PASS_NO_NATIVE")
     print("ISSUE541_DD_P3_FAILURE_DIAGNOSTIC_NEGATIVE_2_PASS_NO_NATIVE")
 
 
@@ -183,12 +220,17 @@ def main() -> int:
     parser.add_argument("--binary", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--source-sha")
+    parser.add_argument("--oci-ref", help="OCI digest actually selected by the DD P3 job")
     args = parser.parse_args()
     if args.self_test:
         self_test()
         return 0
-    if not (args.binary and args.output and args.source_sha):
-        parser.error("--binary, --output and --source-sha are required for real P3")
+    if not (args.binary and args.output and args.source_sha and args.oci_ref):
+        parser.error("--binary, --output, --source-sha and --oci-ref are required for real P3")
+    if re.fullmatch(r"[0-9a-f]{40}", args.source_sha) is None:
+        parser.error("P3_EXACT_SOURCE_SHA_FORMAT")
+    if args.oci_ref != PINNED_OCI_REF:
+        parser.error("P3_PINNED_OCI_PROVENANCE_MISMATCH")
     binary = args.binary.resolve()
     if not binary.is_file() or not binary.stat().st_size:
         parser.error("P3_NATIVE_BINARY_MISSING")
@@ -210,6 +252,7 @@ def main() -> int:
         "schema": "issue402_json_dd_p3_sheath_only_v2",
         "source_sha": args.source_sha,
         "binary_sha256": digest(binary),
+        "oci_ref": args.oci_ref,
         "deck_sha256": digest(CI / DECK_NAME),
         "json_sha256": digest(CI / DATA_NAME),
         "time_step_s": DT,
@@ -224,9 +267,17 @@ def main() -> int:
     all_receipts["lanes"]["json_sheath_wall"] = wall
     if wall["p3"] == "EXECUTED":
         changes = wall["observables"]["delta"]
-        all_receipts["time_evolution_observed"] = (
-            abs(changes["avg_log_e"]) > 1e-12 or
+        all_receipts["continuity_evolution_observed"] = (
+            abs(changes["avg_log_e"]) > 1e-12
+        )
+        all_receipts["energy_evolution_observed"] = (
             abs(changes["avg_log_e_energy"]) > 1e-12
+        )
+        # These are two independent P3 obligations. Either one alone is not
+        # enough to claim a coupled continuity+energy transient passed.
+        all_receipts["time_evolution_observed"] = (
+            all_receipts["continuity_evolution_observed"] and
+            all_receipts["energy_evolution_observed"]
         )
         all_receipts["status"] = (
             "P3_BOUNDED_SHEATH_SMOKE_PASS"
