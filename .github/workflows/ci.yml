@@ -59,9 +59,9 @@ jobs:
           test -f docs/operating_system/README.md
           test -f docs/operating_system/CENTRAL_SKILLS.md
           test -f docs/operating_system/central_skills.json
-          grep -Fq '9b335e3fbb9c5e8e323e382daeec56fa25336822' docs/operating_system/README.md
+          grep -Fq '972d3151527adb944f09f123a184cf791292ff36' docs/operating_system/README.md
           grep -Fq 'Expected OS:** Samuel' docs/operating_system/README.md
-          grep -Fq '9b335e3fbb9c5e8e323e382daeec56fa25336822' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq '972d3151527adb944f09f123a184cf791292ff36' docs/operating_system/CENTRAL_SKILLS.md
 
           # Calvin operating metrics remain archive-only under Samuel.
           test ! -e docs/metrics
@@ -70,9 +70,9 @@ jobs:
           test -f archive/operating_metrics/calvin/metrics_closure.md
 
           # Executable central actions use the same exact Samuel revision.
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@9b335e3fbb9c5e8e323e382daeec56fa25336822' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@9b335e3fbb9c5e8e323e382daeec56fa25336822' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@9b335e3fbb9c5e8e323e382daeec56fa25336822' .github/workflows/experiment.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@972d3151527adb944f09f123a184cf791292ff36' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@972d3151527adb944f09f123a184cf791292ff36' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@972d3151527adb944f09f123a184cf791292ff36' .github/workflows/experiment.yml
 
           python3 - <<'PY'
           import json
@@ -82,12 +82,12 @@ jobs:
           assert manifest["schema_version"] == 2
           assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
           os_meta=manifest["operating_system"]
-          revision="9b335e3fbb9c5e8e323e382daeec56fa25336822"
+          revision="972d3151527adb944f09f123a184cf791292ff36"
           assert os_meta["revision"] == revision
           assert os_meta["expected_version"] == "Samuel"
           assert os_meta["index"] == {
               "path": "docs/operating_system/README.md",
-              "expected_blob_sha": "77448ab850a06c141b16976c1c75353e7224973d",
+              "expected_blob_sha": "a5fdc9985affe32e455b6e0a09398047497ba0b4",
           }
           assert os_meta["essential_rules"] == {
               "path": "docs/operating_system/ESSENTIAL_RULES.md",
@@ -95,16 +95,17 @@ jobs:
           }
           assert manifest["skill_catalog"] == {
               "path": "skills/catalog.json",
-              "expected_blob_sha": "9bee98efd28235ccafdcffde18da06dcc0386702",
+              "expected_blob_sha": "210236d110c6bfcdfb9ccdfb1ebd5957a8730663",
           }
           assert manifest["capability_registry"] == {
               "path": "skills/capability-registry.json",
-              "expected_blob_sha": "aa87d20fa68dc6e171ffd3240b4e4bc6d3bf28be",
+              "expected_blob_sha": "a1637f562362a17781e2531f4d019e09a344906e",
           }
 
           entries={item["name"]: item for item in manifest["skills"]}
           expected_names={
               "session-bootstrap",
+              "problem-oriented-response",
               "state-refresh",
               "repository-mutation",
               "governed-work",
@@ -114,6 +115,7 @@ jobs:
               "github-actions-observation",
               "artifact-staging",
               "scientific-discriminator-controller",
+              "pull-request-create",
               "pull-request-merge",
               "research-controller",
           }
@@ -122,7 +124,8 @@ jobs:
               assert item["revision"] == revision
           assert entries["session-bootstrap"]["load_on"] == ["INIT"]
           assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
-          assert entries["repository-mutation"]["load_on"] == ["MUTATE","GITHUB_BRANCH_DELETE","GITHUB_MUTATION_CAPABILITY_VERDICT"]
+          assert entries["problem-oriented-response"]["load_on"] == ["INIT"]
+          assert entries["repository-mutation"]["load_on"] == ["MUTATE","GITHUB_BRANCH_DELETE","GITHUB_MUTATION_CAPABILITY_VERDICT","GITHUB_FILE_CREATE","GITHUB_FILE_UPDATE","GITHUB_BRANCH_CREATE","GITHUB_BRANCH_FAST_FORWARD"]
           assert entries["governed-work"]["load_on"] == ["GOVERNED_WORK"]
           assert entries["controller-throughput"]["load_on"] == ["SCHEDULED_CONTROLLER"]
           assert entries["controller-lifecycle"]["load_on"] == ["SCHEDULED_CONTROLLER"]
@@ -130,6 +133,7 @@ jobs:
           assert entries["github-actions-observation"]["load_on"] == ["GITHUB_ACTIONS_OBSERVATION"]
           assert entries["artifact-staging"]["load_on"] == ["ARTIFACT_STAGING"]
           assert entries["scientific-discriminator-controller"]["load_on"] == ["SCIENTIFIC_DISCRIMINATOR_CONTROLLER"]
+          assert entries["pull-request-create"]["load_on"] == ["GITHUB_PR_CREATE"]
           assert entries["pull-request-merge"]["load_on"] == ["GITHUB_PR_MERGE"]
           assert entries["research-controller"]["load_on"] == ["RESEARCH_CONTROLLER"]
 
@@ -138,6 +142,10 @@ jobs:
           assert policy["repository"] == "HyungseonSong-plasma/moose-test-repo"
           assert policy["validation_gate"]["mode"] == "named_workflows"
           assert "Repository CI" in policy["validation_gate"]["workflows"]
+          branch_policy=json.loads(Path("automation/samuel/repository-mutation-policy.json").read_text(encoding="utf-8"))
+          assert branch_policy["repository"] == policy["repository"]
+          assert branch_policy["mutation"]["branch_names"] == policy["mutation"]["branch_names"]
+          assert "automation/samuel/repository-mutation-policy.json" in branch_policy["mutation"]["file_paths"]["deny"]
           PY
 
           central_revision="$(python3 - <<'PY'
