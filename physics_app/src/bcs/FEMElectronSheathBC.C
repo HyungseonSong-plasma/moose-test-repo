@@ -74,6 +74,10 @@ FEMElectronSheathBC(const InputParameters & parameters)
   : ADIntegratedBC(parameters),
     _wall_number_flux(getFunctor<ADReal>("wall_number_flux"))
 {
+  // FEM-only problems still need prebuilt FaceInfo for the exact plasma-side
+  // FaceArg sheath flux. Request the mesh cache before FEProblem::init();
+  // never build finite-volume metadata from threaded boundary residuals.
+  _subproblem.needFV();
 }
 
 ADReal
