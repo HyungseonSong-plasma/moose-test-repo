@@ -11,6 +11,8 @@ ENTRYPOINTS = {
     "sol-runtime-integration.yml": {"push", "pull_request"},
     "ion-fvm-hybrid-staged-dt.yml": {"push", "pull_request", "workflow_dispatch"},
     "samuel-branch-delete.yml": {"push"},
+    # Exact-source, owner-approved DD P3 only; no automatic trigger.
+    "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},

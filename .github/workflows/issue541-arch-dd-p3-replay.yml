@@ -1,0 +1,128 @@
+# ARCH independent maintained replay candidate: manual dispatch only; never
+# auto-run P3 on push/PR. Requires exact SHA and an explicit approval phrase.
+# The original historical one-shot remains unchanged until separate retirement.
+# Bounded one-shot P3 JSON sheath-only transient; independent continuity
+# and energy time evolution are mandatory. No RF/S6 science acceptance.
+# Triggered only by an explicit edit of this branch-local workflow path.
+name: Issue541 ARCH maintained DD JSON sheath P3 replay (manual only)
+run-name: ARCH DD JSON P3 manual @ ${{ github.sha }}
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Exact commit to execute; must equal selected workflow ref HEAD'
+        required: true
+        type: string
+      p3_approval:
+        description: 'Type ISSUE541_DD_TWO_STEP_P3_APPROVED to explicitly authorize P3'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: issue402-dd-json-p3-smoke-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  bounded-p3:
+    name: Native P3 FEM electron continuity energy with JSON sheath only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Fail closed without explicit DD P3 approval and exact source
+        shell: bash
+        env:
+          APPROVAL: ${{ inputs.p3_approval }}
+          REQUESTED_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$APPROVAL" = "ISSUE541_DD_TWO_STEP_P3_APPROVED"
+          test "$REQUESTED_SHA" = "$GITHUB_SHA"
+          echo "ISSUE541_ARCH_DD_EXPLICIT_SOURCE_BOUND_P3_APPROVED"
+      - name: Checkout exact Draft PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: P0 immutable provenance, bounds, and actual solve intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f physics_app/ci/dd_plasma_boundary_json_p3_smoke.i
+          test -f physics_app/ci/run_issue402_dd_json_p3_smoke.py
+          grep -Fq 'num_steps = 2' physics_app/ci/dd_plasma_boundary_json_p3_smoke.i
+          ! grep -Fq 'solve = false' physics_app/ci/dd_plasma_boundary_json_p3_smoke.i
+          grep -Fq 'energy_transport_coef' physics_app/ci/dd_plasma_boundary_json_p2.json
+          ! grep -Fq '"drift_diffusion"' physics_app/ci/dd_plasma_boundary_json_p2.json
+          python3 -m py_compile physics_app/ci/run_issue402_dd_json_p3_smoke.py
+          echo "P3_SHEATH_ONLY_SOURCE=$GITHUB_SHA P0_PASS SCIENCE_HOLD"
+      - name: P1 build exact pinned native PhysicsApp binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee /tmp/issue402_dd_json_p3_native_build.log
+          echo P3_NATIVE_BINARY_P1_PASS
+      - name: P2 and P3 real two-step JSON sheath transient only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e issue402_dd_json_p3_evidence
+          # The Native runner writes evidence as container root, whereas this
+          # validation job runs as the non-root GitHub runner. Restore ownership
+          # on success OR failure so the result gate can persist its receipt and
+          # actions/upload-artifact can preserve the actual failure diagnostics.
+          restore_evidence_ownership() {
+            if [[ -d issue402_dd_json_p3_evidence ]]; then
+              sudo chown -R "$(id -u):$(id -g)" issue402_dd_json_p3_evidence
+            fi
+          }
+          trap restore_evidence_ownership EXIT
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" \
+            --env "RUN_SOURCE_SHA=$GITHUB_SHA" \
+            --env "RUN_OCI_REF=$OCI" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              python3 physics_app/ci/run_issue402_dd_json_p3_smoke.py \
+                --binary /workspace/physics_app/physics-opt \
+                --output /workspace/issue402_dd_json_p3_evidence \
+                --source-sha "$RUN_SOURCE_SHA" \
+                --oci-ref "$RUN_OCI_REF"
+            ' 2>&1 | tee /tmp/issue402_dd_json_p3_transient.log
+          restore_evidence_ownership
+          test -w issue402_dd_json_p3_evidence
+          test -s issue402_dd_json_p3_evidence/status.json
+          python3 ci/guards/issue541_arch_dd_p3_result_gate.py \
+            --evidence issue402_dd_json_p3_evidence \
+            --source-sha "$GITHUB_SHA" \
+            --binary physics_app/physics-opt \
+            --repository . \
+            --oci-ref "$OCI"
+          echo P3_BOUNDED_JSON_SHEATH_CONTINUITY_ENERGY_OCI_PROVEN_SCIENCE_HOLD
+      - name: Upload P3 source-bound Exodus, CSV, diagnostics, and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-dd-json-p3-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            issue402_dd_json_p3_evidence/**
+            /tmp/issue402_dd_json_p3_native_build.log
+            /tmp/issue402_dd_json_p3_transient.log
