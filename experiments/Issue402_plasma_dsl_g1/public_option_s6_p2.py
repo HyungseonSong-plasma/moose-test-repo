@@ -283,6 +283,318 @@ def remap_staged_fem_types(chemistry: Path, ordered: list[str]) -> dict:
     }
 
 
+
+def remap_staged_electron_lookup(chemistry: Path, ordered: list[str]) -> dict:
+    """Re-use the already mutation-tested, exact historical S6 lookup cutover.
+
+    Only a scratch copy changes. The source B/C deck remains archived and
+    immutable; a mismatched table/pressure/temperature/bounds/owner fails
+    before any staged file is written.
+    """
+    if len(ordered) not in (10, 11):
+        raise ValueError("Unexpected S6 layer count for electron lookup cutover")
+    names = [Path(item).name for item in ordered]
+    if (len(set(names)) != len(names)
+            or any(name != item.split("/")[-1] or not name.endswith(".i")
+                   for name, item in zip(names, ordered))):
+        raise ValueError("Unsafe/duplicate S6 lookup layer")
+
+    spec = importlib.util.spec_from_file_location(
+        "issue402_s6_lookup_cutover",
+        ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("Canonical S6 lookup migration helper missing")
+    canonical = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(canonical)
+
+    original = {chemistry / name: (chemistry / name).read_text(encoding="utf-8")
+                for name in names}
+    revised, receipt = canonical.canonicalize_staged_electron_lookup(original)
+    if set(revised) != set(original):
+        raise ValueError("Canonical S6 lookup cutover changed the layer inventory")
+    changed = [path for path in original if original[path] != revised[path]]
+    if (len(changed) != 1 or changed[0].name != names[0]
+            or receipt["source_layer"] != names[0]):
+        raise ValueError("Canonical S6 lookup owner was not the pinned first layer")
+    owner = changed[0]
+    if ("type = PhysicsElectronTransportLookupMaterial" in revised[owner]
+            or revised[owner].count("type = DDTransportMaterial") <
+               original[owner].count("type = DDTransportMaterial") + 1):
+        raise ValueError("Retired S6 lookup owner remains after cutover")
+
+    # The helper's exact-source identity and negative mutations are independently
+    # tested in tests/test_issue402_s6_electron_transport_compatibility.py.
+    for path in changed:
+        path.write_text(revised[path], encoding="utf-8")
+    receipt["files"] = {
+        owner.name: {
+            "original_sha256": hashlib.sha256(original[owner].encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(revised[owner].encode("utf-8")).hexdigest(),
+        }
+    }
+    return receipt
+
+
+def remap_staged_wall_owners(chemistry: Path, ordered: list[str]) -> dict:
+    """Apply the existing ownership-tested S6 wall migration to scratch only.
+
+    A legacy wall output may be renamed only when its original species,
+    density, signed charge, owning Material, and every consumer are verified.
+    This is P2 construction compatibility, never proof of P3 wall-law parity.
+    """
+    if len(ordered) not in (10, 11):
+        raise ValueError("Unexpected S6 layer count for wall cutover")
+    names = [Path(item).name for item in ordered]
+    if (len(names) != len(set(names))
+            or any(name != item.split("/")[-1] or not name.endswith(".i")
+                   for name, item in zip(names, ordered))):
+        raise ValueError("Unsafe or duplicate S6 wall layer")
+
+    spec = importlib.util.spec_from_file_location(
+        "issue402_s6_wall_cutover",
+        ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("Canonical S6 wall migration helper missing")
+    canonical = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(canonical)
+    original = {chemistry / name: (chemistry / name).read_text(encoding="utf-8")
+                for name in names}
+    revised, receipt = canonical.canonicalize_staged_wall_inputs(original)
+    if set(original) != set(revised):
+        raise ValueError("Canonical S6 wall cutover changed layer inventory")
+    if (receipt.get("status") != "SCRATCH_ONLY_SPECIES_WALL_NAMES"
+            or not receipt.get("wall_material_owners")
+            or receipt.get("P3") != "NOT_RUN"
+            or receipt.get("science") != "SCIENCE_HOLD"):
+        raise ValueError("Canonical S6 wall owner or scientific HOLD is missing")
+    changed = [path for path in original if original[path] != revised[path]]
+    if not changed:
+        raise ValueError("No original S6 wall owner/consumer was transformed")
+    for path in changed:
+        path.write_text(revised[path], encoding="utf-8")
+    receipt["files"] = {
+        path.name: {
+            "original_sha256": hashlib.sha256(original[path].encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(revised[path].encode("utf-8")).hexdigest(),
+        } for path in changed
+    }
+    return receipt
+
+
+def remap_staged_sheath_bcs(
+        chemistry: Path, ordered: list[str], variant: str) -> dict:
+    """Rebind eight proven historical sheath BC owners in disposable B/D input.
+
+    This handles the actual Native P2 archived B names and D canonical names
+    separately. Only the registered BC *type* changes: never its variable,
+    physical flux, mean-energy input or boundary list. Scientific P3 remains HOLD.
+    """
+    if variant not in ("B", "D") or len(ordered) not in (10, 11):
+        raise ValueError("S6_SHEATH_UNSUPPORTED_VARIANT_OR_LAYER_COUNT")
+    names = [Path(item).name for item in ordered]
+    if (len(names) != len(set(names))
+            or any(name != item.split("/")[-1] or not name.endswith(".i")
+                   for name, item in zip(names, ordered))):
+        raise ValueError("S6_SHEATH_UNSAFE_OR_DUPLICATE_LAYER")
+
+    spec = importlib.util.spec_from_file_location(
+        "issue402_s6_sheath_contract",
+        ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_SHEATH_DONOR_CONTRACT_MISSING")
+    canonical = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(canonical)
+
+    layers = {name: (chemistry / name).read_text(encoding="utf-8")
+              for name in names}
+    # The original B/C base owns all eight named BCs. The D no-D1 base does
+    # too; reject any shifted ownership or extra archived BC in other layers.
+    base_name = names[0]
+    legacy_types = tuple(canonical.OLD_SHEATH_TYPES.values())
+    if any(re.search(r"(?m)^    type\s*=\s*(?:" +
+                     "|".join(map(re.escape, legacy_types)) + r")\s*$",
+                     layer)
+           for name, layer in layers.items() if name != base_name):
+        raise ValueError("S6_SHEATH_SECONDARY_LAYER_RETIRED_OWNER")
+
+    source = layers[base_name]
+    matched = []
+    for name, (registered, boundary) in canonical.SHEATH_BC_SPEC.items():
+        blocks = [
+            m for m in canonical.BLOCK.finditer(source)
+            if (m.group("name") == name
+                and re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
+                               source[:m.start()])[-1:] == ["BCs"])
+        ]
+        if len(blocks) != 1:
+            raise ValueError("S6_SHEATH_OWNER_COUNT_" + name + ": " + str(len(blocks)))
+        original = blocks[0]
+        is_energy = registered == "FEMElectronEnergySheathBC"
+        expected = {
+            "type": canonical.OLD_SHEATH_TYPES[registered],
+            "variable": ("log_energy" if variant == "B" else "log_e_energy")
+                        if is_energy else ("log_ne" if variant == "B" else "log_e"),
+            "wall_number_flux": "e_wall_number_flux",
+            "boundary": boundary,
+        }
+        if is_energy:
+            expected["mean_energy"] = "e_energy_eV"
+        if canonical.parameters(original.group("body")) != expected:
+            raise ValueError("S6_SHEATH_OWNER_IDENTITY_" + name)
+        matched.append((original, name, registered))
+
+    if len(matched) != 8:
+        raise ValueError("S6_SHEATH_EXPECTED_EIGHT_OWNERS")
+    revised = source
+    receipts = []
+    for original, name, registered in reversed(matched):
+        before = original.group(0)
+        old = canonical.OLD_SHEATH_TYPES[registered]
+        after = before.replace("    type = " + old + "\n",
+                               "    type = " + registered + "\n", 1)
+        if after == before:
+            raise ValueError("S6_SHEATH_TYPE_REPLACEMENT_FAILED_" + name)
+        revised = revised[:original.start()] + after + revised[original.end():]
+        receipts.append({
+            "owner": name,
+            "from_type": old,
+            "to_type": registered,
+            "old_sha256": hashlib.sha256(before.encode()).hexdigest(),
+            "new_sha256": hashlib.sha256(after.encode()).hexdigest(),
+        })
+
+    if any(re.search(r"(?m)^    type\s*=\s*" + re.escape(old) + r"\s*$", revised)
+           for old in legacy_types):
+        raise ValueError("S6_SHEATH_UNREGISTERED_TYPE_REMAINS")
+    if variant == "D":
+        # Reconcile verbatim against the existing independently tested D
+        # migration. This prevents drift between the two current P2 routes.
+        donor_revised, donor_receipts = canonical.migrate_exact_s6_fem_sheath(source)
+        if donor_revised != revised or len(donor_receipts) != 8:
+            raise ValueError("S6_SHEATH_DONOR_REPLAY_MISMATCH")
+
+    # All eight blocks are verified before the single scratch write.
+    (chemistry / base_name).write_text(revised, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_EXACT_EIGHT_SHEATH_BC_TYPE_CUTOVER",
+        "variant": variant,
+        "source_layer": base_name,
+        "owner_count": 8,
+        "owners": sorted(receipts, key=lambda row: row["owner"]),
+        "original_sha256": hashlib.sha256(source.encode()).hexdigest(),
+        "staged_sha256": hashlib.sha256(revised.encode()).hexdigest(),
+        "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
+    }
+
+
+def remap_staged_mean_energy(chemistry: Path, ordered: list[str]) -> dict:
+    """Rebind only a proven log-molar legacy mean-energy owner in disposable B/D decks.
+
+    Old and new classes both compute exp(log_energy - log_density) [eV]
+    in log_molar_eV mode. Their output Functor names differ; rebind all
+    consumers in the same staged layer set. Unsupported representations HOLD.
+    """
+    if len(ordered) not in (10, 11):
+        raise ValueError("Unexpected S6 input layer count for mean-energy remap")
+    legacy_type = re.compile(
+        r"(?m)^[ \t]*type[ \t]*=[ \t]*PhysicsElectronMeanEnergyMaterial[ \t]*$"
+    )
+    canonical_type = re.compile(
+        r"(?m)^[ \t]*type[ \t]*=[ \t]*ElectronEnergyMaterial[ \t]*$"
+    )
+    owner_block = re.compile(
+        r"(?m)^  \[(?P<owner>[A-Za-z_][A-Za-z0-9_]*)\][ \t]*\r?\n"
+        r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+        r"^  \[\][ \t]*(?:\r?\n|$)"
+    )
+    output_token = re.compile(
+        r"(?<![A-Za-z0-9_])mean_en_solved(?![A-Za-z0-9_])"
+    )
+    original_layers: dict[str, str] = {}
+    found = []
+    for relative in ordered:
+        name = Path(relative).name
+        if name != relative.split("/")[-1] or not name.endswith(".i") or name in original_layers:
+            raise ValueError("Unsafe or duplicate staged mean-energy layer")
+        source = (chemistry / name).read_text(encoding="utf-8")
+        original_layers[name] = source
+        if canonical_type.search(source):
+            raise ValueError("Unexpected existing canonical ElectronEnergyMaterial")
+        matches = list(legacy_type.finditer(source))
+        if matches:
+            if len(matches) != 1:
+                raise ValueError("Duplicate archived mean-energy Material types")
+            blocks = [m for m in owner_block.finditer(source)
+                      if legacy_type.search(m.group("body"))]
+            if len(blocks) != 1:
+                raise ValueError("Unknown archived mean-energy Material block layout")
+            owner = blocks[0]
+            pairs = re.findall(
+                r"(?m)^    ([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^\r\n]+)$",
+                owner.group("body"))
+            params = dict(pairs)
+            if (len(pairs) != len(owner.group("body").splitlines())
+                or len(params) != len(pairs)
+                or set(params) - {
+                    "type", "state_form", "electron_energy_density", "electron_density",
+                    "mean_energy_output", "block"}):
+                raise ValueError("Unknown archived mean-energy owner parameters")
+            if (params.get("type", "").strip() != "PhysicsElectronMeanEnergyMaterial"
+                or params.get("state_form", "").strip() != "log_molar_eV"
+                or params.get("electron_energy_density", "").strip() not in ("log_energy", "log_e_energy")
+                or params.get("electron_density", "").strip() not in ("log_ne", "log_e")
+                or params.get("mean_energy_output", "mean_en_solved").strip() != "mean_en_solved"):
+                raise ValueError("Archived mean-energy representation or output differs")
+            found.append((name, owner))
+    if len(found) != 1:
+        raise ValueError("Expected exactly one archived mean-energy producer")
+    writes = []
+    files = {}
+    total_references = 0
+    for name, source in original_layers.items():
+        updated = source
+        if name == found[0][0]:
+            owner = found[0][1]
+            before = owner.group(0)
+            after = re.sub(
+                r"(?m)^(    type[ \t]*=[ \t]*)PhysicsElectronMeanEnergyMaterial([ \t]*\r?$)",
+                r"\1ElectronEnergyMaterial\2", before)
+            # New material owns the fixed e_energy_eV name; the retired option
+            # mean_energy_output must not leak into the new Native input.
+            after = re.sub(
+                r"(?m)^    mean_energy_output[ \t]*=[ \t]*mean_en_solved[ \t]*\r?\n",
+                "", after)
+            if after == before or legacy_type.search(after):
+                raise ValueError("Failed to replace archived mean-energy owner")
+            updated = source[:owner.start()] + after + source[owner.end():]
+        if re.search(
+            r"(?m)^[ \t]*(?:property_name|mean_energy_output)[ \t]*=[ \t]*mean_en_solved[ \t]*$",
+            updated
+        ):
+            raise ValueError("Competing archived mean-energy output owner")
+        updated, n = output_token.subn("e_energy_eV", updated)
+        total_references += n
+        files[name] = {
+            "original_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(updated.encode("utf-8")).hexdigest(),
+            "functor_reference_replacements": n,
+        }
+        writes.append((chemistry / name, updated))
+    if not total_references:
+        raise ValueError("No archived mean-energy Functor consumers found")
+    # Validate every layer before writing any scratch file; archives are untouched.
+    for target, updated in writes:
+        if target.read_text(encoding="utf-8") != updated:
+            target.write_text(updated, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_LOG_MOLAR_MEAN_ENERGY_CUTOVER",
+        "producer_layer": found[0][0],
+        "consumer_renames": total_references,
+        "files": files,
+    }
+
+
+
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
     if git_head(ROOT) != expected_head or git_head(historical) != HISTORICAL_SHA:
         raise ValueError("Candidate or historical Git source HEAD mismatch")
@@ -432,12 +744,20 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
                         scratch_types = remap_staged_fem_types(staged / p2.CHEM, ordered)
+                        scratch_lookup = remap_staged_electron_lookup(staged / p2.CHEM, ordered)
+                        scratch_wall = remap_staged_wall_owners(staged / p2.CHEM, ordered)
+                        scratch_mean_energy = remap_staged_mean_energy(staged / p2.CHEM, ordered)
+                        scratch_sheath = remap_staged_sheath_bcs(staged / p2.CHEM, ordered, variant)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
                             binary, identity["binary_sha256"], staged, ordered,
                             log, timeout_seconds)
                         report["checks"][case][variant]["layers"] = len(ordered)
                         report["checks"][case][variant]["scratch_fem_type_remap"] = scratch_types
+                        report["checks"][case][variant]["scratch_lookup_cutover"] = scratch_lookup
+                        report["checks"][case][variant]["scratch_wall_cutover"] = scratch_wall
+                        report["checks"][case][variant]["scratch_mean_energy_cutover"] = scratch_mean_energy
+                        report["checks"][case][variant]["scratch_sheath_bc_cutover"] = scratch_sheath
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                     except Exception as exc:

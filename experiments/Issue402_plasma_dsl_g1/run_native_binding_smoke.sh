@@ -91,19 +91,64 @@ native() {
   ' -- "$@"
 }
 
+# Canonical replacement for the historical JSON-rate one-shot Native P2 cases.
+# Use the exact same physics-opt binary and immutable OCI as P1 and later S6 P2.
+# H01-H04, H05 and the actual JSON surface-rate input do not execute timesteps.
+docker run --rm --entrypoint /bin/bash --user 0:0 \
+  --workdir /workspace -v "$PWD:/workspace" \
+  -e "EXPECTED_HEAD=$(git rev-parse HEAD)" \
+  -e "PINNED_BASE=$PINNED_BASE" "$PINNED_BASE" -lc '
+  set -euo pipefail
+  source /environment
+  python3 -m physics_app.ci.check_issue402_json_rate_native_p2 \
+    --executable /workspace/physics_app/physics-opt \
+    --p1-identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
+' 2>&1 | tee "$EVIDENCE/issue402_json_rate_native_p2.log"
+echo "ISSUE402_JSON_RATE_SHARED_NATIVE_P2_PASS"
+
+# Issue #541 task #3: genuine FEM signed-charge residual-response discriminator.
+# Separate synthetic one-step P3 control: not public S6 or science acceptance.
+# The P1 executable, OCI and exact source must match this job's identity receipt.
+docker run --rm --entrypoint /bin/bash --user 0:0 \
+  --workdir /workspace -v "$PWD:/workspace" \
+  -e "EXPECTED_HEAD=$(git rev-parse HEAD)" \
+  -e "PINNED_BASE=$PINNED_BASE" "$PINNED_BASE" -lc '
+  set -euo pipefail
+  source /environment
+  git config --global --add safe.directory /workspace
+  python3 -m physics_app.ci.check_issue402_signed_fem_residual_native \
+    --self-test
+  python3 -m physics_app.ci.check_issue402_signed_fem_residual_native \
+    --executable /workspace/physics_app/physics-opt \
+    --p1-identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json \
+    --expected-head "$EXPECTED_HEAD" --oci-image "$PINNED_BASE" \
+    --output-dir /workspace/experiments/Issue402_plasma_dsl_g1/evidence/charge_residual
+' 2>&1 | tee "$EVIDENCE/issue541_task3_charge_residual_native.log"
+test -s "$EVIDENCE/charge_residual/receipt.json"
+echo "ISSUE541_TASK3_JSON_SIGNED_FEM_RESIDUAL_NATIVE_VERIFIED"
+
+
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
+# JSON-owned log-molar solver variables and initial density: standalone P2 only.
+# Legacy baseline.i declares external variables/ICs and cannot be overlaid.
+native --check-input -i "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
-# Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
-native --check-input -i "$PILOT/generic_four_species.i" \
+# Verify canonical names e/O2p/Om/Op through the JSON-owned four-species P2 fixture.
+# Preserve the older generic_four_species.i as historical input evidence.
+native --check-input -i "$PILOT/species_density_pairs_p2.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
 echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# Distinct synthetic full-Action P2: JSON creates selected e/O2p initial states
+# and Physics owns the electron energy/Poisson/RF kernels. Never merge baseline.
+native --check-input -i "$PILOT/valid_all_physics_json_p2.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
+echo "PLASMA_ALL_PHYSICS_JSON_OWNED_P2_PASS"
 # Standalone positive construction check: one generated FEM transport Kernel.
 # It is a P2-only input, not an accepted physical simulation or P3 parity run.
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
+# Modern generated option-first transport uses a standalone JSON-owned
+# electron log-molar IC. The retired baseline overlay remains as source history.
+native --check-input -i "$PILOT/valid_generated_transport_json_p2.i" \
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
@@ -220,7 +265,7 @@ echo "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED"
 
 for entry in "invalid_species_density_zero_p2:Invalid species ID for automatic naming: 0" \
              "invalid_species_density_odd_p2:Invalid species ID for automatic naming: 1e16" \
-             "invalid_species_density_nan_p2:Species 'nan' is absent from"; do
+             "invalid_species_density_nan_p2:Selected species 'nan' requires species.nan.initial_number_density"; do
   item="${entry%%:*}"
   expected="${entry#*:}"
   set +e
@@ -269,8 +314,9 @@ done
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
-native --check-input -i "$PILOT/baseline.i" \
-  "$PILOT/valid_generated_transport_options.i" \
+# The current JSON-owned P2 generates exactly one e_time. Overlay an
+# intentionally duplicate Native kernel without the retired external IC deck.
+native --check-input -i "$PILOT/valid_generated_transport_json_p2.i" \
   "$PILOT/duplicate_e_time.i" > "$EVIDENCE/duplicate_e_time.log" 2>&1
 duplicate_time_exit=$?
 set -e
@@ -296,20 +342,28 @@ native --check-input -i "physics_app/ci/dd_nv_material_smoke.i" \
 echo "PLASMA_DD_NV_MATERIALS_P2_PASS"
 
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
+  # The obsolete fem_kernel_names option must be checked against the modern
+  # JSON-owned generated transport input; old baseline masks it via missing IC.
+  if [[ "$item" == invalid_legacy_kernel_names || "$item" == invalid_missing_fvm_charges ||
+        "$item" == invalid_incomplete_coefficients || "$item" == invalid_wrong_charge_sign ]]; then
+    input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")
+  else
+    input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")
+  fi
   set +e
-  native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
+  native --check-input -i "${input_decks[@]}" \
     > "$EVIDENCE/$item.log" 2>&1
   code=$?
   set -e
   case "$item" in
     invalid_overlap) expected='species listed in both groups' ;;
-    invalid_fem_fv_swap) expected='wrong type' ;;
+    invalid_fem_fv_swap) expected="Species 'O2p' has JSON initial_number_density and an existing solver variable 'log_O2p'" ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
     invalid_poisson_variable) expected='Poisson fem_potential requires an FEM solver variable' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
-    invalid_missing_variable) expected='was not found' ;;
+    invalid_missing_variable) expected="Selected species 'missing' requires species.missing.initial_number_density" ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
     invalid_missing_fvm_charges) expected='fem_charge_numbers' ;;
@@ -328,7 +382,10 @@ echo "PLASMA_INVALID_INPUTS_REJECTED"
 mkdir -p "$EVIDENCE/baseline" "$EVIDENCE/candidate"
 native -i "$PILOT/baseline.i" "Outputs/file_base=$EVIDENCE/baseline/plasma" \
   2>&1 | tee "$EVIDENCE/baseline_run.log"
-native -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# Tiny diffusion parity is an intentionally different contract: adding an
+# otherwise inert root Action must NOT modify the external Native equations.
+# The archived all-physics overlay is no longer valid as a no-op numerical run.
+native -i "$PILOT/baseline.i" "$PILOT/noop_physics_root_overlay.i" \
   "Outputs/file_base=$EVIDENCE/candidate/plasma" \
   2>&1 | tee "$EVIDENCE/candidate_run.log"
 test -s "$EVIDENCE/baseline/plasma.e"

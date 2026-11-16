@@ -165,3 +165,74 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
     source = text("experiments/Issue402_plasma_dsl_g1/prepare_s6_single_kernel_migration.py")
     assert '"electron_diffusion"' in source
     assert "ne_transport" in source
+
+def test_json_owned_signed_charge_reaches_fem_residual_with_mutation_sentinels():
+    """P0 source/sign contract, not signed-drift Native P3 or scientific parity.
+
+    The retired positional charge-vector negative rejects an obsolete option;
+    it is NOT a physical charge-sign test. This independent gate verifies the
+    JSON -> generated parameter -> FEM signed-flux source path.
+    """
+    import copy
+
+    mechanism = json.loads(text(
+        "experiments/Issue402_plasma_dsl_g1/plasma_species_initial_p2.json"))
+    continuity = text("physics_app/src/physics/plasma/DDContinuityEq.C")
+    energy = text("physics_app/src/physics/plasma/DDEnergyEq.C")
+    kernel = text("physics_app/src/kernels/FEMPlasmaTransport.C")
+    retired = text("experiments/Issue402_plasma_dsl_g1/invalid_wrong_charge_sign.i")
+
+    expected_signs = {"e": -1, "O2p": 1, "Om": -1, "Op": 1}
+    signed_source = (
+        "D * grad_c + _charge_number * mu * c * _grad_potential[_qp]"
+    )
+    continuity_source = (
+        'params.set<Real>("charge_number") = '
+        'mechanism.species(species[i]).charge_number;'
+    )
+    energy_source = (
+        'transport.set<Real>("charge_number") = '
+        'chemistryData().species("e").charge_number;'
+    )
+
+    def p0_charge_path(data, dd, energy_dd, transport):
+        signs = {name: data["species"][name]["charge_number"]
+                 for name in expected_signs}
+        return (
+            signs == expected_signs
+            and continuity_source in dd
+            and energy_source in energy_dd
+            and signed_source in transport
+            and 'params.addRequiredParam<Real>("charge_number"' in transport
+            and 'paramError("charge_number", "Drift-diffusion requires nonzero charge_number.")'
+            in transport
+            and '"fem_charge_numbers"' not in dd
+            and '"fvm_charge_numbers"' not in dd
+        )
+
+    assert p0_charge_path(mechanism, continuity, energy, kernel)
+    wrong_e = copy.deepcopy(mechanism)
+    wrong_e["species"]["e"]["charge_number"] = 1
+    assert not p0_charge_path(wrong_e, continuity, energy, kernel)
+    wrong_om = copy.deepcopy(mechanism)
+    wrong_om["species"]["Om"]["charge_number"] = 1
+    assert not p0_charge_path(wrong_om, continuity, energy, kernel)
+    assert not p0_charge_path(mechanism, continuity.replace(
+        continuity_source, 'params.set<Real>("charge_number") = 1.0;', 1
+    ), energy, kernel)
+    assert not p0_charge_path(mechanism, continuity, energy, kernel.replace(
+        signed_source,
+        "D * grad_c - _charge_number * mu * c * _grad_potential[_qp]", 1
+    ))
+
+    # In E=-grad(phi), the sign of z changes drift direction for positive mu.
+    def physical_drift(charge: int, mobility=2.0, concentration=3.0, electric_field=1.0):
+        return charge * mobility * concentration * electric_field
+    assert physical_drift(expected_signs["e"]) == -6.0
+    assert physical_drift(expected_signs["O2p"]) == 6.0
+    assert physical_drift(expected_signs["Om"]) == -6.0
+
+    # Classify the historical negative for what it actually proves.
+    assert "fem_charge_numbers = '1'" in retired
+    assert "fvm_charge_numbers = '1'" in retired
+    assert "files = plasma_species_only.json" not in retired

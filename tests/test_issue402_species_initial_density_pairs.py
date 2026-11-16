@@ -76,8 +76,12 @@ def test_retired_positional_initials_fail_closed_and_archival_sources_remain_unt
         PILOT / "invalid_species_density_zero_p2.i").read_text()
     assert "fvm_species = 'O2p 1e16 Om'" in (
         PILOT / "invalid_species_density_odd_p2.i").read_text()
-    assert "fem_species = 'e nan'" in (
-        PILOT / "invalid_species_density_nan_p2.i").read_text()
+    malformed = (PILOT / "invalid_species_density_nan_p2.i").read_text()
+    assert "fem_species = 'e nan'" in malformed
+    # JSON initializes the active species so the absent 'nan' error is probed.
+    assert "files = plasma_species_initial_p2.json" in malformed
+    assert "Selected species 'nan' requires species.nan.initial_number_density" in (
+        PILOT / "run_native_binding_smoke.sh").read_text()
     runner = (PILOT / "run_native_binding_smoke.sh").read_text()
     for case in (
         "species_density_pairs_p2",

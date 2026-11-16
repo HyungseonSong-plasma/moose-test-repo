@@ -1,0 +1,137 @@
+{
+  "schema": "issue541.core_four.retirement_contract.v1",
+  "source_pr": 544,
+  "source_head": "d18a802e41cf3c5b152f21ff13374cd622fe9c5a",
+  "science": "SCIENCE_HOLD",
+  "p3": "NOT_REQUESTED",
+  "ownership": "CORE_END_TO_END",
+  "replacement": {
+    "p0_job": "issue402_core_four_p0",
+    "native_job": "issue402_core_four_native_p2",
+    "native_runner": "physics_app/ci/run_issue541_core_four_native_p2.py",
+    "ci": ".github/workflows/ci.yml",
+    "required_build_base": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "source_verified_head": "37aa27e7bcb0de17bda0210ef790c618c56ebee0",
+    "source_verified_run": 43718313495
+  },
+  "workflows": [
+    {
+      "path": ".github/workflows/issue402-dd-json-boundary-p0-p2-once.yml",
+      "original_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+      "historical_branch": "issue-402-dd-plasma-boundary-action",
+      "branch_present_at_2026_11_15": true,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "DD_JSON_BOUNDARY_NATIVE_P2_PASS_P3_NOT_RUN",
+      "retirement": "KEEP_HOLD",
+      "reason": "Original branch remains live; caller-zero cannot be demonstrated without owner disposition.",
+      "original_success": {
+        "run_id": 43533803916,
+        "source_sha": "5c976546e78594caef86740ee58d3f641c78cdda",
+        "artifact_id": 14088768015,
+        "zip_sha256": "de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27",
+        "zip_bytes": 2072,
+        "expires_at": "2026-12-14T00:29:14Z"
+      },
+      "independent_backup": {
+        "url": "https://drive.google.com/file/d/1OsADIq21_JU4Z4O65t_Hl-_AwjM6Nxf0/view",
+        "readback_sha256": "de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27",
+        "readback_bytes": 2072,
+        "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
+      },
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_STILL_EXISTS"
+    },
+    {
+      "path": ".github/workflows/issue402-sccm-fixed-gas-p0-p2-once.yml",
+      "original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611",
+      "historical_branch": "issue-402-sccm-inlet-flow-native",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "ISSUE402_SCCM_STATIC_GAS_NATIVE_P2_PASS_P3_NOT_RUN",
+      "retirement": "RETIRED_VERIFIED",
+      "reason": "Original branch absent on refreshed GitHub branch search; self-file-only push with no dispatch/call, no other repository code references; all historical P0/P1/P2 faithfully reexecuted at 37aa27e7 and original run 43505864550 artifact ZIP archived and readback SHA matched; removal is source-HEAD CI gated.",
+      "original_success": {
+        "run_id": 43505864550,
+        "source_sha": "e78b8fa3c3e30dbd219a2ab28730121284f666a6",
+        "artifact_id": 14077346147,
+        "zip_sha256": "9980ada10e2ef8bf49fac0f71b559cf1f9592ff41f0476577b209f45e196d304",
+        "zip_bytes": 1880,
+        "expires_at": "2026-12-13T21:00:07Z"
+      },
+      "independent_backup": {
+        "url": "https://drive.google.com/file/d/1ANMZfpvAwUi-ozaDYKDuwKMwjJSzBxMT/view",
+        "readback_sha256": "9980ada10e2ef8bf49fac0f71b559cf1f9592ff41f0476577b209f45e196d304",
+        "readback_bytes": 1880,
+        "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
+      },
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "retirement_candidate_source_head": "d6346a9dea92e935cdd55818e651d47564fb1a2b",
+      "rollback_original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611"
+    },
+    {
+      "path": ".github/workflows/issue402-species-initial-composition-native-once.yml",
+      "original_blob": "f11aa0de000fb05bcc587798400313558a6cb58a",
+      "historical_branch": "issue-402-species-initial-composition",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "SPECIES_INITIAL_VOLUME_INLET_NATIVE_P2_PASS",
+      "retirement": "KEEP_HOLD",
+      "reason": "Replacement exact-head P0/P1/P2 verified and independent byte custody verified; candidate removal needs a scoped same-HEAD gate.",
+      "original_success": {
+        "run_id": 43468688669,
+        "source_sha": "0ff51761bbbc9d22bcc20c848904498c1c495480",
+        "artifact_id": 14059970866,
+        "zip_sha256": "836776e154de813c7b4e67b8a78d586ff01ad9e28c3ce1a3f6c837721f7d2072",
+        "zip_bytes": 30673,
+        "expires_at": "2026-12-13T17:06:26Z"
+      },
+      "independent_backup": {
+        "url": "https://drive.google.com/file/d/1upBNduXJk-XxSt1uUyXVomlP4Hkc_6Ve/view",
+        "readback_sha256": "836776e154de813c7b4e67b8a78d586ff01ad9e28c3ce1a3f6c837721f7d2072",
+        "readback_bytes": 30673,
+        "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
+      },
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND"
+    },
+    {
+      "path": ".github/workflows/issue402-species-live-ic-inlet-native-once.yml",
+      "original_blob": "c6068680c0c7083e38ec03d86c5433eb49db94bf",
+      "historical_branch": "issue-402-species-live-ic-inlet",
+      "branch_present_at_2026_11_15": false,
+      "scope": "P0_P1_P2_ONLY",
+      "original_p3": "NOT_RUN",
+      "source_event": "push:branch-specific,self-path",
+      "required_marker": "FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS",
+      "retirement": "KEEP_HOLD",
+      "reason": "Replacement exact-head P0/P1/P2 verified and independent byte custody verified; candidate removal needs a scoped same-HEAD gate.",
+      "original_success": {
+        "run_id": 43492369825,
+        "source_sha": "e5e586595948919a694ecd2bb19b48dd60a4751e",
+        "artifact_id": 14070227642,
+        "zip_sha256": "b3c596707eb7deb6ce20e6f6d42fbb394a404064a14de4a91f3a5e8b691c3376",
+        "zip_bytes": 31731,
+        "expires_at": "2026-12-13T19:32:31Z"
+      },
+      "independent_backup": {
+        "url": "https://drive.google.com/file/d/1LsTjdZwjtsC3Xqgk5Oa2qjqAMC_FZ_WW/view",
+        "readback_sha256": "b3c596707eb7deb6ce20e6f6d42fbb394a404064a14de4a91f3a5e8b691c3376",
+        "readback_bytes": 31731,
+        "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
+      },
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND"
+    }
+  ],
+  "backup": {
+    "provider": "Google Drive",
+    "folder_url": "https://drive.google.com/drive/folders/1XBu94Z7HnMkIAOhSfRi-e3G_XIx_T9bc",
+    "visibility": "OWNER_ONLY_NOT_SHARED",
+    "readback_date": "2026-11-15",
+    "readback": "SHA256_AND_SIZE_VERIFIED",
+    "permanent_worm": "NOT_PROVEN"
+  }
+}

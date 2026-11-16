@@ -10,6 +10,7 @@ import base64
 import hashlib
 import io
 import json
+import math
 from pathlib import Path
 import re
 import tarfile
@@ -78,6 +79,31 @@ def test_retired_action_is_absent_independent_material_objects_remain():
         assert f'registerMooseObject("PhysicsApp", {material});' in source.read_text()
     assert 'registerSyntax("DDContinuityEq",' in app
     assert 'registerSyntax("DDEnergyEq",' in app
+
+
+def test_direct_material_smoke_bridges_physical_to_log_molar_without_rate_changes():
+    """P2 representation adapter must preserve n_e and mean physical energy."""
+    fixture = (APP / "ci/plasma_direct_existing_materials_smoke.i").read_text()
+    assert "state_form = physical_eV" not in fixture
+    assert "state_form = log_molar_eV" in fixture
+    assert "initial_condition = 1.0e15" in fixture
+    assert "initial_condition = 3.0e15" in fixture
+    assert fixture.count("type = EIRateCoefMaterial") == 2
+    for name, input_functor, expression in (
+        ("electron_log_molar_density", "electron_number_density_physical",
+         "log(ne/6.02214076e23)"),
+        ("electron_log_molar_energy", "electron_energy_density_physical",
+         "log(energy/6.02214076e23)"),
+    ):
+        assert "property_name = " + name in fixture
+        assert "functor_names = '" + input_functor + "'" in fixture
+        assert "expression = '" + expression + "'" in fixture
+    assert "electron_density = electron_log_molar_density" in fixture
+    assert "electron_energy_density = electron_log_molar_energy" in fixture
+    assert "electron_number_density = electron_number_density_physical" in fixture
+    for ne, energy in ((1e15, 3e15), (2e19, 8e19)):
+        actual = math.exp(math.log(energy/6.02214076e23) - math.log(ne/6.02214076e23))
+        assert math.isclose(actual, energy/ne, rel_tol=1e-13)
 
 
 def test_existing_native_smoke_uses_direct_materials_without_code_generation():
