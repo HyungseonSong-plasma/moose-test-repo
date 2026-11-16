@@ -69,7 +69,12 @@ def execute(case: str, historical: Path, source_sha: str, output: Path) -> dict:
         sidecar = chemistry / "migrated_continuity.i"
         if option.sha_file(sidecar) != chem_cutover["overlay_sha256"]:
             raise ValueError("ARCH_S6_P2_CHEMISTRY_OVERLAY_HASH")
-        hybrid = prepare_hybrid(chemistry, layers, case)
+        # Chemistry already transferred four charged Native ICs into JSON and
+        # rebound eight sheath BCs. Hybrid must verify those exact receipts
+        # rather than attempt to retire the same owners a second time.
+        hybrid = prepare_hybrid(
+            chemistry, layers, case, chemistry_cutover=chem_cutover
+        )
         if option.sha_file(sidecar) != hybrid["overlay_sha256"]:
             raise ValueError("ARCH_S6_P2_HYBRID_OVERLAY_HASH")
         integrated = chemistry / hybrid["integrated_mechanism_json"]
