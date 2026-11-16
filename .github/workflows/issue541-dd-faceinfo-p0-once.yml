@@ -1,0 +1,40 @@
+# Isolated, single-use source-only P0 check. No Native solver, no science promotion.
+name: Issue541 DD FEM FaceInfo P0 exact-head no Native
+run-name: DD faceinfo P0 only @ ${{ github.sha }}
+on:
+  push:
+    branches: [cleanup-wave1-dd-faceinfo-20261116]
+    paths: [.github/workflows/issue541-dd-faceinfo-p0-once.yml]
+permissions:
+  contents: read
+jobs:
+  faceinfo-p0:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Reject replay and stale head before checkout
+        env:
+          BEFORE: ${{ github.event.before }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = "refs/heads/cleanup-wave1-dd-faceinfo-20261116"
+          test "$BEFORE" = "0be8979a6a39a37bc568e6cc70246a05e0c9760e"
+          test "$COMMIT_MESSAGE" = "test(dd-p3): OWNER_APPROVED_FACEINFO_P0_ONCE"
+          echo DD_FACEINFO_P0_SINGLE_USE_APPROVED_NO_P3
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Static constructor and flux integrity P0 with negative controls
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m py_compile tests/test_issue541_dd_fem_faceinfo_contract.py
+          python3 -m pytest -q tests/test_issue541_dd_fem_faceinfo_contract.py tests/test_issue402_fem_electron_sheath_bc_retirement.py
+          python3 ci/guards/workflow_surface_guard.py --self-test
+          echo DD_FEM_FACEINFO_P0_SOURCE_AND_NEGATIVE_PASS_NO_P1_P2_P3
