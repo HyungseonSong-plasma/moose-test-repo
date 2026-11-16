@@ -96,10 +96,10 @@ def a1_static_workflow_callers(workflows: dict[str, str]) -> list[str]:
             window = " ".join(lines[i:i + 4])
             marker = (target in window or workflow_id in window)
             if marker and (
-                re.search(r"\\bgh\\s+workflow\\s+run\\b", line)
-                or re.search(r"\\buses:\\s*[^ ]*", line) and target in line
+                re.search(r"\bgh\s+workflow\s+run\b", line)
+                or re.search(r"\buses:\s*[^ ]*", line) and target in line
                 or re.search(r"actions/workflows/", line) and marker
-                or re.search(r"\\bworkflow_id\\s*:", line) and marker
+                or re.search(r"\bworkflow_id\s*:", line) and marker
             ):
                 matches.append(path + ":" + str(i + 1) + ":direct-caller")
             elif "workflow_run" in line and workflow_name in window:
@@ -347,9 +347,9 @@ def self_test(root: Path, original: dict) -> None:
         probes.append(("A1 forged caller audit " + field, bad))
     synthetic_callers = (
         ("GH_CLI", "run: gh workflow run issue402-dd-json-boundary-p0-p2-once.yml"),
-        ("WORKFLOW_REUSE", "steps:\\n  - uses: ./.github/workflows/issue402-dd-json-boundary-p0-p2-once.yml"),
+        ("WORKFLOW_REUSE", "steps:\n  - uses: ./.github/workflows/issue402-dd-json-boundary-p0-p2-once.yml"),
         ("EXPLICIT_API", "run: gh api repos/o/r/actions/workflows/417754909/dispatches"),
-        ("WORKFLOW_RUN", "on:\\n  workflow_run:\\n    workflows: [Issue402 DD JSON plasma boundary exact]"),
+        ("WORKFLOW_RUN", "on:\n  workflow_run:\n    workflows: [Issue402 DD JSON plasma boundary exact]"),
     )
     for label, synthetic in synthetic_callers:
         assert a1_static_workflow_callers({
