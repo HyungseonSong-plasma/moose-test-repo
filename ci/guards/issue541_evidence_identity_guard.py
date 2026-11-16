@@ -536,8 +536,10 @@ def self_test():
             head_commit={"id": "e" * 40})),
         ("N28_WRONG_PR_BRANCH", lambda a, b: b["/actions/runs/101"].update(
             head_branch="another-branch")),
-        ("N29_UNRELATED_HEAD", lambda a, b: b["/pulls/578"]["head"].update(
-            sha="f" * 40)),
+        ("N29_UNRELATED_HEAD", lambda a, b: (
+            b["/pulls/578"]["head"].update(sha="f" * 40),
+            b["/compare/" + "a" * 40 + "..." + "f" * 40].update(
+                status="diverged", behind_by=1))),
         ("N12", lambda a, b: a.update(validation_scope="ALL_NATIVE")),
         ("N13", lambda a, b: a.update(science="SCIENCE_PASS")),
         ("N14", lambda a, b: a.update(binary_sha256="f" * 64)),
