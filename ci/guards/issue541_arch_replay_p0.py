@@ -36,6 +36,39 @@ def gitblob(content):
  raw = content.encode()
  return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
 
+DD_ARCHIVE_SOURCE = "docs/development/archive/issue402-dd-json-p3-smoke-once.yml.txt"
+DD_STAGE_MANIFEST = "ci/baselines/issue541_dd_p3_retirement_20261116.json"
+DD_STAGE_DOC = "docs/development/2026-11-16_issue541_dd_p3_original_retirement_custody.md"
+
+def require_dd_staged_receipt():
+  m = json.loads((ROOT/DD_STAGE_MANIFEST).read_text(encoding="utf-8"))
+  archived = (ROOT/DD_ARCHIVE_SOURCE).read_text(encoding="utf-8")
+  doc = (ROOT/DD_STAGE_DOC).read_text(encoding="utf-8")
+  need(m["schema"] == "issue541.dd_p3.original_staged_retirement.v1"
+       and m["state"] == "STAGED_DELETE_KEEP_HOLD_INTEGRATION"
+       and m["science"] == "SCIENCE_HOLD" and m["final_retired_verified"] is False,
+       "DD_STAGE_STATUS")
+  need(m["original"]["git_blob"] == ORIGINAL["dd_json_two_step"][1]
+       and m["original"]["source_copy_path"] == DD_ARCHIVE_SOURCE
+       and gitblob(archived) == ORIGINAL["dd_json_two_step"][1],
+       "DD_ORIGINAL_EXACT_ARCHIVED_BLOB")
+  need(m["dd_native_p3"]["run_id"] == 43911477519
+       and m["dd_native_p3"]["two_timesteps_completed"] is True
+       and m["dd_native_p3"]["sha256"] == "1e2c52623a0ba1936a8c44ae69a1f2c273526a5b96048325288f6854de1d47da",
+       "DD_TWO_STEP_P3_RECEIPT")
+  need(m["custody"]["readback"] == "REMOTE_DOWNLOAD_SHA256_AND_ZIP_CRC_MATCH_ALL_THREE"
+       and m["custody"]["worm_lock"] == "NOT_PROVEN", "DD_CUSTODY_NOT_WORM")
+  need(all(x in doc for x in (ORIGINAL["dd_json_two_step"][1], "manual-only",
+                              "registered on the current default branch", "SCIENCE_HOLD")),
+       "DD_ARCHIVAL_DOCUMENT")
+  replay=(ROOT/DD).read_text(encoding="utf-8")
+  trigger=replay.split("\non:\n",1)[1].split("\npermissions:",1)[0]
+  need(trigger.startswith("  workflow_dispatch:\n")
+       and all(x not in trigger for x in ("  push:", "  pull_request:", "  schedule:"))
+       and PHRASES[0] in replay and 'test "$REQUESTED_SHA" = "$GITHUB_SHA"' in replay,
+       "DD_EXACT_SOURCE_MANUAL_ONLY")
+
+
 def validate(m, dd, s6, old, surface):
  need(m["schema"] == "issue541.arch.two_p3_workflow_retention.v1", "SCHEMA")
  need(m["package"] == "ARCH" and m["authority_issue"] == 541 and m["retirement_issue"] == 535, "OWNER")
@@ -47,9 +80,11 @@ def validate(m, dd, s6, old, surface):
   original_text = old[name]
   need(x["old_path"] == path and x["old_blob"] == sha, "ORIGINAL_ID_"+name)
   if original_text is None:
-   # Only S6 can be staged absent: never let this waive the DD original.
-   need(name == "s6_hybrid_two_case", "UNAPPROVED_ORIGINAL_ABSENCE_"+name)
-   require_s6_staged_receipt((ROOT/S6_RETIREMENT_DOC).read_text())
+   if name == "dd_json_two_step":
+    require_dd_staged_receipt()
+   else:
+    need(name == "s6_hybrid_two_case", "UNAPPROVED_ORIGINAL_ABSENCE_"+name)
+    require_s6_staged_receipt((ROOT/S6_RETIREMENT_DOC).read_text())
   else:
    need(gitblob(original_text) == sha, "ORIGINAL_BLOB_"+name)
   need(x["retirement"] == "KEEP_HOLD" and x["replay_proof"] == "NOT_EXECUTED_ON_CANDIDATE_EXACT_HEAD", "FALSE_RETIREMENT_"+name)
@@ -97,8 +132,11 @@ def load():
    # blob and a documented maintained manual replacement, not a guard bypass.
    require_s6_staged_receipt((ROOT/S6_RETIREMENT_DOC).read_text())
    old[name] = None
+  elif name == "dd_json_two_step":
+   require_dd_staged_receipt()
+   old[name] = None
   else:
-   need(False, "DD_ORIGINAL_MUST_BE_PRESERVED")
+   need(False, "UNEXPECTED_ORIGINAL_ABSENCE_"+name)
  surface = (ROOT/"ci/guards/workflow_surface_guard.py").read_text()
  validate(m,dd,s6,old,surface)
  return m,dd,s6,old,surface
@@ -135,6 +173,12 @@ def self_test():
       in result.stdout,
       "DD_P3_RUNNER_FAILURE_CLASSIFICATION_SELF_TEST")
  print(result.stdout.strip())
+ if old["dd_json_two_step"] is None:
+  forged=dict(old);forged["dd_json_two_step"]="forged original"
+  try: validate(m,dd,s6,forged,surface)
+  except ValueError: pass
+  else: raise ValueError("UNREJECTED_FORGED_DD_ORIGINAL")
+  print("ISSUE541_ARCH_DD_STAGED_ABSENCE_NEGATIVE_REJECTED")
  if old["s6_hybrid_two_case"] is None:
   # Fail closed on forged original bytes or missing rollback/replacement proof.
   forged = dict(old)
