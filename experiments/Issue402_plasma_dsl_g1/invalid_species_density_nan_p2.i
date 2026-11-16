@@ -18,7 +18,7 @@
 []
 [Physics]
   [Plasmas]
-    files = plasma_auto_constant.json
+    files = plasma_species_initial_p2.json
     [Transport]
       [DriftDiffusion]
         [Continuity]

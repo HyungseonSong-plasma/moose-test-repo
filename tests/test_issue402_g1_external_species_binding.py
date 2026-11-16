@@ -3,6 +3,7 @@
 These tests do not replace building or running the solver.
 """
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,38 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "physics_app"
 CASE = ROOT / "experiments/Issue402_plasma_dsl_g1"
 
+
+def json_owned_negative_routes(runner: str) -> set[str]:
+    """Identify scheduled negative cases routed to the JSON-owned P2 deck."""
+    loop = re.search(
+        r'for item in (?P<items>invalid_[^\n]*); do\n(?P<body>.*?)\n  set \+e',
+        runner,
+        re.S,
+    )
+    assert loop, "Missing negative-input loop"
+    branch = re.search(
+        r'if \[\[(?P<predicate>.*?)\]\]; then\s*'
+        r'(?P<json_arm>.*?)\s*else\s*'
+        r'(?P<baseline_arm>.*?)\s*fi\s*',
+        loop.group("body"),
+        re.S,
+    )
+    assert branch, "Missing negative-input route predicate/arms"
+    assert branch.group("json_arm").strip() == (
+        'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")'
+    ), "JSON-owned negative route must use the JSON-owned P2 deck"
+    assert branch.group("baseline_arm").strip() == (
+        'input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")'
+    ), "Other negative cases must use baseline deck"
+
+    clauses = re.split(r'\s*\|\|\s*', branch.group("predicate"))
+    routed = set()
+    for clause in clauses:
+        match = re.fullmatch(r'\s*"\$item"\s*==\s*(invalid_[a-z_]+)\s*', clause)
+        assert match, f"Expected OR of exact negative case names, got {clause!r}"
+        routed.add(match.group(1))
+    scheduled = set(loop.group("items").split())
+    return routed & scheduled
 
 def sources():
     base_header = (APP / "include/physics/plasma/PlasmaInterface.h").read_text()
@@ -119,6 +152,10 @@ def test_continuity_e_time_is_generated_from_existing_species_without_new_option
     assert "type = FEMLogMolarTimeDerivative" in duplicate
     assert "variable = log_e" in duplicate
     assert "duplicate_e_time.i" in runner
+    # The duplicate-owner negative must be based on the current JSON state;
+    # a missing initial_number_density must not mask the kernel collision.
+    assert '"$PILOT/valid_generated_transport_json_p2.i" \\' in runner
+    assert '  "$PILOT/duplicate_e_time.i"' in runner
     assert "PLASMA_DUPLICATE_E_TIME_REJECTED" in runner
 
 
@@ -152,6 +189,155 @@ def test_example_inputs(filename, expected):
     assert "[Continuity]" in text
     assert "schema_version" not in text
 
+
+def test_swapped_discretization_negative_requires_json_sole_owner_diagnostic():
+    """A wrong-type legacy state cannot bypass the current JSON owner guard."""
+    fixture = (CASE / "invalid_fem_fv_swap.i").read_text()
+    baseline = (CASE / "baseline.i").read_text()
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    source = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
+    assert "files = plasma_species_initial_p2.json" in fixture
+    assert "fem_species = 'O2p'" in fixture
+    assert "fvm_species = 'e'" in fixture
+    assert "[log_O2p]" in baseline and "type = MooseVariableFVReal" in baseline
+    assert "[log_e]" in baseline and "family = LAGRANGE" in baseline
+    assert "invalid_fem_fv_swap) expected=\"Species 'O2p' has JSON initial_number_density and an existing solver variable 'log_O2p'\"" in runner
+    assert 'if (variableExists(variable, /*error_if_aux=*/true))' in source
+    assert '"JSON is the sole initial-state owner."' in source
+
+
+def test_unknown_species_negative_fails_on_specific_missing_json_record():
+    """The old external-variable negative now probes the JSON sole-source rule."""
+    fixture = (CASE / "invalid_missing_variable.i").read_text()
+    json_data = json.loads((CASE / "plasma_species_initial_p2.json").read_text())
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "files = plasma_species_initial_p2.json" in fixture
+    assert "fem_species = 'missing'" in fixture
+    assert "fvm_species = 'O2p'" in fixture
+    assert "missing" not in json_data["species"]
+    assert json_data["species"]["O2p"]["initial_number_density"] > 0
+    assert "invalid_missing_variable) expected=\"Selected species 'missing' requires species.missing.initial_number_density\"" in runner
+
+
+def test_retired_kernel_name_negative_reaches_forbidden_option():
+    """Missing JSON IC may not mask an obsolete explicit FEM kernel option."""
+    invalid = (CASE / "invalid_legacy_kernel_names.i").read_text()
+    positive = (CASE / "valid_generated_transport_json_p2.i").read_text()
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "fem_kernel_names = 'ne_transport'" in invalid
+    assert "fem_species" not in invalid and "fvm_species" not in invalid
+    assert "block = plasma" not in invalid
+    assert "files = plasma_species_initial_p2.json" in positive
+    assert "invalid_legacy_kernel_names" in json_owned_negative_routes(runner)
+    assert 'input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")' in runner
+    assert 'native --check-input -i "${input_decks[@]}"' in runner
+    assert "invalid_legacy_kernel_names) expected='fem_kernel_names'" in runner
+
+
+def test_retired_positional_charge_negative_uses_json_sole_source():
+    negative = (CASE / "invalid_missing_fvm_charges.i").read_text()
+    positive = (CASE / "valid_generated_transport_json_p2.i").read_text()
+    data = json.loads((CASE / "plasma_species_initial_p2.json").read_text())
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "fem_charge_numbers = '-1'" in negative
+    assert "fem_species" not in negative and "block = plasma" not in negative
+    assert "files = plasma_species_initial_p2.json" in positive
+    assert data["species"]["e"]["charge_number"] == -1
+    assert data["species"]["O2p"]["charge_number"] == 1
+    assert "invalid_missing_fvm_charges) expected='fem_charge_numbers'" in runner
+    assert "invalid_missing_fvm_charges" in json_owned_negative_routes(runner)
+
+
+def test_retired_transport_coefficients_fail_on_specific_obsolete_option():
+    """A JSON IC failure must not mask the forbidden mobility/diffusivity keys."""
+    negative = (CASE / "invalid_incomplete_coefficients.i").read_text()
+    positive = (CASE / "valid_generated_transport_json_p2.i").read_text()
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "mobility = 'electron_mobility'" in negative
+    assert "diffusivity = 'electron_diffusion'" in negative
+    assert "fem_species" not in negative and "fvm_species" not in negative
+    assert "files = plasma_species_initial_p2.json" in positive
+    assert "invalid_incomplete_coefficients" in json_owned_negative_routes(runner)
+    assert "invalid_incomplete_coefficients) expected='mobility'" in runner
+
+
+def test_retired_wrong_charge_negative_uses_json_owned_base():
+    """Do not let the missing-density error mask retired charge-vector options."""
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    negative = (CASE / "invalid_wrong_charge_sign.i").read_text()
+    assert "invalid_wrong_charge_sign" in json_owned_negative_routes(runner)
+    assert "fem_charge_numbers = '1'" in negative
+    assert "fvm_charge_numbers = '1'" in negative
+    assert "files = plasma_species_only.json" not in negative
+    assert "fem_species" not in negative and "fvm_species" not in negative
+    assert "invalid_wrong_charge_sign) expected='fem_charge_numbers'" in runner
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "invalid_legacy_kernel_names",
+        "invalid_missing_fvm_charges",
+        "invalid_incomplete_coefficients",
+        "invalid_wrong_charge_sign",
+    ],
+)
+def test_json_owned_negative_routing_detects_removed_case(case):
+    """Mutate each JSON-owned branch, not just the charge-vector case."""
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert case in json_owned_negative_routes(runner)
+    mutated = runner.replace(f'"$item" == {case}', f'"$item" == {case}_removed', 1)
+    assert mutated != runner
+    assert case not in json_owned_negative_routes(mutated)
+
+
+def test_json_owned_negative_routing_detects_unscheduled_case():
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    mutated = runner.replace(
+        "invalid_incomplete_coefficients invalid_wrong_charge_sign; do",
+        "invalid_incomplete_coefficients; do",
+        1,
+    )
+    assert mutated != runner
+    assert "invalid_wrong_charge_sign" not in json_owned_negative_routes(mutated)
+
+
+@pytest.mark.parametrize(
+    "old_deck,new_deck,expected",
+    [
+        ("valid_generated_transport_json_p2.i", "baseline.i", "JSON-owned"),
+        ("baseline.i", "valid_generated_transport_json_p2.i", "baseline"),
+    ],
+)
+def test_json_owned_negative_routing_rejects_wrong_branch_deck(
+    old_deck, new_deck, expected
+):
+    """Switching either conditional arm must fail instead of false-PASS."""
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    old = f'input_decks=("$PILOT/{old_deck}" "$PILOT/$item.i")'
+    new = f'input_decks=("$PILOT/{new_deck}" "$PILOT/$item.i")'
+    assert old in runner
+    with pytest.raises(AssertionError, match=expected):
+        json_owned_negative_routes(runner.replace(old, new, 1))
+
+
+def test_json_owned_negative_routing_rejects_and_predicate():
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    original = 'invalid_incomplete_coefficients || "$item" == invalid_wrong_charge_sign'
+    mutated = 'invalid_incomplete_coefficients && "$item" == invalid_wrong_charge_sign'
+    assert original in runner
+    with pytest.raises(AssertionError, match="Expected OR"):
+        json_owned_negative_routes(runner.replace(original, mutated, 1))
+
+
+def test_json_owned_negative_routing_checks_all_expected_cases():
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert json_owned_negative_routes(runner) == {
+        "invalid_legacy_kernel_names",
+        "invalid_missing_fvm_charges",
+        "invalid_incomplete_coefficients",
+        "invalid_wrong_charge_sign",
+    }
 
 def test_native_build_and_comparison_script():
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
@@ -215,6 +401,29 @@ def test_real_solver_object_wiring():
     assert "reaction_material = neg_a" in (CASE / "rf_generated.i").read_text()
     assert "type = MatCoupledForce" in (CASE / "rf_explicit.i").read_text()
     assert "rf_builder_parity.json" in (CASE / "run_native_binding_smoke.sh").read_text()
+
+
+def test_native_parity_receipt_rejects_mutated_real_exodus_data():
+    """Actual Native outputs must be rechecked with fail-closed negative probes."""
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert 'echo "PLASMA_RESULTS_MATCH"' in runner
+    assert 'echo "PLASMA_RESULTS_MATCH"' not in runner.split(
+        'echo "PLASMA_RESULTS_MATCH"', 1)[1].split('PY', 1)[0]
+    assert "native_parity_negative_controls.json" in runner
+    assert "numeric_state_mutation" in runner
+    assert "same_unrecognised_physical_field" in runner
+    assert "NATIVE_PARITY_NOT_PROVEN" in runner
+    assert "Unsupported Exodus physical field" in runner
+    assert "Numerical discrepancy" in runner
+    assert "Native parity negative control modified original output" in runner
+    assert "sha(baseline) != before" in runner
+    assert "sha(candidate) != before" in runner
+    assert "NATIVE_PARITY_FALSE_PASS_REJECTED" in runner
+    assert runner.index('echo "PLASMA_RESULTS_MATCH"') < runner.index(
+        'print(receipt["result"])')
+    # The false-PASS controls must finish before the unrelated RF/P3 stages.
+    assert runner.index('print(receipt["result"])') < runner.index(
+        'native --check-input -i "$PILOT/rf_explicit.i"')
 
 
 def test_generated_physics_requires_explicit_inputs():

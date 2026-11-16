@@ -91,19 +91,42 @@ native() {
   ' -- "$@"
 }
 
+# Canonical replacement for the historical JSON-rate one-shot Native P2 cases.
+# Use the exact same physics-opt binary and immutable OCI as P1 and later S6 P2.
+# H01-H04, H05 and the actual JSON surface-rate input do not execute timesteps.
+docker run --rm --entrypoint /bin/bash --user 0:0 \
+  --workdir /workspace -v "$PWD:/workspace" \
+  -e "EXPECTED_HEAD=$(git rev-parse HEAD)" \
+  -e "PINNED_BASE=$PINNED_BASE" "$PINNED_BASE" -lc '
+  set -euo pipefail
+  source /environment
+  python3 -m physics_app.ci.check_issue402_json_rate_native_p2 \
+    --executable /workspace/physics_app/physics-opt \
+    --p1-identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
+' 2>&1 | tee "$EVIDENCE/issue402_json_rate_native_p2.log"
+echo "ISSUE402_JSON_RATE_SHARED_NATIVE_P2_PASS"
+
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
+# JSON-owned log-molar solver variables and initial density: standalone P2 only.
+# Legacy baseline.i declares external variables/ICs and cannot be overlaid.
+native --check-input -i "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
-# Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
-native --check-input -i "$PILOT/generic_four_species.i" \
+# Verify canonical names e/O2p/Om/Op through the JSON-owned four-species P2 fixture.
+# Preserve the older generic_four_species.i as historical input evidence.
+native --check-input -i "$PILOT/species_density_pairs_p2.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
 echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# Distinct synthetic full-Action P2: JSON creates selected e/O2p initial states
+# and Physics owns the electron energy/Poisson/RF kernels. Never merge baseline.
+native --check-input -i "$PILOT/valid_all_physics_json_p2.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
+echo "PLASMA_ALL_PHYSICS_JSON_OWNED_P2_PASS"
 # Standalone positive construction check: one generated FEM transport Kernel.
 # It is a P2-only input, not an accepted physical simulation or P3 parity run.
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
+# Modern generated option-first transport uses a standalone JSON-owned
+# electron log-molar IC. The retired baseline overlay remains as source history.
+native --check-input -i "$PILOT/valid_generated_transport_json_p2.i" \
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
@@ -220,7 +243,7 @@ echo "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED"
 
 for entry in "invalid_species_density_zero_p2:Invalid species ID for automatic naming: 0" \
              "invalid_species_density_odd_p2:Invalid species ID for automatic naming: 1e16" \
-             "invalid_species_density_nan_p2:Species 'nan' is absent from"; do
+             "invalid_species_density_nan_p2:Selected species 'nan' requires species.nan.initial_number_density"; do
   item="${entry%%:*}"
   expected="${entry#*:}"
   set +e
@@ -269,8 +292,9 @@ done
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
-native --check-input -i "$PILOT/baseline.i" \
-  "$PILOT/valid_generated_transport_options.i" \
+# The current JSON-owned P2 generates exactly one e_time. Overlay an
+# intentionally duplicate Native kernel without the retired external IC deck.
+native --check-input -i "$PILOT/valid_generated_transport_json_p2.i" \
   "$PILOT/duplicate_e_time.i" > "$EVIDENCE/duplicate_e_time.log" 2>&1
 duplicate_time_exit=$?
 set -e
@@ -296,20 +320,28 @@ native --check-input -i "physics_app/ci/dd_nv_material_smoke.i" \
 echo "PLASMA_DD_NV_MATERIALS_P2_PASS"
 
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
+  # The obsolete fem_kernel_names option must be checked against the modern
+  # JSON-owned generated transport input; old baseline masks it via missing IC.
+  if [[ "$item" == invalid_legacy_kernel_names || "$item" == invalid_missing_fvm_charges ||
+        "$item" == invalid_incomplete_coefficients || "$item" == invalid_wrong_charge_sign ]]; then
+    input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")
+  else
+    input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")
+  fi
   set +e
-  native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
+  native --check-input -i "${input_decks[@]}" \
     > "$EVIDENCE/$item.log" 2>&1
   code=$?
   set -e
   case "$item" in
     invalid_overlap) expected='species listed in both groups' ;;
-    invalid_fem_fv_swap) expected='wrong type' ;;
+    invalid_fem_fv_swap) expected="Species 'O2p' has JSON initial_number_density and an existing solver variable 'log_O2p'" ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
     invalid_poisson_variable) expected='Poisson fem_potential requires an FEM solver variable' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
-    invalid_missing_variable) expected='was not found' ;;
+    invalid_missing_variable) expected="Selected species 'missing' requires species.missing.initial_number_density" ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
     invalid_missing_fvm_charges) expected='fem_charge_numbers' ;;
@@ -328,7 +360,10 @@ echo "PLASMA_INVALID_INPUTS_REJECTED"
 mkdir -p "$EVIDENCE/baseline" "$EVIDENCE/candidate"
 native -i "$PILOT/baseline.i" "Outputs/file_base=$EVIDENCE/baseline/plasma" \
   2>&1 | tee "$EVIDENCE/baseline_run.log"
-native -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# Tiny diffusion parity is an intentionally different contract: adding an
+# otherwise inert root Action must NOT modify the external Native equations.
+# The archived all-physics overlay is no longer valid as a no-op numerical run.
+native -i "$PILOT/baseline.i" "$PILOT/noop_physics_root_overlay.i" \
   "Outputs/file_base=$EVIDENCE/candidate/plasma" \
   2>&1 | tee "$EVIDENCE/candidate_run.log"
 test -s "$EVIDENCE/baseline/plasma.e"
@@ -338,6 +373,118 @@ python3 "$PILOT/compare_native_outputs.py" \
   --candidate "$EVIDENCE/candidate/plasma.e" \
   --output "$EVIDENCE/numerical_parity.json"
 echo "PLASMA_RESULTS_MATCH"
+
+# #5: mutate COPIES of the actual physics-opt-produced Exodus files and prove
+# that the same exact-head comparator rejects false parity. The native outputs
+# and original scientific inputs remain untouched. This is the tiny-fixture
+# contract only, never full S6/P3 scientific equivalence.
+python3 - "$EVIDENCE" "$PILOT/compare_native_outputs.py" "$(git rev-parse HEAD)" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+import numpy as np
+from scipy.io import netcdf_file
+
+evidence, oracle, head = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+baseline = evidence / "baseline/plasma.e"
+candidate = evidence / "candidate/plasma.e"
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+before = {"baseline": sha(baseline), "candidate": sha(candidate)}
+receipt = {
+    "schema": "issue541.native_parity_negative_controls.v1",
+    "source_sha": head,
+    "baseline_exodus_sha256": before["baseline"],
+    "candidate_exodus_sha256": before["candidate"],
+    "scope": "actual tiny Native diffusion output, not S6/P3/science",
+    "result": "NOT_EVALUATED",
+    "controls": {},
+}
+
+with tempfile.TemporaryDirectory(prefix="issue541_parity_", dir=evidence) as workspace:
+    scratch = Path(workspace)
+
+    def must_reject(case, ref_file, candidate_file, expected_reason):
+        report_path = scratch / (case + ".json")
+        process = subprocess.run(
+            [sys.executable, str(oracle), "--baseline", str(ref_file),
+             "--candidate", str(candidate_file), "--output", str(report_path)],
+            capture_output=True, text=True, check=False)
+        if not report_path.is_file():
+            raise RuntimeError(f"{case}: comparator did not produce a report")
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        if (process.returncode == 0 or
+                report.get("result") != "NATIVE_PARITY_NOT_PROVEN" or
+                expected_reason not in report.get("reason", "")):
+            raise RuntimeError(
+                f"{case}: invalid Native Exodus data accepted/misdiagnosed: "
+                f"exit={process.returncode}, report={report}, stderr={process.stderr}")
+        receipt["controls"][case] = {
+            "status": "PASS_EXPECTED_REJECTION",
+            "reason": report["reason"],
+            "baseline_sha256": sha(ref_file),
+            "candidate_sha256": sha(candidate_file),
+        }
+
+    # Negative 1: change one physical state value in an actual solver output.
+    # This is not a synthetic netCDF file or a parser-only check.
+    perturbed = scratch / "perturbed_candidate.e"
+    shutil.copyfile(candidate, perturbed)
+    with netcdf_file(perturbed, "a", mmap=False) as exodus:
+        names = sorted(name for name in exodus.variables
+                       if name.startswith("vals_nod_var")
+                       and name[len("vals_nod_var"):].isdigit())
+        if not names:
+            raise RuntimeError("No actual Native nodal state available to perturb")
+        values = np.array(exodus.variables[names[0]].data, copy=True)
+        if not values.size or not np.isfinite(values).all():
+            raise RuntimeError("No finite Native state to perturb")
+        original = float(values.flat[0])
+        values.flat[0] = original + 1.0 + abs(original) * 1e-3
+        exodus.variables[names[0]][:] = values
+    if sha(perturbed) == before["candidate"]:
+        raise RuntimeError("Native perturbation did not change Exodus bytes")
+    must_reject("numeric_state_mutation", baseline, perturbed,
+                "Numerical discrepancy")
+
+    # Negative 2: a new unrecognised physical field in BOTH outputs must
+    # not be silently skipped just because the inventories still match.
+    first = scratch / "extra_reference.e"
+    second = scratch / "extra_candidate.e"
+    shutil.copyfile(baseline, first)
+    shutil.copyfile(baseline, second)
+    for path in (first, second):
+        with netcdf_file(path, "a", mmap=False) as exodus:
+            name = "vals_nset_var1ns1"
+            if name in exodus.variables or "time_whole" not in exodus.variables:
+                raise RuntimeError("Unexpected original Native output layout")
+            times = exodus.variables["time_whole"]
+            extra = exodus.createVariable(name, "d", times.dimensions)
+            extra[:] = np.zeros_like(np.asarray(times.data), dtype=float)
+    must_reject("same_unrecognised_physical_field", first, second,
+                "Unsupported Exodus physical field")
+
+# Guard original Native provenance against mutation during negative controls.
+if sha(baseline) != before["baseline"] or sha(candidate) != before["candidate"]:
+    raise RuntimeError("Native parity negative control modified original output")
+if set(receipt["controls"]) != {
+    "numeric_state_mutation", "same_unrecognised_physical_field"
+}:
+    raise RuntimeError("Native parity negative control coverage incomplete")
+receipt["result"] = "NATIVE_PARITY_FALSE_PASS_REJECTED"
+(evidence / "native_parity_negative_controls.json").write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+print(receipt["result"])
+PY
 
 set +e
 native --check-input -i "$PILOT/rf_explicit.i" "$PILOT/duplicate_maxwell.i" \
