@@ -629,3 +629,70 @@ def test_lowerD_surface_current_probe_semantics_and_scratch_type_only(tmp_path):
     assert (staged / "layer_0.i").read_text() == expected
     assert receipt["files"]["layer_0.i"]["original_sha256"] == (
         hashlib.sha256(original.encode()).hexdigest())
+
+
+
+def test_wafer_D1_geometry_probe_keeps_plasma_side_observation_contract(tmp_path):
+    """Retired diagnostic tokens map to equivalent canonical observer, not no-op."""
+    import re
+
+    app = ROOT / "physics_app"
+    modern, old = "WaferD1GeometryProbeAux", "PhysicsWaferD1GeometryProbeAux"
+    source = (app / "src/auxkernels" / (modern + ".C")).read_text()
+    header = (app / "include/auxkernels" / (modern + ".h")).read_text()
+    assert f"class {modern} : public AuxKernel" in header
+    assert f'registerMooseObject("PhysicsApp", {modern});' in source
+    assert f'registerMooseObject("PhysicsApp", {old});' not in source
+    for marker in (
+        "getHigherDSide(_current_elem)", "_surface_current_density.hasFaceSide(*fi, true)",
+        "_surface_current_density.hasFaceSide(*fi, false)",
+        "if (on_elem == on_neighbor)",
+        'MooseEnum("normal_r normal_z owner d_perp e_n")',
+        'if (_component == "normal_r")',
+        'if (_component == "normal_z")',
+        'if (_component == "owner")',
+        'if (_component == "d_perp")',
+        "_potential.gradient(face_arg.makeElem()",
+        "_potential.gradient(face_arg.makeNeighbor()",
+    ):
+        assert marker in source, marker
+
+    script = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(script.read_text())
+    declarations = [
+        n for n in tree.body if isinstance(n, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id in
+                {"RENAMED_FEM_KERNEL_TYPES", "_FEM_TYPE_LINE"}
+                for t in n.targets)
+    ]
+    fun = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+           and n.name == "remap_staged_fem_types"]
+    namespace = {"Path": Path, "re": re, "hashlib": hashlib}
+    exec(compile(ast.Module(body=declarations + fun, type_ignores=[]),
+                 str(script), "exec"), namespace)
+    assert namespace["RENAMED_FEM_KERNEL_TYPES"][old] == modern
+    folder = tmp_path / "staged"
+    folder.mkdir()
+    original = (
+        "[AuxKernels]\n"
+        "  [wafer_d1_normal_r_kernel]\n"
+        f"    type = {old}\n"
+        "    variable = wafer_d1_normal_r\n"
+        "    surface_current_density = wafer_net_surface_current_density\n"
+        "    potential = potential\n"
+        "    component = normal_r\n"
+        "    block = wafer_surface\n"
+        "    execute_on = 'INITIAL TIMESTEP_END'\n"
+        "  []\n[]\n"
+    )
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        (folder / f"layer_{i}.i").write_text(
+            original if i == 0 else f"# unused {i}\n"
+        )
+    result = namespace["remap_staged_fem_types"](folder, ordered)
+    assert result["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
+    assert result["totals"][old] == 1
+    assert (folder / "layer_0.i").read_text() == (
+        original.replace("type = " + old, "type = " + modern)
+    )
