@@ -1164,12 +1164,17 @@ jobs:
           set -e
           cat /tmp/issue541_group_a_surface.log
           test "$status" -ne 0
-          for name in issue402-dd-json-boundary-p0-p2-once.yml issue402-legacy-symbol-audit-once.yml; do
+          for name in issue402-dd-json-boundary-p0-p2-once.yml; do
             grep -Fq "$name: one-shot must target branches: [main]" /tmp/issue541_group_a_surface.log
           done
+          test ! -e .github/workflows/issue402-legacy-symbol-audit-once.yml
+          if grep -Fq 'issue402-legacy-symbol-audit-once.yml: one-shot must target branches: [main]' /tmp/issue541_group_a_surface.log; then
+            echo '::error::retired A2 still violates global workflow surface'
+            exit 1
+          fi
           test ! -e .github/workflows/issue402-rate-coef-ideal-gas-native-once.yml
           test ! -e .github/workflows/issue402-reaction-material-reduction-p0-once.yml
-          echo 'ISSUE541_GROUP_A_GLOBAL_SURFACE_GUARD=FAIL_EXPECTED; A1_A2_VIOLATIONS=2; A3_A4_STAGED_DELETIONS=2; NO_WAIVER'
+          echo 'ISSUE541_GROUP_A_GLOBAL_SURFACE_GUARD=FAIL_EXPECTED; A1_VIOLATIONS=1; A2_RETIRED_VERIFIED=1; A3_A4_STAGED_DELETIONS=2; NO_WAIVER'
       - name: Preserve source-bound Group A audit and guard output
         if: always()
         uses: actions/upload-artifact@v4
