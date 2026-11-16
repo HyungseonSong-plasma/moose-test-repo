@@ -1,5 +1,6 @@
 """Zero-P3 artifact probe is an independent, one-day diagnostic of CreateArtifact."""
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -9,7 +10,9 @@ def test_general_ci_reproducible_and_probe_is_not_s6_p3():
     workflow = (ROOT / ".github/workflows/ci.yml").read_text()
     assert gen == workflow
     assert "  artifact-api-probe:\n" in workflow
-    section = workflow.split("\n  artifact-api-probe:\n", 1)[1]
+    probe_tail = workflow.split("\n  artifact-api-probe:\n", 1)[1]
+    # Analyze this job only, not later Native jobs sharing the same CI YAML.
+    section = re.split(r"\n  [A-Za-z_][A-Za-z0-9_-]*:\n", probe_tail, maxsplit=1)[0]
     assert "github.event_name == 'pull_request'" in section
     assert "if-no-files-found: error" in section
     assert "actions/upload-artifact@v4" in section

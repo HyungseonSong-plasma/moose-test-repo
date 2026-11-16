@@ -5,6 +5,7 @@ These tests never launch Docker, access private rates, or solve a plasma state.
 from __future__ import annotations
 
 import ast
+import math
 from pathlib import Path
 
 import numpy as np
@@ -38,7 +39,9 @@ def test_exact_main_trigger_and_isolated_d_run_contract():
     assert "run_canonical_s6_p3_once.py" in text
     assert "run_native_binding_smoke.sh" in text
     assert "run_public_option_s6_p2.sh" not in text
-    assert 'option.p2.stage(ROOT, historical, case, "C", staged, manifest)' in script
+    assert 'ordered = option.p2.stage(\n' in script
+    assert 'ROOT, historical, case, "C", staged, manifest,' in script
+    assert 'd_base_source=d_base)' in script
     assert "canonicalize_staged_D_inputs" in script
     assert "option.remap_staged_fem_types" in script
     assert "option.run_one(" in script  # same binary must pass P2 before P3
@@ -82,7 +85,7 @@ def test_p3_accepts_only_canonical_output_names(tmp_path):
     function = next(node for node in tree.body
                     if isinstance(node, ast.FunctionDef)
                     and node.name == "verify_canonical_exodus")
-    scope = {"Path": Path}
+    scope = {"Path": Path, "math": math}
     exec(compile(ast.Module(body=[function], type_ignores=[]),
                  str(RUNNER), "exec"), scope)
     verify = scope["verify_canonical_exodus"]
