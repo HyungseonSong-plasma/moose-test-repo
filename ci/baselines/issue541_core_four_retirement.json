@@ -99,8 +99,8 @@
       "original_p3": "NOT_RUN",
       "source_event": "push:branch-specific,self-path",
       "required_marker": "ISSUE402_SCCM_STATIC_GAS_NATIVE_P2_PASS_P3_NOT_RUN",
-      "retirement": "RETIRED_VERIFIED",
-      "reason": "Original branch absent on refreshed GitHub branch search; self-file-only push with no dispatch/call, no other repository code references; all historical P0/P1/P2 faithfully reexecuted at exact head 2599f54a240abe1b7a1f49c97806fc39ab801426 (Repository CI run 43835330764) and original run 43505864550 artifact ZIP archived and readback SHA matched; removal is source-HEAD CI gated.",
+      "retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+      "reason": "Original absent in #578 candidate, not in main. Independent historic SCCM success 43505864550 and original ZIP 14077346147; exact #578 9e71762 CORE P0 and real Physics P1/P2 SUCCESS (CI 43853584740, jobs 133252079406/133252079180, artifacts 14219701647/14219962212). Replacement source-bound Native retains SCCM positive, all-four live, 20+ negative composition/IC/SCCM/boundary controls. Historical trigger branch absent; dynamic/off-platform caller-zero unverified. Current merged integration and global guard red; staged only.",
       "original_success": {
         "run_id": 43505864550,
         "source_sha": "e78b8fa3c3e30dbd219a2ab28730121284f666a6",
@@ -117,7 +117,10 @@
       },
       "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
       "retirement_candidate_source_head": "d6346a9dea92e935cdd55818e651d47564fb1a2b",
-      "rollback_original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611"
+      "rollback_original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611",
+      "wave1d_caller_zero": "UNVERIFIED",
+      "wave1d_integration": "HOLD",
+      "wave1d_current_run": 43853584740
     },
     {
       "path": ".github/workflows/issue402-species-initial-composition-native-once.yml",
@@ -181,5 +184,14 @@
     "readback_date": "2026-11-15",
     "readback": "SHA256_AND_SIZE_VERIFIED",
     "permanent_worm": "NOT_PROVEN"
+  },
+  "wave1d": {
+    "base_pr": 578,
+    "base_head": "9e71762a5f45ab755481720e8beba314f59cd021",
+    "donor_pr": 558,
+    "donor_head": "436c5b1c43a6f6ddb1b629c81f6c7d97fbfaf9a9",
+    "status": "STAGED_ONLY_NOT_MERGED",
+    "science": "SCIENCE_HOLD",
+    "p3": "NOT_RUN"
   }
 }

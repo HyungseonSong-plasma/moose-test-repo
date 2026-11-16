@@ -72,7 +72,7 @@ def check(manifest: dict, ci: str, native: str) -> None:
         assert re.fullmatch("[0-9a-f]{40}", row["original_blob"])
         assert row["scope"] == "P0_P1_P2_ONLY"
         assert row["original_p3"] == "NOT_RUN"
-        assert row["retirement"] in ("KEEP_HOLD", "RETIRED_VERIFIED")
+        assert row["retirement"] in ("KEEP_HOLD", "RETIRED_VERIFIED", "STAGED_DELETE_KEEP_HOLD_INTEGRATION")
         assert row["required_marker"] in P2_MARKERS
         assert row["reason"]
         source = ROOT / row["path"]
@@ -82,6 +82,10 @@ def check(manifest: dict, ci: str, native: str) -> None:
             assert not source.exists(), "PREMATURE_RETIREMENT:" + row["path"]
             assert not row["branch_present_at_2026_11_15"], "HISTORIC_BRANCH_STILL_LIVE"
             assert row["caller_observation"] == "HISTORICAL_PUSH_BRANCH_NOT_FOUND"
+            if row["retirement"] == "STAGED_DELETE_KEEP_HOLD_INTEGRATION":
+                assert row.get("rollback_original_blob") == row["original_blob"], "WAVE1D_ROLLBACK_BLOB_MISSING"
+                assert row.get("wave1d_caller_zero") == "UNVERIFIED", "WAVE1D_CALLER_ZERO_FALSE_PROOF"
+                assert row.get("wave1d_integration") == "HOLD", "WAVE1D_INTEGRATION_FALSE_PASS"
         hist = row["original_success"]
         assert hist["run_id"] > 0 and hist["artifact_id"] > 0
         assert re.fullmatch("[0-9a-f]{40}", hist["source_sha"])
@@ -176,6 +180,8 @@ def self_test(m: dict, ci: str, native: str):
         ("SCIENCE_PROMOTION", lambda x: x.update(science="ACCEPTED")),
         ("BACKUP_HASH_TAMPER", lambda x: x["workflows"][0]["independent_backup"].update(readback_sha256="0"*64)),
         ("BACKUP_PUBLIC", lambda x: x["backup"].update(visibility="PUBLIC")),
+        ("WAVE1D_STAGED_FALSE_CALLER_ZERO", lambda x: x["workflows"][1].update(wave1d_caller_zero="VERIFIED")),
+        ("WAVE1D_STAGED_MISSING_ROLLBACK", lambda x: x["workflows"][1].update(rollback_original_blob="0" * 40)),
     ):
         bad = copy.deepcopy(m)
         mutator(bad)
