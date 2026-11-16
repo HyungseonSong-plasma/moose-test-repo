@@ -570,3 +570,62 @@ def test_s6_D_json_initial_ownership_retires_only_pinned_native_states(tmp_path)
     with pytest.raises(ValueError, match="MISSING_PINNED_NATIVE_STATES"):
         migrate(missing, ordered)
     assert snapshot == {p.name: p.read_bytes() for p in missing.iterdir()}
+
+
+
+def test_lowerD_surface_current_probe_semantics_and_scratch_type_only(tmp_path):
+    """B keeps its wall-current observation, without a retired factory alias."""
+    import re
+
+    modern = "LowerDSurfaceCurrentProbeAux"
+    old = "PhysicsLowerDSurfaceCurrentProbeAux"
+    app = ROOT / "physics_app"
+    header = (app / "include/auxkernels" / (modern + ".h")).read_text()
+    source = (app / "src/auxkernels" / (modern + ".C")).read_text()
+    assert "class " + modern + " : public AuxKernel" in header
+    assert f'registerMooseObject("PhysicsApp", {modern});' in source
+    assert f'registerMooseObject("PhysicsApp", {old});' not in source
+    assert "interior_parent()" in source
+    assert "getHigherDSide(_current_elem)" in source
+    assert "_surface_current_density.hasFaceSide(*fi, true)" in source
+    assert "_surface_current_density.hasFaceSide(*fi, false)" in source
+    assert "if (on_elem == on_neighbor)" in source
+    assert "_surface_current_density(face_arg, Moose::currentState())" in source
+    assert "return MetaPhysicL::raw_value" in source
+
+    path = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(path.read_text())
+    declarations = [n for n in tree.body if isinstance(n, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id in
+                            {"RENAMED_FEM_KERNEL_TYPES", "_FEM_TYPE_LINE"}
+                            for t in n.targets)]
+    fun = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+           and n.name == "remap_staged_fem_types"]
+    assert len(declarations) == 2 and len(fun) == 1
+    namespace = {"re": re, "Path": Path, "hashlib": hashlib}
+    exec(compile(ast.Module(body=declarations + fun, type_ignores=[]),
+                 str(path), "exec"), namespace)
+    assert namespace["RENAMED_FEM_KERNEL_TYPES"][old] == modern
+    staged = tmp_path / "scratch"
+    staged.mkdir()
+    original = (
+        "[AuxKernels]\n"
+        "  [wafer_net_current_probe_kernel]\n"
+        f"    type = {old}\n"
+        "    variable = wafer_net_current_probe\n"
+        "    surface_current_density = wafer_net_surface_current_density\n"
+        "    block = wafer_surface\n"
+        "    execute_on = 'INITIAL TIMESTEP_END'\n"
+        "  []\n[]\n"
+    )
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        (staged / f"layer_{i}.i").write_text(original if i == 0
+                                            else f"# unchanged {i}\n")
+    receipt = namespace["remap_staged_fem_types"](staged, ordered)
+    assert receipt["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
+    assert receipt["totals"][old] == 1
+    expected = original.replace("type = " + old, "type = " + modern)
+    assert (staged / "layer_0.i").read_text() == expected
+    assert receipt["files"]["layer_0.i"]["original_sha256"] == (
+        hashlib.sha256(original.encode()).hexdigest())
