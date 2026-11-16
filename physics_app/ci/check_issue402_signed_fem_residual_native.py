@@ -283,11 +283,14 @@ def main() -> int:
     if args.output_dir.exists():
         raise EvidenceError("Refusing to overwrite existing task3 evidence")
     args.output_dir.mkdir(parents=True)
-    measurements = {}
+    # All P2 construction checks finish before any real P3 timestep starts.
     for name, charge, mobility in CASES:
+        make_case(args.output_dir / name, charge, mobility)
+    for name, _, _ in CASES:
+        execute(binary, args.output_dir / name, check_input=True, timeout=args.timeout)
+    measurements = {}
+    for name, _, _ in CASES:
         directory = args.output_dir / name
-        make_case(directory, charge, mobility)
-        execute(binary, directory, check_input=True, timeout=args.timeout)
         execute(binary, directory, check_input=False, timeout=args.timeout)
         measurements[name] = read_observation(directory)
     result = check_response(measurements)
