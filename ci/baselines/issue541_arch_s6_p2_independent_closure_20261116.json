@@ -1,0 +1,74 @@
+{
+  "schema": "issue541.arch.s6_p2_independent_closure.v1",
+  "authority_issue": 541,
+  "retirement_issue": 535,
+  "science_issue": 402,
+  "scope": "S6_417_941_NATIVE_CHECK_INPUT_P2_ONLY",
+  "baseline": {
+    "integration_pr": 578,
+    "exact_source_sha": "5d15c4054a00aa9fa8a778a87bb21690a3a5469b",
+    "ci_run_id": 43883076025,
+    "native_p2_job_id": 133353818041,
+    "native_p2_job_conclusion": "success",
+    "artifact_id": 14234186951,
+    "artifact_bytes": 8675,
+    "artifact_sha256": "7d2b1593f9ef7e4cbce714d637a9894a6109f2738e721be751ecb9609828f634",
+    "artifact_integrity_proof": "PR578_INTEGRATION_READBACK_CRC_SHA256_PASS",
+    "historical_input_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "oci_digest": "sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "ci_workflow_blob": "84cd7d60508f9a93739e50fa93dfc4405ddc8dc1",
+    "native_p2_runner_blob": "533dfa16395c041c610130f90d0489300fdd548f",
+    "legacy_s6_workflow_blob": "485439a723584ca5bbc8632a86c53574b0b1eb9a"
+  },
+  "cases": {
+    "417": {
+      "P0": "PASS",
+      "P1": "PASS_SOURCE_BOUND_BINARY",
+      "P2": "PASS",
+      "P3": "NOT_RUN",
+      "P4": "NOT_RUN",
+      "science": "SCIENCE_HOLD",
+      "status": "ARCH_S6_HYBRID_NATIVE_P2_PASS_NO_P3"
+    },
+    "941": {
+      "P0": "PASS",
+      "P1": "PASS_SOURCE_BOUND_BINARY",
+      "P2": "PASS",
+      "P3": "NOT_RUN",
+      "P4": "NOT_RUN",
+      "science": "SCIENCE_HOLD",
+      "status": "ARCH_S6_HYBRID_NATIVE_P2_PASS_NO_P3"
+    }
+  },
+  "p2_decision": "SOURCE_BOUND_P2_VERIFIED_ON_PINNED_HEAD",
+  "newer_head_p2_acceptance": "REVALIDATE_WHEN_EXACT_HEAD_CHANGES",
+  "p3_replay": {
+    "run_id": 43892446918,
+    "source_sha": "6efeb8bbc519914099380e02ad60364b1c87032f",
+    "case_417": {
+      "job_id": 133386980384,
+      "conclusion": "failure",
+      "error": "HYBRID_OWNER_COUNT_Variables_log_e: 0",
+      "artifact_id": 14236309715,
+      "native_p3": "NOT_RUN"
+    },
+    "case_941": {
+      "job_id": 133386979669,
+      "conclusion": "failure",
+      "error": "HYBRID_OWNER_COUNT_Variables_log_e: 0",
+      "artifact_id": 14237158635,
+      "native_p3": "NOT_RUN"
+    },
+    "classification": "HYBRID_POST_CHEMISTRY_OWNER_CUTOVER_PRE_NATIVE_INPUT_FAILURE",
+    "disposition": "SEPARATE_REPLAY_HOLD",
+    "result_not_usable_for_p2": "TRUE"
+  },
+  "owner_external_caller_attestation": "OWNER_ATTESTED_ABSENT",
+  "owner_attestation_basis": "2026-11-16 user statement scoped to S6; not independent machine exhaustiveness proof",
+  "original_s6_workflow_retirement": "KEEP_HOLD",
+  "p4": "DIAGNOSTIC_ONLY",
+  "science": "SCIENCE_HOLD",
+  "global_workflow_surface": "UNWAIVED_FAIL",
+  "global_repository_release": "KEEP_HOLD",
+  "integration_policy": "ONLY_P2_CLOSURE_RECEIPT_MAY_BE_CONSIDERED_SEPARATELY_NO_P3_ONE_SHOT_OR_GUARD_WAIVER"
+}
