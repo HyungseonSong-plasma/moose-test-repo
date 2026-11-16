@@ -408,6 +408,57 @@ def migrate_staged_electron_closure(chemistry: Path, ordered: list[str],
     }
 
 
+
+def migrate_staged_wall_owners(chemistry: Path, ordered: list[str]) -> dict:
+    """Reuse the independently tested wall-owner audit on disposable S6 P2 copies.
+
+    Archive bytes and Chemistry/Physics C++ stay untouched. The helper proves
+    each species/charge owner before rewriting *all* wall consumer references.
+    """
+    wall_path = (ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/"
+                 "prepare_s6_run_input.py")
+    spec = importlib.util.spec_from_file_location("issue402_s6_p2_wall_audit", wall_path)
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_WALL_AUDIT_MODULE_UNAVAILABLE")
+    wall = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(wall)
+    paths = [chemistry / Path(name).name for name in ordered]
+    if any(Path(name).name != name.split("/")[-1] or
+           not name.endswith(".i") for name in ordered):
+        raise ValueError("S6_WALL_UNSAFE_STAGED_LAYER")
+    if len(paths) != len(set(paths)):
+        raise ValueError("S6_WALL_DUPLICATED_STAGED_LAYER")
+    original = {path: path.read_text(encoding="utf-8") for path in paths}
+    updated, audit = wall.canonicalize_staged_wall_inputs(original)
+    if set(updated) != set(original):
+        raise ValueError("S6_WALL_UNEXPECTED_STAGED_FILE_SET")
+    owners = audit.get("wall_material_owners", [])
+    if (audit.get("owner_count") != 4 or
+            {item["species_id"] for item in owners} != {"O2p", "Om", "Op", "e"}):
+        raise ValueError("S6_WALL_OWNER_COUNT_OR_SPECIES_UNPROVED")
+    if not audit.get("consumer_and_reference_replacements"):
+        raise ValueError("S6_WALL_CONSUMER_CUTOVER_MISSING")
+    for text in updated.values():
+        if ("PhysicsIonWallTotalFluxMaterial" in text or
+                "PhysicsElectronAdjacentSheathWallFluxMaterial" in text or
+                "PhysicsElectronWallFluxMaterial" in text):
+            raise ValueError("S6_WALL_RETIRED_FACTORY_REMAINS")
+    audit["files"] = {
+        path.name: {
+            "original_sha256": hashlib.sha256(original[path].encode("utf-8")).hexdigest(),
+            "staged_sha256": hashlib.sha256(updated[path].encode("utf-8")).hexdigest(),
+        }
+        for path in paths
+    }
+    # Atomic validation before any scratch write; fail closed on every owner.
+    for path in paths:
+        if original[path] != updated[path]:
+            path.write_text(updated[path], encoding="utf-8")
+    audit["P3"] = "NOT_RUN"
+    audit["science"] = "SCIENCE_HOLD"
+    return audit
+
+
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
     if git_head(ROOT) != expected_head or git_head(historical) != HISTORICAL_SHA:
         raise ValueError("Candidate or historical Git source HEAD mismatch")
@@ -558,6 +609,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                                 raise ValueError("Staged D sidecar SHA is incorrect")
                         scratch_closure = migrate_staged_electron_closure(
                             staged / p2.CHEM, ordered, variant)
+                        scratch_wall = migrate_staged_wall_owners(
+                            staged / p2.CHEM, ordered)
                         scratch_types = remap_staged_fem_types(staged / p2.CHEM, ordered)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
@@ -566,6 +619,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         report["checks"][case][variant]["layers"] = len(ordered)
                         report["checks"][case][variant]["scratch_fem_type_remap"] = scratch_types
                         report["checks"][case][variant]["scratch_electron_closure"] = scratch_closure
+                        report["checks"][case][variant]["scratch_wall_owners"] = scratch_wall
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                     except Exception as exc:
