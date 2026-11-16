@@ -268,6 +268,19 @@ def verify(record, api):
                     source != record["pr_head_sha"], "N10_MERGE_REF_IDENTITY_INVALID")
             require(record.get("merged_commit_sha") is None,
                     "N10_TEST_MERGE_IS_NOT_ACTUAL_MERGE")
+            # Live Git test-merge ref and its parents: no PR API merge_commit_sha
+            # presence alone can establish an actual completed merge.
+            live_ref = api.get("/git/ref/pull/" + str(record["pr_number"]) + "/merge")
+            require(live_ref.get("ref") == "refs/pull/" +
+                    str(record["pr_number"]) + "/merge" and
+                    live_ref.get("object", {}).get("sha") == source,
+                    "N10_MERGE_REF_NOT_VERIFIED")
+            merge_commit = api.get("/commits/" + source)
+            parents = {x.get("sha") for x in merge_commit.get("parents", [])}
+            require(len(parents) >= 2 and record["pr_head_sha"] in parents,
+                    "N10_MERGE_REF_NOT_A_TEST_MERGE_OF_PR_HEAD")
+            require(pr.get("merge_commit_sha") == source,
+                    "N10_PR_TEST_MERGE_SHA_MISMATCH")
     else:
         require(pr.get("merged") is True and pr.get("merged_at"),
                 "N9_ACTUAL_MERGE_NOT_CONFIRMED")
@@ -387,6 +400,10 @@ def sample():
             "[command]/usr/bin/git checkout --progress --force " + source + "\n",
         "/actions/artifacts/301": {"id": 301, "name": "core-native", "expired": False,
                                     "workflow_run": {"id": 101, "head_sha": source}},
+        "/git/ref/pull/578/merge":
+            {"ref": "refs/pull/578/merge", "object": {"sha": "d" * 40}},
+        "/commits/" + "d" * 40:
+            {"parents": [{"sha": source}, {"sha": "f" * 40}]},
         "/branches/main": {"commit": {"sha": "f" * 40}},
         "/compare/" + source + "..." + "f" * 40:
             {"status": "ahead", "behind_by": 0}}
@@ -428,6 +445,42 @@ def self_test():
         except (EvidenceRejected, KeyError):
             continue
         raise AssertionError("FALSE_PASS_NOT_REJECTED:" + name)
+    # Genuine synthetic *temporary* merge-ref fixture. The source run head
+    # remains PR_HEAD, while runner checkout and artifact inner source refer
+    # to a separate test-merge SHA.
+    temp_sha = "d" * 40
+    tr, td = copy.deepcopy(r), copy.deepcopy(d)
+    tr.update(evidence_kind="PR_MERGE_REF", source_sha=temp_sha,
+              checkout_sha=temp_sha, pr_merge_ref_sha=temp_sha)
+    td["/pulls/578"]["merge_commit_sha"] = temp_sha
+    td["/actions/jobs/201/logs"] = (
+        "[command]/usr/bin/git checkout --progress --force " + temp_sha + "\n")
+    td["/actions/artifacts/301"]["workflow_run"]["head_sha"] = r["source_sha"]
+    inner = json.loads(pick_member(zip_files(blob), "p1_identity.json"))
+    inner["source_sha"] = temp_sha
+    temp_zip = io.BytesIO()
+    with zipfile.ZipFile(temp_zip, "w") as archive:
+        archive.writestr("p1_identity.json", json.dumps(inner))
+        archive.writestr("p1.log", "built")
+        archive.writestr("p2.log", "\n".join(CORE_MARKERS))
+    temp_blob = temp_zip.getvalue()
+    tr["artifact"]["sha256"] = hashlib.sha256(temp_blob).hexdigest()
+    require(verify(tr, MockGitHub(td, temp_blob))["status"] == "PASS",
+            "PR_MERGE_REF_POSITIVE_FIXTURE")
+    for name, mutate in [
+        ("N22_WRONG_REF", lambda a: a["/git/ref/pull/578/merge"]["object"].update(
+            sha="e" * 40)),
+        ("N23_MISSING_PR_PARENT", lambda a: a["/commits/" + temp_sha].update(
+            parents=[{"sha": "f" * 40}, {"sha": "e" * 40}])),
+        ("N24_MERGE_CLAIM", lambda a: a["/pulls/578"].update(merged=True)),
+    ]:
+        trial = copy.deepcopy(td)
+        mutate(trial)
+        try:
+            verify(tr, MockGitHub(trial, temp_blob))
+        except EvidenceRejected:
+            continue
+        raise AssertionError("FALSE_PASS_NOT_REJECTED:" + name)
     # Positive actual-merge fixture must prove ancestry; no fake PR merge acceptance.
     mr, md = copy.deepcopy(r), copy.deepcopy(d)
     mr.update(evidence_kind="MERGED_COMMIT", merged_commit_sha=r["source_sha"],
@@ -463,7 +516,7 @@ def self_test():
         pass
     else:
         raise AssertionError("N7_MISSING_REAL_ZIP_FILE_FALSE_PASS")
-    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=21; SCIENCE_HOLD")
+    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=24; SCIENCE_HOLD")
 
 
 def audit_live(args):
