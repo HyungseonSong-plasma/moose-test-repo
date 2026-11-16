@@ -10,7 +10,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 REPLAY = ROOT / ".github/workflows/issue541-arch-s6-p3-p4-replay.yml"
-ORIGINAL = ROOT / ".github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml"
+ORIGINAL_LIVE = ROOT / ".github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml"
+ORIGINAL_ARCHIVE = ROOT / "docs/development/archive/issue402-hybrid-json-s6-p3-p4-once.yml.txt"
+ORIGINAL = ORIGINAL_LIVE if ORIGINAL_LIVE.is_file() else ORIGINAL_ARCHIVE
 ORIGINAL_BLOB = "485439a723584ca5bbc8632a86c53574b0b1eb9a"
 OCI_DIGEST = "2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
 APPROVAL = "ISSUE541_S6_400W_100US_BOTH_CASES_APPROVED"
@@ -68,6 +70,14 @@ def validate(workflow: str, original: str) -> None:
           "results/**" in workflow, "FAIL_CLOSED_ARTIFACT")
     _need("tests/test_issue541_s6_p3_replay_contract.py" in workflow,
           "S6_NEGATIVE_TEST_HOOK")
+
+
+def test_retired_s6_original_remains_byte_pinned() -> None:
+    # Archived original is source evidence, not an executable GitHub workflow.
+    # Never accept missing archival evidence or changed original bytes.
+    if not ORIGINAL_LIVE.is_file():
+        _need(ORIGINAL_ARCHIVE.is_file(), "ARCHIVED_ORIGINAL_MISSING")
+    _need(_blob(ORIGINAL.read_text()) == ORIGINAL_BLOB, "ORIGINAL_BYTE_IDENTITY")
 
 
 def test_original_and_manual_replay_p0() -> None:
