@@ -316,6 +316,89 @@ def reconcile_staged_D_json_initials(chemistry: Path, ordered: list[str]) -> dic
     }
 
 
+
+def retire_staged_B_d1_observations(chemistry: Path, ordered: list[str]) -> dict:
+    """Remove only exact historical D1 observer pairs from disposable B P2.
+
+    No physics kernel, surface-charge owner, mesh or time control may change.
+    Historical B and scientific D1 output provenance remain immutable and
+    must NOT be promoted from this diagnostic-free construction check.
+    """
+    if (len(ordered) != 10 or len({Path(item).name for item in ordered}) != 10
+            or any(Path(item).name != item.split("/")[-1] or
+                   not item.endswith(".i") for item in ordered)):
+        raise ValueError("S6_B_D1_UNEXPECTED_LAYER_SET")
+    spec = importlib.util.spec_from_file_location(
+        "issue397_original_d1_contract",
+        ROOT / "experiments/Issue395_powered_chemistry_ladder/issue397_d1_instrument.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_B_D1_ORIGINAL_INSTRUMENT_MISSING")
+    instrument = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(instrument)
+    donor_spec = importlib.util.spec_from_file_location(
+        "issue402_s6_ownership_contract",
+        ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py")
+    if donor_spec is None or donor_spec.loader is None:
+        raise ValueError("S6_B_D1_OWNER_CONTRACT_MISSING")
+    donor = importlib.util.module_from_spec(donor_spec)
+    donor_spec.loader.exec_module(donor)
+    first = chemistry / Path(ordered[0]).name
+    original = first.read_text(encoding="utf-8")
+    if not re.search(r"(?m)^    type\s*=\s*PhysicsLowerDSurfaceCurrent\s*$", original):
+        raise ValueError("S6_B_D1_PHYSICAL_SURFACE_CURRENT_OWNER_MISSING")
+    if "type = PhysicsADSurfaceChargePoissonBC" not in original:
+        raise ValueError("S6_B_D1_POISSON_SURFACE_OWNER_MISSING")
+    expected = {"wafer_net_current_probe":
+                    ("PhysicsLowerDSurfaceCurrentProbeAux",
+                     "wafer_net_surface_current_density", None)}
+    for name, functor in instrument.FIELDS.items():
+        expected[name] = ("PhysicsLowerDSurfaceCurrentProbeAux", functor, None)
+    for name, component in instrument.GEOM.items():
+        expected[name] = ("PhysicsWaferD1GeometryProbeAux",
+                          "wafer_net_surface_current_density", component)
+    if len(expected) != 14:
+        raise ValueError("S6_B_D1_DIAGNOSTIC_INVENTORY_NOT_FOURTEEN")
+
+    remaining, receipts = original, []
+    for name, (kind, functor, component) in expected.items():
+        var_params = {"family": "MONOMIAL", "order": "CONSTANT",
+                      "block": "wafer_surface"}
+        remaining, owner = donor.retire(remaining, "AuxVariables", name, var_params)
+        kernel_params = {
+            "type": kind, "variable": name,
+            "surface_current_density": functor, "block": "wafer_surface",
+            "execute_on": "'INITIAL TIMESTEP_END'",
+        }
+        if component is not None:
+            kernel_params.update(potential="potential", component=component)
+        remaining, kernel = donor.retire(
+            remaining, "AuxKernels", name + "_kernel", kernel_params)
+        receipts.append((owner["old_block_sha256"], kernel["old_block_sha256"]))
+    # Reject extra unknown retired owners, hidden input consumers or offsets.
+    retired_types = ("PhysicsLowerDSurfaceCurrentProbeAux",
+                     "PhysicsWaferD1GeometryProbeAux")
+    for name in expected:
+        rx = r"(?<![A-Za-z0-9_])" + re.escape(name) + r"(?![A-Za-z0-9_])"
+        if any(re.search(rx, layer) for layer in
+               [remaining] + [(chemistry / Path(item).name).read_text(encoding="utf-8")
+                               for item in ordered[1:]]):
+            raise ValueError("S6_B_D1_UNKNOWN_EXTERNAL_CONSUMER_" + name)
+    if any(re.search(r"(?m)^    type\s*=\s*" + re.escape(old) + r"\s*$",
+                     remaining) for old in retired_types):
+        raise ValueError("S6_B_D1_UNKNOWN_RETIRED_OBSERVER_REMAINS")
+    # This is NOT an original-archive P2 check, nor a P3 scientific replay.
+    first.write_text(remaining, encoding="utf-8")
+    return {
+        "status": "SCRATCH_ONLY_B_RETIRED_D1_OBSERVERS_REMOVED",
+        "observer_pairs": len(receipts),
+        "native_source_sha256": hashlib.sha256(original.encode()).hexdigest(),
+        "native_staged_sha256": hashlib.sha256(remaining.encode()).hexdigest(),
+        "retired_owner_sha256": receipts,
+        "B_historical_observation_parity": "NOT_CLAIMED",
+        "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
+    }
+
+
 def remap_staged_fem_types(chemistry: Path, ordered: list[str]) -> dict:
     """Rebind only staged input type fields to registered canonical C++ classes."""
     if len(ordered) not in (10, 11):
@@ -836,6 +919,10 @@ def execute(historical: Path, binary: Path, expected_head: str,
                                   "s6_c0_physics_base_no_d1.i") if variant == "D" else None
                         ordered = p2.stage(ROOT, historical, case, old_variant,
                                            staged, manifest, d_base_source=d_base)
+                        scratch_retired_B = None
+                        if variant == "B":
+                            scratch_retired_B = retire_staged_B_d1_observations(
+                                staged / p2.CHEM, ordered)
                         if variant == "D":
                             overlay = staged / p2.CHEM / "migrated_continuity.i"
                             # Rewrite only the temporary D copies of the ten
@@ -869,6 +956,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         report["checks"][case][variant]["scratch_wall_cutover"] = scratch_wall
                         report["checks"][case][variant]["scratch_mean_energy_cutover"] = scratch_mean_energy
                         report["checks"][case][variant]["scratch_sheath_bc_cutover"] = scratch_sheath
+                        if scratch_retired_B is not None:
+                            report["checks"][case][variant]["scratch_B_d1_retirement"] = scratch_retired_B
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                             report["checks"][case][variant]["scratch_json_initials"] = scratch_initials
