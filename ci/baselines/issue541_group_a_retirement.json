@@ -2,7 +2,7 @@
   "schema": "issue541.workflow_surface.group_a_evidence.v1",
   "repository": "HyungseonSong-plasma/moose-test-repo",
   "baseline_main_sha": "71e112eb05d4645c82aab8861b99d6952ac4ac3e",
-  "review_scope": "Group A 4-record audit: A1 KEEP_HOLD, A2 owner-attested P0-only retired exact historical self-path, A3/A4 staged in independent FLOW A-2. Global Surface Guard must remain fail-closed for A1/ARCH P3.",
+  "review_scope": "Group A four-owner audit: A1 operator-attested and staged for independent historical cutover; A2 RETIRED_VERIFIED; A3/A4 staged FLOW; no global Surface Guard waiver.",
   "science": "SCIENCE_HOLD",
   "p3": "NOT_RUN",
   "source_date": "2026-11-16",
@@ -52,15 +52,14 @@
         "conclusion": "success",
         "route": ".github/workflows/ci.yml / issue402_core_four_p0 + issue402_core_four_native_p2"
       },
-      "caller_state": "ACTIVE_LEGACY_PUSH_BRANCH__EXTERNAL_DYNAMIC_UNPROVEN",
-      "decision": "KEEP_HOLD",
+      "caller_state": "OWNER_DECLARED_NO_EXTERNAL_CALLERS__A1_OLD_REF_CUTOVER_DRAFT",
+      "decision": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
       "blockers": [
-        "Exact historical push branch remains present with same original YAML at af4a9e896328",
-        "External/dynamic caller-zero is unproven; a main-based code-search miss is insufficient",
-        "Maintained replacement is verified at 34a353947707 on unmerged Draft #553; no conflict-free integration and global validate PASS"
+        "A1 historical self-path still present at b3f3b6e0 until PR #606 accepted; old shared branch must remain for P3",
+        "Staged A1 integrated candidate requires exact new HEAD guard/CORE real P0/P1/P2 validation and approval; main remains untouched"
       ],
       "live_branch_readback": {
-        "head": "af4a9e896328386723e8bbb957f334e1d83fe75e",
+        "head": "b3f3b6e09b83828343fc0bc097f5a4edce9207e7",
         "workflow_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
         "entrypoint": "PUSH_SELF_PATH_STILL_PRESENT",
         "observed_on": "2026-11-16"
@@ -145,7 +144,52 @@
         "decision": "KEEP_HOLD",
         "science": "SCIENCE_HOLD",
         "p3": "NOT_RUN"
-      }
+      },
+      "a1_owner_retirement": {
+        "mode": "OPERATOR_DECLARED_A1_NO_EXTERNAL_CALLERS__STAGED_ONLY",
+        "operator_statement": "외부 호출자는 존재하지 않으니까, 그걸로 처리를 하자.",
+        "statement_source": "CURRENT_USER_CONVERSATION_2026-11-16",
+        "attestation_type": "USER_DECLARATION_NOT_INDEPENDENT_GITHUB_AUDIT",
+        "static_census": "FIVE_CONNECTED_REPOS_DEFAULT_BRANCH_A1_SELF_PATH_ONLY",
+        "historic_actions_runs": 19,
+        "historic_events": "ALL_PUSH_REPO_OWNER",
+        "historical_branch": "issue-402-dd-plasma-boundary-action",
+        "historical_head_before": "b3f3b6e09b83828343fc0bc097f5a4edce9207e7",
+        "original_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+        "historic_a1_file": "PRESENT_UNTIL_APPROVED_OLD_REF_CUTOVER",
+        "old_ref_cutover_pr": 606,
+        "old_ref_cutover_head": "08086bd563f76d1b6bd86d4274679791f801136d",
+        "old_ref_cutover_state": "DRAFT_NOT_MERGED",
+        "old_ref_cutover_scope": "EXACTLY_ONE_A1_YAML_DELETION",
+        "original_artifact_id": 14088768015,
+        "historical_zip_sha256": "de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27",
+        "independent_drive_backup": "1OsADIq21_JU4Z4O65t_Hl-_AwjM6Nxf0",
+        "original_zip_bytes": 2072,
+        "backup_readback": "MATCHED_BYTES_SHA256_VALID_ZIP",
+        "archive_worm": "NOT_PROVEN",
+        "a2_unchanged": "RETIRED_VERIFIED_AND_ABSENT_ON_LIVE_BRANCH",
+        "p3_dd_blob": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
+        "p3_s6_blob": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
+        "shared_branch_deletion": "NOT_AUTHORIZED",
+        "replacement_job": "issue402_core_four_native_p2",
+        "replacement_p0_job": "issue402_core_four_p0",
+        "replacement_oci_sha256": "2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+        "last_verified_run": 43872131969,
+        "last_verified_sha": "8dcec2c195b683d795d162ab6825da1366c932d2",
+        "last_verified_native_job": 133315748335,
+        "last_verified_native_artifact_id": 14227174075,
+        "last_verified_group_a_mutations": 59,
+        "final_candidate_exact_head_ci": "PENDING_AFTER_SOURCE_CHANGE",
+        "proposed_retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+        "accepted_retirement": false,
+        "p3": "NOT_RUN",
+        "science": "SCIENCE_HOLD"
+      },
+      "remaining_non_a1_gates": [
+        "ARCH DD P3 original not retired",
+        "ARCH hybrid S6 P3/P4 original not retired",
+        "Global Workflow Surface Guard still FAIL while ARCH originals remain"
+      ]
     },
     {
       "id": "A2",
