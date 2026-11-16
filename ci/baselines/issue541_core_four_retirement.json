@@ -131,8 +131,8 @@
       "original_p3": "NOT_RUN",
       "source_event": "push:branch-specific,self-path",
       "required_marker": "SPECIES_INITIAL_VOLUME_INLET_NATIVE_P2_PASS",
-      "retirement": "KEEP_HOLD",
-      "reason": "Replacement exact-head P0/P1/P2 verified and independent byte custody verified; candidate removal needs a scoped same-HEAD gate.",
+      "retirement": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+      "reason": "Isolated D2 deletion and exact-source tests recovered from #558 at 436c5b1c (CI 43835541341, jobs 133191130258 and 133191130353 SUCCESS, artifacts 14210712331/14211160676). #578 9e71762 CORE P0/P1/P2 also SUCCESS (CI 43853584740). Current Wave1-D branch has staged original deletion, not integrated main acceptance; historical trigger branch absent, static main search only own YAML, external/dynamic caller-zero unverified. No P3/science acceptance.",
       "original_success": {
         "run_id": 43468688669,
         "source_sha": "0ff51761bbbc9d22bcc20c848904498c1c495480",
@@ -147,7 +147,13 @@
         "readback_bytes": 30673,
         "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
       },
-      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND"
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "retirement_candidate_source_head": "2df75852699531c8b6d469ec447d09a90e9a3738",
+      "replacement_parent_ci_run": 43835541341,
+      "rollback_original_blob": "f11aa0de000fb05bcc587798400313558a6cb58a",
+      "wave1d_caller_zero": "UNVERIFIED",
+      "wave1d_integration": "HOLD",
+      "wave1d_source_run": 43835541341
     },
     {
       "path": ".github/workflows/issue402-species-live-ic-inlet-native-once.yml",
