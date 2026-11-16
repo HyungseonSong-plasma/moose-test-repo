@@ -183,6 +183,20 @@ def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path
         "    variable = log_ne\n  []\n"
         "  [energy_joule]\n    type = PhysicsFEMLogMolarElectronJouleHeating\n"
         "    variable = log_energy\n  []\n[]\n"
+        "[BCs]\n"
+        "  [electron_bc]\n"
+        "    type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC\n"
+        "    variable = log_ne\n"
+        "    wall_number_flux = e_wall_number_flux\n"
+        "    boundary = left\n"
+        "  []\n"
+        "  [electron_energy_bc]\n"
+        "    type = PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC\n"
+        "    variable = log_energy\n"
+        "    wall_number_flux = e_wall_number_flux\n"
+        "    mean_energy = e_energy_eV\n"
+        "    boundary = left\n"
+        "  []\n[]\n"
     )
     ordered = []
     for i in range(10):
