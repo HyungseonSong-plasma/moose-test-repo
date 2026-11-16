@@ -115,6 +115,7 @@ jobs:
           python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
           cd control
           python3 -m pytest -q tests/test_issue402_hybrid_json_s6_owner_preflight.py
+          python3 -m pytest -q tests/test_issue541_s6_p3_replay_contract.py
           cd ..
           echo HYBRID_S6_ONE_JSON_EIGHT_REACTIONS_SPECIES_COEFFICIENT_PRESSURE_IC_P0_PASS
           cd control
@@ -244,7 +245,7 @@ jobs:
           name: issue402-hybrid-S6-${{ matrix.case }}-P3-P4-${{ github.sha }}
           retention-days: 45
           compression-level: 3
-          if-no-files-found: warn
+          if-no-files-found: error
           path: |
             ${{ runner.temp }}/hybrid_S6_${{ matrix.case }}/results/**
             ${{ runner.temp }}/hybrid_S6_${{ matrix.case }}/native_P2.log
