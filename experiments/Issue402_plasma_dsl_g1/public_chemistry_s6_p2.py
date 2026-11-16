@@ -7,11 +7,9 @@ binary. Never executes a timestep or reads/publishes private kinetic tables.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
-import re
 import sys
 import tempfile
 
@@ -20,48 +18,6 @@ ROOT = PILOT.parents[1]
 sys.path.insert(0, str(PILOT))
 import public_option_s6_p2 as option
 from chemistry.prepare_s6_run_input import prepare
-from chemistry.prepare_hybrid_json_s6 import (
-    OLD_SHEATH_TYPES, migrate_exact_s6_fem_sheath,
-)
-
-
-def rebind_staged_chemistry_sheath_bcs(chemistry_dir: Path,
-                                      ordered: list[str]) -> dict:
-    """Reuse the eight-owner hybrid BC identity contract on disposable P2 only.
-
-    Chemistry.prepare() already normalizes log_e/log_e_energy and the two wall
-    Functor names. The archived B/D decks and any P3 science are unchanged.
-    """
-    names = [Path(item).name for item in ordered]
-    if (len(names) != 11 or names[-1] != "migrated_continuity.i"
-            or len(set(names)) != 11
-            or any(name != item.split("/")[-1] or not item.endswith(".i")
-                   for name, item in zip(names, ordered))):
-        raise ValueError("S6_CHEM_SHEATH_UNEXPECTED_LAYER_SET")
-    base = chemistry_dir / names[0]
-    old_types = tuple(OLD_SHEATH_TYPES.values())
-    for name in names[1:]:
-        content = (chemistry_dir / name).read_text(encoding="utf-8")
-        if any(re.search(r"(?m)^    type\s*=\s*" + re.escape(kind) + r"\s*$",
-                         content) for kind in old_types):
-            raise ValueError("S6_CHEM_SHEATH_SECONDARY_OWNER_" + name)
-    original = base.read_text(encoding="utf-8")
-    revised, owners = migrate_exact_s6_fem_sheath(original)
-    if revised == original or len(owners) != 8:
-        raise ValueError("S6_CHEM_SHEATH_EIGHT_OWNER_REBIND_REQUIRED")
-    # Fail-closed all signatures before the sole scratch write.
-    base.write_text(revised, encoding="utf-8")
-    if base.read_text(encoding="utf-8") != revised:
-        raise ValueError("S6_CHEM_SHEATH_STAGED_READBACK_FAILED")
-    return {
-        "status": "SCRATCH_ONLY_EXACT_EIGHT_REGISTERED_SHEATH_BCS",
-        "source_layer": names[0],
-        "owner_count": len(owners),
-        "owners": owners,
-        "original_sha256": hashlib.sha256(original.encode("utf-8")).hexdigest(),
-        "staged_sha256": hashlib.sha256(revised.encode("utf-8")).hexdigest(),
-        "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
-    }
 
 
 def execute(historical: Path, binary: Path, source_sha: str, evidence: Path) -> dict:
@@ -95,8 +51,6 @@ def execute(historical: Path, binary: Path, source_sha: str, evidence: Path) -> 
             canonical = option.canonicalize_staged_D_inputs(chemistry_dir, ordered)
             type_remap = option.remap_staged_fem_types(chemistry_dir, ordered)
             cutover = prepare(chemistry_dir, ordered, variant)
-            sheath_cutover = rebind_staged_chemistry_sheath_bcs(
-                chemistry_dir, ordered)
             log = evidence / f"s6_{variant}_chemistry_cutover_p2.log"
             verdict = option.run_one(binary, identity["binary_sha256"],
                                      staged, ordered, log, 1200)
@@ -104,8 +58,7 @@ def execute(historical: Path, binary: Path, source_sha: str, evidence: Path) -> 
                 **verdict,
                 "source_cutover": cutover,
                 "scratch_canonical_state_renames": canonical,
-                "scratch_fem_type_remap": type_remap,
-                "scratch_sheath_bc_cutover": sheath_cutover,
+                "scratch_fem_type_remap": type_remap
             }
             (evidence / "issue402_s6_chemistry_cutover_p2.json").write_text(
                 json.dumps(report, indent=2, sort_keys=True) + "\n")
