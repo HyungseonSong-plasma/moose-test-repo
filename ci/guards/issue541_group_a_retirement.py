@@ -100,6 +100,29 @@ def check_trigger(source: str, path: str, branch: str) -> list[str]:
     return errors
 
 
+S6_STAGED_REPLAY = ".github/workflows/issue541-arch-s6-p3-p4-replay.yml"
+S6_STAGED_README = "experiments/Issue402_plasma_dsl_g1/chemistry/README.md"
+S6_STAGED_MARKERS = (
+    "issue541-arch-s6-p3-p4-replay.yml",
+    "485439a723584ca5bbc8632a86c53574b0b1eb9a",
+    "manual-only", "retirement proposal", "current default branch",
+)
+
+
+def s6_staged_absence_evidence(readme: str, replay: str) -> bool:
+    """S6-only staged-removal proof; never promote DD or A1 retirement."""
+    if not all(marker in readme for marker in S6_STAGED_MARKERS):
+        return False
+    if "\non:\n" not in replay:
+        return False
+    trigger = replay.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
+    return (trigger.startswith("  workflow_dispatch:\n") and
+            all(event not in trigger for event in
+                ("  push:", "  pull_request:", "  schedule:")) and
+            "ISSUE541_S6_400W_100US_BOTH_CASES_APPROVED" in replay and
+            'test "$REQUESTED_SHA" = "$GITHUB_SHA"' in replay)
+
+
 def inspect(root: Path, doc: dict) -> list[str]:
     errors = []
     if doc.get("schema") != "issue541.workflow_surface.group_a_evidence.v1":
@@ -173,8 +196,22 @@ def inspect(root: Path, doc: dict) -> list[str]:
                 ("issue402-hybrid-json-s6-p3-p4-once.yml", A1_OWNER_RETIREMENT["p3_s6_blob"]),
             ):
                 p3source = root / ".github/workflows" / p3name
-                if not p3source.is_file() or git_blob_sha(p3source.read_bytes()) != blob:
-                    errors.append("A1 associated ARCH P3 original changed/missing: " + p3name)
+                if p3source.is_file():
+                    if git_blob_sha(p3source.read_bytes()) != blob:
+                        errors.append("A1 associated ARCH P3 original changed: " + p3name)
+                elif p3name == "issue402-hybrid-json-s6-p3-p4-once.yml":
+                    # S6's isolated retirement candidate may delete this
+                    # original from the integration tree, but only with a
+                    # manifest-pinned rollback blob and manual-only replay.
+                    readme_path = root / S6_STAGED_README
+                    replay_path = root / S6_STAGED_REPLAY
+                    if (not readme_path.is_file() or not replay_path.is_file()
+                            or not s6_staged_absence_evidence(
+                                readme_path.read_text(encoding="utf-8"),
+                                replay_path.read_text(encoding="utf-8"))):
+                        errors.append("S6 staged absent without approved source/replay receipt")
+                else:
+                    errors.append("A1 associated ARCH DD P3 original changed/missing: " + p3name)
             ci_file = root / ".github/workflows/ci.yml"
             ci_text = ci_file.read_text(encoding="utf-8") if ci_file.is_file() else ""
             for needed in ("  issue402_core_four_p0:", "  issue402_core_four_native_p2:",
@@ -422,6 +459,19 @@ def self_test(root: Path, original: dict) -> None:
                          first["path"], first["historical_branch"])
     assert check_trigger(raw.replace("    paths:", "    paths_disabled:", 1),
                          first["path"], first["historical_branch"])
+    if not (root / ".github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml").is_file():
+        # Negative proof: corrupting any of the five staged-retirement
+        # requirements or auto-enabling the replacement must be rejected.
+        doc_bytes = (root / S6_STAGED_README).read_text(encoding="utf-8")
+        replay_bytes = (root / S6_STAGED_REPLAY).read_text(encoding="utf-8")
+        assert s6_staged_absence_evidence(doc_bytes, replay_bytes)
+        for marker in S6_STAGED_MARKERS:
+            assert not s6_staged_absence_evidence(
+                doc_bytes.replace(marker, "forged", 1), replay_bytes)
+        assert not s6_staged_absence_evidence(
+            doc_bytes,
+            replay_bytes.replace("  workflow_dispatch:", "  push:", 1))
+        print("ISSUE541_GROUP_A_S6_STAGED_ABSENCE_MUTATIONS_6_REJECTED")
     print("ISSUE541_GROUP_A_MUTATION_SELF_TEST=PASS count=" + str(len(probes) + 2))
 
 
