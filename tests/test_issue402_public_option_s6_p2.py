@@ -696,3 +696,144 @@ def test_wafer_D1_geometry_probe_keeps_plasma_side_observation_contract(tmp_path
     assert (folder / "layer_0.i").read_text() == (
         original.replace("type = " + old, "type = " + modern)
     )
+
+
+
+def test_s6_chemistry_json_initial_transfer_retains_seven_pinned_channels(tmp_path):
+    """Chemistry's disposable common JSON gains only four original Native ICs.
+
+    The original seven-channel mechanism, all neutral species, and the
+    variant-dependent eighth reaction are not copied into a new owner or
+    silently replaced.
+    """
+    import importlib.util
+    import json
+    import math
+    import re
+    import pytest
+
+    pilot_script = PILOT / "public_option_s6_p2.py"
+    tree = ast.parse(pilot_script.read_text())
+    declarations = [
+        n for n in tree.body if isinstance(n, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "_S6_D_INITIAL_VARIABLE"
+                for t in n.targets)
+    ]
+    functions = [
+        n for n in tree.body if isinstance(n, ast.FunctionDef)
+        and n.name == "migrate_staged_D_json_initial"
+    ]
+    assert len(declarations) == len(functions) == 1
+    scope = {
+        "ROOT": ROOT, "Path": Path, "hashlib": hashlib,
+        "json": json, "math": math, "re": re,
+        "importlib": __import__("importlib"),
+        "sha_file": lambda path: hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+    exec(compile(ast.Module(body=declarations + functions, type_ignores=[]),
+                 str(pilot_script), "exec"), scope)
+    migrate = scope["migrate_staged_D_json_initial"]
+
+    folder = tmp_path / "chemistry-scratch"
+    chemistry = folder / "chemistry"
+    chemistry.mkdir(parents=True)
+    original_json = PILOT / "chemistry/oxygen_s6_common.json"
+    original_document = json.loads(original_json.read_text())
+    assert len(original_document["reactions"]) == 7
+    assert len(original_document["equations"]) == 7
+    (chemistry / "oxygen_s6_common.json").write_bytes(original_json.read_bytes())
+
+    variant_source = PILOT / "chemistry/oxygen_s6_417.json"
+    (chemistry / "oxygen_s6_417.json").write_bytes(variant_source.read_bytes())
+    logs = {
+        "log_e": "-20.216123548032986",
+        "log_O2p": "-20.216123548032986",
+        "log_Om": "-27.123878827015126",
+        "log_Op": "-27.123878827015126",
+    }
+    variables = "[Variables]\n"
+    for name, initial in logs.items():
+        declaration = ("    family = LAGRANGE\n    order = FIRST\n"
+                       if name == "log_e" else
+                       "    type = MooseVariableFVReal\n")
+        variables += (
+            "  [" + name + "]\n" + declaration
+            + "    initial_condition = " + initial + "\n"
+            + "    block = plasma\n  []\n"
+        )
+    variables += "  [log_e_energy]\n    family = LAGRANGE\n[]\n"
+    ordered = [f"chem/layer_{i}.i" for i in range(10)]
+    for i in range(10):
+        (folder / f"layer_{i}.i").write_text(
+            variables if i == 0 else f"# untouched {i}\n"
+        )
+    ordered.append("chem/migrated_continuity.i")
+    (folder / "migrated_continuity.i").write_text("# option-only sidecar\n")
+    sources = {p.relative_to(folder): p.read_bytes()
+               for p in folder.rglob("*") if p.is_file()}
+
+    result = migrate(folder, ordered, chemistry_common=True)
+    assert result["status"] == "SCRATCH_ONLY_ARCHIVED_NATIVE_DENSITIES_TO_JSON"
+    assert result["json_relative_name"] == "chemistry/oxygen_s6_common.json"
+    assert result["science"] == "SCIENCE_HOLD"
+    assert result["P3"] == "NOT_RUN"
+    assert set(result["retired_native_variable_owners"]) == set(logs)
+    updated = json.loads((chemistry / "oxygen_s6_common.json").read_text())
+    assert updated["equations"] == original_document["equations"]
+    assert updated["reactions"] == original_document["reactions"]
+    assert set(updated["species"]) == set(original_document["species"])
+    for species in ("O2", "O", "O2a"):
+        assert updated["species"][species] == original_document["species"][species]
+    for species, variable in (("e", "log_e"), ("O2p", "log_O2p"),
+                              ("Om", "log_Om"), ("Op", "log_Op")):
+        expected = math.exp(float(logs[variable])) * 6.02214076e23
+        assert updated["species"][species]["initial_number_density"] == expected
+        assert {k: v for k, v in updated["species"][species].items()
+                if k != "initial_number_density"} == original_document["species"][species]
+    first = (folder / "layer_0.i").read_text()
+    assert "[log_e_energy]" in first
+    for name in logs:
+        assert "[" + name + "]" not in first
+    assert (chemistry / "oxygen_s6_417.json").read_bytes() == (
+        variant_source.read_bytes()
+    )
+    assert original_json.read_bytes() == sources[Path("chemistry/oxygen_s6_common.json")]
+
+    # Each mutation must fail *before* rewriting any disposable input.
+    for fault in ("changed_ic", "changed_source_charge", "missing_ic"):
+        broken = tmp_path / fault
+        for name, data in sources.items():
+            destination = broken / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(data)
+        if fault == "changed_ic":
+            old_path = broken / "layer_0.i"
+            old_path.write_text(old_path.read_text().replace(
+                "initial_condition = -20.216123548032986",
+                "initial_condition = -20.216123548032985", 1))
+        elif fault == "missing_ic":
+            old_path = broken / "layer_0.i"
+            old_path.write_text(old_path.read_text().replace(
+                "  [log_e]\n    family = LAGRANGE\n"
+                "    order = FIRST\n"
+                "    initial_condition = -20.216123548032986\n"
+                "    block = plasma\n  []\n", "", 1))
+        else:
+            common = broken / "chemistry/oxygen_s6_common.json"
+            data = json.loads(common.read_text())
+            data["species"]["e"]["charge_number"] = 1
+            common.write_text(json.dumps(data))
+        before = {p.relative_to(broken): p.read_bytes()
+                  for p in broken.rglob("*") if p.is_file()}
+        with pytest.raises(ValueError,
+                           match=("SOURCE_JSON_IDENTITY_CHANGED" if fault == "changed_source_charge"
+                                  else "MISSING_PINNED_NATIVE_STATES" if fault == "missing_ic"
+                                  else "SOURCE_CONTRACT_CHANGED")):
+            migrate(broken, ordered, chemistry_common=True)
+        assert before == {p.relative_to(broken): p.read_bytes()
+                          for p in broken.rglob("*") if p.is_file()}
+
+    chemistry_runner = (PILOT / "public_chemistry_s6_p2.py").read_text()
+    assert "option.migrate_staged_D_json_initial(" in chemistry_runner
+    assert "chemistry_common=True" in chemistry_runner
+    assert '"scratch_json_initial": scratch_initial' in chemistry_runner
