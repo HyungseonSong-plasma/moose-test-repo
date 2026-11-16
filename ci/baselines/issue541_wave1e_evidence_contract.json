@@ -1,0 +1,64 @@
+{
+  "schema": "issue541.wave1e.contract_receipt.v1",
+  "work_unit": "#16 Wave1-E FIX-EVIDENCE-HEAD-MERGE",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "branch": "issue-541-wave1-e-evidence-identity-20261116",
+  "base_pr": 578,
+  "base_sha": "9e71762a5f45ab755481720e8beba314f59cd021",
+  "mode": "PARTIAL_HOLD",
+  "science": "SCIENCE_HOLD",
+  "p3": "NOT_RUN",
+  "implementation": {
+    "guard": "ci/guards/issue541_evidence_identity_guard.py",
+    "guard_original": null,
+    "ci_original_blob": "48a89c4a6c84106cf6d67bfce8cfe00d88aa339e",
+    "ci_updated_blob": "2a2bbc7f6a7d9ef953f30e5974b3ab79521e32f4",
+    "template_original_blob": "48a89c4a6c84106cf6d67bfce8cfe00d88aa339e",
+    "template_updated_blob": "2a2bbc7f6a7d9ef953f30e5974b3ab79521e32f4",
+    "changed_paths": [
+      "ci/guards/issue541_evidence_identity_guard.py",
+      ".github/workflows/ci.yml",
+      "ci/workflow_templates/general-ci.yml"
+    ],
+    "byte_identical_ci_template": true,
+    "mutations_declared": "21 negative paths including a rejected merge-ancestry fixture; unexecuted pending exact-head CI"
+  },
+  "prior_evidence": {
+    "source_sha": "9e71762a5f45ab755481720e8beba314f59cd021",
+    "repository_run_id": 43853584740,
+    "repository_conclusion": "failure",
+    "core_native_job_id": 133252079180,
+    "core_native_conclusion": "success",
+    "core_native_artifact_id": 14219962212,
+    "arch_dd_job_id": 133252079173,
+    "arch_dd_conclusion": "success",
+    "arch_s6_job_id": 133252079410,
+    "arch_s6_conclusion": "failure",
+    "flow_run_id": 43853584722,
+    "flow_job_id": 133252078093,
+    "flow_conclusion": "failure",
+    "flow_artifact_id": 14220155986,
+    "artifact_content_sha256": "UNKNOWN_NOT_DOWNLOADED",
+    "evidence_class": "GITHUB_METADATA_ONLY_NOT_REPLAY_VERIFIED"
+  },
+  "gates": {
+    "exact_head_self_test": "NOT_RUN",
+    "exact_head_ci": "NOT_RUN",
+    "historic_real_pr_head_guard_audit": "NOT_RUN",
+    "historic_actual_merged_commit_guard_audit": "NOT_VERIFIED",
+    "post_merge_native": "NOT_RUN",
+    "draft_pr": "BLOCKED_PR_CREATE_NOT_IN_PINNED_CAPABILITY_REGISTRY",
+    "issue541_write": "NOT_PERFORMED",
+    "merge": "NOT_PERFORMED"
+  },
+  "handoff": {
+    "task17": "Only after actual merge: verify PR merged flag, merge_commit_sha, ancestry on main, push run exact source, P1/P2 and artifact integrity; refuse to promote PR_HEAD proof.",
+    "task18": "Bind each CORE/FLOW/ARCH scoped receipt to exact run/job/artifact/SHA; aggregate only when all owned scopes succeed, never let one job PASS override FLOW/ARCH failure."
+  },
+  "notes": [
+    "No change to Physics sources or original workflow retirement files.",
+    "Existing artifact evidence guard is retained and not weakened.",
+    "The production verifier uses GitHub API and artifact ZIP bytes; synthetically supplied API data is self-test only.",
+    "No valid new-HEAD execution or post-merge science evidence is implied."
+  ]
+}
