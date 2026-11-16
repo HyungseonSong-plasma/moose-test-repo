@@ -5,7 +5,9 @@ electron-lookup conversion. No private rate files and no solver are required.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import sys
@@ -15,7 +17,8 @@ import pytest
 PILOT = Path(__file__).resolve().parents[1] / "experiments/Issue402_plasma_dsl_g1"
 sys.path.insert(0, str(PILOT))
 from chemistry.prepare_hybrid_json_s6 import (
-    PINNED_INITIAL_LOG, NATIVE_COEFFICIENT_RENAME, prepare
+    N_A, PINNED_INITIAL_LOG, NATIVE_COEFFICIENT_RENAME,
+    migrate_exact_s6_fem_sheath, prepare, retire
 )
 from chemistry.prepare_s6_run_input import (
     canonicalize_staged_electron_lookup, canonicalize_staged_wall_inputs
@@ -264,3 +267,100 @@ def test_hybrid_rejects_changed_archived_pressure_outlet(tmp_path: Path):
         prepare(stage, names, "941")
     assert (stage / names[0]).read_text() == mutated
     assert not (stage / "unified_s6_941.json").exists()
+
+
+def staged_chemistry_handoff(tmp_path: Path, case: str):
+    """Simulate exactly Chemistry's four IC removals and 8 BC type rebinds."""
+    stage, names, original = prepare_scratch(tmp_path, case)
+    source, sheath_receipts = migrate_exact_s6_fem_sheath(original)
+    retired = []
+    densities = {}
+    for species, var in (("e", "log_e"), ("O2p", "log_O2p"),
+                         ("Om", "log_Om"), ("Op", "log_Op")):
+        expected = {"initial_condition": PINNED_INITIAL_LOG[var], "block": "plasma"}
+        if species == "e":
+            expected.update(family="LAGRANGE", order="FIRST")
+        else:
+            expected["type"] = "MooseVariableFVReal"
+        source, receipt = retire(source, "Variables", var, expected)
+        retired.append(receipt)
+        densities[species] = math.exp(float(PINNED_INITIAL_LOG[var])) * N_A
+    (stage / names[0]).write_text(source)
+    common_path = stage / "chemistry/oxygen_s6_common.json"
+    common = json.loads(common_path.read_text())
+    for species, density in densities.items():
+        common["species"][species]["initial_number_density"] = density
+    common_path.write_text(json.dumps(common, indent=2, sort_keys=True) + "\n")
+    handoff = {
+        "scratch_json_initial_cutover": {
+            "status": "SCRATCH_ONLY_FOUR_NATIVE_INITIAL_OWNERS_TO_JSON",
+            "owner_count": 4,
+            "owners": retired,
+            "densities_per_m3": densities,
+            "native_initial_after_sha256": hashlib.sha256(source.encode()).hexdigest(),
+        },
+        "scratch_sheath_bc_cutover": {
+            "status": "SCRATCH_ONLY_EIGHT_REGISTERED_SHEATH_TYPES",
+            "owner_count": 8,
+            "owners": sheath_receipts,
+        },
+    }
+    return stage, names, handoff
+
+
+@pytest.mark.parametrize("case", ["417", "941"])
+def test_hybrid_consumes_chemistry_handoff_without_retirment_twice(
+    tmp_path: Path, case: str
+) -> None:
+    stage, names, handoff = staged_chemistry_handoff(tmp_path, case)
+    report = prepare(stage, names, case, chemistry_cutover=handoff)
+    assert report["removed_generated_owner_count"] == 10
+    assert report["rebound_native_sheath_bc_count"] == 8
+    assert report["integrated_mechanism_json"] == f"unified_s6_{case}.json"
+    text = (stage / names[0]).read_text()
+    assert "[log_e]" not in text
+    assert "[log_e_energy]" not in text
+    assert text.count("type = FEMElectronSheathBC") == 4
+    assert text.count("type = FEMElectronEnergySheathBC") == 4
+    assert "P3" not in report or report.get("science_acceptance") == "HOLD"
+
+
+@pytest.mark.parametrize("mutant", [
+    "missing_ic_receipt", "wrong_receipt_sha", "wrong_bc_type",
+    "wrong_bc_variable", "wrong_bc_boundary", "wrong_wall_functor",
+    "wrong_json_initial", "wrong_reaction_variant",
+])
+def test_hybrid_chemistry_handoff_mutants_fail_closed_before_any_write(
+    tmp_path: Path, mutant: str
+) -> None:
+    stage, names, handoff = staged_chemistry_handoff(tmp_path, "417")
+    first = stage / names[0]
+    common = stage / "chemistry/oxygen_s6_common.json"
+    variant = stage / "chemistry/oxygen_s6_417.json"
+    if mutant == "missing_ic_receipt":
+        handoff["scratch_json_initial_cutover"]["owners"].pop()
+    elif mutant == "wrong_receipt_sha":
+        handoff["scratch_json_initial_cutover"]["native_initial_after_sha256"] = "0" * 64
+    elif mutant in {"wrong_bc_type", "wrong_bc_variable",
+                    "wrong_bc_boundary", "wrong_wall_functor"}:
+        raw = first.read_text()
+        old, new = {
+            "wrong_bc_type": ("type = FEMElectronSheathBC", "type = INVALIDSheathBC"),
+            "wrong_bc_variable": ("variable = log_e", "variable = wrong_e"),
+            "wrong_bc_boundary": ("boundary = 'plasma_cover'", "boundary = 'plasma_wrong'"),
+            "wrong_wall_functor": ("wall_number_flux = e_wall_number_flux",
+                                   "wall_number_flux = invalid_wall_flux"),
+        }[mutant]
+        assert old in raw
+        first.write_text(raw.replace(old, new, 1))
+    elif mutant == "wrong_json_initial":
+        data = json.loads(common.read_text())
+        data["species"]["e"]["initial_number_density"] *= 2
+        common.write_text(json.dumps(data))
+    elif mutant == "wrong_reaction_variant":
+        variant.write_bytes((PILOT / "chemistry/oxygen_s6_941.json").read_bytes())
+    frozen = {name: (stage / name).read_bytes() for name in names}
+    with pytest.raises(ValueError, match="HYBRID_"):
+        prepare(stage, names, "417", chemistry_cutover=handoff)
+    assert all((stage / name).read_bytes() == original for name, original in frozen.items())
+    assert not (stage / "unified_s6_417.json").exists()
