@@ -31,7 +31,8 @@ def _names(exodus, key, names):
 
 def make_exodus(path, *, nodes=("log_e",), nodal_values=None,
                 elems=(), elem_values=None, globals_=(), glo_values=None,
-                x=(0., 1.), block_id=7):
+                x=(0., 1.), block_id=7, omitted_values=(),
+                extra_physical=None):
     with netcdf_file(path, "w") as ex:
         ex.createDimension("time_step", 2)
         ex.createDimension("num_nodes", 2)
@@ -41,7 +42,8 @@ def make_exodus(path, *, nodes=("log_e",), nodal_values=None,
             _names(ex, "name_nod_var", nodes)
             for i, name in enumerate(nodes, 1):
                 data = (nodal_values or {}).get(name, [1., 2.])
-                ex.createVariable(f"vals_nod_var{i}", "d", ("time_step", "num_nodes"))[:] = [data, data]
+                if f"vals_nod_var{i}" not in omitted_values:
+                    ex.createVariable(f"vals_nod_var{i}", "d", ("time_step", "num_nodes"))[:] = [data, data]
         if elems:
             _names(ex, "name_elem_var", elems)
             ex.createDimension("num_el_blk", 1)
@@ -50,12 +52,15 @@ def make_exodus(path, *, nodes=("log_e",), nodal_values=None,
             ex.createVariable("connect1", "i", ("num_el_in_blk1", "num_nodes"))[:] = [[1, 2]]
             for i, name in enumerate(elems, 1):
                 value = (elem_values or {})[name]
-                ex.createVariable(f"vals_elem_var{i}eb1", "d", ("time_step", "num_el_in_blk1"))[:] = [[value], [value]]
+                if f"vals_elem_var{i}eb1" not in omitted_values:
+                    ex.createVariable(f"vals_elem_var{i}eb1", "d", ("time_step", "num_el_in_blk1"))[:] = [[value], [value]]
         if globals_:
             _names(ex, "name_glo_var", globals_)
             ex.createDimension("num_glo_var", len(globals_))
             value = [float((glo_values or {})[name]) for name in globals_]
             ex.createVariable("vals_glo_var", "d", ("time_step", "num_glo_var"))[:] = [value, value]
+        if extra_physical is not None:
+            ex.createVariable(extra_physical, "d", ("time_step", "num_nodes"))[:] = [[9., 10.], [9., 10.]]
     return path
 
 
@@ -87,6 +92,35 @@ def test_extra_candidate_nodal_field_rejected(tmp_path):
     assert result.returncode != 0
     assert report["result"] == "NATIVE_PARITY_NOT_PROVEN"
     assert "identity metadata differs" in report["reason"]
+
+
+@pytest.mark.parametrize("family", ["nodal", "elemental"])
+def test_identically_missing_named_physical_field_rejected(tmp_path, family):
+    """Old oracle falsely passed when both files omitted the same named field."""
+    if family == "nodal":
+        options = {"nodes": ("log_e", "unread_state"),
+                   "omitted_values": ("vals_nod_var2",)}
+    else:
+        options = {"elems": ("ion_density", "unread_state"),
+                   "elem_values": {"ion_density": 5., "unread_state": 9.},
+                   "omitted_values": ("vals_elem_var2eb1",)}
+    result, report = compare(tmp_path, ref=options, new=options)
+    assert result.returncode != 0
+    assert report["result"] == "NATIVE_PARITY_NOT_PROVEN"
+    assert f"Exodus {family} names without values" in report["reason"]
+    assert "unread_state" in report["reason"]
+
+
+@pytest.mark.parametrize("on_both", [False, True])
+def test_unsupported_exodus_physical_family_cannot_false_pass(tmp_path, on_both):
+    """Unknown vals_* arrays must never be silently discarded."""
+    unknown = {"extra_physical": "vals_nset_var1ns1"}
+    result, report = compare(
+        tmp_path, ref=unknown if on_both else {}, new=unknown)
+    assert result.returncode != 0
+    assert report["result"] == "NATIVE_PARITY_NOT_PROVEN"
+    assert "Unsupported Exodus physical field" in report["reason"]
+    assert "vals_nset_var1ns1" in report["reason"]
 
 
 def test_reordered_named_elemental_and_global_fields_pass(tmp_path):
