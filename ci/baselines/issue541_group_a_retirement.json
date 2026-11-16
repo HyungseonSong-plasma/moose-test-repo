@@ -2,7 +2,7 @@
   "schema": "issue541.workflow_surface.group_a_evidence.v1",
   "repository": "HyungseonSong-plasma/moose-test-repo",
   "baseline_main_sha": "71e112eb05d4645c82aab8861b99d6952ac4ac3e",
-  "review_scope": "Group A only; no original one-shot removed on this evidence branch",
+  "review_scope": "Group A 4-record read-only audit: A1/A2 retained KEEP_HOLD; A3/A4 staged in independent FLOW A-2 with mandatory source-bound guard and KEEP_HOLD_INTEGRATION.",
   "science": "SCIENCE_HOLD",
   "p3": "NOT_RUN",
   "source_date": "2026-11-16",
@@ -168,8 +168,16 @@
       "blockers": [
         "External/dynamic caller-zero proof and integration review outstanding",
         "Donor #548 deletion is draft only; new Group A branch must not duplicate deletion",
-        "Maintained replacement and evidence not integrated in main"
-      ]
+        "Maintained replacement and evidence not integrated in main",
+        "Staged deletion only on integrated Draft; original Git blob and historical artifact retained; final native/caller/integration acceptance still pending"
+      ],
+      "staged_candidate": {
+        "source_pr": 568,
+        "source_integration_pr": 574,
+        "status": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+        "flow_manifest": "ci/baselines/issue541_group_a2_flow_retirement.json",
+        "flow_guard": "ci/guards/issue541_group_a2_flow_retirement_p0.py"
+      }
     },
     {
       "id": "A4",
@@ -202,8 +210,16 @@
       "blockers": [
         "Deletion and replacement verified only on unmerged Draft #548",
         "External/dynamic caller-zero and current group-A integrated HEAD proof outstanding",
-        "No historical artifact uploaded; historical run and blob must remain fetchable"
-      ]
+        "No historical artifact uploaded; historical run and blob must remain fetchable",
+        "Staged deletion only on integrated Draft; original Git blob and historical artifact retained; final native/caller/integration acceptance still pending"
+      ],
+      "staged_candidate": {
+        "source_pr": 568,
+        "source_integration_pr": 574,
+        "status": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+        "flow_manifest": "ci/baselines/issue541_group_a2_flow_retirement.json",
+        "flow_guard": "ci/guards/issue541_group_a2_flow_retirement_p0.py"
+      }
     }
   ]
 }

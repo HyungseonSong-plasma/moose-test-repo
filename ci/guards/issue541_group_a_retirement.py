@@ -113,10 +113,38 @@ def inspect(root: Path, doc: dict) -> list[str]:
         if not re.fullmatch(r"[0-9a-f]{40}", str(record.get("original_source_sha", ""))):
             errors.append(id_ + " missing historical source identity")
         source_path = root / path
-        if not source_path.is_file():
-            # A future accepted retirement requires a *different* contract;
-            # do not let dropping the old YAML silently turn CI green.
-            errors.append(id_ + " historical workflow absent without accepted retirement")
+        if id_ in {"A3", "A4"}:
+            # Integration is staged deletion, NOT accepted retirement. A3/A4
+            # are independently owned by the FLOW A-2 archival/negative gate.
+            staged = record.get("staged_candidate")
+            expected_staged = {
+                "source_pr": 568,
+                "source_integration_pr": 574,
+                "status": "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
+                "flow_manifest": "ci/baselines/issue541_group_a2_flow_retirement.json",
+                "flow_guard": "ci/guards/issue541_group_a2_flow_retirement_p0.py",
+            }
+            if staged != expected_staged:
+                errors.append(id_ + " staged owner evidence missing/falsified")
+            if source_path.exists():
+                errors.append(id_ + " staged retired workflow was reintroduced")
+            for needed in (expected_staged["flow_manifest"], expected_staged["flow_guard"],
+                           ".github/workflows/issue402-flow-native-p2-regression.yml"):
+                if not (root / needed).is_file():
+                    errors.append(id_ + " FLOW replacement/archival dependency absent: " + needed)
+            native_path = root / ".github/workflows/issue402-flow-native-p2-regression.yml"
+            if native_path.is_file() and (
+                "issue541_group_a2_flow_retirement_p0.py --self-test --check"
+                not in native_path.read_text(encoding="utf-8")
+            ):
+                errors.append(id_ + " mandatory FLOW A-2 mutation contract disconnected")
+            ci_file = root / ".github/workflows/ci.yml"
+            expected_job = ("issue402_ideal_gas_p0" if id_ == "A3"
+                            else "issue402_reaction_material_p0")
+            if ci_file.is_file() and "  " + expected_job + ":" not in ci_file.read_text(encoding="utf-8"):
+                errors.append(id_ + " maintained P0 owner not in canonical CI")
+        elif not source_path.is_file():
+            errors.append(id_ + " active-branch original workflow missing without accepted caller-zero")
         else:
             raw = source_path.read_bytes()
             if git_blob_sha(raw) != sha:
@@ -199,6 +227,15 @@ def self_test(root: Path, original: dict) -> None:
         record = next(x for x in mutated["workflows"] if x["id"] == id_)
         record["same_head_revalidation"]["job_id"] = 0
         probes.append(("missing exact job provenance " + id_, mutated))
+    for id_ in ("A3", "A4"):
+        mutated = copy.deepcopy(original)
+        record = next(x for x in mutated["workflows"] if x["id"] == id_)
+        record["staged_candidate"]["status"] = "RETIRED_VERIFIED"
+        probes.append(("premature staged acceptance " + id_, mutated))
+        mutated = copy.deepcopy(original)
+        record = next(x for x in mutated["workflows"] if x["id"] == id_)
+        del record["staged_candidate"]
+        probes.append(("missing FLOW replacement custody " + id_, mutated))
     for label, fake in probes:
         assert inspect(root, fake), "negative mutation not rejected: " + label
     first = original["workflows"][0]
