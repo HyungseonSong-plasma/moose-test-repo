@@ -145,6 +145,51 @@
         "decision": "KEEP_HOLD",
         "science": "SCIENCE_HOLD",
         "p3": "NOT_RUN"
+      },
+      "wave1_c_a1_caller_audit": {
+        "snapshot_date": "2026-11-16",
+        "target": "A1_DD_BOUNDARY_ONLY",
+        "original_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+        "workflow_id": 417754909,
+        "historical_branch": "issue-402-dd-plasma-boundary-action",
+        "historical_head": "af4a9e896328386723e8bbb957f334e1d83fe75e",
+        "original_self_path_push_only": true,
+        "api_dispatch_and_workflow_call_not_declared": true,
+        "historical_actions_branch_runs_total": 36,
+        "historical_a1_runs": 19,
+        "historical_a1_events": [
+          "push"
+        ],
+        "historical_a1_actors": [
+          "HyungseonSong-plasma"
+        ],
+        "latest_a1_run_utc": "2026-11-14T00:22:57Z",
+        "github_installation_id": 155128539,
+        "github_accessible_repos": [
+          "HyungseonSong-plasma/chatgpt-operation",
+          "HyungseonSong-plasma/codeQA",
+          "HyungseonSong-plasma/moose-test-repo",
+          "HyungseonSong-plasma/simulation-ontology",
+          "HyungseonSong-plasma/sol-adapter-moose"
+        ],
+        "accessible_repo_default_branch_exact_literal_a1_reference": "SELF_YAML_ONLY",
+        "other_repo_default_branch_exact_literal_a1_reference_count": 0,
+        "all_branches_scanned": false,
+        "off_platform_controller_schedules_scanned": false,
+        "owner_external_caller_disposition": "UNVERIFIED",
+        "dynamic_gh_api_and_git_push_consumers": "UNVERIFIED",
+        "caller_zero_proven": false,
+        "original_a1_preserved": true,
+        "old_ref_cutover_pr_588": "OPEN_DRAFT_A1_A2_SHARED_NOT_EXECUTED",
+        "shared_dd_p3_original_blob": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
+        "shared_s6_p3_original_blob": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
+        "independently_byte_rehashed_original_zip_sha256": "de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27",
+        "artifact_id": 14088768015,
+        "artifact_external_worm": "NOT_PROVEN",
+        "retirement_authorized": false,
+        "state": "KEEP_HOLD_UNVERIFIED_EXTERNAL_CALLERS",
+        "science": "SCIENCE_HOLD",
+        "p3": "NOT_RUN"
       }
     },
     {
