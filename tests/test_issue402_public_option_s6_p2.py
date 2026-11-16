@@ -332,6 +332,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
         "migrate_staged_electron_closure": lambda *_args: {"status": "SYNTHETIC_CLOSURE"},
+        "migrate_staged_wall_owners": lambda *_args: {"status": "SYNTHETIC_WALL_AUDIT"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(
