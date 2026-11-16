@@ -230,7 +230,8 @@ _S6_D_INITIAL_VARIABLE = re.compile(
 )
 
 
-def migrate_staged_D_json_initial(chemistry: Path, ordered: list[str]) -> dict:
+def migrate_staged_D_json_initial(chemistry: Path, ordered: list[str],
+                                  *, chemistry_common: bool = False) -> dict:
     """Transfer precisely pinned log-molar Native ICs to D's Chemistry JSON.
 
     All checks run before writing either disposable .i or JSON. No fallback to
@@ -244,13 +245,20 @@ def migrate_staged_D_json_initial(chemistry: Path, ordered: list[str]) -> dict:
                 for item, name in zip(ordered, names))):
         raise ValueError("S6_D_INITIAL_UNSAFE_LAYER")
     original_file = chemistry / names[0]
-    staged_json = chemistry / "plasma_species_only.json"
-    source_json = ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json"
+    relative_json = ("chemistry/oxygen_s6_common.json" if chemistry_common
+                     else "plasma_species_only.json")
+    staged_json = chemistry / relative_json
+    source_json = ROOT / "experiments/Issue402_plasma_dsl_g1" / relative_json
     if staged_json.read_bytes() != source_json.read_bytes():
         raise ValueError("S6_D_INITIAL_SOURCE_JSON_IDENTITY_CHANGED")
     parsed = json.loads(staged_json.read_text(encoding="utf-8"))
-    if (set(parsed) != {"species", "equations", "reactions"} or
-            parsed["equations"] != {} or parsed["reactions"] != []):
+    if set(parsed) != {"species", "equations", "reactions"}:
+        raise ValueError("S6_D_INITIAL_UNEXPECTED_SPECIES_DOCUMENT")
+    if chemistry_common:
+        if (set(parsed["species"]) != {"e", "O2", "O", "O2p", "Om", "Op", "O2a"} or
+                len(parsed["equations"]) != 7 or len(parsed["reactions"]) != 7):
+            raise ValueError("S6_D_INITIAL_CHEMISTRY_MECHANISM_CHANGED")
+    elif parsed["equations"] != {} or parsed["reactions"] != []:
         raise ValueError("S6_D_INITIAL_UNEXPECTED_SPECIES_DOCUMENT")
 
     pinned_path = (ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/"
@@ -334,6 +342,7 @@ def migrate_staged_D_json_initial(chemistry: Path, ordered: list[str]) -> dict:
         "status": "SCRATCH_ONLY_ARCHIVED_NATIVE_DENSITIES_TO_JSON",
         "retired_native_variable_owners": seen,
         "densities_number_per_m3": densities,
+        "json_relative_name": relative_json,
         "json_original_sha256": original_json_sha,
         "json_staged_sha256": sha_file(staged_json),
         "staged_layers": changes,
