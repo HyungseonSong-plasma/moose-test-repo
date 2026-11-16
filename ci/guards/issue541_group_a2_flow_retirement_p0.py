@@ -56,7 +56,7 @@ def blob_sha(raw: bytes) -> str:
 
 
 def job_content(ci: str, name: str) -> str:
-    pattern = r"(?ms)^  " + re.escape(name) + r":\\s*\\n(.*?)(?=^  [A-Za-z0-9_-]+:\\s*$|\\Z)"
+    pattern = r"(?ms)^  " + re.escape(name) + r":\s*\n(.*?)(?=^  [A-Za-z0-9_-]+:\s*$|\Z)"
     match = re.search(pattern, ci)
     require(match is not None, "MISSING_P0_JOB:" + name)
     return match.group(1)
@@ -94,8 +94,8 @@ def verify(m: dict, archive: dict[str, bytes], ci: str, native: str,
             routes["historical_public_source"] ==
             "29d1acc6ef7969908b86719e4b95c73a1565136d",
             "REPLACEMENT_PROVENANCE")
-    require("on:\\n  pull_request:\\n    branches: [main]" in native and
-            "\\n  workflow_dispatch:" in native and "\\n  push:" not in native,
+    require("on:\n  pull_request:\n    branches: [main]" in native and
+            "\n  workflow_dispatch:" in native and "\n  push:" not in native,
             "REPLACEMENT_NOT_GOVERNED")
     for mark in ("FLOW_NATIVE_SOURCE_BOUND_P1_PASS",
                  "FLOW_IDEAL_GAS_DIRECT_MATERIAL_NATIVE_P2_PASS",
@@ -120,8 +120,8 @@ def verify(m: dict, archive: dict[str, bytes], ci: str, native: str,
         original = archive[expected["path"]]
         require(blob_sha(original) == expected["blob"], "HISTORICAL_BYTES_CHANGED:" + key)
         header = original.decode("utf-8").split("permissions:", 1)[0]
-        require("on:\\n  push:\\n    branches: [" + expected["branch"] +
-                "]\\n    paths: [" + expected["path"] + "]" in header,
+        require("on:\n  push:\n    branches: [" + expected["branch"] +
+                "]\n    paths: [" + expected["path"] + "]" in header,
                 "HISTORICAL_TRIGGER_CHANGED:" + key)
         require(not any(re.search(r"(?m)^  " + x + r":", header)
                         for x in ("workflow_dispatch", "workflow_call",
@@ -212,12 +212,15 @@ def self_test(m: dict, archives: dict[str, bytes], ci: str,
         record["original"]["blob"] = "0" * 40
         reject("HISTORICAL_BLOB_FORGERY_" + case, altered)
         altered = copy.deepcopy(archives)
-        altered[CASES[case]["path"]] += b"\\n# modified"
+        altered[CASES[case]["path"]] += b"\n# modified"
         reject("HISTORICAL_BYTES_" + case, m, old=altered)
         record = next(x for x in m["workflows"] if x["id"] == case)
         test = record["replacement"]["required_p0_tests"][0]
+        scoped = job_content(ci, CASES[case]["p0_job"])
+        require(test in scoped, "SELFTEST_FIXTURE_MISSING:" + case)
+        scoped_bad = scoped.replace(test, "REMOVED_" + test, 1)
         reject("DROPPED_TEST_" + case, m,
-               test_ci=ci.replace(test, "REMOVED_" + test, 1))
+               test_ci=ci.replace(scoped, scoped_bad, 1))
     bad = copy.deepcopy(m)
     bad["consumers"]["declared_dispatch"] = True
     reject("DECLARED_DISPATCH", bad)
