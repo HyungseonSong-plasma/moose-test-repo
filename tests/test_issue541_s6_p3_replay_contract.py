@@ -52,7 +52,7 @@ def validate(workflow: str, original: str) -> None:
     _need("physics-build-base@sha256:" + OCI_DIGEST in workflow and
           "HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d" in workflow,
           "SOURCE_AND_OCI_PINS")
-    _need("native_p1_identity.json" in workflow and
+    _need(workflow.count("native_p1_identity.json") >= 2 and
           '"binary_sha256":hash_file(binary)' in workflow, "BINARY_RECEIPT")
     _need("--case \"\u0024{{ matrix.case }}\"" in workflow and
           "--hybrid-json" in workflow and "--authorize-p3" in workflow,
