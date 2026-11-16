@@ -68,6 +68,10 @@ WAVE1_C_FIXED = json.loads(r'''{"audit_id":"wave1-c-20261116-live-github-readbac
 WAVE1_C_PER_CASE = json.loads(r'''{"A1":{"historical_run_id":43533803916,"historical_run_conclusion":"SUCCESS","artifact_custody":"ARTIFACT_14088768015_UNEXPIRED_EXPIRES_2026-12-14_BACKUP_NOT_REHASHED","replacement_p0_job":133252079406,"replacement_native_p1_p2_job":133252079180,"replacement_job_conclusion":"SUCCESS","distinct_red_gate":"EXTERNAL_DYNAMIC_CALLER_ZERO_NOT_PROVEN; LEGACY_PUSH_BRANCH_PRESENT; SOURCE_CI_RED; P3_BRANCH_SHARED; FULL_PRESERVATION_UNPROVEN"},"A2":{"historical_run_id":43522731185,"historical_run_conclusion":"SUCCESS","artifact_custody":"NO_ARTIFACT_PUBLISHED_IN_ORIGINAL_RUN","replacement_p0_job":133252079239,"replacement_native_p1_p2_job":null,"replacement_job_conclusion":"SUCCESS","distinct_red_gate":"EXTERNAL_DYNAMIC_CALLER_ZERO_NOT_PROVEN; LEGACY_PUSH_BRANCH_PRESENT; SOURCE_CI_RED; P3_BRANCH_SHARED; FULL_PRESERVATION_UNPROVEN"}}''')
 
 
+# Independent Drive source bytes and isolated branch sunset prerequisite.
+# This is a recorded, fail-closed staging receipt, not CALLER_ZERO_PROVEN.
+WAVE1_C_CLOSURE = json.loads(r'''{"A1":{"mode":"STAGED_LEGACY_BRANCH_SHUTDOWN_REVIEW_ONLY","retention":"PRIVATE_INDEPENDENT_COPY_READBACK","proof_date":"2026-11-16","historical_branch":"issue-402-dd-plasma-boundary-action","historical_branch_head":"af4a9e896328386723e8bbb957f334e1d83fe75e","branch_shared_with_p3":true,"branch_must_not_be_deleted":true,"original_workflows_reviewed":45,"branch_write_route":"PUSH_EXACT_SELF_PATH_ONLY","declared_dispatch_or_call_route":false,"cross_branch_external_or_dynamic_callers":"UNVERIFIED","caller_zero_proven":false,"prereq_draft_pr":588,"prereq_draft_head":"85d6968f5155e25eabfca8b503828979d9509506","prereq_base":"issue-402-dd-plasma-boundary-action","prereq_state":"OPEN_DRAFT_NOT_MERGED","prereq_scope":"EXACTLY_TWO_A1_A2_FILES_REMOVED_FROM_CANDIDATE_BRANCH_ONLY","untouched_p3_dd_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","untouched_p3_s6_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","original_sha":"bbebff910db3e5659014368043a50b99273d2cdc","artifact_backup":{"drive_file_id":"1OsADIq21_JU4Z4O65t_Hl-_AwjM6Nxf0","github_artifact_id":14088768015,"bytes":2072,"sha256":"de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27","independent_zip_readback":"EXACT_BINARY_AND_HASH_PASS","worm":"NOT_PROVEN"},"final_deletion_authorized":false,"decision":"KEEP_HOLD","science":"SCIENCE_HOLD","p3":"NOT_RUN"},"A2":{"mode":"STAGED_LEGACY_BRANCH_SHUTDOWN_REVIEW_ONLY","retention":"PRIVATE_INDEPENDENT_COPY_READBACK","proof_date":"2026-11-16","historical_branch":"issue-402-dd-plasma-boundary-action","historical_branch_head":"af4a9e896328386723e8bbb957f334e1d83fe75e","branch_shared_with_p3":true,"branch_must_not_be_deleted":true,"original_workflows_reviewed":45,"branch_write_route":"PUSH_EXACT_SELF_PATH_ONLY","declared_dispatch_or_call_route":false,"cross_branch_external_or_dynamic_callers":"UNVERIFIED","caller_zero_proven":false,"prereq_draft_pr":588,"prereq_draft_head":"85d6968f5155e25eabfca8b503828979d9509506","prereq_base":"issue-402-dd-plasma-boundary-action","prereq_state":"OPEN_DRAFT_NOT_MERGED","prereq_scope":"EXACTLY_TWO_A1_A2_FILES_REMOVED_FROM_CANDIDATE_BRANCH_ONLY","untouched_p3_dd_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","untouched_p3_s6_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","original_sha":"1931f0b9909507979826812f346d3353f12e333b","artifact_backup":null,"final_deletion_authorized":false,"decision":"KEEP_HOLD","science":"SCIENCE_HOLD","p3":"NOT_RUN"}}''')
+
 def git_blob_sha(raw: bytes) -> str:
     return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
 
@@ -190,6 +194,8 @@ def inspect(root: Path, doc: dict) -> list[str]:
             expected_wave1.update(WAVE1_C_PER_CASE[id_])
             if record.get("wave1_c_followup") != expected_wave1:
                 errors.append(id_ + " Wave1-C branch/caller/CI/retention audit missing or falsified")
+            if record.get("wave1_c_closure") != WAVE1_C_CLOSURE[id_]:
+                errors.append(id_ + " Wave1-C independent backup or source-branch cutover evidence falsified")
         if record.get("decision") != "KEEP_HOLD":
             errors.append(id_ + " retirement promoted without accepted caller-zero/integrated proof")
         if not isinstance(record.get("blockers"), list) or not record["blockers"]:
@@ -254,6 +260,27 @@ def self_test(root: Path, original: dict) -> None:
             record = next(x for x in mutated["workflows"] if x["id"] == id_)
             record["wave1_c_followup"][key] = tampered
             probes.append(("Wave1-C falsified " + id_ + " " + key, mutated))
+    # Mutation checks for independent original ZIP backup and branch-specific
+    # staged cutover. They deliberately reject fake retirement eligibility.
+    for id_ in ("A1", "A2"):
+        for key, tampered in (
+            ("prereq_draft_head", "0" * 40),
+            ("prereq_state", "MERGED_VERIFIED"),
+            ("caller_zero_proven", True),
+            ("final_deletion_authorized", True),
+        ):
+            mutated = copy.deepcopy(original)
+            record = next(x for x in mutated["workflows"] if x["id"] == id_)
+            record["wave1_c_closure"][key] = tampered
+            probes.append(("Wave1-C closure falsified " + id_ + " " + key, mutated))
+    mutated = copy.deepcopy(original)
+    record = next(x for x in mutated["workflows"] if x["id"] == "A1")
+    record["wave1_c_closure"]["artifact_backup"]["sha256"] = "0" * 64
+    probes.append(("Wave1-C original Drive hash falsified", mutated))
+    mutated = copy.deepcopy(original)
+    record = next(x for x in mutated["workflows"] if x["id"] == "A1")
+    record["wave1_c_closure"]["untouched_p3_dd_blob"] = "0" * 40
+    probes.append(("Wave1-C P3 source identity falsified", mutated))
     for id_ in ("A3", "A4"):
         mutated = copy.deepcopy(original)
         record = next(x for x in mutated["workflows"] if x["id"] == id_)
