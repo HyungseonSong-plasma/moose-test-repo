@@ -123,6 +123,39 @@ def s6_staged_absence_evidence(readme: str, replay: str) -> bool:
             'test "$REQUESTED_SHA" = "$GITHUB_SHA"' in replay)
 
 
+DD_STAGE_MANIFEST = Path("ci/baselines/issue541_dd_p3_retirement_20261116.json")
+DD_STAGE_ARCHIVE = Path("docs/development/archive/issue402-dd-json-p3-smoke-once.yml.txt")
+DD_STAGE_DOC = Path("docs/development/2026-11-16_issue541_dd_p3_original_retirement_custody.md")
+DD_STAGE_REPLAY = Path(".github/workflows/issue541-arch-dd-p3-replay.yml")
+
+def dd_staged_absence_evidence(root: Path) -> bool:
+    try:
+        m=json.loads((root/DD_STAGE_MANIFEST).read_text(encoding="utf-8"))
+        archive=(root/DD_STAGE_ARCHIVE).read_bytes()
+        doc=(root/DD_STAGE_DOC).read_text(encoding="utf-8")
+        replay=(root/DD_STAGE_REPLAY).read_text(encoding="utf-8")
+        trigger=replay.split("\non:\n",1)[1].split("\npermissions:",1)[0]
+        return (m["schema"] == "issue541.dd_p3.original_staged_retirement.v1"
+                and m["state"] == "STAGED_DELETE_KEEP_HOLD_INTEGRATION"
+                and m["science"] == "SCIENCE_HOLD"
+                and m["final_retired_verified"] is False
+                and m["original"]["git_blob"] == A1_OWNER_RETIREMENT["p3_dd_blob"]
+                and m["original"]["source_copy_path"] == str(DD_STAGE_ARCHIVE)
+                and git_blob_sha(archive) == A1_OWNER_RETIREMENT["p3_dd_blob"]
+                and m["custody"]["readback"] == "REMOTE_DOWNLOAD_SHA256_AND_ZIP_CRC_MATCH_ALL_THREE"
+                and m["custody"]["worm_lock"] == "NOT_PROVEN"
+                and m["dd_native_p3"]["run_id"] == 43911477519
+                and m["dd_native_p3"]["two_timesteps_completed"] is True
+                and A1_OWNER_RETIREMENT["p3_dd_blob"] in doc
+                and "manual-only" in doc
+                and trigger.startswith("  workflow_dispatch:\n")
+                and all(x not in trigger for x in ("  push:", "  pull_request:", "  schedule:"))
+                and "ISSUE541_DD_TWO_STEP_P3_APPROVED" in replay
+                and 'test "$REQUESTED_SHA" = "$GITHUB_SHA"' in replay)
+    except (OSError,ValueError,KeyError,TypeError,IndexError):
+        return False
+
+
 def inspect(root: Path, doc: dict) -> list[str]:
     errors = []
     if doc.get("schema") != "issue541.workflow_surface.group_a_evidence.v1":
@@ -199,6 +232,9 @@ def inspect(root: Path, doc: dict) -> list[str]:
                 if p3source.is_file():
                     if git_blob_sha(p3source.read_bytes()) != blob:
                         errors.append("A1 associated ARCH P3 original changed: " + p3name)
+                elif p3name == "issue402-dd-json-p3-smoke-once.yml":
+                    if not dd_staged_absence_evidence(root):
+                        errors.append("DD staged original absent without pinned archival/manual proof")
                 elif p3name == "issue402-hybrid-json-s6-p3-p4-once.yml":
                     # S6's isolated retirement candidate may delete this
                     # original from the integration tree, but only with a
@@ -459,6 +495,9 @@ def self_test(root: Path, original: dict) -> None:
                          first["path"], first["historical_branch"])
     assert check_trigger(raw.replace("    paths:", "    paths_disabled:", 1),
                          first["path"], first["historical_branch"])
+    if not (root / ".github/workflows/issue402-dd-json-p3-smoke-once.yml").is_file():
+        assert dd_staged_absence_evidence(root), "DD_SOURCE_ARCHIVE_NOT_VERIFIED"
+        print("ISSUE541_GROUP_A_DD_STAGED_ABSENCE_P0_PASS")
     if not (root / ".github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml").is_file():
         # Negative proof: corrupting any of the five staged-retirement
         # requirements or auto-enabling the replacement must be rejected.
