@@ -51,7 +51,7 @@ def verify(m: dict, original: str, maintained: str, surface: str,
             old["other_events"] == "NONE", "ORIGINAL_TRIGGER_LEDGER")
     require("on:\n  push:\n    branches: [issue-402-species-functor-naming]\n    paths:\n" in original,
             "ORIGINAL_TRIGGER_CHANGED")
-    require("      - ".strip() + REL in original, "SELF_PATH_MISSING")
+    require("      - " + REL in original, "SELF_PATH_MISSING")
     for event in ("workflow_dispatch", "workflow_call", "schedule",
                   "workflow_run", "repository_dispatch"):
         require("\n  " + event + ":" not in original, "ORIGINAL_EXTERNALLY_CALLABLE_" + event)
@@ -98,7 +98,7 @@ def verify(m: dict, original: str, maintained: str, surface: str,
         "FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS",
         "--case both", "check_issue402_reaction_reduction_p2_only",
         OLD_BLOB, OLD_REF, OCI_DIGEST,
-        "'417'", "'941'",
+        '"417"', '"941"',
         "'"+REL+"'",
     ):
         require(required in maintained, "MAINTAINED_OBLIGATION_MISSING:" + required)
@@ -163,7 +163,7 @@ def self_test(m: dict, old: str, replacement: str, surface: str) -> None:
                     "  pull_request:", "  push:", 1))
     must_reject("GUARD_REMOVAL", m, guard=surface.replace(
                     "ONE_SHOT_NAME", "REMOVED_POLICY_OWNER"))
-    print("ISSUE541_GROUP_B_FLOW_NEGATIVE_MUTATIONS_12_REJECTED")
+    print("ISSUE541_GROUP_B_FLOW_NEGATIVE_MUTATIONS_13_REJECTED")
 
 
 def main() -> int:
