@@ -5,15 +5,10 @@
   dim = 1
   nx = 4
 []
+# Continuity owns log_e and its IC through the P2-only JSON overlay.
+# Energy owns log_e_energy and its synthetic molar-energy IC. Do not declare
+# competing external variables; this is a Native --check-input-only fixture.
 [Variables]
-  [log_e]
-    family = LAGRANGE
-    order = FIRST
-  []
-  [log_e_energy]
-    family = LAGRANGE
-    order = FIRST
-  []
   [potential]
     family = LAGRANGE
     order = FIRST
@@ -38,6 +33,7 @@
         []
         [Energy]
           fem_species = 'e'
+          initial_molar_energy_density_eV = 4.98161720152154e-8
         []
       []
     []
