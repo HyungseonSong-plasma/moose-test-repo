@@ -356,6 +356,9 @@ RENAMED_FEM_KERNEL_TYPES = {
     # Rename only the disposable public P2 input type fields, not the factory.
     "PhysicsFEMLogMolarElectronFieldLimitedFluxBC": "FEMElectronSheathBC",
     "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC": "FEMElectronEnergySheathBC",
+    # Preserve lower-D current observation with the same plasma-side FaceArg.
+    # Only B/D staged type tokens change: the retired factory stays unregistered.
+    "PhysicsLowerDSurfaceCurrentProbeAux": "LowerDSurfaceCurrentProbeAux",
     # Archived S6 inputs are rewritten only after their pinned byte hashes are checked.
     "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
     "DDMaterial": "DDTransportMaterial",
