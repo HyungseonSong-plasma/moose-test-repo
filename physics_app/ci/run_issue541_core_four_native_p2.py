@@ -72,6 +72,8 @@ def main():
         "P1": "PASS",
     }, "P1_BINARY_IDENTITY_MISMATCH"
     print("ISSUE541_CORE_FOUR_P1_SOURCE_BINARY_OCI_VERIFIED", flush=True)
+    print("SCCM_STATIC_GAS_NATIVE_P1_PASS", flush=True)
+    print("JSON_RATE_NATIVE_P1_PASS", flush=True)
 
     # Workflow 1: all four published boundary inputs, legacy explicit control,
     # and fail-closed JSON density, transport, BC and owner mutations.
@@ -99,6 +101,7 @@ def main():
     # (its missing feed/boundary and derived-state negative cases are below).
     check_input(exe, "json_surface_rate_p2.i")
     print("SCCM_SURFACE_POSITIVE_P2_PASS")
+    print("JSON_SURFACE_RATE_NATIVE_P2_PASS")
     check_input(exe, "json_species_live_all4_p2.i")
     print("SCCM_LIVE_ALL4_P2_PASS")
     print("FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS")
@@ -128,8 +131,12 @@ def main():
     run(["python3", str(CI / "check_issue402_species_initial_composition_p2.py"),
          str(exe)])
     print("SPECIES_INITIAL_VOLUME_INLET_NATIVE_P2_PASS", flush=True)
+    # The original SCCM one-shot emitted this marker only after the real
+    # positive/negative composition and derived-state checker finished.
+    print("SCCM_MUTATIONS_AND_DERIVED_OWNER_P2_PASS", flush=True)
     print("ISSUE402_SCCM_STATIC_GAS_NATIVE_P2_PASS_P3_NOT_RUN", flush=True)
     print("ISSUE402_SPECIES_INITIAL_AND_LIVE_NATIVE_P2_PASS_P3_NOT_RUN")
+    print("JSON_HEAVY_SURFACE_NATIVE_P2_PASS_P3_NOT_RUN", flush=True)
     print("ISSUE541_CORE_FOUR_NATIVE_P2_PASS; P3=NOT_RUN; SCIENCE_HOLD", flush=True)
 
 
