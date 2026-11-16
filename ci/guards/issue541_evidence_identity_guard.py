@@ -16,6 +16,8 @@ import os
 from pathlib import PurePosixPath, Path
 import re
 import sys
+import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 
@@ -42,6 +44,23 @@ def require(ok, reason):
         raise EvidenceRejected(reason)
 
 
+class ArtifactRedirect(urllib.request.HTTPRedirectHandler):
+    """Allow HTTPS signed-URL redirects but never forward API credentials."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        old = urllib.parse.urlsplit(req.full_url)
+        new = urllib.parse.urlsplit(newurl)
+        require(new.scheme == "https" and bool(new.hostname) and
+                new.username is None and new.password is None,
+                "ARTIFACT_REDIRECT_NOT_HTTPS")
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None and old.netloc != new.netloc:
+            # urllib normally copies regular request headers on redirects;
+            # signed blob-storage URLs MUST NOT receive the GitHub token.
+            redirected.remove_header("Authorization")
+        return redirected
+
+
 class GitHub:
     """Read-only GitHub API: metadata and artifact ZIP from the same repository."""
     def __init__(self, repo=REPOSITORY):
@@ -57,8 +76,12 @@ class GitHub:
             headers={"Accept": "application/vnd.github+json",
                      "User-Agent": "issue541-evidence-identity-v1",
                      **({"Authorization": "Bearer " + self.token} if self.token else {})})
-        with urllib.request.urlopen(req, timeout=45) as response:
-            return json.loads(response.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(req, timeout=45) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            raise EvidenceRejected(
+                "GITHUB_METADATA_HTTP_" + str(exc.code) + ":" + path) from exc
 
     def download(self, artifact_id):
         path = "/actions/artifacts/" + str(artifact_id) + "/zip"
@@ -67,8 +90,13 @@ class GitHub:
             headers={"Accept": "application/vnd.github+json",
                      "User-Agent": "issue541-evidence-identity-v1",
                      **({"Authorization": "Bearer " + self.token} if self.token else {})})
-        with urllib.request.urlopen(req, timeout=75) as response:
-            return response.read()
+        try:
+            opener = urllib.request.build_opener(ArtifactRedirect())
+            with opener.open(req, timeout=75) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            raise EvidenceRejected(
+                "GITHUB_ARTIFACT_ZIP_HTTP_" + str(exc.code) + ":" + str(artifact_id)) from exc
 
 
 def sha(value, n=40):
