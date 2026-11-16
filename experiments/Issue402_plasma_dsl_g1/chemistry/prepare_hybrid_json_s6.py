@@ -459,7 +459,64 @@ def canonicalize_s6_root_gas_state(
 
 
 
-def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
+def verify_chemistry_handoff(source: str, cutover: dict) -> tuple[list[dict], list[dict]]:
+    """Accept only the exact owner retirements made by Chemistry.prepare().
+
+    Chemistry already removes four charged Native ICs and rebinds eight BCs.
+    Re-running those destructive transitions is invalid; verify their
+    receipts *and current staged bytes* instead, then let hybrid retire only
+    its remaining native energy/DD owners. No ownership or physics is changed.
+    """
+    initials = cutover.get("scratch_json_initial_cutover", {})
+    sheath = cutover.get("scratch_sheath_bc_cutover", {})
+    vars_expected = ("log_e", "log_O2p", "log_Om", "log_Op")
+    owners = initials.get("owners", [])
+    if (initials.get("status") != "SCRATCH_ONLY_FOUR_NATIVE_INITIAL_OWNERS_TO_JSON"
+            or initials.get("owner_count") != 4 or len(owners) != 4
+            or initials.get("native_initial_after_sha256") != digest(source.encode())
+            or set(item.get("name") for item in owners) != set(vars_expected)):
+        raise ValueError("HYBRID_CHEMISTRY_INITIAL_HANDOFF_MISMATCH")
+    for item in owners:
+        var = item["name"]
+        expected = {"initial_condition": PINNED_INITIAL_LOG[var], "block": "plasma"}
+        if var == "log_e":
+            expected.update(family="LAGRANGE", order="FIRST")
+        else:
+            expected["type"] = "MooseVariableFVReal"
+        if item.get("section") != "Variables" or item.get("old_parameters") != expected:
+            raise ValueError("HYBRID_CHEMISTRY_INITIAL_IDENTITY_" + var)
+        if re.search(r"(?m)^  \[" + re.escape(var) + r"\]\s*$", source):
+            raise ValueError("HYBRID_CHEMISTRY_NATIVE_INITIAL_NOT_RETIRED_" + var)
+    receipts = sheath.get("owners", [])
+    if (sheath.get("status") != "SCRATCH_ONLY_EIGHT_REGISTERED_SHEATH_TYPES"
+            or sheath.get("owner_count") != 8 or len(receipts) != 8
+            or set(item.get("owner") for item in receipts) != set(SHEATH_BC_SPEC)):
+        raise ValueError("HYBRID_CHEMISTRY_SHEATH_HANDOFF_MISMATCH")
+    by_owner = {item["owner"]: item for item in receipts}
+    for name, (expected_type, boundary) in SHEATH_BC_SPEC.items():
+        blocks = [block for block in BLOCK.finditer(source)
+                  if block.group("name") == name and
+                  re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",
+                             source[:block.start()])[-1:] == ["BCs"]]
+        if len(blocks) != 1:
+            raise ValueError("HYBRID_CHEMISTRY_SHEATH_OWNER_COUNT_" + name)
+        params = {
+            "type": expected_type,
+            "variable": "log_e_energy" if expected_type == "FEMElectronEnergySheathBC" else "log_e",
+            "wall_number_flux": "e_wall_number_flux",
+            "boundary": boundary,
+        }
+        if expected_type == "FEMElectronEnergySheathBC":
+            params["mean_energy"] = "e_energy_eV"
+        if (parameters(blocks[0].group("body")) != params or
+                by_owner[name].get("new_type") != expected_type or
+                by_owner[name].get("new_block_sha256") != digest(blocks[0].group(0).encode())):
+            raise ValueError("HYBRID_CHEMISTRY_SHEATH_IDENTITY_" + name)
+    return owners, sorted(receipts, key=lambda item: item["owner"])
+
+
+def prepare(staged_chem_dir: Path, ordered: list[str], case: str,
+            *, chemistry_cutover: dict | None = None) -> dict:
     if case not in ("417", "941"):
         raise ValueError("HYBRID_CASE_NOT_417_OR_941")
     staged_chem_dir = Path(staged_chem_dir).resolve()
@@ -475,6 +532,10 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
     removed = []
 
     density = {}
+    if chemistry_cutover is not None:
+        already_removed, sheath_bc_rebinds = verify_chemistry_handoff(
+            source, chemistry_cutover)
+        removed.extend(already_removed)
     for var in VAR_NAMES:
         # Compare against original full-precision .i lexical bytes, not
         # str(float) which shortens e.g. -18.829829186913098 to -18.8298291869131.
@@ -483,8 +544,9 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
             expected.update(family="LAGRANGE", order="FIRST")
         else:
             expected["type"] = "MooseVariableFVReal"
-        source, receipt = retire(source, "Variables", var, expected)
-        removed.append(receipt)
+        if chemistry_cutover is None or var == "log_e_energy":
+            source, receipt = retire(source, "Variables", var, expected)
+            removed.append(receipt)
         if var != "log_e_energy":
             density[var[4:]] = math.exp(float(PINNED_INITIAL_LOG[var])) * N_A
 
@@ -495,7 +557,8 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         source, receipt = retire(source, "FunctorMaterials", name, expected)
         removed.append(receipt)
 
-    source, sheath_bc_rebinds = migrate_exact_s6_fem_sheath(source)
+    if chemistry_cutover is None:
+        source, sheath_bc_rebinds = migrate_exact_s6_fem_sheath(source)
 
     # Existing Native physics that JSON does NOT generate is immutable.
     for signature in ("[potential]", "[phi_diffusion]", "[phi_source]",
@@ -516,6 +579,10 @@ def prepare(staged_chem_dir: Path, ordered: list[str], case: str) -> dict:
         raise ValueError("HYBRID_COMMON_SPECIES_IDENTITY_CHANGED")
     if variant.get("species"):
         raise ValueError("HYBRID_VARIANT_SPECIES_OVERLAY_NOT_EMPTY")
+    if chemistry_cutover is not None:
+        if any(common["species"][id].get("initial_number_density") != density[id]
+               for id in density):
+            raise ValueError("HYBRID_CHEMISTRY_JSON_INITIAL_DENSITY_MISMATCH")
     for id in density:
         if not math.isfinite(density[id]) or density[id] <= 0:
             raise ValueError("HYBRID_INITIAL_DENSITY_INVALID_" + id)
