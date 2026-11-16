@@ -226,6 +226,10 @@ RENAMED_FEM_KERNEL_TYPES = {
     "PhysicsFEMLogMolarTimeDerivative": "FEMLogMolarTimeDerivative",
     "PhysicsFEMLogMolarDriftDiffusion": "FEMLogMolarDriftDiffusion",
     "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
+    # Wave2-6-B: exact historical lower-D observers retain their measurements.
+    # Migrate type tokens only, never install legacy factory aliases.
+    "PhysicsLowerDSurfaceCurrentProbeAux": "LowerDSurfaceCurrentProbeAux",
+    "PhysicsWaferD1GeometryProbeAux": "WaferD1GeometryProbeAux",
     # Archived S6 inputs are rewritten only after their pinned byte hashes are checked.
     "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
     "DDMaterial": "DDTransportMaterial",
@@ -318,11 +322,12 @@ def reconcile_staged_D_json_initials(chemistry: Path, ordered: list[str]) -> dic
 
 
 def retire_staged_B_d1_observations(chemistry: Path, ordered: list[str]) -> dict:
-    """Remove only exact historical D1 observer pairs from disposable B P2.
+    """Verify and retain all 14 historical D1 observer pairs in B scratch.
 
-    No physics kernel, surface-charge owner, mesh or time control may change.
-    Historical B and scientific D1 output provenance remain immutable and
-    must NOT be promoted from this diagnostic-free construction check.
+    The original archived inputs are immutable. The validated legacy type
+    tokens are subsequently remapped to the Wave2-6-B canonical AuxKernels;
+    physical surface-current and Poisson owners remain unchanged. This P2
+    scope is not a scientific comparison or P3 approval.
     """
     if (len(ordered) != 10 or len({Path(item).name for item in ordered}) != 10
             or any(Path(item).name != item.split("/")[-1] or
@@ -386,13 +391,16 @@ def retire_staged_B_d1_observations(chemistry: Path, ordered: list[str]) -> dict
     if any(re.search(r"(?m)^    type\s*=\s*" + re.escape(old) + r"\s*$",
                      remaining) for old in retired_types):
         raise ValueError("S6_B_D1_UNKNOWN_RETIRED_OBSERVER_REMAINS")
-    # This is NOT an original-archive P2 check, nor a P3 scientific replay.
-    first.write_text(remaining, encoding="utf-8")
+    # donor.retire operated on an in-memory copy strictly to verify all 14
+    # historic blocks. Preserve the original scratch bytes for the canonical
+    # type-token remapper and real P2 observer execution.
+    if first.read_text(encoding="utf-8") != original:
+        raise ValueError("S6_B_D1_OBSERVATION_PRECHECK_MUTATED_SOURCE")
     return {
-        "status": "SCRATCH_ONLY_B_RETIRED_D1_OBSERVERS_REMOVED",
+        "status": "SCRATCH_ONLY_B_D1_OBSERVERS_VERIFIED_PRESERVED",
         "observer_pairs": len(receipts),
         "native_source_sha256": hashlib.sha256(original.encode()).hexdigest(),
-        "native_staged_sha256": hashlib.sha256(remaining.encode()).hexdigest(),
+        "native_staged_sha256": hashlib.sha256(original.encode()).hexdigest(),
         "retired_owner_sha256": receipts,
         "B_historical_observation_parity": "NOT_CLAIMED",
         "P3": "NOT_RUN", "science": "SCIENCE_HOLD",

@@ -221,8 +221,8 @@ def test_s6_D_json_initials_retire_exact_native_solver_owners(tmp_path):
 
 
 
-def test_B_retired_D1_observers_removed_only_when_exactly_self_contained(tmp_path):
-    """Historical observer source and negative inputs are never rewritten."""
+def test_B_historical_D1_observers_preserved_with_canonical_types_only(tmp_path):
+    """All 14 diagnostics survive B P2 with pinned provenance and no aliases."""
     import importlib.util
     import pytest
 
@@ -292,17 +292,53 @@ def test_B_retired_D1_observers_removed_only_when_exactly_self_contained(tmp_pat
     original_folder = stage("original")
     snapshot = {file.name: file.read_bytes() for file in original_folder.iterdir()}
     receipt = module.retire_staged_B_d1_observations(original_folder, ordered)
-    assert receipt["status"] == "SCRATCH_ONLY_B_RETIRED_D1_OBSERVERS_REMOVED"
+    assert receipt["status"] == "SCRATCH_ONLY_B_D1_OBSERVERS_VERIFIED_PRESERVED"
     assert receipt["observer_pairs"] == 14
     assert receipt["science"] == "SCIENCE_HOLD"
     assert receipt["B_historical_observation_parity"] == "NOT_CLAIMED"
+    # The preflight validates 14 observers without deleting their source blocks.
     after = (original_folder / names[0]).read_text()
+    assert after == base
+    assert receipt["native_staged_sha256"] == hashlib.sha256(base.encode()).hexdigest()
     assert "type = PhysicsLowerDSurfaceCurrent\n" in after
     assert "type = PhysicsADSurfaceChargePoissonBC\n" in after
-    assert "PhysicsLowerDSurfaceCurrentProbeAux" not in after
-    assert "PhysicsWaferD1GeometryProbeAux" not in after
+    assert after.count("type = PhysicsLowerDSurfaceCurrentProbeAux\n") == 9
+    assert after.count("type = PhysicsWaferD1GeometryProbeAux\n") == 5
     assert all((original_folder / name).read_bytes() == snapshot[name]
                for name in names[1:])
+    remap = module.remap_staged_fem_types(original_folder, ordered)
+    assert remap["status"] == "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES"
+    assert remap["totals"]["PhysicsLowerDSurfaceCurrentProbeAux"] == 9
+    assert remap["totals"]["PhysicsWaferD1GeometryProbeAux"] == 5
+    migrated = (original_folder / names[0]).read_text()
+    assert migrated.count("type = LowerDSurfaceCurrentProbeAux\n") == 9
+    assert migrated.count("type = WaferD1GeometryProbeAux\n") == 5
+    assert "type = PhysicsLowerDSurfaceCurrentProbeAux\n" not in migrated
+    assert "type = PhysicsWaferD1GeometryProbeAux\n" not in migrated
+    assert "type = PhysicsLowerDSurfaceCurrent\n" in migrated
+    assert "type = PhysicsADSurfaceChargePoissonBC\n" in migrated
+    assert all(f"  [{name}]\n" in migrated for name in (*fields, *geometry))
+    for cls, required in (
+        ("LowerDSurfaceCurrentProbeAux", (
+            "interior_parent()", "getHigherDSide(_current_elem)",
+            "_surface_current_density.hasFaceSide(*fi, true)",
+            "_surface_current_density.hasFaceSide(*fi, false)",
+            "if (on_elem == on_neighbor)",
+            "_surface_current_density(face_arg, Moose::currentState())",
+        )),
+        ("WaferD1GeometryProbeAux", (
+            "getHigherDSide(_current_elem)",
+            'MooseEnum("normal_r normal_z owner d_perp e_n")',
+            "_potential.gradient(face_arg.makeElem()",
+            "_potential.gradient(face_arg.makeNeighbor()",
+        )),
+    ):
+        header = (ROOT / "physics_app/include/auxkernels" / f"{cls}.h").read_text()
+        source = (ROOT / "physics_app/src/auxkernels" / f"{cls}.C").read_text()
+        assert f"class {cls} : public AuxKernel" in header
+        assert f'registerMooseObject("PhysicsApp", {cls});' in source
+        assert f'registerMooseObject("PhysicsApp", Physics{cls});' not in source
+        assert all(marker in source for marker in required)
     for label, contents, extra in (
         ("wrong_functor", base.replace("surface_current_density = ion_wall_number_flux",
                                        "surface_current_density = fake_flux"), ""),
