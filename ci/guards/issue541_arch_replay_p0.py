@@ -4,6 +4,8 @@ import argparse
 import copy
 import hashlib
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -95,6 +97,16 @@ def self_test():
   try: validate(mutant,dd,s6,old,surface)
   except ValueError: continue
   raise ValueError("UNREJECTED_RECEIPT_MUTATION_"+str(i))
+ runner = ROOT/"physics_app/ci/run_issue402_dd_json_p3_smoke.py"
+ result = subprocess.run(
+  [sys.executable, str(runner), "--self-test"],
+  cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+  text=True, timeout=30, check=False)
+ need(result.returncode == 0 and
+      "ISSUE541_DD_P3_FAILURE_DIAGNOSTIC_NEGATIVE_2_PASS_NO_NATIVE"
+      in result.stdout,
+      "DD_P3_RUNNER_FAILURE_CLASSIFICATION_SELF_TEST")
+ print(result.stdout.strip())
  print("ISSUE541_ARCH_P3_NEGATIVE_MUTATIONS_14_REJECTED")
 
 def main():
