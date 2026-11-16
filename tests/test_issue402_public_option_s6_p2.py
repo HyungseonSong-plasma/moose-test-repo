@@ -152,6 +152,73 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
 
 
 
+
+def test_s6_D_json_initials_retire_exact_native_solver_owners(tmp_path):
+    import importlib.util
+    import math
+    import pytest
+
+    script = PILOT / "public_option_s6_p2.py"
+    spec = importlib.util.spec_from_file_location("s6_native_initials", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    original_base = PILOT / "native/s6_c0_physics_base_no_d1.i"
+    saved = original_base.read_bytes()
+    json_source = PILOT / "plasma_species_only.json"
+    saved_json = json_source.read_bytes()
+    names = [original_base.name] + [f"side_{i}.i" for i in range(9)]
+    ordered = ["chem/" + name for name in names] + ["chem/migrated_continuity.i"]
+
+    def staged(name):
+        folder = tmp_path / name
+        folder.mkdir()
+        for i, filename in enumerate(names):
+            (folder / filename).write_bytes(saved if i == 0 else f"# side {i}\n".encode())
+        (folder / "migrated_continuity.i").write_text("PINNED_OVERLAY")
+        (folder / "plasma_species_only.json").write_bytes(saved_json)
+        module.canonicalize_staged_D_inputs(folder, ordered)
+        return folder
+
+    good = staged("good")
+    report = module.reconcile_staged_D_json_initials(good, ordered)
+    assert report["status"] == "SCRATCH_ONLY_JSON_INITIALS_FOUR_NATIVE_OWNERS_RETIRED"
+    assert report["retired_native_variables"] == ["log_O2p", "log_Om", "log_Op", "log_e"]
+    assert report["P3"] == "NOT_RUN" and report["science"] == "SCIENCE_HOLD"
+    revised = (good / original_base.name).read_text()
+    for variable in ("log_e", "log_O2p", "log_Om", "log_Op"):
+        assert f"  [{variable}]\n" not in revised
+    assert "  [log_energy]\n" in revised
+    payload = json.loads((good / "plasma_species_only.json").read_bytes())
+    values = {"e": -20.216123548032986, "O2p": -20.216123548032986,
+              "Om": -27.123878827015126, "Op": -27.123878827015126}
+    for species, lexical in values.items():
+        assert payload["species"][species]["initial_number_density"] == (
+            math.exp(lexical) * 6.02214076e23)
+    assert original_base.read_bytes() == saved and json_source.read_bytes() == saved_json
+    for fault in ("density", "duplicate", "charge", "extra"):
+        folder = staged(fault)
+        base = folder / original_base.name
+        if fault == "density":
+            data = base.read_text()
+            assert "initial_condition = -20.216123548032986" in data
+            base.write_text(data.replace("initial_condition = -20.216123548032986",
+                                         "initial_condition = 0", 1))
+        elif fault == "duplicate":
+            (folder / names[1]).write_text("  [log_e]\n    initial_condition = 0\n  []\n")
+        else:
+            data = json.loads((folder / "plasma_species_only.json").read_bytes())
+            if fault == "charge":
+                data["species"]["e"]["charge_number"] = 1
+            else:
+                data["species"]["e"]["initial_number_density"] = 1e15
+            (folder / "plasma_species_only.json").write_text(json.dumps(data))
+        snapshot = {file.name: file.read_bytes() for file in folder.iterdir()}
+        with pytest.raises(ValueError):
+            module.reconcile_staged_D_json_initials(folder, ordered)
+        assert snapshot == {file.name: file.read_bytes() for file in folder.iterdir()}
+
+
 def test_archived_s6_kernel_types_remap_only_in_scratch_without_aliases(tmp_path):
     """The old B input is immutable; only temporary B/D type fields change."""
     import re
