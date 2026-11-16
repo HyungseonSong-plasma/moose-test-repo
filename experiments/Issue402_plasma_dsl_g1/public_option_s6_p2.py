@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -237,6 +238,82 @@ _FEM_TYPE_LINE = re.compile(
     + "|".join(map(re.escape, RENAMED_FEM_KERNEL_TYPES))
     + r")(?P<end>[ \t]*\r?$)"
 )
+
+
+
+def reconcile_staged_D_json_initials(chemistry: Path, ordered: list[str]) -> dict:
+    """Pin the four D log-state initials to the archived Native S6, scratch only.
+
+    The JSON-owned DD Physics generates exactly these four solver variables/ICs;
+    delete the competing old native declarations without touching log_energy,
+    physics equations, original source inputs or the reviewed public overlay.
+    """
+    if (len(ordered) != 11 or Path(ordered[-1]).name != "migrated_continuity.i"
+            or len({Path(item).name for item in ordered}) != 11
+            or any(Path(item).name != item.split("/")[-1] or
+                   not item.endswith(".i") for item in ordered)):
+        raise ValueError("S6_D_INITIAL_UNEXPECTED_LAYER_SET")
+    spec = importlib.util.spec_from_file_location(
+        "issue402_s6_initial_contract",
+        ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py")
+    if spec is None or spec.loader is None:
+        raise ValueError("S6_D_INITIAL_PINNED_DONOR_MISSING")
+    donor = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(donor)
+    states = {"e": "log_e", "O2p": "log_O2p", "Om": "log_Om", "Op": "log_Op"}
+    first = chemistry / Path(ordered[0]).name
+    original = first.read_text(encoding="utf-8")
+    if "[log_energy]\n" not in original:
+        raise ValueError("S6_D_INITIAL_NATIVE_ENERGY_OWNER_MISSING")
+    remaining, retired, densities = original, [], {}
+    for species, variable in states.items():
+        lexical = donor.PINNED_INITIAL_LOG[variable]
+        expected = {"initial_condition": lexical, "block": "plasma"}
+        if species == "e":
+            expected.update(family="LAGRANGE", order="FIRST")
+        else:
+            expected["type"] = "MooseVariableFVReal"
+        remaining, receipt = donor.retire(remaining, "Variables", variable, expected)
+        retired.append(receipt)
+        density = math.exp(float(lexical)) * donor.N_A
+        if not math.isfinite(density) or density <= 0:
+            raise ValueError("S6_D_INITIAL_PHYSICAL_DENSITY_INVALID")
+        densities[species] = density
+    for relative in ordered[1:-1]:
+        source = (chemistry / Path(relative).name).read_text(encoding="utf-8")
+        for variable in states.values():
+            if re.search(r"(?m)^  \[" + re.escape(variable) + r"\]\s*$", source):
+                raise ValueError("S6_D_INITIAL_SECONDARY_NATIVE_OWNER_" + variable)
+
+    source_path = ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json"
+    staged_path = chemistry / "plasma_species_only.json"
+    original_json = source_path.read_bytes()
+    if staged_path.read_bytes() != original_json:
+        raise ValueError("S6_D_INITIAL_SPECIES_JSON_SOURCE_DRIFT")
+    payload = json.loads(original_json)
+    if (set(payload) != {"species", "equations", "reactions"}
+            or payload["equations"] != {} or payload["reactions"] != []
+            or set(payload["species"]) != {"e", "O2", "O", "O2p", "Om", "Op"}):
+        raise ValueError("S6_D_INITIAL_SPECIES_ONLY_SCHEMA_MISMATCH")
+    for species, charge in {"e": -1, "O2p": 1, "Om": -1, "Op": 1}.items():
+        record = payload["species"][species]
+        if set(record) != {"elements", "charge_number"} or record["charge_number"] != charge:
+            raise ValueError("S6_D_INITIAL_CHARGE_OR_OWNER_" + species)
+        record["initial_number_density"] = densities[species]
+    new_json = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    # All identity, ownership and schema preflights finish before either write.
+    first.write_text(remaining, encoding="utf-8")
+    staged_path.write_bytes(new_json)
+    return {
+        "status": "SCRATCH_ONLY_JSON_INITIALS_FOUR_NATIVE_OWNERS_RETIRED",
+        "retired_native_variables": sorted(states.values()),
+        "densities_m3": densities,
+        "native_before_sha256": hashlib.sha256(original.encode()).hexdigest(),
+        "native_after_sha256": hashlib.sha256(remaining.encode()).hexdigest(),
+        "json_original_sha256": hashlib.sha256(original_json).hexdigest(),
+        "json_staged_sha256": hashlib.sha256(new_json).hexdigest(),
+        "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
+    }
 
 
 def remap_staged_fem_types(chemistry: Path, ordered: list[str]) -> dict:
@@ -772,6 +849,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             # Only a disposable JSON copy is created; the repository file is immutable.
                             shutil.copy2(ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
                                          staged / p2.CHEM / "plasma_species_only.json")
+                            scratch_initials = reconcile_staged_D_json_initials(
+                                staged / p2.CHEM, ordered)
                             overlay.write_text(OVERLAY, encoding="utf-8")
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
@@ -792,6 +871,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         report["checks"][case][variant]["scratch_sheath_bc_cutover"] = scratch_sheath
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
+                            report["checks"][case][variant]["scratch_json_initials"] = scratch_initials
                     except Exception as exc:
                         report["checks"][case][variant] = {
                             "P2": "HOLD", "classification": type(exc).__name__,
