@@ -95,8 +95,37 @@ def check(manifest: dict, ci: str, native: str) -> None:
     assert manifest["backup"]["visibility"] == "OWNER_ONLY_NOT_SHARED"
     assert manifest["backup"]["readback"] == "SHA256_AND_SIZE_VERIFIED"
     assert manifest["backup"]["permanent_worm"] == "NOT_PROVEN"
-    assert manifest["replacement"]["source_verified_run"] == 43718313495
-    assert manifest["replacement"]["source_verified_head"] == "37aa27e7bcb0de17bda0210ef790c618c56ebee0"
+    # A completed run proves only its *exact* source SHA and each individual job.
+    # A newer branch HEAD needs a new Actions run; green subjobs are not CI PASS.
+    replacement = manifest["replacement"]
+    receipt = replacement["verification_receipt"]
+    assert receipt["claim"] == "PRIOR_COMPLETED_EXACT_HEAD_P0_P1_P2_ONLY"
+    assert receipt["repository"] == "HyungseonSong-plasma/moose-test-repo"
+    assert receipt["pr_number"] == 553
+    assert re.fullmatch(r"[0-9a-f]{40}", replacement["source_verified_head"])
+    assert receipt["head_sha"] == replacement["source_verified_head"], "EVIDENCE_HEAD_MISMATCH"
+    assert receipt["workflow_run_id"] == replacement["source_verified_run"], "EVIDENCE_RUN_MISMATCH"
+    assert receipt["workflow_run_id"] > 0 and receipt["run_attempt"] >= 1
+    assert receipt["workflow_name"] == "Repository CI"
+    assert receipt["event"] == "pull_request"
+    assert receipt["run_conclusion"] == "failure", "GLOBAL_CI_FALSE_PASS"
+    assert receipt["p3"] == "NOT_RUN" and receipt["science"] == "SCIENCE_HOLD"
+    assert receipt["freshness_policy"] == "NEW_HEAD_REQUIRES_NEW_EXACT_HEAD_RUN_AND_JOB_RECEIPTS"
+    p0_receipt, native_receipt = receipt["p0"], receipt["native_p1_p2"]
+    assert p0_receipt["job_name"] == "Issue541 CORE four boundary SCCM composition inlet P0 (no Native)"
+    assert native_receipt["job_name"] == "Issue541 CORE four native source-bound P1 P2 (no P3)"
+    assert p0_receipt["conclusion"] == native_receipt["conclusion"] == "success"
+    assert {p0_receipt["job_id"], native_receipt["job_id"]} and p0_receipt["job_id"] != native_receipt["job_id"]
+    assert all(x["job_id"] > 0 and x["artifact_id"] > 0 for x in (p0_receipt, native_receipt))
+    assert p0_receipt["artifact_name"] == f"issue541-core-four-p0-{receipt['workflow_run_id']}"
+    assert native_receipt["artifact_name"] == f"issue541-core-four-native-{receipt['workflow_run_id']}"
+    others = receipt["other_gates"]
+    assert set(others) == {"validate", "plasma_native_regression"}
+    assert others["validate"]["conclusion"] == others["plasma_native_regression"]["conclusion"] == "failure"
+    assert others["validate"]["reason"] == "WORKFLOW_SURFACE_GUARD"
+    assert others["plasma_native_regression"]["reason"] == "PUBLIC_S6_417_941_P2_HOLD"
+    assert all(x["job_id"] > 0 for x in others.values())
+    assert len({p0_receipt["job_id"], native_receipt["job_id"], *(x["job_id"] for x in others.values())}) == 4
     assert sum(x["branch_present_at_2026_11_15"] for x in owners) == 1
     assert ci.count("  issue402_core_four_p0:") == 1
     assert ci.count("  issue402_core_four_native_p2:") == 1
@@ -156,6 +185,26 @@ def self_test(m: dict, ci: str, native: str):
             pass
         else:
             raise AssertionError("MUTATION_NOT_DETECTED:" + label)
+    # Independent mutations of the external Actions receipt must fail closed.
+    for label, mutator in (
+        ("HEAD_MISMATCH", lambda x: x["replacement"]["verification_receipt"].update(head_sha="0" * 40)),
+        ("RUN_MISMATCH", lambda x: x["replacement"]["verification_receipt"].update(workflow_run_id=1)),
+        ("EVENT_MISMATCH", lambda x: x["replacement"]["verification_receipt"].update(event="push")),
+        ("P0_FALSE_PASS", lambda x: x["replacement"]["verification_receipt"]["p0"].update(conclusion="failure")),
+        ("P2_FALSE_PASS", lambda x: x["replacement"]["verification_receipt"]["native_p1_p2"].update(conclusion="failure")),
+        ("ARTIFACT_MISSING", lambda x: x["replacement"]["verification_receipt"]["native_p1_p2"].update(artifact_id=0)),
+        ("GLOBAL_CI_FALSE_PASS", lambda x: x["replacement"]["verification_receipt"].update(run_conclusion="success")),
+        ("GLOBAL_GATE_HIDDEN", lambda x: x["replacement"]["verification_receipt"]["other_gates"].pop("validate")),
+        ("FRESHNESS_PROMOTION", lambda x: x["replacement"]["verification_receipt"].update(claim="CURRENT_HEAD_FULLY_VERIFIED")),
+    ):
+        bad = copy.deepcopy(m)
+        mutator(bad)
+        try:
+            check(bad, ci, native)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError("MUTATION_NOT_DETECTED:EVIDENCE_" + label)
     print("ISSUE541_CORE_FOUR_MUTATION_SELF_TEST=PASS")
 
 def main():
@@ -172,7 +221,15 @@ def main():
         self_test(m, ci, native)
     if args.check:
         check(m, ci, native)
-        print("ISSUE541_CORE_FOUR_SOURCE_CONTRACT=PASS; P3=NOT_RUN; SCIENCE_HOLD")
+        import os
+        observed_head = os.environ.get("EXPECTED_HEAD")
+        evidence_head = m["replacement"]["source_verified_head"]
+        if observed_head:
+            assert re.fullmatch(r"[0-9a-f]{40}", observed_head), "EXPECTED_HEAD_INVALID"
+        scope = ("EXACT_SOURCE_MATCH_ONLY" if observed_head == evidence_head
+                 else "PRIOR_VERIFIED_HEAD_REQUIRES_FRESH_CI")
+        print("ISSUE541_CORE_FOUR_SOURCE_CONTRACT=PASS; P3=NOT_RUN; SCIENCE_HOLD; "
+              f"EVIDENCE_HEAD={evidence_head}; HEAD_LINEAGE={scope}")
 
 if __name__ == "__main__":
     main()

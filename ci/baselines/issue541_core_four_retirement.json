@@ -11,8 +11,48 @@
     "native_runner": "physics_app/ci/run_issue541_core_four_native_p2.py",
     "ci": ".github/workflows/ci.yml",
     "required_build_base": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
-    "source_verified_head": "37aa27e7bcb0de17bda0210ef790c618c56ebee0",
-    "source_verified_run": 43718313495
+    "source_verified_head": "2df75852699531c8b6d469ec447d09a90e9a3738",
+    "source_verified_run": 43833166262,
+    "verification_receipt": {
+      "claim": "PRIOR_COMPLETED_EXACT_HEAD_P0_P1_P2_ONLY",
+      "repository": "HyungseonSong-plasma/moose-test-repo",
+      "pr_number": 553,
+      "head_sha": "2df75852699531c8b6d469ec447d09a90e9a3738",
+      "workflow_name": "Repository CI",
+      "workflow_run_id": 43833166262,
+      "run_attempt": 1,
+      "event": "pull_request",
+      "run_conclusion": "failure",
+      "p0": {
+        "job_name": "Issue541 CORE four boundary SCCM composition inlet P0 (no Native)",
+        "job_id": 133183151585,
+        "conclusion": "success",
+        "artifact_id": 14208944369,
+        "artifact_name": "issue541-core-four-p0-43833166262"
+      },
+      "native_p1_p2": {
+        "job_name": "Issue541 CORE four native source-bound P1 P2 (no P3)",
+        "job_id": 133183151549,
+        "conclusion": "success",
+        "artifact_id": 14209821466,
+        "artifact_name": "issue541-core-four-native-43833166262"
+      },
+      "other_gates": {
+        "validate": {
+          "job_id": 133183151619,
+          "conclusion": "failure",
+          "reason": "WORKFLOW_SURFACE_GUARD"
+        },
+        "plasma_native_regression": {
+          "job_id": 133183151818,
+          "conclusion": "failure",
+          "reason": "PUBLIC_S6_417_941_P2_HOLD"
+        }
+      },
+      "p3": "NOT_RUN",
+      "science": "SCIENCE_HOLD",
+      "freshness_policy": "NEW_HEAD_REQUIRES_NEW_EXACT_HEAD_RUN_AND_JOB_RECEIPTS"
+    }
   },
   "workflows": [
     {
@@ -52,7 +92,7 @@
       "source_event": "push:branch-specific,self-path",
       "required_marker": "ISSUE402_SCCM_STATIC_GAS_NATIVE_P2_PASS_P3_NOT_RUN",
       "retirement": "RETIRED_VERIFIED",
-      "reason": "Original branch absent on refreshed GitHub branch search; self-file-only push with no dispatch/call, no other repository code references; all historical P0/P1/P2 faithfully reexecuted at 37aa27e7 and original run 43505864550 artifact ZIP archived and readback SHA matched; removal is source-HEAD CI gated.",
+      "reason": "Original branch absent on refreshed GitHub branch search; self-file-only push with no dispatch/call, no other repository code references; all historical P0/P1/P2 faithfully reexecuted at exact head 2df75852699531c8b6d469ec447d09a90e9a3738 (Repository CI run 43833166262) and original run 43505864550 artifact ZIP archived and readback SHA matched; removal is source-HEAD CI gated.",
       "original_success": {
         "run_id": 43505864550,
         "source_sha": "e78b8fa3c3e30dbd219a2ab28730121284f666a6",
