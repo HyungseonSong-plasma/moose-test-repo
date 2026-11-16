@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "ci/baselines/issue541_core_four_retirement.json"
 CI = ROOT / ".github/workflows/ci.yml"
+GROUP_A = ROOT / "ci/baselines/issue541_group_a_retirement.json"
 
 REQUIRED_P0 = (
 "tests/test_issue402_dd_plasma_boundary_json.py",
@@ -70,6 +71,9 @@ def check(manifest: dict, ci: str, native: str) -> None:
     assert manifest["ownership"] == "CORE_END_TO_END"
     assert manifest["replacement"]["native_runner"] == "physics_app/ci/run_issue541_core_four_native_p2.py"
     assert "sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008" in manifest["replacement"]["required_build_base"]
+    group_a = json.loads(GROUP_A.read_text(encoding="utf-8"))
+    ga_rows = {x["id"]: x for x in group_a["workflows"]}
+    assert set(ga_rows) == {"A1", "A2", "A3", "A4"}, "GROUP_A_OWNER_SET_MISMATCH"
     owners = manifest["workflows"]
     assert len(owners) == len(ORIGINALS)
     assert {x["path"].rsplit("/", 1)[-1] for x in owners} == set(ORIGINALS)
@@ -81,7 +85,31 @@ def check(manifest: dict, ci: str, native: str) -> None:
         assert row["required_marker"] in P2_MARKERS
         assert row["reason"]
         source = ROOT / row["path"]
-        if row["retirement"] == "KEEP_HOLD":
+        if row["path"].endswith("/issue402-dd-json-boundary-p0-p2-once.yml"):
+            # A1 is staged with user's declared external-caller absence; the
+            # actual shared historical branch is still live until #606 merges.
+            assert row["retirement"] == "STAGED_DELETE_KEEP_HOLD_INTEGRATION", "A1_PREMATURE_RETIREMENT"
+            assert not source.exists(), "A1_STAGED_SOURCE_REINTRODUCED"
+            assert row["branch_present_at_2026_11_15"] is True, "A1_HISTORIC_BRANCH_FACT_TAMPERED"
+            assert row["caller_observation"] == "HISTORICAL_PUSH_BRANCH_STILL_EXISTS"
+            assert row.get("rollback_original_blob") == row["original_blob"], "A1_ROLLBACK_MISSING"
+            assert row.get("wave1c_caller_zero") == "USER_DECLARED_NO_EXTERNAL_CALLERS_NOT_GITHUB_PROVEN"
+            assert row.get("wave1c_integration") == "HOLD_PENDING_OLD_REF_CUTOVER_AND_APPROVAL"
+            stage = row.get("a1_owner_retirement")
+            assert isinstance(stage, dict) and ga_rows["A1"]["a1_owner_retirement"] == stage, "A1_CROSS_MANIFEST_MISMATCH"
+            assert ga_rows["A1"]["original_blob"] == row["original_blob"], "A1_BLOB_CROSS_MANIFEST_MISMATCH"
+            assert ga_rows["A1"]["decision"] == row["retirement"], "A1_DISPOSITION_CROSS_MANIFEST_MISMATCH"
+            assert stage["mode"] == "OPERATOR_DECLARED_A1_NO_EXTERNAL_CALLERS__STAGED_ONLY"
+            assert stage["attestation_type"] == "USER_DECLARATION_NOT_INDEPENDENT_GITHUB_AUDIT"
+            assert stage["old_ref_cutover_pr"] == 606 and stage["old_ref_cutover_state"] == "DRAFT_NOT_MERGED"
+            assert stage["historical_head_before"] == "b3f3b6e09b83828343fc0bc097f5a4edce9207e7"
+            assert stage["original_blob"] == row["original_blob"]
+            assert stage["p3_dd_blob"] == "068ef7f78b84b45dbf8c678522ada049d4a42b7a"
+            assert stage["p3_s6_blob"] == "485439a723584ca5bbc8632a86c53574b0b1eb9a"
+            assert stage["original_artifact_id"] == row["original_success"]["artifact_id"]
+            assert stage["historical_zip_sha256"] == row["original_success"]["zip_sha256"]
+            assert stage["accepted_retirement"] is False and stage["science"] == "SCIENCE_HOLD"
+        elif row["retirement"] == "KEEP_HOLD":
             assert source.is_file(), "HOLD_WORKFLOW_MISSING:" + row["path"]
         else:
             assert not source.exists(), "PREMATURE_RETIREMENT:" + row["path"]
@@ -187,6 +215,11 @@ def self_test(m: dict, ci: str, native: str):
         ("BACKUP_PUBLIC", lambda x: x["backup"].update(visibility="PUBLIC")),
         ("WAVE1D_STAGED_FALSE_CALLER_ZERO", lambda x: x["workflows"][1].update(wave1d_caller_zero="VERIFIED")),
         ("WAVE1D_STAGED_MISSING_ROLLBACK", lambda x: x["workflows"][1].update(rollback_original_blob="0" * 40)),
+        ("A1_FALSE_CALLER_PROVEN", lambda x: x["workflows"][0].update(wave1c_caller_zero="GITHUB_PROVEN")),
+        ("A1_MISSING_ROLLBACK", lambda x: x["workflows"][0].update(rollback_original_blob="0"*40)),
+        ("A1_FALSE_MERGE", lambda x: x["workflows"][0]["a1_owner_retirement"].update(old_ref_cutover_state="MERGED")),
+        ("A1_WRONG_P3", lambda x: x["workflows"][0]["a1_owner_retirement"].update(p3_dd_blob="0"*40)),
+        ("A1_FALSE_ACCEPTED", lambda x: x["workflows"][0]["a1_owner_retirement"].update(accepted_retirement=True)),
     ):
         bad = copy.deepcopy(m)
         mutator(bad)
@@ -239,6 +272,7 @@ def main():
             assert re.fullmatch(r"[0-9a-f]{40}", observed_head), "EXPECTED_HEAD_INVALID"
         scope = ("EXACT_SOURCE_MATCH_ONLY" if observed_head == evidence_head
                  else "PRIOR_VERIFIED_HEAD_REQUIRES_FRESH_CI")
+        print("ISSUE541_CORE_A1_CROSS_GUARD=PASS; A1=STAGED_ONLY; OPERATOR_ATTESTED; OLD_REF_UNMERGED")
         print("ISSUE541_CORE_FOUR_SOURCE_CONTRACT=PASS; P3=NOT_RUN; SCIENCE_HOLD; "
               f"EVIDENCE_HEAD={evidence_head}; HEAD_LINEAGE={scope}")
 
