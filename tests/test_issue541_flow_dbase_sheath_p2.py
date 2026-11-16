@@ -92,12 +92,18 @@ def test_flow_sheath_preflight_is_read_only_and_hybrid_is_wired(
     ).hexdigest()
     assert scratch.read_text(encoding="utf-8") == original
     driver = (PILOT / "run_chemistry_s6_p2_only.py").read_text()
-    assert "prepare_hybrid(chemistry, ordered, case)" in driver
-    assert '"scratch_hybrid_json_cutover": hybrid' in driver
-    assert "rebind_preserved_native_sheath(" in driver
+    assert "cutover = prepare(chemistry, ordered, case)" in driver
+    assert 'sheath_receipt = cutover["scratch_sheath_bc_cutover"]' in driver
+    assert '"scratch_sheath_bc_rebind": sheath_receipt' in driver
+    assert 'cutover["scratch_json_initial_cutover"]["owner_count"] != 4' in driver
+    assert "prepare_hybrid(chemistry, ordered, case)" not in driver
 
 
-@pytest.mark.parametrize("mutation", ["wall_flux", "boundary", "class", "duplicate"])
+@pytest.mark.parametrize(
+    "mutation",
+    ["wall_flux", "boundary", "class", "variable", "duplicate",
+     "quote", "extra_space", "token_order"],
+)
 def test_flow_sheath_refuses_mutated_owners_without_writing(
     tmp_path: Path, mutation: str,
 ) -> None:
@@ -117,6 +123,21 @@ def test_flow_sheath_refuses_mutated_owners_without_writing(
         altered = block.replace(
             "type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
             "type = UnapprovedSheathLaw", 1)
+    elif mutation == "variable":
+        altered = block.replace("variable = log_e",
+                                "variable = log_O2p", 1)
+    elif mutation == "quote":
+        altered = block.replace(
+            "boundary = 'plasma_electrode plasma_metal plasma_right'",
+            'boundary = "plasma_electrode plasma_metal plasma_right"', 1)
+    elif mutation == "extra_space":
+        altered = block.replace(
+            "plasma_electrode plasma_metal plasma_right",
+            "plasma_electrode  plasma_metal plasma_right", 1)
+    elif mutation == "token_order":
+        altered = block.replace(
+            "plasma_electrode plasma_metal plasma_right",
+            "plasma_metal plasma_electrode plasma_right", 1)
     else:
         altered = block + "\n" + block
     assert altered != block
@@ -134,3 +155,18 @@ def test_flow_sheath_refuses_wrong_layer_order(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="FLOW_S6_DBASE_ORDER_OR_SOURCE_CHANGED"):
         rebind_preserved_native_sheath(chemistry, list(reversed(ordered)))
     assert scratch.read_text(encoding="utf-8") == source
+
+
+def test_flow_sheath_refuses_second_conversion_without_writing(
+    tmp_path: Path,
+) -> None:
+    # The original FLOW error was caused by invoking the exact archived-type
+    # rebind after the canonical Chemistry cutover had already converted it.
+    original = _canonical_source()
+    once, owners = migrate_exact_s6_fem_sheath(original)
+    assert len(owners) == 8
+    chemistry, ordered, scratch = _stage(tmp_path, once)
+    before = scratch.read_bytes()
+    with pytest.raises(ValueError, match="HYBRID_SHEATH_BC_IDENTITY_electron_sheath"):
+        rebind_preserved_native_sheath(chemistry, ordered, apply=False)
+    assert scratch.read_bytes() == before
