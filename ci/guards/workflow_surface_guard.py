@@ -13,6 +13,8 @@ ENTRYPOINTS = {
     "samuel-branch-delete.yml": {"push"},
     # Exact-source, owner-approved DD P3 only; no automatic trigger.
     "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
+    # S6: two-case 100us manual source-bound replay; NEVER scheduled/auto-run.
+    "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
