@@ -74,8 +74,16 @@ private-rate boundaries are never edited.
 
 This contract is implemented by
 `chemistry/prepare_hybrid_json_s6.py`, checked by
-`tests/test_issue402_hybrid_json_s6_owner_preflight.py`, and exercised by
-`.github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml`.
+`tests/test_issue402_hybrid_json_s6_owner_preflight.py`. The maintained
+manual-only replay candidate is
+`.github/workflows/issue541-arch-s6-p3-p4-replay.yml`, which requires exact
+source-SHA and explicit typed P3 approval; it is not registered on the
+current default branch. The historical one-shot
+`issue402-hybrid-json-s6-p3-p4-once.yml` (Git blob
+`485439a723584ca5bbc8632a86c53574b0b1eb9a`) is retained in
+immutable Git history and Issue #535 execution/Artifact receipts; its
+deletion from the Wave1 integration candidate is a retirement proposal,
+not scientific approval or proof that the historical branch has been cut over.
 The reference comparison is **P4 diagnostic only**; `SCIENCE_HOLD`
 persists until separate scientific parity review.
 
