@@ -191,6 +191,33 @@ def test_guarded_scratch_cutover_retains_native_nonchem_operators(tmp_path, vari
                 "  []\n"
             )
             source = source.replace("[]\n[Kernels]", electron + "[]\n[Kernels]", 1)
+            # The Chemistry D route already canonicalized names but retains
+            # the eight obsolete factory *type* tokens until prepare().
+            particle_types = {
+                "electron_sheath": "'plasma_electrode plasma_metal plasma_right'",
+                "electron_cover_dielectric": "'plasma_cover'",
+                "electron_wafer_dielectric": "'plasma_wafer'",
+                "electron_focus_ring_dielectric": "'plasma_focus_ring'",
+            }
+            energy_types = {
+                "electron_energy_sheath": "'plasma_electrode plasma_metal plasma_right'",
+                "electron_energy_cover": "'plasma_cover'",
+                "electron_energy_wafer": "'plasma_wafer'",
+                "electron_energy_focus_ring": "'plasma_focus_ring'",
+            }
+            sheath = "[BCs]\n"
+            for name, boundary in particle_types.items():
+                sheath += (f"  [{name}]\n"
+                           "    type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC\n"
+                           "    variable = log_e\n    wall_number_flux = e_wall_number_flux\n"
+                           f"    boundary = {boundary}\n  []\n")
+            for name, boundary in energy_types.items():
+                sheath += (f"  [{name}]\n"
+                           "    type = PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC\n"
+                           "    variable = log_energy\n    wall_number_flux = e_wall_number_flux\n"
+                           "    mean_energy = e_energy_eV\n"
+                           f"    boundary = {boundary}\n  []\n")
+            source += sheath + "[]\n"
         (tmp_path / basename).write_text(source)
     overlay = tmp_path / ordered[-1]
     overlay.write_text("ORIGINAL OVERLAY - DO NOT USE")
@@ -199,7 +226,14 @@ def test_guarded_scratch_cutover_retains_native_nonchem_operators(tmp_path, vari
     for old in ("R_elastic_O2", "R_elastic_O", "R_ion_O2"):
         assert result["canonical_name_replacements"][old] >= 1
     assert result["status"] == "P2_INPUT_PREPARED"
+    assert result["scratch_sheath_bc_cutover"]["owner_count"] == 8
+    assert result["scratch_sheath_bc_cutover"]["P3"] == "NOT_RUN"
     assert result["native_check_input"] == "NOT_RUN"
+    first_text = (tmp_path / ordered[0]).read_text()
+    assert first_text.count("type = FEMElectronSheathBC") == 4
+    assert first_text.count("type = FEMElectronEnergySheathBC") == 4
+    assert "PhysicsFEMLogMolarElectronFieldLimitedFluxBC" not in first_text
+    assert "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC" not in first_text
     assert result["run"] == "NOT_RUN"
     assert result["science"] == "SCIENCE_HOLD"
     assert overlay.read_text() == (PILOT / f"s6_{variant}_chemistry_run.template.i").read_text()
