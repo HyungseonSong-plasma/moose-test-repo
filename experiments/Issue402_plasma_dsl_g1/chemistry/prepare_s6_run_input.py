@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import shutil
 from pathlib import Path
@@ -514,8 +515,56 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
                 for receipt in sheath_receipts)):
         raise ValueError("S6_CHEMISTRY_SHEATH_INCOMPLETE_MIGRATION")
     edits[first] = migrated_sheath_source
+
+    # Transfer only exactly pinned historical four charged species initial
+    # states to the staged Chemistry JSON. Continuity now owns their solver
+    # variables and ICs; the Native energy state log_e_energy remains owned
+    # by its original Variables block (Energy is in partial-input mode).
+    initial_states = {
+        "e": "log_e", "O2p": "log_O2p", "Om": "log_Om", "Op": "log_Op"
+    }
+    original_owner_source = edits[first]
+    revised_owner_source = original_owner_source
+    native_initial_owners = []
+    densities = {}
+    for species_id, variable in initial_states.items():
+        lexical = sheath.PINNED_INITIAL_LOG[variable]
+        expected_owner = {"initial_condition": lexical, "block": "plasma"}
+        if species_id == "e":
+            expected_owner.update(family="LAGRANGE", order="FIRST")
+        else:
+            expected_owner["type"] = "MooseVariableFVReal"
+        revised_owner_source, receipt = sheath.retire(
+            revised_owner_source, "Variables", variable, expected_owner)
+        native_initial_owners.append(receipt)
+        # Log-state stores ln(mol/m^3); Chemistry JSON requires particles/m^3.
+        initial_density = math.exp(float(lexical)) * sheath.N_A
+        if not math.isfinite(initial_density) or initial_density <= 0:
+            raise ValueError("S6_CHEMISTRY_INITIAL_DENSITY_INVALID_" + species_id)
+        densities[species_id] = initial_density
+    if "  [log_e_energy]\n" not in revised_owner_source:
+        raise ValueError("S6_CHEMISTRY_NATIVE_ENERGY_OWNER_MISSING")
+    for item in ordered[1:-1]:
+        other_source = edits[staged_chem_dir / Path(item).name]
+        for variable in initial_states.values():
+            if re.search(r"(?m)^  \[" + re.escape(variable) + r"\]\s*$", other_source):
+                raise ValueError("S6_CHEMISTRY_DUPLICATE_NATIVE_INITIAL_" + variable)
+    edits[first] = revised_owner_source
+
+    canonical_common = COMMON.read_bytes()
+    common_document = json.loads(canonical_common)
+    if (set(common_document) != {"species", "equations", "reactions"}
+            or set(common_document["species"]) !=
+               {"e", "O2", "O", "O2p", "Om", "Op", "O2a"}):
+        raise ValueError("S6_CHEMISTRY_COMMON_SPECIES_SCHEMA_DRIFT")
+    for species_id, charge in {"e": -1, "O2p": 1, "Om": -1, "Op": 1}.items():
+        record = common_document["species"][species_id]
+        if (set(record) != {"elements", "charge_number"}
+                or record["charge_number"] != charge):
+            raise ValueError("S6_CHEMISTRY_JSON_CHARGE_OR_OWNER_" + species_id)
+        record["initial_number_density"] = densities[species_id]
+    common = (json.dumps(common_document, indent=2, sort_keys=True) + "\n").encode()
     template = (PILOT / f"s6_{variant}_chemistry_run.template.i").read_text()
-    common = COMMON.read_bytes()
     selected = (PILOT / f"chemistry/oxygen_s6_{variant}.json").read_bytes()
     expected = {
         "EI-417" if variant == "417" else "EI-941"
@@ -549,6 +598,18 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
             "owners": sheath_receipts,
             "source_sha256": sha(original_sheath_source.encode()),
             "staged_sha256": sha(migrated_sheath_source.encode()),
+            "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
+        },
+        "scratch_json_initial_cutover": {
+            "status": "SCRATCH_ONLY_FOUR_NATIVE_INITIAL_OWNERS_TO_JSON",
+            "owner_count": len(native_initial_owners),
+            "owners": native_initial_owners,
+            "densities_per_m3": densities,
+            "common_original_sha256": sha(canonical_common),
+            "common_staged_sha256": sha(common),
+            "native_initial_before_sha256": sha(original_owner_source.encode()),
+            "native_initial_after_sha256": sha(revised_owner_source.encode()),
+            "energy_native_retained": True,
             "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
         },
         "overlay_sha256": sha(template.encode()),
