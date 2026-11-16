@@ -14,6 +14,8 @@ on:
       - 'tests/test_issue402_reaction_reduction_p2_only.py'
       - 'ci/baselines/issue541_group_a2_flow_retirement.json'
       - 'ci/guards/issue541_group_a2_flow_retirement_p0.py'
+      - 'ci/baselines/issue541_group_b_flow_reaction_retirement.json'
+      - 'ci/guards/issue541_group_b_flow_retirement_p0.py'
   workflow_dispatch:
 
 permissions:
@@ -73,6 +75,11 @@ jobs:
           grep -Fq "$OCI" control/physics_app/dependencies.lock
           python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py --control control --mode preflight
           echo "FLOW_NATIVE_P0_SOURCE_PIN_PASS P3=NOT_RUN SCIENCE_HOLD"
+      - name: P0 - fail-closed Group B FLOW Native retirement and caller mutation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 control/ci/guards/issue541_group_b_flow_retirement_p0.py --self-test --check
       - name: Set up source-bound P0 Python dependencies
         uses: actions/setup-python@v5
         with:
