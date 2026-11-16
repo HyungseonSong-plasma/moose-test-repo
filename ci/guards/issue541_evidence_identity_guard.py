@@ -216,6 +216,8 @@ def verify(record, api):
                          if kind == "PR_MERGE_REF" else source)
     require(run.get("head_sha") == expected_run_head,
             "N11_RUN_SOURCE_SHA_MISMATCH")
+    require(run.get("head_commit", {}).get("id") == expected_run_head,
+            "N11_RUN_HEAD_COMMIT_MISMATCH")
     require(run.get("status") == "completed", "RUN_NOT_COMPLETE")
     require(pr.get("number") == record["pr_number"], "N3_PR_NUMBER_MISMATCH")
     require(pr.get("base", {}).get("ref") == "main", "PR_TARGET_MISMATCH")
@@ -256,8 +258,23 @@ def verify(record, api):
                 "N9_PREMERGE_PR_NOT_OPEN")
         require(run["event"] == "pull_request", "PR_EVENT_REQUIRED")
         require(sha(record.get("pr_head_sha")), "PR_HEAD_SHA_INVALID")
-        require(pr.get("head", {}).get("sha") == record["pr_head_sha"],
-                "N11_STALE_PR_HEAD")
+        # A PR can advance after a successful historical run. The immutable
+        # run SHA remains the evidence owner: current PR.head.sha is NOT the
+        # source SHA of that old run. Require identical branch and verified
+        # non-rewritten ancestry rather than silently rebinding its proof.
+        require(run.get("head_branch") == pr.get("head", {}).get("ref"),
+                "N11_PR_RUN_BRANCH_MISMATCH")
+        current_pr_sha = pr.get("head", {}).get("sha")
+        require(sha(current_pr_sha), "N11_CURRENT_PR_HEAD_INVALID")
+        historical_pr_sha = record["pr_head_sha"]
+        require(historical_pr_sha == run.get("head_sha"),
+                "N11_HISTORICAL_PR_HEAD_NOT_RUN_SHA")
+        if historical_pr_sha != current_pr_sha:
+            ancestry = api.get("/compare/" + historical_pr_sha +
+                               "..." + current_pr_sha)
+            require(ancestry.get("status") == "ahead" and
+                    ancestry.get("behind_by") == 0,
+                    "N11_HISTORICAL_PR_HEAD_NOT_ANCESTOR")
         if kind == "PR_HEAD":
             require(source == record["pr_head_sha"], "N2_PR_HEAD_IS_NOT_SOURCE")
             require(record.get("pr_merge_ref_sha") is None and
@@ -454,9 +471,12 @@ def sample():
         "artifact": {"id": 301, "name": "core-native", "sha256": hashlib.sha256(blob).hexdigest()}}
     data = {
         "/pulls/578": {"number": 578, "merged": False, "state": "open",
-                       "head": {"sha": source}, "base": {"ref": "main"}},
+                       "head": {"sha": source, "ref": "integration"},
+                       "base": {"ref": "main"}},
         "/actions/runs/101": {"id": 101, "run_attempt": 1, "event": "pull_request",
-                              "head_sha": source, "status": "completed",
+                              "head_sha": source, "head_branch": "integration",
+                              "head_commit": {"id": source},
+                              "status": "completed",
                               "conclusion": "failure", "name": "Repository CI",
                               "repository": {"full_name": REPOSITORY},
                               "pull_requests": [{"number": 578}]},
@@ -473,6 +493,8 @@ def sample():
             {"ref": "refs/pull/578/merge", "object": {"sha": "d" * 40}},
         "/commits/" + "d" * 40:
             {"parents": [{"sha": source}, {"sha": "f" * 40}]},
+        "/compare/" + source + "..." + "e" * 40:
+            {"status": "ahead", "behind_by": 0},
         "/branches/main": {"commit": {"sha": "f" * 40}},
         "/compare/" + source + "..." + "f" * 40:
             {"status": "ahead", "behind_by": 0}}
@@ -482,6 +504,20 @@ def sample():
 def self_test():
     r, d, blob = sample()
     require(verify(r, MockGitHub(d, blob))["status"] == "PASS", "SELFTEST_POSITIVE")
+    # A run remains valid after PR head advances, but is NEVER promoted to
+    # a new source SHA. A rewritten/diverged PR branch is rejected.
+    advanced = copy.deepcopy(d)
+    advanced["/pulls/578"]["head"]["sha"] = "e" * 40
+    require(verify(r, MockGitHub(advanced, blob))["source_sha"] == r["source_sha"],
+            "HISTORICAL_HEAD_POSITIVE_NOT_SOURCE_BOUND")
+    broken = copy.deepcopy(advanced)
+    broken["/compare/" + r["source_sha"] + "..." + "e" * 40]["status"] = "diverged"
+    try:
+        verify(r, MockGitHub(broken, blob))
+    except EvidenceRejected:
+        pass
+    else:
+        raise AssertionError("N27_REWRITTEN_HEAD_FALSE_PASS")
     cases = [
         ("N1", lambda a, b: a.update(checkout_sha="d" * 40)),
         ("N2", lambda a, b: a.update(evidence_kind="MERGED_COMMIT")),
@@ -496,7 +532,12 @@ def self_test():
                                     merged_commit_sha="a" * 40)),
         ("N10", lambda a, b: a.update(evidence_kind="PR_MERGE_REF",
                                      pr_merge_ref_sha="a" * 40)),
-        ("N11", lambda a, b: b["/pulls/578"]["head"].update(sha="e" * 40)),
+        ("N11", lambda a, b: b["/actions/runs/101"].update(
+            head_commit={"id": "e" * 40})),
+        ("N28_WRONG_PR_BRANCH", lambda a, b: b["/actions/runs/101"].update(
+            head_branch="another-branch")),
+        ("N29_UNRELATED_HEAD", lambda a, b: b["/pulls/578"]["head"].update(
+            sha="f" * 40)),
         ("N12", lambda a, b: a.update(validation_scope="ALL_NATIVE")),
         ("N13", lambda a, b: a.update(science="SCIENCE_PASS")),
         ("N14", lambda a, b: a.update(binary_sha256="f" * 64)),
@@ -591,7 +632,7 @@ def self_test():
         pass
     else:
         raise AssertionError("N7_MISSING_REAL_ZIP_FILE_FALSE_PASS")
-    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=26; SCIENCE_HOLD")
+    print("ISSUE541_EVIDENCE_IDENTITY_MUTATION_SELF_TEST=PASS; NEGATIVES=29; SCIENCE_HOLD")
 
 
 def audit_live(args):
@@ -611,7 +652,7 @@ def audit_live(args):
         "schema": SCHEMA, "repository": args.repo, "evidence_kind": args.kind,
         "source_sha": args.expected_sha,
         "checkout_sha": checkout_from_job_log(api.job_log(args.job_id)),
-        "pr_head_sha": pr["head"]["sha"], "pr_merge_ref_sha": None,
+        "pr_head_sha": run["head_sha"], "pr_merge_ref_sha": None,
         "merged_commit_sha": pr.get("merge_commit_sha") if pr.get("merged") else None,
         "workflow_run_id": args.run_id, "job_id": args.job_id,
         "run_attempt": run["run_attempt"], "event_name": run["event"],
