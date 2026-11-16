@@ -164,7 +164,10 @@ def verify(record, api):
     require(run.get("repository", {}).get("full_name") == REPOSITORY,
             "RUN_REPOSITORY_MISMATCH")
     run_prs = [x.get("number") for x in run.get("pull_requests") or []]
-    require(record["pr_number"] in run_prs, "N3_RUN_NOT_OWNED_BY_PR")
+    # GitHub push runs often omit pull_requests; post-merge ownership is
+    # proved by merged PR SHA + main ancestry instead.
+    if kind in {"PR_HEAD", "PR_MERGE_REF"}:
+        require(record["pr_number"] in run_prs, "N3_RUN_NOT_OWNED_BY_PR")
     require(isinstance(jobs_page.get("jobs"), list), "JOBS_UNAVAILABLE")
     job = next((x for x in jobs_page["jobs"]
                 if x.get("id") == record["job_id"]), None)
@@ -198,8 +201,9 @@ def verify(record, api):
     else:
         require(pr.get("merged") is True and pr.get("merged_at"),
                 "N9_ACTUAL_MERGE_NOT_CONFIRMED")
-        require(run["event"] in {"push", "workflow_dispatch"},
-                "N10_POSTMERGE_EVENT_INVALID")
+        require(run["event"] in {"push", "workflow_dispatch"} and
+                run.get("head_branch") == "main",
+                "N10_POSTMERGE_EVENT_OR_BRANCH_INVALID")
         require(sha(record.get("merged_commit_sha")) and
                 source == record["merged_commit_sha"] and
                 source == pr.get("merge_commit_sha"), "N2_MERGE_COMMIT_MISMATCH")
@@ -333,6 +337,7 @@ def self_test():
         ("N13", lambda a, b: a.update(science="SCIENCE_PASS")),
         ("N14", lambda a, b: a.update(binary_sha256="f" * 64)),
         ("N15", lambda a, b: b["/actions/artifacts/301"].update(expired=True)),
+        ("N19", lambda a, b: b["/actions/artifacts/301"]["workflow_run"].update(id=505)),
         ("N16", lambda a, b: a.update(workflow_result="success")),
         ("N17", lambda a, b: b["/actions/runs/101"].update(head_sha="e" * 40)),
         ("N18", lambda a, b: a.update(oci_digest="other@sha256:" + "b" * 64)),
@@ -351,7 +356,8 @@ def self_test():
               pr_merge_ref_sha=None, event_name="push")
     md["/pulls/578"].update(merged=True, merged_at="2026-11-01T00:00:00Z",
                              merge_commit_sha=r["source_sha"], state="closed")
-    md["/actions/runs/101"].update(event="push")
+    md["/actions/runs/101"].update(event="push", head_branch="main",
+                                    pull_requests=[])
     require(verify(mr, MockGitHub(md, blob))["status"] == "PASS",
             "MERGED_COMMIT_POSITIVE_FIXTURE")
     md["/compare/" + r["source_sha"] + "..." + "f" * 40]["status"] = "diverged"
