@@ -235,7 +235,7 @@ echo "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED"
 
 for entry in "invalid_species_density_zero_p2:Invalid species ID for automatic naming: 0" \
              "invalid_species_density_odd_p2:Invalid species ID for automatic naming: 1e16" \
-             "invalid_species_density_nan_p2:Species 'nan' is absent from"; do
+             "invalid_species_density_nan_p2:Selected species 'nan' requires species.nan.initial_number_density"; do
   item="${entry%%:*}"
   expected="${entry#*:}"
   set +e
@@ -324,7 +324,7 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
   set -e
   case "$item" in
     invalid_overlap) expected='species listed in both groups' ;;
-    invalid_fem_fv_swap) expected="Selected species 'O2p' requires species.O2p.initial_number_density" ;;
+    invalid_fem_fv_swap) expected="Species 'O2p' has JSON initial_number_density and an existing solver variable 'log_O2p'" ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
