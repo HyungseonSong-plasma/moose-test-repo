@@ -72,6 +72,41 @@ WAVE1_C_PER_CASE = json.loads(r'''{"A1":{"historical_run_id":43533803916,"histor
 # This is a recorded, fail-closed staging receipt, not CALLER_ZERO_PROVEN.
 WAVE1_C_CLOSURE = json.loads(r'''{"A1":{"mode":"STAGED_LEGACY_BRANCH_SHUTDOWN_REVIEW_ONLY","retention":"PRIVATE_INDEPENDENT_COPY_READBACK","proof_date":"2026-11-16","historical_branch":"issue-402-dd-plasma-boundary-action","historical_branch_head":"af4a9e896328386723e8bbb957f334e1d83fe75e","branch_shared_with_p3":true,"branch_must_not_be_deleted":true,"original_workflows_reviewed":45,"branch_write_route":"PUSH_EXACT_SELF_PATH_ONLY","declared_dispatch_or_call_route":false,"cross_branch_external_or_dynamic_callers":"UNVERIFIED","caller_zero_proven":false,"prereq_draft_pr":588,"prereq_draft_head":"85d6968f5155e25eabfca8b503828979d9509506","prereq_base":"issue-402-dd-plasma-boundary-action","prereq_state":"OPEN_DRAFT_NOT_MERGED","prereq_scope":"EXACTLY_TWO_A1_A2_FILES_REMOVED_FROM_CANDIDATE_BRANCH_ONLY","untouched_p3_dd_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","untouched_p3_s6_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","original_sha":"bbebff910db3e5659014368043a50b99273d2cdc","artifact_backup":{"drive_file_id":"1OsADIq21_JU4Z4O65t_Hl-_AwjM6Nxf0","github_artifact_id":14088768015,"bytes":2072,"sha256":"de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27","independent_zip_readback":"EXACT_BINARY_AND_HASH_PASS","worm":"NOT_PROVEN"},"final_deletion_authorized":false,"decision":"KEEP_HOLD","science":"SCIENCE_HOLD","p3":"NOT_RUN"},"A2":{"mode":"STAGED_LEGACY_BRANCH_SHUTDOWN_REVIEW_ONLY","retention":"PRIVATE_INDEPENDENT_COPY_READBACK","proof_date":"2026-11-16","historical_branch":"issue-402-dd-plasma-boundary-action","historical_branch_head":"af4a9e896328386723e8bbb957f334e1d83fe75e","branch_shared_with_p3":true,"branch_must_not_be_deleted":true,"original_workflows_reviewed":45,"branch_write_route":"PUSH_EXACT_SELF_PATH_ONLY","declared_dispatch_or_call_route":false,"cross_branch_external_or_dynamic_callers":"UNVERIFIED","caller_zero_proven":false,"prereq_draft_pr":588,"prereq_draft_head":"85d6968f5155e25eabfca8b503828979d9509506","prereq_base":"issue-402-dd-plasma-boundary-action","prereq_state":"OPEN_DRAFT_NOT_MERGED","prereq_scope":"EXACTLY_TWO_A1_A2_FILES_REMOVED_FROM_CANDIDATE_BRANCH_ONLY","untouched_p3_dd_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","untouched_p3_s6_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","original_sha":"1931f0b9909507979826812f346d3353f12e333b","artifact_backup":null,"final_deletion_authorized":false,"decision":"KEEP_HOLD","science":"SCIENCE_HOLD","p3":"NOT_RUN"}}''')
 
+
+# A1-only: this is an immutable account-visible GitHub audit snapshot, not
+# positive evidence of *off-platform* controller/scheduler absence.
+A1_CALLER_AUDIT = json.loads(r'''{"snapshot_date":"2026-11-16","target":"A1_DD_BOUNDARY_ONLY","original_blob":"bbebff910db3e5659014368043a50b99273d2cdc","workflow_id":417754909,"historical_branch":"issue-402-dd-plasma-boundary-action","historical_head":"af4a9e896328386723e8bbb957f334e1d83fe75e","original_self_path_push_only":true,"api_dispatch_and_workflow_call_not_declared":true,"historical_actions_branch_runs_total":36,"historical_a1_runs":19,"historical_a1_events":["push"],"historical_a1_actors":["HyungseonSong-plasma"],"latest_a1_run_utc":"2026-11-14T00:22:57Z","github_installation_id":155128539,"github_accessible_repos":["HyungseonSong-plasma/chatgpt-operation","HyungseonSong-plasma/codeQA","HyungseonSong-plasma/moose-test-repo","HyungseonSong-plasma/simulation-ontology","HyungseonSong-plasma/sol-adapter-moose"],"accessible_repo_default_branch_exact_literal_a1_reference":"SELF_YAML_ONLY","other_repo_default_branch_exact_literal_a1_reference_count":0,"all_branches_scanned":false,"off_platform_controller_schedules_scanned":false,"owner_external_caller_disposition":"UNVERIFIED","dynamic_gh_api_and_git_push_consumers":"UNVERIFIED","caller_zero_proven":false,"original_a1_preserved":true,"old_ref_cutover_pr_588":"OPEN_DRAFT_A1_A2_SHARED_NOT_EXECUTED","shared_dd_p3_original_blob":"068ef7f78b84b45dbf8c678522ada049d4a42b7a","shared_s6_p3_original_blob":"485439a723584ca5bbc8632a86c53574b0b1eb9a","independently_byte_rehashed_original_zip_sha256":"de931c0c1dcb95308759a0c67eba42b9fbcd97fcb961b88a92d0b179ca9a8d27","artifact_id":14088768015,"artifact_external_worm":"NOT_PROVEN","retirement_authorized":false,"state":"KEEP_HOLD_UNVERIFIED_EXTERNAL_CALLERS","science":"SCIENCE_HOLD","p3":"NOT_RUN"}''')
+
+def a1_static_workflow_callers(workflows: dict[str, str]) -> list[str]:
+    """Detect explicit same-repository dispatch/reuse/run callers of the A1 one-shot.
+
+    Dynamic GitHub API or automated git push consumers outside this static
+    source set remain explicitly UNVERIFIED. Negative scan != caller-zero.
+    """
+    target = "issue402-dd-json-boundary-p0-p2-once.yml"
+    workflow_id = "417754909"
+    workflow_name = "Issue402 DD JSON plasma boundary exact"
+    matches = []
+    for path, source in workflows.items():
+        if path.endswith("/" + target):
+            continue
+        lines = [line.strip() for line in source.splitlines()
+                 if line.strip() and not line.lstrip().startswith("#")]
+        for i, line in enumerate(lines):
+            window = " ".join(lines[i:i + 4])
+            marker = (target in window or workflow_id in window)
+            if marker and (
+                re.search(r"\bgh\s+workflow\s+run\b", line)
+                or re.search(r"\buses:\s*[^ ]*", line) and target in line
+                or re.search(r"actions/workflows/", line) and marker
+                or re.search(r"\bworkflow_id\s*:", line) and marker
+            ):
+                matches.append(path + ":" + str(i + 1) + ":direct-caller")
+            elif "workflow_run" in line and workflow_name in window:
+                matches.append(path + ":" + str(i + 1) + ":workflow-run")
+    return sorted(set(matches))
+
+
 def git_blob_sha(raw: bytes) -> str:
     return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
 
@@ -102,6 +137,16 @@ def inspect(root: Path, doc: dict) -> list[str]:
         errors.append("baseline source")
     if doc.get("science") != "SCIENCE_HOLD" or doc.get("p3") != "NOT_RUN":
         errors.append("science/P3 promotion")
+    workflow_dir = root / ".github/workflows"
+    if workflow_dir.is_dir():
+        observed_callers = a1_static_workflow_callers({
+            str(path.relative_to(root)): path.read_text(encoding="utf-8")
+            for path in sorted([*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")])
+        })
+        for caller in observed_callers:
+            errors.append("A1 newly introduced static workflow caller " + caller)
+    else:
+        errors.append("A1 canonical workflow inventory directory missing")
     records = doc.get("workflows")
     if not isinstance(records, list):
         return errors + ["missing workflow records"]
@@ -196,6 +241,11 @@ def inspect(root: Path, doc: dict) -> list[str]:
                 errors.append(id_ + " Wave1-C branch/caller/CI/retention audit missing or falsified")
             if record.get("wave1_c_closure") != WAVE1_C_CLOSURE[id_]:
                 errors.append(id_ + " Wave1-C independent backup or source-branch cutover evidence falsified")
+        if id_ == "A1":
+            if record.get("wave1_c_a1_caller_audit") != A1_CALLER_AUDIT:
+                errors.append("A1 caller audit snapshot missing or fabricated")
+            if record.get("decision") != "KEEP_HOLD":
+                errors.append("A1 retirement without off-platform caller-zero authorization")
         if record.get("decision") != "KEEP_HOLD":
             errors.append(id_ + " retirement promoted without accepted caller-zero/integrated proof")
         if not isinstance(record.get("blockers"), list) or not record["blockers"]:
@@ -281,6 +331,30 @@ def self_test(root: Path, original: dict) -> None:
     record = next(x for x in mutated["workflows"] if x["id"] == "A1")
     record["wave1_c_closure"]["untouched_p3_dd_blob"] = "0" * 40
     probes.append(("Wave1-C P3 source identity falsified", mutated))
+    # A1-only receipt must reject silent upgrades of unscanned services,
+    # owner attestation, historical branch state or the actual disposition.
+    for field, forged in (
+        ("owner_external_caller_disposition", "ZERO_PROVEN"),
+        ("dynamic_gh_api_and_git_push_consumers", "NONE"),
+        ("caller_zero_proven", True),
+        ("retirement_authorized", True),
+        ("historical_head", "0" * 40),
+        ("all_branches_scanned", True),
+    ):
+        bad = copy.deepcopy(original)
+        a1 = next(x for x in bad["workflows"] if x["id"] == "A1")
+        a1["wave1_c_a1_caller_audit"][field] = forged
+        probes.append(("A1 forged caller audit " + field, bad))
+    synthetic_callers = (
+        ("GH_CLI", "run: gh workflow run issue402-dd-json-boundary-p0-p2-once.yml"),
+        ("WORKFLOW_REUSE", "steps:\n  - uses: ./.github/workflows/issue402-dd-json-boundary-p0-p2-once.yml"),
+        ("EXPLICIT_API", "run: gh api repos/o/r/actions/workflows/417754909/dispatches"),
+        ("WORKFLOW_RUN", "on:\n  workflow_run:\n    workflows: [Issue402 DD JSON plasma boundary exact]"),
+    )
+    for label, synthetic in synthetic_callers:
+        assert a1_static_workflow_callers({
+            ".github/workflows/a1-consumer.yml": synthetic
+        }), "A1_STATIC_CALLER_FALSE_NEGATIVE:" + label
     for id_ in ("A3", "A4"):
         mutated = copy.deepcopy(original)
         record = next(x for x in mutated["workflows"] if x["id"] == id_)
@@ -298,7 +372,8 @@ def self_test(root: Path, original: dict) -> None:
                          first["path"], first["historical_branch"])
     assert check_trigger(raw.replace("    paths:", "    paths_disabled:", 1),
                          first["path"], first["historical_branch"])
-    print("ISSUE541_GROUP_A_MUTATION_SELF_TEST=PASS count=" + str(len(probes) + 2))
+    print("ISSUE541_A1_CALLER_STATIC_MUTATIONS=PASS count=4")
+    print("ISSUE541_GROUP_A_MUTATION_SELF_TEST=PASS count=" + str(len(probes) + 2 + 4))
 
 
 def main() -> int:
