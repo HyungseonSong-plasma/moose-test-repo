@@ -1,0 +1,53 @@
+# Temporary one-shot, preparation ONLY. No native P1/P2 or P3 is executed.
+# Intentionally isolated from main and Wave1 integration, NOT a merge candidate.
+# A later user-authorized separate commit may stage a P3 one-shot with a fresh
+# exact-source and cost approval. This initial revision NEVER runs a solver.
+name: Issue541 DD P3 fallback P0 readiness (NO NATIVE)
+run-name: DD P3 fallback P0 only @ ${{ github.sha }}
+on:
+  push:
+    branches: [cleanup-wave1-dd-p3-fallback-20261116]
+    paths: [.github/workflows/issue541-dd-p3-fallback-once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: issue541-dd-p3-fallback-prep-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  p0-no-native:
+    name: Verify temporary push route and DD P3 result gates (P0 ONLY)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Reject any push except the one approved P0 preparation commit
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          PUSH_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_REF" = "refs/heads/cleanup-wave1-dd-p3-fallback-20261116"
+          test "$BEFORE_SHA" = "aedb1509859d5a9e64817f1d7ab1dbf7aea77b6a"
+          test "$PUSH_MESSAGE" = "chore(dd-p3): P0-only fallback route readiness (NO_P3)"
+          echo 'DD_P3_EXPLICIT_RUN_APPROVAL=ABSENT'
+          echo 'DD_P3_ACTUAL_EXECUTION=FORBIDDEN'
+      - name: Checkout exact one-shot HEAD (read only)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Read-only source/OCI/provenance and synthetic P3 gate self-tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git hash-object .github/workflows/issue541-arch-dd-p3-replay.yml)" = "342069640ed958898a4d28585fdf4eead545a0ad"
+          test "$(git hash-object ci/guards/issue541_arch_dd_p3_result_gate.py)" = "7c57550530a9fe079fe20d93e84ba7a222ed167c"
+          test "$(git hash-object physics_app/ci/run_issue402_dd_json_p3_smoke.py)" = "661fe676f96db26a5f964aa2ac6b28d6882b150c"
+          test "$(git hash-object .github/workflows/issue402-dd-json-p3-smoke-once.yml)" = "068ef7f78b84b45dbf8c678522ada049d4a42b7a"
+          python3 -m py_compile physics_app/ci/run_issue402_dd_json_p3_smoke.py
+          python3 ci/guards/issue541_arch_dd_p3_result_gate.py --self-test
+          python3 physics_app/ci/run_issue402_dd_json_p3_smoke.py --self-test
+          python3 ci/guards/workflow_surface_guard.py --self-test
+          echo 'DD_P3_ONE_SHOT_FALLBACK_ROUTE_P0_READY_NO_P1_P2_P3'
