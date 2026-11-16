@@ -72,7 +72,7 @@ class GitHub:
     def get(self, path):
         # GitHub commit comparison uses exactly three dots. Admit only the
         # SHA40...SHA40 shape; all other dot-path/traversal forms stay denied.
-        compare = re.fullmatch(r"/compare/[0-9a-f]{40}\\.\\.\\.[0-9a-f]{40}", path)
+        compare = re.fullmatch(r"/compare/[0-9a-f]{40}[.][.][.][0-9a-f]{40}", path)
         require(path.startswith("/") and (compare is not None or ".." not in path),
                 "API_PATH_INVALID")
         req = urllib.request.Request(
