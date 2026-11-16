@@ -1,7 +1,8 @@
 # ARCH independent maintained replay candidate: manual dispatch only; never
 # auto-run P3 on push/PR. Requires exact SHA and an explicit approval phrase.
 # The original historical one-shot remains unchanged until separate retirement.
-# Bounded one-shot P3 JSON sheath-only transient; no RF/S6 acceptance.
+# Bounded one-shot P3 JSON sheath-only transient; independent continuity
+# and energy time evolution are mandatory. No RF/S6 science acceptance.
 # Triggered only by an explicit edit of this branch-local workflow path.
 name: Issue541 ARCH maintained DD JSON sheath P3 replay (manual only)
 run-name: ARCH DD JSON P3 manual @ ${{ github.sha }}
@@ -94,13 +95,15 @@ jobs:
           trap restore_evidence_ownership EXIT
           docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
             --workdir /workspace -v "$PWD:/workspace" \
-            --env "RUN_SOURCE_SHA=$GITHUB_SHA" "$OCI" -lc '
+            --env "RUN_SOURCE_SHA=$GITHUB_SHA" \
+            --env "RUN_OCI_REF=$OCI" "$OCI" -lc '
               set -euo pipefail
               source /environment
               python3 physics_app/ci/run_issue402_dd_json_p3_smoke.py \
                 --binary /workspace/physics_app/physics-opt \
                 --output /workspace/issue402_dd_json_p3_evidence \
-                --source-sha "$RUN_SOURCE_SHA"
+                --source-sha "$RUN_SOURCE_SHA" \
+                --oci-ref "$RUN_OCI_REF"
             ' 2>&1 | tee /tmp/issue402_dd_json_p3_transient.log
           restore_evidence_ownership
           test -w issue402_dd_json_p3_evidence
@@ -109,8 +112,9 @@ jobs:
             --evidence issue402_dd_json_p3_evidence \
             --source-sha "$GITHUB_SHA" \
             --binary physics_app/physics-opt \
-            --repository .
-          echo P3_BOUNDED_JSON_SHEATH_REAL_TRANSIENT_PASS_SCIENCE_HOLD
+            --repository . \
+            --oci-ref "$OCI"
+          echo P3_BOUNDED_JSON_SHEATH_CONTINUITY_ENERGY_OCI_PROVEN_SCIENCE_HOLD
       - name: Upload P3 source-bound Exodus, CSV, diagnostics, and failure evidence
         if: always()
         uses: actions/upload-artifact@v4
