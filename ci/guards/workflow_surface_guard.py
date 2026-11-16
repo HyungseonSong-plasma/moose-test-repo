@@ -11,6 +11,9 @@ ENTRYPOINTS = {
     "sol-runtime-integration.yml": {"push", "pull_request"},
     "ion-fvm-hybrid-staged-dt.yml": {"push", "pull_request", "workflow_dispatch"},
     "samuel-branch-delete.yml": {"push"},
+    # Explicit, SHA+approval-gated ARCH P3 entrypoint; never a one-shot push.
+    "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
+    "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
