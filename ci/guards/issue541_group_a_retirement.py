@@ -141,7 +141,7 @@ def inspect(root: Path, doc: dict) -> list[str]:
     if workflow_dir.is_dir():
         observed_callers = a1_static_workflow_callers({
             str(path.relative_to(root)): path.read_text(encoding="utf-8")
-            for path in sorted(workflow_dir.glob("*.yml"))
+            for path in sorted([*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")])
         })
         for caller in observed_callers:
             errors.append("A1 newly introduced static workflow caller " + caller)
