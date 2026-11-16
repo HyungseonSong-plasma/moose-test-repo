@@ -54,6 +54,8 @@ jobs:
             --artifact-id 14219962212 \
             --expected-sha 9e71762a5f45ab755481720e8beba314f59cd021 \
             --kind PR_HEAD --output issue541-wave1e-pr578-verified.json
+          python3 ci/guards/issue541_evidence_identity_guard.py --verify-record \
+            issue541-wave1e-pr578-verified.json
       - name: Publish SHA-bound Wave1-E verification receipt (not global CI)
         uses: actions/upload-artifact@v4
         with:
