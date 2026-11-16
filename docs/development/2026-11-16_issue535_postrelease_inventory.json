@@ -1,0 +1,636 @@
+{
+  "schema": "issue535.postrelease_legacy_inventory.v1",
+  "snapshot": {
+    "main_sha": "4738c56b79c7f9e08340d705339ec2a4a19ad456",
+    "as_of_utc": "2026-11-16",
+    "repository_ci_run": 43976673554,
+    "repository_ci_conclusion": "success",
+    "release_pr": 578,
+    "release_merge": "02910c0ea7c91fd34f86f117b2d68c3e67890f2a",
+    "postmerge_ci_fix_pr": 655,
+    "postmerge_ci_fix_merge": "4738c56b79c7f9e08340d705339ec2a4a19ad456",
+    "exact_pr_head_ci_sha": "1efdd922096df10239cff8adc132e8f3811c1a63",
+    "exact_pr_head_ci_run": 43972605776,
+    "exact_pr_head_flow_run": 43972605750,
+    "exact_pr_head_sol_run": 43972605779,
+    "native_push_policy": "Native jobs skipped on main push; exact PR head source P1/P2 previously passed"
+  },
+  "issue541": {
+    "total": 10,
+    "all_absent_from_main": true,
+    "retired_verified_count": 2,
+    "formal_hold_count": 8,
+    "items": [
+      {
+        "id": "D1/A1",
+        "owner": "CORE",
+        "path": ".github/workflows/issue402-dd-json-boundary-p0-p2-once.yml",
+        "original_blob": "bbebff910db3e5659014368043a50b99273d2cdc",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "RETIRED_VERIFIED",
+        "reason": "P0-P2 ONLY: operator attested no external callers; 19 owner push runs; historical #606 cutover; source ZIP hash backup; final exact PR-head CORE Native P1/P2 pass",
+        "replacement": "Repository CI CORE four P0 and Native P1/P2"
+      },
+      {
+        "id": "D2",
+        "owner": "CORE",
+        "path": ".github/workflows/issue402-sccm-fixed-gas-p0-p2-once.yml",
+        "original_blob": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "KEEP_HOLD",
+        "reason": "External and dynamic caller-zero not independently established",
+        "replacement": "Repository CI CORE four P0 and Native P1/P2"
+      },
+      {
+        "id": "D3",
+        "owner": "CORE",
+        "path": ".github/workflows/issue402-species-initial-composition-native-once.yml",
+        "original_blob": "f11aa0de000fb05bcc587798400313558a6cb58a",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "KEEP_HOLD",
+        "reason": "External and dynamic caller-zero not independently established",
+        "replacement": "Repository CI CORE four P0 and Native P1/P2"
+      },
+      {
+        "id": "D4",
+        "owner": "CORE",
+        "path": ".github/workflows/issue402-species-live-ic-inlet-native-once.yml",
+        "original_blob": "c6068680c0c7083e38ec03d86c5433eb49db94bf",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "KEEP_HOLD",
+        "reason": "External and dynamic caller-zero not independently established",
+        "replacement": "Repository CI CORE four P0 and Native P1/P2"
+      },
+      {
+        "id": "A2",
+        "owner": "FLOW",
+        "path": ".github/workflows/issue402-legacy-symbol-audit-once.yml",
+        "original_blob": "1931f0b9909507979826812f346d3353f12e333b",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "RETIRED_VERIFIED",
+        "reason": "Previously accepted #535; #602 historical cutover; owner attested no external PAT/private controller; maintained P0 inventory tests",
+        "replacement": "Repository CI legacy symbol P0"
+      },
+      {
+        "id": "A3",
+        "owner": "FLOW",
+        "path": ".github/workflows/issue402-rate-coef-ideal-gas-native-once.yml",
+        "original_blob": "64164c097ec8f7831e67b80b317144cd97ba9ee8",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "KEEP_HOLD",
+        "reason": "External and dynamic caller-zero not independently established",
+        "replacement": "Repository CI ideal gas P0 plus FLOW Native P2"
+      },
+      {
+        "id": "A4",
+        "owner": "FLOW",
+        "path": ".github/workflows/issue402-reaction-material-reduction-p0-once.yml",
+        "original_blob": "5e433b5c56f335808e6a5cbaa771b808eef1ad45",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "KEEP_HOLD",
+        "reason": "External and dynamic caller-zero not independently established",
+        "replacement": "Repository CI reaction material P0"
+      },
+      {
+        "id": "B",
+        "owner": "FLOW",
+        "path": ".github/workflows/issue402-reaction-reduction-native-once.yml",
+        "original_blob": "91313152e7e7df3bd0256a2180f489774cfa6171",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "KEEP_HOLD",
+        "reason": "Old multi-path self-trigger retired from main; external and dynamic callers not independently established",
+        "replacement": "FLOW EI10 EI16 Native P2"
+      },
+      {
+        "id": "DD",
+        "owner": "ARCH",
+        "path": ".github/workflows/issue402-dd-json-p3-smoke-once.yml",
+        "original_blob": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "KEEP_HOLD",
+        "reason": "Original archived exact byte; DD two-step live run source-bound only; WORM and external caller exhaustiveness not proven",
+        "replacement": "required manual DD P3 replay"
+      },
+      {
+        "id": "S6",
+        "owner": "ARCH",
+        "path": ".github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml",
+        "original_blob": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
+        "main_executable_present": false,
+        "git_blob_retrievable": true,
+        "formal_verdict": "KEEP_HOLD",
+        "reason": "Original archived exact byte; 417 941 three-step P3 source-bound only; full maintained 100us replay and WORM unproven",
+        "replacement": "required manual S6 two-case P3 P4 replay"
+      }
+    ]
+  },
+  "other_oneshots": {
+    "count": 26,
+    "all_self_path_main_push": true,
+    "items": [
+      {
+        "path": ".github/workflows/issue202-maxwell-once.yml",
+        "git_blob": "c46bcc78659d8f179b1a518fcbcbf25476150ad1",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue202-maxwell-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue282-historical-rz-e2a-once.yml",
+        "git_blob": "7e04362a03248f778a6ebf300a39f8541bd8a16e",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue282-historical-rz-e2a-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue282-rz-jitoff-once.yml",
+        "git_blob": "3fd69c82bf962692fb43cfe3d1af5c11414561ab",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue282-rz-jitoff-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue310-relaxation-once.yml",
+        "git_blob": "6001ef71540d47ec59d3b013c1f93728da1fe616",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue310-relaxation-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-ground-state-three-power-once.yml",
+        "git_blob": "4bcea0ba352319c1b513ec96ca06426584712ee5",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-ground-state-three-power-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-mixed-o3p-o1d-400-1000-once.yml",
+        "git_blob": "57e29713060a7cc26254633bf3afd04c5d5678c2",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-mixed-o3p-o1d-400-1000-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-mixed-o3p-o1d-initial1e15-once.yml",
+        "git_blob": "8abdd8f46896448611f41292511a9510c5d37c15",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-mixed-o3p-o1d-initial1e15-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-mixed-o3p-o1d-zero-initial-once.yml",
+        "git_blob": "87c48bb222e776468070f92feee75cd7cfdbc022",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-mixed-o3p-o1d-zero-initial-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-o2p-dr-ab-once.yml",
+        "git_blob": "9c42e5738f7354b03898cdb78307f9441ac34e9f",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-o2p-dr-ab-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-o2p-dr-zero-o-once.yml",
+        "git_blob": "7f85af30bb79670af04bd43fdd4132e60d5e684b",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-o2p-dr-zero-o-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-oxygen24-400-1000-once.yml",
+        "git_blob": "7b71b4259bd5a59382094458bb67b2c61ef65b4f",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-oxygen24-400-1000-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-pure-o2-inlet-mixed-400-1000-once.yml",
+        "git_blob": "96e84a4ef9a7fd6150016fddc7ad34ea64b56bbd",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-pure-o2-inlet-mixed-400-1000-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-step0-no-diss-control-400-1000-once.yml",
+        "git_blob": "1d4b6cd1c266d426887d9aca3e950a996e5d5104",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-step0-no-diss-control-400-1000-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue395-step1-diss-off-pure-o2-400-1000-once.yml",
+        "git_blob": "a1d4143ef65b663625f26173041a0f7b4ceb512f",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue395-step1-diss-off-pure-o2-400-1000-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue402-canonical-s6-d-once.yml",
+        "git_blob": "6d8eb34b45876dcec08714dba7d8cb68cd19862a",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue402-canonical-s6-d-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue402-chemistry-p3-once.yml",
+        "git_blob": "ff5433fa9dd92fc2bca66833ed3860d81406aa74",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue402-chemistry-p3-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue402-electron-fem-hybrid-p3-once.yml",
+        "git_blob": "8f3658a26ee3de6c81c9157aad5b6dee075ce338",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue402-electron-fem-hybrid-p3-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue457-c0-400-100us-once.yml",
+        "git_blob": "2947edc63ffeb0cf6e9d9bef3d074f554be852b9",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue457-c0-400-100us-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue457-oxygen-c0-preflight-once.yml",
+        "git_blob": "50fcfeab30299abe77d1409804798623d5eedb1b",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue457-oxygen-c0-preflight-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue471-ad-parser-closure-once.yml",
+        "git_blob": "b99d47dfeb373636b6251458a86330b5a4576418",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue471-ad-parser-closure-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue477-first-three-400w-native-maps-once.yml",
+        "git_blob": "39b8cf6f7c9dffc0df068106269e3d6b6576d3af",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue477-first-three-400w-native-maps-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue477-s3-401-op-generation-native-maps-once.yml",
+        "git_blob": "d20f7b12866b877f501d7fcfcd110307b388db14",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue477-s3-401-op-generation-native-maps-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue477-s5-o2-consumers-4plus4-delay-once.yml",
+        "git_blob": "97688e103511f844ae6d181a64fa876e26a67d58",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue477-s5-o2-consumers-4plus4-delay-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue477-s6-combined-407-2069-h25-once.yml",
+        "git_blob": "111b8be4121e427ff383bf742a15f260f84e5da5",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue477-s6-combined-407-2069-h25-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue477-second-base-3lookup-native-maps-once.yml",
+        "git_blob": "c9cb9a1165323240b86d494b0a5760638a28ba3b",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue477-second-base-3lookup-native-maps-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      },
+      {
+        "path": ".github/workflows/issue493-public-bc-results-p4-once.yml",
+        "git_blob": "729d5cc9a8530d7dffadaabd3440c58aaaa5b6ca",
+        "trigger_events": [
+          "push"
+        ],
+        "trigger_branches": [
+          "main"
+        ],
+        "trigger_paths": [
+          ".github/workflows/issue493-public-bc-results-p4-once.yml"
+        ],
+        "surface_status": "COMPLIANT",
+        "retirement_verdict": "KEEP_PENDING_OWNER_CALLER_AND_EVIDENCE_AUDIT"
+      }
+    ]
+  },
+  "issue1": {
+    "root": "experiments/Issue1_reactor_o2plus_integration/",
+    "total_source_files": 14,
+    "decision": "KEEP_ALL_14_DELETE_HOLD",
+    "checkers": [
+      {
+        "file": "check_migration_state.py",
+        "blob": "359ddccbc6b1cdb9cc1bb2016fe78d5d45fb3fc1"
+      },
+      {
+        "file": "check_reactor_o2plus.py",
+        "blob": "dd24ab29dd0de8015e42280f7584a51e2bdc1dc6"
+      }
+    ],
+    "cases": [
+      {
+        "case": "correction_on",
+        "folder": "experiments/Issue1_reactor_o2plus_integration/correction_on/",
+        "input": "correction_on.i",
+        "input_blob": "5c20f5036f037142962e44e92f518d204e10e8cc",
+        "manifest": "test.json",
+        "manifest_blob": "16886ceca94b1e4134d70c813b31c834a7af5491",
+        "manifest_type": "canonical",
+        "checker": "check_reactor_o2plus.py",
+        "checker_mode": "correction_on",
+        "decision": "KEEP"
+      },
+      {
+        "case": "full_exact_phi_ic",
+        "folder": "experiments/Issue1_reactor_o2plus_integration/full_exact_phi_ic/",
+        "input": "full_exact_phi_ic.i",
+        "input_blob": "a9d7354f8763bf855387668a54dfeedcd052fe81",
+        "manifest": "test.json",
+        "manifest_blob": "4e494d56e1c52ecda3b2d24f8aeb79be2c43ed03",
+        "manifest_type": "canonical",
+        "checker": "check_migration_state.py",
+        "checker_mode": "full",
+        "decision": "KEEP"
+      },
+      {
+        "case": "full_zero_phi_ic",
+        "folder": "experiments/Issue1_reactor_o2plus_integration/full_zero_phi_ic/",
+        "input": "full_zero_phi_ic.i",
+        "input_blob": "d883a9bf8f118a77f0affcdc259ac35642af6bec",
+        "manifest": "test.json",
+        "manifest_blob": "a662bd12355c271c75b8a01e8c11b57c1f1d0aed",
+        "manifest_type": "canonical",
+        "checker": "check_migration_state.py",
+        "checker_mode": "full",
+        "decision": "KEEP"
+      },
+      {
+        "case": "migration_only_exact_phi_ic",
+        "folder": "experiments/Issue1_reactor_o2plus_integration/migration_only_exact_phi_ic/",
+        "input": "migration_only_exact_phi_ic.i",
+        "input_blob": "9906040c450e28b3f1de8628c3936cf3ad1dec74",
+        "manifest": "test.json",
+        "manifest_blob": "7b553ef668d361b5cb02b3cedcf3514c08242b9e",
+        "manifest_type": "canonical",
+        "checker": "check_migration_state.py",
+        "checker_mode": "migration_only",
+        "decision": "KEEP"
+      },
+      {
+        "case": "poisson_analytic",
+        "folder": "experiments/Issue1_reactor_o2plus_integration/poisson_analytic/",
+        "input": "poisson_analytic.i",
+        "input_blob": "5b20df8337828f74d40b122d2745310d46aa1b71",
+        "manifest": "test.json",
+        "manifest_blob": "df860e45ed58e00dd0928a8dfe09f0e3d4697163",
+        "manifest_type": "canonical",
+        "checker": "check_reactor_o2plus.py",
+        "checker_mode": "poisson_analytic",
+        "decision": "KEEP"
+      },
+      {
+        "case": "self_consistent_2d",
+        "folder": "experiments/Issue1_reactor_o2plus_integration/self_consistent_2d/",
+        "input": "self_consistent_2d.i",
+        "input_blob": "d2986a9f06b54b3ab8a875adffee767d99d74a48",
+        "manifest": "test.json",
+        "manifest_blob": "0a2e864022819b88c935641b41838a5dc02e2637",
+        "manifest_type": "canonical",
+        "checker": "check_reactor_o2plus.py",
+        "checker_mode": "self_consistent",
+        "decision": "KEEP"
+      }
+    ],
+    "live_consumers": [
+      ".github/scripts/issue197_h3_migration_audit.py",
+      " .github/scripts/issue199_h5_known_charge.py",
+      "tests/test_issue402_retired_charge_poisson_ownership.py"
+    ],
+    "dynamic_discovery": "physics_harness/execution/workspace.py recursive test.json discovery with configured --tests-root",
+    "other_pr534": "OPEN_DRAFT_UNMERGED"
+  },
+  "independent_holds": {
+    "arch_worm": "NOT_PROVEN: private owner-mutable Drive ZIP backups",
+    "science": "SCIENCE_HOLD",
+    "p4": "NOT_ACCEPTED",
+    "s6_100us_replay": "NOT_PROVEN_EQUIVALENT",
+    "unverified_callers": "PER_WORKFLOW_KEEP_HOLD"
+  },
+  "notes": "Historical existing baseline records are time-stamped; this is a new postrelease operational snapshot. No workflow/source/artifact data mutated."
+}
