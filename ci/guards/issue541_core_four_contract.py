@@ -87,22 +87,27 @@ def check(manifest: dict, ci: str, native: str) -> None:
         source = ROOT / row["path"]
         if row["path"].endswith("/issue402-dd-json-boundary-p0-p2-once.yml"):
             # A1 is staged with user's declared external-caller absence; the
-            # actual shared historical branch is still live until #606 merges.
+            # original historical branch is still retained for the independent
+            # DD and hybrid P3 workflows; #606 cut over only the A1 self-path.
             assert row["retirement"] == "STAGED_DELETE_KEEP_HOLD_INTEGRATION", "A1_PREMATURE_RETIREMENT"
             assert not source.exists(), "A1_STAGED_SOURCE_REINTRODUCED"
             assert row["branch_present_at_2026_11_15"] is True, "A1_HISTORIC_BRANCH_FACT_TAMPERED"
             assert row["caller_observation"] == "HISTORICAL_PUSH_BRANCH_STILL_EXISTS"
             assert row.get("rollback_original_blob") == row["original_blob"], "A1_ROLLBACK_MISSING"
             assert row.get("wave1c_caller_zero") == "USER_DECLARED_NO_EXTERNAL_CALLERS_NOT_GITHUB_PROVEN"
-            assert row.get("wave1c_integration") == "HOLD_PENDING_OLD_REF_CUTOVER_AND_APPROVAL"
+            assert row.get("wave1c_integration") == "HOLD_PENDING_FINAL_VALIDATION_AND_ACCEPTANCE"
             stage = row.get("a1_owner_retirement")
             assert isinstance(stage, dict) and ga_rows["A1"]["a1_owner_retirement"] == stage, "A1_CROSS_MANIFEST_MISMATCH"
             assert ga_rows["A1"]["original_blob"] == row["original_blob"], "A1_BLOB_CROSS_MANIFEST_MISMATCH"
             assert ga_rows["A1"]["decision"] == row["retirement"], "A1_DISPOSITION_CROSS_MANIFEST_MISMATCH"
             assert stage["mode"] == "OPERATOR_DECLARED_A1_NO_EXTERNAL_CALLERS__STAGED_ONLY"
             assert stage["attestation_type"] == "USER_DECLARATION_NOT_INDEPENDENT_GITHUB_AUDIT"
-            assert stage["old_ref_cutover_pr"] == 606 and stage["old_ref_cutover_state"] == "DRAFT_NOT_MERGED"
+            assert stage["old_ref_cutover_pr"] == 606 and stage["old_ref_cutover_state"] == "MERGED_READBACK_VERIFIED"
             assert stage["historical_head_before"] == "b3f3b6e09b83828343fc0bc097f5a4edce9207e7"
+            assert stage["historical_head_after"] == "632aa2376cad03faa271bad2986c664086842225"
+            assert stage["old_ref_merge_commit"] == stage["historical_head_after"]
+            assert stage["historic_a1_file"] == "ABSENT_ON_LIVE_HISTORICAL_REF"
+            assert stage["accepted_retirement"] is False
             assert stage["original_blob"] == row["original_blob"]
             assert stage["p3_dd_blob"] == "068ef7f78b84b45dbf8c678522ada049d4a42b7a"
             assert stage["p3_s6_blob"] == "485439a723584ca5bbc8632a86c53574b0b1eb9a"
