@@ -280,7 +280,7 @@ jobs:
         with:
           name: physics-directory-role-audit
           path: physics-directory-role-audit.json
-          if-no-files-found: warn
+          if-no-files-found: error
       - name: Validate strict zero-legacy architecture census
         run: |
           python ci/guards/physics_architecture_census.py --json-out physics-architecture-census.json
@@ -293,6 +293,7 @@ jobs:
         with:
           name: physics-architecture-census
           path: physics-architecture-census.json
+          if-no-files-found: error
       - name: Upload migration source snapshot
         if: always()
         uses: actions/upload-artifact@v4
@@ -302,6 +303,7 @@ jobs:
             physics_harness/**/*.py
             experiments/**/*.py
             tests/**/*.py
+          if-no-files-found: error
           retention-days: 1
       - name: Run Physics pytest
         run: python -m pytest -q
@@ -518,7 +520,7 @@ jobs:
         with:
           name: boltzmann-native-eepf-synthetic-controls
           path: boltzmann-ci-eepf/*.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
       # Developer binary only: no LXCat rows, no native BOLSIG+ reference
       # and no selected third-party collision files are copied to CI.
@@ -750,6 +752,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           python3 ci/guards/issue541_core_four_contract.py --self-test
           python3 ci/guards/issue541_core_four_contract.py --check
+          python3 ci/guards/issue541_artifact_evidence_guard.py --self-test
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-policy
           test ! -e physics_app/src/physics/plasma/PlasmaDriftDiffusionBoundaryAction.C
           test -e physics_app/src/physics/plasma/SCCMInletFlow.C
           test -e physics_app/src/physics/plasma/IdealGasMixtureState.C
@@ -823,6 +827,11 @@ jobs:
             tests/test_issue402_s6_chemistry_run_templates.py \
             2>&1 | tee /tmp/issue541_recovered_p0.log
           echo ISSUE541_RECOVERED_P0_PASS_P3_NOT_RUN
+      - name: Require complete CORE P0 artifact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-core-p0
       - name: Store four-workflow P0 and inventory evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -832,7 +841,8 @@ jobs:
             /tmp/issue541_core_four_p0.log
             /tmp/issue541_core_four_routes.json
             /tmp/issue541_core_four_routes.md
-          if-no-files-found: warn
+            /tmp/issue541_recovered_p0.log
+          if-no-files-found: error
           retention-days: 30
 
   issue402_core_four_native_p2:
@@ -912,13 +922,19 @@ jobs:
                 --identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/core_four/p1_identity.json
               echo "P3=NOT_RUN; SCIENCE_HOLD"
             ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/core_four/p2.log
+      - name: Require source-bound CORE Native P1/P2 artifact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-core-native \
+            --expected-head "$EXPECTED_HEAD" --pinned-oci "$PINNED_OCI"
       - name: Publish exact-head P1/P2 source-bound evidence (no P3)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: issue541-core-four-native-${{ github.run_id }}
           path: experiments/Issue402_plasma_dsl_g1/evidence/core_four/**
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
   plasma_native_regression:
@@ -976,13 +992,18 @@ jobs:
           else
             echo 'Public S6 full-input gate is not present on this PR head (legacy smoke scope)'
           fi
+      - name: Require actual native regression evidence before success
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-regression
       - name: Upload native regression evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: plasma-native-regression-${{ github.event.pull_request.head.sha }}
           path: experiments/Issue402_plasma_dsl_g1/evidence/**
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
   artifact-api-probe:
