@@ -11,6 +11,9 @@ export EVIDENCE="$PILOT/evidence"
 mkdir -p "$EVIDENCE"
 test -f "$PILOT/baseline.i"
 test -f "$PILOT/valid_bindings.i"
+test -f "$PILOT/valid_generated_transport_json_p2.i"
+test -f "$PILOT/valid_all_physics_json_p2.i"
+test -f "$PILOT/noop_physics_root_overlay.i"
 
 # Python-only contracts; build the existing MOOSE application, never generate source code.
 python3 physics_app/ci/check_plasma_closures_contract.py
@@ -93,17 +96,29 @@ native() {
 
 native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
+# Historical external-variable overlay is a negative: JSON must own IC.
+set +e
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
-  2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
-# Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
-native --check-input -i "$PILOT/generic_four_species.i" \
+  > "$EVIDENCE/legacy_external_ic_rejected.log" 2>&1
+legacy_ic_status=$?
+set -e
+if [[ "$legacy_ic_status" -eq 0 ]] || \
+   ! grep -Fq "Selected species 'e' requires species.e.initial_number_density" \
+      "$EVIDENCE/legacy_external_ic_rejected.log"; then
+  echo "::error::Legacy external IC overlay was accepted or misdiagnosed" >&2
+  cat "$EVIDENCE/legacy_external_ic_rejected.log" >&2
+  exit 32
+fi
+echo "PLASMA_LEGACY_EXTERNAL_IC_REJECTED"
+# Modern positive control creates all four JSON-owned log-molar species states.
+native --check-input -i "$PILOT/species_density_pairs_p2.i" \
   2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
 echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+native --check-input -i "$PILOT/valid_all_physics_json_p2.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
 # Standalone positive construction check: one generated FEM transport Kernel.
 # It is a P2-only input, not an accepted physical simulation or P3 parity run.
-native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
+native --check-input -i "$PILOT/valid_generated_transport_json_p2.i" \
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
@@ -269,8 +284,7 @@ done
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
-native --check-input -i "$PILOT/baseline.i" \
-  "$PILOT/valid_generated_transport_options.i" \
+native --check-input -i "$PILOT/valid_generated_transport_json_p2.i" \
   "$PILOT/duplicate_e_time.i" > "$EVIDENCE/duplicate_e_time.log" 2>&1
 duplicate_time_exit=$?
 set -e
@@ -296,20 +310,27 @@ native --check-input -i "physics_app/ci/dd_nv_material_smoke.i" \
 echo "PLASMA_DD_NV_MATERIALS_P2_PASS"
 
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
+  # Obsolete option guards need a valid JSON owner; legacy baseline masks errors.
+  if [[ "$item" == invalid_legacy_kernel_names || "$item" == invalid_missing_fvm_charges ||
+        "$item" == invalid_incomplete_coefficients || "$item" == invalid_wrong_charge_sign ]]; then
+    input_decks=("$PILOT/valid_generated_transport_json_p2.i" "$PILOT/$item.i")
+  else
+    input_decks=("$PILOT/baseline.i" "$PILOT/$item.i")
+  fi
   set +e
-  native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
+  native --check-input -i "${input_decks[@]}" \
     > "$EVIDENCE/$item.log" 2>&1
   code=$?
   set -e
   case "$item" in
     invalid_overlap) expected='species listed in both groups' ;;
-    invalid_fem_fv_swap) expected='wrong type' ;;
+    invalid_fem_fv_swap) expected="Selected species 'O2p' requires species.O2p.initial_number_density" ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
     invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
     invalid_poisson_variable) expected='Poisson fem_potential requires an FEM solver variable' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
-    invalid_missing_variable) expected='was not found' ;;
+    invalid_missing_variable) expected="Selected species 'missing' requires species.missing.initial_number_density" ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
     invalid_missing_fvm_charges) expected='fem_charge_numbers' ;;
@@ -328,7 +349,8 @@ echo "PLASMA_INVALID_INPUTS_REJECTED"
 mkdir -p "$EVIDENCE/baseline" "$EVIDENCE/candidate"
 native -i "$PILOT/baseline.i" "Outputs/file_base=$EVIDENCE/baseline/plasma" \
   2>&1 | tee "$EVIDENCE/baseline_run.log"
-native -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
+# The only parity candidate overlay is inert: preserve external Native equations.
+native -i "$PILOT/baseline.i" "$PILOT/noop_physics_root_overlay.i" \
   "Outputs/file_base=$EVIDENCE/candidate/plasma" \
   2>&1 | tee "$EVIDENCE/candidate_run.log"
 test -s "$EVIDENCE/baseline/plasma.e"
