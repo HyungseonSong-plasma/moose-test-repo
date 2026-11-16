@@ -167,3 +167,22 @@ Artifacts identified by existing #578 receipt (not replayed on a new branch SHA)
 ## Mutation boundary
 
 First bounded cycle only creates this new file on isolated `cleanup-wave1-release-20261116`. No edits to Wave1 A/B DD/S6-owned workflow/test files, no changes to `ci.yml`, workflow guard, production C++, `main`, #575, #578 or any existing PR, and no workflow execution/merge/retirement.
+
+## 2026-11-16 — Lane A/B exact-byte selective intake (supersedes earlier "first-cycle document-only" boundary)
+
+**Intake snapshot before this note:** `1256034cd196a4e078fa680f8538b5c9945bfb44`; parent PR #578 stays `5d15c4054a00aa9fa8a778a87bb21690a3a5469b`, main stays `71e112eb05d4645c82aab8861b99d6952ac4ac3e`. **Not a release acceptance.** Lane C imported but did not alter owner-authored DD/S6 bytes. Four bounded Git tree CAS commits added exactly 6 tracked donor paths (plus existing coordinator document), with no overlap and no generic CI/Guard edits:
+
+| Lane / source | Exact imported path | Donor Git blob |
+|---|---|---|
+| A / #610 `ad1285b9e32be7467c07c5b09d56d6e9309211d0` | `.github/workflows/issue541-arch-dd-p3-replay.yml` | `342069640ed958898a4d28585fdf4eead545a0ad` |
+| A / #610 | `ci/guards/issue541_arch_dd_p3_result_gate.py` | `7c57550530a9fe079fe20d93e84ba7a222ed167c` |
+| A / #610 | `physics_app/ci/run_issue402_dd_json_p3_smoke.py` | `661fe676f96db26a5f964aa2ac6b28d6882b150c` |
+| B / #612 `9f340b60951735d29ffb4211ceac723803fc65df` | `.github/workflows/issue541-arch-s6-p3-p4-replay.yml` | `6c673628eac4693abe0d74b04fc31578a39b3971` |
+| B / #612 | `tests/test_issue541_s6_p3_replay_contract.py` | `9b0795f4c614ec791a52a4e2ddfa891290823e6c` |
+| B / #612 `9f340b60951735d29ffb4211ceac723803fc65df` | `docs/development/2026-11-16_wave1_p3_b_s6_417_941_retirement_audit.md` | `e3b2c486d06170b71c7c8c4b24a8c1201aacfb70` |
+
+**Source drift noted:** Lane B #612 advanced after the selected 3-file handoff (observed `6efeb8bbc519914099380e02ad60364b1c87032f`) by adding `.github/workflows/issue541-s6-owner-approved-p3-once-20261116.yml` with push-triggered expensive 400W/100us P3. This seventh workflow is explicitly **EXCLUDED** from Lane C release candidate; no one-shot import, automatic P3 run or external ownership approval is inferred. The separately authorized S6 Lane B execution, if any, must be audited by its owner and its own job/artifact before release decisions.
+
+**Evidence readback:** #610 head exact-source Repository CI `43889640337`: 16/17 job successes and `validate` failed on retained ARCH originals; both real CORE/ARCH DD/S6 source-bound Native P1/P2 successful at that donor SHA. #612's scoped 20-negative new P0 tests are source-imported but have no external exact-source receipt before integration. Neither case is equivalent to an actual successful DD or both-case S6 P3.
+
+**Post-intake validation gate:** whole-branch `workflow_surface_guard.py --check` must stay fail-closed on the two retained originals, so global `validate` will not be reported as PASS until independently approved retirement. Run new **exact HEAD** Repository CI through a safe main-target CI-only PR or other verified equivalent event; verify per-job SHA/attempt, DD synthetic 12 negative controls, S6 20 negative controls, real Native P1/P2, then GitHub Artifact digest and inner ZIP/source/OCI/provenance. No main merge. No default-branch registration. P3/P4 scientific acceptance still HOLD. Final Wave2 handoff SHA remains UNASSIGNED.
