@@ -88,9 +88,9 @@ Column `#577` means present in the main→#577 delta. `later` means modified by 
 | `experiments/Issue402_plasma_dsl_g1/valid_bindings.i` | modified | BASE-577 | Y | - | upstream dependency preserved |
 | `experiments/Issue402_plasma_dsl_g1/valid_generated_transport_json_p2.i` | added | BASE-577 | Y | - | upstream dependency preserved |
 | `physics_app/ci/check_issue402_json_rate_native_p2.py` | added | BASE-577 | Y | - | upstream dependency preserved |
-| `physics_app/ci/check_issue402_reaction_reduction_p2_only.py` | modified | INT-UNASSIGNED | - | Y | source ownership sign-off required |
-| `physics_app/ci/check_issue402_signed_fem_residual_native.py` | added | INT-UNASSIGNED | - | Y | source ownership sign-off required |
-| `physics_app/ci/check_stage5_s5r_ei16_recovery.py` | modified | INT-UNASSIGNED | - | Y | source ownership sign-off required |
+| `physics_app/ci/check_issue402_reaction_reduction_p2_only.py` | modified | WAVE1-FLOW-RETIREMENT | - | Y | FLOW Native EI10/EI16 P2 dependency; retain |
+| `physics_app/ci/check_issue402_signed_fem_residual_native.py` | added | INTEGRATION-#3 | - | Y | Donor #566 signed FEM residual control; not full science acceptance |
+| `physics_app/ci/check_stage5_s5r_ei16_recovery.py` | modified | WAVE2-8-A-2 | - | Y | Historical EI16 source identity vs current scratch mapping |
 | `physics_app/ci/plasma_direct_existing_materials_smoke.i` | modified | BASE-577 | Y | - | upstream dependency preserved |
 | `physics_app/ci/run_issue402_dd_json_p3_smoke.py` | modified | WAVE1-B | - | Y | Lane B owned DD/S6/P3; do not edit |
 | `physics_app/ci/run_issue541_core_four_native_p2.py` | added | WAVE1-D | Y | Y | CORE original retirement & P1/P2 |
@@ -100,7 +100,7 @@ Column `#577` means present in the main→#577 delta. `later` means modified by 
 | `physics_app/src/auxkernels/WaferD1GeometryProbeAux.C` | added | WAVE2-6-B | - | Y | preintegrated Native + D1 observer pair; no subtraction |
 | `tests/test_issue402_chemistry_mechanism_contract.py` | modified | BASE-577 | Y | - | upstream dependency preserved |
 | `tests/test_issue402_g1_external_species_binding.py` | modified | BASE-577 | Y | - | upstream dependency preserved |
-| `tests/test_issue402_hybrid_json_s6_owner_preflight.py` | modified | INT-UNASSIGNED | - | Y | source ownership sign-off required |
+| `tests/test_issue402_hybrid_json_s6_owner_preflight.py` | modified | WAVE1-B | - | Y | Hybrid S6 owner/initial-state/sheath negative controls |
 | `tests/test_issue402_json_rate_unification.py` | modified | BASE-577 | Y | - | upstream dependency preserved |
 | `tests/test_issue402_public_option_s6_p2.py` | modified | WAVE2-6-B | Y | Y | preintegrated Native + D1 observer pair; no subtraction |
 | `tests/test_issue402_retired_plasma_closures.py` | modified | BASE-577 | Y | - | upstream dependency preserved |
@@ -110,7 +110,7 @@ Column `#577` means present in the main→#577 delta. `later` means modified by 
 | `tests/test_issue541_flow_dbase_sheath_p2.py` | added | WAVE1-A | - | Y | Lane A owned P0/P1/P2; do not edit |
 | `tests/test_issue541_flow_native_trigger.py` | added | SHARED-WAVE1/WAVE2 | - | Y | Lane C ONLY for edits; no blind overwrite |
 | `tests/test_issue541_native_exodus_parity_oracle.py` | added | BASE-577 | Y | - | upstream dependency preserved |
-| `tests/test_retired_legacy_physics_owners_contract.py` | modified | INT-UNASSIGNED | - | Y | source ownership sign-off required |
+| `tests/test_retired_legacy_physics_owners_contract.py` | modified | WAVE2-8-A-2 | - | Y | Retired BC vs active electron sheath owner contract |
 
 ## Release collision matrix
 
@@ -150,6 +150,8 @@ Column `#577` means present in the main→#577 delta. `later` means modified by 
 | D / CORE | Historical P0 job #133353818981 + source-bound P1/P2 job #133353818289 succeeded | Three original workflow retirement final sign-off, rollback/CI exact-head |
 | E / evidence identity | P0 job #133353817967, 29 negative controls succeeded | Historical PR_HEAD and merged-commit proof is NOT eventual release merge proof |
 | **Global** | CI #43883076025 terminal **16 successful, 1 failed**; `validate` #133353818240 fails for exactly two ARCH historical branch-policy violations | No main merge while red; exact-release-head full CI/Artifacts, independent scientific gates |
+
+**Fresh GitHub Artifact API metadata check (2026-11-16):** all five listed source-#578 artifacts exist, are not expired and advertise the expected SHA256 digests. ARCH S6 #14234186951 (8675 B, expires 2026-12-16); Group A #14232922962 (6097 B, 2026-12-16); CORE Native #14232683641 (2646 B, 2026-12-16); ARCH DD #14234060837 (2089 B, 2026-12-16); Wave1 E #14234070153 (1662 B, expires **2026-11-30**). This is a metadata availability check, not new ZIP-content readback. The coordinator documentation HEAD has **zero** CI runs as of inspection; exact-head validation for the candidate is NOT_RUN. Wave1 E artifact should be preserved before its earlier expiration.
 
 Artifacts identified by existing #578 receipt (not replayed on a new branch SHA): ARCH S6 `14234186951`, Group A `14232922962`, CORE Native `14232683641`, ARCH DD `14234060837`, Wave1-E `14234070153`. Final HEAD requires independent job/attempt, artifact download, ZIP CRC, SHA-256 and inner source/binary/OCI readback. Never promote older successful SHA to current candidate.
 
