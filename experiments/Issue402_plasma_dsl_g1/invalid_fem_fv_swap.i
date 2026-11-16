@@ -1,6 +1,11 @@
-# Species are assigned to the opposite discretization of their derived existing variables.
+# Negative owner guard: baseline.i already declares log_O2p as FV and log_e
+# as FEM. The current JSON-owned Continuity must reject the attempted swapped
+# FEM=O2p/FVM=e generation BEFORE silently reusing either old solver variable.
+# This is not the unreachable historical "wrong type" diagnostic: JSON now
+# generates each correctly typed state and rejects preexisting owners first.
 [Physics]
   [Plasmas]
+    files = plasma_species_initial_p2.json
     [Transport]
       [DriftDiffusion]
         [Continuity]
