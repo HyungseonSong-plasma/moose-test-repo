@@ -225,6 +225,11 @@ RENAMED_FEM_KERNEL_TYPES = {
     "PhysicsFEMLogMolarTimeDerivative": "FEMLogMolarTimeDerivative",
     "PhysicsFEMLogMolarDriftDiffusion": "FEMLogMolarDriftDiffusion",
     "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
+    # Historical and current ADIntegratedBC residuals/required Functors match:
+    # particle flux/N_A and energy flux/N_A * (5/2)*(2/3)*mean_energy.
+    # Rename only the disposable public P2 input type fields, not the factory.
+    "PhysicsFEMLogMolarElectronFieldLimitedFluxBC": "FEMElectronSheathBC",
+    "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC": "FEMElectronEnergySheathBC",
     # Archived S6 inputs are rewritten only after their pinned byte hashes are checked.
     "PhysicsThermalDiffusionMaterial": "NVTransportMaterial",
     "DDMaterial": "DDTransportMaterial",
