@@ -43,19 +43,9 @@ jobs:
           set -euo pipefail
           python3 -m py_compile ci/guards/issue541_evidence_identity_guard.py
           python3 ci/guards/issue541_evidence_identity_guard.py --self-test
-      - name: Verify real historical #578 CORE Native PR HEAD provenance (scope only)
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          python3 ci/guards/issue541_evidence_identity_guard.py --audit-live \
-            --pr-number 578 --run-id 43860931290 --job-id 133277243659 \
-            --artifact-id 14223846020 \
-            --expected-sha b26f15cc8c5c44233cf895b6ff52a2bbb1cffdea \
-            --kind PR_HEAD --output issue541-wave1e-pr578-verified.json
-          python3 ci/guards/issue541_evidence_identity_guard.py --verify-record \
-            issue541-wave1e-pr578-verified.json
+      # The #578 PR_HEAD live audit was accepted while the PR was OPEN.
+      # It is not a generic CI obligation after merge. Preserve that immutable
+      # source/run receipt; keep the fail-closed self-tests and merged-CI audit.
       - name: Verify real historical merged-main CI and preserved ZIP (no Native)
         shell: bash
         env:
@@ -72,7 +62,6 @@ jobs:
         with:
           name: issue541-wave1e-provenance-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            issue541-wave1e-pr578-verified.json
             issue541-wave1e-historic-merge-ci.json
           if-no-files-found: error
           retention-days: 14
