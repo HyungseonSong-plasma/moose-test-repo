@@ -404,6 +404,85 @@ def test_actual_s6_native_wall_cutover_preserves_archive_and_rejects_charge_flip
     assert snapshot == {p.name: p.read_bytes() for p in staged.iterdir()}
 
 
+def test_both_s6_native_sheath_variants_strict_eight_owner_cutover(tmp_path):
+    """Exercise the actual current Native P2 adapter without running the solver."""
+    import importlib.util
+    import re
+    import pytest
+
+    src = PILOT / "public_option_s6_p2.py"
+    spec = importlib.util.spec_from_file_location("issue541_native_sheath_runner", src)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    base_file = PILOT / "native/s6_c0_physics_base_no_d1.i"
+    source_original = base_file.read_bytes()
+    legacy = source_original.decode("utf-8")
+    old_particle = "PhysicsFEMLogMolarElectronFieldLimitedFluxBC"
+    old_energy = "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC"
+    assert legacy.count("type = " + old_particle) == 4
+    assert legacy.count("type = " + old_energy) == 4
+
+    for variant in ("B", "D"):
+        staging = tmp_path / variant
+        staging.mkdir()
+        # Reproduce the proven preceding scratch wall + mean-energy names.
+        staged = legacy.replace("electron_wall_number_flux", "e_wall_number_flux")
+        staged = staged.replace("mean_en_solved", "e_energy_eV")
+        if variant == "D":
+            staged = re.sub(r"\blog_ne\b", "log_e", staged)
+            staged = re.sub(r"\blog_energy\b", "log_e_energy", staged)
+        names = [base_file.name] + [f"other_{i}.i" for i in range(9)]
+        ordered = [f"chem/{name}" for name in names]
+        for i, name in enumerate(names):
+            (staging / name).write_text(staged if i == 0 else f"# other {i}\n")
+        unmodified = {p.name: p.read_bytes() for p in staging.iterdir()}
+        result = module.remap_staged_sheath_bcs(staging, ordered, variant)
+        assert result["status"] == "SCRATCH_ONLY_EXACT_EIGHT_SHEATH_BC_TYPE_CUTOVER"
+        assert result["owner_count"] == 8
+        assert result["variant"] == variant
+        assert len({item["owner"] for item in result["owners"]}) == 8
+        assert result["P3"] == "NOT_RUN"
+        assert result["science"] == "SCIENCE_HOLD"
+        revised = (staging / base_file.name).read_text()
+        assert revised.count("type = FEMElectronSheathBC") == 4
+        assert revised.count("type = FEMElectronEnergySheathBC") == 4
+        assert old_particle not in revised and old_energy not in revised
+        assert result["original_sha256"] == hashlib.sha256(unmodified[base_file.name]).hexdigest()
+        assert result["staged_sha256"] == hashlib.sha256(revised.encode()).hexdigest()
+        assert all((staging / name).read_bytes() == unmodified[name] for name in names[1:])
+        assert base_file.read_bytes() == source_original
+
+        # Wrong boundary, source flux, mean energy or old factory must stop
+        # BEFORE any scratch file is written; never silently "fix" physics.
+        faulty_sources = (
+            staged.replace("boundary = 'plasma_cover'",
+                           "boundary = 'plasma_fake'", 1),
+            staged.replace("wall_number_flux = e_wall_number_flux",
+                           "wall_number_flux = fake_flux", 1),
+            staged.replace("mean_energy = e_energy_eV",
+                           "mean_energy = fake_energy", 1),
+            staged.replace("type = " + old_particle,
+                           "type = FEMElectronSheathBC", 1),
+        )
+        for number, bad in enumerate(faulty_sources):
+            assert bad != staged, number
+            (staging / base_file.name).write_text(bad)
+            before = {p.name: p.read_bytes() for p in staging.iterdir()}
+            with pytest.raises(ValueError, match="S6_SHEATH_OWNER_IDENTITY_"):
+                module.remap_staged_sheath_bcs(staging, ordered, variant)
+            assert before == {p.name: p.read_bytes() for p in staging.iterdir()}
+
+        (staging / base_file.name).write_text(staged)
+        (staging / names[1]).write_text(
+            "  [unexpected]\n    type = " + old_particle + "\n  []\n")
+        before = {p.name: p.read_bytes() for p in staging.iterdir()}
+        with pytest.raises(ValueError, match="S6_SHEATH_SECONDARY_LAYER_RETIRED_OWNER"):
+            module.remap_staged_sheath_bcs(staging, ordered, variant)
+        assert before == {p.name: p.read_bytes() for p in staging.iterdir()}
+        assert base_file.read_bytes() == source_original
+
+
 def test_full_s6_p2_provenance_and_no_solver_execution():
     script = (PILOT / "public_option_s6_p2.py").read_text()
     shell = PILOT / "run_public_option_s6_p2.sh"
@@ -527,6 +606,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "remap_staged_electron_lookup": lambda *_args: {"status": "SYNTHETIC_LOOKUP_REMAP"},
         "remap_staged_wall_owners": lambda *_args: {"status": "SYNTHETIC_WALL_REMAP"},
         "remap_staged_mean_energy": lambda *_args: {"status": "SYNTHETIC_MEAN_ENERGY_REMAP"},
+        "remap_staged_sheath_bcs": lambda *_args: {"status": "SYNTHETIC_SHEATH_REMAP"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(
