@@ -19,7 +19,9 @@
     "trigger": "workflow_dispatch_ONLY",
     "typed_approval": "ISSUE541_DD_TWO_STEP_P3_APPROVED",
     "exact_sha": true,
-    "registered_on_default_branch": false
+    "registered_on_default_branch": true,
+    "default_branch_registration_pr": 616,
+    "default_branch_registration_merge_commit": "dd08540238ead52fee2038c4542fb67ca8e1aff6"
   },
   "dd_native_p3": {
     "run_id": 43911477519,

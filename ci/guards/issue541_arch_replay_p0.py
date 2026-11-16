@@ -59,7 +59,7 @@ def require_dd_staged_receipt():
   need(m["custody"]["readback"] == "REMOTE_DOWNLOAD_SHA256_AND_ZIP_CRC_MATCH_ALL_THREE"
        and m["custody"]["worm_lock"] == "NOT_PROVEN", "DD_CUSTODY_NOT_WORM")
   need(all(x in doc for x in (ORIGINAL["dd_json_two_step"][1], "manual-only",
-                              "not registered on the current default branch", "SCIENCE_HOLD")),
+                              "registered on the current default branch", "SCIENCE_HOLD")),
        "DD_ARCHIVAL_DOCUMENT")
   replay=(ROOT/DD).read_text(encoding="utf-8")
   trigger=replay.split("\non:\n",1)[1].split("\npermissions:",1)[0]

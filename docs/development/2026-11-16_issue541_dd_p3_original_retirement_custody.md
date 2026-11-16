@@ -2,7 +2,7 @@
 
 Status: `STAGED_DELETE_KEEP_HOLD_INTEGRATION`; `SCIENCE_HOLD`. The full original source is preserved byte-for-byte as `docs/development/archive/issue402-dd-json-p3-smoke-once.yml.txt`, Git blob `068ef7f78b84b45dbf8c678522ada049d4a42b7a`. Original path: `.github/workflows/issue402-dd-json-p3-smoke-once.yml`.
 
-The historical branch `issue-402-dd-plasma-boundary-action@632aa2376cad03faa271bad2986c664086842225` still contains its self-path push workflow at staging. It is **not** caller-zero-proven. No historical branch delete, default-branch registration or live P3 rerun is authorized here. The maintained candidate `.github/workflows/issue541-arch-dd-p3-replay.yml` is **manual-only**, SHA-bound and typed approval gated; it is not registered on the current default branch.
+The historical branch `issue-402-dd-plasma-boundary-action@632aa2376cad03faa271bad2986c664086842225` still contains its self-path push workflow at staging. It is **not** caller-zero-proven. No historical branch delete, default-branch registration or live P3 rerun is authorized here. The maintained candidate `.github/workflows/issue541-arch-dd-p3-replay.yml` is **manual-only**, SHA-bound and typed approval gated; it is registered on the current default branch by #616 merge `dd08540238ead52fee2038c4542fb67ca8e1aff6` with `workflow_dispatch` only (no automatic Native P3).
 
 ## Independently saved P3 outputs
 
