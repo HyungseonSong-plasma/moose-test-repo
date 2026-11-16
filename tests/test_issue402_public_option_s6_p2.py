@@ -155,6 +155,7 @@ def test_canonical_s6_migration_changes_scratch_only(tmp_path):
 
 def test_s6_D_json_initials_retire_exact_native_solver_owners(tmp_path):
     import importlib.util
+    import json
     import math
     import pytest
 
@@ -688,6 +689,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
         "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
+        "reconcile_staged_D_json_initials": lambda *_args: {"status": "SYNTHETIC_JSON_INITIALS"},
         "remap_staged_fem_types": lambda *_args: {"status": "SYNTHETIC_TYPE_REMAP"},
         "remap_staged_electron_lookup": lambda *_args: {"status": "SYNTHETIC_LOOKUP_REMAP"},
         "remap_staged_wall_owners": lambda *_args: {"status": "SYNTHETIC_WALL_REMAP"},
