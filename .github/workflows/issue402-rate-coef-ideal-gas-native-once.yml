@@ -2,7 +2,7 @@ name: Issue402 EI H Coef Ideal Gas P0 P1 P2
 # Source-bound validation for new EI/H factory names and optional root ideal-gas Functors.
 on:
   push:
-    branches: [issue-402-rate-coef-ideal-gas]
+    branches: [main]
     paths: [.github/workflows/issue402-rate-coef-ideal-gas-native-once.yml]
 permissions:
   contents: read

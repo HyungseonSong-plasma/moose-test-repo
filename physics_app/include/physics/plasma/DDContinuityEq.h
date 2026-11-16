@@ -26,6 +26,7 @@ private:
   void addSolverVariables() override;
   void addInitialConditions() override;
   void addFEKernels() override;
+  void addFEBCs() override;
   void addFunctorMaterials() override;
 
   std::vector<std::string> _fem_species;

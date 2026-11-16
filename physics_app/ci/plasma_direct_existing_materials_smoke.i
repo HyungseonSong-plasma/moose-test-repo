@@ -55,12 +55,30 @@
 []
 
 [FunctorMaterials]
+  # P2-only conversion of the existing physical electron-number and energy
+  # density Aux state to the canonical log-molar representation. These
+  # derived Functors are not independent ICs and retain mean energy
+  # (3e15 eV/m^3)/(1e15 particles/m^3) = 3 eV identically.
+  [electron_log_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = log_e
+    functor_names = 'electron_number_density_physical'
+    functor_symbols = 'ne'
+    expression = 'log(ne/6.02214076e23)'
+  []
+  [electron_log_molar_energy]
+    type = ADParsedFunctorMaterial
+    property_name = log_e_energy
+    functor_names = 'electron_energy_density_physical'
+    functor_symbols = 'we'
+    expression = 'log(we/6.02214076e23)'
+  []
   # Mean energy and temperature are state closures, not transport coefficients.
   [electron_mean_energy]
     type = ElectronEnergyMaterial
-    state_form = physical_eV
-    electron_density = electron_number_density_physical
-    electron_energy_density = electron_energy_density_physical
+    state_form = log_molar_eV
+    electron_density = log_e
+    electron_energy_density = log_e_energy
   []
   [electron_temperature]
     type = ADParsedFunctorMaterial

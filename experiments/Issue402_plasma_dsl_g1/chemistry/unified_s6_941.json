@@ -16,13 +16,17 @@
       "elements": {
         "O": 2
       },
-      "charge_number": 0
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.032,
+      "mass_fraction_functor": "w_O2_constraint"
     },
     "O": {
       "elements": {
         "O": 1
       },
-      "charge_number": 0
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.016,
+      "mass_fraction_functor": "w_O"
     },
     "O2p": {
       "elements": {
@@ -32,7 +36,8 @@
       "initial_number_density": 1000000000000001.6,
       "transport_coef": "functor",
       "mobility": "O2p_mobility",
-      "diffusivity": "O2p_diffusivity"
+      "diffusivity": "O2p_diffusivity",
+      "molar_mass_kg_mol": 0.032
     },
     "Om": {
       "elements": {
@@ -42,7 +47,8 @@
       "initial_number_density": 999999999999.9983,
       "transport_coef": "functor",
       "mobility": "Om_mobility",
-      "diffusivity": "Om_diffusivity"
+      "diffusivity": "Om_diffusivity",
+      "molar_mass_kg_mol": 0.016
     },
     "Op": {
       "elements": {
@@ -52,13 +58,16 @@
       "initial_number_density": 999999999999.9983,
       "transport_coef": "functor",
       "mobility": "Op_mobility",
-      "diffusivity": "Op_diffusivity"
+      "diffusivity": "Op_diffusivity",
+      "molar_mass_kg_mol": 0.016
     },
     "O2a": {
       "elements": {
         "O": 2
       },
-      "charge_number": 0
+      "charge_number": 0,
+      "molar_mass_kg_mol": 0.032,
+      "mass_fraction_functor": "w_O2s"
     }
   },
   "equations": {
@@ -82,14 +91,11 @@
         "e": 1,
         "O2": 1
       },
-      "provenance": {
-        "archive_layer": "o2_elastic_400w_100us_dt1000ns_overlay.i"
-      },
       "units": "mol/(m^3 s)",
       "energy_loss_eV": {
-        "model": "functor",
-        "name": "delta_epsilon_EI02_eV"
-      }
+        "model": "elastic"
+      },
+      "table": "o2_elastic.txt"
     },
     {
       "id": "EI-17",
@@ -101,14 +107,11 @@
         "e": 1,
         "O": 1
       },
-      "provenance": {
-        "archive_layer": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i"
-      },
       "units": "mol/(m^3 s)",
       "energy_loss_eV": {
-        "model": "functor",
-        "name": "delta_epsilon_EI17_eV"
-      }
+        "model": "elastic"
+      },
+      "table": "o_elastic.txt"
     },
     {
       "id": "EI-415",
@@ -120,11 +123,9 @@
         "e": 2,
         "O2p": 1
       },
-      "provenance": {
-        "archive_layer": "issue477_S2-415_generation_overlay.i"
-      },
       "units": "mol/(m^3 s)",
-      "energy_loss_eV": 12.06
+      "energy_loss_eV": 12.06,
+      "table": "private_rates/EI-415_O2_X.txt"
     },
     {
       "id": "EI-401",
@@ -136,11 +137,9 @@
         "Om": 1,
         "O": 1
       },
-      "provenance": {
-        "archive_layer": "issue477_S3-415-401_extra_overlay.i"
-      },
       "units": "mol/(m^3 s)",
-      "energy_loss_eV": 0
+      "energy_loss_eV": 0,
+      "table": "private_rates/EI-401_O2_X.txt"
     },
     {
       "id": "EI-407",
@@ -152,12 +151,9 @@
         "e": 1,
         "O2a": 1
       },
-      "provenance": {
-        "archive_layer": "issue477_S5-417-407_o2_consumer_overlay.i",
-        "alternate_archive_layer": "issue477_S5-941-407_o2_consumer_overlay.i"
-      },
       "units": "mol/(m^3 s)",
-      "energy_loss_eV": 0.977
+      "energy_loss_eV": 0.977,
+      "table": "private_rates/EI-407_O2_X.txt"
     },
     {
       "id": "EI-2069",
@@ -169,12 +165,9 @@
         "e": 1,
         "O": 2
       },
-      "provenance": {
-        "archive_layer": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
-        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_EI2069_overlay.i"
-      },
       "units": "mol/(m^3 s)",
-      "energy_loss_eV": 5.02
+      "energy_loss_eV": 5.02,
+      "table": "private_rates/EI-2069_O2_a1Delta.txt"
     },
     {
       "id": "H25",
@@ -186,13 +179,16 @@
         "O": 1,
         "O2p": 1
       },
-      "provenance": {
-        "archive_layer": "issue477_S6-417-407-2069-H25_H25_overlay.i",
-        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_H25_overlay.i"
-      },
       "units": "mol/(m^3 s)",
       "energy_loss_eV": {
         "model": "none"
+      },
+      "rate": {
+        "model": "power_law",
+        "A": 12044281.52,
+        "basis": "molar",
+        "T_ref": 300,
+        "exponent": 0.4
       }
     },
     {
@@ -205,11 +201,71 @@
         "e": 2,
         "Op": 1
       },
-      "provenance": {
-        "archive_layer": "issue477_S4-401-941_op_ionization_overlay.i"
-      },
       "units": "mol/(m^3 s)",
-      "energy_loss_eV": 13.62
+      "energy_loss_eV": 13.62,
+      "table": "private_rates/EI-941_O_3P.txt"
     }
-  ]
+  ],
+  "boundaries": {
+    "plasma_electrode plasma_metal plasma_right": {
+      "bcs": {
+        "electron_sheath": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "wall_number_flux": "e_wall_number_flux"
+        },
+        "electron_energy_sheath": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV"
+        }
+      }
+    },
+    "plasma_cover": {
+      "bcs": {
+        "electron_cover_dielectric": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "wall_number_flux": "e_wall_number_flux"
+        },
+        "electron_energy_cover": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV"
+        }
+      }
+    },
+    "plasma_wafer": {
+      "bcs": {
+        "electron_wafer_dielectric": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "wall_number_flux": "e_wall_number_flux"
+        },
+        "electron_energy_wafer": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV"
+        }
+      }
+    },
+    "plasma_focus_ring": {
+      "bcs": {
+        "electron_focus_ring_dielectric": {
+          "type": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "wall_number_flux": "e_wall_number_flux"
+        },
+        "electron_energy_focus_ring": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV"
+        }
+      }
+    }
+  }
 }

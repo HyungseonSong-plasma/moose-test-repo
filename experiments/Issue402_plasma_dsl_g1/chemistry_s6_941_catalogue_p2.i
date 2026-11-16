@@ -5,11 +5,11 @@
   dim = 1
   nx = 4
 []
+[Problem]
+  solve = false
+  kernel_coverage_check = false
+[]
 [Variables]
-  [log_e]
-    family = LAGRANGE
-    order = FIRST
-  []
   [log_e_energy]
     family = LAGRANGE
     order = FIRST

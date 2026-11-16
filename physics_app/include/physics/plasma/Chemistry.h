@@ -90,6 +90,7 @@ struct RateRecord
 {
   std::string model;
   std::string basis;
+  std::string table_file;
   double A_input = 0.0;
   double A_molar = 0.0;
   double T_ref = 300.0;
@@ -111,6 +112,7 @@ struct ReactionRecord
   double energy_loss_eV = 0;
   std::string energy_loss_functor;
   bool contributes_electron_energy = false;
+  bool elastic_energy_loss = false;
 
   int net(const std::string & species) const;
 };
@@ -125,6 +127,7 @@ public:
   const SpeciesRecord & species(const std::string & id) const;
   const std::map<std::string, SpeciesRecord> & speciesRecords() const { return _species; }
   const std::vector<ReactionRecord> & reactions() const { return _reactions; }
+  const std::vector<std::string> & sourceFiles() const { return _source_files; }
   bool hasSpeciesSource(const std::string & id) const;
   bool hasElectronEnergySource() const;
   const DDTransportRecord * ddTransport(const std::string & id) const;
@@ -139,6 +142,7 @@ public:
   // Scenario-specific heavy-species composition is stored directly in speciesRecords().
 
 private:
+  std::vector<std::string> _source_files;
   std::map<std::string, SpeciesRecord> _species;
   std::vector<ReactionRecord> _reactions;
   std::map<std::string, DDTransportRecord> _dd_transport;

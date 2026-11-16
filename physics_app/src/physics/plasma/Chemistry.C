@@ -1,4 +1,6 @@
 #include "Chemistry.h"
+#include "DDContinuityEq.h"
+#include "DDEnergyEq.h"
 #include "SCCMInletFlow.h"
 #include "IdealGasMixtureState.h"
 #include "FEProblemBase.h"
@@ -290,6 +292,7 @@ ReactionRecord::net(const std::string & species) const
 }
 
 ChemistryData::ChemistryData(const std::vector<std::string> & files)
+  : _source_files(files)
 {
   std::set<std::string> reaction_ids;
   std::set<std::string> progresses;
@@ -628,6 +631,29 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       if (entry.at("units").get<std::string>() != units)
         fail(file, reaction.id + ": progress units must be " + units);
 
+      // A table is an executable EI rate owner; no metadata, checksum, or
+      // user-specified progress/target names are part of the JSON API.
+      if (entry.contains("table"))
+      {
+        if (entry.contains("rate") || reaction.domain != "volume" ||
+            reaction.id.rfind("EI-", 0) != 0 ||
+            !entry.at("table").is_string() || entry.at("table").get<std::string>().empty())
+          fail(file, reaction.id + ": table requires an EI volume reaction without rate");
+        if (reaction.reactants.size() != 2 || reaction.reactants.count("e") != 1 ||
+            reaction.reactants.at("e") != 1)
+          fail(file, reaction.id + ": table requires one electron and one heavy target");
+        for (const auto & [target, amount] : reaction.reactants)
+          if (target != "e" && (amount != 1 ||
+              _species.at(target).molar_mass_kg_mol <= 0.0))
+            fail(file, reaction.id + ": table requires a unit heavy target with molar mass");
+        reaction.rate.table_file =
+            resolveDataFile(entry.at("table").get<std::string>(), file);
+      }
+
+      if (entry.contains("table_sha256") || entry.contains("target_molar_concentration"))
+        fail(file, reaction.id +
+             ": table metadata/target Functor names are internal; declare only table");
+
       if (entry.contains("rate"))
       {
         const auto & rate = entry.at("rate");
@@ -732,8 +758,23 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           fail(file, reaction.id + ": empty energy-loss functor");
         reaction.contributes_electron_energy = true;
       }
+      else if (energy.is_object() && energy.value("model", std::string()) == "elastic" &&
+               energy.size() == 1 &&
+               (reaction.id == "EI-02" || reaction.id == "EI-17"))
+      {
+        // The original oxygen elastic energy exchange is a function of
+        // mean electron energy and gas temperature, never a static loss.
+        const std::string target = reaction.id == "EI-02" ? "O2" : "O";
+        if (reaction.reactants.count(target) != 1 ||
+            _species.at(target).molar_mass_kg_mol <= 0.0)
+          fail(file, reaction.id + ": elastic loss requires the original target molar mass");
+        reaction.energy_loss_functor = "delta_epsilon_" +
+            std::string(reaction.id == "EI-02" ? "EI02" : "EI17") + "_eV";
+        reaction.elastic_energy_loss = true;
+        reaction.contributes_electron_energy = true;
+      }
       else if (!(energy.is_object() && energy.value("model", std::string()) == "none"))
-        fail(file, reaction.id + ": energy loss needs a nonnegative number, positive-loss functor or model none");
+        fail(file, reaction.id + ": energy loss needs a nonnegative number, elastic model, positive-loss functor or model none");
       if (reaction.domain == "surface" && reaction.contributes_electron_energy)
         fail(file, reaction.id + ": surface electron-energy sources are unsupported");
       validateReaction(reaction, _species, file);
@@ -841,8 +882,8 @@ Chemistry::validParams()
 {
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
-      "Generates one source Functor per species and one electron-energy source "
-      "from validated [Plasmas]/files reaction channels; kinetic progress remains separately owned.");
+      "Generates native electron-impact/heavy rate providers and shared species/energy "
+      "source Functors from validated [Plasmas]/files reaction channels.");
   return params;
 }
 
@@ -865,6 +906,144 @@ void
 Chemistry::addFunctorMaterials()
 {
   const auto & mechanism = chemistryData();
+  // A fully declared JSON mechanism cannot silently leave one progress
+  // unowned. Historical entirely Native-owned mechanisms remain supported.
+  bool any_json_rate = false;
+  for (const auto & reaction : mechanism.reactions())
+    if (!reaction.rate.table_file.empty() || !reaction.rate.model.empty())
+      any_json_rate = true;
+  if (any_json_rate)
+    for (const auto & reaction : mechanism.reactions())
+      if (reaction.domain == "volume" &&
+          reaction.rate.table_file.empty() && reaction.rate.model.empty())
+        paramError("block", "Reaction ", reaction.id,
+                   " needs table or rate for fully JSON-owned Chemistry.");
+
+  // Only Chemistry owns executable progress R_k. Species and rate data are
+  // immutable JSON inputs; target Functor names are derived internally.
+  std::set<std::string> required_concentrations;
+  std::vector<std::string> heavy_rate_ids;
+  std::vector<std::string> heavy_reactants;
+  for (const auto & reaction : mechanism.reactions())
+  {
+    if (!reaction.rate.table_file.empty())
+    {
+      std::string target;
+      for (const auto & [species, count] : reaction.reactants)
+        if (species != "e")
+          target = species;
+      required_concentrations.insert(target);
+    }
+    if (reaction.domain == "volume" &&
+        (reaction.rate.model == "constant" || reaction.rate.model == "power_law"))
+    {
+      heavy_rate_ids.push_back(reaction.id);
+      for (const auto & [species, count] : reaction.reactants)
+        if (species != "e")
+          required_concentrations.insert(species);
+    }
+  }
+
+  const std::string parsed_type = "ADParsedFunctorMaterial";
+  for (const auto & id : required_concentrations)
+  {
+    const auto & species = mechanism.species(id);
+    auto params = getFactory().getValidParams(parsed_type);
+    params.set<std::string>("property_name") = "c_" + id;
+    params.set<std::vector<std::string>>("functor_symbols") = {"u"};
+    if (species.initial_number_density && species.charge_number != 0)
+    {
+      // Heavy charged species use their live solved log-molar state.
+      params.set<std::vector<std::string>>("functor_names") = {"log_" + id};
+      params.set<std::string>("expression") = "exp(u)";
+    }
+    else
+    {
+      const auto live_fraction = species.mass_fraction_functor.empty()
+                                     ? species.mass_fraction_variable
+                                     : species.mass_fraction_functor;
+      if (live_fraction.empty() || species.molar_mass_kg_mol <= 0.0)
+        paramError("block", "Reaction target ", id,
+                   " requires a live species mass fraction and molar_mass_kg_mol.");
+      const std::string density =
+          getProblem().hasVariable("pressure") ? "rho_neutral" : "rho_g";
+      params.set<std::vector<std::string>>("functor_names") = {density, live_fraction};
+      params.set<std::vector<std::string>>("functor_symbols") = {"rho", "w"};
+      params.set<std::string>("expression") =
+          "rho*w/" + realLiteral(species.molar_mass_kg_mol);
+    }
+    assignBlocks(params, _blocks);
+    getProblem().addFunctorMaterial(parsed_type, "chemistry_" + id + "_concentration", params);
+  }
+
+  for (const auto & reaction : mechanism.reactions())
+    if (!reaction.rate.table_file.empty())
+    {
+      const auto type = "EIRateCoefMaterial";
+      auto params = getFactory().getValidParams(type);
+      std::string target;
+      for (const auto & [species, count] : reaction.reactants)
+        if (species != "e")
+          target = species;
+      params.set<FileName>("rate_table_file") = reaction.rate.table_file;
+      params.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
+      params.set<MooseFunctorName>("electron_number_density") = "n_e_physical";
+      params.set<MooseFunctorName>("target_molar_concentration") = "c_" + target;
+      params.set<std::string>("reaction_progress") = reaction.progress;
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(type, "chemistry_" + reaction.progress + "_rate", params);
+    }
+
+  if (!heavy_rate_ids.empty())
+  {
+    if (mechanism.sourceFiles().size() != 1)
+      paramError("block", "Automatic heavy reaction rates require one [Plasmas]/files JSON.");
+    for (const auto & id : required_concentrations)
+      if (id != "e")
+      {
+        bool in_heavy_rate = false;
+        for (const auto & reaction : mechanism.reactions())
+          if (reaction.rate.model == "constant" || reaction.rate.model == "power_law")
+            in_heavy_rate |= reaction.reactants.count(id) > 0;
+        if (in_heavy_rate)
+          heavy_reactants.push_back(id);
+      }
+    const auto type = "HRateCoefMaterial";
+    auto params = getFactory().getValidParams(type);
+    std::vector<MooseFunctorName> concentrations;
+    for (const auto & id : heavy_reactants)
+      concentrations.push_back("c_" + id);
+    params.set<FileName>("chemistry_file") = mechanism.sourceFiles().front();
+    params.set<MooseFunctorName>("temperature") = "temperature";
+    params.set<std::vector<std::string>>("species") = heavy_reactants;
+    params.set<std::vector<MooseFunctorName>>("reactant_concentrations") = concentrations;
+    params.set<std::vector<std::string>>("active_reactions") = heavy_rate_ids;
+    assignBlocks(params, _blocks);
+    getProblem().addFunctorMaterial(type, name() + "_heavy_rates", params);
+  }
+
+  for (const auto & reaction : mechanism.reactions())
+    if (reaction.elastic_energy_loss)
+    {
+      const auto target = reaction.id == "EI-02" ? "O2" : "O";
+      const Real molar_mass = mechanism.species(target).molar_mass_kg_mol;
+      constexpr Real electron_mass = 9.1093837015e-31;
+      constexpr Real avogadro = 6.02214076e23;
+      constexpr Real kb_over_ev = 8.617333262145e-5;
+      const Real factor = 3.0 * electron_mass / (molar_mass / avogadro);
+      auto params = getFactory().getValidParams(parsed_type);
+      params.set<std::string>("property_name") = reaction.energy_loss_functor;
+      params.set<std::vector<std::string>>("functor_names") =
+          {"e_energy_eV", "temperature"};
+      params.set<std::vector<std::string>>("functor_symbols") = {"eps", "Tg"};
+      params.set<std::string>("expression") =
+          realLiteral(factor) + "*((2.0/3.0)*eps-" +
+          realLiteral(kb_over_ev) + "*Tg)";
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(
+          parsed_type, "chemistry_" + reaction.progress + "_elastic_loss", params);
+    }
+
   std::map<std::string, SourceExpression> particle;
   SourceExpression energy;
 
@@ -1018,25 +1197,31 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
 void
 PlasmasAction::act()
 {
-  // Root JSON is the sole ownership switch for the relocated, verbatim
-  // [BCs] blocks, independent of the DD/NV taxonomy. There is deliberately NO .i
-  // plasma_boundary toggle and NO implicit wall type interpretation.
-  // This path also works when root gas_state is not enabled.
-  if (_current_task == "add_bc" && _data.hasBoundaries())
+  // Root owns validated JSON catalogues, not the DriftDiffusion electron
+  // boundary operators. Each electron equation Physics builds its own BC.
+  if (_current_task == "check_integrity" && _data.hasBoundaries())
+  {
+    bool requires_continuity = false;
+    bool requires_energy = false;
     for (const auto & [group, boundary] : _data.boundaries())
       for (const auto & [name, bc] : boundary.bcs)
       {
-        auto params = _factory.getValidParams(bc.type);
-        params.set<NonlinearVariableName>("variable") = bc.variable;
-        std::vector<BoundaryName> sidesets;
-        for (const auto & side : boundary.mesh_boundaries)
-          sidesets.emplace_back(side);
-        params.set<std::vector<BoundaryName>>("boundary") = sidesets;
-        params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
-        if (bc.type == "FEMElectronEnergySheathBC")
-          params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
-        _problem->addBoundaryCondition(bc.type, name, params);
+        (void)group;
+        (void)name;
+        // Energy sheath uses the same wall-number-flux provider created by
+        // Continuity even if no particle sheath BC is present.
+        requires_continuity |= bc.type == "FEMElectronSheathBC" ||
+                               bc.type == "FEMElectronEnergySheathBC";
+        requires_energy |= bc.type == "FEMElectronEnergySheathBC";
       }
+
+    if (requires_continuity && _awh.getActions<Plasma::DDContinuityEq>().empty())
+      paramError("files",
+                 "JSON FEMElectronSheathBC requires [Transport]/[DriftDiffusion]/[Continuity].");
+    if (requires_energy && _awh.getActions<Plasma::DDEnergyEq>().empty())
+      paramError("files",
+                 "JSON FEMElectronEnergySheathBC requires [Transport]/[DriftDiffusion]/[Energy].");
+  }
 
   if (!gasStateEnabled() ||
       (_current_task != "add_functor_material" &&
@@ -1059,11 +1244,8 @@ PlasmasAction::act()
     bool has_root_composition = false;
     for (const auto & [id, record] : _data.speciesRecords())
       if (id != "e" &&
-          (record.molar_mass_kg_mol > 0.0 ||
-           record.initial_vol_mass_fraction ||
-           record.initial_inlet_mass_fraction ||
-           !record.mass_fraction_variable.empty() ||
-           !record.mass_fraction_functor.empty()))
+          (record.initial_vol_mass_fraction ||
+           record.initial_inlet_mass_fraction))
         has_root_composition = true;
     if (has_root_composition)
       paramError("files", "A solved Navier-Stokes pressure variable uses the "

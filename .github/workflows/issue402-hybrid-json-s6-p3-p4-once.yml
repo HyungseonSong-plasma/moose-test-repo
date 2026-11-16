@@ -11,7 +11,7 @@ name: Issue402 JSON hybrid 400W S6 Native P3 P4 once
 run-name: Issue402 JSON hybrid S6-417/941 @ ${{ github.sha }}
 on:
   push:
-    branches: [issue-402-dd-plasma-boundary-action]
+    branches: [main]
     paths: [.github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml]
 
 permissions:

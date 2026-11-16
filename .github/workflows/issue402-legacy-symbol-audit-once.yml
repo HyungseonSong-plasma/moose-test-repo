@@ -3,7 +3,7 @@ name: Issue402 legacy symbol audit once
 run-name: Issue402 legacy symbol audit ${{ github.sha }}
 on:
   push:
-    branches: [issue-402-dd-plasma-boundary-action]
+    branches: [main]
     paths: [.github/workflows/issue402-legacy-symbol-audit-once.yml]
 permissions:
   contents: read

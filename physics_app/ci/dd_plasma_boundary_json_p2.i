@@ -1,4 +1,4 @@
-# Issue402 verbatim BC JSON migration fixture; no .i selector.
+# Issue402 root-only JSON BC control: must fail closed without DriftDiffusion Physics.
 # GeneratedMesh sideset mapping: left=wafer, bottom=cover, right=inlet, top=outlet.
 [Mesh]
   type = GeneratedMesh
@@ -40,6 +40,7 @@
   []
   [electron_wall_flux]
     type = ESWallFluxMaterial
+    species_id = e
     electron_density = n_e_physical
     mean_energy = e_energy_eV
     potential = potential

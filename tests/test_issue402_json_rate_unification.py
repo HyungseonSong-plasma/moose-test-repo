@@ -149,7 +149,9 @@ def test_surface_json_keeps_wall_mass_flux_separate_from_volume_sources():
     assert "pressure = 1.333223684" in fixture
     assert "temperature = 300" in fixture
     assert "model = ideal_gas" in fixture
-    assert "temperature = T" in fixture
+    # Root [Plasmas] publishes the canonical temperature Functor, not T.
+    assert "temperature = temperature" in fixture
+    assert "temperature = T\n" not in fixture
     assert "density = rho_g" in fixture
     assert "gas_state" not in data
     assert data["species"]["O2"]["initial_vol_mass_fraction"] == 0.9

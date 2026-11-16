@@ -99,13 +99,25 @@ rejected. The parser currently supports only the two verified FEM
 electron-wall BC types; it does NOT implement arbitrary DD/FV/NV,
 Poisson, or Navier–Stokes BCs.
 
-The existing `PlasmasAction` in
-`physics_app/src/physics/plasma/Chemistry.C` registers exactly those
-JSON-declared BCs during MOOSE `add_bc`. The full FEM energy Physics
-(`fem_potential` set) generates the existing `ElectronEnergyMaterial`
-and, only if supported sheath BCs are present, the physical-number-density
-bridge and existing `ESWallFluxMaterial`. No new sheath law or
-duplicate Flux Material factory was created.
+**Ownership update (Draft PR #533, 2026-11-14):** `PlasmasAction`
+parses, validates and shares the JSON boundary catalogue but does **not**
+instantiate the electron sheath BC operators. The
+`[Transport]/[DriftDiffusion]/[Continuity]` Physics
+(`DDContinuityEq::addFEBCs`) creates `FEMElectronSheathBC`; the sibling
+`[Energy]` Physics (`DDEnergyEq::addFEBCs`) creates
+`FEMElectronEnergySheathBC`. Both are registered for MOOSE `add_bc`.
+Absent required Physics owners cause an explicit configuration error, rather
+than silently dropping JSON-declared BCs. The root `PlasmasAction` retains
+its separate gas-state and inlet composition responsibilities.
+
+`DDContinuityEq::addFunctorMaterials` owns the live `n_e_physical`
+bridge and the *single* `ESWallFluxMaterial` when FEM electron
+continuity with `fem_potential` declares a supported sheath BC.
+`DDEnergyEq::addFunctorMaterials` owns `ElectronEnergyMaterial` and
+the `e_energy_eV` mean-energy Functor only. The BC parameters and
+physical wall-flux formula are unchanged. The independent particle and
+energy BCs thus remain under the DriftDiffusion Physics tree rather than
+the root catalogue action; scientific parity remains `SCIENCE_HOLD`.
 
 ## 5. JSON species initials and automatic electron equation assembly
 

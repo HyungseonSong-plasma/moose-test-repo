@@ -1,7 +1,7 @@
 name: Issue402 EI10 EI16 standard reaction material reduction P0 once
 on:
   push:
-    branches: [issue-402-species-functor-naming]
+    branches: [main]
     paths: [.github/workflows/issue402-reaction-material-reduction-p0-once.yml]
 permissions:
   contents: read

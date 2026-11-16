@@ -31,7 +31,8 @@ protected:
                           const SpaceArg & r,
                           const StateArg & state) const;
 
-  const Moose::Functor<ADReal> & _density;
+  const Moose::Functor<ADReal> * _density = nullptr;
+  std::map<std::string, const Moose::Functor<ADReal> *> _concentrations;
   const Moose::Functor<ADReal> & _temperature;
   Plasma::ChemistryData _chemistry;
 

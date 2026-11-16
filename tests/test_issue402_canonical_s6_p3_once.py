@@ -38,7 +38,11 @@ def test_exact_main_trigger_and_isolated_d_run_contract():
     assert "run_canonical_s6_p3_once.py" in text
     assert "run_native_binding_smoke.sh" in text
     assert "run_public_option_s6_p2.sh" not in text
-    assert 'option.p2.stage(ROOT, historical, case, "C", staged, manifest)' in script
+    # The runner now stages the C reference with an explicit D base source;
+    # changing that source silently would invalidate the P3 comparison.
+    assert "ordered = option.p2.stage(" in script
+    assert 'ROOT, historical, case, "C", staged, manifest,' in script
+    assert "d_base_source=d_base" in script
     assert "canonicalize_staged_D_inputs" in script
     assert "option.remap_staged_fem_types" in script
     assert "option.run_one(" in script  # same binary must pass P2 before P3

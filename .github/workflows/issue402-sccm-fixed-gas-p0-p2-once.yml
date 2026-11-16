@@ -4,7 +4,7 @@ name: Issue402 SCCM static gas P0 P1 P2 once
 run-name: Issue402 SCCM fixed gas Native at ${{ github.sha }}
 on:
   push:
-    branches: [issue-402-sccm-inlet-flow-native]
+    branches: [main]
     paths: [.github/workflows/issue402-sccm-fixed-gas-p0-p2-once.yml]
 permissions:
   contents: read
