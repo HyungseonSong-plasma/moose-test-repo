@@ -16,6 +16,67 @@ env:
   EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
 
 jobs:
+  issue541_evidence_identity_p0:
+    name: Issue541 Wave1-E evidence identity P0 (no Native)
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      github.event.changes.base != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact Wave1-E validation source checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+      - name: Fail-closed PR HEAD / merge-commit evidence identity mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ci/guards/issue541_evidence_identity_guard.py
+          python3 ci/guards/issue541_evidence_identity_guard.py --self-test
+      - name: Verify real historical #578 CORE Native PR HEAD provenance (scope only)
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_evidence_identity_guard.py --audit-live \
+            --pr-number 578 --run-id 43860931290 --job-id 133277243659 \
+            --artifact-id 14223846020 \
+            --expected-sha b26f15cc8c5c44233cf895b6ff52a2bbb1cffdea \
+            --kind PR_HEAD --output issue541-wave1e-pr578-verified.json
+          python3 ci/guards/issue541_evidence_identity_guard.py --verify-record \
+            issue541-wave1e-pr578-verified.json
+      - name: Verify real historical merged-main CI and preserved ZIP (no Native)
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_evidence_identity_guard.py --audit-merged-ci \
+            --pr-number 523 --run-id 43588060442 --job-id 132426707768 \
+            --artifact-id 14111365673 \
+            --expected-sha e9aafe92f87f44193147cfc909cbab1de27e3b4d \
+            --output issue541-wave1e-historic-merge-ci.json
+      - name: Publish SHA-bound Wave1-E verification receipt (not global CI)
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-wave1e-provenance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            issue541-wave1e-pr578-verified.json
+            issue541-wave1e-historic-merge-ci.json
+          if-no-files-found: error
+          retention-days: 14
+
   validate:
     if: >-
       github.event_name != 'pull_request' ||
