@@ -110,8 +110,8 @@
       "original_p3": "NOT_RUN",
       "source_event": "push:branch-specific,self-path",
       "required_marker": "FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS",
-      "retirement": "KEEP_HOLD",
-      "reason": "Replacement exact-head P0/P1/P2 verified and independent byte custody verified; candidate removal needs a scoped same-HEAD gate.",
+      "retirement": "RETIRED_VERIFIED",
+      "reason": "Original self-path-only push branch absent in fresh 2026-11-16 GitHub branch search, no callable events, default-branch code search found only own workflow definition. Original run 43492369825 and ZIP artifact 14070227642 preserved with independent private SHA256 readback; new source HEAD 845ce60d197747069ccb4f82961498c1f7445444 Repository CI run 43834680087 verified real Physics P1 and P2 with explicit FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS. Candidate deletion is gated by next exact-head P0/P1/P2 and conflict-free integration; P3 not run, SCIENCE_HOLD.",
       "original_success": {
         "run_id": 43492369825,
         "source_sha": "e5e586595948919a694ecd2bb19b48dd60a4751e",
@@ -126,7 +126,10 @@
         "readback_bytes": 31731,
         "status": "PRIVATE_OWNER_ONLY_SHA256_VERIFIED"
       },
-      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND"
+      "caller_observation": "HISTORICAL_PUSH_BRANCH_NOT_FOUND",
+      "rollback_original_blob": "c6068680c0c7083e38ec03d86c5433eb49db94bf",
+      "retirement_candidate_source_head": "845ce60d197747069ccb4f82961498c1f7445444",
+      "replacement_parent_ci_run": 43834680087
     }
   ],
   "backup": {
