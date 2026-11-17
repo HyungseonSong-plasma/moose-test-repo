@@ -147,7 +147,9 @@ def cutover_texts(layers: dict[str, str]) -> tuple[dict[str, str], dict]:
     }
 
 
-def retire_in_disposable_scratch(folder: Path, ordered: list[str]) -> dict:
+def retire_in_disposable_scratch(
+    folder: Path, ordered: list[str], *, exact_manifest: dict, expected_source_head: str
+) -> dict:
     """Prevalidate the entire staged 11-layer set before ANY scratch write."""
     directory = Path(folder).resolve(strict=True)
     marker = directory / ".issue633_disposable_scratch"
@@ -166,7 +168,34 @@ def retire_in_disposable_scratch(folder: Path, ordered: list[str]) -> dict:
     original = {p.name: p.read_bytes() for p in paths}
     if any(b"\r" in b for b in original.values()):
         raise CutoverError("ION26_INPUT_CRLF_NOT_ACCEPTED")
+    # Exact immutable 11-layer source/owner identity is mandatory before mutation.
+    if not isinstance(exact_manifest, dict) or exact_manifest.get("source_head") != expected_source_head:
+        raise CutoverError("ION26_SOURCE_HEAD_PIN_MISMATCH")
+    expected_layers = exact_manifest.get("layers", [])
+    expected_owners = exact_manifest.get("ion_native_blocks", [])
+    if len(expected_layers) != 11 or len(expected_owners) != 26:
+        raise CutoverError("ION26_EXACT_PIN_MANIFEST_INCOMPLETE")
+    pinned_names = [Path(entry["file_path"]).name for entry in expected_layers]
+    if names != pinned_names:
+        raise CutoverError("ION26_PINNED_ORDER_MISMATCH")
+    for entry in expected_layers:
+        name = Path(entry["file_path"]).name
+        if digest(original[name]) != entry["file_sha256"]:
+            raise CutoverError("ION26_PINNED_FILE_SHA_MISMATCH:" + name)
     after, receipt = cutover_texts({n: original[n].decode("utf-8") for n in names})
+    expected_blocks = sorted(
+        (Path(x["file_path"]).name, x["section"], x["object_name"], x["block_sha256"])
+        for x in expected_owners
+    )
+    actual_blocks = sorted(
+        (x["file"], x["section"], x["name"], x["old_block_sha256"])
+        for x in receipt["retired_owners"]
+    )
+    if actual_blocks != expected_blocks:
+        raise CutoverError("ION26_PINNED_BLOCK_SHA_OR_OWNER_MISMATCH")
+    receipt["source_head"] = expected_source_head
+    receipt["exact_pin_verified"] = True
+
     changes = {n: source.encode("utf-8") for n, source in after.items()
                if source.encode("utf-8") != original[n]}
     if not changes:
@@ -195,11 +224,15 @@ def main() -> int:
     p.add_argument("--staged-chem-dir", type=Path, required=True)
     p.add_argument("--ordered-file", type=Path, required=True)
     p.add_argument("--receipt", type=Path, required=True)
+    p.add_argument("--case-manifest", type=Path, required=True)
+    p.add_argument("--expected-source-head", required=True)
     args = p.parse_args()
     if args.receipt.exists():
         raise CutoverError("ION26_RECEIPT_ALREADY_EXISTS")
     report = retire_in_disposable_scratch(
-        args.staged_chem_dir, json.loads(args.ordered_file.read_text())
+        args.staged_chem_dir, json.loads(args.ordered_file.read_text()),
+        exact_manifest=json.loads(args.case_manifest.read_text()),
+        expected_source_head=args.expected_source_head,
     )
     args.receipt.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
     print(json.dumps({k: report[k] for k in (
