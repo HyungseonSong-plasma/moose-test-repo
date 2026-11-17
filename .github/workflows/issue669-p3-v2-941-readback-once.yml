@@ -190,12 +190,20 @@ jobs:
               except ValueError:negative[mutation]="REJECTED"
               else:raise ValueError("NEGATIVE_FALSE_PASS:"+mutation)
           # Stage mutation controls on byte-hash and duplicate-presence preconditions.
-          bad_stage=STAGE/EXPECTED_FILES[0][0]
-          guard(h(bad_stage.read_bytes())!=("0"*64),"INVALID_SHA_NEGATIVE_TEST")
-          negative["altered_stage_file_sha"]="REJECTED"
-          modified=copy.deepcopy(oldBC);modified.append(copy.deepcopy(oldBC[0]))
-          guard(len([b for b in modified if b["name"]==oldBC[0]["name"]])==2,"DUPLICATE_BC_NEGATIVE_TEST")
-          negative["duplicate_existing_bc"]="REJECTED"
+          def verify_layer_hash(data, expected):
+              guard(h(data)==expected,"STAGE_LAYER_SHA_REJECTED")
+          bad_stage=(STAGE/EXPECTED_FILES[0][0]).read_bytes()+b"# altered staged input\\n"
+          try:verify_layer_hash(bad_stage,EXPECTED_FILES[0][1])
+          except ValueError:negative["altered_stage_file_sha"]="REJECTED"
+          else:raise ValueError("NEGATIVE_FALSE_PASS:altered_stage_file_sha")
+          def check_unique_existing_bc(records):
+              for old in oldBC:
+                  seen=[o for o in records if o["name"]==old["name"] and o["section"]=="BCs"]
+                  guard(len(seen)==1,"STAGE_BC_DUPLICATE:"+old["name"])
+          modified=copy.deepcopy(objects);modified.append(copy.deepcopy(oldBC[0]))
+          try:check_unique_existing_bc(modified)
+          except ValueError:negative["duplicate_existing_bc"]="REJECTED"
+          else:raise ValueError("NEGATIVE_FALSE_PASS:duplicate_existing_bc")
           # Independent source inspection supports a structural potential overlap, not actual
           # warehouse duplicate assertion. Only P3-X may retire/rebind retained FEM BCs.
           report={"schema":"issue669.p3_v2.s6_941.static_source_and_p2_stage.v1","task_id":"P3-V2",
@@ -245,6 +253,8 @@ jobs:
           print("P3_V2_RETAINED_8_OF_8_BC=PASS")
           print("P3_V2_NEWONLY_JSON_8_OF_8_BC=PASS")
           print("P3_V2_STAGE_PRESSURE_OBSERVED="+repr([(x["section"],x["name"],x["params"]) for x in stage_pressure])[:1300])
+          for old in oldBC:
+              print(f"P3_V2_RETAINED_BC_SHA256={old['name']}:{old['block_sha256']}")
           print("P3_V2_NEGATIVES=12_OF_12_REJECTED")
           print("P3_V2_SOURCE_STATIC_PASS_P3_X_NEWONLY_BC_OWNER_HOLD")
           PY
