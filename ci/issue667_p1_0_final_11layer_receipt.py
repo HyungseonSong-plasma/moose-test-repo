@@ -146,7 +146,10 @@ def run_case(control: Path, output: Path, case: str, archive: Path, option, prep
     # The production Hybrid preparer requires the exact public 400-W electron
     # moments lookup at its original path relative to the staged chemistry.
     # This never copies or synthesizes any protected kinetic rate table.
-    table_src = control / ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt"
+    historical = control.parent / "historical"
+    expected(subprocess.check_output(["git", "-C", str(historical), "rev-parse", "HEAD"], text=True).strip() == HIST,
+             case + "_EXACT_HISTORICAL_SOURCE_HEAD")
+    table_src = historical / ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt"
     expected(hash_path(table_src) ==
              "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
              case + "_PINNED_PUBLIC_ELECTRON_MOMENTS")

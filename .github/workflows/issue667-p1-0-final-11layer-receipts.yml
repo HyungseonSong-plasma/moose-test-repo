@@ -34,6 +34,13 @@ jobs:
           path: control
           persist-credentials: false
           fetch-depth: 1
+      - name: Checkout exact historical public source (electron lookup, no private rates)
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          persist-credentials: false
+          fetch-depth: 1
       - name: Confirm PR 665 HEAD remains pinned
         env:
           GH_TOKEN: ${{ github.token }}
