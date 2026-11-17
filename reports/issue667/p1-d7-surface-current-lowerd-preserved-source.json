@@ -1,0 +1,262 @@
+{
+  "schema": "issue667.p1_d7.surface_current_lowerd.pin.v1",
+  "task_id": "P1-D7",
+  "status": "PASS_STATIC_SOURCE_BOUND_WITH_RUNTIME_HOLD",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_archive_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "parent_issue": 667,
+  "scope": "PR665 fixed-head final pre-retirement Hybrid Scratch 11-layer S6-417/941; no Native P2/P3/P4",
+  "evidence": {
+    "source_ci_run_id": 44182663514,
+    "source_artifact_id": 14372278074,
+    "source_artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182663514/artifacts/14372278074",
+    "embedded_final_11_layer_zip_sha256": "9923c7c875dff975ec203610e58797be7abbfe6a92be2173f1fbe525f49f1172",
+    "embedded_manifest_sha256": "cf08568b0255486005a6e8b6541689dc42dbd434ba5dd8b80eecb4886b66b1fc",
+    "independent_second_artifact_id": 14372315897,
+    "second_artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44180190753/artifacts/14372315897",
+    "second_artifact_outer_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "source_commit_for_cpp": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "source_cpp_file": "physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C",
+    "source_cpp_git_blob_sha": "df2847333530b5e7f4a49251bf292ed1d4138e86",
+    "local_full_64kb_independent_receipt_sha256": "fce01c3c26b8151095a8de8cd7cff7f34c1295a57c8d3d9db43a5c681f67ec15"
+  },
+  "immutable_first_layer": {
+    "ordinal": 1,
+    "file_name": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "sha256_in_both_cases": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "D7_object_hashes_both_cases": [
+      {
+        "path": "Mesh/plasma_cover_owner",
+        "block_sha256": "ccb4976d109e055b7722ce2f09c007702a3a5b4f2b2ecf096f4e83ae807fab48",
+        "line_range": "14-20"
+      },
+      {
+        "path": "Mesh/cover_surface_block",
+        "block_sha256": "46a1f59913968ef388dca17d98d33458d7557ca5ae9dbacf9307192f4dcb36e5",
+        "line_range": "35-41"
+      },
+      {
+        "path": "Variables/sigma_s",
+        "block_sha256": "071af0ede3a7d4a105629cc585401709e062a48f2b708d1d98676c87630ce048",
+        "line_range": "111-116"
+      },
+      {
+        "path": "FunctorMaterials/cover_surface_current",
+        "block_sha256": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+        "line_range": "297-304"
+      },
+      {
+        "path": "Kernels/sigma_time",
+        "block_sha256": "7e06815cedce5737eaf55979b43b9a1615e198e06a0cd835ea1635e1e90d1643",
+        "line_range": "509-513"
+      },
+      {
+        "path": "Kernels/sigma_surface_current",
+        "block_sha256": "974e11b136ae11dc234af36a4fe27359116b54a53f8c3bae3ecaa545acc49fb5",
+        "line_range": "514-519"
+      },
+      {
+        "path": "BCs/cover_surface_charge_poisson",
+        "block_sha256": "4f0ea3837be3f796459c18167825715d885cc7d90145ae37a3eadda63e134574",
+        "line_range": "805-810"
+      },
+      {
+        "path": "Materials/cover_surface_anchor",
+        "block_sha256": "d944dad83e1760c02c8bfd517b7c6934e3a516f29c02856b11dffdbbd10d01e2",
+        "line_range": "475-480"
+      },
+      {
+        "path": "Mesh/plasma_wafer_owner",
+        "block_sha256": "f09247ed06bb585a6e5f03797127c0a52eec75b104535dcf16db6085fe1ecc6a",
+        "line_range": "21-27"
+      },
+      {
+        "path": "Mesh/wafer_surface_block",
+        "block_sha256": "98e7af515fc48dd937d86f5570faa325da6d225297b384628ba494c7698e36b3",
+        "line_range": "42-48"
+      },
+      {
+        "path": "Variables/sigma_wafer",
+        "block_sha256": "1d8b7d104a82513a50157376e28c7b8a56c4e423121c58b9ec8bc4d3362bb5a7",
+        "line_range": "117-122"
+      },
+      {
+        "path": "FunctorMaterials/wafer_surface_current",
+        "block_sha256": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+        "line_range": "305-312"
+      },
+      {
+        "path": "Kernels/sigma_wafer_time",
+        "block_sha256": "d8276ebb49e396b894d4dc1e3dbd644436b9aaac87c85bc141f0e0049755d46e",
+        "line_range": "520-524"
+      },
+      {
+        "path": "Kernels/sigma_wafer_surface_current",
+        "block_sha256": "574479001966e2977ff6086325241a41e637952312cc2457e22d91f0a363835f",
+        "line_range": "525-530"
+      },
+      {
+        "path": "BCs/wafer_surface_charge_poisson",
+        "block_sha256": "890d205cacae47948f6d850e7ab70a42a5db346570c98735a0cf7e31b7bc258b",
+        "line_range": "811-816"
+      },
+      {
+        "path": "Materials/wafer_surface_anchor",
+        "block_sha256": "85375d81f9264ea54af128b727622e3ccc636f10642ed22f5c7e0236ec03cb6e",
+        "line_range": "481-486"
+      },
+      {
+        "path": "Mesh/plasma_focus_ring_owner",
+        "block_sha256": "b0f2020a4f952ee2b86e318cb849fc85e3260ab2a4a8c67c511d6236da8a5139",
+        "line_range": "28-34"
+      },
+      {
+        "path": "Mesh/focus_ring_surface_block",
+        "block_sha256": "a17551a92162049f2c72a48e066fae54b381824b40f5583386b571007a30e7ab",
+        "line_range": "49-55"
+      },
+      {
+        "path": "Variables/sigma_focus_ring",
+        "block_sha256": "8f3c29f6dc68f42aa3ef7fc33330957005b144321534e91d04fedd8a7c6d9e6b",
+        "line_range": "123-128"
+      },
+      {
+        "path": "FunctorMaterials/focus_ring_surface_current",
+        "block_sha256": "b7f8870d2c6b4431fc0dff3fa90e158b64edfa5e7f0f1f68371ffc570fe442a2",
+        "line_range": "313-320"
+      },
+      {
+        "path": "Kernels/sigma_focus_ring_time",
+        "block_sha256": "fc54841f5b697f8ad5810b67f609505a4af1122a98b3c7441b644a2b9e60d8af",
+        "line_range": "531-535"
+      },
+      {
+        "path": "Kernels/sigma_focus_ring_surface_current",
+        "block_sha256": "cfc0a9a018a39451890da56837c77b98f3f850f724f634244cf95ad0411e3470",
+        "line_range": "536-541"
+      },
+      {
+        "path": "BCs/focus_ring_surface_charge_poisson",
+        "block_sha256": "62e32c8363e7c2feab8cdfc6f337940214b4c44d1120cf7d23b3d7e225d03fa3",
+        "line_range": "817-822"
+      },
+      {
+        "path": "Materials/focus_ring_surface_anchor",
+        "block_sha256": "ad77973da6c3a93b752703c3ef56c1d4c1d54b926032fa35ece5bf39f95407aa",
+        "line_range": "487-492"
+      }
+    ]
+  },
+  "cases": {
+    "417": {
+      "files_checked": 11,
+      "D7_blocks_checked": 24,
+      "D7_duplicate_objects": 0,
+      "archived_file_count": 10,
+      "archive_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+    },
+    "941": {
+      "files_checked": 11,
+      "D7_blocks_checked": 24,
+      "D7_duplicate_objects": 0,
+      "archived_file_count": 10,
+      "archive_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    }
+  },
+  "required_edges": [
+    {
+      "area": "cover",
+      "mesh_owner": "plasma_cover_owner",
+      "lower_d_block": "cover_surface",
+      "variable": "sigma_s",
+      "current_producer": "cover_surface_current",
+      "current_functor": "cover_net_surface_current_density",
+      "time_kernel": "sigma_time",
+      "source_kernel": "sigma_surface_current",
+      "poisson_bc": "cover_surface_charge_poisson",
+      "boundary": "plasma_cover"
+    },
+    {
+      "area": "wafer",
+      "mesh_owner": "plasma_wafer_owner",
+      "lower_d_block": "wafer_surface",
+      "variable": "sigma_wafer",
+      "current_producer": "wafer_surface_current",
+      "current_functor": "wafer_net_surface_current_density",
+      "time_kernel": "sigma_wafer_time",
+      "source_kernel": "sigma_wafer_surface_current",
+      "poisson_bc": "wafer_surface_charge_poisson",
+      "boundary": "plasma_wafer"
+    },
+    {
+      "area": "focus_ring",
+      "mesh_owner": "plasma_focus_ring_owner",
+      "lower_d_block": "focus_ring_surface",
+      "variable": "sigma_focus_ring",
+      "current_producer": "focus_ring_surface_current",
+      "current_functor": "focus_ring_net_surface_current_density",
+      "time_kernel": "sigma_focus_ring_time",
+      "source_kernel": "sigma_focus_ring_surface_current",
+      "poisson_bc": "focus_ring_surface_charge_poisson",
+      "boundary": "plasma_focus_ring"
+    }
+  ],
+  "current_producer_semantics": {
+    "factory": "ADParsedFunctorMaterial",
+    "functor_names": "O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux",
+    "symbols": "gi gop gm ge",
+    "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+    "archive_vs_final": "ONLY canonical wall-flux symbol rename in all 3 current producers; expression and sign unchanged",
+    "archived_producer_sha256": {
+      "cover": "eacf9c74614c8b38b35a3db934a12a6251362695adbb3ff5ffc24d4df34b71cf",
+      "wafer": "fd0d36f9326897924d23f7ae7b2fa3c6ccec54959785a7baae4468ac967214ca",
+      "focus_ring": "442feeda564a874635847eba21d452cfcd76e2e22c9c58d16db1407f0e905a23"
+    },
+    "nonproducer_blocks_archive_vs_final_byte_identical_per_case": 21
+  },
+  "verification": {
+    "local_exact_artifact_byte_readback": true,
+    "file_sha256_verified_total": 22,
+    "D7_block_sha256_verified_total": 48,
+    "cross_case_same_D7_block_sha256": 24,
+    "independent_same_head_second_artifact_file_byte_equal": 22,
+    "negative_controls_rejected": 26,
+    "negative_controls_total": 26,
+    "negative_controls_types": [
+      "missing_current_producer",
+      "wrong_sign",
+      "wrong_input_flux",
+      "current_functor_crosswired",
+      "current_kernel_cross_block",
+      "missing_time_derivative",
+      "poisson_sigma_crosswire",
+      "mesh_wrong_sideset",
+      "sigma_variable_wrong_block",
+      "duplicate_sigma_current",
+      "file_sha_tamper",
+      "unresolved_include",
+      "drop_11th_layer"
+    ],
+    "D7_missing_or_duplicate_counts": 0,
+    "static_component_reachability": "PASS",
+    "runtime_higherD_FaceInfo_orientation": "NOT_RUN",
+    "dynamic_external_callers": "UNRESOLVED",
+    "physical_surface_current_parity": "NOT_RUN",
+    "ionic_new_only_retirement": "NOT_RUN",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "Runtime higher-D FaceInfo owner-sidedness and mesh orientation cannot be proved from static bytes",
+    "Dynamic external caller-zero and full coupled numerical sign/flux parity not established",
+    "P1-E independent 29-receipt integration and later P2 #668 New-only 26->24 remain separate"
+  ],
+  "protected": {
+    "main_untouched": true,
+    "PR665_untouched": true,
+    "archives_untouched": true,
+    "private_rates_absent": true
+  }
+}
