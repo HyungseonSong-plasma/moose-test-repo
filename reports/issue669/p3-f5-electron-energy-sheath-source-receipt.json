@@ -1,0 +1,235 @@
+{
+  "schema": "issue669.P3-F5.fem_electron_energy_sheath.v1",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "issue": 669,
+  "task_id": "P3-F5",
+  "status": "PASS_STATIC_ELECTRON_ENERGY_SHEATH__NEW_ONLY_OWNER_HOLD",
+  "source_pin": {
+    "pr": 665,
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "P1_run": 44182628032,
+    "P1_artifact": 14372278070,
+    "P1_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "P1_common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "P2_source_run": 44196762787,
+    "P2_artifact": 14379920938,
+    "P2_zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+  },
+  "cases": {
+    "417": {
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "case": "S6-417",
+      "original": {
+        "artifact_id": 13677089020,
+        "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+        "input_layers_sha_recomputed": "10/10",
+        "C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+        "object_name": "electron_energy_sheath",
+        "section": "BCs",
+        "layer_ordinal": 1,
+        "original_factory": "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC",
+        "original_variable": "log_energy",
+        "original_wall_number_flux": "electron_wall_number_flux",
+        "original_mean_energy": "mean_en_solved",
+        "original_block_sha256": "57e95a3f444f3458abf5af990cb3088f130845a163fe6a31e6d2670e2aa94fde"
+      },
+      "P1_hybrid": {
+        "input_layers_sha_recomputed": "11/11",
+        "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "layer_ordinal": 1,
+        "object_count": 1,
+        "object_block_sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891"
+      },
+      "P2_ion_retired": {
+        "input_layers_sha_recomputed": "11/11",
+        "C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+        "layer_ordinal": 1,
+        "object_count": 1,
+        "object_block_sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+        "source_material_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+        "retired_native_ion_kernels": 14,
+        "retired_native_ion_bcs": 12,
+        "preserved_electron_fem_bcs": "8/8"
+      },
+      "target": {
+        "task_id": "P3-F5",
+        "case": "S6-417",
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+        "layer_ordinal": 1,
+        "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+        "file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca49f904e17e",
+        "section": "BCs",
+        "object_name": "electron_energy_sheath",
+        "factory_type": "FEMElectronEnergySheathBC",
+        "variable": "log_e_energy",
+        "relevant_parameters": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "boundary": "'plasma_electrode plasma_metal plasma_right'"
+        },
+        "block_sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+        "status": "PASS_STATIC_BYTE_PRESERVATION",
+        "unresolved": [
+          "New-only JSON generated e_energy_wall overlaps same energy variable and sidesets; P3-X reconcile"
+        ]
+      }
+    },
+    "941": {
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "case": "S6-941",
+      "original": {
+        "artifact_id": 13677375813,
+        "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+        "input_layers_sha_recomputed": "10/10",
+        "C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+        "object_name": "electron_energy_sheath",
+        "section": "BCs",
+        "layer_ordinal": 1,
+        "original_factory": "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC",
+        "original_variable": "log_energy",
+        "original_wall_number_flux": "electron_wall_number_flux",
+        "original_mean_energy": "mean_en_solved",
+        "original_block_sha256": "57e95a3f444f3458abf5af990cb3088f130845a163fe6a31e6d2670e2aa94fde"
+      },
+      "P1_hybrid": {
+        "input_layers_sha_recomputed": "11/11",
+        "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "layer_ordinal": 1,
+        "object_count": 1,
+        "object_block_sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891"
+      },
+      "P2_ion_retired": {
+        "input_layers_sha_recomputed": "11/11",
+        "C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+        "layer_ordinal": 1,
+        "object_count": 1,
+        "object_block_sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+        "source_material_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+        "retired_native_ion_kernels": 14,
+        "retired_native_ion_bcs": 12,
+        "preserved_electron_fem_bcs": "8/8"
+      },
+      "target": {
+        "task_id": "P3-F5",
+        "case": "S6-941",
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+        "layer_ordinal": 1,
+        "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+        "file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca49f904e17e",
+        "section": "BCs",
+        "object_name": "electron_energy_sheath",
+        "factory_type": "FEMElectronEnergySheathBC",
+        "variable": "log_e_energy",
+        "relevant_parameters": {
+          "type": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "boundary": "'plasma_electrode plasma_metal plasma_right'"
+        },
+        "block_sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+        "status": "PASS_STATIC_BYTE_PRESERVATION",
+        "unresolved": [
+          "New-only JSON generated e_energy_wall overlaps same energy variable and sidesets; P3-X reconcile"
+        ]
+      }
+    }
+  },
+  "source_producer_consumer_edges": [
+    {
+      "from": "log_e_energy",
+      "through": "electron energy/mean-energy source",
+      "to": "e_energy_eV",
+      "type": "required material producer; C++ DDEnergyEq"
+    },
+    {
+      "from": "log_e",
+      "through": "n_e_physical",
+      "to": "electron_wall_flux / ESWallFluxMaterial",
+      "type": "electron density to wall flux"
+    },
+    {
+      "from": "ESWallFluxMaterial (species_id=e)",
+      "to": "e_wall_number_flux",
+      "type": "Functor output",
+      "source_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824"
+    },
+    {
+      "from": "e_wall_number_flux + e_energy_eV",
+      "to": "BCs/electron_energy_sheath",
+      "type": "one-sided plasma face energy flux",
+      "value": "(number_flux / N_A)*(2.5*(2/3)*mean_energy)"
+    }
+  ],
+  "newonly_contract": {
+    "json_417": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+    "json_941": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+    "declared_object": "e_energy_wall",
+    "declared_factory": "FEMElectronEnergySheathBC",
+    "declared_boundary": "plasma_electrode plasma_metal plasma_right",
+    "Chemistry_C_inferred_variable": "log_e_energy",
+    "Chemistry_C_inferred_wall_number_flux": "e_wall_number_flux",
+    "Chemistry_C_inferred_mean_energy": "e_energy_eV",
+    "conflicts_with_retained": "electron_energy_sheath",
+    "status": "STATIC_OVERLAP_RISK_RUNTIME_NOT_PROVEN"
+  },
+  "implementation_source_git_blobs": {
+    "FEMElectronEnergySheathBC_C": "2ca0f695d8d801b28ebdaec8a32c3847a8a00a58",
+    "ESWallFluxMaterial_C": "7f0981608dad18e896b36af8fc8248211da381c6",
+    "Chemistry_C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "DDEnergyEq_C": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "prepare_hybrid_json_s6_py": "8a76517c7863be77d8390cd04b0b3be055f2c147",
+    "newonly_417_json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "newonly_941_json": "9568e2cae6640a755f9403c4f58e077c801b998c"
+  },
+  "independent_local_receipt": {
+    "file": "P3-F5_electron_energy_sheath_independent_receipt.json",
+    "sha256": "bf358e45653189843b01c62a6ab80d7011b59c16148b730085ffde27d84142da",
+    "size_bytes": 25898,
+    "includes_all_22_P1_and_22_P2_layer_hashes": true
+  },
+  "negative_tests": {
+    "rejected": 17,
+    "total": 17,
+    "classes": [
+      "wrong_factory",
+      "wrong_variable",
+      "legacy_energy_variable",
+      "wrong_flux_alias",
+      "wrong_mean_energy",
+      "wrong_mean_energy_density",
+      "missing_electrode",
+      "missing_right",
+      "extra_cover",
+      "wrong_boundary_wafer",
+      "extra_mean_energy_parameter",
+      "missing_mean_energy_parameter",
+      "missing_wall_flux_parameter",
+      "missing_object",
+      "duplicate_object",
+      "wrong_block_byte",
+      "wrong_section"
+    ]
+  },
+  "gates": {
+    "P3_F5_STATIC_SOURCE": "PASS",
+    "P3_F5_P2_ION_RETIREMENT_PRESERVATION": "PASS",
+    "P3_F5_NEW_ONLY_SINGLE_OWNER": "HOLD",
+    "P2_ISSUE_668": "OPEN",
+    "P3_X_INTEGRATION": "PENDING",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "JSON e_energy_wall would overlap retained electron_energy_sheath on log_e_energy and same three physical boundaries; must reconcile in P3-X",
+    "DDEnergyEq may generate wall flux and density material in addition to retained explicit producers; runtime warehouse uniqueness unverified",
+    "New-only 11-layer plus JSON integrated after P2 exact-head not established; no Native P2 execution",
+    "No scientific energy equivalence proof"
+  ],
+  "preservation": "Worker only generated task-specific receipt; original archives, PR #665, main, Physics C++, CI and issue body unchanged"
+}
