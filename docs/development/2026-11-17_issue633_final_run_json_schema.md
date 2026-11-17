@@ -8,7 +8,7 @@ PR #665 contains the candidates. Historical Hybrid S6 sources and runner remain 
 - `experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json`
 - `experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json`
 
-Each file contains seven species, eight pinned reaction entries, **two grouped**
+Each file contains seven species, eight pinned reaction entries, **five grouped**
 drift-diffusion boundaries. They instantiate 12 ion FV BC objects and 8
 electron/energy FEM sheath BC objects without changing the historic
 electron's inlet/outlet boundary treatment. The source has one electron
@@ -107,12 +107,23 @@ because it owns the separately selected electron-energy physics.
 - The 3 ion Wall Materials consume each species' molar mass, temperature
   fallback and sticking coefficient. Their density, potential, mobility
   and `temperature` Functors are derived by the existing Physics Action.
-- The new-only JSON declares `drift_diffusion_boundaries` with **two**
-  sideset groups. Each group contains BC entries directly (no `bcs`
-  wrapper), each specifying only `type` and optionally `sidesets`
-  to restrict an entry to a subset of that group. BC names supply
-  species IDs, from which C++ derives `variable=log_<species>` and
-  canonical `<species>_wall_number_flux`. For `e_energy_*` it derives
+- The new-only JSON declares `drift_diffusion_boundaries` with **five
+  nonoverlapping physical groups**: `inlet outlet`,
+  `plasma_electrode plasma_metal plasma_right`, `plasma_cover`,
+  `plasma_wafer`, `plasma_focus_ring`. Each group contains BC
+  objects directly (no `bcs` wrapper). **Each BC has only `type`;**
+  no `sidesets` option or independently repeated `variable`, `factor`
+  or flux Functor field exists in the new JSON.
+- Ion general-wall names (`O2p_wall`, `Om_wall`, `Op_wall`) appear in
+  both general groups. The parser **coalesces the matching typed records**
+  across disjoint groups into a single MOOSE BC per name, with the union
+  of their physical sidesets. Conflicting duplicate names, overlapping
+  physical group keys, different types, and duplicate residual owners
+  fail closed. Thus 23 JSON references produce **20 unique BC objects**:
+  3 general + 9 dielectric FV ions; 4 electron + 4 electron-energy FEM.
+  BC names supply Species IDs, from which C++ derives
+  `variable=log_<species>` and canonical
+  `<species>_wall_number_flux`. For `e_energy_*` it derives
   `log_e_energy` and `e_energy_eV`.
 - **Units and sign are code-owned:** general ion `FVFunctorNeumannBC`
   translates particle number flux [1/(m² s)] into log-molar boundary
@@ -121,12 +132,13 @@ because it owns the separately selected electron-energy physics.
   `FVLogMolarDielectricFluxBC` instead divides the *signed*
   particle flux by `N_A` inside its residual method, without a
   user-provided `factor`.
-- The general five-side group has ion `*_wall` objects and electron
-  `e_wall`/`e_energy_wall` objects, but the electron pair is
-  restricted explicitly to `plasma_electrode plasma_metal plasma_right`
-  (not inlet/outlet). The three dielectric sides remain separately owned
-  by 9 ion, 3 electron, and 3 electron-energy BC entries; each uses
-  `sidesets` to select its actual physical surface.
+- The two general groups produce a merged five-sideset ion wall BC,
+  while electron `e_wall`/`e_energy_wall` exist **only** in the
+  `plasma_electrode plasma_metal plasma_right` group, not inlet/outlet.
+  Each dielectric group has exactly 3 ion, 1 electron and 1
+  electron-energy BC. This exactly preserves the Native S6 electron
+  particle/energy sheath on cover, wafer and focus_ring without widening
+  the inlet/outlet electron residual.
 - The new ion wall Functors and a **single** electron wall Flux feed the
   three surface-current properties. In the S6 ion-only cutover the
   `[Energy]` action stays in partial mode: its existing Native electron
