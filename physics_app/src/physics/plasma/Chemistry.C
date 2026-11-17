@@ -385,57 +385,49 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         if (!std::isfinite(species.molar_mass_kg_mol) || species.molar_mass_kg_mol <= 0.0)
           fail(file, "molar_mass_kg_mol must be finite and positive for " + it.key());
       }
-      // C2 ion-wall loss is a species-local JSON parameter record, not a
-      // second discretization selector and not neutral mass-fraction metadata.
+      // Flat species.wall_* keys own ONLY wall-law parameters. Continuous
+      // ion state, mobility, potential, temperature and block have their own
+      // single owners and must not be duplicated in a wall JSON object.
       if (record.contains("ion_wall"))
+        fail(file, "species." + it.key() +
+                       ".ion_wall is retired; move wall_* fields to species");
+      const std::set<std::string> wall_keys = {
+          "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
+          "wall_migration_gate_smoothing_width",
+          "wall_use_element_gradient_for_potential"};
+      bool wall_requested = false;
+      for (const auto & key : wall_keys)
+        wall_requested = wall_requested || record.contains(key);
+      if (wall_requested)
       {
-        const auto & wall = record.at("ion_wall");
-        const std::set<std::string> required = {
-            "ion_number_density", "potential", "mobility", "gas_temperature", "block",
-            "molar_mass", "sticking", "ion_temperature_eV",
-            "migration_gate_smoothing_width", "use_element_gradient_for_potential"};
-        if (!wall.is_object() || wall.size() != required.size())
-          fail(file, "species." + it.key() + ".ion_wall requires exactly ten named arguments");
-        for (const auto & key : required)
-          if (!wall.contains(key))
-            fail(file, "species." + it.key() + ".ion_wall missing " + key);
+        for (const auto & key : wall_keys)
+          if (!record.contains(key))
+            fail(file, "species." + it.key() + " missing flat wall parameter " + key);
         if (it.key() == "e" || species.charge_number == 0)
-          fail(file, "ion_wall requires a charged heavy species, not " + it.key());
+          fail(file, "flat wall_* parameters require a charged heavy ion: " + it.key());
 
         IonWallRecord parsed;
-        auto text = [&](const char * key) {
-          if (!wall.at(key).is_string() || wall.at(key).get<std::string>().empty())
-            fail(file, "species." + it.key() + ".ion_wall invalid " + key);
-          return wall.at(key).get<std::string>();
-        };
-        auto number = [&](const char * key) {
-          if (!wall.at(key).is_number())
-            fail(file, "species." + it.key() + ".ion_wall nonnumeric " + key);
-          const double value = wall.at(key).get<double>();
+        const auto number = [&](const char * key) {
+          if (!record.at(key).is_number())
+            fail(file, "species." + it.key() + " nonnumeric " + key);
+          const double value = record.at(key).get<double>();
           if (!std::isfinite(value))
-            fail(file, "species." + it.key() + ".ion_wall nonfinite " + key);
+            fail(file, "species." + it.key() + " nonfinite " + key);
           return value;
         };
-        parsed.ion_number_density = text("ion_number_density");
-        parsed.potential = text("potential");
-        parsed.mobility = text("mobility");
-        parsed.gas_temperature = text("gas_temperature");
-        parsed.block = text("block");
-        parsed.molar_mass = number("molar_mass");
-        parsed.sticking = number("sticking");
-        parsed.ion_temperature_eV = number("ion_temperature_eV");
-        parsed.migration_gate_smoothing_width = number("migration_gate_smoothing_width");
-        if (parsed.molar_mass <= 0.0 || parsed.sticking < 0.0 || parsed.sticking > 1.0 ||
-            parsed.ion_temperature_eV < 0.0 || parsed.migration_gate_smoothing_width < 0.0)
-          fail(file, "species." + it.key() + ".ion_wall nonphysical numeric parameter");
-        if (!wall.at("use_element_gradient_for_potential").is_boolean())
-          fail(file, "species." + it.key() + ".ion_wall requires boolean gradient selection");
+        parsed.molar_mass = number("wall_molar_mass");
+        parsed.sticking = number("wall_sticking");
+        parsed.ion_temperature_eV = number("wall_ion_temperature_eV");
+        parsed.migration_gate_smoothing_width =
+            number("wall_migration_gate_smoothing_width");
+        if (parsed.molar_mass <= 0.0 || parsed.sticking < 0.0 ||
+            parsed.sticking > 1.0 || parsed.ion_temperature_eV < 0.0 ||
+            parsed.migration_gate_smoothing_width < 0.0)
+          fail(file, "species." + it.key() + " nonphysical flat wall_* parameter");
+        if (!record.at("wall_use_element_gradient_for_potential").is_boolean())
+          fail(file, "species." + it.key() + " wall gradient selection must be boolean");
         parsed.use_element_gradient_for_potential =
-            wall.at("use_element_gradient_for_potential").get<bool>();
-        // Reject swapped canonical Functor producers before invoking the factory.
-        if (parsed.ion_number_density != it.key() + "_number_density" ||
-            parsed.mobility != it.key() + "_mobility")
-          fail(file, "species." + it.key() + ".ion_wall wrong canonical density/mobility Functor");
+            record.at("wall_use_element_gradient_for_potential").get<bool>();
         species.ion_wall = parsed;
       }
 
@@ -1176,21 +1168,17 @@ PlasmasAction::act()
       if (record.ion_wall)
         configured.insert(id);
     if (selected.empty() || configured != selected)
-      mooseError("C2 selected fvm_species and species.<id>.ion_wall producers differ");
+      mooseError("C2 selected fvm_species and species.<id>.wall_* producers differ");
     if (_data.surfaceElectronWallFlux().empty())
       mooseError("C2 requires ion_surface_current.electron_wall_number_flux");
 
-    std::string common_block;
-    for (const auto & id : selected)
-    {
-      const auto & wall = *_data.species(id).ion_wall;
-      if (wall.potential != potential)
-        mooseError("C2 ion ", id, " wall potential differs from DDContinuityEq.fem_potential");
-      if (common_block.empty())
-        common_block = wall.block;
-      else if (common_block != wall.block)
-        mooseError("C2 ion walls must use the same plasma block for the surface-current ledger");
-    }
+    // No duplicated wall potential, gas-temperature or block fields in JSON.
+    // The same Continuity action supplies potential and block to every
+    // selected ion; [Plasmas] publishes the sole temperature Functor.
+    if (!gasStateEnabled())
+      mooseError("C2 wall flux requires [Plasmas] pressure and temperature");
+    const auto blocks =
+        continuity.front()->getParam<std::vector<SubdomainName>>("block");
 
     // Reject missing, extra, reordered/species-swapped or duplicate BCs.
     // A general FV Neumann BC owns five sidesets as one operator; each
@@ -1254,10 +1242,10 @@ PlasmasAction::act()
         const auto type = "IonWallFluxMaterial";
         auto params = _factory.getValidParams(type);
         params.set<std::string>("species_id") = id;
-        params.set<MooseFunctorName>("ion_number_density") = wall.ion_number_density;
-        params.set<MooseFunctorName>("potential") = wall.potential;
-        params.set<MooseFunctorName>("mobility") = wall.mobility;
-        params.set<MooseFunctorName>("gas_temperature") = wall.gas_temperature;
+        params.set<MooseFunctorName>("ion_number_density") = id + "_number_density";
+        params.set<MooseFunctorName>("potential") = potential;
+        params.set<MooseFunctorName>("mobility") = id + "_mobility";
+        params.set<MooseFunctorName>("gas_temperature") = "temperature";
         params.set<Real>("charge_number") = _data.species(id).charge_number;
         params.set<Real>("molar_mass") = wall.molar_mass;
         params.set<Real>("sticking") = wall.sticking;
@@ -1265,7 +1253,8 @@ PlasmasAction::act()
         params.set<Real>("migration_gate_smoothing_width") = wall.migration_gate_smoothing_width;
         params.set<bool>("use_element_gradient_for_potential") =
             wall.use_element_gradient_for_potential;
-        params.set<std::vector<SubdomainName>>("block") = {wall.block};
+        if (!blocks.empty())
+          params.set<std::vector<SubdomainName>>("block") = blocks;
         _problem->addFunctorMaterial(type, id + "_wall", params);
       }
 
@@ -1299,7 +1288,8 @@ PlasmasAction::act()
         params.set<std::vector<std::string>>("functor_symbols") = symbols;
         params.set<std::string>("expression") =
             "1.602176634e-19*(" + current_expression + ")";
-        params.set<std::vector<SubdomainName>>("block") = {common_block};
+        if (!blocks.empty())
+          params.set<std::vector<SubdomainName>>("block") = blocks;
         _problem->addFunctorMaterial(type, std::string(side) + "_surface_current", params);
       }
     }
