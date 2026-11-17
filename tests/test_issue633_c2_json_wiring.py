@@ -297,3 +297,19 @@ def test_non_string_electron_current_selection_fails_closed():
         stage["ion_surface_current"]["electron_wall_number_flux"] = invalid
         with pytest.raises(C2ContractError, match="INVALID_SURFACE_CURRENT_ELECTRON_CONSUMER"):
             validate(stage)
+
+
+
+def test_general_wall_group_permutation_preserves_same_five_physical_sidesets():
+    stage = data()
+    old = "inlet outlet plasma_electrode plasma_metal plasma_right"
+    new = "plasma_right plasma_metal inlet outlet plasma_electrode"
+    stage["boundaries"][new] = stage["boundaries"].pop(old)
+    assert validate(stage)["normal_fvbcs"] == 3
+
+
+def test_cpp_charge_guard_preserves_signed_s6_three_ion_ledger():
+    source = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
+    assert 'const int expected_charge = id == "Om" ? -1 : 1;' in source
+    assert 'if (_data.species(id).charge_number != expected_charge)' in source
+    assert 'current_expression += "-ge";' in source
