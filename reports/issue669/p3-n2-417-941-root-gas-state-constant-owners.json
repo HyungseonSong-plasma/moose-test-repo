@@ -19,8 +19,8 @@
     "pinned_cpp_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
     "pinned_staging_file": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py",
     "staging_blob_sha1": "8a76517c7863be77d8390cd04b0b3be055f2c147",
-    "independent_local_verifier_sha256": "09aecc47917651080af3f4429c57581e346824cc879432ffd0ee0274cd48f089",
-    "independent_local_receipt_sha256": "4d2bb90a0145af7ccd727cffa4414e47bdc48229b46b2bd25027ad27b1aaf62a",
+    "independent_local_verifier_sha256": "b4bc697aab89be84af899cccc9fe6d9a09ef6cf95818168e8011f48108d4ff7d",
+    "independent_local_receipt_sha256": "ac7ea270c467950bb4a39414da545ed6656a7491cfdafda135164ac01c230be9",
     "independently_verified_file_sha_count": 64,
     "negative_mutation_rejected": 10,
     "negative_mutation_total": 10,
@@ -35,7 +35,13 @@
       "outlet_root_link_broken",
       "constants_duplicate_gas_temperature",
       "constants_coeff_tamper"
-    ]
+    ],
+    "verified_breakdown": {
+      "historical_archive_files_per_case": 10,
+      "hybrid_inputs_per_case": 11,
+      "p2_stage_inputs_per_case": 11,
+      "total_across_two_cases": 64
+    }
   },
   "cases": {
     "417": {
