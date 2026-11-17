@@ -181,6 +181,32 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
         bool(block["params"].get("fem_potential"))
         for block in blocks
     )
+    # New grouped JSON creates the 4 electron particle + 4 electron
+    # energy FEM BC objects as well. Their old Native BCs must be retired
+    # from disposable Scratch even when the Native electron wall FLUX
+    # Material remains the single flux producer.
+    grouped_electron_bcs = bool(mechanism.get("drift_diffusion_boundaries"))
+    historical_electron_bcs = {
+        "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+        "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC",
+        "FEMElectronSheathBC", "FEMElectronEnergySheathBC",
+    }
+    duplicate_electron_bcs = [
+        {"file": block["file"], "line": block["line"], "name": block["name"],
+         "type": block["params"].get("type"), "variable": block["params"].get("variable")}
+        for block in blocks
+        if block["parent"] == "BCs" and (
+            block["params"].get("type") in historical_electron_bcs or
+            (
+                block["params"].get("variable") in {
+                    "log_ne", "log_e", "log_energy", "log_e_energy"
+                } and (
+                    "electron" in block["name"].lower() or
+                    block["name"].startswith("e_")
+                )
+            )
+        )
+    ]
     generated_wall_names = {ident + "_wall" for ident in c2_ions}
     generated_wall_properties = {ident + "_wall_number_flux" for ident in c2_ions}
     current_names = {"cover_surface_current", "wafer_surface_current",
@@ -232,6 +258,10 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
             errors.append(f"P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_{len(producer_conflicts)}")
         if native:
             errors.append(f"P1_NATIVE_FV_ION_OWNER_PRESENT_{len(native)}")
+        if grouped_electron_bcs and duplicate_electron_bcs:
+            errors.append(
+                f"P1_NATIVE_ELECTRON_FEM_BC_OWNER_PRESENT_{len(duplicate_electron_bcs)}"
+            )
         status = "P0_STATIC_PASS_ONLY"
     else:
         # This is a provenance-only S6-417/941 archived Native inventory.
@@ -257,6 +287,8 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
             "explicit_ion_wall_current_owners": explicit_functor,
             "c2_native_producer_collision_count": len(producer_conflicts),
             "c2_native_producer_collisions": producer_conflicts,
+            "native_electron_bc_owner_count": len(duplicate_electron_bcs),
+            "native_electron_bc_owners": duplicate_electron_bcs,
             "runtime_generated_kernel_bc_count": "NOT_VERIFIED_P0_ONLY"}
 
 def main(argv=None) -> int:
