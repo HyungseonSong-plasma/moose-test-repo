@@ -42,13 +42,14 @@ DDContinuityEq::validParams()
   params.addClassDescription(
       "Bind plasma continuity species to deterministic internal state and kernel names. "
       "Supported FEM continuity generation creates the conservative log-molar time " 
-      "derivative and drift-diffusion Kernels; FV transport stays Native.");
+      "derivative and drift-diffusion Kernels; selected FV species own explicit "
+      "time, diffusion, drift, and Chemistry-source FV Kernels.");
   params.addParam<std::vector<std::string>>(
       "fem_species", {}, "FEM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<std::vector<std::string>>(
       "fvm_species", {}, "FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<VariableName>(
-      "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
+      "fem_potential", "Potential for selected FEM and FVM drift-diffusion transport.");
   return params;
 }
 
@@ -109,43 +110,50 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   addRequiredPhysicsTask("add_variables_physics");
   addRequiredPhysicsTask("add_ics_physics");
 
-  // JSON automatically owns all selected DD species when any DD record exists.
-  // A fully absent section preserves historical Native coefficients.
-  // No front-end transport switch or implicit partial JSON fallback.
-  if (chemistryData().hasDDTransport())
+  // Selection is driven exclusively by fem_species/fvm_species and the JSON
+  // species IDs, never by the presence of a Native kernel or an ownership mode.
+  // Both FE and FV continuity generation require a complete explicit JSON
+  // transport record; an absent section is not a Native-coefficient fallback.
+  const auto & mechanism = chemistryData();
+  const auto validate = [this, &mechanism](const std::vector<std::string> & ids,
+                                            const std::string & option,
+                                            const std::string & family)
   {
-    const auto & mechanism = chemistryData();
-    const auto validate = [this, &mechanism](const std::vector<std::string> & ids,
-                                              const std::string & option,
-                                              const std::string & family)
+    for (const auto & id : ids)
     {
-      for (const auto & id : ids)
-      {
-        (void)mechanism.species(id);
-        if (!mechanism.ddTransport(id))
-          paramError(option,
-                     "Missing drift-diffusion transport JSON record for ",
-                     family,
-                     " species '",
-                     id,
-                     "'. Specify model=constant, lookup, or functor.");
-      }
-    };
-    validate(_fem_species, "fem_species", "FEM");
-    validate(_fvm_species, "fvm_species", "FVM");
-  }
+      (void)mechanism.species(id);
+      if (!mechanism.ddTransport(id))
+        paramError(option,
+                   "Missing drift-diffusion transport JSON record for ",
+                   family,
+                   " species '",
+                   id,
+                   "'. Specify transport_coef=constant, lookup, or functor in species JSON.");
+    }
+  };
+  validate(_fem_species, "fem_species", "FEM");
+  validate(_fvm_species, "fvm_species", "FVM");
 
-  // Charges are specified once in [Plasmas]/files, not by parallel per-species
-  // vectors. Keep this builder disabled in pure variable-binding check mode.
-  if (isParamValid("fem_potential"))
+  // Selection itself activates generation. Potential is transport data, not
+  // an ownership switch; never silently downgrade to binding-only mode.
+  if (!isParamValid("fem_potential"))
+    paramError("fem_potential",
+               "Selected fem_species/fvm_species require an explicit potential "
+               "for automatic FEM/FV drift-diffusion generation.");
+
+  // FV selection is the cutover decision: no Native presence probe, no owner
+  // Enum, and no partially generated species equation.
+  if (!fvm.empty())
   {
-    if (fem.empty())
-      paramError("fem_species", "Generated FEM transport requires FEM species.");
-    const auto & mechanism = chemistryData();
-    for (const auto & id : fem)
-      (void)mechanism.species(id);
+    if (!chemistryEnabled())
+      paramError("fvm_species",
+                 "FV species kernels require [Physics]/[Plasmas]/[Transport]/[Chemistry] "
+                 "to generate species source functors.");
     for (const auto & id : fvm)
-      (void)mechanism.species(id);
+      if (!mechanism.hasSpeciesSource(id))
+        paramError("fvm_species",
+                   "Selected FV species '", id,
+                   "' requires a nonzero volume reaction source in Chemistry JSON.");
   }
 }
 
@@ -214,21 +222,18 @@ DDContinuityEq::checkIntegrity() const
   const auto & fvm = _fvm_species;
   const auto variables = resolvedContinuityVariables(fem, fvm);
   validateExistingSpeciesVariables(fem, fvm, variables);
-  if (isParamValid("fem_potential"))
-    for (std::size_t i = 0; i < fem.size(); ++i)
-    {
-      requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);
-      requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);
-      if (chemistryEnabled() && chemistryData().hasSpeciesSource(fem[i]))
-        requireUniqueFEKernel("FunctorKernel", variables[i]);
-    }
+  for (std::size_t i = 0; i < fem.size(); ++i)
+  {
+    requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);
+    requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);
+    if (chemistryEnabled() && chemistryData().hasSpeciesSource(fem[i]))
+      requireUniqueFEKernel("FunctorKernel", variables[i]);
+  }
 }
 
 void
 DDContinuityEq::addFEKernels()
 {
-  if (!isParamValid("fem_potential"))
-    return;
   const auto & species = _fem_species;
   const auto variables = resolvedContinuityVariables(species, _fvm_species);
   const auto & mechanism = chemistryData();
@@ -273,13 +278,65 @@ DDContinuityEq::addFEKernels()
 }
 
 void
+DDContinuityEq::addFVKernels()
+{
+  if (_fvm_species.empty())
+    return;
+
+  // The selected fvm_species, not a detected Native owner or separate mode,
+  // determines the four generated operators per species. The full old Native
+  // 11-layer deck must be independently preflighted and stripped in Scratch.
+  const auto & mechanism = chemistryData();
+  const auto & potential = getParam<VariableName>("fem_potential");
+  for (const auto & id : _fvm_species)
+  {
+    const NonlinearVariableName variable = continuityStateName(id);
+
+    const std::string time_type = "FVLogMolarTimeDerivative";
+    auto time_params = getFactory().getValidParams(time_type);
+    time_params.set<NonlinearVariableName>("variable") = variable;
+    assignBlocks(time_params, _blocks);
+    getProblem().addFVKernel(time_type, id + "_time", time_params);
+
+    const std::string diffusion_type = "FVLogMolarDiffusion";
+    auto diffusion_params = getFactory().getValidParams(diffusion_type);
+    diffusion_params.set<NonlinearVariableName>("variable") = variable;
+    diffusion_params.set<MooseFunctorName>("coeff") = id + "_diffusivity";
+    assignBlocks(diffusion_params, _blocks);
+    getProblem().addFVKernel(diffusion_type, id + "_diffusion", diffusion_params);
+
+    const std::string drift_type = "FVLogMolarElectrostaticDrift";
+    auto drift_params = getFactory().getValidParams(drift_type);
+    drift_params.set<NonlinearVariableName>("variable") = variable;
+    drift_params.set<MooseFunctorName>("potential") = potential;
+    drift_params.set<MooseFunctorName>("mobility") = id + "_mobility";
+    drift_params.set<MooseFunctorName>("carrier") = "carrier_one";
+    drift_params.set<Real>("charge_number") = mechanism.species(id).charge_number;
+    drift_params.set<bool>("use_element_gradient_for_potential") = true;
+    assignBlocks(drift_params, _blocks);
+    getProblem().addFVKernel(drift_type, id + "_drift", drift_params);
+
+    // Chemistry has already combined all EI/H contributions for this species
+    // into one signed molar source S_<species>_molar. FVCoupledForce evaluates
+    // that Functor with a single RHS sign (negative residual).
+    const std::string source_type = "FVCoupledForce";
+    auto source_params = getFactory().getValidParams(source_type);
+    source_params.set<NonlinearVariableName>("variable") = variable;
+    source_params.set<MooseFunctorName>("v") = "S_" + id + "_molar";
+    source_params.set<Real>("coef") = 1.0;
+    assignBlocks(source_params, _blocks);
+    getProblem().addFVKernel(source_type, id + "_source", source_params);
+  }
+}
+
+void
 DDContinuityEq::addFunctorMaterials()
 {
   // Material ownership follows exactly the FEM and FVM species listed by
   // Continuity, not a second species list or per-species .i Material blocks.
   // PlasmasAction loads JSON and resolves table_file relative to its JSON file.
-  // Native FV equations remain external; generated coefficient Functors are
-  // available to those FV operators without creating a duplicate equation.
+  // Transport coefficients are supplied by validated JSON for every selected
+  // species; FV kernel and BC cutover are separate P05/P14 gates.
   const auto & mechanism = chemistryData();
   std::vector<std::string> species = _fem_species;
   const auto & fvm = _fvm_species;
@@ -289,7 +346,8 @@ DDContinuityEq::addFunctorMaterials()
   {
     const auto * config = mechanism.ddTransport(id);
     if (!config)
-      continue; // Existing Native coefficient owners remain during S6 parity migration.
+      mooseError("DDContinuityEq selected species '", id,
+                 "' has no JSON transport record after constructor validation.");
     const std::string type = "DDTransportMaterial";
     auto params = getFactory().getValidParams(type);
     params.set<std::string>("species_id") = id;
@@ -335,4 +393,5 @@ registerMooseAction("PhysicsApp", DDContinuityEq, "add_variables_physics");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_ics_physics");
 registerMooseAction("PhysicsApp", DDContinuityEq, "check_integrity");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_kernel");
+registerMooseAction("PhysicsApp", DDContinuityEq, "add_fv_kernel");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_functor_material");
