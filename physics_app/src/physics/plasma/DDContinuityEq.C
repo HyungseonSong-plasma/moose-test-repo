@@ -58,6 +58,13 @@ DDContinuityEq::validParams()
       "fvm_species", {}, "FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<VariableName>(
       "fem_potential", "Potential for selected FEM and FVM drift-diffusion transport.");
+  // Numerical wall gate control belongs to the MOOSE input, not species
+  // Chemistry JSON. Require explicit value for any selected C2 ion wall;
+  // zero selects the non-smoothed outward-only migration gate.
+  params.addParam<Real>(
+      "wall_migration_gate_smoothing_width",
+      "Wall-directed migration gate smoothing width [V/m], explicitly set in "
+      "[Continuity] whenever JSON wall_* ion producers are enabled.");
   return params;
 }
 
@@ -123,6 +130,17 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   // Both FE and FV continuity generation require a complete explicit JSON
   // transport record; an absent section is not a Native-coefficient fallback.
   const auto & mechanism = chemistryData();
+  if (mechanism.hasIonWalls())
+  {
+    if (!isParamValid("wall_migration_gate_smoothing_width"))
+      paramError("wall_migration_gate_smoothing_width",
+                 "Selected ion wall_* JSON requires an explicit nonnegative "
+                 "wall_migration_gate_smoothing_width in the MOOSE [Continuity] input.");
+    const Real smoothing = getParam<Real>("wall_migration_gate_smoothing_width");
+    if (!std::isfinite(smoothing) || smoothing < 0.0)
+      paramError("wall_migration_gate_smoothing_width",
+                 "Ion wall migration smoothing must be finite and nonnegative [V/m].");
+  }
   // MOOSE's existing dont_create_kernels is a whole-Physics binding-only
   // control used by historical P2 IC tests, not an ion/Native ownership mode.
   // Without that explicit control, selected species always generate Kernels.
