@@ -1,0 +1,206 @@
+{
+  "schema": "issue667.p1.d8.source_byte_diagnostics_and_external_dynamic_callers.v1",
+  "task_id": "P1-D8",
+  "status": "SOURCE_BYTE_SCOPE_PASS_DYNAMIC_CALLER_ZERO_HOLD",
+  "result_scope": "Independent read-only audit of final S6-417 and S6-941 11-layer .i artifact; subset of GitHub source callers. NOT a runtime/caller-zero proof.",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "original_historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "p1_0": {
+    "artifact_id": 14372278070,
+    "ci_run": 44182628032,
+    "artifact_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "common_pin": "reports/issue667/p1-0-s6-417-941-immutable-source-pin.json",
+    "pin_commit": "9691f7f7741566fda93e1ee6f3fcb603e6532261"
+  },
+  "methodology": {
+    "verify_zip_and_manifest_sha": true,
+    "independently_rehash_final_files": 22,
+    "source_parse": "all top-level [Postprocessors],[AuxVariables],[AuxKernels],[MultiApps],[Transfers],[Controls],[UserObjects] blocks; original raw block bytes including closing line, no text normalization",
+    "duplicate_guard": "section+name unique within each 11-layer case",
+    "cross_case_variant_census": "Exact 417-only 6 Postprocessors vs 941-only 9 Postprocessors, with 130 shared",
+    "negative_test": "In-memory substitution of cover_O2p_flux's functor changes exact source file SHA; 45-column CSV caller fails membership if this postprocessor is deleted",
+    "external_repository_search": "bounded only: analyzed Issue3 dynamic CSV analyzer, canonical S6 P3 verifier, Exodus species_plot and time_trace; all at pinned integration HEAD"
+  },
+  "cases": {
+    "417": {
+      "final_layer_count": 11,
+      "section_counts": {
+        "Postprocessors": 136,
+        "AuxVariables": 7,
+        "AuxKernels": 5,
+        "MultiApps": 1,
+        "Transfers": 7,
+        "Controls": 1,
+        "UserObjects": 1
+      },
+      "unique_d8_objects": 158,
+      "direct_ion_density_extrema_edges": 6,
+      "wall_surface_current_and_particle_flux_edges": 15,
+      "wall_mass_flux_edges": 3,
+      "required_external_csv_pp_columns_present": 45
+    },
+    "941": {
+      "final_layer_count": 11,
+      "section_counts": {
+        "Postprocessors": 139,
+        "AuxVariables": 7,
+        "AuxKernels": 5,
+        "MultiApps": 1,
+        "Transfers": 7,
+        "Controls": 1,
+        "UserObjects": 1
+      },
+      "unique_d8_objects": 161,
+      "direct_ion_density_extrema_edges": 6,
+      "wall_surface_current_and_particle_flux_edges": 15,
+      "wall_mass_flux_edges": 3,
+      "required_external_csv_pp_columns_present": 45
+    }
+  },
+  "key_source_bound_receipts": [
+    {
+      "case": "417_and_941",
+      "ordinal": 1,
+      "section": "Postprocessors",
+      "name": "ni_min",
+      "factory": "ADElementExtremeFunctorValue",
+      "functor": "n_i_physical",
+      "block_sha256": "91b30eb8da655138b8fe742a24cb3b456f1483b9ea6d8e67031452e515e07083"
+    },
+    {
+      "case": "417_and_941",
+      "ordinal": 1,
+      "section": "Postprocessors",
+      "name": "cover_O2p_flux",
+      "factory": "ADSideIntegralFunctorPostprocessor",
+      "functor": "O2p_wall_number_flux",
+      "boundary": "plasma_cover",
+      "block_sha256": "7537b9a2ce13e06e441291a0c3aaf43bdd05e8cd715a426e19e8791b1dfb06f5"
+    },
+    {
+      "case": "417_and_941",
+      "ordinal": 1,
+      "section": "Postprocessors",
+      "name": "stageb4_O2p_wall_mass_rate",
+      "factory": "ADSideIntegralFunctorPostprocessor",
+      "functor": "O2p_wall_mass_flux",
+      "block_sha256": "7e24efa159f0f673673fbe1d1b0571fdf2b28e93a97613b6a21d36db05042ce8"
+    },
+    {
+      "case": "417_and_941",
+      "ordinal": 2,
+      "section": "Postprocessors",
+      "name": "P_rf_raw_W_t6",
+      "factory": "ElementIntegralMaterialProperty",
+      "property": "q_rf_raw_t6",
+      "block_sha256": "24cfa7c164e1c9521b35dfcc53a32c601d5eeeabf6a7efae2863cfedc09f117f"
+    },
+    {
+      "case": "417_and_941",
+      "ordinal": 2,
+      "section": "Controls",
+      "name": "rf_drive_pid_t6",
+      "factory": "PIDTransientControl",
+      "sensor": "P_rf_raw_W_t6",
+      "parameter_pp": "rf_drive_scale_t6",
+      "block_sha256": "f8c59d0d7e057580769032684bd6752519eb1ff9a596753c6a00fb6ace3901d7"
+    },
+    {
+      "case": "417_and_941",
+      "ordinal": 2,
+      "section": "Transfers",
+      "name": "drive_to_maxwell_t6",
+      "factory": "MultiAppPostprocessorTransfer",
+      "from_pp": "rf_drive_scale_t6",
+      "to_pp": "rf_drive_scale_child",
+      "block_sha256": "2a70aa7af1e1fc40a7d9a869710df8a75cb14519129783d9c1c0e88cb18002d8"
+    },
+    {
+      "case": "417_and_941",
+      "ordinal": 2,
+      "section": "MultiApps",
+      "name": "maxwell_t6",
+      "factory": "FullSolveMultiApp",
+      "external_input": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i",
+      "block_sha256": "30683695a66ea5f357e6f57338d2b4c3c495167d5f5781d48996c937761f5473"
+    },
+    {
+      "case": "417_and_941",
+      "ordinal": 10,
+      "section": "Postprocessors",
+      "name": "h25_progress_integral",
+      "factory": "ADElementIntegralFunctorPostprocessor",
+      "functor": "R_H25",
+      "block_sha256": "1f777f8d147b434bd59db935879ffd7be9c9c4fd4cc469a8465c5d20db19b662"
+    }
+  ],
+  "indirect_edges": {
+    "ion_state_diagnostics": [
+      "ni_min/ni_max -> n_i_physical",
+      "nm_min/nm_max -> n_m_physical",
+      "nop_min/nop_max -> n_op_physical"
+    ],
+    "signed_wall_flux_postprocessors": [
+      "cover,wafer,focus_ring O2p/Om/Op flux -> O2p_wall_number_flux, Om_wall_number_flux, Op_wall_number_flux",
+      "cover,wafer,focus_ring electron_primary_flux -> e_wall_number_flux",
+      "cover,wafer,focus_ring net_surface_current -> <surface>_net_surface_current_density"
+    ],
+    "wall_mass_rates": [
+      "stageb4_O2p_wall_mass_rate -> O2p_wall_mass_flux",
+      "stageb4_Om_wall_mass_rate -> Om_wall_mass_flux",
+      "stageb4_Op_wall_mass_rate -> Op_wall_mass_flux"
+    ],
+    "rf_control": [
+      "P_rf_raw_W_t6 -> PIDTransientControl rf_drive_pid_t6 -> rf_drive_scale_t6",
+      "rf_drive_scale_t6 -> drive_to_maxwell_t6 -> maxwell_t6/rf_drive_scale_child",
+      "maxwell_t6 input_files points outside saved 11-layer bundle"
+    ]
+  },
+  "external_caller_samples": [
+    {
+      "path": "experiments/Issue3_dielectric_surface_charge/analyze_cover_wafer_focus_ring_15us.py",
+      "blob_sha": "18633d742f7adc0ed688897bd9f8a7d95fc78068",
+      "evidence": "45 required Postprocessor columns plus time; 30 f'{owner}_{field}' dynamic CSV keys; all 45 static PP names found in both final .i input sets",
+      "called_by_s6_p1_runtime": "NOT_PROVEN"
+    },
+    {
+      "path": "physics_harness/adapters/moose/species_plot.py",
+      "blob_sha": "36770b381d433bf6351178cf663b949e47fb4d06",
+      "evidence": "exodus_log_name selects unique canonical or archive alias, rejects both together; cannot establish execution",
+      "called_by_s6_p1_runtime": "NOT_PROVEN"
+    },
+    {
+      "path": "physics_harness/adapters/moose/time_trace.py",
+      "blob_sha": "04bc07813eb3e05368d87cc979df572466cf5463",
+      "evidence": "reads native Exodus names dynamically and uses P_rf_scaled_W_t6/P_rf_raw_W_t6 globals",
+      "called_by_s6_p1_runtime": "NOT_PROVEN"
+    },
+    {
+      "path": "experiments/Issue402_plasma_dsl_g1/run_canonical_s6_p3_once.py",
+      "blob_sha": "98d3e8b1a08821c2d7a4b137c1421bfc293c97dd",
+      "evidence": "explicit canonical log_O2p/Om/Op Exodus guard; actual P3 is out of scope",
+      "called_by_s6_p1_runtime": "NOT_RUN"
+    }
+  ],
+  "unresolved": [
+    "Full dynamic caller-zero across Python/C++/MOOSE late-bound registry not proven by bounded static sampling.",
+    "Runtime effective material/Functor producers and duplicate/absence semantics of n_i_physical/n_m_physical/n_op_physical and wall flux outputs need D5-D7 handoff and new-only P2.",
+    "maxwell_t6 child input is referred to but not among 11 saved .i inputs; staging/path and child runtime reachability not independently verified.",
+    "CSV/Exodus actual emitted fields, resolved output-merging and time-dependent control/transfer invocation need runtime evidence; static Input names are not execution.",
+    "No proof that the Issue3 historical 15us CSV analyzer is invoked by current S6; it is a source-reference consumer contract only.",
+    "P1-E must integrate these source-bound receipts with D1-D7, B/C rate, 26 owners; do not infer full semantic parity."
+  ],
+  "audit_output_local_sha256": "cb55ba25418c4c03aae19f3dbaceaf0ba8dc2afcfbb19f86ab206a29f6ae7f9c",
+  "gates": {
+    "P1_D8_STATIC_SOURCE_BYTES": "PASS",
+    "P1_D8_DYNAMIC_CALLER_ZERO": "UNRESOLVED_HOLD",
+    "P1_D8": "HOLD_PENDING_RUNTIME_REACHABILITY",
+    "P1_E": "NOT_RUN",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "private_rate_bytes_published": false
+}
