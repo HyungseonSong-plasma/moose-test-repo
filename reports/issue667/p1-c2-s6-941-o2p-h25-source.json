@@ -1,0 +1,120 @@
+{
+  "schema": "issue667.p1_c2.source_bound_final11.v1",
+  "task_id": "P1-C2",
+  "issue": 667,
+  "case": "941",
+  "status": "PASS_STATIC_SOURCE_BOUND",
+  "evidence_scope": "S6-941 exact-PR665-HEAD reconstructed 11-layer Hybrid Scratch D source bytes. Not runtime P2, not New-only cutover.",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "source_pin": {
+    "run_id": 44180190753,
+    "artifact_id": 14372315897,
+    "artifact_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "source_files_verified": "11/11",
+    "fv_objects_verified": "63/63",
+    "no_literal_unresolved_include": true
+  },
+  "original_archive": {
+    "artifact_id": 13677375813,
+    "archive_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+    "input_files_verified": "10/10",
+    "original_layer_ordinal": 10,
+    "original_file_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+    "original_block_sha256": "cd065f0510bdf38ebdec7c8c91b13f02309cee1ff9b7970647707d9adbdb5f6d",
+    "original_variable": "log_ni"
+  },
+  "object": {
+    "layer_ordinal": 10,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+    "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+    "section": "FVKernels",
+    "object_name": "h25_molecular_positive_ion",
+    "factory_type": "FVCoupledForce",
+    "variable": "log_O2p",
+    "relevant_parameters": {
+      "type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "v": "S_O2p_molar_H25",
+      "coef": "1.0",
+      "block": "plasma"
+    },
+    "start_line": 122,
+    "end_line": 128,
+    "block_sha256": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4",
+    "occurrence_count_11layer": 1
+  },
+  "distinct_c1": {
+    "object_name": "ei415_o2p_source",
+    "layer_ordinal": 5,
+    "variable": "log_O2p",
+    "v": "S_O2p_molar_EI415",
+    "factory_type": "FVCoupledForce",
+    "block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+    "occurrence_count_11layer": 1,
+    "no_duplicate_or_functor_alias": true
+  },
+  "static_producer_consumer_edges": [
+    {
+      "from": "h25_progress",
+      "produces": "R_H25",
+      "block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081"
+    },
+    {
+      "from": "h25_o2p_birth",
+      "consumes": "R_H25",
+      "produces": "S_O2p_molar_H25",
+      "expression": "R",
+      "block_sha256": "6f483b0cff456b77f9c5737ae7f67d6e9f4fd5e50d595f568d42857810dd94e7"
+    },
+    {
+      "to": "h25_molecular_positive_ion",
+      "consumes": "S_O2p_molar_H25",
+      "variable": "log_O2p"
+    }
+  ],
+  "independently_verified": {
+    "archive_zip_sha_match": true,
+    "original_ten_layer_file_sha_match": true,
+    "scratch_zip_sha_match": true,
+    "scratch_eleven_layer_file_sha_match": true,
+    "full_case_fv_object_sha_and_parameter_match": true,
+    "target_unique": true,
+    "c1_c2_distinct": true,
+    "provider_unique": true,
+    "negative_controls_rejected": "13/13",
+    "negative_control_classes": [
+      "deleted_C2",
+      "duplicate_C2",
+      "wrong_C2_v",
+      "wrong_C2_variable",
+      "wrong_C2_coef",
+      "wrong_C2_factory",
+      "missing_H25_producer",
+      "wrong_H25_producer_sign",
+      "C1_C2_functor_alias",
+      "duplicate_O2p_source",
+      "missing_layer10",
+      "file_sha_tamper",
+      "unresolved_include"
+    ]
+  },
+  "gates": {
+    "P1_C2": "PASS_STATIC_SOURCE_BOUND",
+    "P1_0_Scratch_D": "PASS_BYTE_READBACK",
+    "P1_C7_H25_rate": "PENDING",
+    "P1_E": "PENDING",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "unresolved": [
+    "Private rates not read or published",
+    "H25 runtime kinetic law/physical source equivalence belongs to independent P1-C7 gate",
+    "Hybrid Scratch D has 26 Native ion operators; New-only ownership cutover is not established",
+    "Dynamic consumers, exact Native P2, and science parity not proven"
+  ],
+  "immutability": "No original archives, main, PR #665, shared issue body, workflow, Native P3/P4 or scientific acceptance changed."
+}
