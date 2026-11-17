@@ -1,0 +1,99 @@
+{
+  "schema": "issue667.p1_c1.final_11layer.source_receipt.v1",
+  "task_id": "P1-C1",
+  "issue": 667,
+  "case": "941",
+  "status": "PASS_SOURCE_BOUNDED_FINAL_11_LAYER__RATE_BYTES_HOLD",
+  "evidence_class": "INDEPENDENT_EXACT_HEAD_SCRATCH_D_INPUT_BYTES_P0_STATIC",
+  "scope": "S6-941 O2p source #1 only; C2 H25 source excluded",
+  "integration": {
+    "pr": 665,
+    "head_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "draft": true
+  },
+  "p1_0": {
+    "run_id": 44180190753,
+    "artifact_id": 14372315897,
+    "artifact_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "artifact_source_branch_sha": "9f96db79611e469ee25d7b498ce1ee22f26f81d4",
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "input_file_sha_checks": 11,
+    "fv_block_sha_checks": 63,
+    "include_directives_found": 0,
+    "case_status": "SOURCE_BYTE_PIN_PASS"
+  },
+  "source": {
+    "layer_ordinal": 5,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+    "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+    "section": "FVKernels",
+    "object_name": "ei415_o2p_source",
+    "factory_type": "FVCoupledForce",
+    "variable": "log_O2p",
+    "parameters": {
+      "type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "v": "S_O2p_molar_EI415",
+      "coef": "1.0",
+      "block": "plasma"
+    },
+    "line_start": 85,
+    "line_end": 91,
+    "block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691"
+  },
+  "producer_edges": {
+    "source_functor_owner": {
+      "section": "FunctorMaterials",
+      "object_name": "ei415_o2p_source",
+      "factory_type": "ADParsedFunctorMaterial",
+      "property_name": "S_O2p_molar_EI415",
+      "functor_names": "R_EI415",
+      "expression": "R",
+      "layer_ordinal": 5,
+      "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+      "block_sha256": "0998b09c7652648ea63f19394f68c54a3e905bb9df680a7a87bc4b114f9d8392"
+    },
+    "rate_progress_owner": {
+      "section": "FunctorMaterials",
+      "object_name": "ei415_progress",
+      "factory_type": "EIRateCoefMaterial",
+      "reaction_progress": "R_EI415",
+      "rate_table_file_reference": "private_rates/EI-415_O2_X.txt",
+      "layer_ordinal": 5,
+      "block_sha256": "aa7b0f2e016f8dc367817c52a29e20d586e4db0c6840c7f377d4cc2970d52894",
+      "private_rate_table_sha256": null
+    }
+  },
+  "non_overlap": {
+    "p1_c1": "ei415_o2p_source",
+    "p1_c2": "h25_molecular_positive_ion",
+    "o2p_source_count_exact": 2,
+    "c2_layer_ordinal": 10,
+    "c2_functor": "S_O2p_molar_H25"
+  },
+  "negative_selftests_rejected": [
+    "MISSING_C1",
+    "DUPLICATE_C1",
+    "WRONG_VARIABLE",
+    "WRONG_FUNCTOR",
+    "WRONG_COEF",
+    "WRONG_FACTORY",
+    "SOURCE_FILE_TAMPER",
+    "WRONG_RATE_EDGE",
+    "WRONG_RATE_TABLE_REFERENCE"
+  ],
+  "unresolved": [
+    "Private EI-415 rate table bytes and digest unavailable; reference path is not content verification (P1-C6 owns rate provenance).",
+    "The artifact is final staged Hybrid Scratch D, not new-only post-retirement 26-to-24 proof.",
+    "Real physics-opt Native P1/P2/P3/P4 not executed under C1."
+  ],
+  "safety": {
+    "no_source_modification": true,
+    "private_rate_bytes_published": false,
+    "new_only_s6_p2": "HOLD",
+    "native_p2": "NOT_RUN",
+    "native_p3": "NOT_RUN",
+    "native_p4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  }
+}
