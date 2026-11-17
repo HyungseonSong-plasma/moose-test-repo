@@ -35,8 +35,8 @@ WAREHOUSE_CHECKS = (
     'P05 missing or duplicate FV Kernel',
     'P05 legacy, duplicate or unexpected FV BC',
     'P05 partial or duplicate FV BC owner',
-    'if (chemistryData().hasIonWalls() && bc_count == 0)',
-    'P05 missing FV wall BCs for selected species',
+    'if (chemistryData().hasIonWalls() && expected_bcs.empty())',
+    'P05 missing JSON FV wall BC declarations for selected species',
 )
 
 
@@ -77,7 +77,11 @@ def test_p05_warehouse_exact_names_types_and_family_coverage():
                              ("drift", "FVLogMolarElectrostaticDrift"),
                              ("source", "FVCoupledForce")):
         assert f'{{id + "_{label}", "{type_name}"}}' in source
-    assert "if (bc_count != 0)" in source  # C2-disabled binding fixtures only
+    assert 'for (const auto & [group, boundary] : chemistryData().boundaries())' in source
+    assert 'expected_bcs.emplace(name, bc.type)' in source
+    assert 'for (const auto & [name, type] : expected_bcs)' in source
+    assert 'id + "_focus_ring_dielectric"' not in source
+    assert 'id + "_cover_dielectric"' not in source
     assert "expected exactly one" in source
 
 
