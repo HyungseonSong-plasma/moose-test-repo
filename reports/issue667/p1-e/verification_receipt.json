@@ -1,6 +1,6 @@
 {
   "schema": "issue667.p1e.verification_receipt.partial.v1",
-  "status": "PARTIAL_SOURCE_STATIC_PASS__P1E_INTEGRATION_HOLD",
+  "status": "PASS_P1E_SOURCE_BOUND_29_RECEIPTS_AND_PRIVATE_SHA_WITH_D8_NEW_ONLY_EXCLUDED",
   "provenance": {
     "source_pr": 665,
     "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
@@ -40,15 +40,8 @@
   },
   "worker_receipts": {
     "expected": 29,
-    "found": 23,
-    "missing": [
-      "A1-1",
-      "A1-2",
-      "B1",
-      "B2",
-      "B7",
-      "D6"
-    ],
+    "found": 29,
+    "missing": [],
     "ledger": [
       {
         "task_id": "A1-3",
@@ -167,43 +160,131 @@
       },
       {
         "task_id": "A1-1",
-        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+        "status": "SOURCE_BOUND_RECEIPT_CONFIRMED",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-a1-1-o2p-source-receipt-20261117/docs/development/issue667/p1-a1-1-o2p-time-diffusion-drift-final11-source-receipt.json",
+        "receipt_git_blob_sha": "af5f2828ff8cd60c1c72fa7dbf6725a9b6031067",
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
       },
       {
         "task_id": "A1-2",
-        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+        "status": "SOURCE_BOUND_RECEIPT_CONFIRMED",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-a1-2-om-final11-20261117/reports/issue667/p1-a1-2-om-final11-source-bound-receipt.json",
+        "receipt_git_blob_sha": "e514b3dd6954d6e0cd0a7e9925bb03e630fb3964",
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
       },
       {
         "task_id": "B1",
-        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+        "status": "SOURCE_BOUND_RECEIPT_CONFIRMED",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b1-s6-417-ei415-9c15a4f-20261117/reports/issue667/p1-b1-s6-417-o2p-ei415-receipt.json",
+        "receipt_git_blob_sha": "c11972750397674163ec4a9890c76c711593654c",
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
       },
       {
         "task_id": "B2",
-        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+        "status": "SOURCE_BOUND_RECEIPT_CONFIRMED",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b2-417-o2p-h25-20261117/reports/issue667/p1-b2-s6-417-o2p-h25-source-receipt.json",
+        "receipt_git_blob_sha": "bac1cea11ed19f24de8158f1b44bb1bfebaf52c9",
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
       },
       {
         "task_id": "B7",
-        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+        "status": "SOURCE_BOUND_RECEIPT_CONFIRMED",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b7-417-h25-final11-20261117/reports/issue667/p1-b7-s6-417-h25-rate-final11-receipt.json",
+        "receipt_git_blob_sha": "e0d1deb22b04b45f708ba4977c8d4cbba494e4c5",
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
       },
       {
         "task_id": "D6",
-        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+        "status": "SOURCE_BOUND_RECEIPT_CONFIRMED",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-d6-wall-flux-receipt-20261117/reports/issue667/p1-d6-wall-flux-producers.json",
+        "receipt_git_blob_sha": "a747b0c487ead471651dc0ae2bb7a18ef56dffb7",
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
       }
     ]
   },
   "gates": {
-    "P1_0": "PASS_EXACT_HEAD_SOURCE",
-    "P1_E": "HOLD",
-    "P2_newonly_retirement": "NOT_RUN",
+    "P1_0": "PASS",
+    "P1_E_SOURCE_BOUND": "PASS",
+    "P1_E_NON_D8": "PASS",
+    "P1_E_FULL_SCOPE": "HOLD_D8_NEW_ONLY_DYNAMIC_ONLY",
+    "B6_PRIVATE_EI_SHA": "PASS",
+    "C6_PRIVATE_EI_SHA": "PASS",
+    "D8_HISTORICAL_LINEAGE": "PASS_BOUNDED",
+    "D8_NEW_ONLY_DYNAMIC": "HOLD",
+    "P2_NEW_ONLY_RETIREMENT": "NOT_RUN",
     "Native_P2": "NOT_RUN",
     "Native_P3": "NOT_RUN",
     "Native_P4": "NOT_RUN",
-    "SCIENCE": "HOLD"
+    "SCIENCE": "SCIENCE_HOLD"
   },
   "unresolved": [
-    "Six independent worker receipts not available even though relevant object bytes were independently checked",
-    "Private EI original table SHA not independently recomputed; manifest digest is expected-only",
-    "Dynamic external caller zero and runtime warehouse ownership unproven",
-    "This is pre-retirement Hybrid D, not 26->24 New-only cutover"
+    "D8 New-only dynamic caller reachability and C++ warehouse/Maxwell child transitive include identity not verified; deferred to #668"
+  ],
+  "integration_scope": "Only exact PR #665 pinned pre-retirement Hybrid Scratch D 11-layer P1 source-bound static/archival evidence, not New-only runtime",
+  "private_ei_original_sha_proof": {
+    "status": "PASS_SIX_OF_SIX_HISTORICAL_PRIVATE_SHA",
+    "ci_run": 44190774410,
+    "ci_artifact": 14376451636,
+    "artifact_zip_sha256": "a382af3a6ebba656e070747814df45267e2880849fe6f492757ceda1c7058a20",
+    "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/5467dbbc53391d277d7d53525928a0bcfe1fe98f/reports/issue667/p1_b6_c6_original_private_ei_sha_secure_rehash.json",
+    "receipt_blob_sha": "566f49af478884ce0b8908ecd9d185e574b3d172",
+    "files": [
+      {
+        "file": "EI-415_O2_X.txt",
+        "sha256": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+        "match": true,
+        "numeric_rows": 100
+      },
+      {
+        "file": "EI-401_O2_X.txt",
+        "sha256": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+        "match": true,
+        "numeric_rows": 100
+      },
+      {
+        "file": "EI-417_O2_X.txt",
+        "sha256": "4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
+        "match": true,
+        "numeric_rows": 100
+      },
+      {
+        "file": "EI-941_O_3P.txt",
+        "sha256": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+        "match": true,
+        "numeric_rows": 100
+      },
+      {
+        "file": "EI-407_O2_X.txt",
+        "sha256": "2565be45b9a13204583b6714a7d1b581cf29c157c78ac502d665649e4065b359",
+        "match": true,
+        "numeric_rows": 100
+      },
+      {
+        "file": "EI-2069_O2_a1Delta.txt",
+        "sha256": "5eba74c1870e0635a3e316e143961e9f04e259675ddad00fd8653de28980644a",
+        "match": true,
+        "numeric_rows": 100
+      }
+    ],
+    "private_bytes_in_public_artifacts": false,
+    "scope": "original raw table byte identity, not scientific equivalence",
+    "overrides_prior_worker_provenance_HOLD": [
+      "B6",
+      "C6"
+    ]
+  },
+  "d8_disposition": {
+    "historical_dynamic_lineage": "PASS_BOUNDED",
+    "proof_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/f07ece7726750a09b6c6a9f717c6e8833b7ce874/reports/issue667/p1-d8-dynamic-caller-preservation-addendum.json",
+    "proof_blob_sha": "ecacef9bbb873942e04178c5f8315211bd1a0332",
+    "new_only_dynamic_caller": "HOLD",
+    "explicitly_not_global_caller_zero": true,
+    "required_followup": "Issue #668 Pin Maxwell child/transitive includes then Native New-only warehouse/functor consumer validation"
+  },
+  "claim_boundaries": [
+    "Worker receipts preserve original source-only judgments; secure rate proof supersedes EI private hash HOLD only",
+    "Static source ownership/byte verification does not prove actual New-only runtime ownership",
+    "No Native P2/P3/P4 execution; no scientific acceptance",
+    "Historical D8 active caller preservation is bounded PASS, not global zero callers"
   ]
 }
