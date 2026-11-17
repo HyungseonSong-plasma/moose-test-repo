@@ -171,7 +171,7 @@ def test_original_s6_is_archived_bit_identically_and_not_executable():
     d = _read()["workflow"]
     assert not (ROOT / d["original_path"]).exists()
     blob = (ROOT / d["non_executable_archive_path"]).read_bytes()
-    assert hashlib.sha1(b"blob " + str(len(blob)).encode() + b"\\0" + blob).hexdigest() == (
+    assert hashlib.sha1(b"blob " + str(len(blob)).encode() + b"\0" + blob).hexdigest() == (
         d["original_blob_sha"])
     replay = (ROOT / d["replacement_path"]).read_text(encoding="utf-8")
     assert "workflow_dispatch" in replay
