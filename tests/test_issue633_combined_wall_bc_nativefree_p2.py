@@ -80,3 +80,28 @@ def test_four_transport_and_source_operators_are_distinct_from_wall_bcs():
     assert 'params.set<MooseFunctorName>("signed_number_flux") = bc.signed_number_flux;' in wall
     assert '_problem->addFunctorMaterial(type, std::string(side) + "_surface_current", params);' in wall
     assert '_problem->addFVBC(bc.type, name, params);' in wall
+
+
+def test_new_surface_current_functors_retain_native_surface_charge_consumers():
+    # Native lower-D sigma equations are allowed: only ion FV Kernel/BC
+    # owners must be cut over. New C2 produces the same three current
+    # property names that their existing surface-charge source Kernels read.
+    legacy = (
+        ROOT / "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i"
+    ).read_text()
+    generator = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
+    assert 'std::string(side) + "_net_surface_current_density"' in generator
+    assert 'std::string(side) + "_surface_current"' in generator
+    for side, state in (
+        ("cover", "sigma_s"),
+        ("wafer", "sigma_wafer"),
+        ("focus_ring", "sigma_focus_ring"),
+    ):
+        current = f"{side}_net_surface_current_density"
+        old_consumer = "sigma_surface_current" if side == "cover" else (
+            f"sigma_{side}_surface_current"
+        )
+        assert f"[{old_consumer}]" in legacy
+        assert "type = PhysicsLowerDSurfaceCurrent" in legacy
+        assert f"surface_current_density = {current}" in legacy
+        assert f"variable = {state}" in legacy
