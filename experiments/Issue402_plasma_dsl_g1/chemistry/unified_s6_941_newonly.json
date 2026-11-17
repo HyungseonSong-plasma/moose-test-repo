@@ -261,14 +261,23 @@
     "electron_wall_number_flux": "e_wall_number_flux"
   },
   "drift_diffusion_boundaries": {
-    "inlet outlet plasma_electrode plasma_metal plasma_right": {
+    "inlet outlet": {
+      "O2p_wall": {
+        "type": "FVFunctorNeumannBC"
+      },
+      "Om_wall": {
+        "type": "FVFunctorNeumannBC"
+      },
+      "Op_wall": {
+        "type": "FVFunctorNeumannBC"
+      }
+    },
+    "plasma_electrode plasma_metal plasma_right": {
       "e_wall": {
-        "type": "FEMElectronSheathBC",
-        "sidesets": "plasma_electrode plasma_metal plasma_right"
+        "type": "FEMElectronSheathBC"
       },
       "e_energy_wall": {
-        "type": "FEMElectronEnergySheathBC",
-        "sidesets": "plasma_electrode plasma_metal plasma_right"
+        "type": "FEMElectronEnergySheathBC"
       },
       "O2p_wall": {
         "type": "FVFunctorNeumannBC"
@@ -280,66 +289,55 @@
         "type": "FVFunctorNeumannBC"
       }
     },
-    "plasma_cover plasma_wafer plasma_focus_ring": {
+    "plasma_cover": {
       "e_cover_dielectric": {
-        "type": "FEMElectronSheathBC",
-        "sidesets": "plasma_cover"
+        "type": "FEMElectronSheathBC"
       },
       "e_energy_cover_dielectric": {
-        "type": "FEMElectronEnergySheathBC",
-        "sidesets": "plasma_cover"
+        "type": "FEMElectronEnergySheathBC"
       },
       "O2p_cover_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_cover"
+        "type": "FVLogMolarDielectricFluxBC"
       },
       "Om_cover_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_cover"
+        "type": "FVLogMolarDielectricFluxBC"
       },
       "Op_cover_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_cover"
-      },
+        "type": "FVLogMolarDielectricFluxBC"
+      }
+    },
+    "plasma_wafer": {
       "e_wafer_dielectric": {
-        "type": "FEMElectronSheathBC",
-        "sidesets": "plasma_wafer"
+        "type": "FEMElectronSheathBC"
       },
       "e_energy_wafer_dielectric": {
-        "type": "FEMElectronEnergySheathBC",
-        "sidesets": "plasma_wafer"
+        "type": "FEMElectronEnergySheathBC"
       },
       "O2p_wafer_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_wafer"
+        "type": "FVLogMolarDielectricFluxBC"
       },
       "Om_wafer_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_wafer"
+        "type": "FVLogMolarDielectricFluxBC"
       },
       "Op_wafer_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_wafer"
-      },
+        "type": "FVLogMolarDielectricFluxBC"
+      }
+    },
+    "plasma_focus_ring": {
       "e_focus_ring_dielectric": {
-        "type": "FEMElectronSheathBC",
-        "sidesets": "plasma_focus_ring"
+        "type": "FEMElectronSheathBC"
       },
       "e_energy_focus_ring_dielectric": {
-        "type": "FEMElectronEnergySheathBC",
-        "sidesets": "plasma_focus_ring"
+        "type": "FEMElectronEnergySheathBC"
       },
       "O2p_focus_ring_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_focus_ring"
+        "type": "FVLogMolarDielectricFluxBC"
       },
       "Om_focus_ring_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_focus_ring"
+        "type": "FVLogMolarDielectricFluxBC"
       },
       "Op_focus_ring_dielectric": {
-        "type": "FVLogMolarDielectricFluxBC",
-        "sidesets": "plasma_focus_ring"
+        "type": "FVLogMolarDielectricFluxBC"
       }
     }
   }
