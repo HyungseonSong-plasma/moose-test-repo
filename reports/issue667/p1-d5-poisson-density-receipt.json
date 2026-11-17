@@ -1,0 +1,353 @@
+{
+  "schema": "issue667.p1_d5.poisson_density.v1",
+  "task_id": "P1-D5",
+  "result": "PASS_STATIC_SOURCE_BYTE_PIN__DYNAMIC_CALLERS_HOLD",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "case": [
+    "S6-417-407-2069-H25",
+    "S6-941-407-2069-H25"
+  ],
+  "immutable_evidence": {
+    "source_commit": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "common_run_id": 44182628032,
+    "common_artifact_id": 14372278070,
+    "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "source_pin_commit": "9691f7f7741566fda93e1ee6f3fcb603e6532261"
+  },
+  "layer": {
+    "ordinal": 1,
+    "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "same_in_both_cases": true
+  },
+  "verification": {
+    "cases": 2,
+    "final_layer_bytes_sha_recomputed": 22,
+    "owner_blocks_sha_recomputed": 36,
+    "unique_FunctorMaterial_property_producers": true,
+    "all_18_target_blocks_on_layer_1_each": true,
+    "no_unresolved_literal_include": true,
+    "negative_test_count": 11,
+    "negative_test_rejected": 11,
+    "negative_test_cases": [
+      "tamper_raw_sha",
+      "remove_ion_density_producer",
+      "duplicate_ion_density_block",
+      "invert_negative_ion_charge_sign",
+      "omit_atomic_positive_in_charge",
+      "change_poisson_scale",
+      "disconnect_phi_source",
+      "flip_poisson_rhs",
+      "wrong_op_density_variable",
+      "drop_potential_equation",
+      "wall_ion_density_consumer"
+    ]
+  },
+  "owners": [
+    {
+      "object_path": "FunctorMaterials/atomic_positive_ion_molar_density",
+      "layer_ordinal": 1,
+      "block_sha256": "6626024ec517e69da46e41f14db2e6ae6e8d62305fc377eb616362ad323ea092",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/atomic_positive_ion_physical_density",
+      "layer_ordinal": 1,
+      "block_sha256": "0046c8031e90fcbf5342d1bef8bc4ef3efc25d43cd5f44ef3cd3000fd389ab75",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/atomic_positive_ion_wall_flux",
+      "layer_ordinal": 1,
+      "block_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/charge_density",
+      "layer_ordinal": 1,
+      "block_sha256": "463d17536ee97f21d001c698cb06bfd36ba9d16a5aadb7781b8445783f84a5c7",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/charge_number_density",
+      "layer_ordinal": 1,
+      "block_sha256": "8fca600fe127ec76fe0a6b642460858b3a84cb2c43bbb13225f02a57ec04e6af",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/electron_molar_density",
+      "layer_ordinal": 1,
+      "block_sha256": "d62268f610d606b407c0e042162bdd490dd86b4cd3d1a6dbb8fd57070acafe2a",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/electron_physical_density",
+      "layer_ordinal": 1,
+      "block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/ion_molar_density",
+      "layer_ordinal": 1,
+      "block_sha256": "286526a716966a09a98e593130fde8a22018aa1e380d9f10c9fef19af7610504",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/ion_physical_density",
+      "layer_ordinal": 1,
+      "block_sha256": "3905f6ad33c6d6ba7d9d577e96a1bd7107bc0ba02b82603cd557e9f3d7c0a1a6",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/ion_wall_flux",
+      "layer_ordinal": 1,
+      "block_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/negative_ion_molar_density",
+      "layer_ordinal": 1,
+      "block_sha256": "1ff82e895a076dcc406ccb44d36c7f20ce31efdf26102fb09ed2a50cafda3584",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/negative_ion_physical_density",
+      "layer_ordinal": 1,
+      "block_sha256": "0950b71a88d6bf3451aa03fb8ca257625819d3e4861493e0bad46aa6f0e92263",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/negative_ion_wall_flux",
+      "layer_ordinal": 1,
+      "block_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "FunctorMaterials/poisson_source",
+      "layer_ordinal": 1,
+      "block_sha256": "95259beac613226b1bb0a52743d09d5136a37500c0504e531d0f470aff4ba5f6",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "Kernels/phi_diffusion",
+      "layer_ordinal": 1,
+      "block_sha256": "7cec0efd72a1b9e81fc790171914f31d02f78a1f3fcb35f64478c669ebe1cc81",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "Kernels/phi_source",
+      "layer_ordinal": 1,
+      "block_sha256": "062570461eafeed5d4f1721a35592ac727eb8e9d794c4b72355f4c2bcee13725",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "Postprocessors/charge_integral",
+      "layer_ordinal": 1,
+      "block_sha256": "4c2137b46b76f661afbf6884c0ac66ec3f1b55789c4c66d24c4055eceddd80df",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    },
+    {
+      "object_path": "Variables/potential",
+      "layer_ordinal": 1,
+      "block_sha256": "54b8a0693a5275f75d2230c7dee63af6080ea9d1b2c1a55f8dc0e5b827755309",
+      "sha_scope": "exact 2-space nested block including close [] newline, direct artifact bytes",
+      "cases": [
+        "417",
+        "941"
+      ]
+    }
+  ],
+  "producer_consumer_edges": [
+    {
+      "producer": "log_O2p",
+      "via": "ion_molar_density",
+      "output": "n_i_physical",
+      "expression": "6.02214076e23*exp(log_O2p)"
+    },
+    {
+      "producer": "log_Om",
+      "via": "negative_ion_molar_density",
+      "output": "n_m_physical",
+      "expression": "6.02214076e23*exp(log_Om)"
+    },
+    {
+      "producer": "log_Op",
+      "via": "atomic_positive_ion_molar_density",
+      "output": "n_op_physical",
+      "expression": "6.02214076e23*exp(log_Op)"
+    },
+    {
+      "producer": "log_e",
+      "via": "electron_molar_density",
+      "output": "n_e_physical",
+      "expression": "6.02214076e23*exp(log_e)"
+    },
+    {
+      "producer": "n_i_physical n_op_physical n_e_physical n_m_physical",
+      "via": "[FunctorMaterials]/charge_number_density",
+      "output": "charge_number_density",
+      "expression": "ni+nop-ne-nm"
+    },
+    {
+      "producer": "charge_number_density",
+      "via": "[FunctorMaterials]/poisson_source",
+      "output": "poisson_source",
+      "expression": "1.8095128179727827e-08*nq"
+    },
+    {
+      "producer": "poisson_source",
+      "via": "[Kernels]/phi_source",
+      "output": "potential",
+      "type": "FunctorKernel",
+      "parameters": {
+        "variable": "potential",
+        "functor_on_rhs": "true",
+        "block": "plasma"
+      }
+    },
+    {
+      "producer": "potential",
+      "via": "[Kernels]/phi_diffusion",
+      "output": "potential",
+      "type": "ADMatDiffusion",
+      "parameters": {
+        "diffusivity": "relative_permittivity"
+      }
+    },
+    {
+      "producer": "charge_number_density",
+      "via": "[FunctorMaterials]/charge_density",
+      "output": "charge_density_C_m3",
+      "expression": "1.602176634e-19*nq",
+      "consumer": "[Postprocessors]/charge_integral"
+    },
+    {
+      "producer": "n_i_physical",
+      "consumers": [
+        "[FunctorMaterials]/ion_wall_flux",
+        "[Postprocessors]/ni_min",
+        "[Postprocessors]/ni_max"
+      ]
+    },
+    {
+      "producer": "n_m_physical",
+      "consumers": [
+        "[FunctorMaterials]/negative_ion_wall_flux",
+        "[Postprocessors]/nm_min",
+        "[Postprocessors]/nm_max"
+      ]
+    },
+    {
+      "producer": "n_op_physical",
+      "consumers": [
+        "[FunctorMaterials]/atomic_positive_ion_wall_flux",
+        "[Postprocessors]/nop_min",
+        "[Postprocessors]/nop_max"
+      ]
+    }
+  ],
+  "token_bearing_line_count_per_case": {
+    "n_i_physical": 5,
+    "n_m_physical": 5,
+    "n_op_physical": 5,
+    "n_e_physical": 12,
+    "charge_number_density": 6,
+    "poisson_source": 3,
+    "potential": 26,
+    "charge_density_C_m3": 2
+  },
+  "preservation": {
+    "native_density_materials": "KEEP",
+    "physical_density_output_aliases": "KEEP",
+    "charge_producers": "KEEP",
+    "potential_and_poisson_kernels": "KEEP",
+    "wall_and_diagnostic_consumers": "KEEP"
+  },
+  "status_gates": {
+    "input_static": "PASS",
+    "runtime_dynamic_caller": "HOLD_NOT_RUN",
+    "new_only_density_producer": "HOLD_UNVERIFIED",
+    "P1_E": "PENDING",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "unresolved": [
+    "Do not assert dynamic runtime reachability or TheWarehouse material registration from static input bytes",
+    "Before new-only retirement, define exactly one producer for O2p/Om/Op number densities and preserve Poisson/wall/diagnostic aliases or atomically rebind every consumer",
+    "Do not delete Native n_i/n_m/n_op_physical or potential charge chain based on the 26 owner list; that list covers ion FV kernels and BCs, not these upstream Materials",
+    "P1-E aggregates all 29 receipts; P2 #668 New-only 26->24 remains separate"
+  ],
+  "private_rates": "bytes excluded",
+  "modified_shared_paths": false
+}
