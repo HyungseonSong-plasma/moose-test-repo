@@ -798,15 +798,28 @@
     "duration_us": 100,
     "max_parallel_jobs": 2,
     "per_job_timeout_minutes": 360,
-    "status": "AUTHORIZED_NOT_DISPATCHED",
-    "run_id": null,
-    "run_attempt": null,
-    "request_timestamp": null,
-    "observation": "NO_VERIFIED_NEW_WORKFLOW_DISPATCH_RUN",
+    "status": "DISPATCHED_RUNNING_AT_RECEIPT",
+    "run_id": 44050874900,
+    "run_attempt": 1,
+    "request_timestamp": "2026-11-17T08:55:23Z",
+    "observation": "MATCHED_ACTIVE_TWO_SOURCE_BOUND_JOBS",
     "P3_full_scope_executed": false,
     "P4": "DIAGNOSTIC_ONLY",
     "science": "SCIENCE_HOLD",
     "no_coverage_waiver": true,
-    "ref_event_guard_preserved": true
+    "ref_event_guard_preserved": true,
+    "target_run_source_sha": "8263fbc1801f213b98183ba4876299041cd01dac",
+    "target_run_event": "workflow_dispatch",
+    "target_run_head_branch": "main",
+    "target_case_job_ids": {
+      "417": 133928069072,
+      "941": 133928068701
+    },
+    "target_both_case_approval_steps_success": true,
+    "issue535_dispatch_receipt_id": 6943420997,
+    "transport_success_run_id": 44050852088,
+    "transport_skipped_preflight_run_id": 44050703765,
+    "temporary_workflow_cleanup_commit": "a39ee535c3dafba90a6f6107020ad04a61a16ca8",
+    "temporary_workflow_removed": true
   }
 }
