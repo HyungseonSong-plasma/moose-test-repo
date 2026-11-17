@@ -1,0 +1,102 @@
+{
+  "schema": "issue669.p3-v3.source-bound-negative-tests.summary.v1",
+  "target_issue": 669,
+  "task_id": "P3-V3",
+  "source_pr": 665,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "status": "PASS_ISOLATED_P0_NEGATIVE_MATRIX",
+  "scope": "Actual pinned 417/941 New-only JSON + exact Continuity/Energy template, isolated minimal [pressure] test fixture; source-only P0, no final integrated 11-layer execution",
+  "workflow": {
+    "path": ".github/workflows/issue669-p3-v3-electron-energy-negative.yml",
+    "branch": "issue-669-p3-v3-electron-transport-energy-negative-20261117",
+    "final_workflow_commit": "dbd730275ec431c83c76a45b317b00919657acc5",
+    "run_id": 44200364609,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44200364609",
+    "event": "push",
+    "conclusion": "success",
+    "artifact_id": 14381605773,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44200364609/artifacts/14381605773",
+    "artifact_zip_sha256_independent": "24b2a891c261fe73d82178e86453c16f77a448f057ae5b831c762b01919fbb35",
+    "embedded_receipt_sha256_independent": "aeefd8776c87c64bff751a4736d4dec8e03d59c1f6e4ba88359ae99282ccab78",
+    "artifact_crc": "PASS"
+  },
+  "pinned_source_blobs": {
+    "existing_p0_guard": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+    "json_417": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "json_941": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "overlay_417": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e",
+    "overlay_941": "4daa6f080f3ddbb35c9839110cbb955b8914fee",
+    "lookup_table": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a"
+  },
+  "look_up_table": {
+    "path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "bytes": 2591,
+    "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "one_byte_mutation_rejected": true
+  },
+  "expected_e_transport": {
+    "type": "lookup",
+    "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "unit": "reduced",
+    "bounds_policy": "clamp"
+  },
+  "cases": {
+    "417": {
+      "status": "PASS",
+      "source_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "source_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "positive_count": 2,
+      "negative_count": 24,
+      "preexisting_guard_detected": 20,
+      "s6_extra_contract_detected": 4
+    },
+    "941": {
+      "status": "PASS",
+      "source_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "source_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "positive_count": 2,
+      "negative_count": 24,
+      "preexisting_guard_detected": 20,
+      "s6_extra_contract_detected": 4
+    }
+  },
+  "negative_control_names": [
+    "e_transport_record_missing",
+    "e_transport_type_none",
+    "e_transport_type_unknown",
+    "e_lookup_table_missing",
+    "e_unit_invalid_token",
+    "e_unit_wrong_but_parser_valid",
+    "e_lookup_bounds_wrong",
+    "e_lookup_file_wrong_existing",
+    "e_initial_density_missing",
+    "e_initial_temperature_missing",
+    "json_duplicate_energy_transport_owner",
+    "energy_action_missing",
+    "energy_transport_selector_wrong",
+    "energy_action_fem_potential_missing",
+    "energy_action_duplicate",
+    "native_e_state_owner_duplicate",
+    "native_energy_state_owner_duplicate",
+    "native_e_energy_time_kernel_duplicate",
+    "native_e_lookup_material_owner_duplicate",
+    "native_e_mean_energy_material_duplicate",
+    "native_e_wall_flux_material_duplicate",
+    "dont_create_kernels_bypass",
+    "root_gas_temperature_missing",
+    "root_gas_pressure_missing"
+  ],
+  "specific_gap_detected": "generic P0 accepts syntactically valid physical unit, arbitrary non-empty lookup path and non-clamp bounds_policy; V3 adds S6-specific constrained checks. Missing/invalid electron temperature_eV for auto energy IC is also caught by V3.",
+  "P2_dependency_issue_668": "FULL_DOD_HOLD",
+  "P3_X": "NOT_RUN",
+  "NEW_ONLY_NATIVE_P2": "NOT_RUN",
+  "NATIVE_P3": "NOT_RUN",
+  "NATIVE_P4": "NOT_RUN",
+  "SCIENCE": "SCIENCE_HOLD",
+  "limitations": [
+    "P3-V3 isolated 1-overlay+pressure positive fixture is not actual complete New-only 11-layer production Scratch.",
+    "Extra semantic assertions live in isolated V3 workflow, not yet main or PR665 production P0 guard.",
+    "PhysicsApp binary, Action Warehouse, Functor runtime, and physical/numerical equivalence not tested."
+  ],
+  "safety": "Original Native 10-layer, PR665, main, private rates and source New-only JSON unmodified; no Native execution."
+}
