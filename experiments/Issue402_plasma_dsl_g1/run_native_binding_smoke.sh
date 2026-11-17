@@ -313,6 +313,29 @@ for channel in 417 941; do
   echo "PLASMA_CHEMISTRY_S6_${channel}_CATALOGUE_P2_PASS"
 done
 
+# Issue #633 P14: actual source-bound 3-ion FV Kernel generation P2.
+# These are synthetic, deliberately nonphysical Rate values; --check-input
+# exercises Factory + TheWarehouse 12/12 uniqueness, NOT P3 science.
+native --check-input -i "$PILOT/chemistry_s6_417_three_ion_fv_generated_p2.i" \
+  2>&1 | tee "$EVIDENCE/issue633_fv12_generated_p2.log"
+echo "ISSUE633_FV_KERNEL_12_NATIVE_P2_PASS_NOT_SCIENCE"
+
+# P05: the same Physics generation must reject a competing Native Kernel.
+set +e
+native --check-input -i "$PILOT/chemistry_s6_417_three_ion_fv_generated_p2.i" \
+  "$PILOT/chemistry_s6_417_three_ion_fv_duplicate_p2.i" \
+  > "$EVIDENCE/issue633_native_duplicate_negative_p2.log" 2>&1
+issue633_duplicate_rc=$?
+set -e
+if [[ "$issue633_duplicate_rc" -eq 0 ]] ||
+   ! grep -Fq "P05 FV Native/Physics duplicate or unexpected owner" \
+     "$EVIDENCE/issue633_native_duplicate_negative_p2.log"; then
+  echo "::error::Issue633 P05 accepted Native/Physics duplicate or failed before P05" >&2
+  cat "$EVIDENCE/issue633_native_duplicate_negative_p2.log" >&2
+  exit 42
+fi
+echo "ISSUE633_FV_NATIVE_DUPLICATE_REJECTED_P2_PASS"
+
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
