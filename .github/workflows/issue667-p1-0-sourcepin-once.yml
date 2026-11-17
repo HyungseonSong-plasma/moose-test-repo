@@ -32,15 +32,19 @@ jobs:
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
           test "$(sha256sum "$SRC" | cut -d ' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
           cp "$SRC" "$DST"
-          export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
-          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400 > /tmp/p1-0-public-mesh.log 2>&1 || {
-            tail -n 80 /tmp/p1-0-public-mesh.log
+          DIEL=experiments/Issue3_dielectric_surface_charge
+          BASE=experiments/fem_fvm_plasma_discriminator
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          python3 "$BASE/generate_contour_mesh.py" > /tmp/p1-0-public-mesh.log 2>&1
+          python3 "$DIEL/extend_cover_mesh.py" "$BASE/plasma_contour_l3_4p5mm.msh" "$DIEL/baseline_cover_fine_source.msh" >> /tmp/p1-0-public-mesh.log 2>&1
+          python3 "$DIEL/build_unstructured_cover_wafer_mesh.py" "$DIEL/baseline_cover_fine_source.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" >> /tmp/p1-0-public-mesh.log 2>&1
+          python3 "$DIEL/add_focus_ring_block.py" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" >> /tmp/p1-0-public-mesh.log 2>&1
+          python3 "$DIEL/add_vacuum_coils_block.py" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" >> /tmp/p1-0-public-mesh.log 2>&1
+          python3 "$CHEM/issue397_materialize_l1_baseline.py" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" >> /tmp/p1-0-public-mesh.log 2>&1 || {
+            tail -n 120 /tmp/p1-0-public-mesh.log
             exit 1
           }
-          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare >> /tmp/p1-0-public-mesh.log 2>&1 || {
-            tail -n 80 /tmp/p1-0-public-mesh.log
-            exit 1
-          }
+          test "$(sha256sum "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" | cut -d ' ' -f1)" = ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc
           test -s experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh
           test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
           echo "P1_0_PUBLIC_MESH_PREPARED_NO_PRIVATE_RATES"
