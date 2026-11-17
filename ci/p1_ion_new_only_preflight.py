@@ -71,6 +71,11 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
     params = cs[0]["params"]
     if "fvm_kernel_ownership" in params:
         errors.append("P1_MANUAL_OWNER_FLAG_FORBIDDEN")
+    # The inherited PhysicsBase option disables automatic equation creation.
+    # Historical binding-only fixtures still need it, but it MUST NEVER
+    # certify a New-only ion cutover (even when explicitly set to false).
+    if contract == "new-only" and "dont_create_kernels" in params:
+        errors.append("P1_BINDING_ONLY_BYPASS_FORBIDDEN")
     fem, fvm = params.get("fem_species", "").split(), params.get("fvm_species", "").split()
     if not (fem or fvm) or len(set(fem + fvm)) != len(fem) + len(fvm):
         errors.append("P1_SPECIES_DUPLICATE_OR_EMPTY")
