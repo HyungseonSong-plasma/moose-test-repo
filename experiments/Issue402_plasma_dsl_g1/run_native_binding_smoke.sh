@@ -99,6 +99,22 @@ native --check-input -i "$PILOT/issue633_ion_continuity_newonly_p2.i" \
   2>&1 | tee "$EVIDENCE/issue633_ion_continuity_newonly_p2.log"
 echo "ISSUE633_ION_CONTINUITY_NEW_ONLY_P2_PASS"
 
+# Exact-HEAD negative P2: Om lacks a volume source, so the otherwise valid
+# JSON + .i selection must fail before accepting a partial FV equation.
+set +e
+native --check-input -i "$PILOT/issue633_ion_continuity_missing_om_source_p2.i" \
+  > "$EVIDENCE/issue633_ion_continuity_missing_om_source_p2.log" 2>&1
+issue633_missing_om_status=$?
+set -e
+if [[ "$issue633_missing_om_status" -eq 0 ]] || \
+   ! grep -Fq "requires a nonzero volume reaction source" \
+       "$EVIDENCE/issue633_ion_continuity_missing_om_source_p2.log"; then
+  echo "::error::Issue633 omitted Om source was accepted or failed for the wrong reason" >&2
+  cat "$EVIDENCE/issue633_ion_continuity_missing_om_source_p2.log" >&2
+  exit 41
+fi
+echo "ISSUE633_ION_CONTINUITY_MISSING_SOURCE_NEGATIVE_P2_PASS"
+
 # Canonical replacement for the historical JSON-rate one-shot Native P2 cases.
 # Use the exact same physics-opt binary and immutable OCI as P1 and later S6 P2.
 # H01-H04, H05 and the actual JSON surface-rate input do not execute timesteps.
