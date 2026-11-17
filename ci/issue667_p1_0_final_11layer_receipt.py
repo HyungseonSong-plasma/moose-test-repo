@@ -143,6 +143,18 @@ def run_case(control: Path, output: Path, case: str, archive: Path, option, prep
     migrate = option.canonicalize_staged_D_inputs(chemistry, ordered)
     typemap = option.remap_staged_fem_types(chemistry, ordered)
     chem = prep_chem(chemistry, ordered, case)
+    # The production Hybrid preparer requires the exact public 400-W electron
+    # moments lookup at its original path relative to the staged chemistry.
+    # This never copies or synthesizes any protected kinetic rate table.
+    table_src = control / ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt"
+    expected(hash_path(table_src) ==
+             "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+             case + "_PINNED_PUBLIC_ELECTRON_MOMENTS")
+    table_dst = case_root / "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+    table_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(table_src, table_dst)
+    expected(hash_path(table_dst) == hash_path(table_src),
+             case + "_PUBLIC_ELECTRON_MOMENTS_READBACK")
     hybrid = prep_hybrid(chemistry, ordered, case, chemistry_cutover=chem)
     expected(hash_path(chemistry / last) == hybrid["overlay_sha256"],
              case + "_FINAL_OVERLAY_SHA")
