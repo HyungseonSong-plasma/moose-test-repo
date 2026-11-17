@@ -118,7 +118,34 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
                            "type": block["params"].get("type"),
                            "variable": " ".join(matched),
                            "species": [tracked[v] for v in matched]})
+    # The 26 ion FV Kernel/BC retirements are not the entire C2 handoff.
+    # JSON/Physics also owns 3 ion wall Materials and the existing three
+    # cover/wafer/focus_ring surface-current output properties. Reject any
+    # explicitly retained provider, even if its block was renamed.
+    old_wall_names = {"ion_wall_flux", "negative_ion_wall_flux",
+                      "atomic_positive_ion_wall_flux", "O2p_wall", "Om_wall", "Op_wall"}
+    wall_types = {"PhysicsIonWallTotalFluxMaterial",
+                  "PhysicsIonWallFluxMaterial", "IonWallFluxMaterial"}
+    current_names = {"cover_surface_current", "wafer_surface_current",
+                     "focus_ring_surface_current"}
+    current_outputs = {side + "_net_surface_current_density"
+                       for side in ("cover", "wafer", "focus_ring")}
+    explicit_functor = []
+    for block in blocks:
+        if block["parent"] != "FunctorMaterials":
+            continue
+        params = block["params"]
+        is_wall = block["name"] in old_wall_names or params.get("type") in wall_types
+        is_current = (block["name"] in current_names or
+                      params.get("property_name") in current_outputs)
+        if is_wall or is_current:
+            explicit_functor.append({"file": block["file"], "line": block["line"],
+                                     "name": block["name"], "type": params.get("type"),
+                                     "property_name": params.get("property_name"),
+                                     "family": "ion_wall" if is_wall else "surface_current"})
     if contract == "new-only":
+        if explicit_functor:
+            errors.append(f"P1_EXPLICIT_ION_WALL_OR_CURRENT_OWNER_PRESENT_{len(explicit_functor)}")
         if native:
             errors.append(f"P1_NATIVE_FV_ION_OWNER_PRESENT_{len(native)}")
         status = "P0_STATIC_PASS_ONLY"
@@ -142,6 +169,8 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
     return {"status": "FAIL" if errors else status, "contract": contract, "errors": errors,
             "fem_species": fem, "fvm_species": fvm, "native_fv_owner_count": len(native),
             "native_fv_owners": native,
+            "explicit_ion_wall_current_owner_count": len(explicit_functor),
+            "explicit_ion_wall_current_owners": explicit_functor,
             "runtime_generated_kernel_bc_count": "NOT_VERIFIED_P0_ONLY"}
 
 def main(argv=None) -> int:
