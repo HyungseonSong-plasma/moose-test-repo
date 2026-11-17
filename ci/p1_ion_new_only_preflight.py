@@ -93,9 +93,38 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
             density = record.get("initial_number_density")
             if isinstance(density, bool) or not isinstance(density, (float, int)) or not math.isfinite(density) or density <= 0:
                 errors.append("P1_JSON_INITIAL_NUMBER_DENSITY_INVALID:" + ident)
-            model = record.get("transport_coef")
+            transport = record.get("transport_coef")
+            modern = isinstance(transport, dict)
+            model = transport.get("type") if modern else transport
             if model not in ("constant", "functor", "lookup"):
                 errors.append("P1_JSON_TRANSPORT_MISSING_OR_INVALID:" + ident)
+            elif modern:
+                # Typed final-run JSON has one shared transport structure.
+                # Canonical AD Functors are derived from species name.
+                file = transport.get("file")
+                unit = transport.get("unit")
+                if model == "lookup":
+                    if not isinstance(file, str) or not file.strip() or file == "none":
+                        errors.append("P1_JSON_TRANSPORT_TABLE_MISSING:" + ident)
+                    if unit not in ("reduced", "physical"):
+                        errors.append("P1_JSON_TRANSPORT_UNIT_INVALID:" + ident)
+                    if unit == "reduced":
+                        plasmas = [b["params"] for b in blocks if b["name"] == "Plasmas"
+                                   and b["parent"].endswith("Physics")]
+                        if len(plasmas) != 1 or not all(
+                            key in plasmas[0] for key in ("pressure", "temperature")
+                        ):
+                            errors.append("P1_ROOT_GAS_FUNCTORS_REQUIRED:" + ident)
+                elif model == "functor":
+                    if file != "none" or unit != "physical":
+                        errors.append("P1_JSON_FUNCTOR_UNIT_OR_FILE_INVALID:" + ident)
+                else:
+                    if file != "none" or unit != "physical":
+                        errors.append("P1_JSON_TRANSPORT_UNIT_INVALID:" + ident)
+                    for key in ("mobility", "diffusivity"):
+                        value = transport.get(key)
+                        if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value) or value < 0:
+                            errors.append(f"P1_JSON_TRANSPORT_COEFFICIENT_INVALID:{ident}:{key}")
             elif model == "constant":
                 for key in ("mobility", "diffusivity"):
                     value = record.get(key)
