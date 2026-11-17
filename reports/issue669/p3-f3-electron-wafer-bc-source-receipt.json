@@ -1,0 +1,126 @@
+{
+  "schema": "issue669.p3_f3.electron_wafer_bc.source_receipt.v1",
+  "task_id": "P3-F3",
+  "verdict": "PASS_SOURCE_STATIC_BOTH_CASES__HOLD_NEW_ONLY_SINGLE_OWNER",
+  "scope": "electron_wafer particle FEM BC; actual original, Hybrid D, and #668 post-ion-retirement byte SHA; not an instantiated New-only acceptance",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "evidence": {
+    "historical_zip_sha256_417": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "historical_zip_sha256_941": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+    "p1_0_run": 44180190753,
+    "p1_0_artifact": 14372315897,
+    "p1_0_artifact_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "p2_668_run": 44196762787,
+    "p2_668_artifact": 14379920938,
+    "p2_668_artifact_zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+  },
+  "native_source": {
+    "layer_ordinal": 1,
+    "file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "section": "BCs",
+    "object": "electron_wafer_dielectric",
+    "factory": "FEMElectronSheathBC",
+    "variable": "log_e",
+    "wall_number_flux": "e_wall_number_flux",
+    "boundary": "plasma_wafer",
+    "archived_block_sha256": "6a7367b30a14c1eba2cffd65c83178b0643a8244f6eb51bba8e0bdce91eaa28a",
+    "final_block_sha256": "0f12b97314b9a0c2da88f9caa0c0512d67b9d0d7dc4ed6d664e0d51da905fe74",
+    "archived_base_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+    "p1_base_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "p2_retired_ion_base_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+    "object_count_per_case": 1,
+    "all_native_fem_electron_BCs_per_case": 8,
+    "canon_transform": "original factory/variable/wall functor -> FEMElectronSheathBC/log_e/e_wall_number_flux is byte-exact",
+    "unchanged_by_ion26_retirement": true
+  },
+  "producer_consumer_edges": [
+    {
+      "producer": "electron_physical_density",
+      "out": "n_e_physical",
+      "consumer": "electron_wall_flux"
+    },
+    {
+      "producer": "mean electron energy",
+      "out": "e_energy_eV",
+      "consumer": "electron_wall_flux",
+      "note": "final New-only generated mean-energy liveness NOT_VERIFIED"
+    },
+    {
+      "producer": "FEM potential",
+      "out": "potential",
+      "consumer": "electron_wall_flux"
+    },
+    {
+      "producer": "electron_wall_flux",
+      "factory": "ESWallFluxMaterial",
+      "out": "e_wall_number_flux",
+      "consumer": "electron_wafer_dielectric"
+    },
+    {
+      "consumer": "electron_wafer_dielectric",
+      "variable": "log_e",
+      "boundary": "plasma_wafer"
+    }
+  ],
+  "producer": {
+    "name": "electron_wall_flux",
+    "factory": "ESWallFluxMaterial",
+    "sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+    "source_count_per_case": 1,
+    "species_id": "e",
+    "sticking": "1.0",
+    "use_element_gradient_for_potential": true
+  },
+  "new_only_contract": {
+    "json_417": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+    "json_417_blob_sha": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "json_941": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+    "json_941_blob_sha": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "boundary": "plasma_wafer",
+    "generated_target_object": "e_wafer_dielectric",
+    "generated_target_type": "FEMElectronSheathBC",
+    "existing_native_same_physical_boundary": true,
+    "grouped_json_instantiated": false,
+    "static_guard": "P1_NATIVE_ELECTRON_FEM_BC_OWNER_PRESENT_<count>",
+    "required_handoff": "remove Native electron wafer BC in disposable 11-layer New-only Scratch; preserve single wall-flux producer; verify P05/Native P2"
+  },
+  "independent_checks": {
+    "original_10layer_input_sha": "20/20_PASS",
+    "p1_staged_11_file_sha": "22/22_PASS",
+    "p2_after_ion_retirement_11_file_sha": "22/22_PASS",
+    "native_wafer_bc_count": "1_PER_CASE",
+    "electron_fem_bcs": "8_PER_CASE",
+    "byte_exact_legacy_to_staged": true,
+    "byte_exact_p1_to_p2_bc": true,
+    "negative_control_cases_417": 8,
+    "negative_control_cases_941": 8,
+    "negative_controls_rejected": 16,
+    "negative_test_types": [
+      "wrong_factory",
+      "wrong_variable",
+      "wrong_boundary",
+      "wrong_wall_functor",
+      "missing_source",
+      "duplicate_source",
+      "legacy_factory",
+      "tampered_file_sha"
+    ]
+  },
+  "dependency_668": {
+    "package_full_dod": "HOLD",
+    "ion_native26_to0_static": "PASS",
+    "newonly_json_staged": "HOLD"
+  },
+  "unresolved": [
+    "Native electron_wafer_dielectric is still present in #668 ion-only scratch and would overlap with JSON e_wafer_dielectric if both were enabled",
+    "New-only canonical ESWallFluxMaterial generator and deletion of old electron_wall_flux not validated",
+    "P05 Native warehouse, Functor late-binding, Native P2 and scientific parity not run"
+  ],
+  "private_ei_rate_bytes_published": false,
+  "new_only_s6_p2": "HOLD",
+  "native_p2": "NOT_RUN",
+  "native_p3": "NOT_RUN",
+  "native_p4": "NOT_RUN",
+  "science": "SCIENCE_HOLD"
+}
