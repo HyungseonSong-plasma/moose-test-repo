@@ -73,6 +73,11 @@ def test_missing_or_ambiguous_selection_fails():
                 mechanism(), "MISSING_SELECTION")
 
 
+def test_selected_species_requires_explicit_potential():
+    expect_fail(BASE_INPUT.replace("fem_potential = potential", ""),
+                mechanism(), "MISSING_POTENTIAL")
+
+
 def test_missing_species_data_is_not_native_fallback():
     data = mechanism()
     del data["species"]["Om"]["transport_coef"]
