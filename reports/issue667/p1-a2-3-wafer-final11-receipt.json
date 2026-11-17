@@ -1,0 +1,99 @@
+{
+  "schema": "issue667.p1_a2_3.wafer.final11.v1",
+  "task_id": "P1-A2-3",
+  "issue": 667,
+  "scope": "exactly 3 wafer dielectric FVBC objects; 417 and 941 independently verified",
+  "status": "PASS_FINAL_11_LAYER_WAFER_BCS",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "p1_0_ci_run": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44180190753",
+  "p1_0_artifact_id": 14372315897,
+  "p1_0_artifact_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+  "verification": {
+    "method": "Downloaded complete ZIP artifact; independent SHA256 of ZIP, all 22 final .i files and all 126 named FV object blocks; compared with both embedded manifests; verified object uniqueness across 11 layers.",
+    "files_per_case": 11,
+    "independent_block_sha_checks_per_case": 63,
+    "cases": {
+      "417": {
+        "file_sha256_in_order": [
+          "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+          "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+          "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+          "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+          "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+          "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
+          "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+          "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+          "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+          "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895"
+        ],
+        "native_ion_FVKernels": 14,
+        "native_ion_FVBCs": 12,
+        "wafer_3_of_3": "PASS"
+      },
+      "941": {
+        "file_sha256_in_order": [
+          "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+          "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+          "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+          "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+          "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+          "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43",
+          "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+          "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+          "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+          "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0"
+        ],
+        "native_ion_FVKernels": 14,
+        "native_ion_FVBCs": 12,
+        "wafer_3_of_3": "PASS"
+      }
+    }
+  },
+  "wafer": {
+    "layer_ordinal": 1,
+    "section": "FVBCs",
+    "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+    "boundary": "plasma_wafer",
+    "input_factor": null,
+    "conversion": "signed_number_flux / N_A inside Factory",
+    "objects": [
+      {
+        "object_name": "ion_wafer_dielectric",
+        "variable": "log_O2p",
+        "signed_number_flux": "O2p_wall_number_flux",
+        "block_sha256": "07256ce1face22d3fbe6b318d5e1857bf61289b2619adfea3cefec707a37b31c",
+        "original_block_sha256": "daa9e430757ba745d611e23d6a0795bf1ee34f40719a46cd61067dbdc7bba0cb"
+      },
+      {
+        "object_name": "negative_ion_wafer_dielectric",
+        "variable": "log_Om",
+        "signed_number_flux": "Om_wall_number_flux",
+        "block_sha256": "ce57b0e42089b7266f623359eeb56cc4349cda356b9503ef37fb244e8cedbea3",
+        "original_block_sha256": "6726d7b6b2c646598854d64be10579568d767500cf551649538753af4ddac7fd"
+      },
+      {
+        "object_name": "atomic_positive_ion_wafer_dielectric",
+        "variable": "log_Op",
+        "signed_number_flux": "Op_wall_number_flux",
+        "block_sha256": "4f6259aa4c0c1d69495581e27e229fc9b4d3e4fb3dcbd59ff09c8ff53ad2937b",
+        "original_block_sha256": "63de1c6c71515f5bfd75028da83bb41d8aaaa194caca95d1998a5dc138e7489a"
+      }
+    ]
+  },
+  "unresolved": [
+    "This is the pre-retirement hybrid Scratch D with 26 Native ion owners, NOT the new-only 26→24 proof.",
+    "Native P2 and P3/P4 were not executed. Integration P1-E, rate provenance and science acceptance remain separate."
+  ],
+  "safety": {
+    "private_rates_in_zip": false,
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "new_only_P2": "HOLD",
+    "science": "SCIENCE_HOLD",
+    "main_merge": false
+  }
+}
