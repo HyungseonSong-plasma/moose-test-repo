@@ -91,6 +91,14 @@ native() {
   ' -- "$@"
 }
 
+# Issue #633: narrow positive P2 before broad legacy/surface/Poisson checks.
+# This is synthetic three-ion FV Continuity only: JSON owns initial densities,
+# transport and reaction sources; no Native ion Kernels/BCs, wall or Poisson.
+# Reuse this job's freshly compiled exact-HEAD physics-opt, never a cached binary.
+native --check-input -i "$PILOT/issue633_ion_continuity_newonly_p2.i" \
+  2>&1 | tee "$EVIDENCE/issue633_ion_continuity_newonly_p2.log"
+echo "ISSUE633_ION_CONTINUITY_NEW_ONLY_P2_PASS"
+
 # Canonical replacement for the historical JSON-rate one-shot Native P2 cases.
 # Use the exact same physics-opt binary and immutable OCI as P1 and later S6 P2.
 # H01-H04, H05 and the actual JSON surface-rate input do not execute timesteps.
