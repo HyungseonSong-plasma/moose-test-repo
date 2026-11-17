@@ -1,0 +1,195 @@
+{
+  "schema": "issue670.p4_s5.s6_941_o2p_2_to_1.source_byte_receipt.v1",
+  "task_id": "P4-S5",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "scope": "READ_ONLY_STATIC_SOURCE_AND_CI_ARTIFACT_READBACK; native runtime and scientific equivalence excluded",
+  "p1": {
+    "run_id": 44182628032,
+    "artifact_id": 14372278070,
+    "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "S6_417_layers": "11/11_SHA_MATCH",
+    "S6_941_layers": "11/11_SHA_MATCH",
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+  },
+  "p2": {
+    "draft_pr": 674,
+    "pr_source_base_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "run_id": 44199587771,
+    "artifact_id": 14380831538,
+    "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "source_only_ci": "SUCCESS",
+    "S6_417_newonly_11_layers": "11/11_SHA_MATCH",
+    "S6_941_newonly_11_layers": "11/11_SHA_MATCH",
+    "S6_941_ion_native_owners_before": 26,
+    "S6_941_ion_native_owners_after": 0,
+    "production_runner_source_only": "PASS",
+    "generated_physics_24": "NOT_RUN",
+    "native_p2": "NOT_RUN"
+  },
+  "old_source_kernels": [
+    {
+      "case": "941",
+      "layer": 5,
+      "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+      "section": "FVKernels",
+      "object_name": "ei415_o2p_source",
+      "factory_type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "v": "S_O2p_molar_EI415",
+      "coef": 1,
+      "block": "plasma",
+      "before_file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+      "after_file_sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+      "block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+      "p2_post_count_all_11_layers": 0
+    },
+    {
+      "case": "941",
+      "layer": 10,
+      "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+      "section": "FVKernels",
+      "object_name": "h25_molecular_positive_ion",
+      "factory_type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "v": "S_O2p_molar_H25",
+      "coef": 1,
+      "block": "plasma",
+      "before_file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+      "after_file_sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+      "block_sha256": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4",
+      "p2_post_count_all_11_layers": 0
+    }
+  ],
+  "retained_producers": [
+    {
+      "case": "941",
+      "layer": 5,
+      "section": "FunctorMaterials",
+      "object_name": "ei415_progress",
+      "factory_type": "EIRateCoefMaterial",
+      "produces": "R_EI415",
+      "source_table_path": "private_rates/EI-415_O2_X.txt",
+      "raw_rate_bytes_in_report": false,
+      "block_sha256": "aa7b0f2e016f8dc367817c52a29e20d586e4db0c6840c7f377d4cc2970d52894",
+      "p2_preserved_byte_identical": true
+    },
+    {
+      "case": "941",
+      "layer": 5,
+      "section": "FunctorMaterials",
+      "object_name": "ei415_o2p_source",
+      "factory_type": "ADParsedFunctorMaterial",
+      "produces": "S_O2p_molar_EI415",
+      "expression": "R_EI415",
+      "block_sha256": "0998b09c7652648ea63f19394f68c54a3e905bb9df680a7a87bc4b114f9d8392",
+      "p2_preserved_byte_identical": true
+    },
+    {
+      "case": "941",
+      "layer": 10,
+      "section": "FunctorMaterials",
+      "object_name": "h25_progress",
+      "factory_type": "ADParsedFunctorMaterial",
+      "produces": "R_H25",
+      "expression": "1.204428152e7*(300.0/tg)^0.4*cp*c2",
+      "inputs": [
+        "c_Op_H25",
+        "c_O2_H25",
+        "Tg_H25_K"
+      ],
+      "block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+      "p2_preserved_byte_identical": true
+    },
+    {
+      "case": "941",
+      "layer": 10,
+      "section": "FunctorMaterials",
+      "object_name": "h25_o2p_birth",
+      "factory_type": "ADParsedFunctorMaterial",
+      "produces": "S_O2p_molar_H25",
+      "expression": "R_H25",
+      "block_sha256": "6f483b0cff456b77f9c5737ae7f67d6e9f4fd5e50d595f568d42857810dd94e7",
+      "p2_preserved_byte_identical": true
+    }
+  ],
+  "aggregation": {
+    "case": "941",
+    "newonly_json_path": "chemistry/unified_s6_941_newonly.json",
+    "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "reactions_total": 8,
+    "reaction_ids_unique": true,
+    "contains_EI941": true,
+    "contains_EI417": false,
+    "EI415": {
+      "equation": "e + O2 -> 2e + O2p",
+      "net_O2p": 1,
+      "rate": "R_EI415"
+    },
+    "H25": {
+      "equation": "Op + O2 -> O + O2p",
+      "net_O2p": 1,
+      "rate": "R_H25"
+    },
+    "other_O2p_net_stoichiometry_nonzero": 0,
+    "generated_source_expression_design": "S_O2p_molar=(+1)*R_EI415+(+1)*R_H25",
+    "units": "mol/(m^3 s)",
+    "source_functor_owner_design": "Chemistry::addFunctorMaterials creates ADParsedFunctorMaterial chemistry_O2p_source -> S_O2p_molar",
+    "kernel_owner_design": "DDContinuityEq::addFVKernels creates O2p_source FVCoupledForce for log_O2p with v=S_O2p_molar,coef=1.0",
+    "files": [
+      {
+        "path": "physics_app/src/physics/plasma/Chemistry.C",
+        "git_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+        "lines": "1235-1293"
+      },
+      {
+        "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+        "git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+        "lines": "419-486"
+      }
+    ],
+    "runtime_material_and_kernel_resolved": "NOT_RUN"
+  },
+  "negatives_in_memory": {
+    "missing_EI415": "REJECT",
+    "missing_H25": "REJECT",
+    "wrong_H25_O2p_sign": "REJECT",
+    "duplicate_EI415": "REJECT",
+    "wrong_941_branch_EI417": "REJECT",
+    "FV_source_wrong_log_variable": "REJECT_SHA_MISMATCH",
+    "FV_source_wrong_coef_sign": "REJECT_SHA_MISMATCH",
+    "total": 7,
+    "all_expected_rejects": 7
+  },
+  "c1_c2_independent_case_guard": {
+    "used_actual_S6_941_raw_files": true,
+    "common_s6_417_cross_case_verified_separately": true,
+    "source_S2_file_and_block_sha_equal_417_941": true,
+    "source_H25_file_and_block_sha_equal_417_941": true,
+    "not_used_as_substitute_for_S6_941_pins": true
+  },
+  "independent_local_receipt": {
+    "file": "p4_s5_941_o2p_independent_receipt.json",
+    "sha256": "819143a6e272e9fd744376b4eaf022fad66252f1bcf3e03a1d38d0f1646b4741",
+    "method": "Python zipfile raw bytes + hashlib SHA256 + scope-qualified [FVKernels] vs [FunctorMaterials] object matching, pre/post P2 full 11-layer stage readback"
+  },
+  "unresolved": [
+    "Generated chemistry_O2p_source and O2p_source are C++ declarative design; runtime Warehouse/Material Functor producer-consumer liveness unverified until Native P2.",
+    "P3-X electron sheath/e_wall owner conflict, P4-X combined source owner uniqueness and density/Poisson/wall consumer wiring require single-writer integration after all receipts.",
+    "PR #674 remains stacked Draft and PR #665 unmerged; source-stage PASS is not same-HEAD final integrated physics executable acceptance.",
+    "Private EI-415 original rate bytes not included; rate table SHA and kinetics numerical parity handled by separate P4-S8/gated verification."
+  ],
+  "gates": {
+    "P4_S5_SOURCE_BYTE": "PASS",
+    "P4_S5_PRODUCER_MATERIAL_PRESERVATION": "PASS",
+    "P4_S5_STOICHIOMETRY": "PASS",
+    "P4_S5_P2_STAGE_REMOVAL": "PASS",
+    "P4_S5_NEGATIVE_TESTS": "PASS_7_OF_7",
+    "P4_S5_NEWONLY_RUNTIME": "HOLD",
+    "P4_X": "HOLD",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
