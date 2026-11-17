@@ -1,0 +1,231 @@
+{
+  "schema": "issue669.p3_t3.electron_reduced_lookup_pressure_temperature.v1",
+  "task_id": "P3-T3",
+  "parent_issue": 669,
+  "scope": "source-bound static lookup unit/bounds and root gas-state edge audit; not Native science P3",
+  "status": "PASS_STATIC_CONTRACT_WITH_P2_DEPENDENCY_HOLD",
+  "source": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "draft_pr": 665,
+    "exact_pr_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "source_state": "OPEN_DRAFT_UNMERGED",
+    "historical_commit": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "main_observed": "ebcfd9e662bc40f0473d8da05da95d11b61789f8"
+  },
+  "dependency": {
+    "issue": 668,
+    "state_at_read": "OPEN",
+    "p2_newonly_retirement_receipt": "NOT_AVAILABLE",
+    "actual_newonly_11_layer_pre_post_sha": "NOT_AVAILABLE",
+    "actual_newonly_table_stage_sha": "NOT_AVAILABLE",
+    "pass_promoted_to_runtime": false
+  },
+  "json": [
+    {
+      "case": "417",
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "git_blob_sha": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "file_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "electron_transport": {
+        "type": "lookup",
+        "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+        "unit": "reduced",
+        "bounds_policy": "clamp"
+      },
+      "root_owned_gas": true
+    },
+    {
+      "case": "941",
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+      "git_blob_sha": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "file_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "electron_transport": {
+        "type": "lookup",
+        "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+        "unit": "reduced",
+        "bounds_policy": "clamp"
+      },
+      "root_owned_gas": true
+    }
+  ],
+  "overlays": [
+    {
+      "case": "417",
+      "path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+      "blob_sha": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e",
+      "file_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "files": "chemistry/unified_s6_417_newonly.json",
+      "pressure_initial_pa": 1.333223684,
+      "temperature_k": 300,
+      "state_model": "ideal_gas",
+      "energy_transport_coefficient": "fluid"
+    },
+    {
+      "case": "941",
+      "path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_941_continuity.template.i",
+      "blob_sha": "4daa6f080f3d7bbd35c9839110cbb955b8914fee",
+      "file_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "files": "chemistry/unified_s6_941_newonly.json",
+      "pressure_initial_pa": 1.333223684,
+      "temperature_k": 300,
+      "state_model": "ideal_gas",
+      "energy_transport_coefficient": "fluid"
+    }
+  ],
+  "table_provenance": {
+    "declared_relative_path": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "resolution_rule": "Chemistry.C resolveDataFile anchors transport file to declaring JSON parent, not .i/cwd",
+    "resolved_repository_target": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "repository_tracked_table": {
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "git_blob_sha": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+      "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "rows": 100,
+      "bytes": 2591
+    },
+    "historical_400W_replay_substitution": {
+      "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+      "from_path": ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt",
+      "git_blob_sha": "aa05aadde111e4ba435185954a64a4b7dbbf2d45",
+      "sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "rows": 42,
+      "bytes": 1770,
+      "copied_to": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "copy_owner": "experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh (historical worktree)"
+    },
+    "two_distinct_byte_sets": true,
+    "source_table_cannot_be_promoted_as_actual_newonly_stage": true,
+    "follow_up": "Obtain #668 disposable New-only Scratch resolved table byte SHA; compare to explicitly selected 42-row historical replay or 100-row tracked reference without silently substituting."
+  },
+  "cplusplus_edges": {
+    "parse_and_file_resolution": {
+      "path": "physics_app/src/physics/plasma/Chemistry.C",
+      "git_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "keys": [
+        "transport_coef.type",
+        "transport_coef.file",
+        "transport_coef.unit",
+        "transport_coef.bounds_policy"
+      ],
+      "root_owned_gas": true,
+      "result_pressure": "pressure",
+      "result_gas_temperature": "temperature",
+      "line_ranges": [
+        "134-151",
+        "177-230",
+        "1598-1665"
+      ]
+    },
+    "action": {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "material": "DDTransportMaterial",
+      "model": "lookup",
+      "table_units": "reduced",
+      "bounds": "clamp",
+      "pressure": "pressure",
+      "gas_temperature": "temperature",
+      "lines": "535-583"
+    },
+    "material": {
+      "path": "physics_app/src/materials/DDTransportMaterial.C",
+      "git_blob": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+      "fixed_coordinate": "e_energy_eV",
+      "bounds_policy": "clamp",
+      "clamp_below": "first row",
+      "clamp_above": "last row",
+      "invalid_pressure_temperature": "error",
+      "lines": "99-125,208-225"
+    },
+    "header": {
+      "path": "physics_app/include/materials/DDTransportMaterial.h",
+      "git_blob": "de9b2abdee7b4e11f18c6a47474da6397e9b6541",
+      "neutral_density_formula": "N_n=pressure/(k_B*temperature)",
+      "physical_mobility_formula": "mu=mu_reduced/N_n",
+      "physical_diffusivity_formula": "D=D_reduced/N_n",
+      "validity": "pressure>0 Pa, temperature>0 K"
+    }
+  },
+  "observed_hybrid_P1_0_baseline": {
+    "artifact_id": 14372278074,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182663514/artifacts/14372278074",
+    "exact_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "embedded_11layer_zip_sha256": "9923c7c875dff975ec203610e58797be7abbfe6a92be2173f1fbe525f49f1172",
+    "manifest_sha256": "cf08568b0255486005a6e8b6541689dc42dbd434ba5dd8b80eecb4886b66b1fc",
+    "actual_input_files_verified": 22,
+    "pre_retirement_hybrid_only": true,
+    "cases": {
+      "417": {
+        "files": 11,
+        "pressure_owner_file_ordinal": 1,
+        "owner_factory": "INSFVPressureVariable",
+        "owner_count": 1,
+        "owner_block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+        "owner_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "overlay_layer_11_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895"
+      },
+      "941": {
+        "files": 11,
+        "pressure_owner_file_ordinal": 1,
+        "owner_factory": "INSFVPressureVariable",
+        "owner_count": 1,
+        "owner_block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+        "owner_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "overlay_layer_11_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0"
+      }
+    },
+    "external_sha_crosscheck_local_report": "p3_t3_hybrid_pressure_static_crosscheck.json",
+    "local_crosscheck_sha256": "edbc6df9772346beed197c6360507e2968df330151a5556084d219cf0f1be702"
+  },
+  "tests": {
+    "mode": "Pure source contract-checker and negative mutation detection, not compiled C++ unit/native run",
+    "assertions": 54,
+    "passes": 54,
+    "failures": 0,
+    "negative_mutation_tests": 26,
+    "negative_cases_per_variant": 13,
+    "injected_changes": [
+      "lookup->constant",
+      "reduced->physical",
+      "clamp->error",
+      "invalid bounds_policy",
+      "missing file sentinel",
+      "species-local pressure alias",
+      "species-local temperature alias",
+      "missing explicit bounds",
+      "missing table key",
+      "negative root pressure",
+      "zero root temperature",
+      "missing root temperature",
+      "missing root pressure"
+    ],
+    "interpretation": "Pinned T3 contract drift rejected by independent static checker; C++ legitimately supports physical/error in other models, so static rejection DOES NOT assert C++ forbids those options generally."
+  },
+  "verdicts": {
+    "JSON_TYPED_LOOKUP": "PASS_SOURCE_STATIC",
+    "JSON_REDUCED_CLAMP": "PASS_SOURCE_STATIC",
+    "ROOT_PRESSURE_TEMPERATURE_WIRING": "PASS_SOURCE_STATIC",
+    "HYBRID_P1_0_REFERENCE_PRESSURE_OWNER": "PASS_SOURCE_BYTES",
+    "NEW_ONLY_STAGED_TABLE_SHA": "HOLD",
+    "NEW_ONLY_RUNTIME_PRESSURE_OWNER": "HOLD",
+    "P2_668": "HOLD",
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "#668 remains open: no actual New-only disposable 11-layer pre/post receipt or Native ion retirement authority. This slot is source-bound inspection only.",
+    "Historical 42-row replay table and repository-tracked 100-row table are different; do not silently promote either SHA as actual New-only staged bytes.",
+    "Dynamic late-bound pressure Functor, runtime root publication, and transport lookup availability require New-only Native P2 plus owner/caller review.",
+    "P3-0 shared manifest and P3-X integration remain serial gates; other P3 slots outside T3 not accepted here."
+  ],
+  "protected": {
+    "original_10_layer_archives_modified": false,
+    "source_JSON_modified": false,
+    "main_modified": false,
+    "PR_665_modified": false,
+    "native_solve_run": false
+  }
+}
