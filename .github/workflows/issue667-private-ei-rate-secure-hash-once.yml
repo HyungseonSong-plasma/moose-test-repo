@@ -1,0 +1,53 @@
+# One-shot read-only verification of original protected EI tables.
+# Original kinetic bytes never enter git, Actions artifacts, or stdout.
+name: Issue667 protected EI original SHA independent rehash
+on:
+  push:
+    branches: [issue-667-rate-sha-independent-20261117]
+    paths:
+      - .github/workflows/issue667-private-ei-rate-secure-hash-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue667-protected-ei-sha-independent-one-shot
+  cancel-in-progress: false
+
+jobs:
+  secret-hash-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout isolated evidence harness
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Enforce one isolated and reviewed workflow-only trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="7d1474a9975df2e7e021afa5aa18c921a9c3f475"
+          test "$(git merge-base "$base" HEAD)" = "$base"
+          test "$(git rev-list --count "$base"..HEAD)" = "1"
+          test "$(git diff --name-only "$base" HEAD)" = ".github/workflows/issue667-private-ei-rate-secure-hash-once.yml"
+          git cat-file -e "9c15a4f0e2cf8042cb0d4b2f18af31511021d168^{commit}"
+          git cat-file -e "29d1acc6ef7969908b86719e4b95c73a1565136d^{commit}"
+          python3 -m py_compile ci/guards/issue667_private_ei_rate_sha_secure.py
+      - name: Read original protected secret in memory; emit SHA equality only
+        shell: bash
+        env:
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 ci/guards/issue667_private_ei_rate_sha_secure.py
+      - name: Upload digest-equality receipt only; no private tables
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue667-private-ei-sha-only-${{ github.run_id }}
+          path: ${{ runner.temp }}/issue667_private_ei_rate_sha_receipt.json
+          if-no-files-found: warn
+          retention-days: 7
