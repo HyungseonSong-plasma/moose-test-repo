@@ -1,0 +1,97 @@
+name: issue668-maxwell-child-newonly-stage-once
+on:
+  push:
+    branches:
+      - issue-668-maxwell-newonly-stage-20261117
+    paths:
+      - .github/workflows/issue668-maxwell-newonly-stage-once.yml
+permissions:
+  contents: read
+  actions: read
+  issues: write
+concurrency:
+  group: issue668-maxwell-newonly-stage-20261117
+  cancel-in-progress: false
+jobs:
+  scratch:
+    name: exact-head New-only Scratch P2 source-only
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Load branch-scoped source-only validator
+        uses: actions/checkout@v4
+        with:
+          path: audit
+          persist-credentials: false
+      - name: Checkout frozen PR 665 HEAD and original tracked mesh
+        uses: actions/checkout@v4
+        with:
+          ref: 9c15a4f0e2cf8042cb0d4b2f18af31511021d168
+          path: source
+          persist-credentials: false
+      - name: Exact source SHA and validator unpack
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = '9c15a4f0e2cf8042cb0d4b2f18af31511021d168'
+          test -f source/experiments/Issue18_qvt_plasma_mapping/qvt.msh
+          base64 --decode audit/ci/issue668_maxwell_child_newonly_stage.py.gz.b64 | gzip -dc > /tmp/issue668-stage.py
+          python -m py_compile /tmp/issue668-stage.py
+          echo 'PINNED_SOURCE_AND_SCRIPT_OK'
+      - name: Download immutable original public artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence_input
+          for spec in '14372278070 p1.zip' '13447489692 historical.zip'; do
+            read -r aid filename <<<"$spec"
+            curl --retry 3 --retry-delay 2 -fLsS \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/HyungseonSong-plasma/moose-test-repo/actions/artifacts/$aid/zip" \
+              -o "evidence_input/$filename"
+          done
+          echo '97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db  evidence_input/p1.zip' | sha256sum -c -
+          echo 'df41ef2860d56b728082fd1fd7e7d3f498bc5b389bb94f5451e11576dd6a27cb  evidence_input/historical.zip' | sha256sum -c -
+      - name: Retire exactly 26 native ion objects per case and stage child plus mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          python /tmp/issue668-stage.py \
+            --source source \
+            --p1 evidence_input/p1.zip \
+            --historical evidence_input/historical.zip \
+            --output stage_out
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('stage_out/stage_receipt.json').read_text())
+          assert r['status']=='PASS_NEW_ONLY_SCRATCH_CHILD_AND_MESH_BYTE_SHA_SOURCE_ONLY'
+          for c in ('417','941'):
+              a=r['cases'][c]
+              assert a['retired_ion_objects']==26
+              assert a['staged_mesh_sha']==r['mesh_git_source_sha256']
+              assert a['native_p2']=='NOT_RUN'
+          print('ISSUE668_SCRATCH_SOURCE_SHA_STAGE_PASS')
+          PY
+      - name: Upload actual New-only Scratch source bytes and receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue668-newonly-maxwell-child-mesh-exactsha-417-941
+          path: stage_out/
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 6
+      - name: Post one-shot run pointer to issue 668
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            repos/HyungseonSong-plasma/moose-test-repo/issues/668/comments \
+            -f body="Issue #668 exact PR665 HEAD New-only Scratch source-only Maxwell child+mesh stage PASS; CI Run $GITHUB_RUN_ID; artifact issue668-newonly-maxwell-child-mesh-exactsha-417-941. Retired 26 Native ion FV objects per case. Native P2/P3/P4 NOT_RUN; science HOLD." >/dev/null
