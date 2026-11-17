@@ -136,6 +136,15 @@ because it owns the separately selected electron-energy physics.
   provider must be retired to prevent a duplicate source. The lower-D
   Native surface-charge equations remain permitted if no producer
   collision exists.
+- **Important additional Scratch cutover:** these grouped JSON entries
+  explicitly generate **8 FEM electron/electron-energy sheath BCs**.
+  The 8 historical Native electron FEM BC objects must therefore be retired
+  in disposable Scratch before validating a new-only run. They are
+  separate from the 14 Native ion FV Kernels and 12 Native ion FV BCs.
+  Retiring electron *BCs* does not require retiring the Native electron
+  wall **Flux Functor** in partial Energy mode. The preflight rejects
+  duplicate Native FEM electron BC owners. Original historical inputs
+  remain untouched; this is a separate P2 HOLD until staged and proven.
 - `pressure`, `temperature`, `wall_gradient` (root),
   `fem_potential`, FV species selection and
   `migration_smoothing_width` (Continuity) belong to MOOSE `.i` input.
