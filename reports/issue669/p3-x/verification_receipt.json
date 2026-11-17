@@ -1,8 +1,8 @@
 {
-  "schema": "issue669.p3_x.preintegration.verification.v1",
+  "schema": "issue669.p3_x.preintegration.verification.v2",
   "task_id": "P3-X",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
-  "status": "SOURCE_ONLY_PREINTEGRATION_PASS__FULL_P3_X_HOLD",
+  "status": "PASS_PRODUCTION_NEWONLY_STAGE_AND_P3X_SHADOW_10OWNERS__HOLD_NATIVE_RUNTIME",
   "scope": "Integrated independent evidence only; P3-X production New-only cutover is explicitly NOT executed",
   "worker_evidence": {
     "requested_slots": 30,
@@ -59,6 +59,33 @@
         "old_electron_fem_bc_preserved": 8,
         "newonly_json_11th_overlay_bound": false
       }
+    },
+    "p2_production_newonly": {
+      "source_pr": 674,
+      "base_pr": 665,
+      "pr674_head": "4185d04ccded7fe1f6b6da8a5ecc2d0cdf339d75",
+      "run_id": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "cases": {
+        "417": {
+          "layer_files_sha_recomputed": 11,
+          "ion_owners_removed": 26,
+          "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+          "overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+          "table_rows": 42
+        },
+        "941": {
+          "layer_files_sha_recomputed": 11,
+          "ion_owners_removed": 26,
+          "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+          "overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+          "table_rows": 42
+        }
+      },
+      "electron_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "source_only": true,
+      "native_P2": "NOT_RUN"
     }
   },
   "independent_local_audit": {
@@ -90,17 +117,50 @@
   "gates": {
     "P1_E_SOURCE": "PASS",
     "P2_668_STATIC_ION_RETIRE_26_TO_0": "PASS_BOTH_CASES",
-    "P2_668_FULL_PACKAGE": "HOLD_PRODUCTION_RUNNER_NEWONLY_JSON_OVERLAY",
+    "P2_668_FULL_PACKAGE": "SOURCE_ONLY_PASS_PR674_STACKED_UNMERGED_PR665",
     "P3_X_19_RECEIPT_REVIEW": "PASS_BOUNDED_ONLY",
     "P3_X_11_RECEIPTS": "MISSING",
-    "P3_X_ACTUAL_NEWONLY_BEFORE_AFTER_11_LAYER_JSON_SHA": "NOT_RUN",
-    "P3_X_ELECTRON_BC_SINGLE_OWNER_WAREHOUSE": "NOT_RUN",
+    "P3_X_ACTUAL_NEWONLY_BEFORE_AFTER_11_LAYER_JSON_SHA": "P2_PR674_REAL_SOURCE_STAGE_PASS__P3X_SOURCE_PROJECTION_ONLY",
+    "P3_X_ELECTRON_BC_SINGLE_OWNER_WAREHOUSE": "STATIC_10_COLLISION_CANDIDATES_IDENTIFIED_SHADOW_RETIRE_PASS__NATIVE_NOT_RUN",
     "P3_X_DYNAMIC_RF_NEUTRAL_PRESSURE_CONSUMER": "NOT_RUN",
     "P5_NATIVE_P2": "NOT_RUN",
     "NATIVE_P3": "NOT_RUN",
     "NATIVE_P4": "NOT_RUN",
-    "SCIENCE": "SCIENCE_HOLD"
+    "SCIENCE": "SCIENCE_HOLD",
+    "P3_X_PRODUCTION_CUTOVER": "NOT_RUN"
   },
-  "integration_decision": "HOLD_ACTUAL_P3_X_CUTOVER_NO_CODE_EDIT_BEFORE_P2_PRODUCTION_GATE",
-  "security": "No private rate bytes in outputs; no original/baseline/main/PR665 modifications; no native execution, no workflow skips or dont_create_kernels bypass"
+  "integration_decision": "P2_PR674_SOURCE_STAGE_AND_P3X_SHADOW_PREINTEGRATION_PASS__HOLD_MISSING_11_WORKER_RECEIPTS_AND_NATIVE_RUNTIME",
+  "security": "No private rate bytes in outputs; no original/baseline/main/PR665 modifications; no native execution, no workflow skips or dont_create_kernels bypass",
+  "p3_x_shadow_proposal": {
+    "status": "PASS_SOURCE_ONLY_DISPOSABLE_COPY__NOT_IN_REPO_OR_PRODUCTION_RUNNER",
+    "cases": [
+      "417",
+      "941"
+    ],
+    "old_electron_BCs_removed_per_case": 8,
+    "old_electron_functor_producers_removed_per_case": 2,
+    "changed_11_layer_files_per_case": 1,
+    "unchanged_layer_files_per_case": 10,
+    "rejected_mutant_count": 8,
+    "expected_generated_electron_BC_count": 8,
+    "expected_generated_functors": [
+      "n_e_physical",
+      "e_wall_number_flux"
+    ],
+    "newonly_json_and_electron_table_untouched": true,
+    "local_verifier_sha256": "ded931704d30561027cb156f1ebfd6c1ff6f6cbb7d117d9fa7c06a2a9cfc6442",
+    "local_shadow_receipt_sha256": "bef062c89b7e2f4947f63915675917671aceb8c7f65dd2ba8dfa6ad0e5e869f4",
+    "local_shadow_zip_sha256": "86867d92a1260d4c13fecf10612c39169f2ebf970a1effb60d56d9433ddb5eb3",
+    "native_warehouse_single_owner_proven": false
+  },
+  "important_findings": [
+    "PR674 real 417/941 New-only overlay+JSON+42-row prepared electron table source stage separately independently rehashed.",
+    "Each real New-only staged C0 retains 8 electron FEM BC owners and 2 FunctorMaterials which conflict with Physics/JSON generated owner contracts; all 10 can be exact-sha retired in a disposable-source shadow, but runtime uniqueness is untested."
+  ],
+  "blocked_gates": [
+    "11 outstanding worker receipts",
+    "Production P3-X cutover must be integrated onto stacked #674/PR665 source, not local shadow alone",
+    "C++ Native Warehouse eight FEM BCs and two Functor providers single-owner + dynamic neutral/RF/Poisson reachability",
+    "Native P2 only in P5; Native P3/P4 and science remain HOLD"
+  ]
 }
