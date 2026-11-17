@@ -50,7 +50,48 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
     require(not any(isinstance(v, dict) and "ion_wall" in v for v in species.values()),
             "RETIRED_ION_WALL_WRAPPER")
     with_walls = {k for k, v in species.items()
-                  if isinstance(v, dict) and any(str(key).startswith("wall_") for key in v)}
+                  if isinstance(v, dict) and (
+                      type(v.get("wall_use_element_gradient_for_potential")) is bool
+                      or any(k in v for k in (
+                          "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV")))}
+    # The final-run schema shares exact common Species keys. Neutrals/electron
+    # declare wall gradient=null, never a wall-flux producer.
+    modern = any(isinstance(v, dict) and isinstance(v.get("transport_coef"), dict)
+                 for v in species.values())
+    if modern:
+        common = {"elements", "charge_number", "molar_mass", "temperature_eV",
+                  "sticking_coefficient", "initial_number_density", "transport_coef",
+                  "wall_use_element_gradient_for_potential"}
+        require(all(isinstance(v, dict) and common <= set(v)
+                    for v in species.values()), "INCONSISTENT_COMMON_SPECIES_TEMPLATE")
+        for name, v in species.items():
+            cfg = v["transport_coef"]
+            require(isinstance(cfg, dict) and {"type", "file", "unit"} <= set(cfg),
+                    "INCONSISTENT_TRANSPORT_TEMPLATE_" + name)
+            require(finite_num(v["molar_mass"], 1e-300),
+                    "INVALID_MOLAR_MASS_" + name)
+            require(v["temperature_eV"] is None or finite_num(v["temperature_eV"], 0),
+                    "INVALID_TEMPERATURE_EV_" + name)
+            require(finite_num(v["sticking_coefficient"], 0, 1),
+                    "INVALID_STICKING_" + name)
+            if name not in selected:
+                require(v["wall_use_element_gradient_for_potential"] is None,
+                        "UNSELECTED_WALL_OWNER_" + name)
+            if cfg["type"] == "none":
+                require(cfg["file"] == "none" and cfg["unit"] == "none",
+                        "INVALID_NONE_TRANSPORT_" + name)
+            elif cfg["type"] == "functor":
+                require(cfg["file"] == "none" and cfg["unit"] == "physical",
+                        "FUNCTOR_MUST_USE_PHYSICAL_UNIT_" + name)
+            elif cfg["type"] == "lookup":
+                require(cfg["file"] != "none" and cfg["unit"] in ("physical", "reduced"),
+                        "INVALID_LOOKUP_TRANSPORT_" + name)
+            else:
+                require(cfg["type"] == "constant", "INVALID_TRANSPORT_TYPE_" + name)
+            for old in ("pressure", "gas_temperature", "mobility", "diffusivity",
+                        "table_file", "table_units", "wall_molar_mass",
+                        "wall_sticking", "wall_ion_temperature_eV"):
+                require(old not in v, "RETIRED_SPECIES_FIELD_" + name + "_" + old)
     require(with_walls == set(selected), "SELECTED_ION_WALL_OWNER_MISMATCH")
     for ident in selected:
         record = species[ident]
@@ -60,13 +101,22 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
             "wall_migration_gate_smoothing_width", "migration_smoothing_width")),
             "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_" + ident)
         declared = {key for key in record if key.startswith("wall_")}
-        require(declared == WALL_FIELDS, "INVALID_ION_WALL_FIELDS_" + ident)
-        require(finite_num(record["wall_molar_mass"], 1e-300) and
-                math.isclose(record["wall_molar_mass"], MASS[ident], rel_tol=1e-12),
-                "WRONG_WALL_MOLAR_MASS_" + ident)
-        require(finite_num(record["wall_sticking"], 0, 1), "INVALID_STICKING_" + ident)
-        require(finite_num(record["wall_ion_temperature_eV"], 0),
-                "INVALID_wall_ion_temperature_eV_" + ident)
+        if modern:
+            require(declared == {"wall_use_element_gradient_for_potential"},
+                    "INVALID_ION_WALL_FIELDS_" + ident)
+            require(finite_num(record["molar_mass"], 1e-300) and
+                    math.isclose(record["molar_mass"], MASS[ident], rel_tol=1e-12),
+                    "WRONG_WALL_MOLAR_MASS_" + ident)
+            require(finite_num(record["sticking_coefficient"], 0, 1),
+                    "INVALID_STICKING_" + ident)
+        else:
+            require(declared == WALL_FIELDS, "INVALID_ION_WALL_FIELDS_" + ident)
+            require(finite_num(record["wall_molar_mass"], 1e-300) and
+                    math.isclose(record["wall_molar_mass"], MASS[ident], rel_tol=1e-12),
+                    "WRONG_WALL_MOLAR_MASS_" + ident)
+            require(finite_num(record["wall_sticking"], 0, 1), "INVALID_STICKING_" + ident)
+            require(finite_num(record["wall_ion_temperature_eV"], 0),
+                    "INVALID_wall_ion_temperature_eV_" + ident)
         require(type(record["wall_use_element_gradient_for_potential"]) is bool,
                 "INVALID_GRADIENT_FLAG_" + ident)
         # Potential, density, mobility, block and temperature are derived from
