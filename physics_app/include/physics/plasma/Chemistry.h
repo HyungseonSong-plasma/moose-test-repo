@@ -52,7 +52,6 @@ struct IonWallRecord
   double molar_mass = 0.0;
   double sticking = 1.0;
   double ion_temperature_eV = 0.0;
-  double migration_gate_smoothing_width = 0.0;
   bool use_element_gradient_for_potential = true;
 };
 
