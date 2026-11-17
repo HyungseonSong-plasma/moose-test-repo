@@ -92,6 +92,15 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
                         "INVALID_LOOKUP_TRANSPORT_" + name)
             else:
                 require(cfg["type"] == "constant", "INVALID_TRANSPORT_TYPE_" + name)
+                require(set(cfg) == {"type", "file", "unit", "mobility", "diffusivity"}
+                        and cfg["file"] == "none" and cfg["unit"] == "physical",
+                        "INVALID_CONSTANT_TRANSPORT_TEMPLATE_" + name)
+                require(finite_num(cfg["mobility"], 0) and
+                        finite_num(cfg["diffusivity"], 0),
+                        "INVALID_CONSTANT_TRANSPORT_VALUE_" + name)
+            if name == "e":
+                require("energy_transport_coef" not in v,
+                        "ENERGY_TRANSPORT_SELECTOR_MUST_BE_MOOSE_INPUT")
             for old in ("pressure", "gas_temperature", "mobility", "diffusivity",
                         "table_file", "table_units", "wall_molar_mass",
                         "wall_sticking", "wall_ion_temperature_eV"):
