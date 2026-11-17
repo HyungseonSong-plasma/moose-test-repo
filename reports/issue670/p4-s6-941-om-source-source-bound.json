@@ -1,0 +1,234 @@
+{
+  "schema": "issue670.p4_s6.941_om_source.v1",
+  "task_id": "P4-S6",
+  "issue": 670,
+  "case": "S6-941-407-2069-H25",
+  "verdict": "PASS_941_OM_SOURCE_STATIC_BYTES_STOICHIOMETRY__NATIVE_WAREHOUSE_HOLD",
+  "pins": {
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "original_PR665_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "PR665_post_PR674_merge_head": "3c961e94533f9676137fb96b2b0bae7e89653914",
+    "PR674_merge_commit": "3c961e94533f9676137fb96b2b0bae7e89653914",
+    "PR674_merged_into_PR665": true,
+    "P2_CI_head": "15f3e387b1c2c3b95c10232c6fe9d5884565c8f3",
+    "P2_CI_to_PR665_merge_diff_files": [
+      ".github/workflows/issue668-pr674-merge-gate-once.yml",
+      "reports/issue668/p2_production_newonly_integrated_receipt.json"
+    ],
+    "P2_CI_to_PR665_source_code_changes": 0,
+    "runtime_code_blob_git_sha1": {
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py": "652420d7653d4d089f5695afb7236370b0f1d7dd",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py": "999a7aa65bdc7011df6f64dd923570f464af1d39",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_ion_fv_owners.py": "41219d43c63aa2c6db025a48831ccc9a6493190e"
+    }
+  },
+  "evidence": {
+    "historical_original": {
+      "artifact_id": 13677375813,
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "file_sha_recomputed": 10,
+      "manifest_sha_pass": true
+    },
+    "P1_0_hybrid": {
+      "ci_run": 44182628032,
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "file_sha_recomputed": 11,
+      "case": "941"
+    },
+    "P2_production": {
+      "ci_run": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "file_sha_recomputed": 11,
+      "source_only": true,
+      "old_ion_owners_removed": 26,
+      "old_ion_owners_remaining": 0
+    },
+    "parent_receipt": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/66a6203b7a30f781021ac16cea28484228d7e042/reports/issue667/p1-c3-s6-941-om-source-final11-receipt.json",
+    "private_EI401_hash": {
+      "rate_file": "EI-401_O2_X.txt",
+      "expected_sha256": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+      "recomputed_original_byte_sha_equal": true,
+      "secure_ci_run": 44190774410,
+      "raw_private_data_in_receipt": false
+    },
+    "independent_local_verifier_sha256": "de66a7063645c81a09b7214bf5b3a26edb99410bbb7c61024c0b5924c18381e0",
+    "independent_local_verification_output_sha256": "4bf69628d9c1ad079a74728eda6b8aa911119f65d2c3bd63e0567706a750376f"
+  },
+  "legacy_source": {
+    "layer": 6,
+    "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+    "section": "FVKernels",
+    "name": "ei401_negative_ion_source",
+    "original_10": {
+      "file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+      "factory": "FVCoupledForce",
+      "variable": "log_nm",
+      "functor": "S_Om_molar_EI401",
+      "coef": 1,
+      "block": "plasma",
+      "block_sha256": "6f65790ab238716cd1b7c56a61a9b20d06812919007156d4dfdef2cd0ebfbdbd",
+      "count": 1
+    },
+    "hybrid_11": {
+      "file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+      "factory": "FVCoupledForce",
+      "variable": "log_Om",
+      "functor": "S_Om_molar_EI401",
+      "coef": 1,
+      "block": "plasma",
+      "block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
+      "count": 1
+    },
+    "production_newonly_11": {
+      "file_sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+      "old_kernel_count": 0,
+      "removal_is_exact_block_subtraction": true,
+      "non_target_layer6_bytes_identical": true
+    }
+  },
+  "rate_source_chain": {
+    "historical_rate": {
+      "object": "ei401_progress",
+      "factory": "PhysicsElectronImpactRateMaterial",
+      "reaction_progress": "R_EI401",
+      "block_sha256": "3e96329c05d1604d1e4eda9486c4f13ac614a64b2544e635b133955747626b0b"
+    },
+    "hybrid_and_newonly_rate": {
+      "object": "ei401_progress",
+      "factory": "EIRateCoefMaterial",
+      "reaction_progress": "R_EI401",
+      "rate_table_file": "private_rates/EI-401_O2_X.txt",
+      "mean_energy": "e_energy_eV",
+      "electron_number_density": "n_e_physical",
+      "target_molar_concentration": "c_O2_EI401",
+      "block_sha256": "ae89ee34938fe2c654992a3c3a5f1c91a59b2e76fe3959daf96855949d54da09",
+      "byte_identical_hybrid_vs_newonly": true
+    },
+    "Om_functor": {
+      "object": "ei401_om_source",
+      "factory": "ADParsedFunctorMaterial",
+      "property_name": "S_Om_molar_EI401",
+      "functor_names": "R_EI401",
+      "functor_symbols": "R",
+      "expression": "R",
+      "block_sha256": "e3b8eb02861bfb246117bf1f3f9a2d1d7eb52f7404b49243c768445b5e46a062",
+      "byte_identical_original_vs_hybrid_vs_newonly": true
+    },
+    "edges": [
+      [
+        "EI-401 original table",
+        "R_EI401"
+      ],
+      [
+        "R_EI401",
+        "S_Om_molar_EI401"
+      ],
+      [
+        "R_EI401",
+        "S_Om_molar (generated)"
+      ],
+      [
+        "S_Om_molar",
+        "Om_source (generated)"
+      ]
+    ]
+  },
+  "newonly_reaction": {
+    "json_path": "experiments/Issue395_powered_chemistry_ladder/chemistry/unified_s6_941_newonly.json",
+    "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "layer11": "migrated_continuity.i",
+    "layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+    "input_binding": "chemistry/unified_s6_941_newonly.json",
+    "species_declared": "fvm_species = 'O2p Om Op'",
+    "reaction_id": "EI-401",
+    "equation": "e + O2 -> Om + O",
+    "reactants": {
+      "e": 1,
+      "O2": 1
+    },
+    "products": {
+      "Om": 1,
+      "O": 1
+    },
+    "net_Om_coefficient": 1,
+    "other_Om_reactions": 0,
+    "energy_loss_eV": 0,
+    "units": "mol/(m^3 s)",
+    "charge_number_Om": -1,
+    "manual_S_Om_molar_owner_count": 0,
+    "expected_Chemistry_generated_source": {
+      "object_name": "chemistry_Om_source",
+      "type": "ADParsedFunctorMaterial",
+      "property_name": "S_Om_molar",
+      "functor_names": [
+        "R_EI401"
+      ],
+      "expression": "(1)*f0",
+      "source_code_verified": true,
+      "instantiated": false
+    },
+    "expected_DD_generated_kernel": {
+      "object_name": "Om_source",
+      "type": "FVCoupledForce",
+      "variable": "log_Om",
+      "v": "S_Om_molar",
+      "coef": 1,
+      "block": "plasma",
+      "source_code_verified": true,
+      "instantiated": false
+    },
+    "original_to_new_rhs_sign": "positive Om production preserved; legacy FVCoupledForce coef=+1 and generated FVCoupledForce coef=+1"
+  },
+  "verification": {
+    "input_file_sha_count": 32,
+    "identity_lineage": {
+      "historical": 1,
+      "hybrid": 1,
+      "production_newonly": 0
+    },
+    "negative_cases": [
+      "wrong_historical_sha",
+      "missing_old_source",
+      "duplicate_old_source",
+      "wrong_old_variable",
+      "wrong_old_source_functor",
+      "wrong_old_rhs_coef",
+      "wrong_old_factory",
+      "wrong_old_block",
+      "wrong_upstream_rate_reference",
+      "wrong_rate_progress",
+      "wrong_sign_material",
+      "old_kernel_reappears_newonly",
+      "json_om_product_missing",
+      "json_ei401_duplicated",
+      "json_wrong_units",
+      "json_wrong_archived_layer",
+      "json_wrong_om_charge"
+    ],
+    "negative_controls_rejected": 17,
+    "negative_controls_total": 17
+  },
+  "gates": {
+    "P4_S6_STATIC_SOURCE_BYTE": "PASS",
+    "P4_S6_JSON_STOICHIOMETRY": "PASS",
+    "P2_668_PRODUCTION_SOURCE": "PASS",
+    "P4_S6_GENERATED_RUNTIME_OWNER": "HOLD_NOT_RUN",
+    "D8_NEWONLY_DYNAMIC_CALLER": "HOLD",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD",
+    "P4_X": "PENDING"
+  },
+  "limitations": [
+    "Static Chemistry and DDContinuityEq code prove intended generator contract; not live runtime Warehouse/Functor uniqueness.",
+    "Original private EI-401 rate SHA was verified in a separate secret-bearing CI, but actual protected rate bytes were neither downloaded nor published here.",
+    "PR674 merged into PR665 during this task. Accepted #668 artifact was generated on exact earlier source HEAD and code paths remained unchanged through PR665 merge commit; latest baseline must be rechecked if future PR665 code changes.",
+    "Only S6-941 Om (P4-S6) is adjudicated. Other source/density/Poisson/wall slots and integrated P4-X not implied PASS."
+  ]
+}
