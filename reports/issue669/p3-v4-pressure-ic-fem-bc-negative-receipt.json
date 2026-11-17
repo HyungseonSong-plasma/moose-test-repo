@@ -1,0 +1,108 @@
+{
+  "artifacts": {
+    "p1_0": {
+      "id": 14372315897,
+      "run": 44180190753,
+      "zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620"
+    },
+    "p2_668": {
+      "id": 14379920938,
+      "run": 44196762787,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    }
+  },
+  "case_results": {
+    "417": {
+      "legacy_alias_count": 0,
+      "mirrored_existing_p0_checks_reject": 18,
+      "missing_from_inspected_p0_coverage": 5,
+      "native_electron_fem_bcs_still_present": 8,
+      "negative_controls_run": 23,
+      "neutral_outlet_variable": "pressure",
+      "old_ion_owners_removed": 26,
+      "p1_file_sha": "11/11_PASS",
+      "p2_file_sha": "11/11_PASS",
+      "pressure_native_ic": 0,
+      "pressure_owner_count": 1,
+      "pressure_type": "INSFVPressureVariable"
+    },
+    "941": {
+      "legacy_alias_count": 0,
+      "mirrored_existing_p0_checks_reject": 18,
+      "missing_from_inspected_p0_coverage": 5,
+      "native_electron_fem_bcs_still_present": 8,
+      "negative_controls_run": 23,
+      "neutral_outlet_variable": "pressure",
+      "old_ion_owners_removed": 26,
+      "p1_file_sha": "11/11_PASS",
+      "p2_file_sha": "11/11_PASS",
+      "pressure_native_ic": 0,
+      "pressure_owner_count": 1,
+      "pressure_type": "INSFVPressureVariable"
+    }
+  },
+  "coverage_finding": {
+    "classification": "P0_FAIL_CLOSED_GAP",
+    "code_explanation": "ci/p1_ion_new_only_preflight.py computes grouped_electron_bcs as bool(drift_diffusion_boundaries) and rejects retained Native BCs, but does not require the exact eight electron JSON BC members with expected group boundary and Factory",
+    "necessary_fix": "At P3-X, enforce exact 8 JSON BC (4 particle + 4 energy) membership/type/boundary with duplicate and missing checks; retire all 8 Native BCs from disposable Scratch; verify zero duplicate Native/JSON owners on actual final 11-layer and run official P0, followed by P5 Native P2.",
+    "runtime_behavior": "UNVERIFIED; coverage finding concerns inspected P0 source only"
+  },
+  "full_independent_local_receipt_sha256": "5ecd8fe7dab7a0b826efaf88cfa20fbea13fdd2015026f693d54b6c229d6ff51",
+  "full_independent_probe_source_sha256": "b56d4d6537f7eb9f760c4aa24327efac9abfe4b9ba0e3c62c8cbea5451c2baaf",
+  "gate": {
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "P2_668_FULL_DOD": "HOLD",
+    "P3_V4_FINAL_NEWONLY": "HOLD",
+    "P3_V4_SOURCE_TESTS": "PASS_WITH_P0_COVERAGE_GAP",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "negative_tests": {
+    "both_cases": 46,
+    "detected_by_mirrored_upstream_v4_rules": [
+      "pressure_missing",
+      "pressure_double",
+      "pressure_wrong_factory",
+      "pressure_legacy_p_variable",
+      "pressure_duplicated_initial_condition",
+      "legacy_p_ref",
+      "legacy_log_ne",
+      "legacy_log_energy",
+      "legacy_electron_wall_flux",
+      "legacy_mean_en_solved",
+      "native_electron_particle_bc",
+      "native_electron_energy_bc",
+      "native_electron_all_8",
+      "neutral_outlet_p_alias",
+      "electron_initial_missing",
+      "electron_initial_zero",
+      "energy_duplicate_native_ic",
+      "root_pressure_missing"
+    ],
+    "method": "P1/P2 raw ZIP SHA readback + exact bracket block inventory + mutation of isolated in-memory projected new-only V4 specimen; C++ parser/warehouse was not run",
+    "mirrored_upstream_p0_rejections": 36,
+    "per_case": 23,
+    "requires_per_bc_contract_not_found_in_inspected_p0": [
+      "json_wafer_particle_missing",
+      "json_wafer_energy_missing",
+      "json_cover_particle_missing",
+      "json_wafer_wrong_boundary",
+      "json_wafer_wrong_factory"
+    ],
+    "strict_extra_rejections": 10,
+    "strict_independent_policy_rejections": 46
+  },
+  "safe_write_boundary": "Dedicated evidence branch only; no shared source, main, draft PR, workflow or original file mutation",
+  "schema": "issue669.p3_v4.pressure_ic_fem_bc_negative_source_receipt.v1",
+  "scope": "source-bound actual 11-layer files + independent in-memory V4 mirror; not upstream inspect() execution or Native solver",
+  "source": {
+    "head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "pr": 665,
+    "source_blob_sha": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+    "source_file": "ci/p1_ion_new_only_preflight.py"
+  },
+  "status": "PASS_INDEPENDENT_NEGATIVE_TEST_DESIGN_WITH_P0_COVERAGE_GAP_FINAL_NEWONLY_HOLD",
+  "task_id": "P3-V4"
+}
