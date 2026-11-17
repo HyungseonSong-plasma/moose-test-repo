@@ -339,7 +339,8 @@ DDTransportRecord::equals(const DDTransportRecord & rhs) const
          diffusivity_source == rhs.diffusivity_source &&
          table_file == rhs.table_file &&
          table_units == rhs.table_units && pressure == rhs.pressure &&
-         gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;
+         gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy &&
+         root_owned_gas == rhs.root_owned_gas;
 }
 
 bool
@@ -413,9 +414,58 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       }
       if (it.key() == "e" && (species.charge_number != -1 || !species.elements.empty()))
         fail(file, "electron 'e' must carry -1 charge and zero nuclei");
+      // Versionless, opt-in final-run schema. These fields have the SAME
+      // shape for electrons, ions and neutrals; null temperature/density means
+      // no separately specified initial solver condition. Only bool gradient
+      // flags enable a charged heavy-ion Wall Material.
+      const bool new_species_schema =
+          record.contains("molar_mass") || record.contains("temperature_eV") ||
+          record.contains("sticking_coefficient") ||
+          (record.contains("transport_coef") && record.at("transport_coef").is_object());
+      if (new_species_schema)
+      {
+        for (const auto * key : {"molar_mass", "temperature_eV", "sticking_coefficient",
+                                 "transport_coef", "initial_number_density",
+                                 "wall_use_element_gradient_for_potential"})
+          if (!record.contains(key))
+            fail(file, "species." + it.key() + " missing common field " + key);
+        if (!record.at("molar_mass").is_number() ||
+            !record.at("sticking_coefficient").is_number())
+          fail(file, "species." + it.key() + " requires numeric mass and sticking");
+        species.molar_mass = record.at("molar_mass").get<double>();
+        species.sticking_coefficient = record.at("sticking_coefficient").get<double>();
+        if (!std::isfinite(species.molar_mass) || species.molar_mass <= 0.0 ||
+            !std::isfinite(species.sticking_coefficient) ||
+            species.sticking_coefficient < 0.0 || species.sticking_coefficient > 1.0)
+          fail(file, "species." + it.key() + " has invalid molar_mass or sticking_coefficient");
+        if (!record.at("temperature_eV").is_null())
+        {
+          if (!record.at("temperature_eV").is_number())
+            fail(file, "species." + it.key() + " temperature_eV must be numeric or null");
+          const Real temperature = record.at("temperature_eV").get<double>();
+          if (!std::isfinite(temperature) || temperature < 0.0)
+            fail(file, "species." + it.key() + " temperature_eV must be finite and nonnegative");
+          species.temperature_eV = temperature;
+        }
+        const auto & gradient = record.at("wall_use_element_gradient_for_potential");
+        if (!gradient.is_null() && !gradient.is_boolean())
+          fail(file, "species." + it.key() + " wall gradient flag must be bool or null");
+        if (gradient.is_boolean())
+        {
+          if (it.key() == "e" || species.charge_number == 0)
+            fail(file, "only charged heavy ions may enable a wall gradient selection");
+          IonWallRecord wall;
+          wall.molar_mass = species.molar_mass;
+          wall.sticking = species.sticking_coefficient;
+          wall.ion_temperature_eV = species.temperature_eV.value_or(0.0);
+          wall.use_element_gradient_for_potential = gradient.get<bool>();
+          species.ion_wall = wall;
+        }
+      }
       // A continuity species' initial particle number density is JSON-owned,
       // independent of heavy-gas mass fractions and energy-density ICs.
-      if (record.contains("initial_number_density"))
+      if (record.contains("initial_number_density") &&
+          !(new_species_schema && record.at("initial_number_density").is_null()))
       {
         if (!record.at("initial_number_density").is_number())
           fail(file, "initial_number_density must be numeric for " + it.key());
@@ -436,10 +486,10 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         }
         else
         {
-        const auto previous = _dd_transport.find(it.key());
-        if (previous == _dd_transport.end())
-          _dd_transport.emplace(it.key(), transport);
-        else if (!previous->second.equals(transport))
+          const auto previous = _dd_transport.find(it.key());
+          if (previous == _dd_transport.end())
+            _dd_transport.emplace(it.key(), transport);
+          else if (!previous->second.equals(transport))
           fail(file, "conflicting species transport_coef owner for " + it.key());
         }
       }
@@ -482,9 +532,13 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           "wall_use_element_gradient_for_potential"};
       bool wall_requested = false;
       for (const auto & key : wall_keys)
-        wall_requested = wall_requested || record.contains(key);
+        wall_requested = wall_requested ||
+            (record.contains(key) && (!new_species_schema ||
+               key != "wall_use_element_gradient_for_potential"));
       if (wall_requested)
       {
+        if (new_species_schema)
+          fail(file, "species." + it.key() + " cannot mix retired wall_* physical fields with common species metadata");
         for (const auto & key : wall_keys)
           if (!record.contains(key))
             fail(file, "species." + it.key() + " missing flat wall parameter " + key);
@@ -569,6 +623,12 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       {
         if (existing->second.charge_number != species.charge_number ||
             existing->second.elements != species.elements ||
+            (existing->second.molar_mass > 0.0 && species.molar_mass > 0.0 &&
+             existing->second.molar_mass != species.molar_mass) ||
+            (existing->second.temperature_eV && species.temperature_eV &&
+             *existing->second.temperature_eV != *species.temperature_eV) ||
+            (existing->second.sticking_coefficient > 0.0 && species.sticking_coefficient > 0.0 &&
+             existing->second.sticking_coefficient != species.sticking_coefficient) ||
             (existing->second.initial_number_density &&
              species.initial_number_density &&
              *existing->second.initial_number_density != *species.initial_number_density) ||
@@ -598,6 +658,12 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           existing->second.ion_wall = species.ion_wall;
         if (!existing->second.initial_number_density)
           existing->second.initial_number_density = species.initial_number_density;
+        if (existing->second.molar_mass == 0.0)
+          existing->second.molar_mass = species.molar_mass;
+        if (!existing->second.temperature_eV)
+          existing->second.temperature_eV = species.temperature_eV;
+        if (existing->second.sticking_coefficient == 0.0)
+          existing->second.sticking_coefficient = species.sticking_coefficient;
         if (existing->second.molar_mass_kg_mol == 0.0)
           existing->second.molar_mass_kg_mol = species.molar_mass_kg_mol;
         if (!existing->second.initial_vol_mass_fraction)
