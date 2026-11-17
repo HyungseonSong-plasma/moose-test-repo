@@ -32,6 +32,10 @@ DDEnergyEq::validParams()
       "fem_potential",
       "FEM electric potential. Enables conservative energy time, drift-diffusion, "
       "electron Joule and canonical mean-energy/JSON-wall providers.");
+  params.addParam<MooseEnum>(
+      "transport_coefficient", MooseEnum("fluid", "fluid"),
+      "Electron energy transport closure. 'fluid' uses (5/3) times the "
+      "electron particle mobility and diffusivity; owned here, not in species JSON.");
   params.addParam<MaterialPropertyName>(
       "rf_heating_material", "Existing electron-energy heating source in the equation's units.");
   params.addParam<Real>(
@@ -67,10 +71,11 @@ DDEnergyEq::DDEnergyEq(const InputParameters & parameters)
     if (getParam<VariableName>("fem_potential").empty())
       paramError("fem_potential", "Full FEM electron energy requires a nonempty potential.");
     const auto & mechanism = chemistryData();
-    if (!mechanism.ddTransport("e") || !mechanism.fluidElectronEnergyTransport())
+    if (!mechanism.ddTransport("e") ||
+        getParam<MooseEnum>("transport_coefficient") != "fluid")
       paramError("fem_potential",
-                 "Full FEM electron energy requires JSON drift_diffusion.e coefficients "
-                 "and drift_diffusion.e_energy={type:fluid}.");
+                 "Full FEM electron energy requires species.e.transport_coef "
+                 "and [Energy] transport_coefficient = fluid.");
   }
   saveSolverVariableName(energyStateName("e"));
   addRequiredPhysicsTask("add_variables_physics");
