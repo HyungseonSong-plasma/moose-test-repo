@@ -246,3 +246,37 @@ def test_native_surface_charge_fallback_is_allowed_but_same_current_output_is_no
     duplicate = native_current.replace("surface_current_native", "cover_net_surface_current_density")
     result = module.inspect({"duplicate.i": duplicate}, c2)
     assert "P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_1" in result["errors"]
+
+
+def test_new_run_electron_wall_rejects_native_eswallflux_duplicate():
+    from copy import deepcopy
+    new = deepcopy(JSON)
+    for sid, z in (("O2p", 1), ("Om", -1), ("Op", 1)):
+        record = new["species"][sid]
+        record["charge_number"] = z
+        record["molar_mass"] = 0.032 if sid == "O2p" else 0.016
+        record["transport_coef"] = {
+            "type": "functor", "file": "none", "unit": "physical"
+        }
+        record.pop("mobility")
+        record.pop("diffusivity")
+    new["drift_diffusion_boundaries"] = {
+        "inlet outlet plasma_electrode plasma_metal plasma_right": {
+            "e_wall": {"type": "FEMElectronSheathBC"}
+        }
+    }
+    new["ion_surface_current"] = {
+        "electron_wall_number_flux": "e_wall_number_flux"
+    }
+    duplicate = DECK + """
+[FunctorMaterials]
+  [old_electron_sheath_wall_flux]
+    type = ESWallFluxMaterial
+    species_id = e
+  []
+[]
+"""
+    result = module.inspect({"native.i": duplicate}, new)
+    assert "P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_1" in result["errors"]
+    assert result["c2_native_producer_collision_count"] == 1
+    assert result["c2_native_producer_collisions"][0]["family"] == "electron_wall"
