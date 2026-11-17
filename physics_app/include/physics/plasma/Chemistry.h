@@ -24,6 +24,9 @@ struct DDTransportRecord
   std::string pressure;
   std::string gas_temperature;
   std::string bounds_policy = "error";
+  // New object-shaped transport requires [Plasmas] pressure/temperature, not
+  // per-species gas Functor name overrides. Legacy flat files remain readable.
+  bool root_owned_gas = false;
 
   bool equals(const DDTransportRecord & rhs) const;
 };
@@ -84,6 +87,12 @@ struct SpeciesRecord
 {
   std::map<std::string, int> elements;
   int charge_number = 0;
+  // Common executable-run species metadata (even for e and neutrals).
+  // temperature_eV is k_B*T [eV], not a new independent energy PDE.
+  // 0 eV for a wall ion retains the existing gas-temperature fallback.
+  double molar_mass = 0.0;
+  std::optional<double> temperature_eV;
+  double sticking_coefficient = 0.0;
   // Needed only for rate laws evaluated from heavy-species mass fractions.
   double molar_mass_kg_mol = 0.0;
   // Initial number density [1/m^3] is required for every species selected
