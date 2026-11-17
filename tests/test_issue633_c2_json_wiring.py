@@ -117,7 +117,7 @@ def test_missing_or_overlap_sideset_group_fails():
     fail(lambda d: d["boundaries"].pop("plasma_focus_ring"),
          "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
     fail(lambda d: d["boundaries"].update(plasma_unknown={"bcs": {}}),
-         "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
+         "EMPTY_BC_GROUP")
 
 
 def test_surface_current_requires_electron_functor():
@@ -163,3 +163,153 @@ def test_wall_and_dielectric_classes_are_registered_by_ion2_donor():
     assert "namespace IonWallC2Detail" in wall
     for helper in ("isFaceArg", "outwardPositivePart", "outwardNormal", "faceElectricField"):
         assert "IonWallC2Detail::" + helper in wall
+
+
+
+def test_explicit_canonical_electron_wall_flux_is_allowed_only_when_named():
+    stage = data()
+    stage["ion_surface_current"]["electron_wall_number_flux"] = "e_wall_number_flux"
+    assert validate(stage)["surface_current_consumers"] == 3
+    fail(lambda d: d["ion_surface_current"].update(
+        electron_wall_number_flux="unverified_flux_alias"),
+        "INVALID_SURFACE_CURRENT_ELECTRON_CONSUMER")
+
+
+def test_fem_electron_and_ion_fv_bcs_can_share_a_group():
+    stage = data()
+    dielectric(stage)["e_cover_sheath"] = {
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "electron_wall_number_flux",
+    }
+    assert validate(stage)["dielectric_fvbcs"] == 9
+    stage["boundaries"]["left"] = {
+        "bcs": {
+            "e_left_sheath": {
+                "type": "FEMElectronSheathBC",
+                "variable": "log_e",
+                "wall_number_flux": "electron_wall_number_flux",
+            }
+        }
+    }
+    assert validate(stage)["normal_fvbcs"] == 3
+    stage["boundaries"]["left"]["bcs"]["bad_ion_on_left"] = {
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "signed_number_flux": "Op_wall_number_flux",
+    }
+    with pytest.raises(C2ContractError, match="MISSING_EXTRA_OR_OVERLAPPING_SIDESETS"):
+        validate(stage)
+
+
+def test_extra_and_duplicate_ion_boundary_operators_fail():
+    fail(lambda d: dielectric(d).update(O2p_duplicate={
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "signed_number_flux": "O2p_wall_number_flux",
+    }), "DUPLICATE_BC_OPERATOR")
+    fail(lambda d: general(d)["Om_wall"].update(type="PhysicsFVLogMolarDielectricFluxBC"),
+         "UNSUPPORTED_FV_BC_TYPE")
+    fail(lambda d: dielectric(d)["Op_cover_dielectric"].update(
+        variable="log_O2p"), "DUPLICATE_BC_OPERATOR")
+
+
+def test_electron_bc_duplicate_operator_and_bad_source_fail_closed():
+    stage = data()
+    electron = {
+        "type": "FEMElectronSheathBC", "variable": "log_e",
+        "wall_number_flux": "electron_wall_number_flux",
+    }
+    dielectric(stage)["e_cover_sheath"] = electron
+    dielectric(stage)["e_cover_again"] = dict(electron)
+    with pytest.raises(C2ContractError, match="DUPLICATE_BC_OPERATOR"):
+        validate(stage)
+    dielectric(stage).pop("e_cover_again")
+    dielectric(stage)["e_cover_sheath"]["wall_number_flux"] = "e_wall_number_flux"
+    with pytest.raises(C2ContractError, match="INVALID_EXISTING_FEM_ELECTRON_BC"):
+        validate(stage)
+
+
+def test_overlapping_sidesets_fail_even_across_separate_groups():
+    stage = data()
+    stage["boundaries"]["plasma_cover inlet"] = {
+        "bcs": {
+            "e_overlap": {
+                "type": "FEMElectronSheathBC", "variable": "log_e",
+                "wall_number_flux": "electron_wall_number_flux",
+            }
+        }
+    }
+    with pytest.raises(C2ContractError, match="MISSING_EXTRA_OR_OVERLAPPING_SIDESETS"):
+        validate(stage)
+
+
+def test_electron_and_density_producers_are_external_conditions_not_c2_fabrications():
+    energy = (ROOT / "physics_app/src/physics/plasma/DDEnergyEq.C").read_text()
+    chem = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
+    assert 'if (!sheath_wall)' in energy
+    assert 'getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall)' in energy
+    assert 'wall_type = "ESWallFluxMaterial"' in energy
+    assert 'bc.wall_number_flux != "electron_wall_number_flux"' in energy
+    # C2 checks explicit sources: ion_1/P09 and actual Scratch must prove
+    # live O2p/Om/Op_number_density and selected electron wall source.
+    assert 'params.set<MooseFunctorName>("ion_number_density") = wall.ion_number_density;' in chem
+    assert 'functors.push_back(_data.surfaceElectronWallFlux());' in chem
+    assert "1.602176634e-19*(" in chem
+    assert 'current_expression += "-ge";' in chem
+    assert 'const std::string flux = id + "_wall_number_flux";' in chem
+    assert 'bc.signed_number_flux != flux' in chem
+
+
+
+def test_existing_electron_energy_sheath_can_share_dielectric_side():
+    stage = data()
+    dielectric(stage)["electron_cover"] = {
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "electron_wall_number_flux",
+    }
+    dielectric(stage)["electron_energy_cover"] = {
+        "type": "FEMElectronEnergySheathBC",
+        "variable": "log_e_energy",
+        "wall_number_flux": "electron_wall_number_flux",
+        "mean_energy": "e_energy_eV",
+    }
+    assert validate(stage)["dielectric_fvbcs"] == 9
+    dielectric(stage)["electron_energy_cover"]["variable"] = "log_e"
+    with pytest.raises(C2ContractError, match="INVALID_EXISTING_FEM_ELECTRON_BC"):
+        validate(stage)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("type", []), ("type", {}), ("type", None), ("variable", None)
+])
+def test_malformed_boundary_type_and_variable_fail_as_contract_error(field, value):
+    stage = data()
+    general(stage)["O2p_wall"][field] = value
+    with pytest.raises(C2ContractError):
+        validate(stage)
+
+
+def test_non_string_electron_current_selection_fails_closed():
+    for invalid in (["electron_wall_number_flux"], None, 17):
+        stage = data()
+        stage["ion_surface_current"]["electron_wall_number_flux"] = invalid
+        with pytest.raises(C2ContractError, match="INVALID_SURFACE_CURRENT_ELECTRON_CONSUMER"):
+            validate(stage)
+
+
+
+def test_general_wall_group_permutation_preserves_same_five_physical_sidesets():
+    stage = data()
+    old = "inlet outlet plasma_electrode plasma_metal plasma_right"
+    new = "plasma_right plasma_metal inlet outlet plasma_electrode"
+    stage["boundaries"][new] = stage["boundaries"].pop(old)
+    assert validate(stage)["normal_fvbcs"] == 3
+
+
+def test_cpp_charge_guard_preserves_signed_s6_three_ion_ledger():
+    source = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
+    assert 'const int expected_charge = id == "Om" ? -1 : 1;' in source
+    assert 'if (_data.species(id).charge_number != expected_charge)' in source
+    assert 'current_expression += "-ge";' in source
