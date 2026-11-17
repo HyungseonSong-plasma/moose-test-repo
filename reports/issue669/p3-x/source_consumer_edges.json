@@ -1,12 +1,12 @@
 {
-  "schema": "issue669.p3_x.source_only.producer_consumer_edges.v1",
+  "schema": "issue669.p3_x.source_only.producer_consumer_edges.v2",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
   "evidence_class": "STATIC_LINEAGE_BOUNDED_NOT_NATIVE_WAREHOUSE",
   "cases": [
     "S6-417",
     "S6-941"
   ],
-  "status": "SOURCE_ONLY_PASS_RUNTIME_HOLD",
+  "status": "SOURCE_STAGE_AND_SHADOW_COLLISION_RESOLUTION_PASS__NATIVE_HOLD",
   "edges": [
     {
       "from": "unified_s6_{417,941}_newonly.json species.e.initial_number_density",
@@ -58,7 +58,11 @@
       "existing_hybrid_energy_bc": "electron_energy_sheath",
       "legacy_names_are_distinct_from_newonly_json_bc_names": true,
       "target_ownership_contract": "exactly one particle and one energy electron BC contribution per covered sideset; no duplicate Hybrid+JSON warehouse objects",
-      "integrated_native_verified": false
+      "integrated_native_verified": false,
+      "static_shadow_legacy_bc_removed": true,
+      "json_generated_bc_expected": true,
+      "actual_cpp_generation_owner": "PlasmasAction::act add_bc (Chemistry.C)",
+      "runtime_verified": false
     },
     {
       "region": "cover",
@@ -67,7 +71,11 @@
       "existing_hybrid_energy_bc": "electron_energy_cover",
       "legacy_names_are_distinct_from_newonly_json_bc_names": true,
       "target_ownership_contract": "exactly one particle and one energy electron BC contribution per covered sideset; no duplicate Hybrid+JSON warehouse objects",
-      "integrated_native_verified": false
+      "integrated_native_verified": false,
+      "static_shadow_legacy_bc_removed": true,
+      "json_generated_bc_expected": true,
+      "actual_cpp_generation_owner": "PlasmasAction::act add_bc (Chemistry.C)",
+      "runtime_verified": false
     },
     {
       "region": "wafer",
@@ -76,7 +84,11 @@
       "existing_hybrid_energy_bc": "electron_energy_wafer",
       "legacy_names_are_distinct_from_newonly_json_bc_names": true,
       "target_ownership_contract": "exactly one particle and one energy electron BC contribution per covered sideset; no duplicate Hybrid+JSON warehouse objects",
-      "integrated_native_verified": false
+      "integrated_native_verified": false,
+      "static_shadow_legacy_bc_removed": true,
+      "json_generated_bc_expected": true,
+      "actual_cpp_generation_owner": "PlasmasAction::act add_bc (Chemistry.C)",
+      "runtime_verified": false
     },
     {
       "region": "focus_ring",
@@ -85,13 +97,42 @@
       "existing_hybrid_energy_bc": "electron_energy_focus_ring",
       "legacy_names_are_distinct_from_newonly_json_bc_names": true,
       "target_ownership_contract": "exactly one particle and one energy electron BC contribution per covered sideset; no duplicate Hybrid+JSON warehouse objects",
-      "integrated_native_verified": false
+      "integrated_native_verified": false,
+      "static_shadow_legacy_bc_removed": true,
+      "json_generated_bc_expected": true,
+      "actual_cpp_generation_owner": "PlasmasAction::act add_bc (Chemistry.C)",
+      "runtime_verified": false
     }
   ],
-  "blocking_collision": "Existing Hybrid 8 electron FEM BC objects are still physically present in #668 ion-retired Scratch. Both New-only JSONs declare their own electron particle/energy BC contracts (8 entries). Verify explicit retirement or suppression of legacy BCs before enabling JSON-generated equivalents; fail closed for duplicate contributions. Do not use dont_create_kernels or workflow skips.",
+  "blocking_collision": "PR674 New-only physical stage retains eight Native electron FEM BCs + two electron FunctorMaterial providers; the C++ New-only path generates those e BCs and corresponding n_e_physical/e_wall_number_flux. Exact 10-block source-only shadow removal is PASS on disposable copied input, not yet in production runner or validated by actual Native warehouse.",
   "untested": [
     "native C++ warehouse object inventory",
     "late-bound electron WallFlux/energy Functor resolution",
     "New-only pressure/RF/neutral consumer reachability"
+  ],
+  "production_source_confirmation": {
+    "pr": 674,
+    "ci_run": 44199587771,
+    "artifact_id": 14380831538,
+    "actual_newonly_json_and_11th_layer_staged": true,
+    "electron_table_prepared_42_rows_actual_bytes_verified": true
+  },
+  "producer_collisions": [
+    {
+      "old_owner": "FunctorMaterials/electron_physical_density",
+      "functor": "n_e_physical",
+      "new_owner": "DDEnergyEq generated ADParsedFunctorMaterial",
+      "old_block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "source_only_shadow_removed": true,
+      "runtime_rebind_verified": false
+    },
+    {
+      "old_owner": "FunctorMaterials/electron_wall_flux",
+      "functor": "e_wall_number_flux",
+      "new_owner": "DDEnergyEq generated ESWallFluxMaterial",
+      "old_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "source_only_shadow_removed": true,
+      "runtime_rebind_verified": false
+    }
   ]
 }
