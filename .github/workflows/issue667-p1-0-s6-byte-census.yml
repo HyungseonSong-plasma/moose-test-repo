@@ -1,0 +1,232 @@
+name: Issue667 P1-0 exact-source scratch D 22 input byte manifest (P0 only)
+run-name: Issue667 P1-0 11-layer SHA readback on pinned PR665
+on:
+  push:
+    branches:
+      - issue-667-p1-0-s6-byte-census-20261117
+    paths:
+      - '.github/workflows/issue667-p1-0-s6-byte-census.yml'
+permissions:
+  contents: read
+jobs:
+  byte-census:
+    name: Verify and preserve 417 and 941 actual 11-layer scratch inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact unchanged PR 665 source HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: 9c15a4f0e2cf8042cb0d4b2f18af31511021d168
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Source-only scratch D staging and exact byte SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from __future__ import annotations
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+          import subprocess
+          import sys
+          import traceback
+          
+          PIN = "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          C0_SHA = "e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd"
+          BASE = Path.cwd().resolve()
+          OUT = Path(os.environ["RUNNER_TEMP"]) / "issue667-p1-0-output"
+          OUT.mkdir(parents=True, exist_ok=False)
+          assert subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip() == PIN
+          assert os.environ["GITHUB_REF_NAME"] == "issue-667-p1-0-s6-byte-census-20261117"
+          
+          sys.path.insert(0, str(BASE / "experiments/Issue402_plasma_dsl_g1"))
+          import public_option_s6_p2 as option
+          from chemistry.prepare_s6_run_input import prepare
+          
+          def sha(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest()
+          
+          def block_for(name: str, data: str):
+              pat = re.compile(r"(?m)^  \[" + re.escape(name) + r"\][ \t]*\r?\n"
+                               r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+                               r"^  \[\][ \t]*(?:\r?\n|$)")
+              return list(pat.finditer(data))
+          
+          EXPECTED = {
+            "ion_cover_dielectric": ("log_O2p", "O2p_wall_number_flux"),
+            "negative_ion_cover_dielectric": ("log_Om", "Om_wall_number_flux"),
+            "atomic_positive_ion_cover_dielectric": ("log_Op", "Op_wall_number_flux"),
+          }
+          
+          def verify_cover(texts: dict[str, str]):
+              entries = []
+              for name, (variable, signed_flux) in EXPECTED.items():
+                  all_found = [(layer, match, contents) for layer, contents in texts.items()
+                               for match in block_for(name, contents)]
+                  if len(all_found) != 1:
+                      raise ValueError("COVER_OBJECT_COUNT_" + name + "_" + str(len(all_found)))
+                  layer, match, contents = all_found[0]
+                  sections = re.findall(r"(?m)^\[([A-Za-z0-9_]+)\][ \t]*$", contents[:match.start()])
+                  if not sections or sections[-1] != "FVBCs":
+                      raise ValueError("COVER_NOT_FVBC_" + name)
+                  pairs = {}
+                  for line in match.group("body").splitlines():
+                      item = re.fullmatch(r"    ([A-Za-z_][A-Za-z_0-9]*)[ \t]*=[ \t]*([^\r\n]+)", line)
+                      if not item or item.group(1) in pairs:
+                          raise ValueError("COVER_PARSE_" + name)
+                      pairs[item.group(1)] = item.group(2).strip()
+                  expected = {
+                      "type": "PhysicsFVLogMolarDielectricFluxBC",
+                      "variable": variable,
+                      "signed_number_flux": signed_flux,
+                      "boundary": "plasma_cover",
+                  }
+                  if pairs != expected:
+                      raise ValueError("COVER_PARAMETER_DRIFT_" + name + "_" + repr(pairs))
+                  entries.append({
+                      "object_name": name, "section": "FVBCs",
+                      "layer_path": layer, "factory_type": pairs["type"],
+                      "variable": variable, "signed_number_flux": signed_flux,
+                      "boundary": "plasma_cover",
+                      "block_sha256": sha(match.group(0).encode("utf-8")),
+                      "block_size_bytes": len(match.group(0).encode("utf-8")),
+                      "block_start_line": contents[:match.start()].count("\n") + 1,
+                  })
+              return entries
+          
+          def check_mutations(texts: dict[str, str]):
+              base = next(n for n in texts if "__C0_chemistry_off.i" in n)
+              origin = texts[base]
+              first = block_for("ion_cover_dielectric", origin)[0].group(0)
+              controls = {
+                "wrong_boundary": origin.replace("boundary = plasma_cover", "boundary = plasma_wafer", 1),
+                "wrong_variable": origin.replace("variable = log_O2p", "variable = log_Op", 1),
+                "wrong_factory": origin.replace("type = PhysicsFVLogMolarDielectricFluxBC", "type = UnknownCoverFactory", 1),
+                "wrong_signed_flux": origin.replace("signed_number_flux = O2p_wall_number_flux", "signed_number_flux = Om_wall_number_flux", 1),
+                "duplicate_owner": origin.replace("  [negative_ion_cover_dielectric]", first + "  [negative_ion_cover_dielectric]", 1),
+                "missing_owner": origin.replace(first, "", 1),
+              }
+              result = {}
+              for label, mutation in controls.items():
+                  if mutation == origin:
+                      raise ValueError("NEGATIVE_CONTROL_NO_MUTATION_" + label)
+                  modified = dict(texts)
+                  modified[base] = mutation
+                  try:
+                      verify_cover(modified)
+                  except ValueError:
+                      result[label] = "REJECTED_AS_EXPECTED"
+                  else:
+                      raise ValueError("NEGATIVE_CONTROL_FALSE_PASS_" + label)
+              return result
+          
+          data = {
+            "schema_version": 1,
+            "task": "P1-0 exact SHA 11-layer evidence / P1-A2-2 downstream",
+            "source_head": PIN,
+            "github_workflow_event_head": os.environ["GITHUB_SHA"],
+            "provenance": "PR#665 exact source checkout + sha-pinned public C source decks + debug-free D base",
+            "evidence_class": "STATIC_SCRATCH_BYTES_ONLY_NOT_NATIVE_P2",
+            "private_rate_bytes": "EXCLUDED",
+            "native_P2": "NOT_RUN", "native_P3": "NOT_RUN", "native_P4": "NOT_RUN",
+            "science": "SCIENCE_HOLD",
+            "cases": {},
+            "overall_status": "HOLD",
+          }
+          try:
+              public = option.p2.preflight(BASE)
+              if public.get("P0") != "PASS":
+                  raise ValueError("PUBLIC_P2_DECK_PREFLIGHT_FAILED")
+              manifest_file = BASE / option.p2.DECKS / "manifest.json"
+              manifest = json.loads(manifest_file.read_text())
+              data["public_source_manifest_sha256"] = sha(manifest_file.read_bytes())
+              d_base = BASE / "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i"
+              if sha(d_base.read_bytes()) != C0_SHA:
+                  raise ValueError("D_BASE_SHA_DRIFT")
+              data["c0_base_sha256"] = C0_SHA
+              for case in ("417", "941"):
+                  report = {"case": case, "status": "HOLD", "ordered_layers": [],
+                            "Cover_FVBCs": [], "negative_controls": {}}
+                  data["cases"][case] = report
+                  try:
+                      rec = manifest["cases"][case]
+                      src = BASE / option.p2.DECKS / rec["name"] / "C"
+                      if len(rec["input_order"]) != 10 or len(set(rec["input_order"])) != 10:
+                          raise ValueError("SOURCE_10_LAYER_ORDER_DRIFT")
+                      names = rec["input_order"] + ["migrated_continuity.i"]
+                      if len(names) != 11 or len(set(names)) != 11:
+                          raise ValueError("SOURCE_11_LAYER_ORDER_INVALID")
+                      folder = OUT / case
+                      folder.mkdir(parents=True, exist_ok=False)
+                      for idx, name in enumerate(names):
+                          if Path(name).name != name or not name.endswith(".i"):
+                              raise ValueError("UNSAFE_LAYER_NAME")
+                          srcfile = d_base if idx == 0 else src / name
+                          source_bytes = srcfile.read_bytes()
+                          expected = C0_SHA if idx == 0 else rec["files_sha256"]["C"][name]
+                          if sha(source_bytes) != expected:
+                              raise ValueError("SOURCE_HASH_MISMATCH_" + name)
+                          (folder / name).write_bytes(source_bytes)
+                      ordered = [str(option.p2.CHEM / n) for n in names]
+                      canonical = option.canonicalize_staged_D_inputs(folder, ordered)
+                      remap = option.remap_staged_fem_types(folder, ordered)
+                      chemistry = prepare(folder, ordered, case)
+                      if chemistry["status"] != "P2_INPUT_PREPARED":
+                          raise ValueError("CHEMISTRY_PREPARATION_NOT_COMPLETE")
+                      texts = {}
+                      for idx, name in enumerate(names):
+                          path = folder / name
+                          raw = path.read_bytes()
+                          if not raw or not raw.endswith(b"\n"):
+                              raise ValueError("EMPTY_OR_UNTERMINATED_LAYER_" + name)
+                          txt = raw.decode("utf-8")
+                          includes = re.findall(r"(?m)^[ \t]*!include[ \t]+([^\r\n#]+)", txt)
+                          texts[name] = txt
+                          report["ordered_layers"].append({
+                            "case": case, "layer_ordinal": idx + 1,
+                            "file_path": name, "file_sha256": sha(raw),
+                            "bytes": len(raw), "include_targets": [x.strip().strip("'\"") for x in includes],
+                            "source_head": PIN
+                          })
+                      report["Cover_FVBCs"] = verify_cover(texts)
+                      report["negative_controls"] = check_mutations(texts)
+                      if len(report["ordered_layers"]) != 11 or len(report["Cover_FVBCs"]) != 3:
+                          raise ValueError("INVENTORY_CARDINALITY_FAIL")
+                      if any(item["include_targets"] for item in report["ordered_layers"]):
+                          raise ValueError("UNRESOLVED_INCLUDE_GRAPH")
+                      report["canonicalization"] = canonical["status"]
+                      report["factory_type_remap"] = remap.get("status", "completed")
+                      report["chemistry_prep"] = chemistry["status"]
+                      report["status"] = "PASS_STATIC_FINAL_STAGED_BYTES"
+                  except Exception as error:
+                      report["status"] = "HOLD"
+                      report["error"] = type(error).__name__ + ": " + str(error)[:450]
+                      print("CASE_FAIL",case,report["error"], flush=True)
+              if all(data["cases"][case]["status"] == "PASS_STATIC_FINAL_STAGED_BYTES"
+                     for case in ("417", "941")):
+                  data["overall_status"] = "PASS_STATIC_22_LAYER_BYTE_READBACK"
+          except Exception as error:
+              data["overall_status"] = "HOLD"
+              data["error"] = type(error).__name__ + ": " + str(error)[:700]
+          finally:
+              (OUT / "p1_0_exact_head_11layer_manifest.json").write_text(
+                  json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+              print(json.dumps({
+                  "source_head":PIN,"status":data["overall_status"],
+                  "cases":{key:value["status"] for key,value in data["cases"].items()},
+                  "error":data.get("error")}, sort_keys=True))
+          sys.exit(0 if data["overall_status"] == "PASS_STATIC_22_LAYER_BYTE_READBACK" else 3)
+          PY
+      - name: Keep only input .i layers and their SHA manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue667-p1-0-scratch-11layer-inputs
+          path: ${{ runner.temp }}/issue667-p1-0-output/
+          if-no-files-found: error
+          retention-days: 14
