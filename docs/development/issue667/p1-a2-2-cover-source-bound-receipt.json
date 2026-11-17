@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "task_id": "P1-A2-2",
+  "issue": 667,
+  "parent_task_id": "P1-0",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_evidence": "P1-0 actual staged public_chemistry 11-layer files; not P2 execution",
+  "p1_0_manifest": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/aa1e414d669c3e0269feb6dce5d31ca0e09924a6/docs/development/issue667/p1-0-s6-417-941-exact-11layer-sha-manifest.json",
+  "pr_665_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/665",
+  "verified_run": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182271555",
+  "artifact_id": 14372727434,
+  "artifact_sha256": "1c3e3b48af473de953ef2b67c660616baf6e161bbecb06b0706bcfc05cbe8",
+  "cases": {
+    "417": {
+      "status": "PASS_STATIC_SOURCE_BOUND",
+      "staged_layer_count": 11,
+      "cover_blocks": [
+        {
+          "object_name": "ion_cover_dielectric",
+          "variable": "log_O2p",
+          "signed_number_flux": "O2p_wall_number_flux",
+          "block_sha256": "6cf04ff67cabc68ad5852678c5c83c646495f994c5bf6c7dfc3628d637812d5b",
+          "section": "FVBCs",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "boundary": "plasma_cover",
+          "layer_ordinal": 1,
+          "staged_file_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+        },
+        {
+          "object_name": "negative_ion_cover_dielectric",
+          "variable": "log_Om",
+          "signed_number_flux": "Om_wall_number_flux",
+          "block_sha256": "61acf3daa0654c6beb7220c7aaca1f3dbab944e9586a09e756aa2d419014ff02",
+          "section": "FVBCs",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "boundary": "plasma_cover",
+          "layer_ordinal": 1,
+          "staged_file_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+        },
+        {
+          "object_name": "atomic_positive_ion_cover_dielectric",
+          "variable": "log_Op",
+          "signed_number_flux": "Op_wall_number_flux",
+          "block_sha256": "f44eddb6f571b5bc1b33cbe08a772bba4dcc86f129f53fe4127b715f47cfbe45",
+          "section": "FVBCs",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "boundary": "plasma_cover",
+          "layer_ordinal": 1,
+          "staged_file_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+        }
+      ],
+      "negative_tests": 6
+    },
+    "941": {
+      "status": "PASS_STATIC_SOURCE_BOUND",
+      "staged_layer_count": 11,
+      "cover_blocks": [
+        {
+          "object_name": "ion_cover_dielectric",
+          "variable": "log_O2p",
+          "signed_number_flux": "O2p_wall_number_flux",
+          "block_sha256": "6cf04ff67cabc68ad5852678c5c83c646495f994c5bf6c7dfc3628d637812d5b",
+          "section": "FVBCs",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "boundary": "plasma_cover",
+          "layer_ordinal": 1,
+          "staged_file_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+        },
+        {
+          "object_name": "negative_ion_cover_dielectric",
+          "variable": "log_Om",
+          "signed_number_flux": "Om_wall_number_flux",
+          "block_sha256": "61acf3daa0654c6beb7220c7aaca1f3dbab944e9586a09e756aa2d419014ff02",
+          "section": "FVBCs",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "boundary": "plasma_cover",
+          "layer_ordinal": 1,
+          "staged_file_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+        },
+        {
+          "object_name": "atomic_positive_ion_cover_dielectric",
+          "variable": "log_Op",
+          "signed_number_flux": "Op_wall_number_flux",
+          "block_sha256": "f44eddb6f571b5bc1b33cbe08a772bba4dcc86f129f53fe4127b715f47cfbe45",
+          "section": "FVBCs",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "boundary": "plasma_cover",
+          "layer_ordinal": 1,
+          "staged_file_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+        }
+      ],
+      "negative_tests": 6
+    }
+  },
+  "signed_flux_residual": "PhysicsFVLogMolarDielectricFluxBC::computeQpResidual = signed_number_flux / N_A (implementation readback)",
+  "nonin_scope": "No Wafer/Focus ring/general BC claims, no other species ion kernel or source/rate census",
+  "overall_verdict": "P1_A2_2_PASS_STATIC_FINAL_11LAYER_BYTES",
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "SCIENCE": "HOLD",
+  "NEW_ONLY_S6_P2": "HOLD",
+  "remaining": "P1-E to combine independent A1/A2/B/C/D receipts; other S6 production staging routes need independent proof."
+}
