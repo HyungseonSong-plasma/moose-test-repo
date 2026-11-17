@@ -416,17 +416,20 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         fail(file, "electron 'e' must carry -1 charge and zero nuclei");
       // Versionless, opt-in final-run schema. These fields have the SAME
       // shape for electrons, ions and neutrals; null temperature/density means
-      // no separately specified initial solver condition. Only bool gradient
-      // flags enable a charged heavy-ion Wall Material.
+      // no separately specified initial solver condition. A charged heavy
+      // species with transport enabled obtains a Wall Material; its common
+      // gradient method belongs exclusively in [Plasmas].
       const bool new_species_schema =
           record.contains("molar_mass") || record.contains("temperature_eV") ||
           record.contains("sticking_coefficient") ||
           (record.contains("transport_coef") && record.at("transport_coef").is_object());
       if (new_species_schema)
       {
+        if (record.contains("wall_use_element_gradient_for_potential"))
+          fail(file, "species." + it.key() +
+                         ".wall_use_element_gradient_for_potential moved to [Plasmas] wall_gradient");
         for (const auto * key : {"molar_mass", "temperature_eV", "sticking_coefficient",
-                                 "transport_coef", "initial_number_density",
-                                 "wall_use_element_gradient_for_potential"})
+                                 "transport_coef", "initial_number_density"})
           if (!record.contains(key))
             fail(file, "species." + it.key() + " missing common field " + key);
         if (!record.at("molar_mass").is_number() ||
@@ -447,18 +450,14 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
             fail(file, "species." + it.key() + " temperature_eV must be finite and nonnegative");
           species.temperature_eV = temperature;
         }
-        const auto & gradient = record.at("wall_use_element_gradient_for_potential");
-        if (!gradient.is_null() && !gradient.is_boolean())
-          fail(file, "species." + it.key() + " wall gradient flag must be bool or null");
-        if (gradient.is_boolean())
+        const auto & transport = record.at("transport_coef");
+        if (it.key() != "e" && species.charge_number != 0 &&
+            transport.is_object() && transport.value("type", std::string()) != "none")
         {
-          if (it.key() == "e" || species.charge_number == 0)
-            fail(file, "only charged heavy ions may enable a wall gradient selection");
           IonWallRecord wall;
           wall.molar_mass = species.molar_mass;
           wall.sticking = species.sticking_coefficient;
           wall.ion_temperature_eV = species.temperature_eV.value_or(0.0);
-          wall.use_element_gradient_for_potential = gradient.get<bool>();
           species.ion_wall = wall;
         }
       }
