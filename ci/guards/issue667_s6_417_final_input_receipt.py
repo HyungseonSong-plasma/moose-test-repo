@@ -53,7 +53,8 @@ def stage_archived_inputs(archive: Path, scratch: Path, control: Path):
         manifests = [x for x in z.namelist() if x.endswith("/case_manifest.json")]
         if len(manifests) != 1 or len(originals) != 10:
             raise ValueError("ORIGINAL_ARCHIVE_LAYOUT_CHANGED")
-        manifest = json.loads(z.read(manifests[0]))
+        case_manifest_bytes = z.read(manifests[0])
+        manifest = json.loads(case_manifest_bytes)
         order = manifest["input_paths"]
         if (manifest.get("case") != CASE or
                 manifest.get("source_sha") != HISTORICAL_HEAD or len(order) != 10):
@@ -100,7 +101,7 @@ def stage_archived_inputs(archive: Path, scratch: Path, control: Path):
     shutil.copyfile(public_table, destination)
     return chemistry, [str(CHEM / Path(x).name) for x in order] + [
         str(CHEM / "migrated_continuity.i")
-    ], entries, manifest
+    ], entries, manifest, digest(case_manifest_bytes)
 
 
 def produce(control: Path, archive: Path, output: Path):
@@ -114,7 +115,7 @@ def produce(control: Path, archive: Path, output: Path):
     output.mkdir(parents=True)
     stage = output / "scratch"
     stage.mkdir()
-    chemistry, ordered, original, src_manifest = stage_archived_inputs(
+    chemistry, ordered, original, src_manifest, raw_manifest_sha = stage_archived_inputs(
         archive, stage, control
     )
     sys.path.insert(
@@ -205,9 +206,7 @@ def produce(control: Path, archive: Path, output: Path):
         "historical_source": HISTORICAL_HEAD,
         "original_artifact_id": 13677089020,
         "original_zip_sha256": ZIP_SHA256,
-        "original_case_manifest_sha256": digest(
-            json.dumps(src_manifest, sort_keys=True).encode("utf-8")
-        ),
+        "original_case_manifest_sha256": raw_manifest_sha,
         "first_layer_override": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
         "first_layer_override_sha256": file_sha(
             control / "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i"
