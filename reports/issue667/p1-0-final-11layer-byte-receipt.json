@@ -1,0 +1,54 @@
+{
+  "schema": "issue667.p1_0.final_11layer_byte_receipt.v1",
+  "parent_issue": 633,
+  "issue": 667,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "workflow_run": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182176604",
+  "workflow_run_result": "SUCCESS",
+  "workflow_commit": "0db47e6b31a9447dffa4b7f5200210393b20db3a",
+  "artifact_id": 14372442471,
+  "artifact_name": "issue667-p1-0-final-11layer-byte-receipt-9c15a4f0",
+  "artifact_zip_sha256": "abf1baa1bd8a465de91c223182c39e57ea4da8e4a97e929ece0c270c2209427b",
+  "evidence_zip_entries": 23,
+  "source_417_archive_artifact": 13677089020,
+  "source_941_archive_artifact": 13677375813,
+  "cases": {
+    "417": {
+      "files": 11,
+      "identified_ion_fv_kernels": 14,
+      "identified_ion_fv_bcs": 12,
+      "ion_owner_block_sha_recomputed": 26,
+      "om_block_count": 3,
+      "layer11_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "ordered_file_sha256_digest": "fc5f89ecd351a067e37fa9350f9859c7dd4cc3a6a9542ac9212a5b8104960e56"
+    },
+    "941": {
+      "files": 11,
+      "identified_ion_fv_kernels": 14,
+      "identified_ion_fv_bcs": 12,
+      "ion_owner_block_sha_recomputed": 26,
+      "om_block_count": 3,
+      "layer11_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "ordered_file_sha256_digest": "760f9e8e7d0df1d129064b43907c2c582cb5e9ff22d71f335fe0247720f3f7d3"
+    }
+  },
+  "independent_byte_recomputed": {
+    "files": "22/22",
+    "in_scope_ion_native_blocks": "52/52",
+    "om_blocks": "6/6",
+    "om_against_prior_projection": "6/6",
+    "include_directives": 0,
+    "private_rate_raw_artifact_entries": 0
+  },
+  "prior_CI_discrepancy": "The previous status.json scratch_fem_type_remap per-file hashes were intermediate, before subsequent Chemistry/Hybrid rewrites; all 22 final byte hashes differ. Do not substitute them for finalized hashes.",
+  "receipt_local_sha256": "8cb4a9dd166c89ec840e97896ddca7dfede860472a1793a00a8cabc06ea2262f",
+  "om_receipt_local_sha256": "5b3d1e48096c19f1ed5abb03ade75076f257f0e88f089bde926d26bdb865ebf6",
+  "validation": "P1_0_FINAL_11_LAYER_BYTE_AND_INDEPENDENT_SHA_PASS",
+  "science": "SCIENCE_HOLD",
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "native_cutover": "HOLD",
+  "provenance_boundary": "Only the exact PR #665 Scratch D with legacy Native FV owners retained. Does not prove New-only input or Physics-generated 24-object runtime ownership."
+}
