@@ -44,10 +44,13 @@ def validate(text: str, mechanism: dict) -> dict:
         doc = MooseInput(text)
         fem = words(get_parameter(text, CONTINUITY, "fem_species"))
         fvm = words(get_parameter(text, CONTINUITY, "fvm_species"))
+        potential = words(get_parameter(text, CONTINUITY, "fem_potential"))
     except (MooseInputError, ValueError) as exc:
         raise OwnerContractError(f"INVALID_HIT: {exc}") from exc
     if not (fem or fvm):
         raise OwnerContractError("MISSING_SELECTION: fem_species/fvm_species")
+    if len(potential) != 1:
+        raise OwnerContractError("MISSING_POTENTIAL: explicit fem_potential required")
     ids = fem + fvm
     if len(ids) != len(set(ids)):
         raise OwnerContractError("DUPLICATE_DISCRETIZATION: selected species repeated")
