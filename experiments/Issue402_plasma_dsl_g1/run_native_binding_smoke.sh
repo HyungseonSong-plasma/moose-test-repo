@@ -99,6 +99,14 @@ native --check-input -i "$PILOT/issue633_ion_continuity_newonly_p2.i" \
   2>&1 | tee "$EVIDENCE/issue633_ion_continuity_newonly_p2.log"
 echo "ISSUE633_ION_CONTINUITY_NEW_ONLY_P2_PASS"
 
+# C2 combined P2: synthetic 2D sidesets with actual 3 species x 4 FV kernels,
+# 3 new wall-flux Materials, 12 JSON-generated FV BCs, and three surface
+# current functors. No Native ion operators and no Poisson or time integration.
+# Never treat synthetic P2 as full S6-417/941 replacement/science acceptance.
+native --check-input -i "$PILOT/issue633_ion_continuity_wall_bc_newonly_p2.i" \
+  2>&1 | tee "$EVIDENCE/issue633_ion_continuity_wall_bc_newonly_p2.log"
+echo "ISSUE633_ION_CONTINUITY_WALL_BC_NEW_ONLY_P2_PASS"
+
 # Exact-HEAD negative P2: Om lacks a volume source, so the otherwise valid
 # JSON + .i selection must fail before accepting a partial FV equation.
 set +e
