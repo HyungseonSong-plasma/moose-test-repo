@@ -8,6 +8,8 @@
     pressure = 1.333223684
     temperature = 300
     state_model = ideal_gas
+    # Shared FEM-potential gradient evaluation for every C2 FV ion wall.
+    wall_gradient = adjacent_element
     [Transport]
       [Chemistry]
         block = plasma
