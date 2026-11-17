@@ -280,7 +280,7 @@ echo "PLASMA_JSON_SPECIES_INITIAL_P2_PASS"
 native --check-input -i "$PILOT/auto_energy_potential_p2.i" \
   2>&1 | tee "$EVIDENCE/auto_energy_potential_p2.log"
 echo "PLASMA_AUTO_ENERGY_POTENTIAL_P2_PASS"
-for entry in "invalid_auto_energy_missing_initial_p2:requires an explicit positive initial molar" \
+for entry in "invalid_auto_energy_missing_initial_p2:requires either explicit .i initial_molar_energy_density_eV or species.e initial_number_density and positive temperature_eV in JSON" \
              "invalid_auto_energy_zero_initial_p2:must be finite and strictly positive" \
              "invalid_auto_poisson_nan_initial_p2:invalid syntax for double parameter"; do
   item="${entry%%:*}"
