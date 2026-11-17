@@ -1,0 +1,180 @@
+name: Issue667 P1-0 exact-665 Scratch D source pin (P0 only)
+on:
+  push:
+    branches: [issue-667-p1-0-sourcepin-9c15a4f-20261117]
+permissions:
+  contents: read
+concurrency:
+  group: issue667-p1-0-665-source-pin
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 9c15a4f0e2cf8042cb0d4b2f18af31511021d168
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          persist-credentials: false
+      - name: Reconstruct exact S6 Scratch D and hash 11-layer inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, re, shutil, subprocess, sys, tempfile
+          from pathlib import Path
+          
+          SOURCE=Path("control").resolve()
+          HIST=Path("historical").resolve()
+          DEST=Path("capture").resolve()
+          PIN="9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          ARCHIVE_PIN="29d1acc6ef7969908b86719e4b95c73a1565136d"
+          A1={"ni_time":("PhysicsFVLogMolarElectronTimeDerivative","log_O2p"),
+              "ni_diffusion":("PhysicsFVLogMolarElectronDiffusion","log_O2p"),
+              "ni_drift":("PhysicsFVLogMolarElectrostaticDrift","log_O2p")}
+          ION_VARS={"log_O2p","log_Om","log_Op"}
+          ZIP_SHA={"417":"441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+                   "941":"d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"}
+          
+          def sha(data): return hashlib.sha256(data).hexdigest()
+          def head(path):
+              return subprocess.check_output(["git","-C",str(path),"rev-parse","HEAD"],text=True).strip()
+          
+          def scan(data,rel,ordinal):
+              text=data.decode("utf-8")
+              found=[]; stack=[]; offset=0
+              for number,line in enumerate(text.splitlines(keepends=True),1):
+                  match=re.fullmatch(r"\s*\[([^\]]*)\]\s*",line.strip())
+                  if match:
+                      name=match.group(1)
+                      if name:
+                          stack.append((name,offset,number))
+                      elif stack:
+                          name,start,first=stack.pop()
+                          if len(stack)==1 and stack[0][0] in ("FVKernels","FVBCs"):
+                              block=text[start:offset+len(line)]
+                              params={}
+                              for setting in block.splitlines()[1:-1]:
+                                  m=re.fullmatch(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*",setting)
+                                  if m:
+                                      if m.group(1) in params: raise ValueError("DUPLICATE_PARAMETER:"+name)
+                                      params[m.group(1)]=m.group(2)
+                              found.append({"layer_ordinal":ordinal,"file_path":rel,
+                                            "section":stack[0][0],"object_name":name,
+                                            "factory_type":params.get("type"),
+                                            "variable":params.get("variable"),
+                                            "parameters":params,"line_start":first,
+                                            "line_end":number,"block_sha256":sha(block.encode("utf-8"))})
+                  offset+=len(line)
+              if stack: raise ValueError("UNBALANCED_INPUT:"+rel)
+              if re.search(r"(?m)^\s*!include\b",text): raise ValueError("UNRESOLVED_INCLUDE:"+rel)
+              return found
+          
+          def verify(objects):
+              names=[(o["section"],o["object_name"]) for o in objects]
+              if len(names)!=len(set(names)): raise ValueError("DUPLICATE_FV_OBJECT")
+              ion=[o for o in objects if o["variable"] in ION_VARS]
+              k=sum(o["section"]=="FVKernels" for o in ion)
+              b=sum(o["section"]=="FVBCs" for o in ion)
+              if (k,b)!=(14,12): raise ValueError("ION_26_OWNER_COUNT:"+str((k,b)))
+              for name,(factory,variable) in A1.items():
+                  hits=[o for o in objects if o["section"]=="FVKernels" and o["object_name"]==name]
+                  if len(hits)!=1 or hits[0]["factory_type"]!=factory or hits[0]["variable"]!=variable:
+                      raise ValueError("A1_MISSING_DUPLICATE_OR_FACTORY:"+name)
+              return {"native_ion_kernels":k,"native_ion_fvbcs":b,
+                      "native_ion_owner_total":len(ion),
+                      "a1_1_object_count":{name:1 for name in A1}}
+          
+          def main():
+              DEST.mkdir(exist_ok=False)
+              status={"schema":"issue667.p1_0.pin.v1","status":"HOLD","source_head":PIN,
+                      "historical_head":ARCHIVE_PIN,"P2":"NOT_RUN","P3":"NOT_RUN",
+                      "P4":"NOT_RUN","science":"SCIENCE_HOLD","cases":{}}
+              try:
+                  assert len(scan(b"[FVKernels]\n  [ni_time]\n    variable = log_O2p\n  []\n[]\n","test.i",1))==1
+                  for bad in (b"!include hidden.i\n",b"[FVKernels]\n"):
+                      try: scan(bad,"negative.i",1)
+                      except ValueError: pass
+                      else: raise ValueError("NEGATIVE_SELFTEST_ACCEPTED")
+                  if head(SOURCE)!=PIN or head(HIST)!=ARCHIVE_PIN: raise ValueError("EXACT_CHECKOUT_PIN_MISMATCH")
+                  if (HIST/"experiments/Issue395_powered_chemistry_ladder/private_rates").exists():
+                      raise ValueError("HISTORICAL_PRIVATE_RATE_DIRECTORY")
+                  sys.path.insert(0,str(SOURCE/"experiments/Issue402_plasma_dsl_g1"))
+                  import public_option_s6_p2 as option
+                  from chemistry.prepare_s6_run_input import prepare as prepare_chemistry
+                  from chemistry.prepare_hybrid_json_s6 import prepare as prepare_hybrid
+                  if option.p2.preflight(SOURCE)["P0"]!="PASS": raise ValueError("PUBLIC_P0_PIN_FAILED")
+                  public_manifest=json.loads((SOURCE/option.p2.DECKS/"manifest.json").read_text())
+                  for case in ("417","941"):
+                      with tempfile.TemporaryDirectory(prefix="p1_0_") as folder:
+                          staged=Path(folder)/"scratch"
+                          c0=SOURCE/"experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i"
+                          ordered=option.p2.stage(SOURCE,HIST,case,"C",staged,public_manifest,d_base_source=c0)
+                          names=[Path(item).name for item in ordered]
+                          if len(names)!=11 or len(set(names))!=11 or names[-1]!="migrated_continuity.i":
+                              raise ValueError("NOT_EXACT_11_LAYERS:"+case)
+                          chemistry=staged/option.p2.CHEM
+                          option.canonicalize_staged_D_inputs(chemistry,ordered)
+                          option.remap_staged_fem_types(chemistry,ordered)
+                          chem=prepare_chemistry(chemistry,ordered,case)
+                          hybrid=prepare_hybrid(chemistry,ordered,case,chemistry_cutover=chem)
+                          if (hybrid["removed_generated_owner_count"],
+                              hybrid["rebound_native_sheath_bc_count"],
+                              hybrid["integrated_species_count"],
+                              hybrid["integrated_reaction_count"])!=(10,8,7,8):
+                              raise ValueError("HYBRID_GENERATION_CONTRACT:"+case)
+                          dst=DEST/("S6-"+case); dst.mkdir()
+                          entries=[]; objects=[]
+                          for ordinal,(relative,name) in enumerate(zip(ordered,names,strict=True),1):
+                              file=staged/relative
+                              if not file.is_file() or file.is_symlink() or name.startswith("."):
+                                  raise ValueError("UNSAFE_LAYER:"+relative)
+                              data=file.read_bytes()
+                              if not data or b"\x00" in data or len(data)>150000:
+                                  raise ValueError("BAD_LAYER_BYTES:"+relative)
+                              blocks=scan(data,relative,ordinal)
+                              shutil.copyfile(file,dst/name)
+                              if (dst/name).read_bytes()!=data: raise ValueError("FILE_COPY_READBACK")
+                              entries.append({"layer_ordinal":ordinal,"file_path":relative,
+                                              "filename":name,"file_sha256":sha(data),
+                                              "size_bytes":len(data),"fv_block_count":len(blocks)})
+                              objects.extend(blocks)
+                          counts=verify(objects)
+                          receipt={"schema":"issue667.p1_0.case.v1","case":case,
+                                   "source_head":PIN,"historical_head":ARCHIVE_PIN,
+                                   "original_zip_sha256_prior_verification":ZIP_SHA[case],
+                                   "status":"SOURCE_BYTES_PINNED_PENDING_INDEPENDENT_READBACK",
+                                   "input_order":names,"layers":entries,"fv_object_blocks":objects,
+                                   "counts":counts,"private_rate_bytes_published":False,
+                                   "P2":"NOT_RUN","P3":"NOT_RUN","P4":"NOT_RUN",
+                                   "science":"SCIENCE_HOLD"}
+                          (dst/"manifest.json").write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+                          if {x.name for x in dst.iterdir()}!=set(names)|{"manifest.json"}:
+                              raise ValueError("NOT_ALLOWLISTED_ARTIFACT")
+                          status["cases"][case]="SOURCE_BYTE_PIN_PASS"
+                          print("P1_0_S6_"+case+"_PINNED 11 files 14 kernels 12 BC",flush=True)
+                  status["status"]="SOURCE_BYTES_PINNED_PENDING_INDEPENDENT_READBACK"
+              except Exception as exc:
+                  status["reason"]=str(exc)[:400]
+                  print("P1_0_HOLD "+status["reason"],flush=True)
+                  raise
+              finally:
+                  (DEST/"status.json").write_text(json.dumps(status,sort_keys=True,indent=2)+"\n")
+              print("P1_0_NO_PRIVATE_RATES_NO_NATIVE_P2_P3_P4",flush=True)
+          
+          if __name__=="__main__": main()
+          PY
+      - name: Upload only final .i and SHA manifests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue667-p1-0-sourcepin-9c15a4f-${{ github.run_id }}-${{ github.run_attempt }}
+          path: capture/
+          if-no-files-found: error
+          retention-days: 30
