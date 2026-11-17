@@ -27,6 +27,8 @@
         [Energy]
           block = plasma
           fem_species = e
+          fem_potential = potential
+          transport_coefficient = fluid
         []
       []
     []
