@@ -47,6 +47,11 @@ DDContinuityEq::validParams()
       "fem_species", {}, "FEM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<std::vector<std::string>>(
       "fvm_species", {}, "FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
+  params.addParam<MooseEnum>(
+      "fvm_kernel_ownership",
+      MooseEnum("external physics", "external"),
+      "FVM continuity Kernel ownership: external preserves archived Native Kernels. "
+      "physics is reserved until Physics-generated FV Kernels and ownership checks exist.");
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
   return params;
@@ -59,6 +64,12 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   // Chemistry JSON and must not be duplicated as positional .i numbers.
   _fem_species = getParam<std::vector<std::string>>("fem_species");
   _fvm_species = getParam<std::vector<std::string>>("fvm_species");
+  // Fail closed: accepting physics here would silently omit all FV equations.
+  // The legacy Hybrid must retain its original external Native FV Kernel owners.
+  if (getParam<MooseEnum>("fvm_kernel_ownership") == "physics")
+    paramError("fvm_kernel_ownership",
+               "physics FVM Kernel ownership is not implemented yet; "
+               "use external until generated FV Kernels and duplicate/missing checks exist.");
   const auto & fem = _fem_species;
   const auto & fvm = _fvm_species;
   const auto variables = resolvedContinuityVariables(fem, fvm);
