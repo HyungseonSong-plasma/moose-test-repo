@@ -1,0 +1,108 @@
+{
+  "schema": "issue667.p1_0_final_pre_retirement_scratch_receipt.v1",
+  "task_id": "P1-0",
+  "status": "PASS_EXACT_HEAD_P0_FINAL_HYBRID_SCRATCH_11_LAYER",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_branch": "PR #665 (Draft, unmerged)",
+  "context": "Pre-retirement hybrid 11-layer, native ion Kernel14+BC12 retained; NOT P2 new-only and NOT scientific parity",
+  "execution": {
+    "workflow_run_id": 44182663514,
+    "workflow_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182663514",
+    "workflow_branch": "issue-667-p1-0-byte-readback-20261117",
+    "workflow_commit": "6266049cfac24b4af28e770f82832b13bde9e6b7",
+    "checkout_target": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "conclusion": "success",
+    "artifact_id": 14372278074,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182663514/artifacts/14372278074",
+    "artifact_zip_sha256": "584fd8eff989ab1f7f0a7582ae72b4dc2429f84b8b05ed91c1a46f89df88da5e",
+    "embedded_11_layer_zip_sha256": "9923c7c875dff975ec203610e58797be7abbfe6a92be2173f1fbe525f49f1172",
+    "embedded_manifest_sha256": "cf08568b0255486005a6e8b6541689dc42dbd434ba5dd8b80eecb4886b66b1fc",
+    "independent_verification_receipt_sha256": "ce60ad88454da92c2b49850da36a72769b5c8f9ce3bf9fd1eae832fc13db3ec1"
+  },
+  "validation": {
+    "independent_zip_readback": true,
+    "independent_file_hash_count": 22,
+    "expected_input_count_per_case": 11,
+    "expected_native_ion_fvkernels_per_case": 14,
+    "expected_native_ion_fvbcs_per_case": 12,
+    "independently_verified_native_ion_blocks_per_case": 26,
+    "op_source_per_case": 2,
+    "exact_file_and_block_sha256_receipts_location": "p1_0_final_11_layer_manifest.json inside Artifact #14372278074",
+    "no_input_include_directive": true,
+    "native_p2": "NOT_RUN",
+    "native_p3": "NOT_RUN",
+    "native_p4": "NOT_RUN",
+    "science": "SCIENCE_HOLD",
+    "private_rate_table_bytes_in_artifact": false,
+    "original_archive_writes": 0,
+    "main_or_pr665_mutation": 0
+  },
+  "cases": {
+    "417": {
+      "status": "PASS_11_FILE_HASH_26_OWNER_BLOCK_HASH",
+      "files": 11,
+      "native_ion_kernels": 14,
+      "native_ion_bcs": 12,
+      "overlay_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "op_sources": [
+        {
+          "task": "P1-B4",
+          "layer": 7,
+          "name": "legacy8_h05_ei417_op",
+          "factory": "FVCoupledForce",
+          "variable": "log_Op",
+          "v": "S_Op_molar_EI417",
+          "file_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
+          "block_sha256": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7"
+        },
+        {
+          "task": "P1-B5",
+          "layer": 10,
+          "name": "h25_atomic_positive_ion",
+          "factory": "FVCoupledForce",
+          "variable": "log_Op",
+          "v": "S_Op_molar_H25",
+          "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+          "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01"
+        }
+      ],
+      "op_source_overlap_count": 0
+    },
+    "941": {
+      "status": "PASS_11_FILE_HASH_26_OWNER_BLOCK_HASH",
+      "files": 11,
+      "native_ion_kernels": 14,
+      "native_ion_bcs": 12,
+      "overlay_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "op_sources": [
+        {
+          "task": "P1-C4",
+          "layer": 7,
+          "name": "ei941_atomic_positive_ion_source",
+          "factory": "FVCoupledForce",
+          "variable": "log_Op",
+          "v": "S_Op_molar_EI941",
+          "file_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43",
+          "block_sha256": "06c9444eda41eb5cc47e28485db5f8e95dba64a52e93131ca2fcc1378367f433"
+        },
+        {
+          "task": "P1-C5",
+          "layer": 10,
+          "name": "h25_atomic_positive_ion",
+          "factory": "FVCoupledForce",
+          "variable": "log_Op",
+          "v": "S_Op_molar_H25",
+          "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+          "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01"
+        }
+      ],
+      "op_source_overlap_count": 0
+    }
+  },
+  "prior_partial_manifest": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/802de3a494838bdf624b935f59d315ae785aab14/reports/issue667/p1_0_common_manifest_partial.json",
+  "next_obligation": "P1-E: reconcile all 29 independent receipts at this source_head; P2 #668: separately retire 26 native ion objects in disposable Scratch, then later Native P2; do not promote scientific acceptance",
+  "unresolved": [
+    "All 29 P1 worker receipts not yet reconciled by P1-E; common P1-0 pin does not imply P1-E closure",
+    "PR #665 hybrid 11-layer retains native 26 owners; actual New-only 26->24 cutover, Native P2, P3, P4 remain future separate gates"
+  ]
+}
