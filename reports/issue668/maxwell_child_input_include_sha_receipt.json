@@ -1,0 +1,129 @@
+{
+  "schema": "issue668.maxwell_child_exact_input_byte_sha_receipt.v1",
+  "task_id": "P2_MAXWELL_CHILD_INCLUDE_CLOSURE",
+  "status": "PASS_HISTORICAL_CHILD_BYTES_AND_INCLUDE_SHA_WITH_NEW_ONLY_RUNTIME_HOLD",
+  "source_pin": {
+    "pr": 665,
+    "commit": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "source_workflow_run": 44182628032,
+    "source_artifact_id": 14372278070,
+    "source_artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "source_common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010"
+  },
+  "historical_execution": {
+    "run_id": 42049066748,
+    "artifact_id": 13447489692,
+    "artifact_zip_sha256": "df41ef2860d56b728082fd1fd7e7d3f498bc5b389bb94f5451e11576dd6a27cb",
+    "inputs_tar_name": "legacy6_restart_inputs_100000ns.tar.gz",
+    "inputs_tar_sha256": "8e5fe7e57dc11bfd9f6afa13a6e886e0891b4e07597a7849f703652d4ce26ea8",
+    "sha_check": "4/4 historical manifest input owners (child, base, overlay, parent)",
+    "native_status": "SUCCESS_HISTORICAL_ONLY"
+  },
+  "base_dir": "experiments/Issue395_powered_chemistry_ladder/",
+  "inputs": [
+    {
+      "name": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i",
+      "size": 110,
+      "sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+      "role": "historical executed child wrapper",
+      "repo_tracked": false
+    },
+    {
+      "name": "issue397_maxwell_steady_abs1e11.i",
+      "size": 6085,
+      "sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+      "role": "historical included Maxwell base",
+      "repo_tracked": false
+    },
+    {
+      "name": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_overlay.i",
+      "size": 4874,
+      "sha256": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45",
+      "role": "historical included Maxwell 400W overlay",
+      "repo_tracked": false
+    }
+  ],
+  "parent_edge": {
+    "name": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+    "source_layer": 2,
+    "parent_sha256_historical": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+    "parent_sha256_final_hybrid_both_cases": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+    "input_files": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i",
+    "cases_417_941": "PASS_EXACT_ONCE_EACH",
+    "transfer_objects": 7,
+    "control_objects": 1,
+    "multiapp_objects": 1
+  },
+  "include_edges": [
+    {
+      "from": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i",
+      "to": "issue397_maxwell_steady_abs1e11.i",
+      "order": 1,
+      "path_resolution": "same Issue395 directory",
+      "sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c"
+    },
+    {
+      "from": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i",
+      "to": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_overlay.i",
+      "order": 2,
+      "path_resolution": "same Issue395 directory",
+      "sha256": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45"
+    }
+  ],
+  "nested_include_count": 0,
+  "mesh_resource": {
+    "referenced_by": "issue397_maxwell_steady_abs1e11.i / [Mesh] / FileMeshGenerator",
+    "reference_path": "../Issue18_qvt_plasma_mapping/qvt.msh",
+    "tracked_repo_path": "experiments/Issue18_qvt_plasma_mapping/qvt.msh",
+    "byte_len": 167248,
+    "sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "git_blob": "28ff31220904ff81f426d0c2ed8dd18a7fd40b9e",
+    "historical_git_blob_identical_to_pr665": true,
+    "source_readback": "PASS",
+    "physical_newonly_scratch_stage_sha": "NOT_RUN_HOLD"
+  },
+  "source_builder_comparison": {
+    "file": "experiments/Issue395_powered_chemistry_ladder/build_rf_multiapp_coupling_power.py",
+    "recreated_parent_overlay_sha_equal_historical": true,
+    "recreated_child_overlay_sha_equal_historical": true,
+    "generated_current_wrapper_sha256": "592aa602fd97d690bcf24870b52cc73df13983a5fe309369717f1c3ce5826fd2",
+    "archived_wrapper_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "current_wrapper_first_include": "../Issue202_maxwell_scalar_fem_m0/rf_power.i",
+    "archived_wrapper_first_include": "issue397_maxwell_steady_abs1e11.i",
+    "current_source_rf_power_sha256": "3be4c95dd15b27920f4f65382330da9e8ede61f8c80e31fd2d8eccf24c34e795",
+    "current_source_rf_power_git_blob": "3b9b281af90fb4960532ffbb7b77d6f4d4d5e3e2",
+    "archived_base_sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+    "physical_difference": "[Executioner] nl_abs_tol historical 1e-11 vs current rf_power.i 1e-12",
+    "verdict": "DIFFERENT_BYTE_CONTRACT_DO_NOT_SILENTLY_SUBSTITUTE"
+  },
+  "independent_verification": {
+    "source_mode": "download original Actions ZIP -> hash ZIP -> nested TAR -> original manifest -> exact 3 .i bytes; independently hash PR665 qvt mesh GitHub file and common P1 artifact parent",
+    "negative_controls": "9/9 REJECTED",
+    "public_child_bundle_zip_sha256": "b0925c14d9cd80a2419d79bd1bea1dcb9592236a3a18f323f5cd37bbf69d2546",
+    "public_child_bundle_manifest_sha256": "8fbd3e2fd8c53f8e2564740a80fdf70953cc0e5e14c02d0e7d25d9689eda968d"
+  },
+  "handoff_requirements": [
+    "In #668 actual disposable checkout, restore exact historically tested public child.i, issue397 base .i and Maxwell overlay .i at Issue395 path without changing bytes or ordering.",
+    "Check tracked Issue18 qvt.msh physically exists under relative path and SHA256 equals a98521af...; fail closed if missing or mutated.",
+    "Bind all 7 parent Transfer endpoints and PID control, retain 1 MultiApp. Do not silently replace archived issue397 Maxwell base with current Issue202 rf_power.i because nonlinear tolerance differs.",
+    "Validate restored child+mesh actual Scratch bytes before New-only solver; Native check-input belongs separately authorized later P5."
+  ],
+  "verdicts": {
+    "historical_child_exact_bytes": "PASS",
+    "historical_include_closure_three_i": "PASS",
+    "mesh_original_and_pr665_git_byte_identity": "PASS",
+    "current_parent_name_binding_both_cases": "PASS",
+    "current_child_physical_scratch_stage": "HOLD_NOT_RUN",
+    "current_mesh_physical_scratch_stage": "HOLD_NOT_RUN",
+    "new_only_native_P2": "HOLD_NOT_RUN",
+    "native_P3_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "original_artifact_modified": false,
+    "main_modified": false,
+    "PR665_modified": false,
+    "private_rate_bytes_exported": false,
+    "native_solver_run": false
+  }
+}
