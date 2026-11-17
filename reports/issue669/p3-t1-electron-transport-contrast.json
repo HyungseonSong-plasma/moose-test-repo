@@ -1,0 +1,201 @@
+{
+  "schema": "issue669.p3_t1.electron_transport_public_d_flow_vs_newonly.v1",
+  "task_id": "P3-T1",
+  "scope": "SOURCE_STATIC_ONLY: Public D/FLOW failure vs Hybrid and target New-only electron transport; no P2 retired scratch or native runtime",
+  "checked_at_utc": "2026-11-17",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "baseline_issue": 668,
+  "package_issue": 669,
+  "p1_0": {
+    "ci_run": 44182628032,
+    "artifact_id": 14372278070,
+    "artifact_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "final_inputs_each_case": 11
+  },
+  "baseline_original": {
+    "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "original_c0_file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+    "original_c0_electron_transport_block_sha256": "a66565c4f83a6aa0152958421988b3d4b21fc50f0772250d574014badaca06ca",
+    "original_material": "[FunctorMaterials]/electron_transport: PhysicsElectronTransportLookupMaterial; table ../Issue91_real_qvt_r3/r3_e0/electron_moments.txt; mean_en_solved; p, T_g_fixed, clamp"
+  },
+  "actual_failure_evidence": {
+    "repository_ci": {
+      "run_id": 44153215087,
+      "artifact_id": 14359823440,
+      "artifact_sha256": "ad661a3dd83d50c10efae707d9889ad29bc87cf22b82366e6e105bf4a6e11899",
+      "mode": "Public D",
+      "case_417": {
+        "P2": "HOLD",
+        "log_sha256": "8f067b852b8e5eae0f02f6c09371dc5ef379c5be0a0139b984a7c600cb616b56"
+      },
+      "case_941": {
+        "P2": "HOLD",
+        "log_sha256": "83aff4decbb2f2e0d9e3628f42e5a2a1c94a948d89dcf56c41e33010e438ed99"
+      }
+    },
+    "flow_ci": {
+      "run_id": 44153215056,
+      "artifact_id": 14360990928,
+      "artifact_sha256": "6f73b2a11d0923c3675c2dcde1f4cc6968bc172c461115e3110ae55e4f4a20b6",
+      "mode": "Chemistry D",
+      "case_417": {
+        "P2": "HOLD",
+        "log_sha256": "3a4d9e61ccff1c004627ddbd457e07c5834be1ab0c1eb14db24e998806bb5b87"
+      },
+      "case_941": "NOT_RUN_AFTER_FIRST_CASE_ERROR"
+    },
+    "observed_failure": "Physics/Plasmas/Transport/DriftDiffusion/Continuity/fem_species: Missing drift-diffusion transport JSON record for FEM species 'e'. Specify transport_coef=constant, lookup, or functor in species JSON.",
+    "code_origin": {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "git_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "source_lines": "152-165; validation of selected FEM/FVM species mechanism.ddTransport(id)"
+    },
+    "legacy_mechanism": {
+      "common_path": "experiments/Issue402_plasma_dsl_g1/chemistry/oxygen_s6_common.json",
+      "common_sha256": "b810c62d21ec88e2b5f6977e7f8989b42dec42f0a20c2574564f379281e8fc55",
+      "common_e_keys": [
+        "elements",
+        "charge_number"
+      ],
+      "case_variant_e_species_absent": true,
+      "stage_preparer": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py",
+      "stage_preparer_git_blob_sha1": "24674ac5d00820db19adec3352cb70fca5355124",
+      "stage_preparer_lines": "566-591: adds initial_number_density to oxygen_s6_common; does not add transport_coef; copies oxygen_s6_{case}.json",
+      "case_template": "experiments/Issue402_plasma_dsl_g1/s6_{case}_chemistry_run.template.i",
+      "files_binding": "chemistry/oxygen_s6_common.json chemistry/oxygen_s6_{case}.json"
+    },
+    "conclusion": "The observed Public D/FLOW missing-e DD record comes from the legacy split mechanism, not from either New-only JSON"
+  },
+  "distinct_hybrid_failure": {
+    "run_id": 44153215087,
+    "artifact_id": 14359967780,
+    "artifact_sha256": "d749bcf741053adcdf9d687b5c56a8e45619c66a610792f1a770c4ccc6d46efc",
+    "reason": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+    "cases": [
+      "417",
+      "941"
+    ],
+    "classification": "Native ion retirement prerequisite P2; not the missing-e-transport failure",
+    "retained_as_hold": true
+  },
+  "cases": {
+    "417": {
+      "legacy_variant_json_sha256": "dc1099e5c0b40811df9ba5bf4a311c783ff52213ed1bc77ded27329f89d6edc2",
+      "hybrid_json_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417.json",
+      "hybrid_json_sha256": "8f1f0e72038829b00fa50f4d6d68bec5c86015e2f400918379539cf9b767c7bc",
+      "hybrid_e_transport": {
+        "transport_coef": "lookup",
+        "table_file": "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+        "table_units": "reduced",
+        "pressure": "pressure",
+        "gas_temperature": "temperature",
+        "bounds_policy": "clamp"
+      },
+      "final_p1_hybrid_overlay_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "newonly_json_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "newonly_json_git_blob_sha1": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "newonly_overlay_path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+      "newonly_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "newonly_lookup": {
+        "type": "lookup",
+        "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+        "unit": "reduced",
+        "bounds_policy": "clamp"
+      },
+      "newonly_root": {
+        "files": "chemistry/unified_s6_417_newonly.json",
+        "pressure": "1.333223684",
+        "temperature": "300",
+        "state_model": "ideal_gas",
+        "fem_species": "e",
+        "fvm_species": "O2p Om Op",
+        "energy_transport_coefficient": "fluid"
+      },
+      "reactions": 8
+    },
+    "941": {
+      "legacy_variant_json_sha256": "d5e42193305743768f65f93e31fbb21e8127ed85ab653d6d8d070a072c1af9bf",
+      "hybrid_json_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941.json",
+      "hybrid_json_sha256": "fc3e1d35ce0c20657f6ed3db125bb9a79251150467e0aec48c079a6dcadb3973",
+      "hybrid_e_transport": {
+        "transport_coef": "lookup",
+        "table_file": "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+        "table_units": "reduced",
+        "pressure": "pressure",
+        "gas_temperature": "temperature",
+        "bounds_policy": "clamp"
+      },
+      "final_p1_hybrid_overlay_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "newonly_json_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+      "newonly_json_git_blob_sha1": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "newonly_overlay_path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_941_continuity.template.i",
+      "newonly_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "newonly_lookup": {
+        "type": "lookup",
+        "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+        "unit": "reduced",
+        "bounds_policy": "clamp"
+      },
+      "newonly_root": {
+        "files": "chemistry/unified_s6_941_newonly.json",
+        "pressure": "1.333223684",
+        "temperature": "300",
+        "state_model": "ideal_gas",
+        "fem_species": "e",
+        "fvm_species": "O2p Om Op",
+        "energy_transport_coefficient": "fluid"
+      },
+      "reactions": 8
+    }
+  },
+  "resolved_static_paths": {
+    "staging_assumption": "[Physics] template migrated_continuity.i in experiments/Issue395_powered_chemistry_ladder, New-only JSON in its chemistry/ subdirectory",
+    "hybrid_json_staged_root": "experiments/Issue395_powered_chemistry_ladder",
+    "newonly_json_staged_root": "experiments/Issue395_powered_chemistry_ladder/chemistry",
+    "both_lookup_relative_paths_resolve_to": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "stage_and_table_bytes_proven_by_newonly_P2": false,
+    "caution": "Lexical POSIX normalization is not runtime file availability or resolver behavior proof"
+  },
+  "verification": {
+    "exact_head_pr665_readback": "MATCH",
+    "newonly_e_transport_present_417": true,
+    "newonly_e_transport_present_941": true,
+    "old_split_mechanism_e_transport_missing": true,
+    "repo_ci_actual_failures_both_cases": true,
+    "flow_ci_failure_observed_only_case417": true,
+    "newonly_json_sha256_independent_fetch_rehash": "PASS_BOTH",
+    "template_bindings_static": "PASS_BOTH",
+    "hybrid_json_sha256_matches_arch_ci_receipt": "PASS_BOTH",
+    "source_only_final_input_artifact": "PASS_BOTH",
+    "native_newonly_check_input": "NOT_RUN",
+    "newonly_disposable_11layer_readback": "NOT_AVAILABLE_PENDING_668"
+  },
+  "unresolved": [
+    "P2 #668 missing actual final after-retirement Scratch 417/941 11-layer file and block SHA, so no New-only runtime validation.",
+    "Physical electron_moments.txt staged byte existence/SHA, content and table readability for New-only require P3-T2; reference checksum 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b is prior source provenance, not runtime binding proof.",
+    "Reduced coefficients coupling to live root pressure/temperature, table axis, bounds and DDEnergy fluid semantics require P3-T3 and later Native P2.",
+    "417/941 individual electron initial density and full overlay integration require T4/T5 and P3-X after #668.",
+    "Do not confuse historical split-JSON missing record with Hybrid Native-ion P05 duplicate; both are distinct demonstrated failure classes.",
+    "Current New-only template exists in repository but is not the final P1-0 Hybrid 11th layer: the latter references unified_s6_{case}.json, not _newonly."
+  ],
+  "handoff": [
+    "P3-T2: validate exact publicly pinned electron_moments.txt bytes/SHA and both relative stage paths",
+    "P3-T3: validate lookup root pressure/temperature, clamp and energy-fluid binding against engine",
+    "P3-T4/T5: case-specific newonly JSON and effective generated overlay after #668",
+    "P3-X: single-writer integration only after P2 26 owner retirement and same HEAD artifact SHA"
+  ],
+  "gates": {
+    "P3_T1_STATIC_COMPARISON": "PASS",
+    "P3_T1_NEWONLY_RUNTIME": "HOLD",
+    "P2_668_DEPENDENCY": "HOLD",
+    "P3_X": "BLOCKED_UNTIL_P2",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "no_physics_code_change": true,
+  "private_rate_bytes_published": false
+}
