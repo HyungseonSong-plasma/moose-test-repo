@@ -10,8 +10,10 @@
 
 #include <cctype>
 #include <cmath>
+#include <iomanip>
 #include <map>
 #include <set>
+#include <sstream>
 
 namespace Plasma
 {
@@ -437,6 +439,23 @@ DDContinuityEq::addFVKernels()
     drift_params.set<MooseFunctorName>("carrier") = "carrier_one";
     drift_params.set<Real>("charge_number") = mechanism.species(id).charge_number;
     drift_params.set<bool>("use_element_gradient_for_potential") = true;
+    // Retain the Native boundary-avoid contract using the ACTUAL typed FV
+    // wall declarations. Do not hard-code S6 sidesets in the generic Kernel
+    // or silently apply an interior drift operator on an ion wall face.
+    std::set<BoundaryName> wall_sidesets;
+    for (const auto & [group, boundary] : mechanism.boundaries())
+      for (const auto & [bc_name, bc] : boundary.bcs)
+        if (bc.variable == variable &&
+            (bc.type == "FVFunctorNeumannBC" ||
+             bc.type == "FVLogMolarDielectricFluxBC"))
+          wall_sidesets.insert(boundary.mesh_boundaries.begin(),
+                               boundary.mesh_boundaries.end());
+    if (mechanism.hasIonWalls() && wall_sidesets.size() != 8)
+      mooseError("P14 drift boundary-avoid handoff requires eight wall sidesets for ", id,
+                 "; got ", wall_sidesets.size());
+    if (!wall_sidesets.empty())
+      drift_params.set<std::vector<BoundaryName>>("boundaries_to_avoid") =
+          std::vector<BoundaryName>(wall_sidesets.begin(), wall_sidesets.end());
     assignBlocks(drift_params, _blocks);
     getProblem().addFVKernel(drift_type, id + "_drift", drift_params);
 
@@ -465,6 +484,28 @@ DDContinuityEq::addFunctorMaterials()
   std::vector<std::string> species = _fem_species;
   const auto & fvm = _fvm_species;
   species.insert(species.end(), fvm.begin(), fvm.end());
+
+  // C2 wall laws consume a live physical particle-number density. Publish
+  // exactly one canonical Physics Functor for each selected FV ion with an
+  // explicit JSON ion_wall record, derived from its logarithmic MOLAR state.
+  // Preserve the Native n_i/n_m/n_op_physical aliases while Poisson and
+  // diagnostics still consume them; do not add a second alias owner here.
+  if (mechanism.hasIonWalls() && !getParam<bool>("dont_create_kernels"))
+    for (const auto & id : _fvm_species)
+    {
+      if (!mechanism.species(id).ion_wall)
+        continue;
+      const std::string type = "ADParsedFunctorMaterial";
+      auto params = getFactory().getValidParams(type);
+      params.set<std::string>("property_name") = id + "_number_density";
+      params.set<std::vector<std::string>>("functor_names") = {continuityStateName(id)};
+      params.set<std::vector<std::string>>("functor_symbols") = {"log_c"};
+      std::ostringstream number_scale;
+      number_scale << std::setprecision(17) << PHYSICS_CONSTANTS::N_A;
+      params.set<std::string>("expression") = number_scale.str() + "*exp(log_c)";
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(type, name() + "_" + id + "_number_density", params);
+    }
 
   for (const auto & id : species)
   {
