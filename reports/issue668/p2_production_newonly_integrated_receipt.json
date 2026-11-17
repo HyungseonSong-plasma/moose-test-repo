@@ -1,0 +1,138 @@
+{
+  "schema": "issue668.p2.production_newonly_source_handoff.integrated.v1",
+  "status": "PASS_P2_PRODUCTION_RUNNER_NEWONLY_SOURCE_STAGE_BOTH_CASES_WITH_NATIVE_AND_D8_RUNTIME_HOLD",
+  "exact_source": {
+    "pr": 665,
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "pr_draft_unmerged": true,
+    "base_p1_e_receipt": "a3e22628d863c3b2f06ba34b2050a6ae99a7c699",
+    "p1_0_artifact_id": 14372278070,
+    "p1_0_artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "maxwell_child_stage_artifact_id": 14379920938,
+    "maxwell_child_stage_zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+  },
+  "source_code": {
+    "production_runner": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py",
+      "git_blob": "999a7aa65bdc7011df6f64dd923570f464af1d39",
+      "mode": "--newonly; Hybrid path preserved"
+    },
+    "newonly_stage": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py",
+      "git_blob": "652420d7653d4d089f5695afb7236370b0f1d7dd"
+    },
+    "pinned_retirement": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_ion_fv_owners.py",
+      "git_blob": "41219d43c63aa2c6db025a48831ccc9a6493190e"
+    },
+    "independent_ci_verifier": {
+      "path": "ci/issue668_p2_newonly_stage_verify.py",
+      "git_blob": "2acec4e09f1eae84b82536d0ad59caa0b818012e"
+    }
+  },
+  "ci": {
+    "first_attempt": {
+      "run_id": 44199381760,
+      "head_sha": "ee070a0d14346d6e255bde953815abb9a39f89ac",
+      "status": "FAILED_VERIFIER_ONLY",
+      "reason": "Verifier initially used name alone; Material and FVKernels shared ei415_o2p_source name. Production runner had successfully staged 417. Corrected matching to (section,name) then reran."
+    },
+    "accepted": {
+      "run_id": 44199587771,
+      "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44199587771",
+      "head_sha": "15f3e387b1c2c3b95c10232c6fe9d5884565c8f3",
+      "event": "push",
+      "status": "SUCCESS",
+      "source_only": true,
+      "artifact_id": 14380831538,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44199587771/artifacts/14380831538",
+      "artifact_name": "issue668-p2-newonly-production-runner-static-417-941",
+      "artifact_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+    }
+  },
+  "independent_readback": {
+    "method": "Downloaded 14380831538, rehashed ZIP, independently compared all 22 final 11-layer file bytes to P1-0 input and 26 exact section-bound Native ion blocks per case, reconstructed file bytes excluding only the 26 blocks plus explicitly replaced last overlay; verified table/JSON/child/mesh byte SHA",
+    "local_receipt_sha256": "ec22d523c6f8e6496ada7ac2b63c1a776b48a7e423762e2448a7c0278e9b1af9",
+    "result": "PASS",
+    "total_files": 22,
+    "owner_blocks_removed": 52,
+    "remaining_native_ion_fv_owners": 0,
+    "unexpected_non_target_byte_changes": 0,
+    "negative_controls": "8_OF_8_REJECTED_NO_WRITE",
+    "private_EI_rate_raw_bytes_in_artifact": false
+  },
+  "cases": {
+    "417": {
+      "status": "PASS_SOURCE_STAGE",
+      "old_kernel_removed": 14,
+      "old_bc_removed": 12,
+      "old_native_ion_owners_remaining": 0,
+      "staged_i_files": 11,
+      "changed_i_files": 6,
+      "untouched_i_files": 5,
+      "non_target_bytes": "IDENTICAL",
+      "json_file": "chemistry/unified_s6_417_newonly.json",
+      "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "layer11": "migrated_continuity.i",
+      "layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "electron_moments_rows": 42,
+      "negative_rejected": 4
+    },
+    "941": {
+      "status": "PASS_SOURCE_STAGE",
+      "old_kernel_removed": 14,
+      "old_bc_removed": 12,
+      "old_native_ion_owners_remaining": 0,
+      "staged_i_files": 11,
+      "changed_i_files": 6,
+      "untouched_i_files": 5,
+      "non_target_bytes": "IDENTICAL",
+      "json_file": "chemistry/unified_s6_941_newonly.json",
+      "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "layer11": "migrated_continuity.i",
+      "layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "electron_moments_rows": 42,
+      "negative_rejected": 4
+    }
+  },
+  "pinned_runtime_inputs": {
+    "electron_moments": {
+      "source_git_commit": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+      "source_path": ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt",
+      "sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "rows": 42,
+      "relative_json_path": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "default_repo_100row_table_not_substituted": true
+    },
+    "maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "maxwell_include_base_sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+    "maxwell_include_overlay_sha256": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45",
+    "mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
+  },
+  "D8": {
+    "historical_dynamic_caller_lineage": "PASS_BOUNDED_ARCHIVED_417_941_CSV_EXODUS",
+    "live_source_declaration_and_maxwell_child_mesh_staging": "PASS_SOURCE_ONLY",
+    "newonly_actual_Warehouse_Functor_runtime": "HOLD_NATIVE_P2_P5",
+    "known_active_callers_present": true,
+    "maxwell_current_wrapper_generator_semantics": "HOLD_DIFFERENT_FROM_HISTORICAL_WRAPPER_ABS_TOL_1e11_VS_1e12",
+    "reason": "Static staging and bounded historical evidence do not instantiate C++ Physics-generated objects or prove late-bound callers. Native New-only P2/P3 belongs to downstream P5/authorized runs."
+  },
+  "gates": {
+    "P2_exact_26_native_retirement": "PASS",
+    "P2_actual_production_runner_wired": "PASS",
+    "P2_both_NewOnly_JSONs_staged": "PASS",
+    "P2_layer11_Physics_overlay": "PASS",
+    "P2_electron_transport_original_byte_pin": "PASS",
+    "P2_Maxwell_child_include_mesh_stage": "PASS",
+    "P2_source_only_package_DoD": "PASS",
+    "D8_historical_and_static_child": "PASS_BOUNDED",
+    "D8_newonly_dynamic_runtime": "HOLD",
+    "P3_X": "READY_FOR_SOURCE_INTEGRATION_AFTER_30_RECEIPTS_WITH_SINGLE_ELECTRON_OWNER_CHECK",
+    "Physics_generated_24": "NOT_RUN",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "caveat": "This source-only stage retains preexisting electron FEM BC and wall-functor ownership. P3-X must reconcile possible JSON-generated e_wall/ESWallFluxMaterial overlap before any Native P2 acceptance. No PR #665/main merge, no private EI original table bytes or MOOSE solver were used."
+}
