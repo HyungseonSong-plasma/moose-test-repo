@@ -5,12 +5,15 @@
 # generates each correctly typed state and rejects preexisting owners first.
 [Physics]
   [Plasmas]
-    files = plasma_species_initial_p2.json
+    files = issue633_ion_continuity_newonly_p2.json
     [Transport]
+      [Chemistry]
+      []
       [DriftDiffusion]
         [Continuity]
           fem_species = 'O2p'
           fvm_species = 'e'
+          fem_potential = u_rf_imag
         []
       []
     []
