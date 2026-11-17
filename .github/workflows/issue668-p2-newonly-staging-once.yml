@@ -1,4 +1,5 @@
 name: Issue668 P2 New-only runner JSON and layer11 source-only one-shot
+# Retry after independent verifier section/name identity correction
 on:
   push:
     branches:
