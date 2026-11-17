@@ -559,8 +559,13 @@ DDContinuityEq::addFunctorMaterials()
       params.set<std::string>("bounds_policy") = config->bounds_policy;
       if (config->table_units == "reduced")
       {
-        params.set<MooseFunctorName>("pressure") = rootGasStateEnabled() ? "pressure" : config->pressure;
-        params.set<MooseFunctorName>("gas_temperature") = rootGasStateEnabled() ? "temperature" : config->gas_temperature;
+        if (config->root_owned_gas && !rootGasStateEnabled())
+          paramError("fem_species", "Object-shaped reduced transport_coef requires root "
+                                   "[Plasmas] pressure and temperature.");
+        params.set<MooseFunctorName>("pressure") =
+            config->root_owned_gas || rootGasStateEnabled() ? "pressure" : config->pressure;
+        params.set<MooseFunctorName>("gas_temperature") =
+            config->root_owned_gas || rootGasStateEnabled() ? "temperature" : config->gas_temperature;
       }
     }
     assignBlocks(params, _blocks);
