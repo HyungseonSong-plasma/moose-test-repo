@@ -157,9 +157,20 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
     # do not overlap a new C2-generated Functor/material owner. New C2 is
     # preferred when configured, but never forbid a disjoint Native producer
     # merely because its implementation is old.
-    c2_ions = {ident for ident in fvm
-               if isinstance(species.get(ident), dict) and
-               any(key.startswith("wall_") for key in species[ident])}
+    c2_ions = {
+        ident for ident in fvm
+        if isinstance(species.get(ident), dict) and (
+            any(key in species[ident] for key in (
+                "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
+                "wall_use_element_gradient_for_potential"))
+            or (
+                ident != "e" and species[ident].get("charge_number", 0) != 0
+                and isinstance(species[ident].get("transport_coef"), dict)
+                and species[ident]["transport_coef"].get("type") != "none"
+                and "molar_mass" in species[ident]
+            )
+        )
+    }
     c2_current = bool(c2_ions) and bool(mechanism.get("ion_surface_current"))
     generated_wall_names = {ident + "_wall" for ident in c2_ions}
     generated_wall_properties = {ident + "_wall_number_flux" for ident in c2_ions}
