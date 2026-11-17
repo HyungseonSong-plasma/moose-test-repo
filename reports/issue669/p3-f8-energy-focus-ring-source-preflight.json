@@ -1,0 +1,162 @@
+{
+  "schema": "issue669.p3_f8.source_preflight.v1",
+  "task_id": "P3-F8",
+  "verdict": "PASS_SOURCE_STATIC_ARCHIVE_HYBRID_P2_STAGE__P2_DEPENDENCY_HOLD_NEWONLY_CUTOVER",
+  "source": {
+    "integration_pr": 665,
+    "pr_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d"
+  },
+  "scope": "[BCs]/electron_energy_focus_ring, S6-417 and S6-941; 11-layer Hybrid D and isolated 26->0 ion retirement artifact; no New-only runtime claim",
+  "artifacts": [
+    {
+      "stage": "archived_s6_417_10",
+      "artifact_id": 13677089020,
+      "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+    },
+    {
+      "stage": "archived_s6_941_10",
+      "artifact_id": 13677375813,
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    {
+      "stage": "P1_0_Hybrid_11",
+      "run": 44182628032,
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010"
+    },
+    {
+      "stage": "P2_ion_retirement_source_only",
+      "run": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    }
+  ],
+  "case_results": {
+    "417": {
+      "original_file_SHA": "10/10_PASS",
+      "hybrid_file_SHA": "11/11_PASS",
+      "p2_post_stage_file_SHA": "11/11_PASS",
+      "f8_instance_counts": {
+        "archived": 1,
+        "hybrid": 1,
+        "p2_stage": 1
+      },
+      "f8_byte_preserved_after_ion_retirement": true,
+      "p2_retired_ion_owners": 26,
+      "negative_controls_rejected": 10
+    },
+    "941": {
+      "original_file_SHA": "10/10_PASS",
+      "hybrid_file_SHA": "11/11_PASS",
+      "p2_post_stage_file_SHA": "11/11_PASS",
+      "f8_instance_counts": {
+        "archived": 1,
+        "hybrid": 1,
+        "p2_stage": 1
+      },
+      "f8_byte_preserved_after_ion_retirement": true,
+      "p2_retired_ion_owners": 26,
+      "negative_controls_rejected": 10
+    }
+  },
+  "object": {
+    "section": "BCs",
+    "object_name": "electron_energy_focus_ring",
+    "layer_ordinal": 1,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "historical_factory": "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC",
+    "historical_params": {
+      "variable": "log_energy",
+      "wall_number_flux": "electron_wall_number_flux",
+      "mean_energy": "mean_en_solved",
+      "boundary": "plasma_focus_ring"
+    },
+    "historical_block_sha256": "52d30a3e9132717f33c6d09b3deeb4b1ef5ed3b819378a481a7f144842227a86",
+    "final_factory": "FEMElectronEnergySheathBC",
+    "final_params": {
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV",
+      "boundary": "plasma_focus_ring"
+    },
+    "hybrid_and_p2_block_sha256": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138",
+    "hybrid_c0_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "p2_retired_c0_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e"
+  },
+  "producer_consumer_edges": [
+    {
+      "producer": "[FunctorMaterials]/electron_wall_flux",
+      "factory": "ESWallFluxMaterial",
+      "output_functor": "e_wall_number_flux",
+      "consumer": "electron_energy_focus_ring.wall_number_flux",
+      "producer_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824"
+    },
+    {
+      "producer": "DDEnergyEq ElectronEnergyMaterial",
+      "input_states": "log_e_energy + log_e",
+      "output_functor": "e_energy_eV",
+      "consumer": "electron_energy_focus_ring.mean_energy",
+      "evidence": "DDEnergyEq.C exact-head source; runtime not checked"
+    },
+    {
+      "producer": "[Physics]/Energy",
+      "state": "log_e_energy",
+      "consumer": "electron_energy_focus_ring.variable",
+      "evidence": "Hybrid overlay; New-only state remains to be instantiated"
+    }
+  ],
+  "checks": {
+    "physical_duplicate_same_variable_and_sideset_in_p2_stage": 0,
+    "negative_tests_total": 20,
+    "negative_tests_rejected": 20,
+    "categories": [
+      "missing",
+      "duplicate_name",
+      "wrong_Factory",
+      "wrong_variable",
+      "wrong_wall_number_flux",
+      "wrong_mean_energy",
+      "wrong_boundary",
+      "unexpected_parameter",
+      "missing_parameter",
+      "duplicate_physical_owner_with_new_name"
+    ],
+    "receipt_local_sha256": "0be940edc90edfb35373e3939ce4ac76ebbc4c9bce45dc68c92f64b64ad40129",
+    "verifier_local_sha256": "d27aa9739faa0e252bb64a6cf4b0feeb16e95f5a5a5ff9bf0a263aaed38c13d4"
+  },
+  "newonly_cutover": {
+    "currently_staged_overlay": "migrated_continuity.i still binds unified_s6_417.json / unified_s6_941.json (Hybrid), not New-only",
+    "current_native_owner": "electron_energy_focus_ring",
+    "expected_newonly_owner": "e_energy_focus_ring_dielectric",
+    "target_JSON_paths": [
+      "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json"
+    ],
+    "target_json_git_blobs": [
+      "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "9568e2cae6640a755f9403c4f58e077c801b998c"
+    ],
+    "generated_contract": {
+      "type": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV",
+      "boundary": "plasma_focus_ring"
+    },
+    "generator": "physics_app/src/physics/plasma/Chemistry.C :: add_bc",
+    "risk": "Existing Native electron_energy_focus_ring and generated e_energy_focus_ring_dielectric would own the same physical energy boundary residual if both active; theoretical collision, not yet observed runtime",
+    "next_gate": "P3-X after P2 production runner completion: hand over to exactly one live F8 BC on plasma_focus_ring. Verify removal/retention, file hashes, warehouse output, 8 electron FEM BCs and negative collision test."
+  },
+  "gate": {
+    "P3_F8_SOURCE_STATIC": "PASS",
+    "P3_F8_FINAL_NEWONLY": "HOLD",
+    "P2_PACKAGE": "STATIC_RETIREMENT_PASS__PRODUCTION_RUNNER_HOLD",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": "No shared input, JSON, C++ or workflows changed; original ZIPs immutable; source-only branch evidence."
+}
