@@ -1,0 +1,155 @@
+{
+  "schema": "issue667.p1_b7.s6_417.h25_rate_provenance.final11.v1",
+  "task_id": "P1-B7",
+  "issue": 667,
+  "case": "417",
+  "status": "PASS_H25_ANALYTIC_LAW_AND_SOURCE_EDGES__SCIENCE_HOLD",
+  "scope": "Historical S6-417 H25 exact analytic law and final Scratch D 11-layer owner/edge hashes, before New-only retirement",
+  "source_pin": {
+    "integration_pr": 665,
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "historical_artifact_id": 13677089020,
+    "historical_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "final_ci_run_id": 44182628032,
+    "final_artifact_id": 14372278070,
+    "final_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "final_common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "original_10_files_direct_sha256": "10/10 PASS",
+    "final_11_files_direct_sha256": "11/11 PASS",
+    "all_FV_blocks_sha256": "63/63 recomputed",
+    "native_ion_blocks_manifest_sha256": "26/26 recomputed"
+  },
+  "h25_file": {
+    "ordinal": 10,
+    "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+    "original_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+    "final_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+    "historical_to_final_only_rewrites": {
+      "log_nop": "log_Op",
+      "log_ni": "log_O2p",
+      "variable = p": "variable = pressure"
+    },
+    "occurrence_counts": {
+      "log_nop": 3,
+      "log_ni": 1,
+      "variable = p": 1
+    },
+    "entire_file_exact_rewrite_verified": true
+  },
+  "rate_law": {
+    "section": "FunctorMaterials",
+    "object_name": "h25_progress",
+    "factory": "ADParsedFunctorMaterial",
+    "property": "R_H25",
+    "functor_names": "c_Op_H25 c_O2_H25 Tg_H25_K",
+    "expression": "1.204428152e7*(300.0/tg)^0.4*cp*c2",
+    "temperature_K": 300,
+    "rate_coefficient_at_300K_m3_per_s": 2e-17,
+    "source_history": "Original comment records research-only provisional QDB-API 1115 screenshot; not independently validated",
+    "original_and_final_law_block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+    "synthetic_replacement": false,
+    "private_rate_table_required": false
+  },
+  "edges": {
+    "upstream": [
+      "h25_op_target -> c_Op_H25 = exp(log_Op)",
+      "h25_o2_target -> c_O2_H25 = rho_neutral*w_O2_constraint/0.032",
+      "h25_fixed_tgas -> Tg_H25_K = 300",
+      "h25_progress -> R_H25"
+    ],
+    "outputs": [
+      "h25_op_loss -> S_Op_molar_H25 = -R_H25",
+      "h25_o2p_birth -> S_O2p_molar_H25 = +R_H25",
+      "h25_o_mass -> S_O_mass_H25 = +0.016 R_H25",
+      "h25_o2_mass_implicit -> S_O2_mass_H25_implicit = -0.032 R_H25",
+      "h25_neutral_mass -> S_neutral_mass_H25 = -0.016 R_H25"
+    ],
+    "consumers": [
+      "h25_atomic_positive_ion: FVCoupledForce(log_Op; S_Op_molar_H25)",
+      "h25_molecular_positive_ion: FVCoupledForce(log_O2p; S_O2p_molar_H25)",
+      "h25_atomic_oxygen: PhysicsFVSpeciesReactionSource(w_O; S_O_mass_H25)",
+      "h25_neutral_pressure: FVCoupledForce(pressure; S_neutral_mass_H25)"
+    ],
+    "diagnostic_owners": 5,
+    "nonoverlap_with_B4": "legacy8_h05_ei417_op (S_Op_molar_EI417) distinct from h25_atomic_positive_ion (S_Op_molar_H25)"
+  },
+  "checks": {
+    "original_H25_objects": 22,
+    "final_H25_objects": 22,
+    "all_22_blocks_direct_sha256_matches": true,
+    "negative_tests_rejected": [
+      "MISSING_R_H25",
+      "DUPLICATE_R_H25",
+      "WRONG_RATE_COEFFICIENT",
+      "WRONG_TEMPERATURE_EXPONENT",
+      "WRONG_RATE_FUNCTOR",
+      "SYNTHETIC_TGAS_500K",
+      "WRONG_OP_INPUT",
+      "WRONG_O2_TARGET",
+      "WRONG_OP_LOSS_SIGN",
+      "WRONG_O2P_BIRTH_SIGN",
+      "WRONG_OP_CONSUMER_FUNCTOR",
+      "WRONG_NEUTRAL_CONSUMER_VARIABLE",
+      "TAMPERED_FINAL_FILE_SHA",
+      "TAMPERED_ARCHIVE_SHA"
+    ]
+  },
+  "sha256": {
+    "final_layer_file_order": [
+      "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+      "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+      "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+      "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+      "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
+      "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+      "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+      "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+      "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895"
+    ],
+    "final_H25_22_object_blocks": {
+      "h25_op_target": "35fd499dc5b5718846fd33c2695d473780e5d0b08e0ab1b9c388e33d774e414b",
+      "h25_o2_target": "5881a9730f266bdff88aff8c2d039b7a06d8bc7df1f88317f8cc726fe0066b6a",
+      "h25_fixed_tgas": "ec511bcb3b0fcde38074bc6dd52eba8b09ee806a07b533970f910f0ef271672b",
+      "h25_progress": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+      "h25_op_loss": "da080a622842e6ba795f29535d5ba24be0a084739f6078c5084b2f8dbde643b1",
+      "h25_o2p_birth": "6f483b0cff456b77f9c5737ae7f67d6e9f4fd5e50d595f568d42857810dd94e7",
+      "h25_o_mass": "2c66569b469e97d8c5f3fc52afb3e2479ce8dcedbc07372778c7768e9476ef51",
+      "h25_o2_mass_implicit": "ae73f6ab368819ca715142850667523b09e621633f2828f0ae1b7937bd196773",
+      "h25_neutral_mass": "f34c32256ffdce217e89d3e9864e9865f36b0f3651730cd9c6cd46805c0a500f",
+      "h25_charge_closure": "c3cefd8839b2cc4a6ed3801478702ff7a86f5d752a363feb162bf6f4f6a5e313",
+      "h25_heavy_mass_closure": "85cb3bc096c36d8b109a63a1ac6524ef7906fb04c86c8d141003dcbeb5c5abab",
+      "h25_neutral_mass_closure": "d67cfabdb06da4f1bcfb10b5a98a81e3dd5be4dc047aab6678a45d2ef5f067ba",
+      "h25_oxygen_atoms_closure": "d50411a9998f6d9683dfae741c9ea6d053b833a5e536f85a0c212f973c951509",
+      "h25_atomic_positive_ion": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01",
+      "h25_molecular_positive_ion": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4",
+      "h25_atomic_oxygen": "a6e6f0be4a0a290b4c855ebca66761b27f16b1b3bd2791b9eee85309a5879cd9",
+      "h25_neutral_pressure": "5d079716d7bca48ad5c54948dabdcd11287bdc67ba6a68fd9530dfc67bc960bd",
+      "h25_progress_integral": "1f777f8d147b434bd59db935879ffd7be9c9c4fd4cc469a8465c5d20db19b662",
+      "h25_charge_closure_integral": "278b09d31e4e6cb1b6196a59922b6d1566f6f1b7a810f48709f7bfbfbb2116f7",
+      "h25_heavy_mass_closure_integral": "0cc5a1cb24ddb8e32c7bd22bcfe3a6059ef99401b2948b1c4d6c640b2ad132ff",
+      "h25_neutral_mass_closure_integral": "2a6b0c23749220a9490cecd0d7ee89913af7d190a8912b9039b4b75ed7671734",
+      "h25_oxygen_atoms_closure_integral": "c74ac6c476058b8e6ab7ece6b97945bdfad6df76f7da7189844db60697429d06"
+    }
+  },
+  "limitations": [
+    "Research-only provisional rate is not independently scientifically validated",
+    "Ion-neutral energy transfer not modeled in original law",
+    "Dynamic callers outside published .i inputs not exhaustively established",
+    "This is pre-retirement Hybrid Scratch D; no New-only 26-to-24 Native P2 claim"
+  ],
+  "safety": {
+    "private_rates_published": false,
+    "original_10_layer_modified": false,
+    "main_modified": false,
+    "pr665_modified": false,
+    "P1_E": "PENDING",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
