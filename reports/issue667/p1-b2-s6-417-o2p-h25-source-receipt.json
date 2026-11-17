@@ -1,0 +1,125 @@
+{
+  "b1_nonduplication": {
+    "block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+    "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+    "layer_ordinal": 5,
+    "object_name": "ei415_o2p_source",
+    "rate_functor": "R_EI415",
+    "rhs": "S_O2p_molar_EI415",
+    "separate_reaction": true,
+    "total_o2p_fvcoupledforce_sources": 2,
+    "variable": "log_O2p"
+  },
+  "birth_producer": {
+    "block_sha256": "6f483b0cff456b77f9c5737ae7f67d6e9f4fd5e50d595f568d42857810dd94e7",
+    "expression": "'R'",
+    "factory_type": "ADParsedFunctorMaterial",
+    "object_name": "h25_o2p_birth",
+    "property_name": "S_O2p_molar_H25",
+    "section": "FunctorMaterials"
+  },
+  "case": "S6-417-407-2069-H25",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "historical_to_final": {
+    "final_h25_file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+    "intermediate_canonical_h25_sha256": "b9845f954a610fa08b2c9f306069901eec219644c1931f63c850bb38cf991dfb",
+    "original_archive_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "original_h25_file_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+    "original_to_final_byte_exact_canonicalization": true
+  },
+  "native_p2": "NOT_RUN",
+  "native_p3": "NOT_RUN",
+  "native_p4": "NOT_RUN",
+  "negative_tests": {
+    "duplicate_source": "REJECTED",
+    "missing_source": "REJECTED",
+    "tampered_file_sha": "REJECTED",
+    "wrong_birth_sign": "REJECTED",
+    "wrong_factory": "REJECTED",
+    "wrong_rate_law": "REJECTED",
+    "wrong_rhs": "REJECTED"
+  },
+  "negative_tests_passed": 7,
+  "new_only_s6_p2": "HOLD",
+  "p1_0": {
+    "artifact_id": 14372315897,
+    "artifact_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "case_417_files_verified": "11/11",
+    "case_417_fv_blocks_verified": "63/63",
+    "native_ion_bcs": 12,
+    "native_ion_kernels": 14,
+    "unresolved_include_directives": 0,
+    "workflow_run_id": 44180190753
+  },
+  "private_rate_bytes_published": false,
+  "producer_consumer_edges": [
+    {
+      "from": "log_Op",
+      "producer": "h25_op_target",
+      "to": "c_Op_H25"
+    },
+    {
+      "from": "rho_neutral + w_O2_constraint",
+      "producer": "h25_o2_target",
+      "to": "c_O2_H25"
+    },
+    {
+      "from": "c_Op_H25 + c_O2_H25 + Tg_H25_K",
+      "producer": "h25_progress",
+      "to": "R_H25"
+    },
+    {
+      "expression": "+R",
+      "from": "R_H25",
+      "producer": "h25_o2p_birth",
+      "to": "S_O2p_molar_H25"
+    },
+    {
+      "from": "S_O2p_molar_H25",
+      "to": "[FVKernels]/h25_molecular_positive_ion",
+      "variable": "log_O2p",
+      "via": "v"
+    }
+  ],
+  "rate_producer": {
+    "block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+    "count_in_11_layers": 1,
+    "expression": "'1.204428152e7*(300.0/tg)^0.4*cp*c2'",
+    "factory_type": "ADParsedFunctorMaterial",
+    "object_name": "h25_progress",
+    "property_name": "R_H25",
+    "section": "FunctorMaterials",
+    "synthetic_provider_count": 0
+  },
+  "schema": "issue667.p1_b2.s6_417.o2p_source2_receipt.v1",
+  "science": "SCIENCE_HOLD",
+  "scope": "Original Native molecular O2+ second source; 11-layer independent bytes/blocks and H25 producer/consumer only",
+  "source": {
+    "block_sha256": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4",
+    "factory_type": "FVCoupledForce",
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+    "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+    "layer_ordinal": 10,
+    "line_end": 128,
+    "line_start": 122,
+    "object_name": "h25_molecular_positive_ion",
+    "parameters": {
+      "block": "plasma",
+      "coef": "1.0",
+      "type": "FVCoupledForce",
+      "v": "S_O2p_molar_H25",
+      "variable": "log_O2p"
+    },
+    "section": "FVKernels",
+    "variable": "log_O2p"
+  },
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "status": "PASS_SOURCE_STATIC_FINAL_11_LAYER",
+  "task_id": "P1-B2",
+  "unresolved": [
+    "P1-E cross-receipt integration and complete semantic compatibility not yet verified",
+    "New-only Physics/JSON ownership and Native P2 remain on separate gate",
+    "H25 ion-neutral energy partition scientific acceptance remains HOLD"
+  ]
+}
