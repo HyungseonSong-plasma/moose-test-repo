@@ -206,6 +206,7 @@ def test_swapped_discretization_negative_requires_json_sole_owner_diagnostic():
     assert "[Chemistry]" not in fixture
     assert 'const bool generate_kernels = !getParam<bool>("dont_create_kernels");' in source
     assert "if (!fvm.empty() && generate_kernels)" in source
+    assert "if (!chemistryEnabled())" in source
     assert "[log_O2p]" in baseline and "type = MooseVariableFVReal" in baseline
     assert "[log_e]" in baseline and "family = LAGRANGE" in baseline
     assert "invalid_fem_fv_swap) expected=\"Species 'O2p' has JSON initial_number_density and an existing solver variable 'log_O2p'\"" in runner
