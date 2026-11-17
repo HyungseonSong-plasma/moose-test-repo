@@ -203,6 +203,7 @@ def test_swapped_discretization_negative_requires_json_sole_owner_diagnostic():
     assert "fem_species = 'O2p'" in fixture
     assert "fvm_species = 'e'" in fixture
     assert "dont_create_kernels = true" in fixture
+    assert "[Chemistry]" not in fixture
     assert 'const bool generate_kernels = !getParam<bool>("dont_create_kernels");' in source
     assert "if (!fvm.empty() && generate_kernels)" in source
     assert "[log_O2p]" in baseline and "type = MooseVariableFVReal" in baseline
