@@ -134,13 +134,17 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   validate(_fem_species, "fem_species", "FEM");
   validate(_fvm_species, "fvm_species", "FVM");
 
-  // FV selection is itself the cutover switch: no Native presence probe, no
-  // manual ownership Enum, and no partially generated species equation.
+  // Selection itself activates generation. Potential is transport data, not
+  // an ownership switch; never silently downgrade to binding-only mode.
+  if (!isParamValid("fem_potential"))
+    paramError("fem_potential",
+               "Selected fem_species/fvm_species require an explicit potential "
+               "for automatic FEM/FV drift-diffusion generation.");
+
+  // FV selection is the cutover decision: no Native presence probe, no owner
+  // Enum, and no partially generated species equation.
   if (!fvm.empty())
   {
-    if (!isParamValid("fem_potential"))
-      paramError("fem_potential",
-                 "fvm_species requires the existing fem_potential name for FV drift.");
     if (!chemistryEnabled())
       paramError("fvm_species",
                  "FV species kernels require [Physics]/[Plasmas]/[Transport]/[Chemistry] "
@@ -150,19 +154,6 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
         paramError("fvm_species",
                    "Selected FV species '", id,
                    "' requires a nonzero volume reaction source in Chemistry JSON.");
-  }
-
-  // Charges are specified once in [Plasmas]/files, not by parallel per-species
-  // vectors. Keep this builder disabled in pure variable-binding check mode.
-  if (isParamValid("fem_potential"))
-  {
-    if (fem.empty())
-      paramError("fem_species", "Generated FEM transport requires FEM species.");
-    const auto & mechanism = chemistryData();
-    for (const auto & id : fem)
-      (void)mechanism.species(id);
-    for (const auto & id : fvm)
-      (void)mechanism.species(id);
   }
 }
 
@@ -231,21 +222,18 @@ DDContinuityEq::checkIntegrity() const
   const auto & fvm = _fvm_species;
   const auto variables = resolvedContinuityVariables(fem, fvm);
   validateExistingSpeciesVariables(fem, fvm, variables);
-  if (isParamValid("fem_potential"))
-    for (std::size_t i = 0; i < fem.size(); ++i)
-    {
-      requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);
-      requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);
-      if (chemistryEnabled() && chemistryData().hasSpeciesSource(fem[i]))
-        requireUniqueFEKernel("FunctorKernel", variables[i]);
-    }
+  for (std::size_t i = 0; i < fem.size(); ++i)
+  {
+    requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);
+    requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);
+    if (chemistryEnabled() && chemistryData().hasSpeciesSource(fem[i]))
+      requireUniqueFEKernel("FunctorKernel", variables[i]);
+  }
 }
 
 void
 DDContinuityEq::addFEKernels()
 {
-  if (!isParamValid("fem_potential"))
-    return;
   const auto & species = _fem_species;
   const auto variables = resolvedContinuityVariables(species, _fvm_species);
   const auto & mechanism = chemistryData();
