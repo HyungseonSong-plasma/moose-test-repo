@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "task_id": "P1-0",
+  "target_pr": 665,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "run_id": 44182271555,
+  "run_event_commit_sha": "a8d62ee3f5600a411b19ae5a2ed4308d5beef683",
+  "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182271555",
+  "artifact_id": 14372727434,
+  "artifact_zip_sha256": "1c3e3b48af473de953ef2b67c660616baf6e161bbecb06b0706bcfc8fc05cbe8",
+  "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182271555/artifacts/14372727434",
+  "staging_route": "Issue493 public C decks: original 10 + D source override; public_option_s6_p2.canonicalize_staged_D_inputs, remap_staged_fem_types; chemistry.prepare_s6_run_input.prepare; no native process",
+  "origin_historical_original_zip_sha256": {
+    "417": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "941": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+  },
+  "original_debug_free_d_base_sha256": "e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd",
+  "cover_block_sha256": {
+    "ion_cover_dielectric": "6cf04ff67cabc68ad5852678c5c83c646495f994c5bf6c7dfc3628d637812d5b",
+    "negative_ion_cover_dielectric": "61acf3daa0654c6beb7220c7aaca1f3dbab944e9586a09e756aa2d419014ff02",
+    "atomic_positive_ion_cover_dielectric": "f44eddb6f571b5bc1b33cbe08a772bba4dcc86f129f53fe4127b715f47cfbe45"
+  },
+  "cases": {
+    "417": {
+      "status": "PASS_STATIC_11_LAYER_BYTES",
+      "file_count": 11,
+      "ordered_layers": [
+        {
+          "layer_ordinal": 1,
+          "file_path": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+        },
+        {
+          "layer_ordinal": 2,
+          "file_path": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "d7e4c86e8417a00d819797ea9e5daa514353811ec2d1c40343d7e67e403620a9"
+        },
+        {
+          "layer_ordinal": 3,
+          "file_path": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "fec601800cd37ff2b859c47a315480e802b9107b9389138e4778cfe23f47c898"
+        },
+        {
+          "layer_ordinal": 4,
+          "file_path": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "dfd7c92c205c6539bb33d3df1c32a3912795055a8d160566fec0a3d64c68f1f4"
+        },
+        {
+          "layer_ordinal": 5,
+          "file_path": "issue477_S2-415_generation_overlay.i",
+          "file_sha256": "b0586fbc724ef632b0a66ab68e8d518d268c690ac8bcf0009f8be9ae4dbd292a"
+        },
+        {
+          "layer_ordinal": 6,
+          "file_path": "issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "cb92b8de3701eae65f440eb827be416bc2a1ec3ab7608b6f0179a6d9426afdf0"
+        },
+        {
+          "layer_ordinal": 7,
+          "file_path": "issue477_S4-401-417_op_ionization_overlay.i",
+          "file_sha256": "518a53d3ab27411a0d91dbf7ce63ea7e0be8ec512c259feab0c7f5198c57f65d"
+        },
+        {
+          "layer_ordinal": 8,
+          "file_path": "issue477_S5-417-407_o2_consumer_overlay.i",
+          "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+        },
+        {
+          "layer_ordinal": 9,
+          "file_path": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+        },
+        {
+          "layer_ordinal": 10,
+          "file_path": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+          "file_sha256": "b9845f954a610fa08b2c9f306069901eec219644c1931f63c850bb38cf991dfb"
+        },
+        {
+          "layer_ordinal": 11,
+          "file_path": "migrated_continuity.i",
+          "file_sha256": "bed32e0f743b210dd182c8f672d9d1d2af8f7f00fae3b17b5c18fe618e842840"
+        }
+      ],
+      "cover_objects_count": 3,
+      "negative_controls": 6,
+      "explicit_bang_include_targets": []
+    },
+    "941": {
+      "status": "PASS_STATIC_11_LAYER_BYTES",
+      "file_count": 11,
+      "ordered_layers": [
+        {
+          "layer_ordinal": 1,
+          "file_path": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+        },
+        {
+          "layer_ordinal": 2,
+          "file_path": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "d7e4c86e8417a00d819797ea9e5daa514353811ec2d1c40343d7e67e403620a9"
+        },
+        {
+          "layer_ordinal": 3,
+          "file_path": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "fec601800cd37ff2b859c47a315480e802b9107b9389138e4778cfe23f47c898"
+        },
+        {
+          "layer_ordinal": 4,
+          "file_path": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "dfd7c92c205c6539bb33d3df1c32a3912795055a8d160566fec0a3d64c68f1f4"
+        },
+        {
+          "layer_ordinal": 5,
+          "file_path": "issue477_S2-415_generation_overlay.i",
+          "file_sha256": "b0586fbc724ef632b0a66ab68e8d518d268c690ac8bcf0009f8be9ae4dbd292a"
+        },
+        {
+          "layer_ordinal": 6,
+          "file_path": "issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "cb92b8de3701eae65f440eb827be416bc2a1ec3ab7608b6f0179a6d9426afdf0"
+        },
+        {
+          "layer_ordinal": 7,
+          "file_path": "issue477_S4-401-941_op_ionization_overlay.i",
+          "file_sha256": "d8d8b3742e625228a66069a98b393ce2f3740a5250761894792f4c6ae8ea79b3"
+        },
+        {
+          "layer_ordinal": 8,
+          "file_path": "issue477_S5-941-407_o2_consumer_overlay.i",
+          "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+        },
+        {
+          "layer_ordinal": 9,
+          "file_path": "issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+        },
+        {
+          "layer_ordinal": 10,
+          "file_path": "issue477_S6-941-407-2069-H25_H25_overlay.i",
+          "file_sha256": "b9845f954a610fa08b2c9f306069901eec219644c1931f63c850bb38cf991dfb"
+        },
+        {
+          "layer_ordinal": 11,
+          "file_path": "migrated_continuity.i",
+          "file_sha256": "3b291c17c2b65b6cbc4e412602d55d8b0e648724b0a679845c213ff4e933b553"
+        }
+      ],
+      "cover_objects_count": 3,
+      "negative_controls": 6,
+      "explicit_bang_include_targets": []
+    }
+  },
+  "verification": "GitHub Actions source checkout exact PR HEAD followed by independent ZIP CRC/byte rehash: PASS",
+  "source_evidence_class": "P0_STATIC_ONLY",
+  "P1_A2_2": "COVER_3_OF_3_PASS_BOTH_CASES",
+  "P1_E": "NOT_RUN",
+  "NEW_ONLY_S6_P2": "HOLD",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "SCIENCE": "HOLD",
+  "private_rate_bytes": "EXCLUDED",
+  "caveat": "Evidence proves the declared public_chemistry scratch staging route, not other Hybrid/New-only input preparation sequences, Native P2, or science."
+}
