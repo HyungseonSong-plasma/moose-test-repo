@@ -1,0 +1,100 @@
+{
+  "schema": "issue667.p1.source_bound_receipt.v1",
+  "task_id": "P1-B5",
+  "case": "S6-417-407-2069-H25",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "parent_issue": 667,
+  "integration_pr": 665,
+  "result": "HOLD_P1_0_ARCHIVE_READBACK_MISSING",
+  "evidence_class": "PINNED_SOURCE_GENERATOR_STATIC_ONLY",
+  "layer_ordinal": 10,
+  "layer_ordinal_evidence": "Issue477 prepare_s6_combined_consumers.py appends EI2069 and H25 to eight S5 input paths; 11th scratch layer is migrated_continuity.i",
+  "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+  "file_sha256": null,
+  "expected_generator_file_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+  "expected_generator_file_bytes": 4938,
+  "section": "FVKernels",
+  "object_name": "h25_atomic_positive_ion",
+  "factory_type": "FVCoupledForce",
+  "variable": "log_nop",
+  "canonical_scratch_variable": "log_Op",
+  "relevant_parameters": {
+    "type": "FVCoupledForce",
+    "variable": "log_nop",
+    "v": "S_Op_molar_H25",
+    "coef": "1.0",
+    "block": "plasma"
+  },
+  "block_sha256": null,
+  "expected_generator_block_sha256": "988613b29ab8eea9d63e1ba2401cbfdabe679800e4a6ee516fe3f7d940b83e08",
+  "expected_generator_block_bytes": 139,
+  "provider_consumer_edges": [
+    {
+      "producer": "h25_op_target",
+      "output": "c_Op_H25",
+      "consumer": "h25_progress"
+    },
+    {
+      "producer": "h25_o2_target",
+      "output": "c_O2_H25",
+      "consumer": "h25_progress"
+    },
+    {
+      "producer": "h25_fixed_tgas",
+      "output": "Tg_H25_K",
+      "consumer": "h25_progress"
+    },
+    {
+      "producer": "h25_progress",
+      "output": "R_H25",
+      "consumer": "h25_op_loss"
+    },
+    {
+      "producer": "h25_op_loss",
+      "output": "S_Op_molar_H25",
+      "expression": "-R_H25",
+      "consumer": "h25_atomic_positive_ion"
+    },
+    {
+      "consumer": "h25_atomic_positive_ion",
+      "target_variable": "log_nop",
+      "role": "Op H25 loss FVCoupledForce"
+    }
+  ],
+  "b4_nonoverlap_static": {
+    "b4_object_name": "legacy8_h05_ei417_op",
+    "b4_functor": "S_Op_molar_EI417",
+    "b4_expected_generator_block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e",
+    "observation": "Distinct object names, generator texts, rate channels and Functor names; actual archived co-presence still UNVERIFIED"
+  },
+  "provenance": {
+    "pinned_oxygen14_source_commit": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "generator_file": ".github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_noei2259_noei2058_100us.py",
+    "generator_git_blob_sha": "c1bab07694987c98dbb87a5381516712208c0e9d",
+    "generator_file_sha256": "1a065c5d152699952af81f03fa8862d90d7816710a06fc698f45764f7ff82cb5",
+    "producer_pipeline": "experiments/Issue477_electron_shape/prepare_s6_combined_consumers.py",
+    "generator_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/29d1acc6ef7969908b86719e4b95c73a1565136d/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_noei2259_noei2058_100us.py#L139-L146",
+    "pipeline_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9c15a4f0e2cf8042cb0d4b2f18af31511021d168/experiments/Issue477_electron_shape/prepare_s6_combined_consumers.py#L131-L151"
+  },
+  "checks": {
+    "generator_block_identified": true,
+    "one_matching_block_in_generator": true,
+    "b4_distinct_in_generator": true,
+    "exact_417_archive_10_layer_bytes_verified": false,
+    "exact_417_11_layer_order_include_verified": false,
+    "original_file_sha256_verified": false,
+    "original_block_sha256_verified": false,
+    "actual_b4_b5_coexistence_verified": false,
+    "private_h25_kinetics_science_verified": false,
+    "physics_opt_native_p2": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "P1-0 immutable S6-417 manifest and archived 10-layer/11-layer readback have not been verified; do not promote expected generator hashes to archive hashes",
+    "Compare archived original file and block bytes against expected hashes and verify H25 appears once at layer 10",
+    "Confirm archived B4 EI417 Op Source and B5 H25 Op Source coexist once each, and no third unexpected log_nop FVKernels Source",
+    "Recompute scratch canonicalized log_Op block hash separately after exact input ordering and canonicalization",
+    "B7 owns unresolved H25 kinetic provenance and original law; source's 300 K model remains provisional"
+  ],
+  "mutation_scope": "Receipt on task-specific branch only; no changes to historic inputs, #665, main, science gates or workflows"
+}
