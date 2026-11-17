@@ -82,7 +82,7 @@ def test_p05_warehouse_exact_names_types_and_family_coverage():
 def test_missing_and_duplicate_guard_negative_mutations():
     source = SOURCE.read_text()
     for token in (*GENERATORS, *WAREHOUSE_CHECKS):
-        mutated = source.replace(token, "", 1)
+        mutated = source.replace(token, "")  # remove every copy of this invariant
         assert mutated != source
         required = GENERATORS if token in GENERATORS else WAREHOUSE_CHECKS
         assert token in _missing(mutated, required), token
