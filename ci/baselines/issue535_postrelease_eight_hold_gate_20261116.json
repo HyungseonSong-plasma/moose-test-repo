@@ -394,9 +394,18 @@
           "sha256": "95eca7994c105347a8948f9b06852ac3929eaddb9781cc01bad00ca31c88397b",
           "zip_crc": "PASS_8_MEMBERS",
           "issue535_receipt": 6933161334,
-          "drive_new_upload_success": false,
+          "drive_new_upload_success": true,
           "provider_expiry_utc": "2026-11-27T14:35:35Z",
-          "durable_redundant_retention": "NOT_VERIFIED"
+          "durable_redundant_retention": "PRIVATE_INDEPENDENT_DRIVE_BYTE_VERIFIED_NOT_WORM",
+          "drive_file_id": "11xBcL8q8FLZBm9vsPXemoEbAhIE17Sqd",
+          "drive_size_bytes": 10401,
+          "drive_mime": "application/zip",
+          "drive_shared": false,
+          "download_readback_sha256_match": true,
+          "download_readback_byte_cmp_match": true,
+          "download_readback_zip_crc": "PASS",
+          "issue535_independent_backup_receipt": 6942585396,
+          "WORM_object_lock_not_proven": true
         }
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
@@ -412,10 +421,8 @@
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
-      "formal_disposition": "KEEP_HOLD",
-      "red_gates": [
-        "DURABLE_ACCESSIBLE_B_ORIGINAL_ARTIFACT_CUSTODY"
-      ],
+      "formal_disposition": "RETIRED_VERIFIED",
+      "red_gates": [],
       "issue535_receipt": 6932945957,
       "retirement_scope": "ORIGINAL_P0_P1_P2_ONLY"
     },
@@ -585,15 +592,15 @@
         "A4",
         "B"
       ],
-      "state": "A4_SCOPED_VERIFIED_B_CALLER_RISK_ACCEPTED_DURABLE_CUSTODY_HOLD"
+      "state": "A4_AND_B_SCOPED_RETIRED_VERIFIED_AFTER_INDEPENDENT_B_ZIP_CUSTODY"
     }
   ],
   "approval_outcome": {
-    "newly_retired_verified_count": 5,
-    "still_hold_count": 3,
+    "newly_retired_verified_count": 6,
+    "still_hold_count": 2,
     "original_wave1_prior_retired_verified_count": 2,
-    "wave1_proposed_formal_retired_verified_count": 7,
-    "wave1_proposed_formal_hold_count": 3,
+    "wave1_proposed_formal_retired_verified_count": 8,
+    "wave1_proposed_formal_hold_count": 2,
     "source": "USER_APPROVAL_CONDITIONED_ON_PR_EXACT_HEAD_CI_AND_MANUAL_MERGE_GATE"
   }
 }
