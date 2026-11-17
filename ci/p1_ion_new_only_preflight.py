@@ -264,6 +264,41 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
                     "P1_FULL_ENERGY_NATIVE_ELECTRON_MATERIAL_OWNERS_" +
                     str(len(old_materials))
                 )
+    # Constant transport values are JSON-owned. They generate their own
+    # canonical Species mobility/diffusivity Functors; external producers of
+    # the same names would be duplicate MOOSE Functor owners.
+    constant_transport_output_names = {
+        id + "_" + quantity
+        for id in fem + fvm
+        if isinstance(species.get(id), dict)
+        and isinstance(species[id].get("transport_coef"), dict)
+        and species[id]["transport_coef"].get("type") == "constant"
+        for quantity in ("mobility", "diffusivity")
+    }
+    external_transport_owners = []
+    for b in blocks:
+        if b["parent"] != "FunctorMaterials":
+            continue
+        params = b["params"]
+        names = set(params.get("prop_names", "").split())
+        if params.get("property_name"):
+            names.add(params["property_name"])
+        is_manual_transport_material = (
+            params.get("type") == "DDTransportMaterial"
+            and params.get("species_id") in (fem + fvm)
+            and params["species_id"] + "_mobility" in constant_transport_output_names
+        )
+        if (names & constant_transport_output_names) or is_manual_transport_material:
+            external_transport_owners.append({
+                "file": b["file"], "line": b["line"], "name": b["name"],
+                "type": params.get("type"),
+                "collisions": sorted(names & constant_transport_output_names),
+            })
+    if contract == "new-only" and external_transport_owners:
+        errors.append(
+            "P1_DUPLICATE_JSON_TRANSPORT_FUNCTOR_OWNER_" +
+            str(len(external_transport_owners))
+        )
     # New electron producer exists only in full DDEnergyEq (fem_potential).
     # In S6 ion-only cutover the Energy action is partial, so the existing
     # Native electron wall Flux may remain as the *sole* producer.
@@ -381,6 +416,7 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
             "c2_native_producer_collisions": producer_conflicts,
             "native_electron_bc_owner_count": len(duplicate_electron_bcs),
             "native_electron_bc_owners": duplicate_electron_bcs,
+            "duplicate_constant_transport_owners": external_transport_owners,
             "runtime_generated_kernel_bc_count": "NOT_VERIFIED_P0_ONLY"}
 
 def main(argv=None) -> int:
