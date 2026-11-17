@@ -1,0 +1,54 @@
+#pragma once
+
+#include "FunctorMaterial.h"
+
+/**
+ * Positive outward ion wall-loss flux.
+ *
+ * Surface component:
+ *
+ *   Gamma_s = s * (1/4) * n_i * sqrt(8 R T_i / (pi M_i))
+ *
+ * where T_i uses the optional user-defined ion_temperature_eV when it is
+ * positive, converted to kelvin through k_B [eV/K].  Otherwise the existing
+ * gas_temperature functor is used as the heavy-particle temperature.
+ *
+ * Migration component:
+ *
+ *   Gamma_m = n_i * mu_i * max(z_i E_n, 0)
+ *
+ * with E = -grad(phi) and E_n = E . n_out.
+ *
+ * The generated functors are:
+ *
+ *   ion_surface_number_flux
+ *   ion_migration_number_flux
+ *   ion_wall_number_flux
+ *   ion_surface_mass_flux
+ *   ion_migration_mass_flux
+ *   ion_wall_mass_flux
+ *
+ * These wall-flux functors are intentionally face-only. Non-face evaluations
+ * return zero. FV wall boundary conditions and surface-charge bookkeeping
+ * should evaluate them with a sided FaceArg so that the same physical face
+ * flux is shared by all consumers.
+ */
+class IonWallFluxMaterial : public FunctorMaterial
+{
+public:
+  static InputParameters validParams();
+  IonWallFluxMaterial(const InputParameters & parameters);
+
+protected:
+  const Moose::Functor<ADReal> & _ion_number_density;
+  const Moose::Functor<ADReal> & _potential;
+  const Moose::Functor<ADReal> & _mobility;
+  const Moose::Functor<ADReal> & _gas_temperature;
+
+  const Real _charge_number;
+  const Real _molar_mass;
+  const Real _sticking;
+  const Real _ion_temperature_eV;
+  const Real _migration_gate_smoothing_width;
+  const bool _use_element_gradient_for_potential;
+};
