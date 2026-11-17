@@ -76,7 +76,7 @@ def test_all_seven_species_have_same_core_keys(case):
     assert species["e"]["molar_mass"] == pytest.approx(5.485799096195737e-7)
     assert species["e"]["temperature_eV"] == pytest.approx(8 / 3)
     assert species["e"]["initial_number_density"] is not None
-    assert species["e"]["energy_transport_coef"] == "fluid"
+    assert "energy_transport_coef" not in species["e"]
     for ident in IONS:
         assert species[ident]["sticking_coefficient"] == 1
         assert species[ident]["temperature_eV"] is None  # existing T_g fallback
@@ -88,7 +88,7 @@ def test_all_seven_species_have_same_core_keys(case):
 
 
 @pytest.mark.parametrize("case", CASES)
-def test_typed_lookup_functor_rules_and_resolved_file(case):
+def test_typed_lookup_and_json_constant_ion_functors(case):
     species = run_json(case)["species"]
     electron = species["e"]["transport_coef"]
     assert electron["type"] == "lookup" and electron["unit"] == "reduced"
@@ -97,7 +97,8 @@ def test_typed_lookup_functor_rules_and_resolved_file(case):
     assert file.is_file() and file.stat().st_size > 0
     for ident in IONS:
         assert species[ident]["transport_coef"] == {
-            "type": "functor", "file": "none", "unit": "physical"
+            "type": "constant", "file": "none", "unit": "physical",
+            "mobility": 10, "diffusivity": 0.25851999786435537
         }
 
 
@@ -112,6 +113,10 @@ def test_new_only_template_owns_pressure_temperature_potential_and_gate(case):
     assert "fem_potential = potential" in deck
     assert "fvm_species = 'O2p Om Op'" in deck
     assert "migration_smoothing_width = 0.001" in deck
+    energy = deck.split("[Energy]", 1)[1].split("[]", 1)[0]
+    assert "fem_species = e" in energy
+    assert "fem_potential = potential" in energy
+    assert "transport_coefficient = fluid" in energy
     assert "[Poisson]" not in deck
 
 
@@ -124,7 +129,7 @@ def test_modern_schema_negative_controls_are_fail_closed(case):
         (lambda d: d["species"]["e"].__setitem__("gas_temperature", "T_g_fixed"),
          "RETIRED_SPECIES_FIELD_e_gas_temperature"),
         (lambda d: d["species"]["O2p"]["transport_coef"].__setitem__("unit", "reduced"),
-         "FUNCTOR_MUST_USE_PHYSICAL_UNIT_O2p"),
+         "INVALID_CONSTANT_TRANSPORT_TEMPLATE_O2p"),
         (lambda d: d["species"]["O2p"].pop("sticking_coefficient"),
          "INCONSISTENT_COMMON_SPECIES_TEMPLATE"),
         (lambda d: d["species"]["Om"].__setitem__("wall_molar_mass", 0.016),
@@ -134,6 +139,10 @@ def test_modern_schema_negative_controls_are_fail_closed(case):
         (lambda d: d["species"]["O2p"].__setitem__(
             "wall_use_element_gradient_for_potential", True),
          "WALL_GRADIENT_MUST_BE_PLASMAS_O2p"),
+        (lambda d: d["species"]["O2p"]["transport_coef"].__setitem__("mobility", -1),
+         "INVALID_CONSTANT_TRANSPORT_VALUE_O2p"),
+        (lambda d: d["species"]["e"].__setitem__("energy_transport_coef", "fluid"),
+         "ENERGY_TRANSPORT_SELECTOR_MUST_BE_MOOSE_INPUT"),
     ]
     for mutate, reason in cases:
         changed = deepcopy(original)
@@ -156,6 +165,12 @@ def test_production_cpp_owner_for_typed_fields_and_electron_initial_temperature(
                   'wall.sticking = species.sticking_coefficient'):
         assert token in chem, token
     assert 'rootGasStateEnabled()' in dd
+    assert 'getActions<Plasma::DDEnergyEq>()' in dd
+    assert 'getParam<MooseEnum>("transport_coefficient") == "fluid"' in dd
+    assert 'getParam<MooseEnum>("transport_coefficient") != "fluid"' in energy
+    assert 'energy_transport_coef is MOOSE [Energy] transport_coefficient-only' in chem
+    assert 'params.set<Real>("mobility") = config->mobility;' in dd
+    assert 'params.set<Real>("diffusivity") = config->diffusivity;' in dd
     assert 'const auto & electron = chemistryData().species("e")' in energy
     assert '1.5 * (*electron.temperature_eV) * (*electron.initial_number_density)' in energy
     assert 'params.set<Real>("value") = std::log(initial_energy)' in energy
