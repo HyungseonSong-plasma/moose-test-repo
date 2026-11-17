@@ -1,0 +1,127 @@
+{
+  "schema": "issue667.p1_b1.original_plus_final_bytes.v1",
+  "task_id": "P1-B1",
+  "case": "S6-417-407-2069-H25",
+  "status": "PASS_SOURCE_BYTES_PRODUCER_CONSUMER_STATIC",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "provenance": {
+    "original_artifact_id": 13677089020,
+    "original_archive_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "original_10_layer_file_sha_recomputed": 10,
+    "final_artifact_id": 14372315897,
+    "final_ci_run_id": 44180190753,
+    "final_artifact_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "final_11_layer_file_sha_recomputed": 11,
+    "independent_local_receipt_sha256": "853cc03fc4b9dbae66973c4a36c3ec9309d28eaeeaedc88df8be4153ca292b5d"
+  },
+  "source": {
+    "layer_ordinal": 5,
+    "section": "FVKernels",
+    "object_name": "ei415_o2p_source",
+    "factory_type": "FVCoupledForce",
+    "variable": "log_O2p",
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+    "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+    "block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+    "original_file_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
+    "original_block_sha256": "86aa718b76813ec96f3dc8ca7f1cd7e18a57be28230664b04179fb2ba2ffc82e",
+    "parameters": {
+      "type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "v": "S_O2p_molar_EI415",
+      "coef": "1.0",
+      "block": "plasma"
+    },
+    "original_to_final_parameter_change": {
+      "variable": [
+        "log_ni",
+        "log_O2p"
+      ]
+    }
+  },
+  "producers": [
+    {
+      "section": "FunctorMaterials",
+      "object_name": "ei415_progress",
+      "factory_type": "EIRateCoefMaterial",
+      "block_sha256": "aa7b0f2e016f8dc367817c52a29e20d586e4db0c6840c7f377d4cc2970d52894",
+      "original_block_sha256": "a209ed7aa0c184b1dfa2c7dddacf46eff075294abb363568753f776506a9a371",
+      "reaction_progress": "R_EI415",
+      "mean_energy": "e_energy_eV",
+      "electron_number_density": "n_e_physical",
+      "target_molar_concentration": "c_O2_EI415",
+      "rate_table_file": "private_rates/EI-415_O2_X.txt"
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "ei415_o2p_source",
+      "factory_type": "ADParsedFunctorMaterial",
+      "block_sha256": "0998b09c7652648ea63f19394f68c54a3e905bb9df680a7a87bc4b114f9d8392",
+      "original_block_sha256": "e2a0b9c65c01f9df48a00227eea30b06c788b76b602c76ad11b150ac38371584",
+      "property_name": "S_O2p_molar_EI415",
+      "functor_names": "R_EI415",
+      "expression": "R"
+    }
+  ],
+  "provider_consumer_edges": [
+    "ei415_progress(R_EI415) -> FunctorMaterials/ei415_o2p_source(S_O2p_molar_EI415)",
+    "FunctorMaterials/ei415_o2p_source(S_O2p_molar_EI415) -> FVKernels/ei415_o2p_source(v=S_O2p_molar_EI415, variable=log_O2p)"
+  ],
+  "b2_nonoverlap": {
+    "other_object_name": "h25_molecular_positive_ion",
+    "other_layer_ordinal": 10,
+    "other_source_functor": "S_O2p_molar_H25",
+    "distinct_o2p_source_kernels": 2,
+    "unique_b1_source_count": 1
+  },
+  "original_to_final_rate_producer_changes": {
+    "type": [
+      "PhysicsElectronImpactRateMaterial",
+      "EIRateCoefMaterial"
+    ],
+    "mean_energy": [
+      "mean_en_solved",
+      "e_energy_eV"
+    ],
+    "reaction_progress": [
+      "R_ion_O2",
+      "R_EI415"
+    ]
+  },
+  "original_to_final_source_material_changes": {
+    "functor_names": [
+      "R_ion_O2",
+      "R_EI415"
+    ]
+  },
+  "negative_controls": {
+    "rejected": 11,
+    "total": 11,
+    "classes": [
+      "missing_b1_kernel",
+      "duplicate_b1_kernel",
+      "wrong_factory",
+      "wrong_variable",
+      "wrong_functor",
+      "wrong_sign",
+      "wrong_source_property",
+      "wrong_source_rate_edge",
+      "wrong_rate_factory",
+      "wrong_private_table_path",
+      "duplicate_b2_source"
+    ]
+  },
+  "unresolved": [
+    "Private EI-415 original table bytes not inspected; private rate SHA independent recomputation HOLD",
+    "Native factory and dynamic source/functor binding not executed; Native P2/P3/P4 NOT_RUN",
+    "No permission from this source receipt to retire Native ion objects or claim New-only P2/science acceptance"
+  ],
+  "private_rate_bytes_read": false,
+  "private_rate_sha_recomputed": false,
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "mutation_scope": "independent task-specific evidence branch only"
+}
