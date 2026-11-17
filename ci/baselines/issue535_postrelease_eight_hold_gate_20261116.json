@@ -95,15 +95,22 @@
         "file_id": "1ANMZfpvAwUi-ozaDYKDuwKMwjJSzBxMT"
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6941923213,
+        "scope": "ORIGINAL_P0_P1_P2_ONLY",
+        "accepted_utc_date": "2026-11-17",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_UNSEEN_PRIVATE_DYNAMIC_CALLERS",
+        "not_independent_caller_zero": true,
+        "excludes_worm_and_science": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
-      "formal_disposition": "KEEP_HOLD",
-      "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION"
-      ],
-      "issue535_receipt": 6932897263
+      "formal_disposition": "RETIRED_VERIFIED",
+      "red_gates": [],
+      "issue535_receipt": 6932897263,
+      "retirement_scope": "ORIGINAL_P0_P1_P2_ONLY"
     },
     {
       "id": "D3",
@@ -149,15 +156,22 @@
         "file_id": "1upBNduXJk-XxSt1uUyXVomlP4Hkc_6Ve"
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6941923213,
+        "scope": "ORIGINAL_P0_P1_P2_ONLY",
+        "accepted_utc_date": "2026-11-17",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_UNSEEN_PRIVATE_DYNAMIC_CALLERS",
+        "not_independent_caller_zero": true,
+        "excludes_worm_and_science": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
-      "formal_disposition": "KEEP_HOLD",
-      "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION"
-      ],
-      "issue535_receipt": 6932897263
+      "formal_disposition": "RETIRED_VERIFIED",
+      "red_gates": [],
+      "issue535_receipt": 6932897263,
+      "retirement_scope": "ORIGINAL_P0_P1_P2_ONLY"
     },
     {
       "id": "D4",
@@ -484,9 +498,55 @@
     }
   ],
   "global_holds": {
-    "external_caller_risk": "NO_NEW_OPERATOR_SIGNOFF_RECEIVED",
+    "external_caller_risk": "PARTIAL_CORE_FLOW_ACCEPTED_ARCH_NOT_ACCEPTED",
     "worm": "NOT_PROVEN",
     "science": "SCIENCE_HOLD",
     "s6_p3": "100US_FULL_MAINTAINED_REPLAY_NOT_ACCEPTED"
-  }
+  },
+  "approval": {
+    "comment_id": 6941923213,
+    "date_utc": "2026-11-17",
+    "source": "DIRECT_OPERATOR_CHAT_APPROVAL_SCOPED",
+    "owner": "repository-operator",
+    "approved_scope": [
+      "D2",
+      "D3",
+      "D4",
+      "A3",
+      "A4",
+      "B"
+    ],
+    "approval_effect": "ACCEPT_RESIDUAL_PRIVATE_DYNAMIC_EXTERNAL_CALLER_RISK_AND_REPLACEMENT_VERIFICATION_HANDOFF_ONLY",
+    "caller_zero_proven": false,
+    "B_durable_custody_approved": false,
+    "ARCH_DD_S6_approved": false,
+    "science_approved": false,
+    "automatic_merging_approved": false
+  },
+  "approval_cycles": [
+    {
+      "number": 1,
+      "cases": [
+        "D2",
+        "D3"
+      ],
+      "state": "SCOPED_RETIRED_VERIFIED_AFTER_REQUIRED_CI"
+    },
+    {
+      "number": 2,
+      "cases": [
+        "D4",
+        "A3"
+      ],
+      "state": "PENDING_EVIDENCE_CAS_WRITE"
+    },
+    {
+      "number": 3,
+      "cases": [
+        "A4",
+        "B"
+      ],
+      "state": "PENDING_EVIDENCE_CAS_WRITE"
+    }
+  ]
 }
