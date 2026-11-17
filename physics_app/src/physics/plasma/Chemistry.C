@@ -543,8 +543,12 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           !current.at("electron_wall_number_flux").is_string())
         fail(file, "ion_surface_current requires exactly electron_wall_number_flux");
       _surface_electron_wall_flux = current.at("electron_wall_number_flux").get<std::string>();
-      if (_surface_electron_wall_flux.empty())
-        fail(file, "ion_surface_current electron Functor must be nonempty");
+      // DDEnergyEq emits the historical name; S6 scratch wall canonicalization
+      // can instead emit e_wall_number_flux. The JSON must name its chosen
+      // producer explicitly: never guess an alias or create a second electron law.
+      if (_surface_electron_wall_flux != "electron_wall_number_flux" &&
+          _surface_electron_wall_flux != "e_wall_number_flux")
+        fail(file, "ion_surface_current requires an explicit known electron wall Functor");
     }
 
     // The top-level JSON boundaries registry relocates existing named [BCs].
@@ -1154,6 +1158,11 @@ PlasmasAction::act()
       {
         if (!allowed.count(id))
           mooseError("C2 has no characterized ion wall contract for selected species ", id);
+        // Explicit species identity must agree with the original 3-ion S6
+        // charge ledger before using it to sign migration and wall current.
+        const int expected_charge = id == "Om" ? -1 : 1;
+        if (_data.species(id).charge_number != expected_charge)
+          mooseError("C2 selected ion charge differs from signed S6 wall contract: ", id);
         selected.insert(id);
       }
     for (const auto & [id, record] : _data.speciesRecords())
