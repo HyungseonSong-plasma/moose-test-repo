@@ -143,44 +143,62 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
         require("boundaries" not in overlay,
                 "MODERN_BOUNDARIES_MUST_USE_DRIFT_DIFFUSION_BOUNDARIES")
         groups = overlay.get("drift_diffusion_boundaries")
-        require(isinstance(groups, dict) and len(groups) == 2,
+        require(isinstance(groups, dict) and len(groups) == 5,
                 "MODERN_BOUNDARY_GROUP_COUNT")
-        general = "inlet outlet plasma_electrode plasma_metal plasma_right"
-        dielectric = "plasma_cover plasma_wafer plasma_focus_ring"
-        require(set(groups) == {general, dielectric},
+        general_inlet = "inlet outlet"
+        general_wall = "plasma_electrode plasma_metal plasma_right"
+        dielectric_groups = {"plasma_" + side for side in DIELECTRIC}
+        require(set(groups) == {general_inlet, general_wall} | dielectric_groups,
                 "MODERN_BOUNDARY_SIDESET_GROUP_MISMATCH")
-        expected_general = {
-            "e_wall": ("FEMElectronSheathBC", "plasma_electrode plasma_metal plasma_right"),
-            "e_energy_wall": ("FEMElectronEnergySheathBC", "plasma_electrode plasma_metal plasma_right"),
+
+        expected_groups = {
+            general_inlet: {ident + "_wall": "FVFunctorNeumannBC"
+                            for ident in selected},
+            general_wall: {
+                "e_wall": "FEMElectronSheathBC",
+                "e_energy_wall": "FEMElectronEnergySheathBC",
+                **{ident + "_wall": "FVFunctorNeumannBC" for ident in selected},
+            },
         }
-        expected_general.update({
-            ident + "_wall": ("FVFunctorNeumannBC", None) for ident in selected
-        })
-        expected_dielectric = {}
         for side in DIELECTRIC:
-            sideset = "plasma_" + side
-            expected_dielectric["e_" + side + "_dielectric"] = (
-                "FEMElectronSheathBC", sideset
-            )
-            expected_dielectric["e_energy_" + side + "_dielectric"] = (
-                "FEMElectronEnergySheathBC", sideset
-            )
-            for ident in selected:
-                expected_dielectric[ident + "_" + side + "_dielectric"] = (
-                    "FVLogMolarDielectricFluxBC", sideset
-                )
-        for label, expected in ((general, expected_general),
-                                (dielectric, expected_dielectric)):
-            actual = groups[label]
-            require(isinstance(actual, dict) and set(actual) == set(expected),
+            expected_groups["plasma_" + side] = {
+                "e_" + side + "_dielectric": "FEMElectronSheathBC",
+                "e_energy_" + side + "_dielectric": "FEMElectronEnergySheathBC",
+                **{ident + "_" + side + "_dielectric":
+                   "FVLogMolarDielectricFluxBC" for ident in selected},
+            }
+
+        merged_owners: dict[str, tuple[str, set[str]]] = {}
+        used_group_sides: set[str] = set()
+        for label, expected in expected_groups.items():
+            group = groups[label]
+            require(isinstance(group, dict) and set(group) == set(expected),
                     "MODERN_BOUNDARY_OPERATOR_MISMATCH_" + label)
-            for name, (bc_type, subset) in expected.items():
-                obj = actual[name]
-                require(isinstance(obj, dict) and obj.get("type") == bc_type,
-                        "MODERN_BOUNDARY_TYPE_" + name)
-                require(set(obj) == ({"type", "sidesets"} if subset else {"type"}) and
-                        (subset is None or obj.get("sidesets") == subset),
-                        "MODERN_BOUNDARY_SIDES_OR_REDUNDANT_FIELD_" + name)
+            sides = set(label.split())
+            require(len(sides) == len(label.split()) and
+                    not sides & used_group_sides,
+                    "MODERN_BOUNDARY_GROUP_SIDES_OVERLAP_" + label)
+            used_group_sides |= sides
+            for name, bc_type in expected.items():
+                spec = group[name]
+                require(isinstance(spec, dict) and spec == {"type": bc_type},
+                        "MODERN_BOUNDARY_REDUNDANT_FIELD_OR_TYPE_" + name)
+                if name in merged_owners:
+                    existing_type, old_sides = merged_owners[name]
+                    require(existing_type == bc_type and not old_sides & sides,
+                            "MODERN_BC_MERGE_COLLISION_" + name)
+                    old_sides.update(sides)
+                else:
+                    merged_owners[name] = (bc_type, set(sides))
+
+        require(len(merged_owners) == 4 * len(selected) + 8,
+                "MODERN_BC_OWNER_COUNT_MISMATCH")
+        for ident in selected:
+            require(merged_owners[ident + "_wall"][1] ==
+                    set((general_inlet + " " + general_wall).split()),
+                    "MODERN_ION_GENERAL_BC_HANDOFF_" + ident)
+        require(merged_owners["e_wall"][1] == set(general_wall.split()),
+                "MODERN_ELECTRON_GENERAL_BC_HANDOFF")
         require(current["electron_wall_number_flux"] == "e_wall_number_flux",
                 "MODERN_ELECTRON_CANONICAL_WALL_FUNCTOR")
         return {
