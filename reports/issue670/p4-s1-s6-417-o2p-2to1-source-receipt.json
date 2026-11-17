@@ -1,0 +1,147 @@
+{
+  "schema": "issue670.p4_s1.s6_417_o2p_2to1.v1",
+  "task_id": "P4-S1",
+  "case": "S6-417",
+  "status": "PASS_SOURCE_STATIC_2_TO_1__HOLD_NATIVE_GENERATION",
+  "source_pr_665_snapshot_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "immutable_source_11layer_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_repo": "HyungseonSong-plasma/moose-test-repo",
+  "provenance": {
+    "original_historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "p1_e_commit": "a3e22628d863c3b2f06ba34b2050a6ae99a7c699",
+    "p1_b1_receipt": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b1-s6-417-ei415-9c15a4f-20261117/reports/issue667/p1-b1-s6-417-o2p-ei415-receipt.json",
+    "p1_b2_receipt": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b2-417-o2p-h25-20261117/reports/issue667/p1-b2-s6-417-o2p-h25-source-receipt.json",
+    "p1_artifact": {
+      "run": 44182628032,
+      "artifact_id": 14372278070,
+      "outer_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "actual_files_checked": "11/11"
+    },
+    "p2_artifact": {
+      "run": 44199587771,
+      "artifact_id": 14380831538,
+      "outer_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "actual_files_checked": "11/11",
+      "retired_native_ion_owners_per_case": 26,
+      "remaining_native_ion_owners": 0
+    },
+    "p2_source_integrated_into_pr665_via_pr674_commit": "3c961e94533f9676137fb96b2b0bae7e89653914",
+    "chemistry_cpp_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "continuity_cpp_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "json_repo_blob_sha1": "4a05649b42b798f566d5e455ef46be347ea2a461"
+  },
+  "method": "Independent local downloaded Artifact ZIP bytes SHA and ZIP CRC; 417 P1 11/11 original manifest file SHA, P2 11/11 before/after stage receipt file SHA; section-qualified exact Native kernel block SHA; original source/rate Materials byte identical P1/P2; P2 staged 417 JSON and 11th overlay SHA; synthetic mutation rejection tests 10/10; static GitHub C++ source readback. No MOOSE native or private table raw bytes were executed/read.",
+  "native_sources": [
+    {
+      "reaction_id": "EI-415",
+      "layer_ordinal": 5,
+      "section": "FVKernels",
+      "object_name": "ei415_o2p_source",
+      "factory_type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "v": "S_O2p_molar_EI415",
+      "coefficient": "1.0",
+      "file_name": "issue477_S2-415_generation_overlay.i",
+      "file_sha256_before": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+      "file_sha256_after": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+      "kernel_block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+      "producer_object": "ei415_progress",
+      "producer_block_sha256": "aa7b0f2e016f8dc367817c52a29e20d586e4db0c6840c7f377d4cc2970d52894",
+      "source_material_object": "ei415_o2p_source",
+      "source_material_block_sha256": "0998b09c7652648ea63f19394f68c54a3e905bb9df680a7a87bc4b114f9d8392",
+      "rate_progress": "R_EI415",
+      "source_expression": "R",
+      "source_material_property": "S_O2p_molar_EI415",
+      "source_material_preserved": "BYTE_IDENTICAL_P1_P2",
+      "old_kernel_removed": true,
+      "rate_table": "private_rates/EI-415_O2_X.txt",
+      "historical_original_rate_sha256": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64"
+    },
+    {
+      "reaction_id": "H25",
+      "layer_ordinal": 10,
+      "section": "FVKernels",
+      "object_name": "h25_molecular_positive_ion",
+      "factory_type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "v": "S_O2p_molar_H25",
+      "coefficient": "1.0",
+      "file_name": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+      "file_sha256_before": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+      "file_sha256_after": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+      "kernel_block_sha256": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4",
+      "producer_object": "h25_progress",
+      "producer_block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+      "source_material_object": "h25_o2p_birth",
+      "source_material_block_sha256": "6f483b0cff456b77f9c5737ae7f67d6e9f4fd5e50d595f568d42857810dd94e7",
+      "rate_progress": "R_H25",
+      "source_expression": "R",
+      "source_material_property": "S_O2p_molar_H25",
+      "source_material_preserved": "BYTE_IDENTICAL_P1_P2",
+      "old_kernel_removed": true,
+      "rate_law": "1.204428152e7*(300.0/tg)^0.4*cp*c2",
+      "rate_law_units": "mol/(m^3 s)",
+      "stoichiometry": "Op + O2 -> O + O2p",
+      "note": "H25 also removes separate old Op-loss FV Kernel in P2; neutral/observable Functors unchanged"
+    }
+  ],
+  "aggregation": {
+    "target_species": "O2p",
+    "target_variable": "log_O2p",
+    "net_stoichiometry": [
+      {
+        "id": "EI-415",
+        "net_O2p": 1,
+        "units": "mol/(m^3 s)"
+      },
+      {
+        "id": "H25",
+        "net_O2p": 1,
+        "units": "mol/(m^3 s)"
+      }
+    ],
+    "expected_functor": "S_O2p_molar",
+    "expected_functor_expression": "(1)*R_EI415+(1)*R_H25",
+    "generated_functor_material_name": "chemistry_O2p_source",
+    "target_FVKernel_name": "O2p_source",
+    "target_FVKernel_type": "FVCoupledForce",
+    "target_FVKernel_v": "S_O2p_molar",
+    "target_FVKernel_coef": 1,
+    "mechanism_json_file": "chemistry/unified_s6_417_newonly.json",
+    "actual_staged_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "actual_staged_overlay_file": "migrated_continuity.i",
+    "actual_staged_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+    "json_reactions_count": 8,
+    "negative_control_count": 10,
+    "negative_control_passed": 10,
+    "source_edge": "R_EI415 + R_H25 -> Chemistry::addFunctorMaterials(S_O2p_molar) -> DDContinuityEq::addFVKernels(O2p_source) -> log_O2p RHS",
+    "runtime_warehouse_generation_verified": false
+  },
+  "negative_tests": [
+    "H25 O2p product deleted",
+    "EI-415 O2p product deleted",
+    "H25 negative O2p sign",
+    "EI-415 negative O2p sign",
+    "H25 O2p stoichiometry double",
+    "duplicate H25 reaction",
+    "extraneous EI-417 O2p generation",
+    "missing EI-415",
+    "wrong H25 equation",
+    "wrong H25 unit"
+  ],
+  "gates": {
+    "p2_source_only_stage": "PASS_MERGED_TO_PR665_BRANCH",
+    "pr665_merge_to_main": "NOT_CONFIRMED",
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD",
+    "note": "P4-S1 static 2->1 mapping is source contract validation; final P4-X owner consolidation and P5 Native warehouse acceptance remain separate gates."
+  },
+  "unresolved": [
+    "Native --check-input and dynamically created Chemistry/Continuity functor material and FVKernel owner count not yet established",
+    "P4-X integrator must check final New-only 11-layer at the eventual merged HEAD and reject dynamic duplicate source owner",
+    "H25 ion-neutral energy exchange and scientific equivalence remain SCIENCE_HOLD"
+  ],
+  "private_rate_bytes_exported": false
+}
