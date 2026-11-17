@@ -172,11 +172,80 @@ requiredTextList(const Json & object, const char * key, const std::string & file
 }
 
 DDTransportRecord
-parseDDTransport(const Json & value, const std::string & file)
+parseDDTransport(const Json & value, const std::string & file, const std::string & id)
 {
   if (!value.is_object())
     fail(file, "drift_diffusion transport entry must be an object");
   DDTransportRecord result;
+  if (value.at("transport_coef").is_object())
+  {
+    // Final run schema: uniform typed transport object per species. All
+    // Functor names are determined by species ID; gas state is root-owned.
+    const auto & entry = value.at("transport_coef");
+    const std::set<std::string> keys = {
+        "type", "file", "unit", "bounds_policy", "mobility", "diffusivity"};
+    for (auto it = entry.begin(); it != entry.end(); ++it)
+      if (!keys.count(it.key()))
+        fail(file, "species." + id + ".transport_coef unknown option " + it.key());
+    const auto model = requiredText(entry, "type", file);
+    const auto filename = requiredText(entry, "file", file);
+    const auto unit = requiredText(entry, "unit", file);
+    for (const auto * retired : {"mobility", "diffusivity", "table_file", "table_units",
+                                 "pressure", "gas_temperature", "bounds_policy",
+                                 "mobility_source", "diffusivity_source"})
+      if (value.contains(retired))
+        fail(file, "species." + id + " flat " + retired +
+                       " is retired with object-shaped transport_coef");
+    result.model = model;
+    if (model == "none")
+    {
+      if (filename != "none" || unit != "none" || entry.size() != 3)
+        fail(file, "transport_coef type none requires file=none, unit=none only");
+    }
+    else if (model == "functor")
+    {
+      if (filename != "none" || unit != "physical" || entry.size() != 3)
+        fail(file, "Functor transport requires file=none and unit=physical; "
+                   "reduced coefficient conversion is not implemented for Functor mode");
+      result.mobility_source = id + "_mobility";
+      result.diffusivity_source = id + "_diffusivity";
+    }
+    else if (model == "lookup")
+    {
+      if (entry.contains("mobility") || entry.contains("diffusivity") ||
+          (unit != "reduced" && unit != "physical") || filename == "none")
+        fail(file, "lookup transport needs a real file and unit=reduced|physical");
+      result.table_file = resolveDataFile(filename, file);
+      result.table_units = unit;
+      if (entry.contains("bounds_policy"))
+        result.bounds_policy = requiredText(entry, "bounds_policy", file);
+      if (result.bounds_policy != "error" && result.bounds_policy != "clamp")
+        fail(file, "lookup bounds_policy must be error or clamp");
+      // Reduced transport tables use LIVE root pressure (FV state when solved)
+      // and the [Plasmas] temperature Functor; never a species-level alias.
+      result.root_owned_gas = unit == "reduced";
+      result.pressure = "pressure";
+      result.gas_temperature = "temperature";
+    }
+    else if (model == "constant")
+    {
+      if (filename != "none" || unit != "physical" ||
+          !entry.contains("mobility") || !entry.contains("diffusivity") ||
+          entry.size() != 5 || !entry.at("mobility").is_number() ||
+          !entry.at("diffusivity").is_number())
+        fail(file, "constant transport requires file=none, unit=physical and numeric mobility/diffusivity");
+      result.mobility = entry.at("mobility").get<double>();
+      result.diffusivity = entry.at("diffusivity").get<double>();
+      if (!std::isfinite(result.mobility) || !std::isfinite(result.diffusivity) ||
+          result.mobility < 0.0 || result.diffusivity < 0.0)
+        fail(file, "constant transport mobility/diffusivity must be finite and nonnegative");
+    }
+    else
+      fail(file, "transport_coef.type must be none, lookup, functor or constant");
+    return result;
+  }
+  // Backward-compatible legacy reader for preserved historical fixtures and
+  // Hybrid runs. Canonical new-only JSON must use the typed object above.
   result.model = requiredText(value, "transport_coef", file);
   if (result.model == "constant")
   {
@@ -359,12 +428,20 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       // Every DD coefficient owner lives in the species JSON record.
       if (record.contains("transport_coef"))
       {
-        const auto transport = parseDDTransport(record, file);
+        const auto transport = parseDDTransport(record, file, it.key());
+        if (transport.model == "none")
+        {
+          if (_dd_transport.count(it.key()))
+            fail(file, "conflicting none transport with an existing selected DD owner: " + it.key());
+        }
+        else
+        {
         const auto previous = _dd_transport.find(it.key());
         if (previous == _dd_transport.end())
           _dd_transport.emplace(it.key(), transport);
         else if (!previous->second.equals(transport))
           fail(file, "conflicting species transport_coef owner for " + it.key());
+        }
       }
       else
         for (const auto * key : {"mobility", "diffusivity", "table_file",
