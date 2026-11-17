@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 import zipfile
@@ -68,11 +69,15 @@ def inspect(layers: dict[str, str], mechanism: dict) -> dict:
         errors.append("P1_JSON_SPECIES_INVALID")
         species = {}
     for ident in fem + fvm:
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", ident):
+            errors.append("P1_SPECIES_INVALID_IDENTIFIER:" + ident)
         record = species.get(ident)
         if not isinstance(record, dict):
             errors.append("P1_JSON_SELECTED_SPECIES_MISSING:" + ident)
-        elif not isinstance(record.get("initial_number_density"), (float, int)) or record["initial_number_density"] <= 0:
-            errors.append("P1_JSON_INITIAL_NUMBER_DENSITY_INVALID:" + ident)
+        else:
+            density = record.get("initial_number_density")
+            if isinstance(density, bool) or not isinstance(density, (float, int)) or not math.isfinite(density) or density <= 0:
+                errors.append("P1_JSON_INITIAL_NUMBER_DENSITY_INVALID:" + ident)
     selected_variables = {"log_" + ident for ident in fvm}
     native = []
     for b in blocks:
