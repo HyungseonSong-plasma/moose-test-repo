@@ -196,7 +196,7 @@ def test_swapped_discretization_negative_requires_json_sole_owner_diagnostic():
     baseline = (CASE / "baseline.i").read_text()
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
     source = (APP / "src/physics/plasma/DDContinuityEq.C").read_text()
-    assert "files = plasma_species_initial_p2.json" in fixture
+    assert "files = issue633_ion_continuity_newonly_p2.json" in fixture
     assert "fem_species = 'O2p'" in fixture
     assert "fvm_species = 'e'" in fixture
     assert "[log_O2p]" in baseline and "type = MooseVariableFVReal" in baseline
