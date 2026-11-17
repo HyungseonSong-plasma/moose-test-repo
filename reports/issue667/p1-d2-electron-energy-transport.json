@@ -1,0 +1,214 @@
+{
+  "schema": "issue667.p1_d2.final_11layer_electron_energy_transport.v1",
+  "task_id": "P1-D2",
+  "status": "STATIC_11_LAYER_PASS_WITH_RUNTIME_HOLD",
+  "issue": 667,
+  "parent": 633,
+  "pr": 665,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "p1_0_evidence": {
+    "run": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182176604",
+    "artifact_id": 14372442471,
+    "zip_sha256": "abf1baa1bd8a465de91c223182c39e57ea4da8e4a97e929ece0c270c2209427b",
+    "manifest_repo": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/feb659de5809e6aaf615d3396ed00144b1eacdc7/reports/issue667/p1-0-final-11layer-byte-receipt.json"
+  },
+  "cases": {
+    "S6-417": {
+      "file_sha_independently_checked": "11/11",
+      "energy_bc_count": 4,
+      "energy_bcs": [
+        {
+          "name": "electron_energy_sheath",
+          "lines": [
+            771,
+            777
+          ],
+          "sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+          "boundary": "plasma_electrode plasma_metal plasma_right",
+          "section": "BCs",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "name": "electron_energy_cover",
+          "lines": [
+            778,
+            784
+          ],
+          "sha256": "5e3c9b1853568945d1e99bc25cc7eb028f39d59b60b64824d4091a81b65b3f98",
+          "boundary": "plasma_cover",
+          "section": "BCs",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "name": "electron_energy_wafer",
+          "lines": [
+            785,
+            791
+          ],
+          "sha256": "fedc129efca3c592e13edb2c4a0d402693a02195029ee9cf86bd94bccc839884",
+          "boundary": "plasma_wafer",
+          "section": "BCs",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "name": "electron_energy_focus_ring",
+          "lines": [
+            792,
+            798
+          ],
+          "sha256": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138",
+          "boundary": "plasma_focus_ring",
+          "section": "BCs",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        }
+      ],
+      "layer11_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "bounded_token_refs": {
+        "e_energy_eV": 16,
+        "e_wall_number_flux": 14,
+        "log_e_energy": 8
+      }
+    },
+    "S6-941": {
+      "file_sha_independently_checked": "11/11",
+      "energy_bc_count": 4,
+      "energy_bcs": [
+        {
+          "name": "electron_energy_sheath",
+          "lines": [
+            771,
+            777
+          ],
+          "sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+          "boundary": "plasma_electrode plasma_metal plasma_right",
+          "section": "BCs",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "name": "electron_energy_cover",
+          "lines": [
+            778,
+            784
+          ],
+          "sha256": "5e3c9b1853568945d1e99bc25cc7eb028f39d59b60b64824d4091a81b65b3f98",
+          "boundary": "plasma_cover",
+          "section": "BCs",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "name": "electron_energy_wafer",
+          "lines": [
+            785,
+            791
+          ],
+          "sha256": "fedc129efca3c592e13edb2c4a0d402693a02195029ee9cf86bd94bccc839884",
+          "boundary": "plasma_wafer",
+          "section": "BCs",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "name": "electron_energy_focus_ring",
+          "lines": [
+            792,
+            798
+          ],
+          "sha256": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138",
+          "boundary": "plasma_focus_ring",
+          "section": "BCs",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "wall_number_flux": "e_wall_number_flux",
+          "mean_energy": "e_energy_eV",
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        }
+      ],
+      "layer11_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "bounded_token_refs": {
+        "e_energy_eV": 16,
+        "e_wall_number_flux": 14,
+        "log_e_energy": 8
+      }
+    }
+  },
+  "source_contract": {
+    "energy_action": "[Physics]/[Plasmas]/[Transport]/[DriftDiffusion]/[Energy] fem_species=e,fem_potential=potential,initial_molar_energy_density_eV=6.6421562686953756e-09",
+    "state": "DDEnergyEq creates log_e_energy FEM state+IC if absent; staged inputs contain no explicit [log_e_energy]",
+    "mean_energy": "DDEnergyEq adds ElectronEnergyMaterial producing e_energy_eV=exp(log_e_energy-log_e)",
+    "transport": "DDContinuityEq adds DDTransportMaterial for selected electron from JSON species.e transport; e_energy_eV lookup coordinate; fluid energy mobility/diffusivity=5/3 particle",
+    "preserved_native": "4 FEMElectronEnergySheathBCs in C0 consume e_wall_number_flux and e_energy_eV; electron_wall_flux(ESWallFluxMaterial) and RF freeze/heating input references are retained",
+    "cpp_blob_shas": {
+      "physics_app/src/physics/plasma/DDEnergyEq.C": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+      "physics_app/src/materials/ElectronEnergyMaterial.C": "4aebfa85282ab5e808309d68223099ded20276e7",
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "physics_app/src/materials/DDTransportMaterial.C": "e75687d73d8ca6fead0eff411ad7ffbb814a6909"
+    }
+  },
+  "bounded_producer_block_sha256": {
+    "electron_molar_energy_density": "452b1796e5f6",
+    "electron_physical_energy_density": "77a496774cef",
+    "electron_wall_flux": "cd1be5c26c3f",
+    "freeze_log_energy_t6": "932279d6593a",
+    "mean_energy_rf_state_t6_aux": "976781e9a633",
+    "rf_heating_t6": "935798c5d6f1"
+  },
+  "negative_controls": "9/9 REJECTED: altered file SHA, wrong ordinal, wrong Factory, variable, wall flux, mean-energy, sideset, missing BC, duplicate BC",
+  "local_receipt_sha256": "c9046652793cba799d4a0bd879302b3504d7ae3923452d6716120cc670e5e0f8",
+  "unresolved": [
+    "Staged unified_s6_{417,941}.json and public transport lookup-table bytes absent from P1-0 artifact; no direct JSON/table SHA recomputation",
+    "C++ generated Functor/Warehouse uniqueness and solver runtime mean-energy/BC validity not proven; Native P2 still HOLD",
+    "RF/Maxwell runtime edges require P1-D4 and P1-E integrated review"
+  ],
+  "runtime": {
+    "P2": "NOT_RUN",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "native_owner_cutover": "HOLD",
+  "scope_boundary": "D2 read-only source evidence only. Non-ion BCs preserved; no Native or scientific parity conclusion."
+}
