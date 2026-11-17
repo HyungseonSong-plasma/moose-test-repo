@@ -87,7 +87,8 @@ jobs:
           for o in owners:
               source=files[o["file"]]
               regex=re.compile(r"(?m)^  \["+re.escape(o["name"])+r"\]\r?\n(?:^    [^\r\n]*\r?\n)+^  \[\](?:\r?\n|$)")
-              candidates=list(regex.finditer(source))
+              candidates=[m for m in regex.finditer(source)
+                          if re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$",source[:m.start()])[-1:]==[o["section"]]]
               assert len(candidates)==1,("OWNER_COUNT",o["name"])
               b=candidates[0].group(0).encode("utf-8")
               assert hashlib.sha256(b).hexdigest()==o["old_block_sha256"],("BLOCK_SHA",o["name"])
