@@ -18,9 +18,9 @@
           fem_species = e
           fvm_species = 'O2p Om Op'
           fem_potential = potential
-          # Numerical wall gate control [V/m]: 0 selects hard max(x, 0).
-          # Keep characterized S6 setting (same for all selected ions).
-          wall_migration_gate_smoothing_width = 0.001
+          # Optional [V/m]: omit or set 0 for exact hard max(x,0).
+          # Historical S6 sets 0.001 explicitly to retain its prior gate.
+          migration_smoothing_width = 0.001
         []
         [Energy]
           block = plasma
