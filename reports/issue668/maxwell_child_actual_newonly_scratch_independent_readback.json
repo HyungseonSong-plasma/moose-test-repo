@@ -1,0 +1,105 @@
+{
+  "schema": "issue668.actual_newonly_scratch_stage_independent_ci_readback.v1",
+  "status": "PASS_MAXWELL_CHILD_MESH_IN_ACTUAL_NEWONLY_SCRATCH_SOURCE_ONLY",
+  "task": "Issue #668 P2 source-only guarded Scratch retirement + Maxwell child+mesh staging",
+  "immutable_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "ci": {
+    "run_id": 44196762787,
+    "job_id": 134440146470,
+    "job_conclusion": "success",
+    "artifact_id": 14379920938,
+    "artifact_name": "issue668-newonly-maxwell-child-mesh-exactsha-417-941",
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44196762787/artifacts/14379920938",
+    "artifact_zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4",
+    "github_digest_match": true,
+    "independent_download_and_rehash": true,
+    "artifact_members": 33
+  },
+  "source_artifacts": {
+    "p1_run_id": 44182628032,
+    "p1_artifact_id": 14372278070,
+    "p1_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "historical_native_run_id": 42049066748,
+    "historical_400w_artifact_id": 13447489692,
+    "historical_zip_sha256": "df41ef2860d56b728082fd1fd7e7d3f498bc5b389bb94f5451e11576dd6a27cb"
+  },
+  "actual_staged_cases": {
+    "417": {
+      "original_layer_count": 11,
+      "newly_staged_public_child_i_count": 3,
+      "staged_qvt_mesh_count": 1,
+      "retired_ion_FVKernel_blocks": 14,
+      "retired_ion_FVBC_blocks": 12,
+      "independently_rechecked_exact_deletion": 26,
+      "changed_existing_input_files": 5,
+      "byte_identical_unmodified_input_files": 6,
+      "retained_7_transfers": true,
+      "retained_maxwell_t6": true,
+      "retained_pid_control": true,
+      "all_11_after_file_SHA_verified": true
+    },
+    "941": {
+      "original_layer_count": 11,
+      "newly_staged_public_child_i_count": 3,
+      "staged_qvt_mesh_count": 1,
+      "retired_ion_FVKernel_blocks": 14,
+      "retired_ion_FVBC_blocks": 12,
+      "independently_rechecked_exact_deletion": 26,
+      "changed_existing_input_files": 5,
+      "byte_identical_unmodified_input_files": 6,
+      "retained_7_transfers": true,
+      "retained_maxwell_t6": true,
+      "retained_pid_control": true,
+      "all_11_after_file_SHA_verified": true
+    }
+  },
+  "stage_base_relative": "cases/<case>/experiments/Issue395_powered_chemistry_ladder/",
+  "maxwell_child": {
+    "file": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i",
+    "file_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "includes_order": [
+      {
+        "path": "issue397_maxwell_steady_abs1e11.i",
+        "sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c"
+      },
+      {
+        "path": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_overlay.i",
+        "sha256": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45"
+      }
+    ],
+    "nested_includes": 0
+  },
+  "mesh": {
+    "relative_from_maxwell_base": "../Issue18_qvt_plasma_mapping/qvt.msh",
+    "actual_staged_path": "cases/<case>/experiments/Issue18_qvt_plasma_mapping/qvt.msh",
+    "file_size": 167248,
+    "sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "pr665_source_git_blob": "28ff31220904ff81f426d0c2ed8dd18a7fd40b9e",
+    "actual_staged_byte_sha_pass_both": true
+  },
+  "verification": {
+    "strategy": "Independent downloaded ZIP readback, manifest+file SHA, native owner block SHA and exact source deletion reconstruction, include/mesh relative resolution, 7 transfer/parent preservation",
+    "script_sha256": "68a78d751152caa1ceeb68c51ea41a916a6327986b930aa599e0d7658e45474e",
+    "independent_receipt_sha256": "8b511486a4a95af6d28726616a9a6145fc603848c5cb925640b278445f3c099e",
+    "negative_controls_rejected": "7/7"
+  },
+  "required_other_gates": [
+    "Stage / generate final unified_s6_417_newonly.json and unified_s6_941_newonly.json; they are absent from the source-only artifact",
+    "Ensure actual Physics runtime creates 12 new FV kernels and 12 FV BCs and that Warehouse/Material/Functor ownership is singular (S6 P5 Native P2)",
+    "No Native P3/P4 or numerical/scientific parity demonstrated"
+  ],
+  "gate_status": {
+    "P2_DISPOSABLE_SCRATCH_RETIRE_26": "PASS_SOURCE_ONLY",
+    "MAXWELL_CHILD_AND_MESH_ACTUAL_SCRATCH_BYTE_SHA": "PASS",
+    "NEW_ONLY_UNIFIED_JSON": "HOLD_NOT_STAGED",
+    "PHYSICS_GENERATED_NEW_24": "NOT_RUN",
+    "NEW_ONLY_NATIVE_P2": "NOT_RUN",
+    "P3_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "original_archives_mutated": false,
+  "main_mutated": false,
+  "pr665_mutated": false,
+  "private_ei_rate_bytes_staged": false,
+  "note": "The CI Scratch is a byte-verified source-only disposable stage, not an executable end-to-end New-only MOOSE simulation."
+}
