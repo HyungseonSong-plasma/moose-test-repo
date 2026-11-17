@@ -1158,6 +1158,11 @@ PlasmasAction::act()
       {
         if (!allowed.count(id))
           mooseError("C2 has no characterized ion wall contract for selected species ", id);
+        // Explicit species identity must agree with the original 3-ion S6
+        // charge ledger before using it to sign migration and wall current.
+        const int expected_charge = id == "Om" ? -1 : 1;
+        if (_data.species(id).charge_number != expected_charge)
+          mooseError("C2 selected ion charge differs from signed S6 wall contract: ", id);
         selected.insert(id);
       }
     for (const auto & [id, record] : _data.speciesRecords())
