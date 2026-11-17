@@ -1,0 +1,157 @@
+{
+  "schema": "issue669.p3_g5.source_bound.v1",
+  "task_id": "P3-G5",
+  "issue": 669,
+  "scope": "Original [Kernels]/energy_joule, RF Joule source Material, consumer and Maxwell transfer chain. No shared source mutation.",
+  "status": "SOURCE_STATIC_PASS__P2_NEWONLY_DEPENDENCY_HOLD",
+  "evidence_class": "INDEPENDENT_ARCHIVED_10_VS_PINNED_HYBRID_11_RAW_SHA256_AND_CPP_SOURCE_READBACK",
+  "source": {
+    "pr": 665,
+    "pr_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "original_artifacts": {
+      "417": 13677089020,
+      "941": 13677375813
+    },
+    "original_zip_sha256": {
+      "417": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "941": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    "final_run_id": 44182628032,
+    "final_artifact_id": 14372278070,
+    "final_artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+  },
+  "cases": {
+    "417": {
+      "original_10_file_sha256_checks": "10/10 PASS",
+      "hybrid_11_file_sha256_checks": "11/11 PASS",
+      "hybrid_FV_block_sha256_checks": "63/63 PASS",
+      "hybrid_native_ion_block_sha256_checks": "26/26 PASS",
+      "original_C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "hybrid_C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_RF_overlay_sha256": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+      "hybrid_RF_overlay_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "hybrid_Energy_overlay_file_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "original_explicit_energy_joule_count": 1,
+      "hybrid_explicit_energy_joule_count": 0,
+      "hybrid_Energy_section_count": 1,
+      "hybrid_explicit_RF_heating_count": 1,
+      "hybrid_RF_q_material_count": 1,
+      "negative_static_guard_checks_rejected": 13
+    },
+    "941": {
+      "original_10_file_sha256_checks": "10/10 PASS",
+      "hybrid_11_file_sha256_checks": "11/11 PASS",
+      "hybrid_FV_block_sha256_checks": "63/63 PASS",
+      "hybrid_native_ion_block_sha256_checks": "26/26 PASS",
+      "original_C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "hybrid_C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_RF_overlay_sha256": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+      "hybrid_RF_overlay_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "hybrid_Energy_overlay_file_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "original_explicit_energy_joule_count": 1,
+      "hybrid_explicit_energy_joule_count": 0,
+      "hybrid_Energy_section_count": 1,
+      "hybrid_explicit_RF_heating_count": 1,
+      "hybrid_RF_q_material_count": 1,
+      "negative_static_guard_checks_rejected": 13
+    }
+  },
+  "original_joule": {
+    "layer": 1,
+    "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "section": "Kernels",
+    "object_name": "energy_joule",
+    "factory": "PhysicsFEMLogMolarElectronJouleHeating",
+    "variable": "log_energy",
+    "electron_log_density": "log_ne",
+    "potential": "potential",
+    "mobility": "electron_mobility",
+    "diffusion": "electron_diffusion",
+    "block": "plasma",
+    "block_sha256": "48608281a61c6b2199d74779357ec943cc9eab0b41c39703dee907334c971656"
+  },
+  "hybrid_electron_energy": {
+    "layer": 11,
+    "file": "migrated_continuity.i",
+    "section": "Physics/Plasmas/Transport/DriftDiffusion/Energy",
+    "fem_species": "e",
+    "fem_potential": "potential",
+    "initial_molar_energy_density_eV": 6.6421562686953756e-9,
+    "block_sha256": "c76c5be87615f2cba68550d65b022f779fb95278a1f8718b9c67415fb1acd2ac",
+    "rf_heating_material_explicitly_defined": false,
+    "generated_joule_instantiation": "SOURCE_STATIC_ONLY"
+  },
+  "cpp_contract": {
+    "source": "physics_app/src/physics/plasma/DDEnergyEq.C",
+    "git_blob_sha": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "lines": "197-207",
+    "generated_factory": "FEMLogMolarElectronJouleHeating",
+    "generated_variable": "log_e_energy",
+    "generated_electron_log_density": "log_e",
+    "generated_potential": "potential",
+    "generated_mobility": "e_mobility",
+    "generated_diffusion": "e_diffusivity",
+    "note": "Requires fem_potential; transport_coefficient enum defaults to fluid; runtime Warehouse check pending."
+  },
+  "hybrid_rf": {
+    "layer": 2,
+    "file": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+    "kernel": "rf_heating_t6",
+    "factory": "MatBodyForce",
+    "variable": "log_e_energy",
+    "material_property": "q_rf_eV_mol_t6",
+    "kernel_block_sha256": "935798c5d6f16243c87d84eab193a6111ef19c9dff827e9381136f97c6fc9c92",
+    "source_material": "q_rf_eV_mol_t6",
+    "source_factory": "ParsedMaterial",
+    "source_block_sha256": "155d1c2baf3a8bfc9a80c34a2dea049d4a6e1a90e7f654141d9d5b1fb51335ab",
+    "source_formula": "enabled*scale*0.5*sigma_real_rf_t6*(E_real_rf_t6^2 + E_imag_rf_t6^2)/F",
+    "source_inputs": "E_real_rf_t6 E_imag_rf_t6 sigma_real_rf_t6",
+    "scale_gate": "${rf_scale_t6} ${source_enable_t6} ${faraday_t6}",
+    "source_units": "eV mol/(m^3 s)",
+    "transfers": [
+      {
+        "name": "E_real_from_maxwell_t6",
+        "sha256": "23237ee6fce41c830da27a35e6d642b1142a4a80842db43b6a24cfe67cb2db8e"
+      },
+      {
+        "name": "E_imag_from_maxwell_t6",
+        "sha256": "84bf065db516a6b8db24931dbab3e001aef3bdd20050f8bde0ddb7943a63d7a3"
+      }
+    ],
+    "electron_state_snapshot": "freeze_log_energy_t6",
+    "snapshot_sha256": "932279d6593ac1976a6ec5ce2868dbffac92da64935ea58db7b729cf07b583ad"
+  },
+  "verification": {
+    "method": "Direct original archive ZIP readback; independently recalculated file/block SHA from 417/941 archived 10-layer and pinned final Hybrid 11-layer, parser scope excludes overlapping sections; 13 source-contract negative guards per case, static only",
+    "negative_guard_count": 26,
+    "private_rates_read": false
+  },
+  "limits": [
+    "P2 #668 actual New-only post-retirement Scratch receipt not verified and package remains OPEN; no P3-X execution.",
+    "A C++ addFEKernels() branch is not runtime proof of instantiated unique Joule owner; require exact New-only Warehouse check in P5.",
+    "The separate RF MatBodyForce must remain single-owner; adding [Energy]/rf_heating_material for same q_rf would cause double counting.",
+    "Maxwell child include closure, mesh and transfer endpoint runtime liveness are separate #668/D8 gates.",
+    "Legacy original Joule and new generated class are not asserted numerically/scientifically equivalent from static code."
+  ],
+  "gates": {
+    "P3_G5_SOURCE": "PASS",
+    "P2_DEPENDENCY": "HOLD",
+    "P3_X": "NOT_RUN",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "main_modified": false,
+    "pr665_modified": false,
+    "shared_issue_body_modified": false,
+    "original_archive_modified": false,
+    "workflow_modified": false
+  },
+  "local_replay_sha256": {
+    "validator": "845b629e378cdcfb48ca2ec03815102fde506a041f03a72981db54e29e91d641",
+    "full_verification_receipt": "be009ce1bb409dbb213d6b77f688c1daf121d05898bdab4ee47eb45c564a86e3"
+  }
+}
