@@ -42,8 +42,12 @@ def test_full_nativefree_selected_three_ion_equations_and_8_sidesets():
             if "new_sideset_name = " + name in deck} == SIDES
     assert "SubdomainBoundingBoxGenerator" in deck
     assert 'block_name = plasma' in deck
-    result = inspect({DECK.name: deck}, base, contract="new-only")
+    merged = {**base, "ion_surface_current": c2["ion_surface_current"]}
+    merged["species"] = {k: {**v, **c2["species"].get(k, {})}
+                         for k, v in base["species"].items()}
+    result = inspect({DECK.name: deck}, merged, contract="new-only")
     assert result["status"] == "P0_STATIC_PASS_ONLY", result["errors"]
+    assert result["c2_native_producer_collision_count"] == 0
     assert result["native_fv_owner_count"] == 0
     assert result["explicit_ion_wall_current_owner_count"] == 0
     c2_result = validate(c2)
