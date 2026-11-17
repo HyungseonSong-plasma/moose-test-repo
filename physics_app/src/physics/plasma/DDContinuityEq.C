@@ -42,13 +42,14 @@ DDContinuityEq::validParams()
   params.addClassDescription(
       "Bind plasma continuity species to deterministic internal state and kernel names. "
       "Supported FEM continuity generation creates the conservative log-molar time " 
-      "derivative and drift-diffusion Kernels; FV transport stays Native.");
+      "derivative and drift-diffusion Kernels; selected FV species own explicit "
+      "time, diffusion, drift, and Chemistry-source FV Kernels.");
   params.addParam<std::vector<std::string>>(
       "fem_species", {}, "FEM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<std::vector<std::string>>(
       "fvm_species", {}, "FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<VariableName>(
-      "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
+      "fem_potential", "Potential for selected FEM and FVM drift-diffusion transport.");
   return params;
 }
 
@@ -132,6 +133,24 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   };
   validate(_fem_species, "fem_species", "FEM");
   validate(_fvm_species, "fvm_species", "FVM");
+
+  // FV selection is itself the cutover switch: no Native presence probe, no
+  // manual ownership Enum, and no partially generated species equation.
+  if (!fvm.empty())
+  {
+    if (!isParamValid("fem_potential"))
+      paramError("fem_potential",
+                 "fvm_species requires the existing fem_potential name for FV drift.");
+    if (!chemistryEnabled())
+      paramError("fvm_species",
+                 "FV species kernels require [Physics]/[Plasmas]/[Transport]/[Chemistry] "
+                 "to generate species source functors.");
+    for (const auto & id : fvm)
+      if (!mechanism.hasSpeciesSource(id))
+        paramError("fvm_species",
+                   "Selected FV species '", id,
+                   "' requires a nonzero volume reaction source in Chemistry JSON.");
+  }
 
   // Charges are specified once in [Plasmas]/files, not by parallel per-species
   // vectors. Keep this builder disabled in pure variable-binding check mode.
@@ -267,6 +286,58 @@ DDContinuityEq::addFEKernels()
       assignBlocks(source_params, _blocks);
       getProblem().addKernel(source_type, species[i] + "_source", source_params);
     }
+  }
+}
+
+void
+DDContinuityEq::addFVKernels()
+{
+  if (_fvm_species.empty())
+    return;
+
+  // The selected fvm_species, not a detected Native owner or separate mode,
+  // determines the four generated operators per species. The full old Native
+  // 11-layer deck must be independently preflighted and stripped in Scratch.
+  const auto & mechanism = chemistryData();
+  const auto & potential = getParam<VariableName>("fem_potential");
+  for (const auto & id : _fvm_species)
+  {
+    const NonlinearVariableName variable = continuityStateName(id);
+
+    const std::string time_type = "FVLogMolarTimeDerivative";
+    auto time_params = getFactory().getValidParams(time_type);
+    time_params.set<NonlinearVariableName>("variable") = variable;
+    assignBlocks(time_params, _blocks);
+    getProblem().addFVKernel(time_type, id + "_time", time_params);
+
+    const std::string diffusion_type = "FVLogMolarDiffusion";
+    auto diffusion_params = getFactory().getValidParams(diffusion_type);
+    diffusion_params.set<NonlinearVariableName>("variable") = variable;
+    diffusion_params.set<MooseFunctorName>("coeff") = id + "_diffusivity";
+    assignBlocks(diffusion_params, _blocks);
+    getProblem().addFVKernel(diffusion_type, id + "_diffusion", diffusion_params);
+
+    const std::string drift_type = "FVLogMolarElectrostaticDrift";
+    auto drift_params = getFactory().getValidParams(drift_type);
+    drift_params.set<NonlinearVariableName>("variable") = variable;
+    drift_params.set<MooseFunctorName>("potential") = potential;
+    drift_params.set<MooseFunctorName>("mobility") = id + "_mobility";
+    drift_params.set<MooseFunctorName>("carrier") = "carrier_one";
+    drift_params.set<Real>("charge_number") = mechanism.species(id).charge_number;
+    drift_params.set<bool>("use_element_gradient_for_potential") = true;
+    assignBlocks(drift_params, _blocks);
+    getProblem().addFVKernel(drift_type, id + "_drift", drift_params);
+
+    // Chemistry has already combined all EI/H contributions for this species
+    // into one signed molar source S_<species>_molar. FVCoupledForce evaluates
+    // that Functor with a single RHS sign (negative residual).
+    const std::string source_type = "FVCoupledForce";
+    auto source_params = getFactory().getValidParams(source_type);
+    source_params.set<NonlinearVariableName>("variable") = variable;
+    source_params.set<MooseFunctorName>("v") = "S_" + id + "_molar";
+    source_params.set<Real>("coef") = 1.0;
+    assignBlocks(source_params, _blocks);
+    getProblem().addFVKernel(source_type, id + "_source", source_params);
   }
 }
 
