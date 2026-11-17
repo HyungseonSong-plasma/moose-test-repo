@@ -697,16 +697,93 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         fail(file, "ion_surface_current requires an explicit known electron wall Functor");
     }
 
-    // The top-level JSON boundaries registry relocates existing named [BCs].
-    // Absence of boundaries creates no additional BC objects.
-    // No wall law, 'open' role, or additional implicit BC is invented.
+    // New-only drift_diffusion_boundaries groups operators directly by
+    // sidesets. Each BC key identifies its species and operator; the parser
+    // derives the solver variable, canonical flux and FV unit/sign factor.
+    // Historical "boundaries": {"sides": {"bcs": {...}}} remains supported.
     if (root.contains("drift_diffusion_boundary"))
-      fail(file, "drift_diffusion_boundary is retired; use boundaries with physical mesh sideset keys");
-    if (root.contains("boundaries"))
+      fail(file, "drift_diffusion_boundary is retired; use drift_diffusion_boundaries");
+    const bool modern_boundaries = root.contains("drift_diffusion_boundaries");
+    if (modern_boundaries && root.contains("boundaries"))
+      fail(file, "choose one boundary catalogue: drift_diffusion_boundaries or boundaries");
+
+    Json normalized_boundaries = Json::object();
+    if (modern_boundaries)
+    {
+      const auto & groups = root.at("drift_diffusion_boundaries");
+      if (!groups.is_object() || groups.empty())
+        fail(file, "drift_diffusion_boundaries must be a nonempty object");
+      for (auto group = groups.begin(); group != groups.end(); ++group)
+      {
+        if (!group.value().is_object() || group.value().empty())
+          fail(file, "drift_diffusion_boundaries group must contain direct BC objects: " + group.key());
+        Json resolved = Json::object();
+        for (auto item = group.value().begin(); item != group.value().end(); ++item)
+        {
+          const auto & spec = item.value();
+          if (!spec.is_object() || !spec.contains("type") ||
+              !spec.at("type").is_string())
+            fail(file, "typed drift_diffusion_boundaries BC requires type: " + item.key());
+          for (auto field = spec.begin(); field != spec.end(); ++field)
+            if (field.key() != "type" && field.key() != "sidesets")
+              fail(file, "drift_diffusion_boundaries derives " + field.key() +
+                             " from BC species and type: " + item.key());
+          const std::string type = spec.at("type").get<std::string>();
+          const bool electron_energy = item.key().rfind("e_energy_", 0) == 0;
+          const auto separator = item.key().find('_');
+          if (separator == std::string::npos)
+            fail(file, "BC name requires species prefix: " + item.key());
+          const std::string species_id = electron_energy ? "e" : item.key().substr(0, separator);
+          if (_species.find(species_id) == _species.end())
+            fail(file, "unknown drift-diffusion BC species: " + species_id);
+          const bool electron = species_id == "e";
+          if (electron != (type == "FEMElectronSheathBC" ||
+                           type == "FEMElectronEnergySheathBC") ||
+              (electron_energy != (type == "FEMElectronEnergySheathBC")))
+            fail(file, "BC species/type mismatch: " + item.key());
+          if (!electron && type != "FVFunctorNeumannBC" &&
+              type != "FVLogMolarDielectricFluxBC")
+            fail(file, "unsupported ion FV BC type: " + item.key());
+          if (!electron && _species.at(species_id).charge_number == 0)
+            fail(file, "neutral species cannot own ion FV wall BC: " + item.key());
+
+          Json bc = {{"type", type},
+                     {"variable", electron_energy ? "log_e_energy" : "log_" + species_id}};
+          if (electron)
+          {
+            bc["wall_number_flux"] = "e_wall_number_flux";
+            if (electron_energy)
+              bc["mean_energy"] = "e_energy_eV";
+          }
+          else if (type == "FVFunctorNeumannBC")
+          {
+            bc["functor"] = species_id + "_wall_number_flux";
+            // The FV Neumann BC takes an inward-signed particle number flux:
+            // convert to log-molar molar flux with -1/N_A in one code owner.
+            bc["factor"] = -1.0 / 6.02214076e23;
+          }
+          else
+            bc["signed_number_flux"] = species_id + "_wall_number_flux";
+
+          if (spec.contains("sidesets"))
+          {
+            if (!spec.at("sidesets").is_string() ||
+                spec.at("sidesets").get<std::string>().empty())
+              fail(file, "sidesets must be a nonempty subset string: " + item.key());
+            bc["sidesets"] = spec.at("sidesets");
+          }
+          resolved[item.key()] = std::move(bc);
+        }
+        normalized_boundaries[group.key()] = {{"bcs", std::move(resolved)}};
+      }
+    }
+
+    if (root.contains("boundaries") || modern_boundaries)
     {
       if (_has_boundaries)
         fail(file, "duplicate boundaries owner across JSON files");
-      const auto & catalogue = root.at("boundaries");
+      const auto & catalogue =
+          modern_boundaries ? normalized_boundaries : root.at("boundaries");
       if (!catalogue.is_object() || catalogue.empty())
         fail(file, "boundaries must be a nonempty object");
 
@@ -757,8 +834,26 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           if (!particle && !energy && !fv_neumann && !fv_dielectric)
             fail(file, "boundaries BC type is not yet supported: " +
                            entry.type + " for " + bc.key());
-          if (spec.size() != (energy || fv_neumann ? 4 : 3))
+          if (spec.size() != (energy || fv_neumann ? 4 : 3) +
+                                 (spec.contains("sidesets") ? 1 : 0))
             fail(file, "wrong named arguments in boundaries BC " + bc.key());
+          if (spec.contains("sidesets"))
+          {
+            if (!modern_boundaries)
+              fail(file, "legacy boundaries forbids per-BC sidesets override");
+            std::istringstream selected_sides(spec.at("sidesets").get<std::string>());
+            const std::set<std::string> group_sides(record.mesh_boundaries.begin(),
+                                                     record.mesh_boundaries.end());
+            std::set<std::string> seen_sides;
+            for (std::string side; selected_sides >> side;)
+            {
+              if (!group_sides.count(side) || !seen_sides.insert(side).second)
+                fail(file, "BC sidesets override must be a unique group subset: " + bc.key());
+              entry.mesh_boundaries.push_back(side);
+            }
+            if (entry.mesh_boundaries.empty())
+              fail(file, "empty BC sidesets selection: " + bc.key());
+          }
           if (particle || energy)
           {
             if (!spec.contains("wall_number_flux") || !spec.at("wall_number_flux").is_string())
@@ -798,7 +893,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
             fail(file, "empty parameter value in boundaries BC " + bc.key());
 
           // Do not double-own a physical residual under two different labels.
-          for (const auto & side : record.mesh_boundaries)
+          const auto & effective_sides =
+              entry.mesh_boundaries.empty() ? record.mesh_boundaries : entry.mesh_boundaries;
+          for (const auto & side : effective_sides)
           {
             const std::string key = entry.type + "/" + entry.variable + "/" + side;
             if (!operator_owners.insert(key).second)
@@ -1458,7 +1555,9 @@ PlasmasAction::act()
         auto params = _factory.getValidParams(bc.type);
         params.set<NonlinearVariableName>("variable") = bc.variable;
         std::vector<BoundaryName> sidesets;
-        for (const auto & side : boundary.mesh_boundaries)
+        const auto & effective_sides =
+            bc.mesh_boundaries.empty() ? boundary.mesh_boundaries : bc.mesh_boundaries;
+        for (const auto & side : effective_sides)
           sidesets.emplace_back(side);
         params.set<std::vector<BoundaryName>>("boundary") = sidesets;
         if (bc.type == "FVFunctorNeumannBC")
