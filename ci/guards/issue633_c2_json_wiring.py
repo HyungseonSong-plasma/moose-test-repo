@@ -39,6 +39,9 @@ def finite_num(v, lo=None, hi=None) -> bool:
 
 def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
     require(isinstance(overlay, dict), "JSON_OBJECT_REQUIRED")
+    require(not any(name in overlay for name in (
+        "wall_migration_gate_smoothing_width", "migration_smoothing_width")),
+        "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_ROOT")
     require(isinstance(selected, (list, tuple)) and bool(selected) and
             len(set(selected)) == len(selected) and
             set(selected) <= set(ION_IDS), "INVALID_SELECTED_SPECIES")
@@ -53,8 +56,9 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
         record = species[ident]
         require(record.get("charge_number") == CHARGE[ident], "WRONG_ION_CHARGE_" + ident)
         require("ion_wall" not in record, "RETIRED_ION_WALL_WRAPPER_" + ident)
-        require("wall_migration_gate_smoothing_width" not in record,
-                "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_" + ident)
+        require(not any(name in record for name in (
+            "wall_migration_gate_smoothing_width", "migration_smoothing_width")),
+            "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_" + ident)
         declared = {key for key in record if key.startswith("wall_")}
         require(declared == WALL_FIELDS, "INVALID_ION_WALL_FIELDS_" + ident)
         require(finite_num(record["wall_molar_mass"], 1e-300) and
