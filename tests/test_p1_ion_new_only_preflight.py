@@ -276,7 +276,20 @@ def test_new_run_electron_wall_rejects_native_eswallflux_duplicate():
   []
 []
 """
-    result = module.inspect({"native.i": duplicate}, new)
+    # Default S6 Energy path is partial: the Native electron provider
+    # remains valid and is required if no new electron material is emitted.
+    baseline = module.inspect({"native.i": duplicate}, new)
+    assert baseline["status"] == "P0_STATIC_PASS_ONLY", baseline["errors"]
+    assert baseline["c2_native_producer_collision_count"] == 0
+
+    # Turning on full Electron Energy physics creates an *additional* electron
+    # wall producer; reject the same Native provider in that configuration.
+    complete_energy = DECK.replace(
+        "        []\n      []",
+        "        []\n        [Energy]\n          fem_potential = potential\n        []\n      []",
+        1,
+    )
+    result = module.inspect({"native.i": complete_energy + duplicate[len(DECK):]}, new)
     assert "P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_1" in result["errors"]
     assert result["c2_native_producer_collision_count"] == 1
     assert result["c2_native_producer_collisions"][0]["family"] == "electron_wall"
