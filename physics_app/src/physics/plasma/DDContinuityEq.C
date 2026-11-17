@@ -452,9 +452,10 @@ DDContinuityEq::addFVKernels()
              bc.type == "FVLogMolarDielectricFluxBC"))
           wall_sidesets.insert(boundary.mesh_boundaries.begin(),
                                boundary.mesh_boundaries.end());
-    if (mechanism.hasIonWalls() && wall_sidesets.size() != 8)
-      mooseError("P14 drift boundary-avoid handoff requires eight wall sidesets for ", id,
-                 "; got ", wall_sidesets.size());
+    // The selected species' FV BC catalogue is the sole source of boundary
+    // exclusion. Its cardinality is scenario-dependent; no S6-specific count.
+    if (mechanism.hasIonWalls() && wall_sidesets.empty())
+      mooseError("P14 FV wall BC catalogue has no drift boundaries for selected ion ", id);
     if (!wall_sidesets.empty())
       drift_params.set<std::vector<BoundaryName>>("boundaries_to_avoid") =
           std::vector<BoundaryName>(wall_sidesets.begin(), wall_sidesets.end());
