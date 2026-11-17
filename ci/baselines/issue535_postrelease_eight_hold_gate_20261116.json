@@ -466,19 +466,31 @@
       },
       "custody": {
         "mode": "ARCH_PRIVATE_BOUNDED_SUCCESS_COPIES_PRESENT_ORIGINAL_FAILURE_LOGS_SEPARATE",
-        "file_id": "1REOmp30hqVl069EqShs_5mR58yOa0L7S"
+        "file_id": "1REOmp30hqVl069EqShs_5mR58yOa0L7S",
+        "operator_accepted_private_drive_alternative": {
+          "receipt_id": 6943043495,
+          "mode": "USER_MANAGED_MUTABLE_PRIVATE_DRIVE",
+          "sha256_and_crc_verified": true,
+          "object_lock_proven": false
+        }
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6943043495,
+        "accepted_utc_date": "2026-11-17",
+        "scope": "DD_ORIGINAL_BOUNDARY_TWO_STEP_P3_ONLY",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_PRIVATE_DYNAMIC_CALLER_RISK",
+        "not_independent_caller_zero": true,
+        "excludes_science_equivalence": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
-      "formal_disposition": "KEEP_HOLD",
-      "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION",
-        "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE"
-      ],
-      "issue535_receipt": 6932963232
+      "formal_disposition": "RETIRED_VERIFIED",
+      "red_gates": [],
+      "issue535_receipt": 6932963232,
+      "retirement_scope": "DD_ORIGINAL_BOUNDARY_TWO_STEP_P3_ONLY"
     },
     {
       "id": "S6",
@@ -713,12 +725,43 @@
     "maintained_bounded_runs_success": true,
     "full_s6_400w_100us_maintained_replay_executed": false,
     "immutable_object_lock_proven": false,
-    "ARCH_external_caller_risk_accepted": false,
+    "ARCH_external_caller_risk_accepted": true,
     "SCIENCE_HOLD": true,
     "operator_approved_waiver": false,
     "retirement_disposition": {
-      "DD": "KEEP_HOLD",
+      "DD": "RETIRED_VERIFIED",
       "S6": "KEEP_HOLD"
-    }
+    },
+    "owner_approved_retention_alternative": true,
+    "owner_approved_retention_method": "USER_MANAGED_MUTABLE_PRIVATE_GOOGLE_DRIVE"
+  },
+  "arch_owner_approval": {
+    "comment_id": 6943043495,
+    "accepted_utc_date": "2026-11-17",
+    "operator": "repository-operator",
+    "source": "DIRECT_USER_APPROVAL_RECORDED_IN_ISSUE535",
+    "scope": [
+      "DD",
+      "S6"
+    ],
+    "accepted_unknown_external_private_dynamic_caller_risk": true,
+    "independent_caller_zero_proven": false,
+    "retention_mode": "USER_MANAGED_PRIVATE_GOOGLE_DRIVE_INDEPENDENT_SHA256_CRC_BACKUP",
+    "retention_owner_mutable": true,
+    "object_lock_or_worm_required_for_operational_retirement": false,
+    "object_lock_or_worm_proven": false,
+    "full_s6_original_scope_p3_authorized": true,
+    "full_s6_execution_is_science_acceptance": false,
+    "source_main_at_approval": "8263fbc1801f213b98183ba4876299041cd01dac"
+  },
+  "arch_retirement_outcome": {
+    "date_utc": "2026-11-17",
+    "receipt_id": 6943043495,
+    "current_proposed_wave1_retired": 9,
+    "current_proposed_wave1_formal_holds": 1,
+    "old_approved_eight_verified": true,
+    "DD_formal_retired_after_CI_manual_review": true,
+    "S6_formal_hold_due_full_replay": true,
+    "science_hold": true
   }
 }
