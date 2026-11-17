@@ -127,11 +127,15 @@ because it owns the separately selected electron-energy physics.
   (not inlet/outlet). The three dielectric sides remain separately owned
   by 9 ion, 3 electron, and 3 electron-energy BC entries; each uses
   `sidesets` to select its actual physical surface.
-- The same new wall-flux Functors feed the three surface-current
-  properties. The electron sheath publishes `e_wall_number_flux`
-  via the existing `ESWallFluxMaterial` with `species_id=e`. The
-  lower-D Native surface-charge equations remain permitted if no
-  producer collision exists.
+- The new ion wall Functors and a **single** electron wall Flux feed the
+  three surface-current properties. In the S6 ion-only cutover the
+  `[Energy]` action stays in partial mode: its existing Native electron
+  `ESWallFluxMaterial` is retained with `species_id=e`, publishing
+  `e_wall_number_flux`. When a future full `[Energy] fem_potential` enables
+  the Physics-generated `ESWallFluxMaterial`, the Native electron
+  provider must be retired to prevent a duplicate source. The lower-D
+  Native surface-charge equations remain permitted if no producer
+  collision exists.
 - `pressure`, `temperature`, `wall_gradient` (root),
   `fem_potential`, FV species selection and
   `migration_smoothing_width` (Continuity) belong to MOOSE `.i` input.
