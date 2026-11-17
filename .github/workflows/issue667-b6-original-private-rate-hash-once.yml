@@ -1,0 +1,101 @@
+name: Issue667 B6 original protected rate SHA verification (hash only)
+
+on:
+  push:
+    branches: [issue-667-p1-b6-private-rate-hash-20261117]
+    paths: [.github/workflows/issue667-b6-original-private-rate-hash-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  hash_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Exact approved immutable source and isolated one-shot check
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="9d8d7b98b4c163a365c93ad69067f34eaaf16f86"
+          test "$(git merge-base "$base" HEAD)" = "$base"
+          test "$(git rev-list --count "$base"..HEAD)" = "1"
+          test "$(git diff --name-only "$base" HEAD)" = ".github/workflows/issue667-b6-original-private-rate-hash-once.yml"
+      - name: Verify historical original kinetic table SHA in memory only
+        shell: bash
+        env:
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import base64,hashlib,io,json,os,pathlib,tarfile
+          expected={
+           "EI-415_O2_X.txt":"9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+           "EI-401_O2_X.txt":"185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+           "EI-417_O2_X.txt":"4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
+          }
+          receipt={"schema":"issue667.p1_b6.original_private_rate_hash_only.v1",
+                   "source_head":"9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+                   "issue":667,"task":"P1-B6","native_P2":"NOT_RUN",
+                   "native_P3":"NOT_RUN","native_P4":"NOT_RUN",
+                   "science":"SCIENCE_HOLD","secret_bytes_published":False,
+                   "raw_rate_bytes_published":False,"rows":[],"status":"HOLD"}
+          output=pathlib.Path(os.environ.get("RUNNER_TEMP","/tmp"))/"b6_private_rate_hash_receipt.json"
+          secret=os.getenv("PROTECTED_ARCHIVE_B64","")
+          if not secret:
+              receipt["reason"]="ORIGINAL_PROTECTED_RATE_SECRET_ABSENT"
+              output.write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+              print("ORIGINAL_PROTECTED_RATE_SECRET_ABSENT")
+              raise SystemExit(22)
+          try:
+              tar_data=base64.b64decode(secret,validate=True)
+              with tarfile.open(fileobj=io.BytesIO(tar_data),mode="r:xz") as arc:
+                  members=arc.getmembers()
+                  if len(members)>200:
+                      raise ValueError("PROTECTED_ARCHIVE_MEMBER_BOUND_EXCEEDED")
+                  matched={}
+                  for m in members:
+                      nm=m.name.removeprefix("./")
+                      parts=pathlib.PurePosixPath(nm).parts
+                      if m.name.startswith("/") or ".." in parts or m.issym() or m.islnk():
+                          raise ValueError("PROTECTED_ARCHIVE_UNSAFE_MEMBER")
+                      if nm in expected:
+                          if not m.isfile() or m.size>1024*1024 or nm in matched:
+                              raise ValueError("PROTECTED_ARCHIVE_TARGET_NOT_UNIQUE")
+                          b=arc.extractfile(m).read()
+                          if len(b)!=m.size:
+                              raise ValueError("PROTECTED_ARCHIVE_TRUNCATED")
+                          actual=hashlib.sha256(b).hexdigest()
+                          matched[nm]={"file":nm,"sha256_expected":expected[nm],
+                                       "sha256_observed_if_equal":actual if actual==expected[nm] else None,
+                                       "sha256_match":actual==expected[nm],
+                                       "line_count":len(b.splitlines()),
+                                       "bytes_verified":len(b)}
+                  for name in expected:
+                      receipt["rows"].append(matched.get(name,{"file":name,"sha256_match":False,
+                                                              "reason":"MISSING_FROM_PROTECTED_ARCHIVE"}))
+              receipt["status"]="PASS_ORIGINAL_PRIVATE_BYTES_SHA256" if all(
+                  row.get("sha256_match") and row.get("line_count")==100
+                  for row in receipt["rows"]) else "HOLD_ORIGINAL_SECRET_SHA_MISMATCH"
+          except Exception as e:
+              receipt["reason"]=type(e).__name__
+          output.write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+          print("B6_ORIGINAL_PRIVATE_RATE_SHA_STATUS",receipt["status"],
+                "matched",sum(row.get("sha256_match",False) for row in receipt["rows"]),
+                "of",len(expected))
+          if receipt["status"]!="PASS_ORIGINAL_PRIVATE_BYTES_SHA256":
+              raise SystemExit(23)
+          PY
+      - name: Publish only SHA-matching receipt, never original rates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue667-b6-original-rate-sha-only-${{ github.sha }}
+          path: ${{ runner.temp }}/b6_private_rate_hash_receipt.json
+          if-no-files-found: error
+          retention-days: 7
