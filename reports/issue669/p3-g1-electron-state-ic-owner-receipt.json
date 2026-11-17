@@ -1,0 +1,256 @@
+{
+  "schema": "issue669.p3_g1.electron_state_ic_owner.v1",
+  "task_id": "P3-G1",
+  "parent_issue": 669,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "status": "PASS_READONLY_STATIC_SOURCE_AND_IC_PARITY__HOLD_NEWONLY_INTEGRATED_P2",
+  "claim_scope": "independent read-only source/byte/IC contract verification; no Physics/JSON or Scratch edits; no new-only runtime claim",
+  "p2_dependency": {
+    "source_only_static_retirement_26_to_0": "PASS_S6_417_AND_S6_941",
+    "full_p2_package_dod": "HOLD_PRODUCTION_RUNNER_AND_JSON_11TH_OVERLAY",
+    "native_p2": "NOT_RUN"
+  },
+  "source_artifacts": [
+    {
+      "role": "source_hybrid_scratch",
+      "action_run_id": 44180190753,
+      "artifact_id": 14372315897,
+      "zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620"
+    },
+    {
+      "role": "post_p2_static_ion_retirement_maxwell_child_mesh",
+      "action_run_id": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    }
+  ],
+  "cases": {
+    "417": {
+      "historical_10_layer_files_sha_checked": 10,
+      "hybrid_11_layer_files_sha_checked": 11,
+      "post_p2_static_retirement_11_layer_sha_checked": 11,
+      "original_c0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "hybrid_c0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "after_p2_native_ion_retirement_c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "original_state_owners": [
+        {
+          "section": "Variables",
+          "object_name": "log_ne",
+          "line": 106,
+          "layer": 1,
+          "family": "LAGRANGE",
+          "order": "FIRST",
+          "initial_condition": "-20.216123548032986",
+          "block_sha256": "a89b75252747163ebc1e4a665a78695ed52ddae851a21a253d8eb58fa6fecb9a"
+        },
+        {
+          "section": "Variables",
+          "object_name": "log_energy",
+          "line": 127,
+          "layer": 1,
+          "family": "LAGRANGE",
+          "order": "FIRST",
+          "initial_condition": "-18.829829186913098",
+          "block_sha256": "9ffe95d812f464e8a6e0a73491d7bc5c104ea4e1fde3511e433cda435c880d30"
+        }
+      ],
+      "original_c0_owned_solver_initials_count": 2,
+      "direct_hybrid_solver_state_or_ics_count_for_legacy_and_canonical": 0,
+      "direct_post_p2_solver_state_or_ics_count_for_legacy_and_canonical": 0,
+      "preserved_electron_related_owner_blocks": [
+        {
+          "section": "FunctorMaterials",
+          "object_name": "electron_molar_density",
+          "functor": "log_e",
+          "block_sha256": "d62268f610d606b407c0e042162bdd490dd86b4cd3d1a6dbb8fd57070acafe2a"
+        },
+        {
+          "section": "FunctorMaterials",
+          "object_name": "electron_molar_energy_density",
+          "functor": "log_e_energy",
+          "block_sha256": "452b1796e5f6cb668ab13de65721eb7c85e3f58ef3acc544fb8919ab96463a3a"
+        },
+        {
+          "section": "AuxKernels",
+          "object_name": "freeze_log_ne_t6",
+          "coupled_variables": "log_e",
+          "block_sha256": "8030dd32c2211a3e7cfa5beda32426e5a9547828fe28ae488ecb28f7af3628f6"
+        },
+        {
+          "section": "AuxKernels",
+          "object_name": "freeze_log_energy_t6",
+          "coupled_variables": "log_e_energy",
+          "block_sha256": "932279d6593ac1976a6ec5ce2868dbffac92da64935ea58db7b729cf07b583ad"
+        }
+      ],
+      "legacy_aux_variable_suffix_not_direct_solver_state": [
+        "log_ne_rf_state_t6",
+        "log_energy_rf_state_t6"
+      ],
+      "p2_native_ion_retired_26_source_only": "PASS",
+      "p2_retired_changed_input_files": 5,
+      "p2_retired_unchanged_input_files": 6,
+      "p2_overlay_still_hybrid": true,
+      "p2_newonly_json_overlay_bound": false,
+      "original_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "hybrid_overlay_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895"
+    },
+    "941": {
+      "historical_10_layer_files_sha_checked": 10,
+      "hybrid_11_layer_files_sha_checked": 11,
+      "post_p2_static_retirement_11_layer_sha_checked": 11,
+      "original_c0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "hybrid_c0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "after_p2_native_ion_retirement_c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "original_state_owners": [
+        {
+          "section": "Variables",
+          "object_name": "log_ne",
+          "line": 106,
+          "layer": 1,
+          "family": "LAGRANGE",
+          "order": "FIRST",
+          "initial_condition": "-20.216123548032986",
+          "block_sha256": "a89b75252747163ebc1e4a665a78695ed52ddae851a21a253d8eb58fa6fecb9a"
+        },
+        {
+          "section": "Variables",
+          "object_name": "log_energy",
+          "line": 127,
+          "layer": 1,
+          "family": "LAGRANGE",
+          "order": "FIRST",
+          "initial_condition": "-18.829829186913098",
+          "block_sha256": "9ffe95d812f464e8a6e0a73491d7bc5c104ea4e1fde3511e433cda435c880d30"
+        }
+      ],
+      "original_c0_owned_solver_initials_count": 2,
+      "direct_hybrid_solver_state_or_ics_count_for_legacy_and_canonical": 0,
+      "direct_post_p2_solver_state_or_ics_count_for_legacy_and_canonical": 0,
+      "preserved_electron_related_owner_blocks": [
+        {
+          "section": "FunctorMaterials",
+          "object_name": "electron_molar_density",
+          "functor": "log_e",
+          "block_sha256": "d62268f610d606b407c0e042162bdd490dd86b4cd3d1a6dbb8fd57070acafe2a"
+        },
+        {
+          "section": "FunctorMaterials",
+          "object_name": "electron_molar_energy_density",
+          "functor": "log_e_energy",
+          "block_sha256": "452b1796e5f6cb668ab13de65721eb7c85e3f58ef3acc544fb8919ab96463a3a"
+        },
+        {
+          "section": "AuxKernels",
+          "object_name": "freeze_log_ne_t6",
+          "coupled_variables": "log_e",
+          "block_sha256": "8030dd32c2211a3e7cfa5beda32426e5a9547828fe28ae488ecb28f7af3628f6"
+        },
+        {
+          "section": "AuxKernels",
+          "object_name": "freeze_log_energy_t6",
+          "coupled_variables": "log_e_energy",
+          "block_sha256": "932279d6593ac1976a6ec5ce2868dbffac92da64935ea58db7b729cf07b583ad"
+        }
+      ],
+      "legacy_aux_variable_suffix_not_direct_solver_state": [
+        "log_ne_rf_state_t6",
+        "log_energy_rf_state_t6"
+      ],
+      "p2_native_ion_retired_26_source_only": "PASS",
+      "p2_retired_changed_input_files": 5,
+      "p2_retired_unchanged_input_files": 6,
+      "p2_overlay_still_hybrid": true,
+      "p2_newonly_json_overlay_bound": false,
+      "original_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "hybrid_overlay_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0"
+    }
+  },
+  "physics_ic_contract": {
+    "legacy_names": {
+      "log_ne": "log_e",
+      "log_energy": "log_e_energy"
+    },
+    "electron_json_number_density_m3": 1000000000000001.6,
+    "electron_json_temperature_eV": 2.6666666666666665,
+    "newonly_417_941_species_e_records_equal": true,
+    "continuity_variable_type": "MooseVariable",
+    "continuity_ic_type": "ConstantIC",
+    "continuity_ic_calculation": "ln(initial_number_density)-ln(N_A)",
+    "energy_variable_type": "MooseVariable",
+    "energy_ic_type": "ConstantIC",
+    "energy_ic_calculation": "ln(1.5*temperature_eV*initial_number_density/N_A)",
+    "old_log_density": -20.216123548032986,
+    "derived_new_log_density": -20.21612354803299,
+    "old_log_energy": -18.8298291869131,
+    "derived_new_log_energy": -18.829829186913095,
+    "abs_difference_log_density": 3.552713678800501e-15,
+    "abs_difference_log_energy": 3.552713678800501e-15,
+    "numeric_parity_atol": 1e-12,
+    "explicit_initial_molar_energy_density_in_newonly_templates": false,
+    "historical_hybrid_explicit_molar_energy_density_eV": 6.6421562686953756e-9,
+    "state_ic_owner": "New-only JSON species.e record plus DDContinuityEq/DDEnergyEq C++ Physics auto creation"
+  },
+  "connected_github_exact_head_source_sha256": [
+    {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "sha256": "f7bed85d1f8a1c71bd01bf03bb16cda2c54139bb4f354c7d20d9c0646b4d6fca",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    },
+    {
+      "path": "physics_app/src/physics/plasma/DDEnergyEq.C",
+      "sha256": "26901f36f0b26531f680b42c36a6e4446a0a252952e17a222a89a227c7fc3b4d",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    },
+    {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    },
+    {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+      "sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    },
+    {
+      "path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+      "sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    },
+    {
+      "path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_941_continuity.template.i",
+      "sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    }
+  ],
+  "negative_tests": {
+    "rejected": 10,
+    "total": 10,
+    "classes": [
+      "missing_legacy_electron",
+      "duplicate_legacy_electron",
+      "wrong_legacy_electron_family",
+      "wrong_legacy_electron_initial",
+      "wrong_legacy_energy_initial",
+      "undeleted_direct_legacy_state",
+      "duplicate_canonical_state",
+      "broken_rf_consumer",
+      "missing_newonly_density",
+      "negative_newonly_electron_temperature"
+    ]
+  },
+  "local_independent_verifier_sha256": "377d8a2a92527b46c4e6be067b76f19bb9c9729e5f02f6ea3a7669b28c529bfa",
+  "local_full_receipt_sha256": "bbae4229cbbf7fac8a734d7c0852f0c6d1143cb91d30cd016a0f6b5eef908708",
+  "unresolved": [
+    "Full P2 production runner hookup and New-only JSON/11th overlay binding not completed; P2 package DoD remains HOLD",
+    "#668 source-only Scratch artifact still contains the Hybrid 11th overlay, not actual New-only Physics/JSON e-energy IC handoff",
+    "Native check-input and C++ Warehouse/IC runtime registration not executed",
+    "Do not upgrade to Native P2 PASS, Native P3/P4 or SCIENCE_ACCEPTED"
+  ],
+  "private_rate_bytes_read": false,
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD"
+}
