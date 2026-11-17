@@ -3,11 +3,12 @@
 The operator accepted residual, unobservable external/private/dynamic caller
 risk for exactly D2/D3/D4/A3/A4/B on 2026-11-17 (Issue #535 comment
 6941923213). This is an explicit *risk acceptance*, not global caller-zero.
-Six original verification obligations can be formally retired after exact-
-head CI and separate release review; FLOW B source ZIP was independently
-re-downloaded from Drive and byte/SHA/CRC verified, not WORM. ARCH DD/S6
-original and bounded artifact custody was also checked, but they stay HOLD. No scientific parity,
-WORM/Object Lock or automatic expensive P3 is asserted by this contract.
+Six CORE/FLOW original obligations were retired after source verification.
+ARCH DD and S6 owner scoped caller risk and user-managed mutable Drive custody
+were separately approved (Issue #535 comment 6943043495). DD two-step P3
+operational retirement is proposed after CI; S6 full 400W 100us two-case P3
+was AUTHORIZED but NOT DISPATCHED, so S6 remains HOLD. Neither WORM nor
+scientific parity is claimed.
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "ci/baselines/issue535_postrelease_eight_hold_gate_20261116.json"
 SOURCE_MAIN = "bde6931a0030eb8bd4dfc532a6f9209e639ef275"
 OWNER_RECEIPT = 6941923213
+ARCH_RECEIPT = 6943043495
 
 ORIGINALS = {
     "D2": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611",
@@ -35,8 +37,8 @@ ORIGINALS = {
     "S6": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
 }
 APPROVED = frozenset(("D2", "D3", "D4", "A3", "A4", "B"))
-SCOPED_RETIRED = frozenset(("D2", "D3", "D4", "A3", "A4", "B"))
-FORMAL_HOLD = frozenset(("DD", "S6"))
+SCOPED_RETIRED = frozenset(("D2", "D3", "D4", "A3", "A4", "B", "DD"))
+FORMAL_HOLD = frozenset(("S6",))
 ARCHIVE = {
     "DD": "docs/development/archive/issue402-dd-json-p3-smoke-once.yml.txt",
     "S6": "docs/development/archive/issue402-hybrid-json-s6-p3-p4-once.yml.txt",
@@ -50,11 +52,8 @@ REPLAY = {
 REQUIRED_GATES = {
     "D2": set(), "D3": set(), "D4": set(), "A3": set(), "A4": set(),
     "B": set(),
-    "DD": {"EXTERNAL_CALLER_ATTESTATION",
-           "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE"},
-    "S6": {"EXTERNAL_CALLER_ATTESTATION",
-           "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE",
-           "FULL_400W_100US_REPLAY_EQUIVALENCE_OR_SEPARATE_APPROVED_WAIVER"},
+    "DD": set(),
+    "S6": {"FULL_400W_100US_REPLAY_EQUIVALENCE_OR_SEPARATE_APPROVED_WAIVER"},
 }
 REQUIRED_ROUTES = {
     "D2": (".github/workflows/ci.yml#issue402_core_four_p0",
@@ -114,6 +113,25 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
     for key in ("B_durable_custody_approved", "ARCH_DD_S6_approved",
                 "science_approved", "automatic_merging_approved"):
         assert approval[key] is False, "APPROVAL_SCOPE_WIDENED:" + key
+
+    # New ARCH scope is independent of the earlier CORE/FLOW sign-off.
+    arch_approval = data["arch_owner_approval"]
+    assert arch_approval["comment_id"] == ARCH_RECEIPT, "ARCH_OWNER_RECEIPT_NOT_PROVEN"
+    assert arch_approval["accepted_utc_date"] == "2026-11-17"
+    assert arch_approval["operator"] == "repository-operator"
+    assert arch_approval["source"] == "DIRECT_USER_APPROVAL_RECORDED_IN_ISSUE535"
+    assert arch_approval["scope"] == ["DD", "S6"]
+    assert arch_approval["accepted_unknown_external_private_dynamic_caller_risk"] is True
+    assert arch_approval["independent_caller_zero_proven"] is False
+    assert arch_approval["retention_mode"] == (
+        "USER_MANAGED_PRIVATE_GOOGLE_DRIVE_INDEPENDENT_SHA256_CRC_BACKUP"
+    )
+    assert arch_approval["retention_owner_mutable"] is True
+    assert arch_approval["object_lock_or_worm_required_for_operational_retirement"] is False
+    assert arch_approval["object_lock_or_worm_proven"] is False
+    assert arch_approval["full_s6_original_scope_p3_authorized"] is True
+    assert arch_approval["full_s6_execution_is_science_acceptance"] is False
+    assert arch_approval["source_main_at_approval"] == "8263fbc1801f213b98183ba4876299041cd01dac"
 
     cases = data["cases"]
     assert len(cases) == len(ORIGINALS) == 8
@@ -176,10 +194,32 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
                 "RETIRED_VERIFIED" if ident in SCOPED_RETIRED else "KEEP_HOLD"
             ), "UNAUTHORIZED_RETIREMENT:" + ident
         else:
-            assert x["owner_caller_risk_attestation"] is None, (
-                "ARCH_CALLER_ATTESTATION_NOT_AUTHORIZED:" + ident
+            assert ident in ARCHIVE
+            receipt = x["owner_caller_risk_attestation"]
+            assert isinstance(receipt, dict), "ARCH_OPERATOR_ATTESTATION_MISSING:" + ident
+            assert receipt["accepted"] is True and receipt["receipt_id"] == ARCH_RECEIPT
+            assert receipt["accepted_utc_date"] == "2026-11-17"
+            assert receipt["type"] == "OPERATOR_ACCEPTS_RESIDUAL_PRIVATE_DYNAMIC_CALLER_RISK"
+            assert receipt["not_independent_caller_zero"] is True
+            assert receipt["excludes_science_equivalence"] is True
+            assert receipt["scope"] == (
+                "DD_ORIGINAL_BOUNDARY_TWO_STEP_P3_ONLY" if ident == "DD"
+                else "S6_417_941_FULL_400W_100US_P3_ORIGINAL_SCOPE"
             )
-            assert x["formal_disposition"] == "KEEP_HOLD", "UNAUTHORIZED_RETIREMENT:" + ident
+            assert x["retirement_scope"] == (
+                "DD_ORIGINAL_BOUNDARY_TWO_STEP_P3_ONLY" if ident == "DD"
+                else "S6_417_941_FULL_400W_100US_P3_PENDING_FULL_SOURCE_RUN"
+            )
+            retention = x["custody"]["operator_accepted_private_drive_alternative"]
+            assert retention == {
+                "receipt_id": ARCH_RECEIPT,
+                "mode": "USER_MANAGED_MUTABLE_PRIVATE_DRIVE",
+                "sha256_and_crc_verified": True,
+                "object_lock_proven": False,
+            }
+            assert x["formal_disposition"] == (
+                "RETIRED_VERIFIED" if ident == "DD" else "KEEP_HOLD"
+            ), "UNAUTHORIZED_ARCH_RETIREMENT:" + ident
 
         assert tuple(x["replacement"]["routes"]) == REQUIRED_ROUTES[ident]
         for ref in x["replacement"]["routes"]:
@@ -236,11 +276,13 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
     assert custody["source_old_workflow_runs_failed"] is True
     assert custody["maintained_bounded_runs_success"] is True
     for flag in ("full_s6_400w_100us_maintained_replay_executed",
-                 "immutable_object_lock_proven", "ARCH_external_caller_risk_accepted",
-                 "operator_approved_waiver"):
+                 "immutable_object_lock_proven", "operator_approved_waiver"):
         assert custody[flag] is False, "ARCH_UNAUTHORIZED_GATE_PROMOTION:" + flag
+    assert custody["ARCH_external_caller_risk_accepted"] is True
+    assert custody["owner_approved_retention_alternative"] is True
+    assert custody["owner_approved_retention_method"] == "USER_MANAGED_MUTABLE_PRIVATE_GOOGLE_DRIVE"
     assert custody["SCIENCE_HOLD"] is True
-    assert custody["retirement_disposition"] == {"DD": "KEEP_HOLD", "S6": "KEEP_HOLD"}
+    assert custody["retirement_disposition"] == {"DD": "RETIRED_VERIFIED", "S6": "KEEP_HOLD"}
     expected_six = {
         "DD_ORIGINAL": (14090046268, 1550, "d7ccb403173ef7a831e3ec9ad31a6c74c49c54dda20dfa839fe11b3331c572a4",
                         "1-2JJR2GeQcvO2aSSl_4H5w2tgY7s2wvQ", "ORIGINAL_FAILED"),
@@ -268,8 +310,45 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
         assert re.fullmatch(r"[0-9a-f]{40}", row["source_sha"])
         assert row["run_id"] in (43536220786, 43587161603, 43911477519, 43902067509)
 
+
+    dispatch = data["arch_p3_dispatch_approval"]
+    assert dispatch["receipt_id"] == ARCH_RECEIPT
+    assert dispatch["approved_utc_date"] == "2026-11-17"
+    assert dispatch["workflow_path"] == ".github/workflows/issue541-arch-s6-p3-p4-replay.yml"
+    assert dispatch["workflow_git_blob"] == "6c673628eac4693abe0d74b04fc31578a39b3971"
+    assert dispatch["target_ref"] == "main"
+    assert dispatch["source_sha_policy"] == "RESOLVE_EXACT_MAIN_SHA_AT_DISPATCH"
+    assert dispatch["source_sha_at_user_approval"] == "8263fbc1801f213b98183ba4876299041cd01dac"
+    assert dispatch["required_event"] == "workflow_dispatch"
+    assert dispatch["required_inputs"] == {
+        "p3_approval": "ISSUE541_S6_400W_100US_BOTH_CASES_APPROVED",
+        "source_sha": "EXACT_SELECTED_REF_HEAD_SHA",
+    }
+    assert dispatch["cases"] == ["417", "941"]
+    assert dispatch["power_W"] == 400 and dispatch["duration_us"] == 100
+    assert dispatch["max_parallel_jobs"] == 2 and dispatch["per_job_timeout_minutes"] == 360
+    assert dispatch["status"] == "AUTHORIZED_NOT_DISPATCHED"
+    assert dispatch["run_id"] is None and dispatch["run_attempt"] is None
+    assert dispatch["request_timestamp"] is None
+    assert dispatch["observation"] == "NO_VERIFIED_NEW_WORKFLOW_DISPATCH_RUN"
+    assert dispatch["P3_full_scope_executed"] is False
+    assert dispatch["P4"] == "DIAGNOSTIC_ONLY"
+    assert dispatch["science"] == "SCIENCE_HOLD"
+    assert dispatch["no_coverage_waiver"] is True
+    assert dispatch["ref_event_guard_preserved"] is True
+    assert data["arch_retirement_outcome"] == {
+        "date_utc": "2026-11-17",
+        "receipt_id": ARCH_RECEIPT,
+        "current_proposed_wave1_retired": 9,
+        "current_proposed_wave1_formal_holds": 1,
+        "old_approved_eight_verified": True,
+        "DD_formal_retired_after_CI_manual_review": True,
+        "S6_formal_hold_due_full_replay": True,
+        "science_hold": True,
+    }
+
     assert data["global_holds"] == {
-        "external_caller_risk": "PARTIAL_CORE_FLOW_ACCEPTED_ARCH_NOT_ACCEPTED",
+        "external_caller_risk": "OPERATOR_SCOPED_RISK_ACCEPTED_CORE_FLOW_ARCH_NOT_GLOBAL_CALLER_ZERO",
         "worm": "NOT_PROVEN",
         "science": "SCIENCE_HOLD",
         "s6_p3": "100US_FULL_MAINTAINED_REPLAY_NOT_ACCEPTED",
@@ -322,7 +401,7 @@ def test_negative_missing_or_forged_operator_approval():
                 _check(data)
 
 
-def test_negative_premature_retirement_ARCH_DD_S6():
+def test_negative_premature_retirement_ARCH_S6_only():
     for ident in FORMAL_HOLD:
         data = copy.deepcopy(_load())
         row = next(x for x in data["cases"] if x["id"] == ident)
@@ -331,15 +410,19 @@ def test_negative_premature_retirement_ARCH_DD_S6():
             _check(data)
 
 
-def test_negative_unapproved_ARCH_caller_and_science_claims():
+def test_negative_forged_ARCH_caller_and_science_claims():
     for ident in ("DD", "S6"):
-        data = copy.deepcopy(_load())
-        row = next(x for x in data["cases"] if x["id"] == ident)
-        row["owner_caller_risk_attestation"] = {
-            "accepted": True, "receipt_id": OWNER_RECEIPT,
-        }
-        with pytest.raises(AssertionError, match="ARCH_CALLER_ATTESTATION_NOT_AUTHORIZED"):
-            _check(data)
+        for violation in ("missing", "wrong_receipt", "fake_caller_zero"):
+            data = copy.deepcopy(_load())
+            row = next(x for x in data["cases"] if x["id"] == ident)
+            if violation == "missing":
+                row["owner_caller_risk_attestation"] = None
+            elif violation == "wrong_receipt":
+                row["owner_caller_risk_attestation"]["receipt_id"] = OWNER_RECEIPT
+            else:
+                row["external_dynamic_caller"] = "CALLER_ZERO_PROVEN"
+            with pytest.raises(AssertionError):
+                _check(data)
 
 
 def test_negative_A4_scope_and_B_independent_backup_tampering():
@@ -404,12 +487,16 @@ def test_negative_false_WORM_science_or_scope_promotion():
 
 def test_negative_ARCH_independent_custody_is_not_WORM_or_replay_waiver():
     for flag in ("full_s6_400w_100us_maintained_replay_executed",
-                 "immutable_object_lock_proven",
-                 "ARCH_external_caller_risk_accepted",
-                 "operator_approved_waiver"):
+                 "immutable_object_lock_proven", "operator_approved_waiver"):
         data = copy.deepcopy(_load())
         data["arch_custody"][flag] = True
         with pytest.raises(AssertionError, match="ARCH_UNAUTHORIZED_GATE_PROMOTION"):
+            _check(data)
+    for flag in ("ARCH_external_caller_risk_accepted",
+                 "owner_approved_retention_alternative"):
+        data = copy.deepcopy(_load())
+        data["arch_custody"][flag] = False
+        with pytest.raises(AssertionError):
             _check(data)
     for field, invalid in (("git_sha256", "0" * 64),
                            ("drive_file_id", "fake"),
@@ -425,3 +512,35 @@ def test_negative_ARCH_independent_custody_is_not_WORM_or_replay_waiver():
     data["arch_custody"]["files"].pop()
     with pytest.raises(AssertionError):
         _check(data)
+
+
+def test_negative_S6_run_approval_is_not_a_completed_dispatch():
+    for field, corrupted in (
+        ("status", "COMPLETED_SUCCESS"),
+        ("run_id", 12345),
+        ("request_timestamp", "2026-11-17T10:00:00Z"),
+        ("observation", "P3_PASS"),
+        ("P3_full_scope_executed", True),
+        ("science", "SCIENCE_ACCEPTED"),
+        ("no_coverage_waiver", False),
+        ("source_sha_policy", "USE_OLD_SHA_WITHOUT_CHECK"),
+    ):
+        data = copy.deepcopy(_load())
+        data["arch_p3_dispatch_approval"][field] = corrupted
+        with pytest.raises(AssertionError):
+            _check(data)
+
+
+def test_negative_ARCH_user_managed_drive_approval_tampering():
+    for field, corrupted in (
+        ("comment_id", OWNER_RECEIPT),
+        ("scope", ["DD"]),
+        ("independent_caller_zero_proven", True),
+        ("retention_owner_mutable", False),
+        ("object_lock_or_worm_proven", True),
+        ("full_s6_execution_is_science_acceptance", True),
+    ):
+        data = copy.deepcopy(_load())
+        data["arch_owner_approval"][field] = corrupted
+        with pytest.raises(AssertionError):
+            _check(data)
