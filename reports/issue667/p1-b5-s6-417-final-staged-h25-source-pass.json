@@ -1,0 +1,57 @@
+{
+  "schema": "issue667.p1_b5.final_staged_byte_receipt.v1",
+  "task_id": "P1-B5",
+  "case": "S6-417-407-2069-H25",
+  "status": "PASS_SCOPE_S6_417_FINAL_STAGED_FILE_AND_BLOCK_SHA",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "pr": 665,
+  "final_layer": {
+    "ordinal": 10,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+    "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc"
+  },
+  "object": {
+    "section": "FVKernels",
+    "object_name": "h25_atomic_positive_ion",
+    "factory_type": "FVCoupledForce",
+    "variable": "log_Op",
+    "v": "S_Op_molar_H25",
+    "coef": "1.0",
+    "block": "plasma",
+    "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01"
+  },
+  "original_generator": {
+    "original_variable": "log_nop",
+    "block_sha256": "988613b29ab8eea9d63e1ba2401cbfdabe679800e4a6ee516fe3f7d940b83e08",
+    "original_overlay_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd"
+  },
+  "B4_independent": {
+    "name": "legacy8_h05_ei417_op",
+    "layer_ordinal": 7,
+    "file_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
+    "block_sha256": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7",
+    "v": "S_Op_molar_EI417",
+    "variable": "log_Op"
+  },
+  "nonoverlap": {
+    "distinct_name": true,
+    "distinct_layer": true,
+    "distinct_v": true,
+    "distinct_final_block_sha256": true,
+    "final_11_layer_unique_owner_occurrence": true
+  },
+  "evidence": {
+    "original_archive_id": 13677089020,
+    "ci_run_id": 44182540363,
+    "ci_artifact_id": 14371664130,
+    "ci_artifact_zip_sha256": "74b4ce486e7e615e3a593745a8218dfea63cc22ab418e634ec35f1288829be24",
+    "final_sha_manifest_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/7d70fd8a5f0dcc8d2400780c6ebb58ac2b09d7dc/reports/issue667/p1_0_s6_417_final_11_layer_sha_manifest.json",
+    "independent_external_rehash": "PASS_11_FILES_AND_26_BLOCKS"
+  },
+  "limitations": [
+    "This B5 PASS covers the S6-417 final staged original Native H25 ion Source at exact PR665 head, not its scientific chemistry acceptance",
+    "Native P2/P3/P4 NOT_RUN; SCIENCE_HOLD",
+    "B7 rate kinetics original law/provenance is an independent gate",
+    "S6-941 final 11-layer P1-0 case still separate"
+  ]
+}
