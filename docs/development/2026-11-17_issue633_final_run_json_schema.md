@@ -56,10 +56,11 @@ same base fields:
   with `null`. A numeric ion temperature is a **prescribed wall thermal
   parameter**, not an automatically solved ion-energy PDE. For `e`, the
   New-only record uses `8/3` eV: the existing S6 initial mean energy 4 eV
-  expressed as an effective Maxwellian temperature. Only when
-  `log_e_energy` is auto-created does this provide its IC via
-  `E_{e,0}^{molar} = (3/2) (n_{e,0}/N_A) T_{e,0}[eV]`. A retained Native
-  `log_e_energy` variable continues to own its existing IC.
+  expressed as an effective Maxwellian temperature. In full New-only
+  `[Energy]` mode, `log_e_energy` is auto-created and its IC is
+  `E_{e,0}^{molar} = (3/2) (n_{e,0}/N_A) T_{e,0}[eV]`. The New-only
+  S6 preflight rejects a competing Native electron energy variable/IC;
+  archived Hybrid/partial modes remain unaffected.
 - `sticking_coefficient` is a species property in [0,1]; `1` for the
   characterized three ions **and electron** (preserving the existing
   electron sheath absorption), `0` for unselected neutrals.
