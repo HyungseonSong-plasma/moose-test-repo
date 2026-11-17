@@ -3,9 +3,10 @@
 The operator accepted residual, unobservable external/private/dynamic caller
 risk for exactly D2/D3/D4/A3/A4/B on 2026-11-17 (Issue #535 comment
 6941923213). This is an explicit *risk acceptance*, not global caller-zero.
-Five original verification obligations can be formally retired after exact-
-head CI and separate release review; FLOW B remains held for durable Artifact
-custody. ARCH DD/S6 were not included and stay HOLD. No scientific parity,
+Six original verification obligations can be formally retired after exact-
+head CI and separate release review; FLOW B source ZIP was independently
+re-downloaded from Drive and byte/SHA/CRC verified, not WORM. ARCH DD/S6
+original and bounded artifact custody was also checked, but they stay HOLD. No scientific parity,
 WORM/Object Lock or automatic expensive P3 is asserted by this contract.
 """
 from __future__ import annotations
@@ -34,8 +35,8 @@ ORIGINALS = {
     "S6": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
 }
 APPROVED = frozenset(("D2", "D3", "D4", "A3", "A4", "B"))
-SCOPED_RETIRED = frozenset(("D2", "D3", "D4", "A3", "A4"))
-FORMAL_HOLD = frozenset(("B", "DD", "S6"))
+SCOPED_RETIRED = frozenset(("D2", "D3", "D4", "A3", "A4", "B"))
+FORMAL_HOLD = frozenset(("DD", "S6"))
 ARCHIVE = {
     "DD": "docs/development/archive/issue402-dd-json-p3-smoke-once.yml.txt",
     "S6": "docs/development/archive/issue402-hybrid-json-s6-p3-p4-once.yml.txt",
@@ -48,7 +49,7 @@ REPLAY = {
 }
 REQUIRED_GATES = {
     "D2": set(), "D3": set(), "D4": set(), "A3": set(), "A4": set(),
-    "B": {"DURABLE_ACCESSIBLE_B_ORIGINAL_ARTIFACT_CUSTODY"},
+    "B": set(),
     "DD": {"EXTERNAL_CALLER_ATTESTATION",
            "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE"},
     "S6": {"EXTERNAL_CALLER_ATTESTATION",
@@ -97,7 +98,7 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
     assert [x["state"] for x in data["approval_cycles"]] == [
         "SCOPED_RETIRED_VERIFIED_AFTER_REQUIRED_CI",
         "SCOPED_RETIRED_VERIFIED_AFTER_REQUIRED_CI",
-        "A4_SCOPED_VERIFIED_B_CALLER_RISK_ACCEPTED_DURABLE_CUSTODY_HOLD",
+        "A4_AND_B_SCOPED_RETIRED_VERIFIED_AFTER_INDEPENDENT_B_ZIP_CUSTODY",
     ]
 
     approval = data["approval"]
@@ -201,18 +202,72 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
     assert readback["sha256"] == original_zip["sha256_digest"].removeprefix("sha256:")
     assert readback["zip_crc"] == "PASS_8_MEMBERS"
     assert readback["issue535_receipt"] == 6933161334
-    assert readback["drive_new_upload_success"] is False
-    assert readback["durable_redundant_retention"] == "NOT_VERIFIED"
+    assert readback["drive_new_upload_success"] is True
+    assert readback["durable_redundant_retention"] == "PRIVATE_INDEPENDENT_DRIVE_BYTE_VERIFIED_NOT_WORM"
     assert readback["provider_expiry_utc"] == original_zip["expires_at"]
+    assert readback["drive_file_id"] == "11xBcL8q8FLZBm9vsPXemoEbAhIE17Sqd"
+    assert readback["drive_size_bytes"] == original_zip["bytes"] == 10401
+    assert readback["drive_mime"] == "application/zip"
+    assert readback["drive_shared"] is False
+    assert readback["download_readback_sha256_match"] is True
+    assert readback["download_readback_byte_cmp_match"] is True
+    assert readback["download_readback_zip_crc"] == "PASS"
+    assert readback["issue535_independent_backup_receipt"] == 6942585396
+    assert readback["WORM_object_lock_not_proven"] is True
 
     assert data["approval_outcome"] == {
-        "newly_retired_verified_count": 5,
-        "still_hold_count": 3,
+        "newly_retired_verified_count": 6,
+        "still_hold_count": 2,
         "original_wave1_prior_retired_verified_count": 2,
-        "wave1_proposed_formal_retired_verified_count": 7,
-        "wave1_proposed_formal_hold_count": 3,
+        "wave1_proposed_formal_retired_verified_count": 8,
+        "wave1_proposed_formal_hold_count": 2,
         "source": "USER_APPROVAL_CONDITIONED_ON_PR_EXACT_HEAD_CI_AND_MANUAL_MERGE_GATE",
     }
+
+    # ARCH originals and separately maintained bounded runs are independently
+    # private-backed up; source-hash equality does not prove WORM or science.
+    custody = data["arch_custody"]
+    assert custody["schema"] == "issue535.arch_independent_custody_2026_11_17.v1"
+    assert custody["receipt_issue535_comment"] == 6942596277
+    assert custody["verified_date_utc"] == "2026-11-17"
+    assert custody["original_failed_zip_folder_id"] == "1AngOUYfMWyvgg9jAT2YGFN_04_5NZiZH"
+    assert custody["evidence"] == "SIX_PRIVATE_DRIVE_DOWNLOADS_SHA256_MATCH_GITHUB_SOURCE_ZIP_CRC_PASS"
+    assert custody["original_files"] == 3 and custody["maintained_bounded_files"] == 3
+    assert custody["source_old_workflow_runs_failed"] is True
+    assert custody["maintained_bounded_runs_success"] is True
+    for flag in ("full_s6_400w_100us_maintained_replay_executed",
+                 "immutable_object_lock_proven", "ARCH_external_caller_risk_accepted",
+                 "operator_approved_waiver"):
+        assert custody[flag] is False, "ARCH_UNAUTHORIZED_GATE_PROMOTION:" + flag
+    assert custody["SCIENCE_HOLD"] is True
+    assert custody["retirement_disposition"] == {"DD": "KEEP_HOLD", "S6": "KEEP_HOLD"}
+    expected_six = {
+        "DD_ORIGINAL": (14090046268, 1550, "d7ccb403173ef7a831e3ec9ad31a6c74c49c54dda20dfa839fe11b3331c572a4",
+                        "1-2JJR2GeQcvO2aSSl_4H5w2tgY7s2wvQ", "ORIGINAL_FAILED"),
+        "S6_417_ORIGINAL": (14117371106, 98686127, "563800ba985c3966d24aa0196fbe8ce46c9e1f5f1a1936685c6b5ff76c77a195",
+                            "1ZgnvNpX6LwmY4yG_exuEdHpJFvAvwsCX", "ORIGINAL_FAILED"),
+        "S6_941_ORIGINAL": (14120049502, 98635164, "87150a4b7db1647aa6a46731335ea1efa28a2998558cedd83df08d707c210d7e",
+                            "1YWmovJU5TOiDp4Lg7gcjN5Vi7j8aNx_z", "ORIGINAL_FAILED"),
+        "DD_BOUNDED": (14247572989, 16167, "1e2c52623a0ba1936a8c44ae69a1f2c273526a5b96048325288f6854de1d47da",
+                       "1REOmp30hqVl069EqShs_5mR58yOa0L7S", "MAINTAINED_2_STEP_SUCCESS"),
+        "S6_417_BOUNDED": (14243685279, 635777, "5ed26e8cd52e1a8b64164c733cd7452850b542f5c3e4e2cab18b6f3e4f8a8bf8",
+                           "1X_L6I88FY0oyfj73rmt-8aSlM0vRiSQw", "MAINTAINED_3_STEP_SUCCESS"),
+        "S6_941_BOUNDED": (14243116086, 635729, "6f20edfa50d64921af495f21aa9e533d910fe98a5696224f7888c5d1da654098",
+                           "1cKDwUi_tF5W1JlccdF9fCiuZetFexT-v", "MAINTAINED_3_STEP_SUCCESS"),
+    }
+    assert len(custody["files"]) == len(expected_six)
+    assert {x["case"] for x in custody["files"]} == set(expected_six)
+    for row in custody["files"]:
+        exact = expected_six[row["case"]]
+        assert (row["github_artifact_id"], row["bytes"], row["git_sha256"],
+                row["drive_file_id"], row["kind"]) == exact
+        assert row["drive_shared"] is False
+        assert row["drive_sha256_re_download_match"] is True
+        assert row["zip_crc"] == "PASS"
+        assert row["drive_copy_mutable"] is True
+        assert re.fullmatch(r"[0-9a-f]{40}", row["source_sha"])
+        assert row["run_id"] in (43536220786, 43587161603, 43911477519, 43902067509)
+
     assert data["global_holds"] == {
         "external_caller_risk": "PARTIAL_CORE_FLOW_ACCEPTED_ARCH_NOT_ACCEPTED",
         "worm": "NOT_PROVEN",
@@ -267,7 +322,7 @@ def test_negative_missing_or_forged_operator_approval():
                 _check(data)
 
 
-def test_negative_premature_retirement_B_and_ARCH_DD_S6():
+def test_negative_premature_retirement_ARCH_DD_S6():
     for ident in FORMAL_HOLD:
         data = copy.deepcopy(_load())
         row = next(x for x in data["cases"] if x["id"] == ident)
@@ -287,14 +342,19 @@ def test_negative_unapproved_ARCH_caller_and_science_claims():
             _check(data)
 
 
-def test_negative_A4_p0_only_and_B_durable_storage_holds():
+def test_negative_A4_scope_and_B_independent_backup_tampering():
     data = copy.deepcopy(_load())
     row = next(x for x in data["cases"] if x["id"] == "A4")
     row["retirement_scope"] = "ORIGINAL_P0_P1_P2_ONLY"
     with pytest.raises(AssertionError):
         _check(data)
-    for key, value in (("drive_new_upload_success", True),
-                       ("durable_redundant_retention", "VERIFIED")):
+    for key, value in (("drive_new_upload_success", False),
+                       ("durable_redundant_retention", "WORM_VERIFIED"),
+                       ("drive_file_id", "WRONG_ID"),
+                       ("drive_shared", True),
+                       ("drive_size_bytes", 0),
+                       ("download_readback_sha256_match", False),
+                       ("WORM_object_lock_not_proven", False)):
         data = copy.deepcopy(_load())
         row = next(x for x in data["cases"] if x["id"] == "B")
         row["custody"]["fresh_original_zip_download"][key] = value
@@ -340,3 +400,28 @@ def test_negative_false_WORM_science_or_scope_promotion():
         data["approval"][field] = True
         with pytest.raises(AssertionError, match="APPROVAL_SCOPE_WIDENED"):
             _check(data)
+
+
+def test_negative_ARCH_independent_custody_is_not_WORM_or_replay_waiver():
+    for flag in ("full_s6_400w_100us_maintained_replay_executed",
+                 "immutable_object_lock_proven",
+                 "ARCH_external_caller_risk_accepted",
+                 "operator_approved_waiver"):
+        data = copy.deepcopy(_load())
+        data["arch_custody"][flag] = True
+        with pytest.raises(AssertionError, match="ARCH_UNAUTHORIZED_GATE_PROMOTION"):
+            _check(data)
+    for field, invalid in (("git_sha256", "0" * 64),
+                           ("drive_file_id", "fake"),
+                           ("bytes", 42),
+                           ("drive_shared", True),
+                           ("drive_copy_mutable", False),
+                           ("drive_sha256_re_download_match", False)):
+        data = copy.deepcopy(_load())
+        data["arch_custody"]["files"][0][field] = invalid
+        with pytest.raises(AssertionError):
+            _check(data)
+    data = copy.deepcopy(_load())
+    data["arch_custody"]["files"].pop()
+    with pytest.raises(AssertionError):
+        _check(data)
