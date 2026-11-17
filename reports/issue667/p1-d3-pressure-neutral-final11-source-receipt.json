@@ -1,0 +1,174 @@
+{
+  "schema": "issue667.p1_d3.pressure_neutral_source_bound.v1",
+  "task_id": "P1-D3",
+  "status": "FINAL_11_LAYER_SOURCE_STATIC_PASS__NATIVE_RUNTIME_NOT_RUN",
+  "source": {
+    "pr": 665,
+    "pr_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_source": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "P1_0_run": 44182628032,
+    "P1_0_artifact_id": 14372278070,
+    "artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010"
+  },
+  "cases": {
+    "417": {
+      "historical_artifact_id": 13677089020,
+      "original_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "historical_file_sha_verified": 10,
+      "final_file_sha_verified": 11,
+      "D3_owner_blocks_exact_sha_verified": 22,
+      "neutral_chemistry_mass_forces": 4,
+      "legacy_p_tokens": 0
+    },
+    "941": {
+      "historical_artifact_id": 13677375813,
+      "original_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "historical_file_sha_verified": 10,
+      "final_file_sha_verified": 11,
+      "D3_owner_blocks_exact_sha_verified": 22,
+      "neutral_chemistry_mass_forces": 4,
+      "legacy_p_tokens": 0
+    }
+  },
+  "c0_after_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+  "c0_layer_ordinal": 1,
+  "pressure_binding": {
+    "historical": {
+      "section": "Variables",
+      "name": "p",
+      "type": "INSFVPressureVariable",
+      "initial_condition": "1.333223684",
+      "block_sha256": "f4e3f12e7751f8f684aa2da772243ca6426bd44aed848203e097c043187fe432"
+    },
+    "final": {
+      "section": "Variables",
+      "name": "pressure",
+      "type": "INSFVPressureVariable",
+      "block": "plasma",
+      "block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+      "native_initial_condition_removed": true,
+      "root_physics_pressure": "1.333223684",
+      "root_temperature": "300"
+    },
+    "rhie_chow": {
+      "section": "UserObjects",
+      "name": "rc",
+      "type": "INSFVRhieChowInterpolator",
+      "u": "u",
+      "v": "v",
+      "pressure": "pressure",
+      "block": "plasma",
+      "global_params": "rhie_chow_user_object = rc; velocity_interp_method = rc",
+      "old_block_sha256": "0e8cf0ce33e9078ab91cd06f272de70032d09f6b1d0eefaee43548e3ad68eb92",
+      "new_block_sha256": "e2df5dc1d44676bb2466221b3b3b315e3e62b244b1473efe82a2c9485d5a7823"
+    },
+    "runtime_initialization_verdict": "STATIC_CONTRACT_VERIFIED_RUNTIME_INITIAL_STATE_NOT_PROVEN"
+  },
+  "mass_momentum": {
+    "neutral_mass_time": {
+      "factory": "WCNSFVMassTimeDerivative",
+      "variable": "pressure",
+      "drho_dt": "drho_neutral_dt",
+      "block_sha256": "a22d4bd658bf1cb3a4f5fd82aa8ef46775600723a2c62533946fa2ebb1851a34"
+    },
+    "neutral_mass_advection": {
+      "factory": "INSFVMassAdvection",
+      "variable": "pressure",
+      "rho": "rho_neutral",
+      "block_sha256": "caf28088002e2302d6248c96c1f29bddf5c75f6a8947faaf3edb9d8f52a44047"
+    },
+    "u_pressure": {
+      "factory": "INSFVMomentumPressure",
+      "variable": "u",
+      "pressure": "pressure",
+      "momentum_component": "x",
+      "block_sha256": "b495dc6a203c3955bb52e206198304802d5c134120135861505fde25007ccb39"
+    },
+    "v_pressure": {
+      "factory": "INSFVMomentumPressure",
+      "variable": "v",
+      "pressure": "pressure",
+      "momentum_component": "y",
+      "block_sha256": "de21314dbf65512bd847219066cbcb9d136c7f21d96f591c7c401474245fdada"
+    },
+    "remaining_verified": [
+      "u_advection",
+      "u_diffusion",
+      "v_advection",
+      "v_diffusion",
+      "u_rz_viscous_source"
+    ],
+    "neutral_sources": {
+      "shared": [
+        "ei415_neutral_mass_source -> S_neutral_mass_EI415",
+        "ei401_neutral_mass_sink -> S_neutral_mass_EI401",
+        "h25_neutral_pressure -> S_neutral_mass_H25"
+      ],
+      "variant_417": "legacy8_h05_ei417_fluid_mass -> S_neutral_mass_EI417",
+      "variant_941": "ei941_neutral_mass_sink -> S_neutral_mass_EI941"
+    }
+  },
+  "density_and_boundary": {
+    "producer": "neutral_density ADParsedFunctorMaterial: pressure + Mn_neutral + temperature -> rho_neutral",
+    "density_time": "neutral_density_dot: pressure + Mn_neutral + dp_state_dt + dMn_neutral_dt + temperature -> drho_neutral_dt",
+    "viscosity": "neutral_flow_constants produces mu_flow = 2.0000000000000002e-05",
+    "transport": "neutral_transport NVTransportMaterial consumes pressure",
+    "inlet_mass": {
+      "name": "neutral_inlet_mass",
+      "factory": "WCNSFVMassFluxBC",
+      "variable": "pressure",
+      "boundary": "inlet",
+      "sha256": "36f2b1ec9b335625c0d47271e2c02bc454a18314cd07ee2fd4ea92e356367328"
+    },
+    "outlet_pressure": {
+      "name": "neutral_outlet_p",
+      "factory": "INSFVOutletPressureBC",
+      "variable": "pressure",
+      "boundary": "outlet",
+      "function": "${Physics/Plasmas/pressure}",
+      "sha256": "473158d972e44badb6ce8b6111c061fce0ff6f4d429a6fb368a3c2f297d9da8d"
+    },
+    "additional_verified": [
+      "neutral_inlet_u",
+      "neutral_inlet_v",
+      "neutral_wall_u",
+      "neutral_wall_v"
+    ]
+  },
+  "independent_checks": {
+    "actual_archived_10_per_case": "PASS",
+    "actual_final_11_per_case": "PASS",
+    "exact_final_object_block_sha": "22/22 each case",
+    "unexpected_duplicate_or_missing_D3_object": "0",
+    "old_p_pressure_token_after_transform": "0",
+    "negative_tests_rejected": 9,
+    "negative_test_types": [
+      "delete_pressure_variable",
+      "duplicate_pressure_variable",
+      "rhie_chow_wrong_pressure",
+      "wrong_mass_time_variable",
+      "wrong_u_pressure_coupling",
+      "wrong_outlet_pressure_root",
+      "missing_neutral_density",
+      "bad_global_rhie_chow",
+      "file_sha_corruption"
+    ],
+    "full_local_receipt_sha256": "718b395ad05839acd4630d0c8e7a0d040cd2fa25398bb48ccc7d045c60d99356"
+  },
+  "unresolved": [
+    "Native P2 execution, pressure initial_condition=1.333223684 handoff runtime effect, and numerical equivalence are NOT verified.",
+    "P1-D4 owns RF/Maxwell transfer dynamic reachability; this slot observes pressure -> freeze_pressure_t6 -> pressure_rf_state_t6 but does not certify D4.",
+    "Private rate bytes, Native P3/P4, science parity excluded."
+  ],
+  "source_contract": "chemistry/prepare_hybrid_json_s6.py@9c15a4f0e2cf8042cb0d4b2f18af31511021d168 canonicalize_s6_root_gas_state explicitly removes original variable initial_condition, uses root gas-state parameter and preserves pressure FV solver variable",
+  "gates": {
+    "P1_D3_STATIC": "PASS",
+    "P1_E": "NOT_RUN",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "mutation_scope": "one new unique receipt file on isolated branch; no shared input, common P1-0 manifest, PR #665, main, workflow, private rate or native run"
+}
