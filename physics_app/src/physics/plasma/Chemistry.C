@@ -309,6 +309,10 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     {
       fail(file, std::string("invalid JSON: ") + exception.what());
     }
+    // FV drift exclusions are derived from the selected species' BC catalogue.
+    // Do not admit a separate JSON override that can silently diverge.
+    if (root.is_object() && root.contains("boundaries_to_avoid"))
+      fail(file, "boundaries_to_avoid is derived from JSON boundaries; remove the duplicate field");
     if (!root.is_object() || !root.contains("species") ||
         !root.contains("equations") || !root.contains("reactions") ||
         !root["species"].is_object() || !root["equations"].is_object() ||
@@ -322,6 +326,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           !record["elements"].is_object() || !record.contains("charge_number") ||
           !record["charge_number"].is_number_integer())
         fail(file, "species '" + it.key() + "' requires elements and integer charge_number");
+      if (record.contains("boundaries_to_avoid"))
+        fail(file, "species." + it.key() +
+                       ".boundaries_to_avoid is unsupported; use the boundaries BC catalogue");
       SpeciesRecord species;
       species.charge_number = record["charge_number"].get<int>();
       for (auto atom = record["elements"].begin(); atom != record["elements"].end(); ++atom)
