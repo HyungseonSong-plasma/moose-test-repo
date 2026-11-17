@@ -82,6 +82,19 @@ def test_four_transport_and_source_operators_are_distinct_from_wall_bcs():
     assert '_problem->addFVBC(bc.type, name, params);' in wall
 
 
+
+def test_neumann_factor_uses_full_precision_functor_name_not_double():
+    # The MOOSE FVFunctorNeumannBC factory parameter is MooseFunctorName.
+    # General-ion wall conversion is -1/N_A (~1e-24); six-decimal
+    # std::to_string would turn it into 0.000000 and erase the residual.
+    source = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
+    assert 'params.set<MooseFunctorName>("factor") = factor_value.str();' in source
+    assert 'std::setprecision(std::numeric_limits<Real>::max_digits10)' in source
+    assert 'factor_value <<' in source and '<< bc.factor;' in source
+    assert 'params.set<Real>("factor")' not in source
+    assert "std::to_string(bc.factor)" not in source.split('params.set<MooseFunctorName>("factor")')[0].split('if (bc.type == "FVFunctorNeumannBC")')[-1]
+    assert 'params.set<MooseFunctorName>("signed_number_flux") = bc.signed_number_flux;' in source
+
 def test_new_surface_current_functors_retain_native_surface_charge_consumers():
     # Native lower-D sigma equations are allowed: only ion FV Kernel/BC
     # owners must be cut over. New C2 produces the same three current
