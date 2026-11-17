@@ -28,7 +28,13 @@ def test_newonly_s6_inputs_explicitly_preserve_001_v_per_m_width():
         path = PILOT / f"issue633_newonly_s6_{case}_continuity.template.i"
         text = path.read_text()
         assert f"chemistry/unified_s6_{case}_newonly.json" in text
-        assert "issue633_c2_wall_3ion_overlay.json" in text
+        # Final-run JSON owns the ion wall/BC schema; no separate overlay is loaded.
+        assert "issue633_c2_wall_3ion_overlay.json" not in text
+        mechanism = json.loads((PILOT / "chemistry" / f"unified_s6_{case}_newonly.json").read_text())
+        assert {"O2p", "Om", "Op"} <= set(mechanism["species"])
+        assert "drift_diffusion_boundaries" in mechanism
+        assert all(mechanism["species"][id]["sticking_coefficient"] == 1
+                   for id in ("O2p", "Om", "Op"))
         assert "fvm_species = 'O2p Om Op'" in text
         assert "fem_potential = potential" in text
         assert "temperature = 300" in text
