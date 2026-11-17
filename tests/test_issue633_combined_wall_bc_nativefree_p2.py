@@ -75,7 +75,7 @@ def test_four_transport_and_source_operators_are_distinct_from_wall_bcs():
     assert 'drift_params.set<MooseFunctorName>("mobility") = id + "_mobility";' in source
     assert 'source_params.set<MooseFunctorName>("v") = "S_" + id + "_molar";' in source
     assert 'expected_bcs.emplace(name, bc.type)' in source
-    assert 'wall_sidesets.insert(boundary.mesh_boundaries.begin(),' in source
+    assert 'wall_sidesets.insert(sides.begin(), sides.end());' in source
     assert 'params.set<MooseFunctorName>("ion_number_density") = id + "_number_density";' in wall
     assert 'params.set<MooseFunctorName>("signed_number_flux") = bc.signed_number_flux;' in wall
     assert '_problem->addFunctorMaterial(type, std::string(side) + "_surface_current", params);' in wall
