@@ -44,7 +44,7 @@ def test_generated_fv_drift_skips_exact_c2_wall_sides_from_json():
         'bc.type == "FVFunctorNeumannBC"',
         'bc.type == "FVLogMolarDielectricFluxBC"',
         'drift_params.set<MooseEnum>("advected_interp_method") = "upwind";',
-        "wall_sidesets.insert(sides.begin(), sides.end());",
+        "wall_sidesets.insert(boundary.mesh_boundaries.begin(),",
         'if (mechanism.hasIonWalls() && wall_sidesets.empty())',
         'drift_params.set<std::vector<BoundaryName>>("boundaries_to_avoid")',
         "std::vector<BoundaryName>(wall_sidesets.begin(), wall_sidesets.end())",
@@ -88,4 +88,4 @@ def test_boundaries_to_avoid_is_not_a_json_input_owner():
     assert 'use the boundaries BC catalogue' in parser
     continuity = CONTINUITY.read_text()
     assert 'drift_params.set<std::vector<BoundaryName>>("boundaries_to_avoid")' in continuity
-    assert 'wall_sidesets.insert(sides.begin(), sides.end());' in continuity
+    assert 'wall_sidesets.insert(boundary.mesh_boundaries.begin(),' in continuity
