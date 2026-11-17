@@ -73,6 +73,9 @@ struct BoundaryBCRecord
   std::string functor;
   std::string signed_number_flux;
   double factor = 0.0;
+  // Optional per-operator sideset subset for grouped new-run boundaries.
+  // Empty means all sidesets in the enclosing group (legacy behavior).
+  std::vector<std::string> mesh_boundaries;
 };
 
 struct BoundaryRecord
