@@ -172,7 +172,15 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
         )
     }
     c2_current = bool(c2_ions) and bool(mechanism.get("ion_surface_current"))
-    canonical_electron_wall = bool(mechanism.get("drift_diffusion_boundaries"))
+    # New electron producer exists only in full DDEnergyEq (fem_potential).
+    # In S6 ion-only cutover the Energy action is partial, so the existing
+    # Native electron wall Flux may remain as the *sole* producer.
+    canonical_electron_wall = bool(mechanism.get("drift_diffusion_boundaries")) and any(
+        block["name"] == "Energy" and
+        block["parent"].endswith("/DriftDiffusion") and
+        bool(block["params"].get("fem_potential"))
+        for block in blocks
+    )
     generated_wall_names = {ident + "_wall" for ident in c2_ions}
     generated_wall_properties = {ident + "_wall_number_flux" for ident in c2_ions}
     current_names = {"cover_surface_current", "wafer_surface_current",
