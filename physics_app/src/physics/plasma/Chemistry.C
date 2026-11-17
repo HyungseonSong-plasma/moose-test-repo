@@ -1573,7 +1573,12 @@ PlasmasAction::act()
         if (bc.type == "FVFunctorNeumannBC")
         {
           params.set<MooseFunctorName>("functor") = bc.functor;
-          params.set<Real>("factor") = bc.factor;
+          // FVFunctorNeumannBC declares factor as a MooseFunctorName, not Real.
+          // Preserve -1/N_A (~1e-24) at full precision; std::to_string would round it to zero.
+          std::ostringstream factor_value;
+          factor_value << std::setprecision(std::numeric_limits<Real>::max_digits10)
+                       << bc.factor;
+          params.set<MooseFunctorName>("factor") = factor_value.str();
           _problem->addFVBC(bc.type, name, params);
         }
         else if (bc.type == "FVLogMolarDielectricFluxBC")
