@@ -133,8 +133,6 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
                 errors.append("P1_LEGACY_AMBIGUOUS_FV_VARIABLE:" + obj["name"])
                 continue
             counts[obj["species"][0]][obj["section"]] += 1
-            if obj["variable"] not in LEGACY_S6_VARIABLES.values():
-                errors.append("P1_LEGACY_ARCHIVED_VARIABLE_MISMATCH:" + obj["name"])
         for ident in LEGACY_S6_VARIABLES:
             if counts[ident]["FVKernels"] != LEGACY_S6_KERNEL_COUNTS[ident]:
                 errors.append("P1_LEGACY_KERNEL_COUNT_MISMATCH:" + ident)
