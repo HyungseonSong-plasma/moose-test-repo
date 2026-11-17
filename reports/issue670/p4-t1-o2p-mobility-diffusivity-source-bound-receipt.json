@@ -1,0 +1,242 @@
+{
+  "schema": "issue670.P4-T1.O2p_transport_source_receipt.v1",
+  "task_id": "P4-T1",
+  "issue_number": 670,
+  "verdict": "HOLD_DUPLICATE_O2P_TRANSPORT_FUNCTOR_PRODUCERS",
+  "numeric_value_verdict": "PASS_EXACT_ORIGINAL_TO_JSON_VALUES",
+  "evidence_kind": "Static source-and-artifact byte readback; collision inferred from instantiated factory registration code, not Native runtime observation",
+  "pinned_source_heads": {
+    "P1_0_P2_artifact_source_pr665_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "latest_pr665_checked_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "p2_ci_success_commit": "15f3e387b1c2c3b95c10232c6fe9d5884565c8f3",
+    "latest_pr674_checked_head": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+    "statement": "PR665 HEAD advanced after CI. Verified 7 T1-relevant source blobs identical on latest PR665/PR674; do NOT claim a fresh full-stage CI at latest HEAD."
+  },
+  "artifact_inputs": {
+    "historical_archive_artifacts": {
+      "417": 13677089020,
+      "941": 13677375813
+    },
+    "p1_common_hybrid_run_id": 44182628032,
+    "p1_common_hybrid_artifact_id": 14372278070,
+    "p1_common_hybrid_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "p2_production_stage_run_id": 44199587771,
+    "p2_production_stage_artifact_id": 14380831538,
+    "p2_production_stage_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "both_cases_actual_input_file_sha_count": "22_OF_22_PASS"
+  },
+  "code_pin": {
+    "continuity": {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "role": "Every selected FVM species with constant JSON transport generates one DDTransportMaterial"
+    },
+    "transport_material": {
+      "path": "physics_app/src/materials/DDTransportMaterial.C",
+      "git_blob": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+      "role": "Constant model adds canonical <species>_mobility and <species>_diffusivity Functor properties"
+    },
+    "source_guard": {
+      "path": "ci/p1_ion_new_only_preflight.py",
+      "git_blob": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+      "role": "new-only contract rejects duplicate external constant transport owners"
+    },
+    "production_runner": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py",
+      "git_blob": "999a7aa65bdc7011df6f64dd923570f464af1d39"
+    },
+    "stage_tool": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py",
+      "git_blob": "652420d7653d4d089f5695afb7236370b0f1d7dd"
+    },
+    "retirement": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_ion_fv_owners.py",
+      "git_blob": "41219d43c63aa2c6db025a48831ccc9a6493190e"
+    },
+    "json": {
+      "417": {
+        "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+        "git_blob": "4a05649b42b798f566d5e455ef46be347ea2a461"
+      },
+      "941": {
+        "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+        "git_blob": "9568e2cae6640a755f9403c4f58e077c801b998c"
+      }
+    }
+  },
+  "case_results": {
+    "417": {
+      "old_archive_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "old_C0_file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "old_legacy_const_block_sha256": "c6f05531f908138bac28975027618968bb2cd72e7364d0f260679eabc5a5092e",
+      "old_coeff_names": {
+        "ion_mobility": 10,
+        "ion_diffusion": 0.25851999786435537
+      },
+      "p1_hybrid_C0_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "production_newonly_C0_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "staged_11layer_input_file_sha256_verification": "PASS_11_OF_11",
+      "staged_legacy_constants_block_sha256": "f9c4beb247c2f1e7ba286aaf21919c07cc16a659cbf0d01987116506ad72bb73",
+      "staged_legacy_constants": {
+        "section": "FunctorMaterials",
+        "name": "constants",
+        "factory": "ADGenericFunctorMaterial",
+        "block": "plasma",
+        "old_producer_count": 1,
+        "published_O2p_mobility": 10,
+        "published_O2p_diffusivity": 0.25851999786435537,
+        "also_publishes": [
+          "Om_mobility",
+          "Om_diffusivity",
+          "Op_mobility",
+          "Op_diffusivity",
+          "carrier_one"
+        ]
+      },
+      "staged_newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "newonly_json_spec": {
+        "species": "O2p",
+        "charge_number": 1,
+        "transport_coef": {
+          "type": "constant",
+          "file": "none",
+          "unit": "physical",
+          "mobility": 10,
+          "diffusivity": 0.25851999786435537
+        }
+      },
+      "generated_physics_material_expected": {
+        "factory": "DDTransportMaterial",
+        "model": "constant",
+        "species_id": "O2p",
+        "output_names": [
+          "O2p_mobility",
+          "O2p_diffusivity"
+        ],
+        "runtime_instantiation": "NOT_RUN"
+      },
+      "collision_names": [
+        "O2p_mobility",
+        "O2p_diffusivity"
+      ],
+      "expected_existing_P0_guard_reason": "P1_DUPLICATE_JSON_TRANSPORT_FUNCTOR_OWNER_1",
+      "numeric_value_parity": "PASS",
+      "single_functor_provider": "HOLD",
+      "mutation_tests": {
+        "count": 16,
+        "all_rejected": true,
+        "scope": "offline independent source-pinned static validator; not Native and not invoked production preflight"
+      }
+    },
+    "941": {
+      "old_archive_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "old_C0_file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "old_legacy_const_block_sha256": "c6f05531f908138bac28975027618968bb2cd72e7364d0f260679eabc5a5092e",
+      "old_coeff_names": {
+        "ion_mobility": 10,
+        "ion_diffusion": 0.25851999786435537
+      },
+      "p1_hybrid_C0_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "production_newonly_C0_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "staged_11layer_input_file_sha256_verification": "PASS_11_OF_11",
+      "staged_legacy_constants_block_sha256": "f9c4beb247c2f1e7ba286aaf21919c07cc16a659cbf0d01987116506ad72bb73",
+      "staged_legacy_constants": {
+        "section": "FunctorMaterials",
+        "name": "constants",
+        "factory": "ADGenericFunctorMaterial",
+        "block": "plasma",
+        "old_producer_count": 1,
+        "published_O2p_mobility": 10,
+        "published_O2p_diffusivity": 0.25851999786435537,
+        "also_publishes": [
+          "Om_mobility",
+          "Om_diffusivity",
+          "Op_mobility",
+          "Op_diffusivity",
+          "carrier_one"
+        ]
+      },
+      "staged_newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "newonly_json_spec": {
+        "species": "O2p",
+        "charge_number": 1,
+        "transport_coef": {
+          "type": "constant",
+          "file": "none",
+          "unit": "physical",
+          "mobility": 10,
+          "diffusivity": 0.25851999786435537
+        }
+      },
+      "generated_physics_material_expected": {
+        "factory": "DDTransportMaterial",
+        "model": "constant",
+        "species_id": "O2p",
+        "output_names": [
+          "O2p_mobility",
+          "O2p_diffusivity"
+        ],
+        "runtime_instantiation": "NOT_RUN"
+      },
+      "collision_names": [
+        "O2p_mobility",
+        "O2p_diffusivity"
+      ],
+      "expected_existing_P0_guard_reason": "P1_DUPLICATE_JSON_TRANSPORT_FUNCTOR_OWNER_1",
+      "numeric_value_parity": "PASS",
+      "single_functor_provider": "HOLD",
+      "mutation_tests": {
+        "count": 16,
+        "all_rejected": true,
+        "scope": "offline independent source-pinned static validator; not Native and not invoked production preflight"
+      }
+    }
+  },
+  "independent_verification": {
+    "artifact_zip_CRC": "PASS",
+    "source_file_sha_count_417": 11,
+    "source_file_sha_count_941": 11,
+    "original_hybrid_and_prod_block_shas": "RECOMPUTED",
+    "number_of_fault_injected_static_mutations_total": 32,
+    "negative_test_names_each_case": [
+      "json_transport_missing",
+      "json_model_not_constant",
+      "json_unit_reduced_instead_physical",
+      "json_constant_points_to_file",
+      "json_mobility_missing",
+      "json_diffusivity_missing",
+      "json_mobility_changed",
+      "json_diffusivity_changed",
+      "json_mobility_negative",
+      "json_diffusivity_nan",
+      "duplicate_legacy_constants_block",
+      "missing_legacy_constants_block",
+      "legacy_constants_factory_wrong",
+      "legacy_canonical_mobility_missing",
+      "legacy_canonical_diffusivity_missing",
+      "legacy_canonical_mobility_value_wrong"
+    ],
+    "mutation_result": "32/32_REJECTED_WITH_TARGET_SPECIFIC_ERRORS",
+    "offline_hypothetical_only": "If canonical O2p property names are omitted from the old constants material in disposable input, the O2p collision goes away in an isolated source-model test while other aliases/carrier_one remain. This is NOT applied and Om/Op collisions remain until T2/T3."
+  },
+  "full_independent_receipt_file_sha256": "ec6739b2b47c69f15ec94bc427c06f0bd994ac2d7599293c5bc3023d2c01d3fa",
+  "next_action": "P4-X sole integrator: establish unique ownership for O2p/Om/Op transport; remove canonical duplicate legacy coefficients only from disposable Scratch (preserve carrier_one and non-target consumers), then rerun P0 and actual Native P2 in #671. Do not edit shared C0 source in P4-T1.",
+  "remaining_hold": [
+    "Production New-only Scratch retains the old constants Material publishing O2p_mobility and O2p_diffusivity, and JSON/Physics creates same names; do not assert single owner.",
+    "P1_FULL_RUNTIME Native P2/warehouse late binding NOT_RUN.",
+    "P4-X P3-X and all integrated science tests NOT_RUN."
+  ],
+  "gates": {
+    "P4_T1_VALUE_PARITY": "PASS",
+    "P4_T1_OWNER_UNIQUENESS": "HOLD_DUPLICATE_FUNCTOR",
+    "P2_PRODUCTION_STATIC": "PASS_AT_PINNED_CI_SHA",
+    "P2_PR665_INTEGRATION": "PENDING_VERIFICATION",
+    "P3_X": "NOT_RUN",
+    "P4_X": "NOT_RUN",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": "No original source input/Private EI Rates/production runner/PR665/PR674/main mutation in this worker."
+}
