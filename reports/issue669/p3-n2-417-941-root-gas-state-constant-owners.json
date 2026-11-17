@@ -1,0 +1,293 @@
+{
+  "schema": "issue669.p3_n2.pressure_temperature_owner.v1",
+  "task_id": "P3-N2",
+  "issue_number": 669,
+  "upstream_issue_number": 668,
+  "verdict": "PASS_SOURCE_GAS_STATE_OWNER_AND_CONSTANT_RETIREMENT__P2_FULL_DOD_HOLD",
+  "source_pin": {
+    "pr": 665,
+    "exact_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d"
+  },
+  "evidence": {
+    "p1_0_common_artifact_id": 14372278070,
+    "p1_0_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "p2_scratch_run_id": 44196762787,
+    "p2_scratch_artifact_id": 14379920938,
+    "p2_scratch_zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4",
+    "pinned_cpp_file": "physics_app/src/physics/plasma/Chemistry.C",
+    "pinned_cpp_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "pinned_staging_file": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py",
+    "staging_blob_sha1": "8a76517c7863be77d8390cd04b0b3be055f2c147",
+    "independent_local_verifier_sha256": "09aecc47917651080af3f4429c57581e346824cc879432ffd0ee0274cd48f089",
+    "independent_local_receipt_sha256": "4d2bb90a0145af7ccd727cffa4414e47bdc48229b46b2bd25027ad27b1aaf62a",
+    "independently_verified_file_sha_count": 64,
+    "negative_mutation_rejected": 10,
+    "negative_mutation_total": 10,
+    "negative_mutations": [
+      "legacy_p_fixed_reintroduced",
+      "legacy_T_g_fixed_reintroduced",
+      "root_pressure_changed",
+      "root_temperature_changed",
+      "root_gas_model_changed",
+      "pressure_solver_removed",
+      "duplicate_pressure_initial_ic",
+      "outlet_root_link_broken",
+      "constants_duplicate_gas_temperature",
+      "constants_coeff_tamper"
+    ]
+  },
+  "cases": {
+    "417": {
+      "case": "S6-417-407-2069-H25",
+      "archived_original_artifact_id": 13677089020,
+      "archived_original_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "source_c0_archived_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "archived_constants_block_sha256": "c6f05531f908138bac28975027618968bb2cd72e7364d0f260679eabc5a5092e",
+      "archived_pressure_variable_block_sha256": "f4e3f12e7751f8f684aa2da772243ca6426bd44aed848203e097c043187fe432",
+      "hybrid_c0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "newonly_ion_retired_c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "canonical_constants_block_sha256": "f9c4beb247c2f1e7ba286aaf21919c07cc16a659cbf0d01987116506ad72bb73",
+      "canonical_pressure_variable_block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+      "hybrid_layer11_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "newonly_layer11_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "original": {
+        "layer_ordinal": 1,
+        "section": "FunctorMaterials",
+        "object_name": "constants",
+        "type": "ADGenericFunctorMaterial",
+        "prop_names": [
+          "p_fixed",
+          "T_g_fixed",
+          "ion_mobility",
+          "ion_diffusion",
+          "negative_ion_mobility",
+          "negative_ion_diffusion",
+          "atomic_positive_ion_mobility",
+          "atomic_positive_ion_diffusion",
+          "carrier_one"
+        ],
+        "prop_values": [
+          "1.333223684",
+          "300",
+          "10",
+          "0.25851999786435537",
+          "10",
+          "0.25851999786435537",
+          "10",
+          "0.25851999786435537",
+          "1.0"
+        ],
+        "solved_pressure_state": "p",
+        "initial_pressure": "1.333223684",
+        "original_pressure_factory": "INSFVPressureVariable"
+      },
+      "hybrid_and_p2_stage": {
+        "pressure_state": "pressure",
+        "pressure_type": "INSFVPressureVariable",
+        "pressure_functor_source": "live solved FV pressure state",
+        "manual_pressure_material_count": 0,
+        "manual_temperature_material_count": 0,
+        "manual_constant_property_count": 7,
+        "legacy_p_fixed_count": 0,
+        "legacy_T_g_fixed_count": 0,
+        "root_gas_state_count": 1,
+        "root_parameters": {
+          "pressure_pa": 1.333223684,
+          "temperature_K": 300,
+          "state_model": "ideal_gas"
+        },
+        "outlet_pressure_root_parameter_expression": "${Physics/Plasmas/pressure}",
+        "pressure_initial_condition_explicit_in_variable": false,
+        "pressure_initial_condition_owner_source": "Chemistry.C registers plasma_initial_pressure FVConstantIC in root gasStateEnabled solved-pressure path",
+        "temperature_runtime_functor_owner_source": "Chemistry.C registers plasma_gas_temperature ADGenericFunctorMaterial on root gasStateEnabled solved-pressure path",
+        "density_edge": "plasma_gas_n_g=pressure/(1.380649e-23*temperature)",
+        "non_target_ion_transport_constants_values_preserved": true,
+        "constants_prop_names": [
+          "O2p_mobility",
+          "O2p_diffusivity",
+          "Om_mobility",
+          "Om_diffusivity",
+          "Op_mobility",
+          "Op_diffusivity",
+          "carrier_one"
+        ],
+        "constants_prop_values": [
+          "10",
+          "0.25851999786435537",
+          "10",
+          "0.25851999786435537",
+          "10",
+          "0.25851999786435537",
+          "1.0"
+        ],
+        "after_ion_retirement_constant_block_bytes_identical": true,
+        "after_ion_retirement_pressure_block_bytes_identical": true
+      },
+      "checks": {
+        "historical_C0": 1,
+        "hybrid_final_input_layers": 11,
+        "p2_ion_retired_scratch_input_layers": 11,
+        "status": "PASS_EXACT_BYTES"
+      }
+    },
+    "941": {
+      "case": "S6-941-407-2069-H25",
+      "archived_original_artifact_id": 13677375813,
+      "archived_original_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "source_c0_archived_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "archived_constants_block_sha256": "c6f05531f908138bac28975027618968bb2cd72e7364d0f260679eabc5a5092e",
+      "archived_pressure_variable_block_sha256": "f4e3f12e7751f8f684aa2da772243ca6426bd44aed848203e097c043187fe432",
+      "hybrid_c0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "newonly_ion_retired_c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "canonical_constants_block_sha256": "f9c4beb247c2f1e7ba286aaf21919c07cc16a659cbf0d01987116506ad72bb73",
+      "canonical_pressure_variable_block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+      "hybrid_layer11_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "newonly_layer11_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "original": {
+        "layer_ordinal": 1,
+        "section": "FunctorMaterials",
+        "object_name": "constants",
+        "type": "ADGenericFunctorMaterial",
+        "prop_names": [
+          "p_fixed",
+          "T_g_fixed",
+          "ion_mobility",
+          "ion_diffusion",
+          "negative_ion_mobility",
+          "negative_ion_diffusion",
+          "atomic_positive_ion_mobility",
+          "atomic_positive_ion_diffusion",
+          "carrier_one"
+        ],
+        "prop_values": [
+          "1.333223684",
+          "300",
+          "10",
+          "0.25851999786435537",
+          "10",
+          "0.25851999786435537",
+          "10",
+          "0.25851999786435537",
+          "1.0"
+        ],
+        "solved_pressure_state": "p",
+        "initial_pressure": "1.333223684",
+        "original_pressure_factory": "INSFVPressureVariable"
+      },
+      "hybrid_and_p2_stage": {
+        "pressure_state": "pressure",
+        "pressure_type": "INSFVPressureVariable",
+        "pressure_functor_source": "live solved FV pressure state",
+        "manual_pressure_material_count": 0,
+        "manual_temperature_material_count": 0,
+        "manual_constant_property_count": 7,
+        "legacy_p_fixed_count": 0,
+        "legacy_T_g_fixed_count": 0,
+        "root_gas_state_count": 1,
+        "root_parameters": {
+          "pressure_pa": 1.333223684,
+          "temperature_K": 300,
+          "state_model": "ideal_gas"
+        },
+        "outlet_pressure_root_parameter_expression": "${Physics/Plasmas/pressure}",
+        "pressure_initial_condition_explicit_in_variable": false,
+        "pressure_initial_condition_owner_source": "Chemistry.C registers plasma_initial_pressure FVConstantIC in root gasStateEnabled solved-pressure path",
+        "temperature_runtime_functor_owner_source": "Chemistry.C registers plasma_gas_temperature ADGenericFunctorMaterial on root gasStateEnabled solved-pressure path",
+        "density_edge": "plasma_gas_n_g=pressure/(1.380649e-23*temperature)",
+        "non_target_ion_transport_constants_values_preserved": true,
+        "constants_prop_names": [
+          "O2p_mobility",
+          "O2p_diffusivity",
+          "Om_mobility",
+          "Om_diffusivity",
+          "Op_mobility",
+          "Op_diffusivity",
+          "carrier_one"
+        ],
+        "constants_prop_values": [
+          "10",
+          "0.25851999786435537",
+          "10",
+          "0.25851999786435537",
+          "10",
+          "0.25851999786435537",
+          "1.0"
+        ],
+        "after_ion_retirement_constant_block_bytes_identical": true,
+        "after_ion_retirement_pressure_block_bytes_identical": true
+      },
+      "checks": {
+        "historical_C0": 1,
+        "hybrid_final_input_layers": 11,
+        "p2_ion_retired_scratch_input_layers": 11,
+        "status": "PASS_EXACT_BYTES"
+      }
+    }
+  },
+  "producer_consumer_edges": [
+    {
+      "producer": "[Variables]/pressure",
+      "factory": "INSFVPressureVariable",
+      "output": "pressure",
+      "consumers": [
+        "INSFVRhieChowInterpolator",
+        "neutral_density",
+        "neutral_density_dot",
+        "NVTransportMaterial",
+        "neutrals flow BCs"
+      ],
+      "significance": "solved FV state; root pressure value is initial condition not duplicate static material"
+    },
+    {
+      "producer": "[Physics]/[Plasmas]/temperature",
+      "value": "300 K",
+      "runtime_owner": "plasma_gas_temperature via Chemistry.C",
+      "output": "temperature",
+      "consumers": [
+        "ion wall flux materials",
+        "neutral density and dot",
+        "neutral transport",
+        "root reduced electron transport"
+      ]
+    },
+    {
+      "producer": "[Physics]/[Plasmas]/pressure",
+      "value": "1.333223684 Pa",
+      "runtime_owner": "plasma_initial_pressure FVConstantIC",
+      "consumer": "[Variables]/pressure"
+    },
+    {
+      "producer": "pressure + temperature",
+      "runtime_owner": "plasma_gas_n_g ADParsedFunctorMaterial",
+      "output": "n_g",
+      "law": "pressure/(1.380649e-23*temperature)"
+    },
+    {
+      "producer": "[Physics]/[Plasmas]/pressure",
+      "consumer": "neutral_outlet_p",
+      "binding": "${Physics/Plasmas/pressure}"
+    }
+  ],
+  "limitations": [
+    "Scope is source-only P3-N2. Existing pressure variable is a solver state, NOT an independent frozen p_fixed material.",
+    "Root gas-state C++ runtime registration is verified only as exact-head source contract, not instantiated Warehouse uniqueness.",
+    "Current #668 staged artifact has 26 ion owners retired, but final unified_s6_417_newonly.json and unified_s6_941_newonly.json integration / layer11 handoff remain HOLD.",
+    "Do not assert #668 P2 full completion or Native P2/P3/P4 success; science remains HOLD.",
+    "No private rate bytes, original inputs, shared JSON, main or PR #665 changed."
+  ],
+  "gates": {
+    "P3_N2_HISTORICAL_CONSTANT_SHA": "PASS",
+    "P3_N2_LEGACY_CONSTANT_RETIREMENT": "PASS_SOURCE_BYTES",
+    "P3_N2_ROOT_OWNER_PARAMETER": "PASS_STATIC",
+    "P3_N2_CPP_SOURCE_CREATION_CONTRACT": "PASS_STATIC",
+    "P3_N2_NEWONLY_FINAL_JSON": "HOLD",
+    "P3_N2_ROOT_RUNTIME_OWNER": "HOLD_NOT_RUN",
+    "P2_PACKAGE_668": "OPEN_HOLD",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD",
+    "P3_X": "PENDING"
+  }
+}
