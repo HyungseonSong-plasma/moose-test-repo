@@ -49,19 +49,24 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
     require(isinstance(species, dict), "SPECIES_JSON_REQUIRED")
     require(not any(isinstance(v, dict) and "ion_wall" in v for v in species.values()),
             "RETIRED_ION_WALL_WRAPPER")
-    with_walls = {k for k, v in species.items()
-                  if isinstance(v, dict) and (
-                      type(v.get("wall_use_element_gradient_for_potential")) is bool
-                      or any(k in v for k in (
-                          "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV")))}
-    # The final-run schema shares exact common Species keys. Neutrals/electron
-    # declare wall gradient=null, never a wall-flux producer.
+    # New-run ion Wall Material is automatically selected for transported
+    # charged heavy species. Geometry and gradient method live in [Plasmas].
     modern = any(isinstance(v, dict) and isinstance(v.get("transport_coef"), dict)
                  for v in species.values())
+    with_walls = (
+        {k for k, v in species.items()
+         if k != "e" and isinstance(v, dict) and v.get("charge_number", 0) != 0
+         and isinstance(v.get("transport_coef"), dict)
+         and v["transport_coef"].get("type") != "none"}
+        if modern else
+        {k for k, v in species.items()
+         if isinstance(v, dict) and any(key in v for key in
+             ("wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
+              "wall_use_element_gradient_for_potential"))}
+    )
     if modern:
         common = {"elements", "charge_number", "molar_mass", "temperature_eV",
-                  "sticking_coefficient", "initial_number_density", "transport_coef",
-                  "wall_use_element_gradient_for_potential"}
+                  "sticking_coefficient", "initial_number_density", "transport_coef"}
         require(all(isinstance(v, dict) and common <= set(v)
                     for v in species.values()), "INCONSISTENT_COMMON_SPECIES_TEMPLATE")
         for name, v in species.items():
@@ -74,9 +79,8 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
                     "INVALID_TEMPERATURE_EV_" + name)
             require(finite_num(v["sticking_coefficient"], 0, 1),
                     "INVALID_STICKING_" + name)
-            if name not in selected:
-                require(v["wall_use_element_gradient_for_potential"] is None,
-                        "UNSELECTED_WALL_OWNER_" + name)
+            require("wall_use_element_gradient_for_potential" not in v,
+                    "WALL_GRADIENT_MUST_BE_PLASMAS_" + name)
             if cfg["type"] == "none":
                 require(cfg["file"] == "none" and cfg["unit"] == "none",
                         "INVALID_NONE_TRANSPORT_" + name)
@@ -102,8 +106,7 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
             "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_" + ident)
         declared = {key for key in record if key.startswith("wall_")}
         if modern:
-            require(declared == {"wall_use_element_gradient_for_potential"},
-                    "INVALID_ION_WALL_FIELDS_" + ident)
+            require(declared == set(), "INVALID_ION_WALL_FIELDS_" + ident)
             require(finite_num(record["molar_mass"], 1e-300) and
                     math.isclose(record["molar_mass"], MASS[ident], rel_tol=1e-12),
                     "WRONG_WALL_MOLAR_MASS_" + ident)
@@ -117,8 +120,9 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
             require(finite_num(record["wall_sticking"], 0, 1), "INVALID_STICKING_" + ident)
             require(finite_num(record["wall_ion_temperature_eV"], 0),
                     "INVALID_wall_ion_temperature_eV_" + ident)
-        require(type(record["wall_use_element_gradient_for_potential"]) is bool,
-                "INVALID_GRADIENT_FLAG_" + ident)
+        if not modern:
+            require(type(record["wall_use_element_gradient_for_potential"]) is bool,
+                    "INVALID_GRADIENT_FLAG_" + ident)
         # Potential, density, mobility, block and temperature are derived from
         # Continuity/species ID and [Plasmas], never independently wall-owned.
         for redundant in ("potential", "ion_number_density", "gas_temperature", "block"):
@@ -134,6 +138,58 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
             current["electron_wall_number_flux"] in {
                 "electron_wall_number_flux", "e_wall_number_flux"},
             "INVALID_SURFACE_CURRENT_ELECTRON_CONSUMER")
+
+    if modern:
+        require("boundaries" not in overlay,
+                "MODERN_BOUNDARIES_MUST_USE_DRIFT_DIFFUSION_BOUNDARIES")
+        groups = overlay.get("drift_diffusion_boundaries")
+        require(isinstance(groups, dict) and len(groups) == 2,
+                "MODERN_BOUNDARY_GROUP_COUNT")
+        general = "inlet outlet plasma_electrode plasma_metal plasma_right"
+        dielectric = "plasma_cover plasma_wafer plasma_focus_ring"
+        require(set(groups) == {general, dielectric},
+                "MODERN_BOUNDARY_SIDESET_GROUP_MISMATCH")
+        expected_general = {
+            "e_wall": ("FEMElectronSheathBC", "plasma_electrode plasma_metal plasma_right"),
+            "e_energy_wall": ("FEMElectronEnergySheathBC", "plasma_electrode plasma_metal plasma_right"),
+        }
+        expected_general.update({
+            ident + "_wall": ("FVFunctorNeumannBC", None) for ident in selected
+        })
+        expected_dielectric = {}
+        for side in DIELECTRIC:
+            sideset = "plasma_" + side
+            expected_dielectric["e_" + side + "_dielectric"] = (
+                "FEMElectronSheathBC", sideset
+            )
+            expected_dielectric["e_energy_" + side + "_dielectric"] = (
+                "FEMElectronEnergySheathBC", sideset
+            )
+            for ident in selected:
+                expected_dielectric[ident + "_" + side + "_dielectric"] = (
+                    "FVLogMolarDielectricFluxBC", sideset
+                )
+        for label, expected in ((general, expected_general),
+                                (dielectric, expected_dielectric)):
+            actual = groups[label]
+            require(isinstance(actual, dict) and set(actual) == set(expected),
+                    "MODERN_BOUNDARY_OPERATOR_MISMATCH_" + label)
+            for name, (bc_type, subset) in expected.items():
+                obj = actual[name]
+                require(isinstance(obj, dict) and obj.get("type") == bc_type,
+                        "MODERN_BOUNDARY_TYPE_" + name)
+                require(set(obj) == ({"type", "sidesets"} if subset else {"type"}) and
+                        (subset is None or obj.get("sidesets") == subset),
+                        "MODERN_BOUNDARY_SIDES_OR_REDUNDANT_FIELD_" + name)
+        require(current["electron_wall_number_flux"] == "e_wall_number_flux",
+                "MODERN_ELECTRON_CANONICAL_WALL_FUNCTOR")
+        return {
+            "ion_wall_materials": len(selected),
+            "normal_fvbcs": len(selected),
+            "dielectric_fvbcs": len(selected) * 3,
+            "surface_current_consumers": 3,
+            "runtime": "NOT_RUN",
+        }
 
     boundaries = overlay.get("boundaries")
     require(isinstance(boundaries, dict), "MISSING_BOUNDARIES")
