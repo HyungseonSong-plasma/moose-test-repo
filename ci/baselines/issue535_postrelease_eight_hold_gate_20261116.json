@@ -330,15 +330,22 @@
         "file_id": null
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6941923213,
+        "scope": "ORIGINAL_P0_ONLY",
+        "accepted_utc_date": "2026-11-17",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_UNSEEN_PRIVATE_DYNAMIC_CALLERS",
+        "not_independent_caller_zero": true,
+        "excludes_worm_and_science": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
-      "formal_disposition": "KEEP_HOLD",
-      "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION"
-      ],
-      "issue535_receipt": 6932945957
+      "formal_disposition": "RETIRED_VERIFIED",
+      "red_gates": [],
+      "issue535_receipt": 6932945957,
+      "retirement_scope": "ORIGINAL_P0_ONLY"
     },
     {
       "id": "B",
@@ -380,19 +387,37 @@
       },
       "custody": {
         "mode": "PREVIOUS_OWNER_PRIVATE_SHA_READBACK_CURRENT_DRIVE_UNVERIFIED",
-        "file_id": null
+        "file_id": null,
+        "fresh_original_zip_download": {
+          "github_artifact_id": 14047452836,
+          "verified_utc_date": "2026-11-16",
+          "sha256": "95eca7994c105347a8948f9b06852ac3929eaddb9781cc01bad00ca31c88397b",
+          "zip_crc": "PASS_8_MEMBERS",
+          "issue535_receipt": 6933161334,
+          "drive_new_upload_success": false,
+          "provider_expiry_utc": "2026-11-27T14:35:35Z",
+          "durable_redundant_retention": "NOT_VERIFIED"
+        }
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6941923213,
+        "scope": "ORIGINAL_P0_P1_P2_ONLY",
+        "accepted_utc_date": "2026-11-17",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_UNSEEN_PRIVATE_DYNAMIC_CALLERS",
+        "not_independent_caller_zero": true,
+        "excludes_worm_and_science": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
       "formal_disposition": "KEEP_HOLD",
       "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION",
-        "RENEW_PRIVATE_B_ARTIFACT_READBACK_BEFORE_2026_11_27"
+        "DURABLE_ACCESSIBLE_B_ORIGINAL_ARTIFACT_CUSTODY"
       ],
-      "issue535_receipt": 6932945957
+      "issue535_receipt": 6932945957,
+      "retirement_scope": "ORIGINAL_P0_P1_P2_ONLY"
     },
     {
       "id": "DD",
@@ -560,7 +585,15 @@
         "A4",
         "B"
       ],
-      "state": "PENDING_EVIDENCE_CAS_WRITE"
+      "state": "A4_SCOPED_VERIFIED_B_CALLER_RISK_ACCEPTED_DURABLE_CUSTODY_HOLD"
     }
-  ]
+  ],
+  "approval_outcome": {
+    "newly_retired_verified_count": 5,
+    "still_hold_count": 3,
+    "original_wave1_prior_retired_verified_count": 2,
+    "wave1_proposed_formal_retired_verified_count": 7,
+    "wave1_proposed_formal_hold_count": 3,
+    "source": "USER_APPROVAL_CONDITIONED_ON_PR_EXACT_HEAD_CI_AND_MANUAL_MERGE_GATE"
+  }
 }
