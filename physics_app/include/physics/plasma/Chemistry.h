@@ -46,11 +46,9 @@ struct NVTransportRecord
 // for this independent ion wall loss law.
 struct IonWallRecord
 {
-  std::string ion_number_density;
-  std::string potential;
-  std::string mobility;
-  std::string gas_temperature;
-  std::string block;
+  // JSON species.wall_* owns only physical wall-law parameters. Density and
+  // mobility names are derived from the selected species, potential/block
+  // come from Continuity and gas temperature from [Plasmas]/temperature.
   double molar_mass = 0.0;
   double sticking = 1.0;
   double ion_temperature_eV = 0.0;
