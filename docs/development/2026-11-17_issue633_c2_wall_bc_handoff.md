@@ -13,7 +13,7 @@
 
 Provide the new `physics_app/ci/issue633_c2_wall_3ion_overlay.json` **after** the resolved S6-417/941 chemistry mechanism file(s), and select `fvm_species = 'O2p Om Op'` with an explicit `fem_potential = potential`.
 
-The overlay supplies only additional species `ion_wall` metadata, `ion_surface_current.electron_wall_number_flux` and 4 physical `boundaries` groups with 12 ion FVBC objects. It does not introduce an additional `fvm_kernel_ownership` flag. The root parser allows only one JSON `boundaries` owner: integrate any existing electron FEM BC definitions into the same root `boundaries` object rather than adding competing root owners.
+The overlay supplies only additional species `ion_wall` metadata, `ion_surface_current.electron_wall_number_flux` and 4 physical `boundaries` groups with 12 ion FVBC objects. The C2 P0 guard also accepts a pre-existing `FEMElectronSheathBC` and `FEMElectronEnergySheathBC` within the same physical sideset group, while continuing to enforce unique FV BC operators. Order of the five ordinary wall sideset names does not affect ownership. It does not introduce an additional `fvm_kernel_ownership` flag. The root parser allows only one JSON `boundaries` owner: integrate any existing electron FEM BC definitions into the same root `boundaries` object rather than adding competing root owners.
 
 The selected species must match configured `ion_wall` producers exactly. The parser rejects duplicate/missing producer records, non-finite or nonphysical numeric inputs, swapped mobility/density names, wrong potential, species/variable/flux mixing, factor sign, unsupported FV BC types, overlapping/missing sidesets and incomplete BC cardinality.
 
@@ -25,7 +25,7 @@ The selected species must match configured `ion_wall` producers exactly. The par
 
 The general `FVFunctorNeumannBC` uses `-1.6605390671738466e-24` on `inlet outlet plasma_electrode plasma_metal plasma_right`. The 9 dielectric FVBCs use `FVLogMolarDielectricFluxBC` with `signed_number_flux` on `plasma_cover`, `plasma_wafer`, `plasma_focus_ring`; their C++ residual uses **`gamma_signed / N_A`**, not the Neumann negative factor.
 
-Three `ADParsedFunctorMaterial` outputs preserve `cover_net_surface_current_density`, `wafer_net_surface_current_density`, `focus_ring_net_surface_current_density` and expression `1.602176634e-19*(gi+gop-gm-ge)`. Current `DDEnergyEq` generates `ESWallFluxMaterial` without `species_id=e`, publishing **`electron_wall_number_flux`**, not `e_wall_number_flux`; this is the explicitly selected consumer in the overlay. The electron producer is created only when the electron sheath BC path is active — its reachability is not established by this overlay alone.
+Three `ADParsedFunctorMaterial` outputs preserve `cover_net_surface_current_density`, `wafer_net_surface_current_density`, `focus_ring_net_surface_current_density` and expression `1.602176634e-19*(gi+gop-gm-ge)`. Current `DDEnergyEq` generates `ESWallFluxMaterial` without `species_id=e`, publishing **`electron_wall_number_flux`** only when an electron sheath FEM boundary is present; the shipped overlay explicitly selects that name. Separately, `prepare_s6_run_input.py::canonicalize_staged_wall_inputs` can publish **`e_wall_number_flux`** from a verified scratch electron Wall source. C2 accepts *only those two explicitly selected names* and never silently aliases them. For the assembled Scratch input, choose **one actually existing producer** and verify no duplicate; the overlay alone does not establish either one.
 
 ## Upstream and downstream ownership
 
@@ -47,3 +47,11 @@ python3 ci/guards/issue633_c2_wall_bc_contract.py --mode native-provenance --inp
 ```
 
 These commands establish only local P0/static contracts. Exact-HEAD CI source/test evidence, a real `physics-opt` P1 build, both S6-417/941 new-only P2, post-scratch 24/24 warehouse/owner ledger and eventually 400 W / 100 µs P3 are separate gates. **SCIENCE_HOLD and P1_NATIVE_CUTOVER=HOLD** until explicit release.
+
+## Integration audit 2026-11-17
+
+- Exact source audit of PR #663 post-rebase: 51 checks PASS at C2 head `c92a30e213138a7f529839592f4fc4b4ee9d7878` (**source JSON/registrations only**, not a Python pytest/Native execution receipt). Includes wall count 3, normal FV BC 3, dielectric FV BC 9, 3 current producers and sign/factor/Functor wiring.
+- Unity fix source HEAD `07e9369bd85cb8c82d2428abe0615af58f54e2c9` verified [FLOW P1 build PASS](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44053693905). The same run fails the historical S6-417 **D-base P2** input stage, not the compiler. This older P1 PASS does **not** promote post-rebase C2 binary.
+- ion_2 exact source base `901e1c26a2ceed8898539241d278336ab0e68a18`; C2 branch was rebased with a SHA-guarded move, retaining 12 C2-owned changed files and no DDContinuityEq edits.
+- ion_2 P05 warehouse check currently permits `bc_count == 0`. This must become strictly 4 per selected ion when C2 is active before P18/P25.
+
