@@ -188,8 +188,30 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
             errors.append("P1_NEWONLY_FULL_ELECTRON_ENERGY_MISSING")
         elif energy_actions[0]["params"].get("transport_coefficient") != "fluid":
             errors.append("P1_ELECTRON_FLUID_TRANSPORT_SELECTOR_MISSING")
-        if "energy_transport_coef" in species.get("e", {}):
+        if "energy_transport_coef" in electron_record:
             errors.append("P1_JSON_ENERGY_TRANSPORT_OWNER_RETIRED")
+        # Native S6 solves neutral pressure as INSFVPressureVariable [p].
+        # A constant pressure Functor would silently change the neutral flow
+        # physics, so require the renamed solved [pressure] variable.
+        pressure_owners = [
+            b for b in blocks
+            if b["parent"] == "Variables" and b["name"] == "pressure"
+            and b["params"].get("type") == "INSFVPressureVariable"
+        ]
+        if len(pressure_owners) != 1:
+            errors.append("P1_SOLVED_S6_PRESSURE_OWNER_COUNT_" + str(len(pressure_owners)))
+        # Both electron log-state ICs are now JSON/Physics-owned; retaining a
+        # renamed Native Variables block would hide a duplicate source or
+        # silently preserve the wrong initial energy.
+        old_e_state_owners = [
+            b for b in blocks if b["parent"] == "Variables"
+            and b["name"] in ("log_ne", "log_energy", "log_e", "log_e_energy", "p")
+        ]
+        if old_e_state_owners:
+            errors.append(
+                "P1_NATIVE_ELECTRON_OR_OLD_PRESSURE_VARIABLE_OWNER_" +
+                str(len(old_e_state_owners))
+            )
         # Verify that the staged 11 layers have actually transferred *all*
         # consumer references. Old identifiers cannot merely coexist as
         # aliases: the Physics-generated solver owners are canonical.
