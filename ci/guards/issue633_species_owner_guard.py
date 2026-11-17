@@ -22,6 +22,14 @@ from physics_harness.adapters.moose.parameters import get_parameter, words
 
 CONTINUITY = "Physics/Plasmas/Transport/DriftDiffusion/Continuity"
 NATIVE_FV_SECTIONS = ("FVKernels", "FVBCs")
+# Verified historical S6 ion state names differ from canonical species IDs.
+# A stale Native operator on log_ni/log_nm/log_nop is still a competing ion
+# equation even if Physics generates log_O2p/log_Om/log_Op instead.
+S6_NATIVE_ION_VARIABLES = {
+    "O2p": ("log_ni",),
+    "Om": ("log_nm",),
+    "Op": ("log_nop",),
+}
 
 
 class OwnerContractError(ValueError):
@@ -72,6 +80,10 @@ def validate(text: str, mechanism: dict) -> dict:
     # Explicit Native FVKernels/FVBCs are forbidden for selected FV variables,
     # even if the object name or legacy class type has been changed.
     selected_variables = {"log_" + sid: sid for sid in fvm}
+    for sid in fvm:
+        selected_variables.update(
+            {native_var: sid for native_var in S6_NATIVE_ION_VARIABLES.get(sid, ())}
+        )
     for block in doc.blocks:
         if not any(block.path.startswith(section + "/") and block.path.count("/") == 1
                    for section in NATIVE_FV_SECTIONS):
