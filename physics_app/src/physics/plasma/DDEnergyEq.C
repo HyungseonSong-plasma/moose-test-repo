@@ -250,6 +250,8 @@ DDEnergyEq::addFunctorMaterials()
   // JSON declares which existing sheath BCs are used; the physical flux
   // calculation stays exclusively inside ESWallFluxMaterial.C.
   bool sheath_wall = false;
+  bool canonical_e_wall = false;
+  bool legacy_e_wall = false;
   for (const auto & [group, boundary] : chemistryData().boundaries())
     for (const auto & [bc_name, bc] : boundary.bcs)
     {
@@ -258,15 +260,21 @@ DDEnergyEq::addFunctorMaterials()
       if (bc.type != "FEMElectronSheathBC" &&
           bc.type != "FEMElectronEnergySheathBC")
         continue;
-      if (bc.wall_number_flux != "electron_wall_number_flux" ||
+      if ((bc.wall_number_flux != "electron_wall_number_flux" &&
+           bc.wall_number_flux != "e_wall_number_flux") ||
           (bc.type == "FEMElectronEnergySheathBC" && bc.mean_energy != "e_energy_eV"))
         paramError("fem_potential",
-                   "Automatic JSON electron sheath BCs require canonical "
-                   "electron_wall_number_flux and e_energy_eV providers.");
+                   "Electron sheath BCs require e_wall_number_flux (new-only) or "
+                   "electron_wall_number_flux (legacy), and e_energy_eV.");
+      canonical_e_wall |= bc.wall_number_flux == "e_wall_number_flux";
+      legacy_e_wall |= bc.wall_number_flux == "electron_wall_number_flux";
       sheath_wall = true;
     }
   if (!sheath_wall)
     return;
+  if (canonical_e_wall && legacy_e_wall)
+    paramError("fem_potential",
+               "Mixed legacy and canonical electron wall Functor names are forbidden.");
 
   // The FEM state log_e stores ln(c_e [mol/m^3]); sheath physics consumes
   // number density [1/m^3]. Construct a state-dependent AD Functor, not a
@@ -286,6 +294,11 @@ DDEnergyEq::addFunctorMaterials()
   wall.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
   wall.set<MooseFunctorName>("potential") = getParam<VariableName>("fem_potential");
   wall.set<bool>("use_element_gradient_for_potential") = true;
+  if (canonical_e_wall)
+  {
+    wall.set<std::string>("species_id") = "e";
+    wall.set<Real>("sticking") = chemistryData().species("e").sticking_coefficient;
+  }
   assignBlocks(wall, _blocks);
   getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall);
 }
