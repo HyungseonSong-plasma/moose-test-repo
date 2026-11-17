@@ -1,0 +1,186 @@
+{
+  "schema": "issue669.p3_g3.energy_time.source_bound.v1",
+  "task_id": "P3-G3",
+  "package": "S6 recovery P3 of 7 (NOT Native scientific P3)",
+  "issue": 669,
+  "upstream_issue": 668,
+  "verdict": "PASS_BOUNDED_HISTORICAL_HYBRID_NEWONLY_INPUT_BYTES__NATIVE_RUNTIME_HOLD",
+  "source_exact_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "historical_main_c0_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+  "common_p1_pin": {
+    "artifact_id": 14372278070,
+    "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010"
+  },
+  "upstream_p2_stage": {
+    "run_id": 44196762787,
+    "conclusion": "SUCCESS",
+    "artifact_id": 14379920938,
+    "artifact_zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4",
+    "stage_result": "PASS_NEW_ONLY_SCRATCH_CHILD_AND_MESH_BYTE_SHA_SOURCE_ONLY",
+    "overall_issue668": "OPEN",
+    "native_P2": "NOT_RUN"
+  },
+  "comparison": {
+    "417": {
+      "case": "S6-417-407-2069-H25",
+      "historical": {
+        "artifact_id": 13677089020,
+        "original_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+        "original_file_shas_recomputed": 10,
+        "energy_time": {
+          "layer_ordinal": 1,
+          "section": "Kernels",
+          "object_name": "energy_time",
+          "factory_type": "PhysicsFEMLogMolarTimeDerivative",
+          "variable": "log_energy",
+          "block": "plasma",
+          "block_size_bytes": 110,
+          "block_sha256": "b988f9778afd444bf93acc97d573932be67d521e9573968b78f6906174d1b03e",
+          "C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+          "occurrences_in_historical_ten": 1
+        },
+        "status": "PASS_ORIGINAL_DIRECT_BYTES"
+      },
+      "hybrid_scratch": {
+        "source_artifact_id": 14372278070,
+        "verified_11_file_shas": 11,
+        "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "old_named_energy_time_kernel_count": 0,
+        "migrated_energy_overlay_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+        "status": "PASS_SOURCE_ONLY"
+      },
+      "new_only_scratch": {
+        "source_run_id": 44196762787,
+        "source_artifact_id": 14379920938,
+        "verified_11_file_shas": 11,
+        "C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+        "old_named_energy_time_kernel_count": 0,
+        "migrated_energy_overlay_same_bytes_as_hybrid": true,
+        "retired_native_ion_owners": 26,
+        "generated_energy_time_warehouse_verified": false,
+        "status": "PASS_STAGED_SOURCE__NATIVE_HOLD"
+      },
+      "energy_binding": {
+        "declared_path": "Physics/Plasmas/Transport/DriftDiffusion/Energy",
+        "fem_species": "e",
+        "fem_potential": "potential",
+        "initial_molar_energy_density_eV": "6.6421562686953756e-09",
+        "legacy_state": "log_energy",
+        "canonical_state": "log_e_energy",
+        "runtime_factory_from_pinned_source": "FEMLogMolarTimeDerivative",
+        "runtime_addition": "DDEnergyEq::addFEKernels() -> getProblem().addKernel(time_type, name()+\"_time\", time)",
+        "runtime_status": "SOURCE_CONTRACT_ONLY_NOT_INSTANTIATED"
+      }
+    },
+    "941": {
+      "case": "S6-941-407-2069-H25",
+      "historical": {
+        "artifact_id": 13677375813,
+        "original_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+        "original_file_shas_recomputed": 10,
+        "energy_time": {
+          "layer_ordinal": 1,
+          "section": "Kernels",
+          "object_name": "energy_time",
+          "factory_type": "PhysicsFEMLogMolarTimeDerivative",
+          "variable": "log_energy",
+          "block": "plasma",
+          "block_size_bytes": 110,
+          "block_sha256": "b988f9778afd444bf93acc97d573932be67d521e9573968b78f6906174d1b03e",
+          "C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+          "occurrences_in_historical_ten": 1
+        },
+        "status": "PASS_ORIGINAL_DIRECT_BYTES"
+      },
+      "hybrid_scratch": {
+        "source_artifact_id": 14372278070,
+        "verified_11_file_shas": 11,
+        "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "old_named_energy_time_kernel_count": 0,
+        "migrated_energy_overlay_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+        "status": "PASS_SOURCE_ONLY"
+      },
+      "new_only_scratch": {
+        "source_run_id": 44196762787,
+        "source_artifact_id": 14379920938,
+        "verified_11_file_shas": 11,
+        "C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+        "old_named_energy_time_kernel_count": 0,
+        "migrated_energy_overlay_same_bytes_as_hybrid": true,
+        "retired_native_ion_owners": 26,
+        "generated_energy_time_warehouse_verified": false,
+        "status": "PASS_STAGED_SOURCE__NATIVE_HOLD"
+      },
+      "energy_binding": {
+        "declared_path": "Physics/Plasmas/Transport/DriftDiffusion/Energy",
+        "fem_species": "e",
+        "fem_potential": "potential",
+        "initial_molar_energy_density_eV": "6.6421562686953756e-09",
+        "legacy_state": "log_energy",
+        "canonical_state": "log_e_energy",
+        "runtime_factory_from_pinned_source": "FEMLogMolarTimeDerivative",
+        "runtime_addition": "DDEnergyEq::addFEKernels() -> getProblem().addKernel(time_type, name()+\"_time\", time)",
+        "runtime_status": "SOURCE_CONTRACT_ONLY_NOT_INSTANTIATED"
+      }
+    }
+  },
+  "independent_validation": {
+    "stage_file_sha256_comparisons": {
+      "historical_original": 20,
+      "hybrid": 22,
+      "new_only": 22
+    },
+    "old_energy_time_archived_occurrences_total": 2,
+    "old_energy_time_hybrid_occurrences_total": 0,
+    "old_energy_time_newonly_occurrences_total": 0,
+    "original_block_417_941_sha_equal": true,
+    "original_c0_417_941_sha_equal": true,
+    "negative_controls_rejected": 11,
+    "negative_controls_total": 11,
+    "negative_cases": [
+      "original_c0_sha_tamper",
+      "legacy_energy_time_missing",
+      "legacy_energy_time_duplicate",
+      "legacy_energy_time_wrong_factory",
+      "legacy_energy_time_wrong_variable",
+      "legacy_energy_time_wrong_block",
+      "hybrid_legacy_energy_time_reintroduced",
+      "newonly_legacy_energy_time_reintroduced",
+      "newonly_missing_energy_block",
+      "newonly_missing_potential",
+      "newonly_missing_initial_molar_energy"
+    ],
+    "independent_local_full_receipt_sha256": "1d54b2c67971bfd1140075ee6189e8db4dd7ada6d76182c944c7bb6f2686c57b",
+    "independent_verifier_script_sha256": "e12c0e78b2c14f4e1bc7deb63e4994dda86a66632c65b4732da25897c5b595bd"
+  },
+  "source_code": {
+    "file": "physics_app/src/physics/plasma/DDEnergyEq.C",
+    "git_blob_sha1": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "function": "DDEnergyEq::addFEKernels",
+    "time_factory": "FEMLogMolarTimeDerivative",
+    "variable": "log_e_energy",
+    "ownership": "source code creates the time kernel if full Energy FEM path enabled; no actual Native Warehouse proof in this task"
+  },
+  "risk_boundary": [
+    "This receipt proves historical energy_time exact kernel bytes and source-only removal in two 11-layer Scratch candidates, not runtime new generated-energy uniqueness.",
+    "P3-X must confirm [Energy] + transport/pressure/8 BC staging on the same exact New-only Scratch before native acceptance.",
+    "Package P2 #668 remains OPEN even though staged source-only 26-owner retirement/Maxwell child + mesh CI succeeded.",
+    "Native P2, P3, P4 not run; historical successful archived P3 not equivalent to current New-only runtime proof.",
+    "No original rate table bytes, main/PR665 mutation, or science acceptance."
+  ],
+  "gates": {
+    "P3_G3_HISTORICAL_FACTORY_VARIABLE_BLOCK_SHA": "PASS",
+    "P3_G3_HYBRID_RETIREMENT": "PASS_SOURCE",
+    "P3_G3_NEWONLY_RETIREMENT": "PASS_SOURCE",
+    "P3_G3_NEW_RUNTIME_KERNEL_INSTANTIATION": "HOLD_NOT_RUN",
+    "P2_PACKAGE_668": "OPEN",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD",
+    "P3_X": "PENDING"
+  }
+}
