@@ -19,7 +19,7 @@ CHARGE = {"O2p": 1, "Om": -1, "Op": 1}
 FACTOR = -1.6605390671738466e-24
 WALL_FIELDS = {
     "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
-    "wall_migration_gate_smoothing_width", "wall_use_element_gradient_for_potential",
+    "wall_use_element_gradient_for_potential",
 }
 
 
@@ -53,14 +53,16 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
         record = species[ident]
         require(record.get("charge_number") == CHARGE[ident], "WRONG_ION_CHARGE_" + ident)
         require("ion_wall" not in record, "RETIRED_ION_WALL_WRAPPER_" + ident)
+        require("wall_migration_gate_smoothing_width" not in record,
+                "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_" + ident)
         declared = {key for key in record if key.startswith("wall_")}
         require(declared == WALL_FIELDS, "INVALID_ION_WALL_FIELDS_" + ident)
         require(finite_num(record["wall_molar_mass"], 1e-300) and
                 math.isclose(record["wall_molar_mass"], MASS[ident], rel_tol=1e-12),
                 "WRONG_WALL_MOLAR_MASS_" + ident)
         require(finite_num(record["wall_sticking"], 0, 1), "INVALID_STICKING_" + ident)
-        for key in ("wall_ion_temperature_eV", "wall_migration_gate_smoothing_width"):
-            require(finite_num(record[key], 0), "INVALID_" + key + "_" + ident)
+        require(finite_num(record["wall_ion_temperature_eV"], 0),
+                "INVALID_wall_ion_temperature_eV_" + ident)
         require(type(record["wall_use_element_gradient_for_potential"]) is bool,
                 "INVALID_GRADIENT_FLAG_" + ident)
         # Potential, density, mobility, block and temperature are derived from
