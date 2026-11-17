@@ -1,0 +1,149 @@
+{
+  "schema": "issue669.p3_x.source_only.inventory.v1",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "status": "PASS_ORIGINAL_HYBRID_P2_RETIREMENT_BYTES__HOLD_NEWONLY_OWNERS",
+  "input_artifacts": {
+    "p1_final_hybrid": {
+      "ci_run": 44180190753,
+      "artifact_id": 14372315897,
+      "zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620"
+    },
+    "p2_source_only_retirement": {
+      "ci_run": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    }
+  },
+  "cases": {
+    "417": {
+      "actual_p1_input_files": 11,
+      "actual_post_p2_input_files": 11,
+      "changed_input_files": 5,
+      "unchanged_input_files": 6,
+      "retired_native_ion_FVKernels": 14,
+      "retired_native_ion_FVBCs": 12,
+      "remaining_old_native_ion_owner_count": 0,
+      "electron_FEM_BCs_preserved": 8,
+      "newonly_overlay_bound": false,
+      "active_overlay": "migrated_continuity.i",
+      "C0_post_p2_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e"
+    },
+    "941": {
+      "actual_p1_input_files": 11,
+      "actual_post_p2_input_files": 11,
+      "changed_input_files": 5,
+      "unchanged_input_files": 6,
+      "retired_native_ion_FVKernels": 14,
+      "retired_native_ion_FVBCs": 12,
+      "remaining_old_native_ion_owner_count": 0,
+      "electron_FEM_BCs_preserved": 8,
+      "newonly_overlay_bound": false,
+      "active_overlay": "migrated_continuity.i",
+      "C0_post_p2_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e"
+    }
+  },
+  "electron_fem_bcs": [
+    {
+      "name": "electron_sheath",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "d9ab87b8365ba483414939b7e3a7a30f39f4acd8b43b1c70a62ecf521c62ca79",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_electrode plasma_metal plasma_right",
+      "factory": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux"
+    },
+    {
+      "name": "electron_cover_dielectric",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_cover",
+      "factory": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux"
+    },
+    {
+      "name": "electron_wafer_dielectric",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "0f12b97314b9a0c2da88f9caa0c0512d67b9d0d7dc4ed6d664e0d51da905fe74",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_wafer",
+      "factory": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux"
+    },
+    {
+      "name": "electron_focus_ring_dielectric",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_focus_ring",
+      "factory": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux"
+    },
+    {
+      "name": "electron_energy_sheath",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_electrode plasma_metal plasma_right",
+      "factory": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV"
+    },
+    {
+      "name": "electron_energy_cover",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "5e3c9b1853568945d1e99bc25cc7eb028f39d59b60b64824d4091a81b65b3f98",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_cover",
+      "factory": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV"
+    },
+    {
+      "name": "electron_energy_wafer",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "fedc129efca3c592e13edb2c4a0d402693a02195029ee9cf86bd94bccc839884",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_wafer",
+      "factory": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV"
+    },
+    {
+      "name": "electron_energy_focus_ring",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_focus_ring",
+      "factory": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV"
+    }
+  ],
+  "newonly_json_source": {
+    "417": {
+      "sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef"
+    },
+    "941": {
+      "sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+    },
+    "electron_transport": {
+      "type": "lookup",
+      "unit": "reduced",
+      "bounds_policy": "clamp",
+      "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+    },
+    "newonly_electron_bc_entries": 8
+  },
+  "full_independent_local_sha_inventory_sha256": "4966a472145ea7cde3c53235f5d26278257d1f3f216aaca88594c97356c91ce2",
+  "case_input_hashes": "P1 and P2 ZIP embedded manifests/retirement_receipt.json contain each exact 11-file SHA; full 22-file before/after rehash independently verified in local full inventory.",
+  "safe_scope": "No production runner or Native execution. This evidence records existing Hybrid/P2 staged source files only."
+}
