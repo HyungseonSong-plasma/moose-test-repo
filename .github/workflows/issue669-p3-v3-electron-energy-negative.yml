@@ -177,7 +177,7 @@ jobs:
               add("native_e_wall_flux_material_duplicate", "P1_FULL_ENERGY_NATIVE_ELECTRON_MATERIAL_OWNERS_1",
                   change_input=lambda x:add_legacy_material(x,"electron_wall_flux","ESWallFluxMaterial"))
               add("dont_create_kernels_bypass", "P1_BINDING_ONLY_BYPASS_FORBIDDEN",
-                  change_input=lambda x:replace_once(x, "          fem_species = e\n", "          fem_species = e\n          dont_create_kernels = true\n"))
+                  change_input=lambda x:replace_once(x, "        [Continuity]\n          block = plasma\n          fem_species = e\n", "        [Continuity]\n          block = plasma\n          fem_species = e\n          dont_create_kernels = true\n"))
               add("root_gas_temperature_missing", "P1_ROOT_GAS_FUNCTORS_REQUIRED:e",
                   change_input=lambda x:replace_once(x,"    temperature = 300\n",""))
               add("root_gas_pressure_missing", "P1_ROOT_GAS_FUNCTORS_REQUIRED:e",
