@@ -1,0 +1,134 @@
+{
+  "schema": "issue667.p1e.edges.static.v1",
+  "status": "PASS_STATIC_RATE_OBJECT_EDGES__PRIVATE_AND_DYNAMIC_HOLD",
+  "provenance": {
+    "source_pr": 665,
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "source_scope": "PR665 pre-retirement Hybrid Scratch D 11-layer only",
+    "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "ci_input_artifacts": [
+      {
+        "id": 14372278070,
+        "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+      },
+      {
+        "id": 14372278074,
+        "sha256": "584fd8eff989ab1f7f0a7582ae72b4dc2429f84b8b05ed91c1a46f89df88da5e"
+      }
+    ],
+    "local_full_evidence_bundle_sha256": "607cd21b0253008a78eb2583f29dc4d8e40c2f5352db1a20ce9a7960bbf8410f"
+  },
+  "source_ion_edges": [
+    {
+      "case": "417",
+      "object": "ei415_o2p_source",
+      "variable": "log_O2p",
+      "consumes_source_functor": "S_O2p_molar_EI415",
+      "upstream_rate_output": "R_EI415",
+      "layer": 5,
+      "block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691"
+    },
+    {
+      "case": "417",
+      "object": "ei401_negative_ion_source",
+      "variable": "log_Om",
+      "consumes_source_functor": "S_Om_molar_EI401",
+      "upstream_rate_output": "R_EI401",
+      "layer": 6,
+      "block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc"
+    },
+    {
+      "case": "417",
+      "object": "legacy8_h05_ei417_op",
+      "variable": "log_Op",
+      "consumes_source_functor": "S_Op_molar_EI417",
+      "upstream_rate_output": "R_EI417",
+      "layer": 7,
+      "block_sha256": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7"
+    },
+    {
+      "case": "417",
+      "object": "h25_atomic_positive_ion",
+      "variable": "log_Op",
+      "consumes_source_functor": "S_Op_molar_H25",
+      "upstream_rate_output": "R_H25",
+      "layer": 10,
+      "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01"
+    },
+    {
+      "case": "417",
+      "object": "h25_molecular_positive_ion",
+      "variable": "log_O2p",
+      "consumes_source_functor": "S_O2p_molar_H25",
+      "upstream_rate_output": "R_H25",
+      "layer": 10,
+      "block_sha256": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4"
+    },
+    {
+      "case": "941",
+      "object": "ei415_o2p_source",
+      "variable": "log_O2p",
+      "consumes_source_functor": "S_O2p_molar_EI415",
+      "upstream_rate_output": "R_EI415",
+      "layer": 5,
+      "block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691"
+    },
+    {
+      "case": "941",
+      "object": "ei401_negative_ion_source",
+      "variable": "log_Om",
+      "consumes_source_functor": "S_Om_molar_EI401",
+      "upstream_rate_output": "R_EI401",
+      "layer": 6,
+      "block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc"
+    },
+    {
+      "case": "941",
+      "object": "ei941_atomic_positive_ion_source",
+      "variable": "log_Op",
+      "consumes_source_functor": "S_Op_molar_EI941",
+      "upstream_rate_output": "R_EI941",
+      "layer": 7,
+      "block_sha256": "06c9444eda41eb5cc47e28485db5f8e95dba64a52e93131ca2fcc1378367f433"
+    },
+    {
+      "case": "941",
+      "object": "h25_atomic_positive_ion",
+      "variable": "log_Op",
+      "consumes_source_functor": "S_Op_molar_H25",
+      "upstream_rate_output": "R_H25",
+      "layer": 10,
+      "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01"
+    },
+    {
+      "case": "941",
+      "object": "h25_molecular_positive_ion",
+      "variable": "log_O2p",
+      "consumes_source_functor": "S_O2p_molar_H25",
+      "upstream_rate_output": "R_H25",
+      "layer": 10,
+      "block_sha256": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4"
+    }
+  ],
+  "wall_flux_materials_each_case": [
+    "ion_wall_flux",
+    "negative_ion_wall_flux",
+    "atomic_positive_ion_wall_flux"
+  ],
+  "FVBC_flux_consumers_per_case": 12,
+  "rate_evidence": "10/10 static functor-to-material-to-rate connections independently checked against raw staged bytes",
+  "non_ion_preservation_receipts": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D7",
+    "D8"
+  ],
+  "gaps": [
+    "D6 independent worker receipt missing",
+    "D8 external dynamic caller zero HOLD",
+    "Private EI rate original table bytes unavailable for independent hash"
+  ]
+}
