@@ -2,6 +2,28 @@
 
 **Status:** SOURCE IMPLEMENTED / P0 TESTS PENDING EXACT HEAD / P1–P3 HOLD. This document does not authorize Native deletion.
 
+## Current single-head schema (supersedes the original ion_3 handoff)
+
+As of the single-integrator PR #665, the **run-facing JSON has no species.ion_wall object**.
+Wall physical parameters are flat species fields:
+`wall_molar_mass`, `wall_sticking`, `wall_ion_temperature_eV`,
+`wall_migration_gate_smoothing_width` and
+`wall_use_element_gradient_for_potential`. The parameter values are
+unchanged from C2: 0.032/0.016 kg/mol, sticking=1, ion-temperature=0 eV,
+migration smoothing width=0.001 V/m, FEM element gradient=true.
+
+The wall's number-density and mobility Functors are derived from species ID,
+`<id>_number_density` and `<id>_mobility`; potential and block are read
+from `[Physics]/[Plasmas]/[Transport]/[DriftDiffusion]/[Continuity]`
+(`fem_potential`, `block`). Gas-temperature Functor is exactly
+`temperature`, published by the root `[Plasmas]` MOOSE input alongside
+`pressure`. No independent `T_g_fixed` provider is created by C2.
+The old `ion_wall` JSON object is explicitly rejected by the parser.
+
+This modifies only the active new-only integration candidate. Historical
+S6 source inputs and the separate hybrid recipe are immutable. Validation
+is still P0 source-level until exact-head Native build and P2 prove the path.
+
 ## Integration boundary
 
 - Implementation branch: `issue-633-c2-on-ion2-20261117`; stacked on [ion_2 PR #661](https://github.com/HyungseonSong-plasma/moose-test-repo/pull/661).
@@ -13,7 +35,7 @@
 
 Provide the new `physics_app/ci/issue633_c2_wall_3ion_overlay.json` **after** the resolved S6-417/941 chemistry mechanism file(s), and select `fvm_species = 'O2p Om Op'` with an explicit `fem_potential = potential`.
 
-The overlay supplies only additional species `ion_wall` metadata, `ion_surface_current.electron_wall_number_flux` and 4 physical `boundaries` groups with 12 ion FVBC objects. It does not introduce an additional `fvm_kernel_ownership` flag. The root parser allows only one JSON `boundaries` owner: integrate any existing electron FEM BC definitions into the same root `boundaries` object rather than adding competing root owners.
+The overlay supplies only flat species `wall_*` metadata, `ion_surface_current.electron_wall_number_flux` and 4 physical `boundaries` groups with 12 ion FVBC objects. It does not introduce an additional `fvm_kernel_ownership` flag. The root parser allows only one JSON `boundaries` owner: integrate any existing electron FEM BC definitions into the same root `boundaries` object rather than adding competing root owners.
 
 The selected species must match configured `ion_wall` producers exactly. The parser rejects duplicate/missing producer records, non-finite or nonphysical numeric inputs, swapped mobility/density names, wrong potential, species/variable/flux mixing, factor sign, unsupported FV BC types, overlapping/missing sidesets and incomplete BC cardinality.
 
