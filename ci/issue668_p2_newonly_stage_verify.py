@@ -104,17 +104,26 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
         orig = baseline.read(f"cases/{case}/final_11_inputs/{name}")
         actual_orig[name] = orig
         if name != "migrated_continuity.i":
-            all_objects = list(mod.BLOCK.finditer(orig.decode()))
-            selected = [x for x in all_objects if any(
-                o["file"] == name and o["name"] == x["name"] for o in retirement["retired_owners"])]
-            converted = orig.decode()
+            original_text = orig.decode()
+            roots = list(mod.ROOT.finditer(original_text))
+            all_objects = list(mod.BLOCK.finditer(original_text))
+            def identity(obj):
+                section = next((r.group(1) for r in reversed(roots)
+                                if r.start() < obj.start()), "")
+                return section, obj["name"]
+            retired_by_section_name = {
+                (o["section"], o["name"]): o
+                for o in retirement["retired_owners"] if o["file"] == name
+            }
+            selected = [x for x in all_objects if identity(x) in retired_by_section_name]
+            assert len(selected) == len(retired_by_section_name)
+            converted = original_text
             for x in reversed(selected):
                 converted = converted[:x.start()] + converted[x.end():]
             expected_after[name] = converted.encode()
             assert folder.joinpath(name).read_bytes() == expected_after[name], name
             for match in selected:
-                obj = next(o for o in retirement["retired_owners"]
-                           if o["file"] == name and o["name"] == match["name"])
+                obj = retired_by_section_name[identity(match)]
                 assert sha(match.group().encode()) == obj["old_block_sha256"]
     all_files = [folder / Path(entry["file_path"]).name for entry in manifest["layers"]]
     changed = [p.name for p in all_files if sha(p.read_bytes()) != sha(actual_orig[p.name])]
