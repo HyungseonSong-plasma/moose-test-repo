@@ -53,7 +53,7 @@ jobs:
                       if symbol: stack.append((symbol,offset,lineno))
                       elif stack:
                           obj,start,first=stack.pop()
-                          if len(stack)==1:
+                          if len(stack)==1 and stack[0][0] in ("FVKernels","FVBCs","Materials","FunctorMaterials"):
                               section=stack[0][0]
                               raw=data[start:offset+len(line)]
                               params={}
