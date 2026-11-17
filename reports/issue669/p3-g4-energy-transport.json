@@ -1,0 +1,122 @@
+{
+  "schema": "issue669.p3_g4.energy_transport_v1",
+  "task_id": "P3-G4",
+  "issue": 669,
+  "dependency_issue": 668,
+  "verdict": "SOURCE_STATIC_PASS__NEW_ONLY_P2_DEPENDENCY_HOLD",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "evidence": {
+    "p1_0_run": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182628032",
+    "p1_0_artifact_id": 14372278070,
+    "p1_0_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "p1_0_common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "original_archive_417": {
+      "artifact_id": 13677089020,
+      "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+    },
+    "original_archive_941": {
+      "artifact_id": 13677375813,
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    "first_layer": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "original_c0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+    "final_hybrid_d_c0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "original_energy_transport": {
+      "section": "Kernels",
+      "object_name": "energy_transport",
+      "factory_type": "PhysicsFEMLogMolarDriftDiffusion",
+      "variable": "log_energy",
+      "potential": "potential",
+      "mobility": "electron_energy_mobility",
+      "diffusion": "electron_energy_diffusion",
+      "charge_number": "-1",
+      "block": "plasma",
+      "block_sha256": "37289bf00a0b03f51b9c17503da9abb6551697ca7950dbe86c90d0f5932997d8",
+      "count_417": 1,
+      "count_941": 1
+    },
+    "original_electron_lookup": {
+      "section": "FunctorMaterials",
+      "object_name": "electron_transport",
+      "factory_type": "PhysicsElectronTransportLookupMaterial",
+      "mean_energy": "mean_en_solved",
+      "pressure": "p",
+      "gas_temperature": "T_g_fixed",
+      "table_file": "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "bounds_policy": "clamp",
+      "block_sha256": "a66565c4f83a6aa0152958421988b3d4b21fc50f0772250d574014badaca06ca",
+      "count_417": 1,
+      "count_941": 1
+    },
+    "final_hybrid_d": {
+      "case_417_layers": 11,
+      "case_941_layers": 11,
+      "direct_energy_transport_417": 0,
+      "direct_energy_transport_941": 0,
+      "direct_electron_transport_417": 0,
+      "direct_electron_transport_941": 0,
+      "note": "Legacy explicit owners absent in the final 11-layer Hybrid D bytes. This is not a New-only generated Kernel readback."
+    },
+    "direct_byte_checks": {
+      "original_file_sha": "20/20_PASS",
+      "final_hybrid_d_file_sha": "22/22_PASS",
+      "original_energy_transport_block": "2/2_PASS",
+      "original_electron_lookup_block": "2/2_PASS",
+      "negative_controls": "18/18_REJECTED"
+    },
+    "local_full_receipt_sha256": "9d818099438d13da28529a29de4070d5a76db252c5c6a1d30e20375f19da201e",
+    "local_verifier_sha256": "0eb060a914cf7b35b0ed89e695ba5b59a67e45181a18e9931055d478f177f0ea"
+  },
+  "source_only_newonly_contract": {
+    "cases": {
+      "417": {
+        "json": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+        "json_git_blob": "4a05649b42b798f566d5e455ef46be347ea2a461",
+        "overlay": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+        "overlay_git_blob": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e"
+      },
+      "941": {
+        "json": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+        "json_git_blob": "9568e2cae6640a755f9403c4f58e077c801b998c",
+        "overlay": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_941_continuity.template.i",
+        "overlay_git_blob": "4daa6f080f3d7bbd35c9839110cbb955b8914fee"
+      }
+    },
+    "expected_generator": "Plasma::DDEnergyEq::addFEKernels, [Energy] + '_transport'",
+    "factory_type": "FEMLogMolarDriftDiffusion",
+    "variable": "log_e_energy",
+    "potential": "potential",
+    "charge_number": -1,
+    "mobility": "e_energy_mobility",
+    "diffusion": "e_energy_diffusivity",
+    "block": "plasma",
+    "actual_generated_kernel_block_sha256": null,
+    "electron_transport_provider": "Plasma::DDContinuityEq::addFunctorMaterials -> DDTransportMaterial(species_id=e)",
+    "json_e_transport": {
+      "type": "lookup",
+      "unit": "reduced",
+      "bounds_policy": "clamp"
+    },
+    "mean_energy_lookup_axis": "e_energy_eV",
+    "electron_energy_closure": "fluid: e_energy_mobility=5/3*e_mobility; e_energy_diffusivity=5/3*e_diffusivity",
+    "registered_kernel_impl": "physics_app/src/kernels/FEMPlasmaTransport.C",
+    "cpp_git_blobs": {
+      "physics_app/src/physics/plasma/DDEnergyEq.C": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "physics_app/src/materials/DDTransportMaterial.C": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+      "physics_app/src/kernels/FEMPlasmaTransport.C": "a44a1049c6d174bbc41a9d00ea998b5fe51a1390"
+    }
+  },
+  "unresolved": [
+    "P2 package #668 is OPEN. No after-retirement New-only Scratch 11-layer byte pin.",
+    "New-only generated Kernel and Functor warehouse object count, name, and block SHA remain unverified; static source is not an emitted .i block.",
+    "Native --check-input, duplicate owner and numerical-equivalence runtime checks NOT_RUN.",
+    "Exact public electron transport lookup table bytes to be independently pinned in P3-T2/T3."
+  ],
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "writes": "Only this independent P3-G4 receipt; PR #665, main, historical inputs, workflows unchanged."
+}
