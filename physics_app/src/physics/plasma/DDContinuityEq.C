@@ -339,6 +339,13 @@ DDContinuityEq::checkIntegrity() const
       ++bc_count;
       ++matched_bcs[bc->name()];
     }
+    // Once ion_3's JSON wall contract is active, absent BCs are as fatal
+    // as partial, duplicate or unexpected BCs. Legacy coefficient/IC-only
+    // P2 fixtures have no ion_wall record and remain independently guarded.
+    if (chemistryData().hasIonWalls() && bc_count == 0)
+      mooseError("P05 missing FV wall BCs for selected species '", id,
+                 "': C2 ion_wall is active, expected four named FV BCs.");
+
     if (bc_count != 0)
       for (const auto & [name, type] : expected_bcs)
         if (matched_bcs[name] != 1)
