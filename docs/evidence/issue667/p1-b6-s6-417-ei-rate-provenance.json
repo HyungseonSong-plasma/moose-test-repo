@@ -1,0 +1,217 @@
+{
+  "schema_version": "issue667.p1_b6.preflight_receipt.v1",
+  "task_id": "P1-B6",
+  "issue": 667,
+  "parent_issue": 633,
+  "case": "S6-417-407-2069-H25",
+  "status": "HOLD",
+  "gate": "P1_0_SOURCE_11_LAYER_PIN_REQUIRED",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "pr": 665,
+  "original_s6_archive_artifact_id": 13677089020,
+  "verification_scope": "Read-only historical generator/source provenance and recorded SHA. Not an actual archived/staged 11-layer readback.",
+  "p1_0_manifest_verified": false,
+  "source_11_layer_order_verified": false,
+  "private_rate_bytes_read": false,
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "chemistry_public_metadata_blobs": {
+    "oxygen_s6_common.json": "e4572d36cba500c68a9c12fdde02805a3bcf0f00",
+    "oxygen_s6_417.json": "24e2db3f036396d439f5701c5cf05de4db2c8912",
+    "prepare_s6_run_input.py": "24674ac5d00820db19adec3352cb70fca5355124",
+    "research_baselines/current_reaction_base.json": "30232929242dc836cc73e7862a2f8fcdfee44364"
+  },
+  "rate_provenance": [
+    {
+      "id": "EI-415",
+      "layer": "issue477_S2-415_generation_overlay.i",
+      "rate_file": "EI-415_O2_X.txt",
+      "rate_sha256_expected": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+      "historical_progress": "R_ion_O2",
+      "scratch_progress": "R_EI415",
+      "reaction": "e + O2 -> 2e + O2p",
+      "source_script": ".github/scripts/ei415_replaces_ei16_h23_ei401_ei412_ei941_14ch.py",
+      "source_script_blob_sha": "f8100a1d9bd3cbd8db3924758a39a914be071836",
+      "known_consumers": [
+        "S_electron_molar_EI415",
+        "S_O2p_molar_EI415",
+        "S_electron_energy_molar_EI415"
+      ],
+      "case": "S6-417-407-2069-H25",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+      "layer_ordinal": null,
+      "file_path": "issue477_S2-415_generation_overlay.i",
+      "file_sha256": null,
+      "section": null,
+      "object_name": null,
+      "factory_type": "PhysicsElectronImpactRateMaterial",
+      "variable": null,
+      "relevant_parameters": {
+        "rate_table_file": "private_rates/EI-415_O2_X.txt",
+        "reaction_progress": "R_ion_O2",
+        "mean_energy": "mean_en_solved",
+        "electron_number_density": "n_e_physical"
+      },
+      "block_sha256": null,
+      "rate_sha256_observed": null,
+      "rate_sha256_status": "EXPECTED_ONLY_NOT_RECALCULATED",
+      "source_block_status": "NOT_BOUND_TO_11_LAYER",
+      "provider_consumer_edges": [
+        {
+          "from": "R_ion_O2",
+          "to": "S_electron_molar_EI415",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        },
+        {
+          "from": "R_ion_O2",
+          "to": "S_O2p_molar_EI415",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        },
+        {
+          "from": "R_ion_O2",
+          "to": "S_electron_energy_molar_EI415",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        }
+      ],
+      "status": "HOLD"
+    },
+    {
+      "id": "EI-401",
+      "layer": "issue477_S3-415-401_extra_overlay.i",
+      "rate_file": "EI-401_O2_X.txt",
+      "rate_sha256_expected": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+      "historical_progress": "R_EI401",
+      "scratch_progress": "R_EI401",
+      "reaction": "e + O2 -> Om + O",
+      "source_script": ".github/scripts/ei401_replaces_ei01_h23_ei412_ei941_14ch.py",
+      "source_script_blob_sha": "97990e652266a2aa35274e9ba7cbcb5930c91225",
+      "known_consumers": [
+        "S_electron_molar_EI401",
+        "S_Om_molar_EI401",
+        "S_O_mass_EI401"
+      ],
+      "case": "S6-417-407-2069-H25",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+      "layer_ordinal": null,
+      "file_path": "issue477_S3-415-401_extra_overlay.i",
+      "file_sha256": null,
+      "section": null,
+      "object_name": null,
+      "factory_type": "PhysicsElectronImpactRateMaterial",
+      "variable": null,
+      "relevant_parameters": {
+        "rate_table_file": "private_rates/EI-401_O2_X.txt",
+        "reaction_progress": "R_EI401",
+        "mean_energy": "mean_en_solved",
+        "electron_number_density": "n_e_physical"
+      },
+      "block_sha256": null,
+      "rate_sha256_observed": null,
+      "rate_sha256_status": "EXPECTED_ONLY_NOT_RECALCULATED",
+      "source_block_status": "NOT_BOUND_TO_11_LAYER",
+      "provider_consumer_edges": [
+        {
+          "from": "R_EI401",
+          "to": "S_electron_molar_EI401",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        },
+        {
+          "from": "R_EI401",
+          "to": "S_Om_molar_EI401",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        },
+        {
+          "from": "R_EI401",
+          "to": "S_O_mass_EI401",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        }
+      ],
+      "status": "HOLD"
+    },
+    {
+      "id": "EI-417",
+      "layer": "issue477_S4-401-417_op_ionization_overlay.i",
+      "rate_file": "EI-417_O2_X.txt",
+      "rate_sha256_expected": "4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
+      "historical_progress": "R_EI417",
+      "scratch_progress": "R_EI417",
+      "reaction": "e + O2 -> 2e + Op + O",
+      "source_script": ".github/scripts/oxygen_legacy8_h05_ei417_100us.py",
+      "source_script_blob_sha": "99597cad8e3b14c441a22600079e1d8d0165d181",
+      "scripted_producer_object": "legacy8_h05_ei417_progress",
+      "known_consumers": [
+        "S_e_molar_EI417",
+        "S_Op_molar_EI417",
+        "S_energy_EI417"
+      ],
+      "case": "S6-417-407-2069-H25",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+      "layer_ordinal": null,
+      "file_path": "issue477_S4-401-417_op_ionization_overlay.i",
+      "file_sha256": null,
+      "section": null,
+      "object_name": "legacy8_h05_ei417_progress",
+      "factory_type": "PhysicsElectronImpactRateMaterial",
+      "variable": null,
+      "relevant_parameters": {
+        "rate_table_file": "private_rates/EI-417_O2_X.txt",
+        "reaction_progress": "R_EI417",
+        "mean_energy": "mean_en_solved",
+        "electron_number_density": "n_e_physical"
+      },
+      "block_sha256": null,
+      "rate_sha256_observed": null,
+      "rate_sha256_status": "EXPECTED_ONLY_NOT_RECALCULATED",
+      "source_block_status": "NOT_BOUND_TO_11_LAYER",
+      "provider_consumer_edges": [
+        {
+          "from": "R_EI417",
+          "to": "S_e_molar_EI417",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        },
+        {
+          "from": "R_EI417",
+          "to": "S_Op_molar_EI417",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        },
+        {
+          "from": "R_EI417",
+          "to": "S_energy_EI417",
+          "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
+        }
+      ],
+      "status": "HOLD"
+    }
+  ],
+  "notes": [
+    "EI-415 progress is renamed R_ion_O2 -> R_EI415 only in scratch by prepare_s6_run_input.py; historical input remains unchanged.",
+    "Recorded EI-415 and EI-401 hashes originate from the repository research reaction base and Issue477 preparers; EI-417 hash is declared in Issue477 S4 preparer.",
+    "Rate SHA values are expected SHA-256, NOT locally verified against original private bytes. Git blob SHA values are a different digest type.",
+    "Historical generator source describes PhysicsElectronImpactRateMaterial. Exact live 11-layer producer object names, layer byte SHA-256, and block SHA-256 cannot be asserted without P1-0 pinned original/staged files.",
+    "Potential script-contract discrepancy: Issue477 S4 prepare_s3_401_op_production.py checks the token `type = RateCoeffMaterial`, whereas historical EI-417 generator CONTENT declares `type = PhysicsElectronImpactRateMaterial`; reconcile against exact archived S4/S6 bytes before accepting this generator path."
+  ],
+  "unresolved": [
+    "P1-0 immutable manifest and 11-layer exact order/source HEAD pin not available in Issue #667 body/comments at preflight read.",
+    "Original S6-417 11-layer source bytes and per-layer file_sha256 not independently read.",
+    "Exact producer object names/section/blocks/factory types and source-consumer edges not independently checked against actual S6-417 staged inputs.",
+    "Private EI-415, EI-401, EI-417 rate table bytes not available for actual SHA-256 recomputation.",
+    "Potential historical EI-417 generator-versus-preparer factory token discrepancy requires exact-source reconciliation."
+  ],
+  "promotion_policy": "DO_NOT_PROMOTE_TO_P1_PASS; P1-E must rebind all entries to verified P1-0 manifest and independently recompute SHA/edges.",
+  "evidence_urls": [
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/29d1acc6ef7969908b86719e4b95c73a1565136d/.github/scripts/ei415_replaces_ei16_h23_ei401_ei412_ei941_14ch.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/29d1acc6ef7969908b86719e4b95c73a1565136d/.github/scripts/ei401_replaces_ei01_h23_ei412_ei941_14ch.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/29d1acc6ef7969908b86719e4b95c73a1565136d/.github/scripts/oxygen_legacy8_h05_ei417_100us.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9c15a4f0e2cf8042cb0d4b2f18af31511021d168/experiments/Issue477_electron_shape/prepare_first_batch.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9c15a4f0e2cf8042cb0d4b2f18af31511021d168/experiments/Issue477_electron_shape/prepare_second_base_sinks.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9c15a4f0e2cf8042cb0d4b2f18af31511021d168/experiments/Issue477_electron_shape/prepare_s3_401_op_production.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9c15a4f0e2cf8042cb0d4b2f18af31511021d168/experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9c15a4f0e2cf8042cb0d4b2f18af31511021d168/experiments/Issue395_powered_chemistry_ladder/research_baselines/current_reaction_base.json"
+  ]
+}
