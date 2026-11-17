@@ -156,8 +156,9 @@ def test_legacy_canonical_names_after_scratch_remap_are_supported():
     assert result["native_fv_owner_count"] == 26
 
 
-def test_new_only_rejects_six_retained_c2_wall_and_current_materials():
-    # These six producers are independent of the 14+12 old FV objects.
+def test_new_only_allows_disjoint_native_surface_charge_producers_without_c2():
+    # Native charge-current bookkeeping is not an ion FV Kernel/BC owner.
+    # If C2 new wall/current is not configured, do not reject by type alone.
     pieces = [DECK, "[FunctorMaterials]"]
     for name in ("ion_wall_flux", "negative_ion_wall_flux",
                  "atomic_positive_ion_wall_flux"):
@@ -167,17 +168,18 @@ def test_new_only_rejects_six_retained_c2_wall_and_current_materials():
                        f"    property_name = {side}_net_surface_current_density", "  []"))
     pieces.append("[]")
     data = module.inspect({"old_c0.i": "\n".join(pieces)}, JSON)
-    assert data["status"] == "FAIL"
+    assert data["status"] == "P0_STATIC_PASS_ONLY", data["errors"]
     assert data["native_fv_owner_count"] == 0
     assert data["explicit_ion_wall_current_owner_count"] == 6
-    assert "P1_EXPLICIT_ION_WALL_OR_CURRENT_OWNER_PRESENT_6" in data["errors"]
+    assert data["c2_native_producer_collision_count"] == 0
 
 
-def test_new_only_rejects_renamed_wall_type_and_current_output():
+def test_new_only_rejects_renamed_wall_type_and_current_output_when_c2_owns_them():
     renamed = DECK + """
 [FunctorMaterials]
   [renamed_ion]
-    type = PhysicsIonWallFluxMaterial
+    type = IonWallFluxMaterial
+    species_id = O2p
   []
   [renamed_current]
     type = ADParsedFunctorMaterial
@@ -185,9 +187,14 @@ def test_new_only_rejects_renamed_wall_type_and_current_output():
   []
 []
 """
-    result = module.inspect({"renamed.i": renamed}, JSON)
-    assert "P1_EXPLICIT_ION_WALL_OR_CURRENT_OWNER_PRESENT_2" in result["errors"]
-    families = {owner["family"] for owner in result["explicit_ion_wall_current_owners"]}
+    from copy import deepcopy
+    c2 = deepcopy(JSON)
+    for id in ("O2p", "Om", "Op"):
+        c2["species"][id]["wall_molar_mass"] = 0.032 if id == "O2p" else 0.016
+    c2["ion_surface_current"] = {"electron_wall_number_flux": "electron_wall_number_flux"}
+    result = module.inspect({"renamed.i": renamed}, c2)
+    assert "P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_2" in result["errors"]
+    families = {owner["family"] for owner in result["c2_native_producer_collisions"]}
     assert families == {"ion_wall", "surface_current"}
 
 
@@ -218,3 +225,24 @@ def test_binding_only_dont_create_kernels_cannot_certify_new_only_cutover():
         # exact historical 14 Kernel + 12 BC inventory, not this option.
         legacy = module.inspect({"binding_only.i": binding_only}, JSON, "legacy-hybrid")
         assert "P1_BINDING_ONLY_BYPASS_FORBIDDEN" not in legacy["errors"]
+
+
+def test_native_surface_charge_fallback_is_allowed_but_same_current_output_is_not():
+    from copy import deepcopy
+    native_current = DECK + """
+[FunctorMaterials]
+  [external_surface_charge]
+    type = ADParsedFunctorMaterial
+    property_name = surface_current_native
+  []
+[]
+"""
+    assert module.inspect({"native.i": native_current}, JSON)["status"] == "P0_STATIC_PASS_ONLY"
+    c2 = deepcopy(JSON)
+    for id in ("O2p", "Om", "Op"):
+        c2["species"][id]["wall_sticking"] = 1.0
+    c2["ion_surface_current"] = {"electron_wall_number_flux": "electron_wall_number_flux"}
+    assert module.inspect({"native.i": native_current}, c2)["status"] == "P0_STATIC_PASS_ONLY"
+    duplicate = native_current.replace("surface_current_native", "cover_net_surface_current_density")
+    result = module.inspect({"duplicate.i": duplicate}, c2)
+    assert "P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_1" in result["errors"]
