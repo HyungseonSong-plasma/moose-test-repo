@@ -502,9 +502,13 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
                            " without transport_coef");
       if (record.contains("energy_transport_coef"))
       {
+        if (new_species_schema)
+          fail(file, "species." + it.key() +
+                         ".energy_transport_coef is MOOSE [Energy] transport_coefficient-only");
+        // Read-only compatibility for historical flat Hybrid JSON.
         if (it.key() != "e" || !record.at("energy_transport_coef").is_string() ||
             record.at("energy_transport_coef").get<std::string>() != "fluid")
-          fail(file, "energy_transport_coef supports only species.e = fluid");
+          fail(file, "legacy energy_transport_coef supports only species.e = fluid");
         _fluid_electron_energy_transport = true;
       }
       if (record.contains("molar_mass_kg_mol"))
