@@ -466,19 +466,31 @@
       },
       "custody": {
         "mode": "ARCH_PRIVATE_BOUNDED_SUCCESS_COPIES_PRESENT_ORIGINAL_FAILURE_LOGS_SEPARATE",
-        "file_id": "1REOmp30hqVl069EqShs_5mR58yOa0L7S"
+        "file_id": "1REOmp30hqVl069EqShs_5mR58yOa0L7S",
+        "operator_accepted_private_drive_alternative": {
+          "receipt_id": 6943043495,
+          "mode": "USER_MANAGED_MUTABLE_PRIVATE_DRIVE",
+          "sha256_and_crc_verified": true,
+          "object_lock_proven": false
+        }
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6943043495,
+        "accepted_utc_date": "2026-11-17",
+        "scope": "DD_ORIGINAL_BOUNDARY_TWO_STEP_P3_ONLY",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_PRIVATE_DYNAMIC_CALLER_RISK",
+        "not_independent_caller_zero": true,
+        "excludes_science_equivalence": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
-      "formal_disposition": "KEEP_HOLD",
-      "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION",
-        "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE"
-      ],
-      "issue535_receipt": 6932963232
+      "formal_disposition": "RETIRED_VERIFIED",
+      "red_gates": [],
+      "issue535_receipt": 6932963232,
+      "retirement_scope": "DD_ORIGINAL_BOUNDARY_TWO_STEP_P3_ONLY"
     },
     {
       "id": "S6",
@@ -527,24 +539,37 @@
       },
       "custody": {
         "mode": "ARCH_PRIVATE_417_941_BOUNDED_3STEP_COPIES_PRESENT_ORIGINAL_FULL_ZIPS_SEPARATE",
-        "file_id": "1X_L6I88FY0oyfj73rmt-8aSlM0vRiSQw"
+        "file_id": "1X_L6I88FY0oyfj73rmt-8aSlM0vRiSQw",
+        "operator_accepted_private_drive_alternative": {
+          "receipt_id": 6943043495,
+          "mode": "USER_MANAGED_MUTABLE_PRIVATE_DRIVE",
+          "sha256_and_crc_verified": true,
+          "object_lock_proven": false
+        }
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6943043495,
+        "accepted_utc_date": "2026-11-17",
+        "scope": "S6_417_941_FULL_400W_100US_P3_ORIGINAL_SCOPE",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_PRIVATE_DYNAMIC_CALLER_RISK",
+        "not_independent_caller_zero": true,
+        "excludes_science_equivalence": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
       "formal_disposition": "KEEP_HOLD",
       "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION",
-        "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE",
         "FULL_400W_100US_REPLAY_EQUIVALENCE_OR_SEPARATE_APPROVED_WAIVER"
       ],
-      "issue535_receipt": 6932963232
+      "issue535_receipt": 6932963232,
+      "retirement_scope": "S6_417_941_FULL_400W_100US_P3_PENDING_FULL_SOURCE_RUN"
     }
   ],
   "global_holds": {
-    "external_caller_risk": "PARTIAL_CORE_FLOW_ACCEPTED_ARCH_NOT_ACCEPTED",
+    "external_caller_risk": "OPERATOR_SCOPED_RISK_ACCEPTED_CORE_FLOW_ARCH_NOT_GLOBAL_CALLER_ZERO",
     "worm": "NOT_PROVEN",
     "science": "SCIENCE_HOLD",
     "s6_p3": "100US_FULL_MAINTAINED_REPLAY_NOT_ACCEPTED"
@@ -713,12 +738,88 @@
     "maintained_bounded_runs_success": true,
     "full_s6_400w_100us_maintained_replay_executed": false,
     "immutable_object_lock_proven": false,
-    "ARCH_external_caller_risk_accepted": false,
+    "ARCH_external_caller_risk_accepted": true,
     "SCIENCE_HOLD": true,
     "operator_approved_waiver": false,
     "retirement_disposition": {
-      "DD": "KEEP_HOLD",
+      "DD": "RETIRED_VERIFIED",
       "S6": "KEEP_HOLD"
-    }
+    },
+    "owner_approved_retention_alternative": true,
+    "owner_approved_retention_method": "USER_MANAGED_MUTABLE_PRIVATE_GOOGLE_DRIVE"
+  },
+  "arch_owner_approval": {
+    "comment_id": 6943043495,
+    "accepted_utc_date": "2026-11-17",
+    "operator": "repository-operator",
+    "source": "DIRECT_USER_APPROVAL_RECORDED_IN_ISSUE535",
+    "scope": [
+      "DD",
+      "S6"
+    ],
+    "accepted_unknown_external_private_dynamic_caller_risk": true,
+    "independent_caller_zero_proven": false,
+    "retention_mode": "USER_MANAGED_PRIVATE_GOOGLE_DRIVE_INDEPENDENT_SHA256_CRC_BACKUP",
+    "retention_owner_mutable": true,
+    "object_lock_or_worm_required_for_operational_retirement": false,
+    "object_lock_or_worm_proven": false,
+    "full_s6_original_scope_p3_authorized": true,
+    "full_s6_execution_is_science_acceptance": false,
+    "source_main_at_approval": "8263fbc1801f213b98183ba4876299041cd01dac"
+  },
+  "arch_retirement_outcome": {
+    "date_utc": "2026-11-17",
+    "receipt_id": 6943043495,
+    "current_proposed_wave1_retired": 9,
+    "current_proposed_wave1_formal_holds": 1,
+    "old_approved_eight_verified": true,
+    "DD_formal_retired_after_CI_manual_review": true,
+    "S6_formal_hold_due_full_replay": true,
+    "science_hold": true
+  },
+  "arch_p3_dispatch_approval": {
+    "receipt_id": 6943043495,
+    "approved_utc_date": "2026-11-17",
+    "workflow_path": ".github/workflows/issue541-arch-s6-p3-p4-replay.yml",
+    "workflow_git_blob": "6c673628eac4693abe0d74b04fc31578a39b3971",
+    "target_ref": "main",
+    "source_sha_policy": "RESOLVE_EXACT_MAIN_SHA_AT_DISPATCH",
+    "source_sha_at_user_approval": "8263fbc1801f213b98183ba4876299041cd01dac",
+    "required_event": "workflow_dispatch",
+    "required_inputs": {
+      "p3_approval": "ISSUE541_S6_400W_100US_BOTH_CASES_APPROVED",
+      "source_sha": "EXACT_SELECTED_REF_HEAD_SHA"
+    },
+    "cases": [
+      "417",
+      "941"
+    ],
+    "power_W": 400,
+    "duration_us": 100,
+    "max_parallel_jobs": 2,
+    "per_job_timeout_minutes": 360,
+    "status": "DISPATCHED_RUNNING_AT_RECEIPT",
+    "run_id": 44050874900,
+    "run_attempt": 1,
+    "request_timestamp": "2026-11-17T08:55:23Z",
+    "observation": "MATCHED_ACTIVE_TWO_SOURCE_BOUND_JOBS",
+    "P3_full_scope_executed": false,
+    "P4": "DIAGNOSTIC_ONLY",
+    "science": "SCIENCE_HOLD",
+    "no_coverage_waiver": true,
+    "ref_event_guard_preserved": true,
+    "target_run_source_sha": "8263fbc1801f213b98183ba4876299041cd01dac",
+    "target_run_event": "workflow_dispatch",
+    "target_run_head_branch": "main",
+    "target_case_job_ids": {
+      "417": 133928069072,
+      "941": 133928068701
+    },
+    "target_both_case_approval_steps_success": true,
+    "issue535_dispatch_receipt_id": 6943420997,
+    "transport_success_run_id": 44050852088,
+    "transport_skipped_preflight_run_id": 44050703765,
+    "temporary_workflow_cleanup_commit": "a39ee535c3dafba90a6f6107020ad04a61a16ca8",
+    "temporary_workflow_removed": true
   }
 }
