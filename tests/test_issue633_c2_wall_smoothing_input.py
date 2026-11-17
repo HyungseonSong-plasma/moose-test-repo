@@ -77,9 +77,13 @@ def test_negative_or_nonfinite_explicit_values_fail_closed():
     assert 'if (!std::isfinite(smoothing) || smoothing < 0.0)' in source
     assert 'paramError("migration_smoothing_width",' in source
     assert 'if (!isParamValid("migration_smoothing_width"))' not in source
-    for token in ('"migration_smoothing_width"', 'smoothing < 0.0'):
-        assert token in source
-        assert token not in source.replace(token, "", 1)
+    # The option occurs in its declaration, access, and error path.
+    # Mutating only its first occurrence does not remove the contract.
+    assert source.count('"migration_smoothing_width"') >= 3
+    assert source.count('smoothing < 0.0') == 1
+    mutated = source.replace(
+        'if (!std::isfinite(smoothing) || smoothing < 0.0)', '', 1)
+    assert 'if (!std::isfinite(smoothing) || smoothing < 0.0)' not in mutated
 
 
 def test_no_second_legacy_numerical_owner_in_species_record_or_json_parser():
