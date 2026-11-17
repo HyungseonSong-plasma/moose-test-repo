@@ -1,0 +1,217 @@
+{
+  "schema": "issue670.p4_s3.417_Op_EI417_H25_aggregation_source_receipt.v1",
+  "task_id": "P4-S3",
+  "title": "S6-417 Op Source EI-417 + H25 2 -> Chemistry S_Op_molar 1",
+  "status": "PASS_STATIC_BYTE_SOURCE_ONLY_RUNTIME_HOLD",
+  "scope": "Independent read-only slot; not P4-X integration and not Native P2/P3/P4",
+  "pins": {
+    "historical_archived_source_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "historical_native_417_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "P1_0_original_11layer_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P1_0_artifact_id": 14372278070,
+    "P1_0_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "P2_production_CI_run": 44199587771,
+    "P2_CI_execution_commit": "15f3e387b1c2c3b95c10232c6fe9d5884565c8f3",
+    "P2_production_artifact_id": 14380831538,
+    "P2_production_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "current_PR665_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "current_stacked_PR674_head": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+    "head_diff_review": "PR665 initial 9c15a4->current b5c1de adds P2 source/receipts but Chemistry.C, DDContinuityEq.C, 417 newonly JSON unchanged; PR674 P2 CI commit 15f3e->current baef adds receipt and workflow only",
+    "core_Chemistry_C_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "core_DDContinuityEq_C_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+  },
+  "historical_S6_417": {
+    "EI417": {
+      "ordinal": 7,
+      "file": "issue477_S4-401-417_op_ionization_overlay.i",
+      "original_file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
+      "original_Op_FVKernel": "legacy8_h05_ei417_op",
+      "original_Op_block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e",
+      "variable": "log_nop",
+      "v": "S_Op_molar_EI417",
+      "sign": "+",
+      "units": "mol/(m^3 s)"
+    },
+    "H25": {
+      "ordinal": 10,
+      "file": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+      "original_file_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+      "original_Op_FVKernel": "h25_atomic_positive_ion",
+      "original_Op_block_sha256": "988613b29ab8eea9d63e1ba2401cbfdabe679800e4a6ee516fe3f7d940b83e08",
+      "variable": "log_nop",
+      "v": "S_Op_molar_H25",
+      "sign": "-",
+      "units": "mol/(m^3 s)"
+    }
+  },
+  "canonical_P1_hybrid_11layer": {
+    "EI417": {
+      "ordinal": 7,
+      "file": "issue477_S4-401-417_op_ionization_overlay.i",
+      "file_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
+      "section": "FVKernels",
+      "name": "legacy8_h05_ei417_op",
+      "type": "FVCoupledForce",
+      "variable": "log_Op",
+      "v": "S_Op_molar_EI417",
+      "coef": 1,
+      "block": "plasma",
+      "block_sha256": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7"
+    },
+    "H25": {
+      "ordinal": 10,
+      "file": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+      "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+      "section": "FVKernels",
+      "name": "h25_atomic_positive_ion",
+      "type": "FVCoupledForce",
+      "variable": "log_Op",
+      "v": "S_Op_molar_H25",
+      "coef": 1,
+      "block": "plasma",
+      "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01"
+    }
+  },
+  "P2_actual_newonly_staged": {
+    "case": "417",
+    "layers": 11,
+    "newonly_JSON_path": "chemistry/unified_s6_417_newonly.json",
+    "newonly_JSON_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "newonly_layer11_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+    "layer7_file_sha256": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a",
+    "layer10_file_sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+    "archived_native_ion_FVKernel_retired_count": 14,
+    "archived_native_ion_FVBC_retired_count": 12,
+    "archived_native_ion_total_remaining": 0,
+    "old_Op_FVKernel_EI417_exists": false,
+    "old_Op_FVKernel_H25_exists": false,
+    "all_11_layer_before_and_after_SHA_independently_verified": true,
+    "old_Op_kernel_count_P1": 2,
+    "old_Op_kernel_count_P2": 0,
+    "explicit_source_producer_property_name_S_Op_molar_count": 0,
+    "explicit_FV_kernel_Op_source_count": 0,
+    "retained_reaction_functors_by_output": [
+      "R_EI417",
+      "R_H25",
+      "S_Op_molar_EI417",
+      "S_Op_molar_H25",
+      "c_Op_H25"
+    ],
+    "all_unique_in_11layer": true,
+    "unmodified_producer_blocks": [
+      {
+        "name": "legacy8_h05_ei417_progress",
+        "section": "FunctorMaterials",
+        "sha256": "a8836b06e5b80ae4c8ffe4a1cdbeb73474c129ed2192b4e981864c548539fde7",
+        "type": "EIRateCoefMaterial",
+        "reaction_progress": "R_EI417"
+      },
+      {
+        "name": "legacy8_h05_ei417_op_source",
+        "section": "FunctorMaterials",
+        "sha256": "8849077d846a21b5f1c39791041dbdb98e67440e3b84eccd7bdfa12185e0b755",
+        "property_name": "S_Op_molar_EI417",
+        "expr": "R"
+      },
+      {
+        "name": "h25_progress",
+        "section": "FunctorMaterials",
+        "sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+        "property_name": "R_H25",
+        "expr": "1.204428152e7*(300.0/tg)^0.4*cp*c2"
+      },
+      {
+        "name": "h25_op_loss",
+        "section": "FunctorMaterials",
+        "sha256": "da080a622842e6ba795f29535d5ba24be0a084739f6078c5084b2f8dbde643b1",
+        "property_name": "S_Op_molar_H25",
+        "expr": "-R"
+      },
+      {
+        "name": "h25_op_target",
+        "section": "FunctorMaterials",
+        "sha256": "35fd499dc5b5718846fd33c2695d473780e5d0b08e0ab1b9c388e33d774e414b",
+        "property_name": "c_Op_H25"
+      },
+      {
+        "name": "h25_fixed_tgas",
+        "section": "FunctorMaterials",
+        "sha256": "ec511bcb3b0fcde38074bc6dd52eba8b09ee806a07b533970f910f0ef271672b",
+        "property_name": "Tg_H25_K",
+        "expr": "300.0"
+      }
+    ]
+  },
+  "derived_Chemistry_single_Oplus_source": {
+    "reaction_JSON_order": [
+      "H25",
+      "EI-417"
+    ],
+    "reaction_progress": [
+      "R_H25",
+      "R_EI417"
+    ],
+    "net_stoichiometric_Op_coefficients": [
+      -1,
+      1
+    ],
+    "reaction_units_each": "mol/(m^3 s)",
+    "Op_charge_number": 1,
+    "expected_producer_material": "chemistry_Op_source",
+    "expected_functor_property_name": "S_Op_molar",
+    "expected_functor_names": [
+      "R_H25",
+      "R_EI417"
+    ],
+    "expected_functor_symbols": [
+      "f0",
+      "f1"
+    ],
+    "expected_functor_expression": "(-1)*f0+(1)*f1",
+    "semantic_equivalence": "S_Op_molar = +R_EI417 - R_H25",
+    "expected_Physics_FVKernel": {
+      "name": "Op_source",
+      "type": "FVCoupledForce",
+      "variable": "log_Op",
+      "v": "S_Op_molar",
+      "coef": 1
+    },
+    "Cpp_implementation": "Chemistry::addFunctorMaterials projects reaction.net(id)*R_k into one ADParsedFunctorMaterial per species; DDContinuityEq::addFVKernels generates one FVCoupledForce consuming S_Op_molar",
+    "generated_warehouse_objects_observed": false
+  },
+  "independent_verification": {
+    "verifier_sha256": null,
+    "local_full_receipt_sha256": "11ba3cc173e724cca6ad5a52480017de4c46c0a91111ffacdf968d2acc19b7e8",
+    "public_bundle_sha256": "40d8669a281761df202b144f8a34ae2fa336b0281b5e71af0ab9e3479598d4c1",
+    "original_historical_zip_checked": true,
+    "p1_zip_sha_checked": true,
+    "p2_zip_digest_matched_GitHub": true,
+    "exact_source_blocks_checked": 8,
+    "preserved_source_rate_related_blocks": 6,
+    "synthetic_negative_mutations_rejected": "19/19",
+    "native_negative_tests_run": 0
+  },
+  "unresolved": [
+    "P2 source-only Artifact proves 2 legacy Op source FV kernels retired, NOT that Chemistry and DDContinuityEq generated exactly one live Op material+FVKernel in the MOOSE Warehouse. P5 Native P2 must prove it.",
+    "EI-417 source references protected private rate_table_file=private_rates/EI-417_O2_X.txt. No private rate table bytes present or read in this receipt; independent P4-S4 secure rate verification remains separate.",
+    "P4-X sole integration writer must enforce no dual owner, validate full 417+941 Source 5->3, preserve neutral/energy/rate producers.",
+    "Native P3/P4 and scientific parity NOT_RUN; SCIENCE_HOLD."
+  ],
+  "gates": {
+    "P4_S3_SOURCE_STATIC": "PASS",
+    "P4_0_COMMON_RECHECK": "PENDING",
+    "P4_X": "PENDING",
+    "OP_GENERATED_PHYSICS_WAREHOUSE": "HOLD_NOT_RUN",
+    "NEW_ONLY_NATIVE_P2": "HOLD_NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "source_original_zip_modified": false,
+    "source_main_modified": false,
+    "PR665_modified": false,
+    "PR674_modified": false,
+    "rate_bytes_disclosed": false
+  }
+}
