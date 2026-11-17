@@ -172,9 +172,10 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
         )
     }
     c2_current = bool(c2_ions) and bool(mechanism.get("ion_surface_current"))
-    modern_s6 = isinstance(species.get("e", {}).get("transport_coef"), dict) and bool(
-        mechanism.get("drift_diffusion_boundaries")
-    )
+    electron_record = species.get("e")
+    modern_s6 = isinstance(electron_record, dict) and isinstance(
+        electron_record.get("transport_coef"), dict
+    ) and bool(mechanism.get("drift_diffusion_boundaries"))
     root_plasmas = [b["params"] for b in blocks if b["name"] == "Plasmas"
                     and b["parent"].endswith("Physics")]
     energy_actions = [b for b in blocks if b["name"] == "Energy" and
