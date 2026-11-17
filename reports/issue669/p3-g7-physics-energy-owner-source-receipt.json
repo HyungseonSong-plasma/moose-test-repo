@@ -1,0 +1,125 @@
+{
+  "schema": "issue669.p3_g7.energy_owner_source_static.v1",
+  "task_id": "P3-G7",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "status": "STATIC_SOURCE_CONTRACT_PASS_FINAL_NEWONLY_HOLD",
+  "task": "Physics [Energy] fluid transport/fem_potential/initial molar energy sole owner",
+  "baseline": {
+    "p1_0": {
+      "run": 44180190753,
+      "artifact_id": 14372315897,
+      "zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620"
+    },
+    "p2_stage": {
+      "issue": 668,
+      "run": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4",
+      "status": "ION26_RETIREMENT_AND_MAXWELL_SOURCE_STAGE_PASS_NEWONLY_JSON_HOLD"
+    }
+  },
+  "source_sha": {
+    "action_DDEnergyEq_C_git_blob": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "material_DDTransportMaterial_C_git_blob": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+    "newonly_template_417_git_blob": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e",
+    "newonly_template_941_git_blob": "4daa6f080f3d7bbd35c9839110cbb955b8914fee",
+    "newonly_json_417_git_blob": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "newonly_json_941_git_blob": "9568e2cae6640a755f9403c4f58e077c801b998c"
+  },
+  "code_contract": {
+    "energy_state": "log_e_energy",
+    "generated_variable": "MooseVariable (if absent)",
+    "generated_ic": "ConstantIC(log(1.5*temperature_eV*initial_number_density/N_A)) if absent and positive",
+    "newonly_overlay": "one [Energy] with fem_species=e, fem_potential=potential, transport_coefficient=fluid",
+    "electron_transport": "species.e.transport_coef lookup/reduced/clamp; no JSON energy_transport_coef key",
+    "generated_fe_kernels": [
+      "FEMLogMolarTimeDerivative",
+      "FEMLogMolarDriftDiffusion",
+      "FEMLogMolarElectronJouleHeating"
+    ],
+    "transport_producer": "DDTransportMaterial fluid_energy uses 5/3 particle mobility/diffusivity to expose e_energy_mobility and e_energy_diffusivity",
+    "duplicate_guard": "DDEnergyEq requireUniqueFEKernel; P1 New-only preflight prohibits retained Native electron variables and kernels"
+  },
+  "cases": {
+    "417": {
+      "p2_staged_source_files_verified": "11/11",
+      "ion_native_retired": "26/26",
+      "staged_overlay_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "staged_energy_block_sha256": "c76c5be87615f2cba68550d65b022f779fb95278a1f8718b9c67415fb1acd2ac",
+      "staged_energy_count": 1,
+      "native_log_e_energy_count": 0,
+      "native_energy_kernel_count": 0,
+      "staged_energy_parameters": {
+        "block": "plasma",
+        "fem_species": "e",
+        "fem_potential": "potential",
+        "initial_molar_energy_density_eV": "6.6421562686953756e-09"
+      },
+      "staged_json": "unified_s6_417.json",
+      "required_final_json": "chemistry/unified_s6_417_newonly.json",
+      "explicit_fluid_in_staged_overlay": false,
+      "explicit_fluid_in_newonly_template": true
+    },
+    "941": {
+      "p2_staged_source_files_verified": "11/11",
+      "ion_native_retired": "26/26",
+      "staged_overlay_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "staged_energy_block_sha256": "c76c5be87615f2cba68550d65b022f779fb95278a1f8718b9c67415fb1acd2ac",
+      "staged_energy_count": 1,
+      "native_log_e_energy_count": 0,
+      "native_energy_kernel_count": 0,
+      "staged_energy_parameters": {
+        "block": "plasma",
+        "fem_species": "e",
+        "fem_potential": "potential",
+        "initial_molar_energy_density_eV": "6.6421562686953756e-09"
+      },
+      "staged_json": "unified_s6_941.json",
+      "required_final_json": "chemistry/unified_s6_941_newonly.json",
+      "explicit_fluid_in_staged_overlay": false,
+      "explicit_fluid_in_newonly_template": true
+    }
+  },
+  "initial": {
+    "original_archived_log_e_energy": -18.8298291869131,
+    "newonly_json_initial_number_density_m3": 1000000000000001.6,
+    "newonly_json_temperature_eV": 2.6666666666666665,
+    "formula": "1.5 * temperature_eV * number_density_m3 / 6.02214076e23",
+    "derived_initial_energy_eV_mol_m3": 6.642156268695398e-9,
+    "derived_log_energy": -18.829829186913095,
+    "derived_minus_original_log": 3.552713678800501e-15,
+    "note": "Static floating-point agreement only; runtime parity not established"
+  },
+  "negative_tests": {
+    "type": "IN_MEMORY_STATIC_CONTRACT_NOT_NATIVE",
+    "rejected": 8,
+    "total": 8,
+    "labels": [
+      "duplicate Energy",
+      "missing fem_potential",
+      "nonfluid",
+      "missing e lookup",
+      "nonpositive Te",
+      "retained native energy variable",
+      "retained native energy kernel",
+      "hybrid JSON substituted for newonly"
+    ]
+  },
+  "unresolved": [
+    "P2 issue #668 remains open and New-only JSON staging is HOLD",
+    "Replace (not append) Hybrid migrated_continuity.i with exact New-only template",
+    "Stage and SHA-verify newonly JSON and its resolved electron transport table",
+    "Re-evaluate single energy state/IC and 5/3 Functor owners against actual final 11-layer New-only scratch",
+    "P05 instantiated Warehouse and Native P2 not executed; science HOLD"
+  ],
+  "status_by_scope": {
+    "source_static": "PASS",
+    "stage_hybrid_energy_byte_readback": "PASS",
+    "actual_final_newonly_energy": "HOLD",
+    "newonly_native_p2": "NOT_RUN",
+    "native_p3_p4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "local_detailed_receipt_sha256": "b5711bf1970a71bdb0639944b11a34b69dc5f7b7cdb7bc6371423b9a0a64bbe9",
+  "private_rate_bytes_published": false
+}
