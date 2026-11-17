@@ -332,16 +332,18 @@ DDContinuityEq::checkIntegrity() const
                    "' [", type, "] on ", variable,
                    "; observed ", matched[name], ", expected exactly one.");
 
-    // P15-P17 own the four species BCs. During the P14-only integration
-    // stage, zero generated BCs is permitted. Any partial or legacy BC set
-    // on a selected FV state is rejected, without bypassing the Kernel gate.
-    const std::map<std::string, std::string> expected_bcs = {
-        {id + "_wall", "FVFunctorNeumannBC"},
-        {id + "_cover_dielectric", "FVLogMolarDielectricFluxBC"},
-        {id + "_wafer_dielectric", "FVLogMolarDielectricFluxBC"},
-        {id + "_focus_ring_dielectric", "FVLogMolarDielectricFluxBC"}};
+    // The selected species' JSON BC catalogue, not S6-specific suffixes or
+    // a fixed count of four, defines the exact expected FV BC owners.
+    // Any additional Native FV BC on the same solver state is rejected.
+    std::map<std::string, std::string> expected_bcs;
+    for (const auto & [group, boundary] : chemistryData().boundaries())
+      for (const auto & [name, bc] : boundary.bcs)
+        if (bc.variable == variable &&
+            (bc.type == "FVFunctorNeumannBC" ||
+             bc.type == "FVLogMolarDielectricFluxBC") &&
+            !expected_bcs.emplace(name, bc.type).second)
+          mooseError("P05 duplicate JSON FV BC owner for ", variable, ": ", name);
     std::map<std::string, unsigned int> matched_bcs;
-    unsigned int bc_count = 0;
     for (const auto * bc : bcs)
     {
       const auto & parameters = bc->parameters();
@@ -352,22 +354,17 @@ DDContinuityEq::checkIntegrity() const
       if (expected_type == expected_bcs.end() || bc->type() != expected_type->second)
         mooseError("P05 legacy, duplicate or unexpected FV BC on '", variable,
                    "': ", bc->name(), " [", bc->type(), "]");
-      ++bc_count;
       ++matched_bcs[bc->name()];
     }
-    // Once ion_3's JSON wall contract is active, absent BCs are as fatal
-    // as partial, duplicate or unexpected BCs. Legacy coefficient/IC-only
-    // P2 fixtures have no ion_wall record and remain independently guarded.
-    if (chemistryData().hasIonWalls() && bc_count == 0)
-      mooseError("P05 missing FV wall BCs for selected species '", id,
-                 "': C2 ion_wall is active, expected four named FV BCs.");
-
-    if (bc_count != 0)
-      for (const auto & [name, type] : expected_bcs)
-        if (matched_bcs[name] != 1)
-          mooseError("P05 partial or duplicate FV BC owner '", name,
-                     "' [", type, "] on ", variable,
-                     "; observed ", matched_bcs[name], ", expected exactly one.");
+    // C2 ions require a nonempty boundary catalogue, while transport-only
+    // fixtures may intentionally have no BCs. Never accept a partial handoff.
+    if (chemistryData().hasIonWalls() && expected_bcs.empty())
+      mooseError("P05 missing JSON FV wall BC declarations for selected species ", id);
+    for (const auto & [name, type] : expected_bcs)
+      if (matched_bcs[name] != 1)
+        mooseError("P05 partial or duplicate FV BC owner '", name,
+                   "' [", type, "] on ", variable,
+                   "; observed ", matched_bcs[name], ", expected exactly one.");
   }
 }
 
