@@ -58,7 +58,7 @@
   "equations": {},
   "reactions": [],
   "ion_surface_current": {
-    "electron_wall_number_flux": "e_wall_number_flux"
+    "electron_wall_number_flux": "electron_wall_number_flux"
   },
   "boundaries": {
     "inlet outlet plasma_electrode plasma_metal plasma_right": {
