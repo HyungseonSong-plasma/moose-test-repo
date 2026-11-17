@@ -1213,6 +1213,10 @@ PlasmasAction::validParams()
   params.addParam<Real>("pressure", "Initial Navier-Stokes pressure [Pa] when a solved "
                                     "pressure variable exists; otherwise uniform gas pressure.");
   params.addParam<Real>("temperature", "Uniform gas temperature [K]; enables canonical Gas State.");
+  params.addParam<MooseEnum>(
+      "wall_gradient", MooseEnum("adjacent_element face", "adjacent_element"),
+      "Wall electric-field gradient evaluation for all selected FV ion walls: "
+      "adjacent_element evaluates the sided element gradient, face evaluates a FaceArg gradient.");
   params.addParam<MooseEnum>("state_model", MooseEnum("ideal_gas", "ideal_gas"),
                              "Canonical mixture equation of state.");
   // Every solved heavy-species mass fraction receives its JSON volume initial
@@ -1401,7 +1405,7 @@ PlasmasAction::act()
         params.set<Real>("migration_gate_smoothing_width") =
             continuity.front()->getParam<Real>("migration_smoothing_width");
         params.set<bool>("use_element_gradient_for_potential") =
-            wall.use_element_gradient_for_potential;
+            getParam<MooseEnum>("wall_gradient") == "adjacent_element";
         if (!blocks.empty())
           params.set<std::vector<SubdomainName>>("block") = blocks;
         _problem->addFunctorMaterial(type, id + "_wall", params);
