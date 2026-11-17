@@ -1,0 +1,93 @@
+{
+  "schema": "issue667.p1_slot_source_bound_receipt.v1",
+  "task_id": "P1-B4",
+  "case": "S6-417",
+  "owner_scope": "Op Source #1 only",
+  "status": "HOLD_PENDING_P1_0_DIRECT_11_LAYER_READBACK",
+  "evidence_class": "PINNED_GENERATOR_STATIC_CANDIDATE_NOT_ARCHIVED_11_LAYER",
+  "source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "observed_repository_main_sha": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+  "observed_integration_pr": {
+    "number": 665,
+    "head_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "state": "OPEN_DRAFT_UNMERGED"
+  },
+  "generator": {
+    "path": ".github/scripts/oxygen_legacy8_h05_ei417_100us.py",
+    "source_ref": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "git_blob_sha": "99597cad8e3b14c441a22600079e1d8d0165d181",
+    "content_symbol": "CONTENT",
+    "generated_overlay_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
+    "generated_overlay_bytes_utf8": 5026,
+    "generation_call": "prepare_s3_401_op_production.py assigns text=overlay_module.CONTENT then new_overlay.write_text(text)"
+  },
+  "layer_ordinal": 7,
+  "layer_ordinal_basis": "inferred: six verified S3 parent layers plus S4 EI417 overlay; NOT checked against a P1-0 S6-417 manifest",
+  "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
+  "file_sha256": null,
+  "generated_expected_file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
+  "section": "FVKernels",
+  "object_name": "legacy8_h05_ei417_op",
+  "factory_type": "FVCoupledForce",
+  "variable": "log_nop",
+  "relevant_parameters": {
+    "v": "S_Op_molar_EI417",
+    "coef": "1.0",
+    "block": "plasma"
+  },
+  "block_sha256": null,
+  "generated_expected_block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e",
+  "generated_block_sha256_scope": "exact LF-delimited text from 2-space-indented [legacy8_h05_ei417_op] through its closing '  []\\n', 7 lines",
+  "generator_duplicate_object_count": 1,
+  "producer_consumer_edges": [
+    {
+      "from": "R_EI417",
+      "via": "legacy8_h05_ei417_op_source (ADParsedFunctorMaterial, property_name S_Op_molar_EI417, expression R)",
+      "to": "legacy8_h05_ei417_op (FVCoupledForce, v S_Op_molar_EI417, variable log_nop)"
+    },
+    {
+      "from": "legacy8_h05_ei417_progress (PhysicsElectronImpactRateMaterial, reaction_progress R_EI417)",
+      "to": "R_EI417",
+      "status": "GENERATOR_STATIC_ONLY_RATE_PROVENANCE_B6_OUT_OF_SCOPE"
+    }
+  ],
+  "source_links": [
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/29d1acc6ef7969908b86719e4b95c73a1565136d/.github/scripts/oxygen_legacy8_h05_ei417_100us.py#L27-L152",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/ebcfd9e662bc40f0473d8da05da95d11b61789f8/experiments/Issue477_electron_shape/prepare_s3_401_op_production.py#L181-L197",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/667"
+  ],
+  "validation": {
+    "performed": [
+      "read exact pinned generator blob",
+      "extract immutable generator CONTENT literal",
+      "check exact object presence once",
+      "compute generated overlay and kernel block SHA-256",
+      "verify SHA-256 implementation against abc known digest",
+      "read current issue #667, main HEAD, PR #665"
+    ],
+    "not_performed": [
+      "P1-0 immutable 11-layer manifest verification",
+      "actual archived S6-417 overlay file readback",
+      "actual archived block SHA-256 comparison",
+      "include chain identity",
+      "cross-slot B4/B5 source uniqueness direct 11-layer check",
+      "Native P1/P2/P3/P4",
+      "CI"
+    ]
+  },
+  "unresolved": [
+    "Issue #667 P1-0 manifest/ten original plus migrated continuity readback is not yet recorded in active issue body or comments",
+    "Bind candidate to exact S6-417 layer ordinal, file byte SHA-256, resolved include path and block SHA-256 using authoritative P1-0 manifest",
+    "Independently compare the other Op source assigned to P1-B5 to exclude duplicate assignment",
+    "Check whether stage transforms altered the kernel block (e.g. log_nop to log_Op); generated-historical SHA must not be promoted to staged SHA"
+  ],
+  "next_action": "P1-0 manifest becomes available -> re-read exact S6-417 layer and validate candidate source bytes and block SHA; then promote B4 only if direct evidence matches; otherwise HOLD",
+  "invariant_flags": {
+    "original_archives_modified": false,
+    "shared_issue_body_modified": false,
+    "main_modified": false,
+    "pr665_modified": false,
+    "science_hold": true,
+    "new_only_s6_p2_hold": true
+  }
+}
