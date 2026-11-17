@@ -1,7 +1,7 @@
 {
-  "schema": "issue667.p1.d8.source_byte_diagnostics_and_external_dynamic_callers.v1",
+  "schema": "issue667.p1.d8.source_byte_diagnostics_and_external_dynamic_callers.v2",
   "task_id": "P1-D8",
-  "status": "SOURCE_BYTE_SCOPE_PASS_DYNAMIC_CALLER_ZERO_HOLD",
+  "status": "SOURCE_BYTE_AND_HISTORICAL_RUNTIME_LINEAGE_PASS_NEW_ONLY_DYNAMIC_HOLD",
   "result_scope": "Independent read-only audit of final S6-417 and S6-941 11-layer .i artifact; subset of GitHub source callers. NOT a runtime/caller-zero proof.",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
   "original_historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
@@ -195,12 +195,25 @@
   "gates": {
     "P1_D8_STATIC_SOURCE_BYTES": "PASS",
     "P1_D8_DYNAMIC_CALLER_ZERO": "UNRESOLVED_HOLD",
-    "P1_D8": "HOLD_PENDING_RUNTIME_REACHABILITY",
+    "P1_D8": "HOLD_ONLY_NEW_ONLY_RUNTIME_REACHABILITY",
     "P1_E": "NOT_RUN",
     "NEW_ONLY_S6_P2": "HOLD",
     "NATIVE_P3": "NOT_RUN",
     "NATIVE_P4": "NOT_RUN",
-    "SCIENCE": "SCIENCE_HOLD"
+    "SCIENCE": "SCIENCE_HOLD",
+    "P1_D8_HISTORICAL_RUNTIME_OUTPUT_LINEAGE": "PASS",
+    "P1_D8_CURRENT_DYNAMIC_CALLER_ZERO": "NOT_PROVED_KNOWN_ACTIVE_CALLERS"
   },
-  "private_rate_bytes_published": false
+  "private_rate_bytes_published": false,
+  "dynamic_caller_addendum": {
+    "receipt": "reports/issue667/p1-d8-dynamic-caller-preservation-addendum.json",
+    "commit": "f07ece7726750a09b6c6a9f717c6e8833b7ce874",
+    "evidence": "Original Native 417/941 solver_exit=0, 461 CSV rows, 461 Exodus frames, 136/139 historical runtime PP CSV names byte-exact identity with final staged 11-layer declarations; dynamic Issue3 45 PP names present; 1 MultiApp+7 Transfers+1 Control; 32-char Exodus name truncation 13/10 without collision; pinned species_plot actual archive alias 4/4 each.",
+    "disposition": "Known active callers; zero-caller assertion is false for retained Native producers. Scope P1 as preservation, defer runtime New-only binding to #668 Scratch and S6 package P5 Native P2.",
+    "local_reproducibility": {
+      "full_json_sha256": "6c3314a9e5ef9e4ae5c2f4dd766766a02a3cc9f218e01bb69c9ea5be3c896ee5",
+      "verifier_sha256": "4dd88c6fa92a02fa7176a4fb69012ef711d9dc1b91141e41d97d516d6ccd4a0c",
+      "synthetic_mutations_rejected": "8/8"
+    }
+  }
 }
