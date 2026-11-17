@@ -1,0 +1,32 @@
+# Issue #633 NEW-ONLY target Continuity overlay; not a standalone S6 input.
+# Stage in a disposable 11-layer Scratch directory with the pinned JSON files
+# and existing external electron/rate/neutral/RF owners. This is NOT P2 PASS.
+# Keep historical Hybrid templates and original Native inputs unchanged.
+[Physics]
+  [Plasmas]
+    files = 'unified_s6_417.json issue633_c2_wall_3ion_overlay.json'
+    pressure = 1.333223684
+    temperature = 300
+    state_model = ideal_gas
+    [Transport]
+      [Chemistry]
+        block = plasma
+      []
+      [DriftDiffusion]
+        [Continuity]
+          block = plasma
+          fem_species = e
+          fvm_species = 'O2p Om Op'
+          fem_potential = potential
+          # Numerical wall gate control [V/m]: 0 selects hard max(x, 0).
+          # Keep characterized S6 setting (same for all selected ions).
+          wall_migration_gate_smoothing_width = 0.001
+        []
+        [Energy]
+          block = plasma
+          fem_species = e
+        []
+      []
+    []
+  []
+[]
