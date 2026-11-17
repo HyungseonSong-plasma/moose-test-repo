@@ -676,5 +676,17 @@
       ]
     }
   },
-  "scope_limit": "Source-level SHA and object consistency; no Native P2 or runtime dynamic-owner proof"
+  "scope_limit": "Source-level SHA and object consistency; no Native P2 or runtime dynamic-owner proof",
+  "integration_verdict": {
+    "status": "PASS_P1E_SOURCE_BOUND_29_RECEIPTS_AND_PRIVATE_SHA_WITH_D8_NEW_ONLY_EXCLUDED",
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "case_417_ion_owner": 26,
+    "case_941_ion_owner": 26,
+    "worker_receipts_found": 29,
+    "worker_receipts_expected": 29,
+    "private_ei_sha": "PASS_6_OF_6",
+    "d8_new_only_dynamic": "HOLD",
+    "native_new_only_P2": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  }
 }
