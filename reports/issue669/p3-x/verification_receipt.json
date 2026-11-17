@@ -1,25 +1,18 @@
 {
-  "schema": "issue669.p3_x.preintegration.verification.v2",
+  "schema": "issue669.p3_x.preintegration.verification.v3",
   "task_id": "P3-X",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
-  "status": "PASS_PRODUCTION_NEWONLY_STAGE_AND_P3X_SHADOW_10OWNERS__HOLD_NATIVE_RUNTIME",
+  "status": "PASS_P2_PRODUCTION_MERGED_179_BYTE_IDENTITY_AND_10_OWNER_SHADOW__HOLD_4_RECEIPTS_NATIVE",
   "scope": "Integrated independent evidence only; P3-X production New-only cutover is explicitly NOT executed",
   "worker_evidence": {
     "requested_slots": 30,
-    "located_unique_source_bound_receipts": 19,
-    "not_located": 11,
+    "located_unique_source_bound_receipts": 26,
+    "not_located": 4,
     "missing_slots": [
       "P3-T5",
       "P3-G2",
       "P3-G6",
-      "P3-F8",
-      "P3-N3",
-      "P3-N5",
-      "P3-N6",
-      "P3-V1",
-      "P3-V2",
-      "P3-V3",
-      "P3-V4"
+      "P3-N3"
     ],
     "index": "reports/issue669/p3-x/worker_receipt_index.json",
     "worker_source_status": "bounded static source verification; no automatic final New-only PASS promotion"
@@ -117,8 +110,7 @@
   "gates": {
     "P1_E_SOURCE": "PASS",
     "P2_668_STATIC_ION_RETIRE_26_TO_0": "PASS_BOTH_CASES",
-    "P2_668_FULL_PACKAGE": "SOURCE_ONLY_PASS_PR674_STACKED_UNMERGED_PR665",
-    "P3_X_19_RECEIPT_REVIEW": "PASS_BOUNDED_ONLY",
+    "P2_668_FULL_PACKAGE": "SOURCE_ONLY_PASS_MERGED_INTO_PR665_b5c1de__NATIVE_NOT_RUN",
     "P3_X_11_RECEIPTS": "MISSING",
     "P3_X_ACTUAL_NEWONLY_BEFORE_AFTER_11_LAYER_JSON_SHA": "P2_PR674_REAL_SOURCE_STAGE_PASS__P3X_SOURCE_PROJECTION_ONLY",
     "P3_X_ELECTRON_BC_SINGLE_OWNER_WAREHOUSE": "STATIC_10_COLLISION_CANDIDATES_IDENTIFIED_SHADOW_RETIRE_PASS__NATIVE_NOT_RUN",
@@ -127,9 +119,11 @@
     "NATIVE_P3": "NOT_RUN",
     "NATIVE_P4": "NOT_RUN",
     "SCIENCE": "SCIENCE_HOLD",
-    "P3_X_PRODUCTION_CUTOVER": "NOT_RUN"
+    "P3_X_PRODUCTION_CUTOVER": "NOT_RUN",
+    "P3_X_26_RECEIPT_REVIEW": "PASS_BOUNDED_PINNED_TO_ORIGINAL_SOURCE_HEAD",
+    "P3_X_4_RECEIPTS": "MISSING_T5_G2_G6_N3"
   },
-  "integration_decision": "P2_PR674_SOURCE_STAGE_AND_P3X_SHADOW_PREINTEGRATION_PASS__HOLD_MISSING_11_WORKER_RECEIPTS_AND_NATIVE_RUNTIME",
+  "integration_decision": "SOURCE_ONLY_STAGE_AND_DISPOSABLE_10_OWNER_SHADOW_PASS__HOLD_REAL_P3_X_CUTOVER_PENDING_4_WORKER_RECEIPTS_AND_NATIVE_WAREHOUSE",
   "security": "No private rate bytes in outputs; no original/baseline/main/PR665 modifications; no native execution, no workflow skips or dont_create_kernels bypass",
   "p3_x_shadow_proposal": {
     "status": "PASS_SOURCE_ONLY_DISPOSABLE_COPY__NOT_IN_REPO_OR_PRODUCTION_RUNNER",
@@ -162,5 +156,18 @@
     "Production P3-X cutover must be integrated onto stacked #674/PR665 source, not local shadow alone",
     "C++ Native Warehouse eight FEM BCs and two Functor providers single-owner + dynamic neutral/RF/Poisson reachability",
     "Native P2 only in P5; Native P3/P4 and science remain HOLD"
-  ]
+  ],
+  "current_source_epoch": {
+    "original_artifact_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "current_integration_PR665_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "merged_P2_674": true,
+    "merging_commit": "3c961e94533f9676137fb96b2b0bae7e89653914",
+    "current_exact_head_ci_run": 44201394393,
+    "ci_artifact_id": 14381456912,
+    "ci_artifact_zip_sha256": "5497c80badab09d7d3266a4c81e2a5d2272a1c9cc216e94e192c8ec1ecd78e95",
+    "old_stage_artifact_id": 14380831538,
+    "all_artifact_files_identical": 179,
+    "source_files_git_blobs_identical": 9,
+    "assertion_scope": "byte-identical stage and source contracts, not native runtime equivalence"
+  }
 }
