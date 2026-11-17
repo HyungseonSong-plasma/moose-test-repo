@@ -109,31 +109,29 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   addRequiredPhysicsTask("add_variables_physics");
   addRequiredPhysicsTask("add_ics_physics");
 
-  // JSON automatically owns all selected DD species when any DD record exists.
-  // A fully absent section preserves historical Native coefficients.
-  // No front-end transport switch or implicit partial JSON fallback.
-  if (chemistryData().hasDDTransport())
+  // Selection is driven exclusively by fem_species/fvm_species and the JSON
+  // species IDs, never by the presence of a Native kernel or an ownership mode.
+  // Both FE and FV continuity generation require a complete explicit JSON
+  // transport record; an absent section is not a Native-coefficient fallback.
+  const auto & mechanism = chemistryData();
+  const auto validate = [this, &mechanism](const std::vector<std::string> & ids,
+                                            const std::string & option,
+                                            const std::string & family)
   {
-    const auto & mechanism = chemistryData();
-    const auto validate = [this, &mechanism](const std::vector<std::string> & ids,
-                                              const std::string & option,
-                                              const std::string & family)
+    for (const auto & id : ids)
     {
-      for (const auto & id : ids)
-      {
-        (void)mechanism.species(id);
-        if (!mechanism.ddTransport(id))
-          paramError(option,
-                     "Missing drift-diffusion transport JSON record for ",
-                     family,
-                     " species '",
-                     id,
-                     "'. Specify model=constant, lookup, or functor.");
-      }
-    };
-    validate(_fem_species, "fem_species", "FEM");
-    validate(_fvm_species, "fvm_species", "FVM");
-  }
+      (void)mechanism.species(id);
+      if (!mechanism.ddTransport(id))
+        paramError(option,
+                   "Missing drift-diffusion transport JSON record for ",
+                   family,
+                   " species '",
+                   id,
+                   "'. Specify transport_coef=constant, lookup, or functor in species JSON.");
+    }
+  };
+  validate(_fem_species, "fem_species", "FEM");
+  validate(_fvm_species, "fvm_species", "FVM");
 
   // Charges are specified once in [Plasmas]/files, not by parallel per-species
   // vectors. Keep this builder disabled in pure variable-binding check mode.
@@ -278,8 +276,8 @@ DDContinuityEq::addFunctorMaterials()
   // Material ownership follows exactly the FEM and FVM species listed by
   // Continuity, not a second species list or per-species .i Material blocks.
   // PlasmasAction loads JSON and resolves table_file relative to its JSON file.
-  // Native FV equations remain external; generated coefficient Functors are
-  // available to those FV operators without creating a duplicate equation.
+  // Transport coefficients are supplied by validated JSON for every selected
+  // species; FV kernel and BC cutover are separate P05/P14 gates.
   const auto & mechanism = chemistryData();
   std::vector<std::string> species = _fem_species;
   const auto & fvm = _fvm_species;
@@ -289,7 +287,8 @@ DDContinuityEq::addFunctorMaterials()
   {
     const auto * config = mechanism.ddTransport(id);
     if (!config)
-      continue; // Existing Native coefficient owners remain during S6 parity migration.
+      mooseError("DDContinuityEq selected species '", id,
+                 "' has no JSON transport record after constructor validation.");
     const std::string type = "DDTransportMaterial";
     auto params = getFactory().getValidParams(type);
     params.set<std::string>("species_id") = id;
