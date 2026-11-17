@@ -150,6 +150,10 @@ def cutover_texts(layers: dict[str, str]) -> tuple[dict[str, str], dict]:
 def retire_in_disposable_scratch(folder: Path, ordered: list[str]) -> dict:
     """Prevalidate the entire staged 11-layer set before ANY scratch write."""
     directory = Path(folder).resolve(strict=True)
+    marker = directory / ".issue633_disposable_scratch"
+    if (marker.is_symlink() or not marker.is_file() or
+            marker.read_text(encoding="utf-8").strip() != "issue633-scratch-only"):
+        raise CutoverError("ION26_REFUSE_UNMARKED_OR_NONDISPOSABLE_INPUT_DIRECTORY")
     names = [Path(n).name for n in ordered]
     if (len(names) != 11 or names[-1] != "migrated_continuity.i"
             or len(set(names)) != 11
