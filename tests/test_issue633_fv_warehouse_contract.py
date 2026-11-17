@@ -35,6 +35,8 @@ WAREHOUSE_CHECKS = (
     'P05 missing or duplicate FV Kernel',
     'P05 legacy, duplicate or unexpected FV BC',
     'P05 partial or duplicate FV BC owner',
+    'if (chemistryData().hasIonWalls() && bc_count == 0)',
+    'P05 missing FV wall BCs for selected species',
 )
 
 
@@ -75,7 +77,7 @@ def test_p05_warehouse_exact_names_types_and_family_coverage():
                              ("drift", "FVLogMolarElectrostaticDrift"),
                              ("source", "FVCoupledForce")):
         assert f'{{id + "_{label}", "{type_name}"}}' in source
-    assert "if (bc_count != 0)" in source  # P15-P17 not yet implemented here
+    assert "if (bc_count != 0)" in source  # C2-disabled binding fixtures only
     assert "expected exactly one" in source
 
 
