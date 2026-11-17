@@ -58,6 +58,7 @@ def test_exact_native_26_owner_retirement_without_touching_other_operators(case)
     assert evidence["old_native_fv_bcs"] == 12
     assert (evidence["expected_generated_fv_kernels"], evidence["expected_generated_fv_bcs"]) == (12, 12)
     assert len(evidence["retired_owners"]) == 26
+    assert evidence["status"] == "NATIVE_ION_26_CUTOVER_PLAN_VALIDATED_P2_NOT_RUN"
     assert "[neutral_transport]" in output[names[0]]
     assert "[Physics]" in output[names[-1]]
     assert all("old_block_sha256" in item for item in evidence["retired_owners"])
@@ -73,6 +74,7 @@ def test_disposable_scratch_writes_are_exact_and_have_sha_receipts(tmp_path, cas
         (tmp_path / name).write_text(body)
     result = retire_in_disposable_scratch(tmp_path, names)
     assert len(result["retired_owners"]) == 26
+    assert result["status"] == "SCRATCH_NATIVE_ION_26_RETIRED_NEW24_PENDING_P2"
     assert all(result["files"][n]["before_sha256"] == result["files"][n]["after_sha256"]
                for n in names if n not in result["changed_staged_files"])
     assert len(result["changed_staged_files"]) == 6
