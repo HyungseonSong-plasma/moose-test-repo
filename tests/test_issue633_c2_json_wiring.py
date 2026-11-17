@@ -339,26 +339,27 @@ def test_flat_species_wall_schema_uses_one_moose_temperature_and_potential_owner
     assert 'params.set<MooseFunctorName>("potential") = potential;' in source
     assert 'params.set<MooseFunctorName>("gas_temperature") = "temperature";' in source
     assert 'params.set<std::vector<SubdomainName>>("block") = blocks;' in source
-    assert 'continuity.front()->getParam<Real>("wall_migration_gate_smoothing_width")' in source
+    assert 'continuity.front()->getParam<Real>("migration_smoothing_width")' in source
     continuity = (ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
-    assert 'params.addParam<Real>(\n      "wall_migration_gate_smoothing_width",' in continuity
-    assert 'if (!isParamValid("wall_migration_gate_smoothing_width"))' in continuity
+    assert 'params.addParam<Real>(\n      "migration_smoothing_width",\n      0.0,' in continuity
+    assert 'getParam<Real>("migration_smoothing_width")' in continuity
+    assert 'if (!isParamValid("migration_smoothing_width"))' not in continuity
     assert 'if (!std::isfinite(smoothing) || smoothing < 0.0)' in continuity
 
 
 def test_smoothing_width_json_is_rejected_and_moose_input_is_sole_owner():
-    for value in (0.001, 0.0, -0.1, float("nan"), "0.001"):
-        fail(lambda d: d["species"]["O2p"].update(
-            wall_migration_gate_smoothing_width=value),
-            "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_O2p")
-    assert all("wall_migration_gate_smoothing_width" not in sp
-               for sp in data()["species"].values())
+    for key in ("migration_smoothing_width", "wall_migration_gate_smoothing_width"):
+        for value in (0.001, 0.0, -0.1, float("nan"), "0.001"):
+            fail(lambda d: d["species"]["O2p"].update({key: value}),
+                 "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_O2p")
+        fail(lambda d: d.update({key: 0.001}),
+             "WALL_SMOOTHING_MUST_BE_MOOSE_INPUT_ROOT")
+    assert all(not any(key in sp for key in (
+        "migration_smoothing_width", "wall_migration_gate_smoothing_width"))
+        for sp in data()["species"].values())
     continuity = (ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
     parser = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
-    assert "wall_migration_gate_smoothing_width belongs in MOOSE [Continuity]" in parser
-    assert 'getParam<Real>("wall_migration_gate_smoothing_width")' in parser
-    for token in (
-        'if (!isParamValid("wall_migration_gate_smoothing_width"))',
-        'if (!std::isfinite(smoothing) || smoothing < 0.0)',
-    ):
-        assert token in continuity
+    assert "migration_smoothing_width is MOOSE [Continuity]-only" in parser
+    assert 'getParam<Real>("migration_smoothing_width")' in parser
+    assert 'if (!isParamValid("migration_smoothing_width"))' not in continuity
+    assert 'if (!std::isfinite(smoothing) || smoothing < 0.0)' in continuity
