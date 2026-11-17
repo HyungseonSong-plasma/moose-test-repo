@@ -438,6 +438,8 @@ DDContinuityEq::addFVKernels()
     drift_params.set<MooseFunctorName>("mobility") = id + "_mobility";
     drift_params.set<MooseFunctorName>("carrier") = "carrier_one";
     drift_params.set<Real>("charge_number") = mechanism.species(id).charge_number;
+    // The Native S6 FV drift explicitly used upwind transport.
+    drift_params.set<MooseEnum>("advected_interp_method") = "upwind";
     drift_params.set<bool>("use_element_gradient_for_potential") = true;
     // Retain the Native boundary-avoid contract using the ACTUAL typed FV
     // wall declarations. Do not hard-code S6 sidesets in the generic Kernel
