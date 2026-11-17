@@ -204,3 +204,17 @@ def test_c2_guard_preserves_archived_hybrid_provenance_boundary():
     assert not any("P1_EXPLICIT_ION_WALL_OR_CURRENT_OWNER_PRESENT" in e
                    for e in archived["errors"])
     assert archived["status"] == "FAIL"  # 26 mandatory legacy FV objects absent
+
+
+def test_binding_only_dont_create_kernels_cannot_certify_new_only_cutover():
+    for setting in ("true", "false"):
+        binding_only = DECK.replace(
+            "fvm_species = 'O2p Om Op'",
+            "fvm_species = 'O2p Om Op'\n          dont_create_kernels = " + setting)
+        result = module.inspect({"binding_only.i": binding_only}, JSON, "new-only")
+        assert result["status"] == "FAIL"
+        assert "P1_BINDING_ONLY_BYPASS_FORBIDDEN" in result["errors"]
+        # The old provenance contract is independently governed by the
+        # exact historical 14 Kernel + 12 BC inventory, not this option.
+        legacy = module.inspect({"binding_only.i": binding_only}, JSON, "legacy-hybrid")
+        assert "P1_BINDING_ONLY_BYPASS_FORBIDDEN" not in legacy["errors"]
