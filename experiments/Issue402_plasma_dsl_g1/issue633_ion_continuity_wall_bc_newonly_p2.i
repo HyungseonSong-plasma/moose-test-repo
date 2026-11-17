@@ -3,6 +3,7 @@
 # 3 general + 9 dielectric FV BCs, and 3 new surface-current functors.
 # No Poisson/RF/neutral solve, no Native ion kernel/BC, no timesteps or P3.
 # Eight names are synthetic S6 *characterization*, not generic C++ geometry.
+# ParsedGenerateSideset combinatorial_geometry uses FunctionParser '&', not C-style '&&'.
 [Mesh]
   [base]
     type = GeneratedMeshGenerator
