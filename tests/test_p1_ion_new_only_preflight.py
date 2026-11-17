@@ -154,3 +154,53 @@ def test_legacy_canonical_names_after_scratch_remap_are_supported():
     result = module.inspect({"old_post_transform.i": "\n".join(parts)}, JSON, "legacy-hybrid")
     assert result["status"] == "P0_LEGACY_PROVENANCE_ONLY"
     assert result["native_fv_owner_count"] == 26
+
+
+def test_new_only_rejects_six_retained_c2_wall_and_current_materials():
+    # These six producers are independent of the 14+12 old FV objects.
+    pieces = [DECK, "[FunctorMaterials]"]
+    for name in ("ion_wall_flux", "negative_ion_wall_flux",
+                 "atomic_positive_ion_wall_flux"):
+        pieces.extend((f"  [{name}]", "    type = PhysicsIonWallTotalFluxMaterial", "  []"))
+    for side in ("cover", "wafer", "focus_ring"):
+        pieces.extend((f"  [{side}_surface_current]", "    type = ADParsedFunctorMaterial",
+                       f"    property_name = {side}_net_surface_current_density", "  []"))
+    pieces.append("[]")
+    data = module.inspect({"old_c0.i": "\n".join(pieces)}, JSON)
+    assert data["status"] == "FAIL"
+    assert data["native_fv_owner_count"] == 0
+    assert data["explicit_ion_wall_current_owner_count"] == 6
+    assert "P1_EXPLICIT_ION_WALL_OR_CURRENT_OWNER_PRESENT_6" in data["errors"]
+
+
+def test_new_only_rejects_renamed_wall_type_and_current_output():
+    renamed = DECK + """
+[FunctorMaterials]
+  [renamed_ion]
+    type = PhysicsIonWallFluxMaterial
+  []
+  [renamed_current]
+    type = ADParsedFunctorMaterial
+    property_name = cover_net_surface_current_density
+  []
+[]
+"""
+    result = module.inspect({"renamed.i": renamed}, JSON)
+    assert "P1_EXPLICIT_ION_WALL_OR_CURRENT_OWNER_PRESENT_2" in result["errors"]
+    families = {owner["family"] for owner in result["explicit_ion_wall_current_owners"]}
+    assert families == {"ion_wall", "surface_current"}
+
+
+def test_c2_guard_preserves_archived_hybrid_provenance_boundary():
+    old = DECK + """
+[FunctorMaterials]
+  [ion_wall_flux]
+    type = PhysicsIonWallTotalFluxMaterial
+  []
+[]
+"""
+    archived = module.inspect({"old.i": old}, JSON, "legacy-hybrid")
+    assert archived["explicit_ion_wall_current_owner_count"] == 1
+    assert not any("P1_EXPLICIT_ION_WALL_OR_CURRENT_OWNER_PRESENT" in e
+                   for e in archived["errors"])
+    assert archived["status"] == "FAIL"  # 26 mandatory legacy FV objects absent
