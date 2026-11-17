@@ -3,6 +3,8 @@
 # FEM=O2p/FVM=e generation BEFORE silently reusing either old solver variable.
 # This is not the unreachable historical "wrong type" diagnostic: JSON now
 # generates each correctly typed state and rejects preexisting owners first.
+# The selected fixture JSON must contain ICs for both e and O2p, otherwise the
+# test fails prematurely on missing e IC instead of the duplicate FV owner.
 [Physics]
   [Plasmas]
     files = plasma_species_initial_p2.json
