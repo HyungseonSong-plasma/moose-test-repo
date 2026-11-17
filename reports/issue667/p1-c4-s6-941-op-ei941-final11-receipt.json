@@ -1,0 +1,120 @@
+{
+  "schema": "issue667.p1_c4.s6_941.final11.v1",
+  "task_id": "P1-C4",
+  "issue": 667,
+  "case": "941",
+  "status": "PASS_SOURCE_BOUNDED_FINAL11__RATE_TABLE_BYTES_HOLD",
+  "evidence_class": "INDEPENDENT_P0_STATIC_SHA_AND_EDGE_READBACK",
+  "scope": "S6-941 Op Source #1; C5 H25 source separately owned",
+  "integration_pr": {
+    "number": 665,
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "draft": true,
+    "merged": false
+  },
+  "p1_0": {
+    "ci_run_id": 44180190753,
+    "ci_run_sha": "9f96db79611e469ee25d7b498ce1ee22f26f81d4",
+    "artifact_id": 14372315897,
+    "artifact_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "files_verified": 11,
+    "fv_blocks_verified": 63,
+    "case_status": "SOURCE_BYTE_PIN_PASS"
+  },
+  "source": {
+    "layer_ordinal": 7,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+    "file_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43",
+    "section": "FVKernels",
+    "object_name": "ei941_atomic_positive_ion_source",
+    "factory_type": "FVCoupledForce",
+    "variable": "log_Op",
+    "parameters": {
+      "type": "FVCoupledForce",
+      "variable": "log_Op",
+      "v": "S_Op_molar_EI941",
+      "coef": "1.0",
+      "block": "plasma"
+    },
+    "line_start": 108,
+    "line_end": 114,
+    "block_sha256": "06c9444eda41eb5cc47e28485db5f8e95dba64a52e93131ca2fcc1378367f433"
+  },
+  "producer": {
+    "layer_ordinal": 7,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+    "file_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43",
+    "section": "FunctorMaterials",
+    "object_name": "ei941_op_source",
+    "factory_type": "ADParsedFunctorMaterial",
+    "parameters": {
+      "type": "ADParsedFunctorMaterial",
+      "property_name": "S_Op_molar_EI941",
+      "functor_names": "R_EI941",
+      "functor_symbols": "R",
+      "expression": "R",
+      "block": "plasma"
+    },
+    "line_start": 33,
+    "line_end": 40,
+    "block_sha256": "6692daa1ab319ca8a18fedb99f1d03d9c2fd41f5b9f2a3705da5dcaf8fb0f3e9"
+  },
+  "rate_producer": {
+    "layer_ordinal": 7,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+    "file_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43",
+    "section": "FunctorMaterials",
+    "object_name": "ei941_progress",
+    "factory_type": "EIRateCoefMaterial",
+    "reaction_progress": "R_EI941",
+    "table_reference": "private_rates/EI-941_O_3P.txt",
+    "target_molar_concentration": "c_O_EI941",
+    "line_start": 16,
+    "line_end": 24,
+    "block_sha256": "37327e9f9b6215f8675af8add85b93d107962ab2b83f5bc47f14350c2815fc46",
+    "table_bytes_verified": false,
+    "private_rate_table_sha256": null
+  },
+  "source_separation": {
+    "P1_C4": {
+      "name": "ei941_atomic_positive_ion_source",
+      "layer": 7,
+      "v": "S_Op_molar_EI941"
+    },
+    "P1_C5": {
+      "name": "h25_atomic_positive_ion",
+      "layer": 10,
+      "v": "S_Op_molar_H25",
+      "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01"
+    },
+    "S6_417_EI941_source_count": 0
+  },
+  "negative_tests_rejected": [
+    "MISSING_C4",
+    "DUPLICATE_C4",
+    "WRONG_VARIABLE",
+    "WRONG_SOURCE_FUNCTOR",
+    "WRONG_COEFFICIENT",
+    "WRONG_FACTORY",
+    "WRONG_BLOCK",
+    "FILE_SHA_TAMPER",
+    "WRONG_RATE_EDGE",
+    "WRONG_RATE_TABLE",
+    "WRONG_CASE_EI941_IN_417"
+  ],
+  "unresolved": [
+    "EI-941 private rate table bytes/SHA not available; P1-C6 retains rate provenance HOLD.",
+    "This is final pinned pre-retirement Hybrid Scratch D (26 Native ion owners), not new-only 26-to-24 proof.",
+    "No physics-opt Native P1/P2/P3/P4 or scientific equivalence executed."
+  ],
+  "safety": {
+    "historical_inputs_unchanged": true,
+    "no_original_mutation": true,
+    "private_rates_published": false,
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "science": "SCIENCE_HOLD"
+  }
+}
