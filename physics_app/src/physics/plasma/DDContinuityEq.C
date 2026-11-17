@@ -1,6 +1,11 @@
 #include "DDContinuityEq.h"
 #include "Chemistry.h"
 #include "Physics.h"
+#include "FEProblemBase.h"
+#include "TheWarehouse.h"
+#include "Attributes.h"
+#include "FVKernel.h"
+#include "FVBoundaryCondition.h"
 
 #include <cctype>
 #include <cmath>
@@ -228,6 +233,98 @@ DDContinuityEq::checkIntegrity() const
     requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);
     if (chemistryEnabled() && chemistryData().hasSpeciesSource(fem[i]))
       requireUniqueFEKernel("FunctorKernel", variables[i]);
+  }
+
+  if (_fvm_species.empty() || getParam<bool>("dont_create_kernels"))
+    return;
+
+  // MOOSE stores FV objects in TheWarehouse, not the FE KernelWarehouse.
+  // These queries must run after the registered add_fv_kernel action. Check
+  // both FV families; matching only the generated name would miss Native
+  // residual objects with a different name on the same solver variable.
+  const auto nl_number = getProblem().getNonlinearSystemBase(0).number();
+  std::vector<FVKernel *> kernels;
+  auto & warehouse = getProblem().theWarehouse();
+  warehouse.query()
+      .condition<AttribSystem>("FVElementalKernel")
+      .condition<AttribSysNum>(nl_number)
+      .condition<AttribThread>(0)
+      .queryInto(kernels);
+  warehouse.query()
+      .condition<AttribSystem>("FVFluxKernel")
+      .condition<AttribSysNum>(nl_number)
+      .condition<AttribThread>(0)
+      .queryInto(kernels);
+
+  std::vector<FVBoundaryCondition *> bcs;
+  warehouse.query()
+      .condition<AttribSystem>("FVFluxBC")
+      .condition<AttribSysNum>(nl_number)
+      .condition<AttribThread>(0)
+      .queryInto(bcs);
+  warehouse.query()
+      .condition<AttribSystem>("FVDirichletBC")
+      .condition<AttribSysNum>(nl_number)
+      .condition<AttribThread>(0)
+      .queryInto(bcs);
+
+  for (const auto & id : _fvm_species)
+  {
+    const NonlinearVariableName variable = continuityStateName(id);
+    const std::map<std::string, std::string> expected = {
+        {id + "_time", "FVLogMolarTimeDerivative"},
+        {id + "_diffusion", "FVLogMolarDiffusion"},
+        {id + "_drift", "FVLogMolarElectrostaticDrift"},
+        {id + "_source", "FVCoupledForce"}};
+    std::map<std::string, unsigned int> matched;
+
+    for (const auto * kernel : kernels)
+    {
+      const auto & parameters = kernel->parameters();
+      if (!parameters.isParamValid("variable") ||
+          parameters.get<NonlinearVariableName>("variable") != variable)
+        continue;
+      const auto expected_type = expected.find(kernel->name());
+      if (expected_type == expected.end() || kernel->type() != expected_type->second)
+        mooseError("P05 FV Native/Physics duplicate or unexpected owner on '",
+                   variable, "': ", kernel->name(), " [", kernel->type(), "]");
+      ++matched[kernel->name()];
+    }
+    for (const auto & [name, type] : expected)
+      if (matched[name] != 1)
+        mooseError("P05 missing or duplicate FV Kernel '", name,
+                   "' [", type, "] on ", variable,
+                   "; observed ", matched[name], ", expected exactly one.");
+
+    // P15-P17 own the four species BCs. During the P14-only integration
+    // stage, zero generated BCs is permitted. Any partial or legacy BC set
+    // on a selected FV state is rejected, without bypassing the Kernel gate.
+    const std::map<std::string, std::string> expected_bcs = {
+        {id + "_wall", "FVFunctorNeumannBC"},
+        {id + "_cover_dielectric", "FVLogMolarDielectricFluxBC"},
+        {id + "_wafer_dielectric", "FVLogMolarDielectricFluxBC"},
+        {id + "_focus_ring_dielectric", "FVLogMolarDielectricFluxBC"}};
+    std::map<std::string, unsigned int> matched_bcs;
+    unsigned int bc_count = 0;
+    for (const auto * bc : bcs)
+    {
+      const auto & parameters = bc->parameters();
+      if (!parameters.isParamValid("variable") ||
+          parameters.get<NonlinearVariableName>("variable") != variable)
+        continue;
+      const auto expected_type = expected_bcs.find(bc->name());
+      if (expected_type == expected_bcs.end() || bc->type() != expected_type->second)
+        mooseError("P05 legacy, duplicate or unexpected FV BC on '", variable,
+                   "': ", bc->name(), " [", bc->type(), "]");
+      ++bc_count;
+      ++matched_bcs[bc->name()];
+    }
+    if (bc_count != 0)
+      for (const auto & [name, type] : expected_bcs)
+        if (matched_bcs[name] != 1)
+          mooseError("P05 partial or duplicate FV BC owner '", name,
+                     "' [", type, "] on ", variable,
+                     "; observed ", matched_bcs[name], ", expected exactly one.");
   }
 }
 
