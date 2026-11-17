@@ -5,54 +5,33 @@
         "O": 2
       },
       "charge_number": 1,
-      "ion_wall": {
-        "ion_number_density": "O2p_number_density",
-        "potential": "potential",
-        "mobility": "O2p_mobility",
-        "gas_temperature": "T_g_fixed",
-        "block": "plasma",
-        "molar_mass": 0.032,
-        "sticking": 1,
-        "ion_temperature_eV": 0,
-        "migration_gate_smoothing_width": 0.001,
-        "use_element_gradient_for_potential": true
-      }
+      "wall_molar_mass": 0.032,
+      "wall_sticking": 1,
+      "wall_ion_temperature_eV": 0,
+      "wall_migration_gate_smoothing_width": 0.001,
+      "wall_use_element_gradient_for_potential": true
     },
     "Om": {
       "elements": {
         "O": 1
       },
       "charge_number": -1,
-      "ion_wall": {
-        "ion_number_density": "Om_number_density",
-        "potential": "potential",
-        "mobility": "Om_mobility",
-        "gas_temperature": "T_g_fixed",
-        "block": "plasma",
-        "molar_mass": 0.016,
-        "sticking": 1,
-        "ion_temperature_eV": 0,
-        "migration_gate_smoothing_width": 0.001,
-        "use_element_gradient_for_potential": true
-      }
+      "wall_molar_mass": 0.016,
+      "wall_sticking": 1,
+      "wall_ion_temperature_eV": 0,
+      "wall_migration_gate_smoothing_width": 0.001,
+      "wall_use_element_gradient_for_potential": true
     },
     "Op": {
       "elements": {
         "O": 1
       },
       "charge_number": 1,
-      "ion_wall": {
-        "ion_number_density": "Op_number_density",
-        "potential": "potential",
-        "mobility": "Op_mobility",
-        "gas_temperature": "T_g_fixed",
-        "block": "plasma",
-        "molar_mass": 0.016,
-        "sticking": 1,
-        "ion_temperature_eV": 0,
-        "migration_gate_smoothing_width": 0.001,
-        "use_element_gradient_for_potential": true
-      }
+      "wall_molar_mass": 0.016,
+      "wall_sticking": 1,
+      "wall_ion_temperature_eV": 0,
+      "wall_migration_gate_smoothing_width": 0.001,
+      "wall_use_element_gradient_for_potential": true
     }
   },
   "equations": {},
