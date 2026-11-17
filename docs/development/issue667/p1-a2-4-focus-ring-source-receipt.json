@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "task_id": "P1-A2-4",
+  "issue": 667,
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "pr": 665,
+  "branch": "issue-667-p1-a2-4-focus-ring-20261117",
+  "generated_date_utc": "2026-11-17",
+  "gate": "P1-0_MANIFEST_NOT_VERIFIED",
+  "status": "HOLD",
+  "evidence_scope": "Read-only, current Git repository C0 file at exact PR HEAD; not reconstructed complete S6-417/941 11-layer runtime input",
+  "source_file": {
+    "path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+    "git_blob_sha1": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+    "sha256": "e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd",
+    "line_endings": "LF",
+    "hash_scope": "Full UTF-8 content returned by GitHub contents API"
+  },
+  "hash_scope_for_blocks": "UTF-8 bytes from the opening '  [object]' line through closing '  []' without the following newline",
+  "implementation": {
+    "path": "physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C",
+    "git_blob_sha1": "a0ec100f03116a8ddfdf459600c8a8da1c717595",
+    "registration": "registerMooseObject(\"PhysicsApp\", PhysicsFVLogMolarDielectricFluxBC)",
+    "residual": "gamma_signed / PHYSICS_CONSTANTS::N_A",
+    "note": "No per-object explicit factor; signed flux provides sign"
+  },
+  "observed_unique_objects": 3,
+  "expected_unique_objects": 3,
+  "objects": [
+    {
+      "task_id": "P1-A2-4",
+      "case": "shared C0 source; 417/941 11-layer NOT_VERIFIED",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "layer_ordinal": null,
+      "file_path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+      "file_sha256": "e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd",
+      "section": "FVBCs",
+      "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+      "boundary": "plasma_focus_ring",
+      "sidesets": [
+        "plasma_focus_ring"
+      ],
+      "factor_parameter": "ABSENT",
+      "effective_conversion": "+1/N_A (C++ computeQpResidual)",
+      "object_name": "ion_focus_ring_dielectric",
+      "variable": "log_ni",
+      "canonical_variable": "log_O2p",
+      "signed_number_flux": "ion_wall_number_flux",
+      "start_line": 954,
+      "end_line": 959,
+      "block_sha256": "9c2dc22fb7d906986e2789d7af08305c96ae395d8748d0686d2a4a89926648ec",
+      "status": "STATIC_SOURCE_PASS_CASE_HOLD",
+      "unresolved": [
+        "P1-0 original/ZIP + full case-specific 11-layer manifest not verified",
+        "No P1-E integrated duplicate/omission verdict"
+      ]
+    },
+    {
+      "task_id": "P1-A2-4",
+      "case": "shared C0 source; 417/941 11-layer NOT_VERIFIED",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "layer_ordinal": null,
+      "file_path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+      "file_sha256": "e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd",
+      "section": "FVBCs",
+      "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+      "boundary": "plasma_focus_ring",
+      "sidesets": [
+        "plasma_focus_ring"
+      ],
+      "factor_parameter": "ABSENT",
+      "effective_conversion": "+1/N_A (C++ computeQpResidual)",
+      "object_name": "negative_ion_focus_ring_dielectric",
+      "variable": "log_nm",
+      "canonical_variable": "log_Om",
+      "signed_number_flux": "negative_ion_wall_number_flux",
+      "start_line": 960,
+      "end_line": 965,
+      "block_sha256": "6016f04737651ea90f4a4af9d1ca53caa9eda0112601a0d3ce37d42c96fa8a5d",
+      "status": "STATIC_SOURCE_PASS_CASE_HOLD",
+      "unresolved": [
+        "P1-0 original/ZIP + full case-specific 11-layer manifest not verified",
+        "No P1-E integrated duplicate/omission verdict"
+      ]
+    },
+    {
+      "task_id": "P1-A2-4",
+      "case": "shared C0 source; 417/941 11-layer NOT_VERIFIED",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "layer_ordinal": null,
+      "file_path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+      "file_sha256": "e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd",
+      "section": "FVBCs",
+      "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+      "boundary": "plasma_focus_ring",
+      "sidesets": [
+        "plasma_focus_ring"
+      ],
+      "factor_parameter": "ABSENT",
+      "effective_conversion": "+1/N_A (C++ computeQpResidual)",
+      "object_name": "atomic_positive_ion_focus_ring_dielectric",
+      "variable": "log_nop",
+      "canonical_variable": "log_Op",
+      "signed_number_flux": "atomic_positive_ion_wall_number_flux",
+      "start_line": 966,
+      "end_line": 971,
+      "block_sha256": "22858fc4f35e3d2dae201091fc3b974527e0529796b6c650ad815b4fadeb8239",
+      "status": "STATIC_SOURCE_PASS_CASE_HOLD",
+      "unresolved": [
+        "P1-0 original/ZIP + full case-specific 11-layer manifest not verified",
+        "No P1-E integrated duplicate/omission verdict"
+      ]
+    }
+  ],
+  "cases": {
+    "417": {
+      "status": "HOLD",
+      "reason": "Shared C0 observed, but complete original 11-layer bytes/includes not pinned"
+    },
+    "941": {
+      "status": "HOLD",
+      "reason": "Shared C0 observed, but complete original 11-layer bytes/includes not pinned"
+    }
+  },
+  "remaining_gates": [
+    "P1-0 immutable read-only 417/941 11-layer original+ZIP SHA and ordered include manifest",
+    "Re-evaluate this receipt against both pinned case-specific inputs",
+    "P1-E independent source-bound integration/negative verification"
+  ],
+  "prohibition": "No archived files, common source, PR #665, Issue #667 body, workflows, Native P2/P3/P4, or main changed by this task"
+}
