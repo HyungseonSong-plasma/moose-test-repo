@@ -1,0 +1,205 @@
+{
+  "schema": "issue669.p3_f2.electron_cover.static_source_receipt.v1",
+  "task_id": "P3-F2",
+  "owner_scope": "electron particle Cover BC only, excluding electron energy Cover F6",
+  "issue": 669,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "PR_665": "DRAFT_UNMERGED",
+  "P3_package_prerequisite_issue_668": "P2_STATIC_EXACT_PIN_26_TO_0_PASS__P2_FULL_DOD_HOLD",
+  "p1_0_common_manifest": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9691f7f7741566fda93e1ee6f3fcb603e6532261/reports/issue667/p1-0-s6-417-941-immutable-source-pin.json",
+  "evidence": [
+    {
+      "stage": "historical_10layer",
+      "case_artifacts": {
+        "417": 13677089020,
+        "941": 13677375813
+      },
+      "zip_sha256": {
+        "417": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+        "941": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+      }
+    },
+    {
+      "stage": "p1_hybrid_post_transform_11layer",
+      "run_id": 44182628032,
+      "artifact_id": 14372278070,
+      "artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010"
+    },
+    {
+      "stage": "p2_newonly_26_native_ion_retired_pre_full_integration",
+      "run_id": 44196762787,
+      "artifact_id": 14379920938,
+      "artifact_zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4",
+      "P2_native": "NOT_RUN"
+    }
+  ],
+  "cases": {
+    "417": {
+      "case": "417",
+      "section": "BCs",
+      "actual_object_name": "electron_cover_dielectric",
+      "task_alias": "electron_cover",
+      "boundary": "plasma_cover",
+      "factory_type": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux",
+      "source_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "layer_ordinal": 1,
+      "original_legacy_block_sha256": "9597a7ebed3f40556e55db662981b7abe5842860778b263955a42c10087d3eae",
+      "original_legacy_factory_type": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+      "original_legacy_variable": "log_ne",
+      "original_legacy_wall_number_flux": "electron_wall_number_flux",
+      "original_file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "newonly_staged_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "hybrid_block_sha256": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04",
+      "newonly_staged_block_sha256": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04",
+      "block_size_bytes": 159,
+      "hybrid_line": 753,
+      "newonly_stage_line": 684,
+      "producer_consumer_edges": [
+        {
+          "producer_object": "electron_wall_flux",
+          "producer_section": "FunctorMaterials",
+          "producer_factory": "ESWallFluxMaterial",
+          "species_id": "e",
+          "producer_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+          "produced_functor": "e_wall_number_flux",
+          "producer_parameters": {
+            "electron_density": "n_e_physical",
+            "mean_energy": "e_energy_eV",
+            "potential": "potential",
+            "block": "plasma",
+            "sticking": "1.0",
+            "use_element_gradient_for_potential": "true"
+          },
+          "consumer_object": "electron_cover_dielectric",
+          "consumer_parameter": "wall_number_flux",
+          "producer_count_in_staged_11layer": 1,
+          "consumer_count_in_staged_11layer": 1,
+          "link": "STATIC_NAME_AND_FACTORY_MATCH_NOT_RUNTIME_WAREHOUSE_PROOF"
+        }
+      ],
+      "non_target_F6_electron_energy_cover_sha256": "5e3c9b1853568945d1e99bc25cc7eb028f39d59b60b64824d4091a81b65b3f98",
+      "negative_mutations_rejected": 13,
+      "negative_mutation_names": [
+        "missing_cover",
+        "duplicate_cover",
+        "wrong_factory",
+        "wrong_variable",
+        "wrong_flux",
+        "wrong_boundary",
+        "wrong_section",
+        "missing_flux_producer",
+        "duplicate_flux_producer",
+        "wrong_species",
+        "wrong_material_factory",
+        "wrong_source_density",
+        "energy_not_particle"
+      ],
+      "verification": "Independent local ZIP CRC+SHA, original 10-layer bytes, P1 common manifest + 11/11 hybrid SHA, P2 stage receipt + 11/11 New-only SHA, unique rooted object/producer in actual .i, exact old->new BC bytes, negative semantic mutation controls.",
+      "status": "PASS_STATIC_SOURCE_AND_PRODUCER_EDGE__P2_DEPENDENCY_HOLD"
+    },
+    "941": {
+      "case": "941",
+      "section": "BCs",
+      "actual_object_name": "electron_cover_dielectric",
+      "task_alias": "electron_cover",
+      "boundary": "plasma_cover",
+      "factory_type": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux",
+      "source_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "layer_ordinal": 1,
+      "original_legacy_block_sha256": "9597a7ebed3f40556e55db662981b7abe5842860778b263955a42c10087d3eae",
+      "original_legacy_factory_type": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+      "original_legacy_variable": "log_ne",
+      "original_legacy_wall_number_flux": "electron_wall_number_flux",
+      "original_file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "newonly_staged_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "hybrid_block_sha256": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04",
+      "newonly_staged_block_sha256": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04",
+      "block_size_bytes": 159,
+      "hybrid_line": 753,
+      "newonly_stage_line": 684,
+      "producer_consumer_edges": [
+        {
+          "producer_object": "electron_wall_flux",
+          "producer_section": "FunctorMaterials",
+          "producer_factory": "ESWallFluxMaterial",
+          "species_id": "e",
+          "producer_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+          "produced_functor": "e_wall_number_flux",
+          "producer_parameters": {
+            "electron_density": "n_e_physical",
+            "mean_energy": "e_energy_eV",
+            "potential": "potential",
+            "block": "plasma",
+            "sticking": "1.0",
+            "use_element_gradient_for_potential": "true"
+          },
+          "consumer_object": "electron_cover_dielectric",
+          "consumer_parameter": "wall_number_flux",
+          "producer_count_in_staged_11layer": 1,
+          "consumer_count_in_staged_11layer": 1,
+          "link": "STATIC_NAME_AND_FACTORY_MATCH_NOT_RUNTIME_WAREHOUSE_PROOF"
+        }
+      ],
+      "non_target_F6_electron_energy_cover_sha256": "5e3c9b1853568945d1e99bc25cc7eb028f39d59b60b64824d4091a81b65b3f98",
+      "negative_mutations_rejected": 13,
+      "negative_mutation_names": [
+        "missing_cover",
+        "duplicate_cover",
+        "wrong_factory",
+        "wrong_variable",
+        "wrong_flux",
+        "wrong_boundary",
+        "wrong_section",
+        "missing_flux_producer",
+        "duplicate_flux_producer",
+        "wrong_species",
+        "wrong_material_factory",
+        "wrong_source_density",
+        "energy_not_particle"
+      ],
+      "verification": "Independent local ZIP CRC+SHA, original 10-layer bytes, P1 common manifest + 11/11 hybrid SHA, P2 stage receipt + 11/11 New-only SHA, unique rooted object/producer in actual .i, exact old->new BC bytes, negative semantic mutation controls.",
+      "status": "PASS_STATIC_SOURCE_AND_PRODUCER_EDGE__P2_DEPENDENCY_HOLD"
+    }
+  },
+  "cxx_identity": {
+    "FEMElectronSheathBC_C": {
+      "git_blob_sha1": "78d8489f8e98ecdfb134c4b5620fd66544a8ca52",
+      "registered": "PhysicsApp",
+      "residual_source": "_test[_i][_qp] * plasmaSideElectronWallNumberFlux(FaceArg)/N_A",
+      "scope": "source only, no residual execution"
+    },
+    "ESWallFluxMaterial_C": {
+      "git_blob_sha1": "7f0981608dad18e896b36af8fc8248211da381c6",
+      "produced_property_rule": "species_id=='e' => 'e_wall_number_flux'",
+      "scope": "source only"
+    }
+  },
+  "gates": {
+    "P3_F2_STATIC": "PASS",
+    "P2_668_PACKAGE_FULL_DOD": "HOLD",
+    "P3_0_NEW_ONLY_COMMON_PIN": "PENDING_INTEGRATION",
+    "NEW_ONLY_S6_NATIVE_P2": "NOT_RUN",
+    "P3_NATIVE": "NOT_RUN",
+    "P4_NATIVE": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "unresolved": [
+    "#668 has not completed final New-only JSON staging and warehouse P05/Native P2; stage is source-only.",
+    "Real runtime e_wall_number_flux provider/consumer reachability and numerical equivalence remain unproved.",
+    "P3-X integration sole writer; do not treat this independent static receipt as P3 package completion."
+  ],
+  "safety": {
+    "private_rate_bytes": "EXCLUDED",
+    "historical_input": "UNCHANGED",
+    "PR665": "UNCHANGED",
+    "main": "UNCHANGED",
+    "native_execution": "NONE"
+  }
+}
