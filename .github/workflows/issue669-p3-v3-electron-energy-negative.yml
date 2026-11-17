@@ -1,0 +1,260 @@
+name: Issue669 P3-V3 electron transport energy negative P0 (source only)
+run-name: P3-V3 negative owner and unit controls exact PR665
+on:
+  push:
+    branches:
+      - issue-669-p3-v3-electron-transport-energy-negative-20261117
+    paths:
+      - '.github/workflows/issue669-p3-v3-electron-energy-negative.yml'
+permissions:
+  contents: read
+jobs:
+  p3-v3:
+    name: Both-case electron transport and energy invalid-input rejection
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout frozen PR665 source for fixture guard
+        uses: actions/checkout@v4
+        with:
+          ref: 9c15a4f0e2cf8042cb0d4b2f18af31511021d168
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Run P3-V3 independent positive and negative P0 controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          """P3-V3: P0 source-only electron transport+energy negative matrix, no Native."""
+          from __future__ import annotations
+          import copy
+          import hashlib
+          import importlib.util
+          import json
+          import math
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
+          
+          PIN = "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          ROOT = Path.cwd()
+          assert subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip() == PIN
+          EXPECTED_GIT_BLOBS = {
+              "ci/p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+              "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+              "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json": "9568e2cae6640a755f9403c4f58e077c801b998c",
+              "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e",
+              "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_941_continuity.template.i": "4daa6f080f3d7bbd35c9839110cbb955b8914fee",
+              "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a"
+          }
+          for path, expected in EXPECTED_GIT_BLOBS.items():
+              actual = subprocess.check_output(["git", "hash-object", path], text=True).strip()
+              if actual != expected:
+                  raise ValueError(f"EXACT_SOURCE_BLOB_DRIFT {path} {actual}")
+          
+          check_path = ROOT / "ci/p1_ion_new_only_preflight.py"
+          spec = importlib.util.spec_from_file_location("issue669_v3_real_p0_guard", check_path)
+          if spec is None or spec.loader is None:
+              raise RuntimeError("REAL_P0_INSPECTOR_UNAVAILABLE")
+          guard = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(guard)
+          
+          LOOKUP_PATH = "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+          DATA_DIR = ROOT / "experiments/Issue402_plasma_dsl_g1"
+          OUT = Path(os.environ["RUNNER_TEMP"]) / "issue669_p3_v3_evidence"
+          OUT.mkdir(parents=True, exist_ok=False)
+          TABLE_PATH = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+          TABLE = TABLE_PATH.read_bytes()
+          
+          def sha(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest()
+          
+          def source_hash_guard(data: bytes, expected: str) -> bool:
+              return sha(data) == expected
+          
+          assert source_hash_guard(TABLE, sha(TABLE))
+          assert not source_hash_guard(TABLE + b"\n", sha(TABLE))
+          PRESSURE_OWNER = "\n[Variables]\n  [pressure]\n    type = INSFVPressureVariable\n    block = plasma\n  []\n[]\n"
+          
+          def s6_specific_errors(doc: dict) -> list[str]:
+              errors = []
+              e = doc.get("species", {}).get("e", {})
+              tr = e.get("transport_coef")
+              if not isinstance(tr, dict) or tr.get("type") != "lookup":
+                  errors.append("V3_S6_E_LOOKUP_TYPE_REQUIRED")
+                  return errors
+              if tr.get("unit") != "reduced":
+                  errors.append("V3_S6_E_REDUCED_UNIT_REQUIRED")
+              if tr.get("bounds_policy") != "clamp":
+                  errors.append("V3_S6_E_CLAMP_POLICY_REQUIRED")
+              if tr.get("file") != LOOKUP_PATH:
+                  errors.append("V3_S6_E_TABLE_PATH_PIN_MISMATCH")
+              temp = e.get("temperature_eV")
+              if isinstance(temp, bool) or not isinstance(temp, (int, float)) or not math.isfinite(temp) or temp <= 0:
+                  errors.append("V3_S6_E_TEMPERATURE_REQUIRED_FOR_AUTO_ENERGY_IC")
+              return errors
+          
+          def eval_case(overlay: str, doc: dict) -> dict:
+              result = guard.inspect({"issue669_v3_isolated_newonly.i": overlay}, doc, contract="new-only")
+              return {"status": result["status"], "errors": result["errors"] + s6_specific_errors(doc)}
+          
+          def energy_obj(input_text: str) -> str:
+              pattern = r"(?m)^        \[Energy\]\r?\n(?:^          [^\r\n]*\r?\n)+^        \[\]\r?\n"
+              matches = list(re.finditer(pattern, input_text))
+              if len(matches) != 1:
+                  raise ValueError(f"UNEXPECTED_ENERGY_BLOCK_COUNT {len(matches)}")
+              return matches[0].group(0)
+          
+          def replace_once(src: str, before: str, after: str) -> str:
+              if src.count(before) != 1:
+                  raise ValueError(f"EXPECTED_ONE_REPLACEMENT {before!r} count={src.count(before)}")
+              return src.replace(before, after, 1)
+          
+          def add_native_state(input_text: str, state: str) -> str:
+              return input_text + f"\n[Variables]\n  [{state}]\n    type = MooseVariable\n    block = plasma\n  []\n[]\n"
+          
+          def add_legacy_material(input_text: str, name: str, type_name: str) -> str:
+              return input_text + f"\n[FunctorMaterials]\n  [{name}]\n    type = {type_name}\n    species_id = e\n    block = plasma\n  []\n[]\n"
+          
+          def add_native_energy_kernel(input_text: str) -> str:
+              return input_text + "\n[Kernels]\n  [energy_time]\n    type = FEMLogMolarTimeDerivative\n    variable = log_e_energy\n    block = plasma\n  []\n[]\n"
+          
+          def cases_for(overlay: str, document: dict):
+              changes = []
+              def add(key: str, expected: str, change_doc=None, change_input=None):
+                  d = copy.deepcopy(document)
+                  i = overlay
+                  if change_doc is not None:
+                      change_doc(d)
+                  if change_input is not None:
+                      i = change_input(i)
+                  if d == document and i == overlay:
+                      raise ValueError("NEGATIVE_CONTROL_IS_NOOP_" + key)
+                  changes.append((key, expected, i, d))
+          
+              add("e_transport_record_missing", "P1_JSON_TRANSPORT_MISSING_OR_INVALID:e",
+                  change_doc=lambda d:d["species"]["e"].pop("transport_coef"))
+              add("e_transport_type_none", "P1_JSON_TRANSPORT_MISSING_OR_INVALID:e",
+                  change_doc=lambda d:d["species"]["e"]["transport_coef"].update(type="none"))
+              add("e_transport_type_unknown", "P1_JSON_TRANSPORT_MISSING_OR_INVALID:e",
+                  change_doc=lambda d:d["species"]["e"]["transport_coef"].update(type="unknown"))
+              add("e_lookup_table_missing", "P1_JSON_TRANSPORT_TABLE_MISSING:e",
+                  change_doc=lambda d:d["species"]["e"]["transport_coef"].update(file="none"))
+              add("e_unit_invalid_token", "P1_JSON_TRANSPORT_UNIT_INVALID:e",
+                  change_doc=lambda d:d["species"]["e"]["transport_coef"].update(unit="volts"))
+              add("e_unit_wrong_but_parser_valid", "V3_S6_E_REDUCED_UNIT_REQUIRED",
+                  change_doc=lambda d:d["species"]["e"]["transport_coef"].update(unit="physical"))
+              add("e_lookup_bounds_wrong", "V3_S6_E_CLAMP_POLICY_REQUIRED",
+                  change_doc=lambda d:d["species"]["e"]["transport_coef"].update(bounds_policy="extrapolate"))
+              add("e_lookup_file_wrong_existing", "V3_S6_E_TABLE_PATH_PIN_MISMATCH",
+                  change_doc=lambda d:d["species"]["e"]["transport_coef"].update(file="../../Issue91_real_qvt_r3/r3_e0/not_the_approved_table.txt"))
+              add("e_initial_density_missing", "P1_JSON_INITIAL_NUMBER_DENSITY_INVALID:e",
+                  change_doc=lambda d:d["species"]["e"].pop("initial_number_density"))
+              add("e_initial_temperature_missing", "V3_S6_E_TEMPERATURE_REQUIRED_FOR_AUTO_ENERGY_IC",
+                  change_doc=lambda d:d["species"]["e"].pop("temperature_eV"))
+              add("json_duplicate_energy_transport_owner", "P1_JSON_ENERGY_TRANSPORT_OWNER_RETIRED",
+                  change_doc=lambda d:d["species"]["e"].update(energy_transport_coef={"type":"constant","mobility":1}))
+              add("energy_action_missing", "P1_NEWONLY_FULL_ELECTRON_ENERGY_MISSING",
+                  change_input=lambda x:replace_once(x,energy_obj(x),""))
+              add("energy_transport_selector_wrong", "P1_ELECTRON_FLUID_TRANSPORT_SELECTOR_MISSING",
+                  change_input=lambda x:replace_once(x,"transport_coefficient = fluid","transport_coefficient = constant"))
+              add("energy_action_fem_potential_missing", "P1_NEWONLY_FULL_ELECTRON_ENERGY_MISSING",
+                  change_input=lambda x:replace_once(x,energy_obj(x),energy_obj(x).replace("          fem_potential = potential\n", "")))
+              add("energy_action_duplicate", "P1_NEWONLY_FULL_ELECTRON_ENERGY_MISSING",
+                  change_input=lambda x:replace_once(x,energy_obj(x),energy_obj(x)+energy_obj(x)))
+              add("native_e_state_owner_duplicate", "P1_NATIVE_ELECTRON_OR_OLD_PRESSURE_VARIABLE_OWNER_1",
+                  change_input=lambda x:add_native_state(x,"log_e"))
+              add("native_energy_state_owner_duplicate", "P1_NATIVE_ELECTRON_OR_OLD_PRESSURE_VARIABLE_OWNER_1",
+                  change_input=lambda x:add_native_state(x,"log_e_energy"))
+              add("native_e_energy_time_kernel_duplicate", "P1_FULL_ENERGY_NATIVE_ELECTRON_KERNEL_OWNERS_1",
+                  change_input=add_native_energy_kernel)
+              add("native_e_lookup_material_owner_duplicate", "P1_FULL_ENERGY_NATIVE_ELECTRON_MATERIAL_OWNERS_1",
+                  change_input=lambda x:add_legacy_material(x,"electron_transport","DDTransportMaterial"))
+              add("native_e_mean_energy_material_duplicate", "P1_FULL_ENERGY_NATIVE_ELECTRON_MATERIAL_OWNERS_1",
+                  change_input=lambda x:add_legacy_material(x,"mean_energy","ElectronEnergyMaterial"))
+              add("native_e_wall_flux_material_duplicate", "P1_FULL_ENERGY_NATIVE_ELECTRON_MATERIAL_OWNERS_1",
+                  change_input=lambda x:add_legacy_material(x,"electron_wall_flux","ESWallFluxMaterial"))
+              add("dont_create_kernels_bypass", "P1_BINDING_ONLY_BYPASS_FORBIDDEN",
+                  change_input=lambda x:replace_once(x, "          fem_species = e\n", "          fem_species = e\n          dont_create_kernels = true\n"))
+              add("root_gas_temperature_missing", "P1_ROOT_GAS_FUNCTORS_REQUIRED:e",
+                  change_input=lambda x:replace_once(x,"    temperature = 300\n",""))
+              add("root_gas_pressure_missing", "P1_ROOT_GAS_FUNCTORS_REQUIRED:e",
+                  change_input=lambda x:replace_once(x,"    pressure = 1.333223684\n",""))
+              return changes
+          
+          report = {
+            "schema":"issue669.p3_v3.negative_testing.v1",
+            "task_id":"P3-V3",
+            "target_issue":669,
+            "exact_source_head":PIN,
+            "source_pin_git_blobs":EXPECTED_GIT_BLOBS,
+            "source_kind":"actual PR665 JSON/template, isolated one-overlay+pressure synthetic fixture",
+            "expected_transport":{"type":"lookup","file":LOOKUP_PATH,"unit":"reduced","bounds_policy":"clamp"},
+            "current_electron_table_sha256":sha(TABLE),
+            "current_electron_table_bytes":len(TABLE),
+            "mutable_protected_sources":False,
+            "native_P2":"NOT_RUN","native_P3":"NOT_RUN","native_P4":"NOT_RUN","SCIENCE":"SCIENCE_HOLD",
+            "full_newonly_11layer":"HOLD_NOT_STAGED_IN_THIS_TEST",
+            "cases":{},
+            "status":"HOLD",
+          }
+          bad = False
+          try:
+              for case in ("417","941"):
+                  jpath = DATA_DIR / f"chemistry/unified_s6_{case}_newonly.json"
+                  ipath = DATA_DIR / f"issue633_newonly_s6_{case}_continuity.template.i"
+                  document = json.loads(jpath.read_text())
+                  template = ipath.read_text()
+                  overlay = template + PRESSURE_OWNER
+                  baseline = eval_case(overlay, document)
+                  if baseline["status"] != "P0_STATIC_PASS_ONLY" or baseline["errors"]:
+                      raise ValueError(f"BASELINE_FAIL_{case} {baseline}")
+                  if not eval_case(overlay + "# V3 non-semantic comment\n", document)["status"] == "P0_STATIC_PASS_ONLY":
+                      raise ValueError("POSITIVE_CONTROL_COMMENT_REJECTED_" + case)
+                  mutations = []
+                  for name, expected, input_text, doc in cases_for(overlay,document):
+                      actual = eval_case(input_text,doc)
+                      errors = actual["errors"]
+                      if actual["status"] == "P0_STATIC_PASS_ONLY" and not errors:
+                          raise ValueError(f"MUTATION_FALSE_PASS_{case}_{name}")
+                      if not any(item.startswith(expected) for item in errors):
+                          raise ValueError(f"MUTATION_WRONG_REASON_{case}_{name}: expected {expected} found {errors}")
+                      mutations.append({"name":name,"expected_detector":expected,
+                          "actual_errors":errors,"verdict":"REJECTED_AS_EXPECTED",
+                          "detector_owner":"existing_P0" if expected.startswith("P1_") else "V3_S6_extra_contract"})
+                  report["cases"][case] = {
+                      "status":"PASS_NEGATIVE_AND_POSITIVE_CONTROLS",
+                      "mechanism_git_blob":EXPECTED_GIT_BLOBS[str(jpath.relative_to(ROOT))],
+                      "mechanism_sha256":sha(jpath.read_bytes()),
+                      "overlay_git_blob":EXPECTED_GIT_BLOBS[str(ipath.relative_to(ROOT))],
+                      "overlay_sha256":sha(ipath.read_bytes()),
+                      "selected_electron_record":document["species"]["e"],
+                      "positive_control_count":2,
+                      "negative_control_count":len(mutations),
+                      "mutations":mutations,
+                  }
+              report["status"]="PASS_ISOLATED_P0_NEGATIVE_MATRIX"
+          except Exception as error:
+              bad=True
+              report["status"]="HOLD"
+              report["failure"]=type(error).__name__+": "+str(error)[:600]
+          finally:
+              report["total_negative_controls"]=sum(x.get("negative_control_count",0) for x in report["cases"].values())
+              filename=OUT/"p3_v3_electron_transport_energy_negative_receipt.json"
+              filename.write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+              print(json.dumps({"status":report["status"],
+                "cases":{c:{"status":x["status"],"negative_controls":x["negative_control_count"]} for c,x in report["cases"].items()},
+                "source":PIN, "failure":report.get("failure")},sort_keys=True))
+          sys.exit(3 if bad else 0)
+          
+          PY
+      - name: Preserve V3 source-bound test results, even after a failing gate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue669-p3-v3-e-transport-energy-p0-receipt
+          path: ${{ runner.temp }}/issue669_p3_v3_evidence/
+          if-no-files-found: error
+          retention-days: 30
