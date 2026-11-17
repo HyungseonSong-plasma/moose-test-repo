@@ -1,0 +1,144 @@
+{
+  "schema": "issue669.p3_n6.pressure_legacy_alias_census.v1",
+  "task_id": "P3-N6",
+  "status": "PASS_STATIC_ALIAS_RESIDUE_ZERO__HOLD_NEW_ONLY_JSON_NATIVE",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "scope": "S6-417 and S6-941 original 10 archived .i inputs, P1 exact 11 Hybrid Scratch D .i inputs and P2 #668 ion-retired 11 .i inputs; external Maxwell child and 2 includes audited separately",
+  "evidence": {
+    "historical_417": {
+      "artifact_id": 13677089020,
+      "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+    },
+    "historical_941": {
+      "artifact_id": 13677375813,
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    "p1": {
+      "run_id": 44182628032,
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "p2": {
+      "run_id": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    }
+  },
+  "method": "Independently opened actual ZIP bytes; checked 10/10 original SHA against original case_manifest; 11/11 P1 SHA against case manifest; 11/11 P2 SHA against stage_receipt and retirement_receipt before/after SHA. Exact lexeme matching in uncommented .i lines; not naive substring matching. Verified invariant canonical code-line multiset and eight object blocks byte-identical P1→P2. Positive/negative synthetic mutations 9/9.",
+  "counts_per_case": {
+    "original_10": {
+      "p": 21,
+      "p_fixed": 1,
+      "T_g_fixed": 10,
+      "pressure": 5,
+      "temperature": 1
+    },
+    "p1_11": {
+      "p": 0,
+      "p_fixed": 0,
+      "T_g_fixed": 0,
+      "pressure": 26,
+      "temperature": 10
+    },
+    "p2_11": {
+      "p": 0,
+      "p_fixed": 0,
+      "T_g_fixed": 0,
+      "pressure": 26,
+      "temperature": 10
+    }
+  },
+  "per_case_post_retirement_11_file_sha256": {
+    "417": {
+      "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2da0dd6a4",
+      "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+      "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+      "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+      "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+      "issue477_S4-401-417_op_ionization_overlay.i": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a",
+      "issue477_S5-417-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+      "issue477_S6-417-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+      "issue477_S6-417-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+      "migrated_continuity.i": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895"
+    },
+    "941": {
+      "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2da0dd6a4",
+      "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+      "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+      "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+      "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+      "issue477_S4-401-941_op_ionization_overlay.i": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa",
+      "issue477_S5-941-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+      "issue477_S6-941-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+      "issue477_S6-941-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+      "migrated_continuity.i": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0"
+    }
+  },
+  "canonical_owner_blocks_sha256_417_and_941_in_both_p1_and_p2": {
+    "Variables/pressure": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+    "UserObjects/rc": "e2df5dc1d44676bb2466221b3b3b315e3e62b244b1473efe82a2c9485d5a7823",
+    "FunctorMaterials/neutral_density": "0377feafc0a96d9b69657564ccb303a15caa8492c3d2b962b3ba981449cf9871",
+    "FunctorMaterials/neutral_density_dot": "3f6f3121b70f8b4131f5f16d2c063c66936972eb55020aba91cfe050bfdde2dc",
+    "FunctorMaterials/neutral_transport": "bf1973756380ff45177a9ddd98bd926005616c94ba531adb33118a1f77c202b3",
+    "FVKernels/neutral_mass_time": "a22d4bd658bf1cb3a4f5fd82aa8ef46775600723a2c62533946fa2ebb1851a34",
+    "FVKernels/neutral_mass_advection": "caf28088002e2302d6248c96c1f29bddf5c75f6a8947faaf3edb9d8f52a44047",
+    "FVBCs/neutral_outlet_p": "473158d972e44badb6ce8b6111c061fce0ff6f4d429a6fb368a3c2f297d9da8d"
+  },
+  "edges": [
+    {
+      "producer": "[Variables]/pressure (INSFVPressureVariable)",
+      "consumers": [
+        "[UserObjects]/rc (INSFVRhieChowInterpolator)",
+        "[FVKernels]/neutral_mass_time",
+        "[FVKernels]/neutral_mass_advection",
+        "[FVBCs]/neutral_outlet_p",
+        "[FunctorMaterials]/neutral_density",
+        "[FunctorMaterials]/neutral_density_dot",
+        "[FunctorMaterials]/neutral_transport",
+        "neutral_p_min",
+        "neutral_p_max",
+        "RF parent coupled_variables"
+      ],
+      "status": "STATIC_OWNER_AND_REFERENCE_FOUND_BLOCK_BYTES_PRESERVED"
+    },
+    {
+      "producer": "[Physics]/[Plasmas] root pressure=1.333223684 and temperature=300 (migrated_continuity.i)",
+      "consumers": [
+        "[FVBCs]/neutral_outlet_p function=${Physics/Plasmas/pressure}",
+        "three PhysicsIonWallFluxMaterial gas_temperature=temperature",
+        "neutral_density and neutral_transport temperature"
+      ],
+      "status": "ROOT_PARAMETERS_AND_REFERENCE_LINES_STATIC"
+    }
+  ],
+  "canonical_11_layer_source_sha_invariance": {
+    "pressure_references_before_and_after": 26,
+    "temperature_references_before_and_after": 10,
+    "all_eight_watched_block_sha_unchanged": true,
+    "verified_ion_native_removed_per_case": 26
+  },
+  "supplemental_maxwell_three_i_files": {
+    "both_cases_legacy_aliases": 0,
+    "not_a_12th_parent_layer": true
+  },
+  "self_tests": {
+    "count": 9,
+    "passed": 9,
+    "negative_reintroduced_alias_rejected": 6,
+    "negative_false_positive_suppression_passed": 3
+  },
+  "private_rates_exposed": false,
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "p2_dependency": "OPEN_PRODUCTION_RUNNER_JSON_AND_NATIVE_P2_HOLD",
+  "unresolved": [
+    "The latest P2 artifact preserves the 11 .i files but not both final staged New-only JSON; no full New-only input composition PASS.",
+    "Root Physics aliases and actual Warehouse/Functor consumer liveness require #668 production-runner integration and downstream Native P2.",
+    "C++/Maxwell runtime semantic equivalence and numerical/physics parity not asserted."
+  ]
+}
