@@ -1,0 +1,97 @@
+name: "Issue667 P1-0 final 11-layer source receipts (no Native)"
+run-name: "P1-0 final 11-layer 417+941 exact-source receipts"
+on:
+  push:
+    branches:
+      - issue-667-p1-0-exact-s6-inputs-20261117
+    paths:
+      - ci/issue667_p1_0_final_11layer_receipt.py
+      - .github/workflows/issue667-p1-0-final-11layer-receipts.yml
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: issue667-p1-0-final-source-receipts
+  cancel-in-progress: false
+
+jobs:
+  p1-0-source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout isolated P1-0 receipt generator
+        uses: actions/checkout@v4
+        with:
+          path: p1_gate
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Checkout exact immutable integration source
+        uses: actions/checkout@v4
+        with:
+          ref: 9c15a4f0e2cf8042cb0d4b2f18af31511021d168
+          path: control
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Confirm PR 665 HEAD remains pinned
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(gh api repos/HyungseonSong-plasma/moose-test-repo/pulls/665 --jq '.head.sha')"
+          test "$current" = "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          test "$(git -C control rev-parse HEAD)" = "$current"
+          echo "P1_0_EXACT_PR_HEAD_PIN_PASS=$current"
+      - name: Download and SHA-check two historical original Native source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/HyungseonSong-plasma/moose-test-repo/actions/artifacts/13677089020/zip > "$RUNNER_TEMP/p1_0_original_417.zip"
+          gh api repos/HyungseonSong-plasma/moose-test-repo/actions/artifacts/13677375813/zip > "$RUNNER_TEMP/p1_0_original_941.zip"
+          echo "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb  $RUNNER_TEMP/p1_0_original_417.zip" | sha256sum --check
+          echo "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177  $RUNNER_TEMP/p1_0_original_941.zip" | sha256sum --check
+          echo "P1_0_BOTH_ARCHIVE_ZIP_BYTES_PASS"
+      - name: Generate final scratch and independently hash all 22 files and 52 owner blocks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 p1_gate/ci/issue667_p1_0_final_11layer_receipt.py \
+            --control control \
+            --archive-417 "$RUNNER_TEMP/p1_0_original_417.zip" \
+            --archive-941 "$RUNNER_TEMP/p1_0_original_941.zip" \
+            --output "$RUNNER_TEMP/p1_0_final"
+          python3 - "$RUNNER_TEMP/p1_0_final" <<'PY'
+          import hashlib, json, pathlib, sys
+          root=pathlib.Path(sys.argv[1])
+          m=json.loads((root/'common_manifest.json').read_text())
+          s=json.loads((root/'status.json').read_text())
+          assert s['status']=='PASS'
+          assert m['source_head']=='9c15a4f0e2cf8042cb0d4b2f18af31511021d168'
+          assert all(len(m['cases'][c]['layers'])==11 for c in ('417','941'))
+          assert all(len(m['cases'][c]['ion_native_blocks'])==26 for c in ('417','941'))
+          for case in ('417','941'):
+              for entry in m['cases'][case]['layers']:
+                  p=root/'cases'/case/'final_11_inputs'/pathlib.Path(entry['file_path']).name
+                  assert hashlib.sha256(p.read_bytes()).hexdigest()==entry['file_sha256']
+          assert len(list(root.glob('cases/*/final_11_inputs/*.i')))==22
+          assert not list(root.rglob('private_rates'))
+          assert not list(root.rglob('*.txt'))
+          print('P1_0_FINAL_INPUT_ARTIFACT_READBACK_PASS 22 FILES 52 BLOCKS')
+          PY
+      - name: Always upload P1-0 exact source inputs, never protected rates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue667-p1-0-final-11layer-417-941
+          retention-days: 30
+          compression-level: 6
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/p1_0_final/common_manifest.json
+            ${{ runner.temp }}/p1_0_final/status.json
+            ${{ runner.temp }}/p1_0_final/cases/*/case_manifest.json
+            ${{ runner.temp }}/p1_0_final/cases/*/final_11_inputs/*.i
