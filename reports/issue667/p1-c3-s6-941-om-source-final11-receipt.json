@@ -1,0 +1,130 @@
+{
+  "schema_version": "issue667.p1_c3.final11.v1",
+  "task_id": "P1-C3",
+  "parent_issue": 667,
+  "date_utc": "2026-11-17",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "case": "S6-941",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "origin_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "verdict": "PASS_SOURCE_STATIC_11_LAYER_HYBRID_D",
+  "native_p2": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "evidence_scope": "Actual final P1-0 source-pinned Hybrid Scratch D 11-layer bytes, not the later New-only 26-to-24 cutover",
+  "p1_0_source": {
+    "run_id": 44180190753,
+    "artifact_id": 14372315897,
+    "artifact_digest": "sha256:962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+  },
+  "independent_verifier": {
+    "run_id": 44182966762,
+    "job_id": 134391879353,
+    "commit_sha": "f8f3688241b1ba8ac53e9f91c3e353427f94048b",
+    "result": "SUCCESS",
+    "artifact_id": 14373596298,
+    "artifact_digest": "sha256:c023792f428a55d4467abc829454f137b1fdcc8ac792341b13e8cca3955762d8",
+    "receipt_inside_artifact": "p1-c3-s6-941-om-source-readback.json",
+    "independent_file_sha_matches": "11/11",
+    "independent_fv_block_matches": "63/63",
+    "unique_om_source_count": "1/1",
+    "negative_controls_rejected": "6/6"
+  },
+  "file": {
+    "layer_ordinal": 6,
+    "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+    "filename": "issue477_S3-415-401_extra_overlay.i",
+    "file_sha256": "Recorded in immutable CI readback artifact receipt under layers[5].sha256 (11/11 independently matched); not re-extracted through GitHub connector",
+    "prior_reconstruction_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+    "prior_reconstruction_status": "PRIOR_B3_PROJECTION_ONLY; do not promote as exact current file SHA without artifact field comparison"
+  },
+  "source_kernel": {
+    "section": "FVKernels",
+    "object_name": "ei401_negative_ion_source",
+    "factory_type": "FVCoupledForce",
+    "variable": "log_Om",
+    "relevant_parameters": {
+      "v": "S_Om_molar_EI401",
+      "coef": "1.0",
+      "block": "plasma"
+    },
+    "layer_ordinal": 6,
+    "line_start": 101,
+    "line_end": 107,
+    "block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
+    "status": "DIRECT_ARTIFACT_BYTES_VERIFIED"
+  },
+  "producer_chain": [
+    {
+      "section": "FunctorMaterials",
+      "object_name": "ei401_progress",
+      "factory_type": "EIRateCoefMaterial",
+      "produces": "R_EI401",
+      "rate_table_path_reference": "private_rates/EI-401_O2_X.txt",
+      "parameters": {
+        "reaction_progress": "R_EI401",
+        "mean_energy": "e_energy_eV",
+        "electron_number_density": "n_e_physical",
+        "target_molar_concentration": "c_O2_EI401",
+        "block": "plasma"
+      },
+      "layer_ordinal": 6,
+      "line_start": 16,
+      "line_end": 24,
+      "block_sha256": "ae89ee34938fe2c654992a3c3a5f1c91a59b2e76fe3959daf96855949d54da09"
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "ei401_om_source",
+      "factory_type": "ADParsedFunctorMaterial",
+      "produces": "S_Om_molar_EI401",
+      "consumes": "R_EI401",
+      "parameters": {
+        "property_name": "S_Om_molar_EI401",
+        "functor_names": "R_EI401",
+        "functor_symbols": "R",
+        "expression": "R",
+        "block": "plasma"
+      },
+      "layer_ordinal": 6,
+      "line_start": 33,
+      "line_end": 40,
+      "block_sha256": "e3b8eb02861bfb246117bf1f3f9a2d1d7eb52f7404b49243c768445b5e46a062"
+    },
+    {
+      "section": "FVKernels",
+      "object_name": "ei401_negative_ion_source",
+      "factory_type": "FVCoupledForce",
+      "produces": null,
+      "consumes": "S_Om_molar_EI401",
+      "variable": "log_Om",
+      "coef": "1.0",
+      "layer_ordinal": 6,
+      "line_start": 101,
+      "line_end": 107,
+      "block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc"
+    }
+  ],
+  "private_rate": {
+    "expected_table_sha256": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+    "bytes_inspected": false,
+    "sha_recomputed": false,
+    "status": "EXPECTED_ONLY"
+  },
+  "negative_tests": {
+    "source_missing": "REJECTED",
+    "source_duplicated": "REJECTED",
+    "wrong_variable": "REJECTED",
+    "wrong_source_functor": "REJECTED",
+    "wrong_rate_input": "REJECTED",
+    "wrong_file_sha": "REJECTED"
+  },
+  "limitations": [
+    "Only source-chain static references proved, no runtime Functor/Rate resolution accepted",
+    "No private EI-401 table bytes inspected",
+    "No Native P1/P2/P3/P4 or science parity",
+    "P1-E 29-slot integration and later New-only cutover remain pending"
+  ],
+  "next_gate": "P1-E integrate source-bound 29 receipts and recheck exact same P1-0 11-layer; do not mix original archive/source projections with Scratch D block hashes",
+  "cleanup": "Temporary P0 verification workflow removed after successful run; all original inputs, central P1-0, main and PR #665 untouched"
+}
