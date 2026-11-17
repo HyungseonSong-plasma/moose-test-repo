@@ -1,0 +1,300 @@
+{
+  "schema": "issue667.p1_a1_3.independent_final11.v2",
+  "task_id": "P1-A1-3",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "issue": 667,
+  "verification_scope": "Actual final 11 input layer bytes from CI-produced Hybrid Scratch D for exact PR #665 HEAD; NOT new-only cutover or Native P2.",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "archive_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "source_pin_run": 44180190753,
+  "artifact_id": 14372315897,
+  "artifact_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+  "cases": {
+    "417": {
+      "status": "SCRATCH_D_11_LAYER_SOURCE_STATIC_PASS",
+      "case": "417",
+      "layers": [
+        {
+          "layer_ordinal": 1,
+          "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "layer_ordinal": 2,
+          "filename": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+        },
+        {
+          "layer_ordinal": 3,
+          "filename": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+        },
+        {
+          "layer_ordinal": 4,
+          "filename": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+        },
+        {
+          "layer_ordinal": 5,
+          "filename": "issue477_S2-415_generation_overlay.i",
+          "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531"
+        },
+        {
+          "layer_ordinal": 6,
+          "filename": "issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0"
+        },
+        {
+          "layer_ordinal": 7,
+          "filename": "issue477_S4-401-417_op_ionization_overlay.i",
+          "file_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c"
+        },
+        {
+          "layer_ordinal": 8,
+          "filename": "issue477_S5-417-407_o2_consumer_overlay.i",
+          "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+        },
+        {
+          "layer_ordinal": 9,
+          "filename": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+        },
+        {
+          "layer_ordinal": 10,
+          "filename": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+          "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc"
+        },
+        {
+          "layer_ordinal": 11,
+          "filename": "migrated_continuity.i",
+          "file_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895"
+        }
+      ],
+      "fv_objects_verified": 63,
+      "native_ion_kernels": 14,
+      "native_ion_fvbcs": 12,
+      "duplicate_fv_object_count": 0,
+      "op_objects": [
+        {
+          "task_id": "P1-A1-3",
+          "case": "417",
+          "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+          "layer_ordinal": 1,
+          "file_path": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "section": "FVKernels",
+          "object_name": "nop_time",
+          "factory_type": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_Op",
+          "block_sha256": "9c2fd0318c788bce2e4a41052cfee715f93647f927ab53bb374a416a1b5ee67d",
+          "status": "PASS",
+          "unresolved": []
+        },
+        {
+          "task_id": "P1-A1-3",
+          "case": "417",
+          "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+          "layer_ordinal": 1,
+          "file_path": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "section": "FVKernels",
+          "object_name": "nop_diffusion",
+          "factory_type": "PhysicsFVLogMolarElectronDiffusion",
+          "variable": "log_Op",
+          "block_sha256": "8d32aa74ca81921bb14bf83944726aaa7fa46b9ea62c27943099ebc240738708",
+          "status": "PASS",
+          "unresolved": []
+        },
+        {
+          "task_id": "P1-A1-3",
+          "case": "417",
+          "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+          "layer_ordinal": 1,
+          "file_path": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "section": "FVKernels",
+          "object_name": "nop_drift",
+          "factory_type": "PhysicsFVLogMolarElectrostaticDrift",
+          "variable": "log_Op",
+          "block_sha256": "f6d86fe0188e7341e4ff986a03af71024daa04a132833948a2055439167ceeec",
+          "status": "PASS",
+          "unresolved": []
+        }
+      ]
+    },
+    "941": {
+      "status": "SCRATCH_D_11_LAYER_SOURCE_STATIC_PASS",
+      "case": "941",
+      "layers": [
+        {
+          "layer_ordinal": 1,
+          "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "layer_ordinal": 2,
+          "filename": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+        },
+        {
+          "layer_ordinal": 3,
+          "filename": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+        },
+        {
+          "layer_ordinal": 4,
+          "filename": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+        },
+        {
+          "layer_ordinal": 5,
+          "filename": "issue477_S2-415_generation_overlay.i",
+          "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531"
+        },
+        {
+          "layer_ordinal": 6,
+          "filename": "issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0"
+        },
+        {
+          "layer_ordinal": 7,
+          "filename": "issue477_S4-401-941_op_ionization_overlay.i",
+          "file_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43"
+        },
+        {
+          "layer_ordinal": 8,
+          "filename": "issue477_S5-941-407_o2_consumer_overlay.i",
+          "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+        },
+        {
+          "layer_ordinal": 9,
+          "filename": "issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+        },
+        {
+          "layer_ordinal": 10,
+          "filename": "issue477_S6-941-407-2069-H25_H25_overlay.i",
+          "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc"
+        },
+        {
+          "layer_ordinal": 11,
+          "filename": "migrated_continuity.i",
+          "file_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0"
+        }
+      ],
+      "fv_objects_verified": 63,
+      "native_ion_kernels": 14,
+      "native_ion_fvbcs": 12,
+      "duplicate_fv_object_count": 0,
+      "op_objects": [
+        {
+          "task_id": "P1-A1-3",
+          "case": "941",
+          "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+          "layer_ordinal": 1,
+          "file_path": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "section": "FVKernels",
+          "object_name": "nop_time",
+          "factory_type": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_Op",
+          "block_sha256": "9c2fd0318c788bce2e4a41052cfee715f93647f927ab53bb374a416a1b5ee67d",
+          "status": "PASS",
+          "unresolved": []
+        },
+        {
+          "task_id": "P1-A1-3",
+          "case": "941",
+          "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+          "layer_ordinal": 1,
+          "file_path": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "section": "FVKernels",
+          "object_name": "nop_diffusion",
+          "factory_type": "PhysicsFVLogMolarElectronDiffusion",
+          "variable": "log_Op",
+          "block_sha256": "8d32aa74ca81921bb14bf83944726aaa7fa46b9ea62c27943099ebc240738708",
+          "status": "PASS",
+          "unresolved": []
+        },
+        {
+          "task_id": "P1-A1-3",
+          "case": "941",
+          "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+          "layer_ordinal": 1,
+          "file_path": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "section": "FVKernels",
+          "object_name": "nop_drift",
+          "factory_type": "PhysicsFVLogMolarElectrostaticDrift",
+          "variable": "log_Op",
+          "block_sha256": "f6d86fe0188e7341e4ff986a03af71024daa04a132833948a2055439167ceeec",
+          "status": "PASS",
+          "unresolved": []
+        }
+      ]
+    }
+  },
+  "op_parameters": {
+    "nop_time": {
+      "variable": "log_Op",
+      "block": "plasma"
+    },
+    "nop_diffusion": {
+      "variable": "log_Op",
+      "coeff": "Op_diffusivity",
+      "block": "plasma"
+    },
+    "nop_drift": {
+      "variable": "log_Op",
+      "potential": "potential",
+      "mobility": "Op_mobility",
+      "carrier": "carrier_one",
+      "charge_number": 1,
+      "advected_interp_method": "upwind",
+      "use_element_gradient_for_potential": true,
+      "boundaries_to_avoid": "inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring",
+      "block": "plasma"
+    },
+    "source_constants": {
+      "Op_mobility": "10",
+      "Op_diffusivity": "0.25851999786435537",
+      "carrier_one": "1.0"
+    }
+  },
+  "independent_checks": {
+    "artifact_zip_sha": true,
+    "input_sha_22_of_22": true,
+    "fv_record_sha_and_parameter_126_of_126": true,
+    "target_op_count_3_per_case": true,
+    "no_duplicate_or_missing_op": true,
+    "no_literal_include": true,
+    "negative_mutations_rejected_7_of_7": true
+  },
+  "negative_controls": [
+    "wrong file SHA",
+    "missing nop_time",
+    "duplicate nop_drift",
+    "wrong drift charge sign",
+    "wrong Op diffusivity source constant",
+    "missing layer 11",
+    "duplicated layer ordering"
+  ],
+  "gates": {
+    "P1_A1_3": "PASS_STATIC_SCRATCH_D_11_LAYER",
+    "P1_0_source_pin": "INDEPENDENT_SOURCE_READBACK_PASS_FOR_HYBRID_SCRATCH_D",
+    "P1_0_new_only": "HOLD",
+    "P1_E": "PENDING",
+    "new_only_native_cutover": "HOLD",
+    "native_p2": "NOT_RUN",
+    "native_p3": "NOT_RUN",
+    "native_p4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "No Native P2 input or physical parity validation",
+    "New-only Physics-generated operators and owner cutover not tested",
+    "Private rate bytes not included; dynamic resource paths unverified",
+    "P1-E 29-slot integration pending"
+  ]
+}
