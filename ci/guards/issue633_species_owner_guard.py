@@ -30,7 +30,7 @@ class OwnerContractError(ValueError):
 
 def validate(text: str, mechanism: dict) -> dict:
     """Validate input-only selection; return expected (not observed) FV objects."""
-    if re.search(r"(?m)^\\s*!include\\b", text):
+    if re.search(r"(?m)^\s*!include\b", text):
         raise OwnerContractError("UNRESOLVED_LAYER: stage all input layers first")
     try:
         doc = MooseInput(text)
