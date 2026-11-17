@@ -391,9 +391,11 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       if (record.contains("ion_wall"))
         fail(file, "species." + it.key() +
                        ".ion_wall is retired; move wall_* fields to species");
-      if (record.contains("wall_migration_gate_smoothing_width"))
+      if (record.contains("wall_migration_gate_smoothing_width") ||
+          record.contains("migration_smoothing_width"))
         fail(file, "species." + it.key() +
-                       ".wall_migration_gate_smoothing_width belongs in MOOSE [Continuity], not JSON");
+                       ".migration_smoothing_width is MOOSE [Continuity]-only; "
+                       "retired wall_migration_gate_smoothing_width is also forbidden in JSON");
       const std::set<std::string> wall_keys = {
           "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
           "wall_use_element_gradient_for_potential"};
@@ -1250,7 +1252,7 @@ PlasmasAction::act()
         params.set<Real>("sticking") = wall.sticking;
         params.set<Real>("ion_temperature_eV") = wall.ion_temperature_eV;
         params.set<Real>("migration_gate_smoothing_width") =
-            continuity.front()->getParam<Real>("wall_migration_gate_smoothing_width");
+            continuity.front()->getParam<Real>("migration_smoothing_width");
         params.set<bool>("use_element_gradient_for_potential") =
             wall.use_element_gradient_for_potential;
         if (!blocks.empty())
