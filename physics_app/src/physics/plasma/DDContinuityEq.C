@@ -1,5 +1,6 @@
 #include "DDContinuityEq.h"
 #include "Chemistry.h"
+#include "DDEnergyEq.h"
 #include "Physics.h"
 #include "FEProblemBase.h"
 #include "NonlinearSystemBase.h"
@@ -539,7 +540,17 @@ DDContinuityEq::addFunctorMaterials()
     // "constant" requires explicit numerical coefficients in the JSON.
     params.set<MooseEnum>("model") = config->model;
     if (id == "e")
-      params.set<bool>("fluid_energy") = mechanism.fluidElectronEnergyTransport();
+    {
+      // Electron-energy transport is an [Energy] MOOSE decision, not a JSON
+      // species field. The unique energy Action requests the fluid 5/3
+      // closure from this shared electron DDTransportMaterial.
+      const auto energy = _awh.getActions<Plasma::DDEnergyEq>();
+      if (energy.size() > 1)
+        mooseError("Multiple DDEnergyEq owners cannot select a unique electron transport closure");
+      const bool fluid = energy.size() == 1 &&
+          energy.front()->getParam<MooseEnum>("transport_coefficient") == "fluid";
+      params.set<bool>("fluid_energy") = fluid;
+    }
     if (config->model == "constant")
     {
       params.set<Real>("mobility") = config->mobility;
