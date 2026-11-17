@@ -65,7 +65,7 @@
         "target_molar_concentration": "c_O2_EI415"
       },
       "source_to_consumer_edge": "ei415_progress => R_EI415 => S_O2p_molar_EI415 => ei415_o2p_source => log_O2p",
-      "public_table_is_byte_parity_with_private_rate": false
+      "public_table_is_byte_parity_with_private_rate": "NOT_ESTABLISHED_WITHOUT_PRIVATE_BYTES"
     },
     {
       "reaction": "EI-401",
@@ -103,7 +103,7 @@
         "target_molar_concentration": "c_O2_EI401"
       },
       "source_to_consumer_edge": "ei401_progress => R_EI401 => S_Om_molar_EI401 => ei401_negative_ion_source => log_Om",
-      "public_table_is_byte_parity_with_private_rate": false
+      "public_table_is_byte_parity_with_private_rate": "NOT_ESTABLISHED_WITHOUT_PRIVATE_BYTES"
     },
     {
       "reaction": "EI-941",
@@ -141,7 +141,7 @@
         "target_molar_concentration": "c_O_EI941"
       },
       "source_to_consumer_edge": "ei941_progress => R_EI941 => S_Op_molar_EI941 => ei941_atomic_positive_ion_source => log_Op",
-      "public_table_is_byte_parity_with_private_rate": false
+      "public_table_is_byte_parity_with_private_rate": "NOT_ESTABLISHED_WITHOUT_PRIVATE_BYTES"
     }
   ],
   "unsupported_claims": [
