@@ -45,7 +45,7 @@ def test_generated_fv_drift_skips_exact_c2_wall_sides_from_json():
         'bc.type == "FVLogMolarDielectricFluxBC"',
         'drift_params.set<MooseEnum>("advected_interp_method") = "upwind";',
         "wall_sidesets.insert(boundary.mesh_boundaries.begin(),",
-        'if (mechanism.hasIonWalls() && wall_sidesets.size() != 8)',
+        'if (mechanism.hasIonWalls() && wall_sidesets.empty())',
         'drift_params.set<std::vector<BoundaryName>>("boundaries_to_avoid")',
         "std::vector<BoundaryName>(wall_sidesets.begin(), wall_sidesets.end())",
     ):
@@ -59,7 +59,10 @@ def test_generated_fv_drift_skips_exact_c2_wall_sides_from_json():
                    for bc in group["bcs"].values()):
                 targets.update(label.split())
         assert targets == EXPECTED_SIDES
-    assert len(EXPECTED_SIDES) == 8
+    # This is only the current S6 characterization. The generator does not
+    # require a fixed count and follows each species' actual BC declarations.
+    assert "wall_sidesets.size() != 8" not in section
+    assert 'if (!wall_sidesets.empty())' in section
 
 
 def test_density_and_drift_mutation_controls_are_fail_closed():
@@ -67,10 +70,22 @@ def test_density_and_drift_mutation_controls_are_fail_closed():
     required = (
         'number_scale.str() + "*exp(log_c)"',
         'if (!mechanism.species(id).ion_wall)',
-        'if (mechanism.hasIonWalls() && wall_sidesets.size() != 8)',
+        'if (mechanism.hasIonWalls() && wall_sidesets.empty())',
         'drift_params.set<std::vector<BoundaryName>>("boundaries_to_avoid")',
     )
     for token in required:
         assert token in source
         mutant = source.replace(token, "", 1)
         assert token not in mutant
+
+
+def test_boundaries_to_avoid_is_not_a_json_input_owner():
+    catalogue = C2_JSON.read_text()
+    assert '"boundaries_to_avoid"' not in catalogue
+    parser = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
+    assert 'if (root.is_object() && root.contains("boundaries_to_avoid"))' in parser
+    assert 'if (record.contains("boundaries_to_avoid"))' in parser
+    assert 'use the boundaries BC catalogue' in parser
+    continuity = CONTINUITY.read_text()
+    assert 'drift_params.set<std::vector<BoundaryName>>("boundaries_to_avoid")' in continuity
+    assert 'wall_sidesets.insert(boundary.mesh_boundaries.begin(),' in continuity
