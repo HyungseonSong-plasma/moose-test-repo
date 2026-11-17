@@ -172,6 +172,97 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
         )
     }
     c2_current = bool(c2_ions) and bool(mechanism.get("ion_surface_current"))
+    modern_s6 = isinstance(species.get("e", {}).get("transport_coef"), dict) and bool(
+        mechanism.get("drift_diffusion_boundaries")
+    )
+    root_plasmas = [b["params"] for b in blocks if b["name"] == "Plasmas"
+                    and b["parent"].endswith("Physics")]
+    energy_actions = [b for b in blocks if b["name"] == "Energy" and
+                      b["parent"].endswith("/DriftDiffusion")]
+    full_energy = len(energy_actions) == 1 and bool(
+        energy_actions[0]["params"].get("fem_potential")
+    )
+    if modern_s6 and contract == "new-only":
+        if len(energy_actions) != 1 or not full_energy:
+            errors.append("P1_NEWONLY_FULL_ELECTRON_ENERGY_MISSING")
+        elif energy_actions[0]["params"].get("transport_coefficient") != "fluid":
+            errors.append("P1_ELECTRON_FLUID_TRANSPORT_SELECTOR_MISSING")
+        if "energy_transport_coef" in species.get("e", {}):
+            errors.append("P1_JSON_ENERGY_TRANSPORT_OWNER_RETIRED")
+        # Verify that the staged 11 layers have actually transferred *all*
+        # consumer references. Old identifiers cannot merely coexist as
+        # aliases: the Physics-generated solver owners are canonical.
+        retired_tokens = ("log_ne", "log_energy", "mean_en_solved",
+                          "electron_wall_number_flux", "p")
+        for filename, content in layers.items():
+            for lineno, source in enumerate(content.splitlines(), 1):
+                code = source.split("#", 1)[0].strip()
+                if not code or code.startswith("#"):
+                    continue
+                for token in retired_tokens:
+                    if re.search(r"(?<![A-Za-z0-9_])" + re.escape(token) +
+                                 r"(?![A-Za-z0-9_])", code):
+                        errors.append(
+                            f"P1_RETIRED_S6_REFERENCE:{token}:{filename}:{lineno}"
+                        )
+        # PlasmasAction alone initializes the canonical solved pressure FV
+        # state from [Plasmas]/pressure. A Native initial_condition would
+        # create a competing IC on the same variable.
+        if root_plasmas and "pressure" in root_plasmas[0]:
+            for b in blocks:
+                if b["parent"] == "Variables" and b["name"] == "pressure" and (
+                    "initial_condition" in b["params"]
+                ):
+                    errors.append("P1_DUPLICATE_ROOT_PRESSURE_IC:" + b["file"])
+
+        if full_energy:
+            legacy_equation_types = {
+                "PhysicsFEMLogMolarTimeDerivative",
+                "PhysicsFEMLogMolarDriftDiffusion",
+                "PhysicsFEMLogMolarElectronJouleHeating",
+                "FEMLogMolarTimeDerivative",
+                "FEMLogMolarDriftDiffusion",
+                "FEMLogMolarElectronJouleHeating",
+            }
+            old_kernels = [
+                b for b in blocks if b["parent"] == "Kernels" and
+                b["params"].get("variable") in {
+                    "log_e", "log_e_energy", "log_ne", "log_energy"
+                } and (
+                    b["params"].get("type") in legacy_equation_types or
+                    b["params"].get("type") == "FunctorKernel"
+                )
+            ]
+            if old_kernels:
+                errors.append(
+                    "P1_FULL_ENERGY_NATIVE_ELECTRON_KERNEL_OWNERS_" +
+                    str(len(old_kernels))
+                )
+            old_materials = [
+                b for b in blocks if b["parent"] == "FunctorMaterials"
+                and (
+                    b["name"] in {
+                        "electron_transport", "mean_energy",
+                        "electron_physical_density", "electron_wall_flux"
+                    } or b["params"].get("type") in {
+                        "PhysicsElectronTransportLookupMaterial",
+                        "PhysicsElectronMeanEnergyMaterial",
+                        "PhysicsElectronAdjacentSheathWallFluxMaterial",
+                        "ESWallFluxMaterial",
+                        "ElectronEnergyMaterial",
+                    } or (
+                        b["params"].get("type") == "DDTransportMaterial"
+                        and b["params"].get("species_id") == "e"
+                    ) or b["params"].get("property_name") in {
+                        "n_e_physical", "e_energy_eV", "e_wall_number_flux"
+                    )
+                )
+            ]
+            if old_materials:
+                errors.append(
+                    "P1_FULL_ENERGY_NATIVE_ELECTRON_MATERIAL_OWNERS_" +
+                    str(len(old_materials))
+                )
     # New electron producer exists only in full DDEnergyEq (fem_potential).
     # In S6 ion-only cutover the Energy action is partial, so the existing
     # Native electron wall Flux may remain as the *sole* producer.
