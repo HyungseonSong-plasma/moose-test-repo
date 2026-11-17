@@ -172,6 +172,7 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
         )
     }
     c2_current = bool(c2_ions) and bool(mechanism.get("ion_surface_current"))
+    canonical_electron_wall = bool(mechanism.get("drift_diffusion_boundaries"))
     generated_wall_names = {ident + "_wall" for ident in c2_ions}
     generated_wall_properties = {ident + "_wall_number_flux" for ident in c2_ions}
     current_names = {"cover_surface_current", "wafer_surface_current",
@@ -191,17 +192,25 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
         is_wall = (block["name"] in old_wall_names or
                    block["name"] in generated_wall_names or
                    params.get("type") in wall_types)
+        is_electron_wall = (params.get("type") in {
+            "ESWallFluxMaterial", "PhysicsElectronWallFluxMaterial",
+            "PhysicsElectronAdjacentSheathWallFluxMaterial",
+        } or block["name"] in {"electron_wall_flux", "e_wall_flux",
+                               "electron_sheath_wall_flux"} or
+            "e_wall_number_flux" in params.get("prop_names", "").split())
         is_current = (block["name"] in current_names or
                       params.get("property_name") in current_outputs)
-        if not is_wall and not is_current:
+        if not is_wall and not is_current and not is_electron_wall:
             continue
         owner = {"file": block["file"], "line": block["line"],
                  "name": block["name"], "type": params.get("type"),
                  "property_name": params.get("property_name"),
-                 "family": "ion_wall" if is_wall else "surface_current"}
+                 "family": "ion_wall" if is_wall else
+                           "electron_wall" if is_electron_wall else "surface_current"}
         explicit_functor.append(owner)
         names = set(params.get("prop_names", "").split())
-        conflict = (block["name"] in generated_wall_names or
+        conflict = ((canonical_electron_wall and is_electron_wall) or
+                    block["name"] in generated_wall_names or
                     (params.get("type") in wall_types and
                      params.get("species_id") in c2_ions) or
                     bool(names & generated_wall_properties) or
