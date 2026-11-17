@@ -15,6 +15,10 @@
         [Continuity]
           fem_species = 'O2p'
           fvm_species = 'e'
+          # This is an initial-state owner negative, not an FV reaction P2.
+          # Standard PhysicsBase binding-only control avoids an unrelated
+          # missing electron volume-source error before the duplicate guard.
+          dont_create_kernels = true
           fem_potential = u_rf_imag
         []
       []
