@@ -391,9 +391,11 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       if (record.contains("ion_wall"))
         fail(file, "species." + it.key() +
                        ".ion_wall is retired; move wall_* fields to species");
+      if (record.contains("wall_migration_gate_smoothing_width"))
+        fail(file, "species." + it.key() +
+                       ".wall_migration_gate_smoothing_width belongs in MOOSE [Continuity], not JSON");
       const std::set<std::string> wall_keys = {
           "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
-          "wall_migration_gate_smoothing_width",
           "wall_use_element_gradient_for_potential"};
       bool wall_requested = false;
       for (const auto & key : wall_keys)
@@ -418,11 +420,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         parsed.molar_mass = number("wall_molar_mass");
         parsed.sticking = number("wall_sticking");
         parsed.ion_temperature_eV = number("wall_ion_temperature_eV");
-        parsed.migration_gate_smoothing_width =
-            number("wall_migration_gate_smoothing_width");
         if (parsed.molar_mass <= 0.0 || parsed.sticking < 0.0 ||
-            parsed.sticking > 1.0 || parsed.ion_temperature_eV < 0.0 ||
-            parsed.migration_gate_smoothing_width < 0.0)
+            parsed.sticking > 1.0 || parsed.ion_temperature_eV < 0.0)
           fail(file, "species." + it.key() + " nonphysical flat wall_* parameter");
         if (!record.at("wall_use_element_gradient_for_potential").is_boolean())
           fail(file, "species." + it.key() + " wall gradient selection must be boolean");
@@ -1250,7 +1249,8 @@ PlasmasAction::act()
         params.set<Real>("molar_mass") = wall.molar_mass;
         params.set<Real>("sticking") = wall.sticking;
         params.set<Real>("ion_temperature_eV") = wall.ion_temperature_eV;
-        params.set<Real>("migration_gate_smoothing_width") = wall.migration_gate_smoothing_width;
+        params.set<Real>("migration_gate_smoothing_width") =
+            continuity.front()->getParam<Real>("wall_migration_gate_smoothing_width");
         params.set<bool>("use_element_gradient_for_potential") =
             wall.use_element_gradient_for_potential;
         if (!blocks.empty())
