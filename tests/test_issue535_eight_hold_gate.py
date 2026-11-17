@@ -7,8 +7,10 @@ Six CORE/FLOW original obligations were retired after source verification.
 ARCH DD and S6 owner scoped caller risk and user-managed mutable Drive custody
 were separately approved (Issue #535 comment 6943043495). DD two-step P3
 operational retirement is proposed after CI; S6 full 400W 100us two-case P3
-was AUTHORIZED but NOT DISPATCHED, so S6 remains HOLD. Neither WORM nor
-scientific parity is claimed.
+was actually DISPATCHED under exact main SHA via workflow_dispatch run
+44050874900 (both 417/941 approval steps PASS and execution in progress at
+receipt). S6 remains HOLD until full execution/Artifact verification; neither
+WORM nor scientific parity is claimed.
 """
 from __future__ import annotations
 
@@ -327,10 +329,20 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
     assert dispatch["cases"] == ["417", "941"]
     assert dispatch["power_W"] == 400 and dispatch["duration_us"] == 100
     assert dispatch["max_parallel_jobs"] == 2 and dispatch["per_job_timeout_minutes"] == 360
-    assert dispatch["status"] == "AUTHORIZED_NOT_DISPATCHED"
-    assert dispatch["run_id"] is None and dispatch["run_attempt"] is None
-    assert dispatch["request_timestamp"] is None
-    assert dispatch["observation"] == "NO_VERIFIED_NEW_WORKFLOW_DISPATCH_RUN"
+    assert dispatch["status"] == "DISPATCHED_RUNNING_AT_RECEIPT"
+    assert dispatch["run_id"] == 44050874900 and dispatch["run_attempt"] == 1
+    assert dispatch["request_timestamp"] == "2026-11-17T08:55:23Z"
+    assert dispatch["observation"] == "MATCHED_ACTIVE_TWO_SOURCE_BOUND_JOBS"
+    assert dispatch["target_run_source_sha"] == "8263fbc1801f213b98183ba4876299041cd01dac"
+    assert dispatch["target_run_event"] == "workflow_dispatch"
+    assert dispatch["target_run_head_branch"] == "main"
+    assert dispatch["target_case_job_ids"] == {"417": 133928069072, "941": 133928068701}
+    assert dispatch["target_both_case_approval_steps_success"] is True
+    assert dispatch["issue535_dispatch_receipt_id"] == 6943420997
+    assert dispatch["transport_success_run_id"] == 44050852088
+    assert dispatch["transport_skipped_preflight_run_id"] == 44050703765
+    assert dispatch["temporary_workflow_cleanup_commit"] == "a39ee535c3dafba90a6f6107020ad04a61a16ca8"
+    assert dispatch["temporary_workflow_removed"] is True
     assert dispatch["P3_full_scope_executed"] is False
     assert dispatch["P4"] == "DIAGNOSTIC_ONLY"
     assert dispatch["science"] == "SCIENCE_HOLD"
@@ -514,7 +526,7 @@ def test_negative_ARCH_independent_custody_is_not_WORM_or_replay_waiver():
         _check(data)
 
 
-def test_negative_S6_run_approval_is_not_a_completed_dispatch():
+def test_negative_S6_dispatch_running_is_not_p3_success_or_science_acceptance():
     for field, corrupted in (
         ("status", "COMPLETED_SUCCESS"),
         ("run_id", 12345),
@@ -542,5 +554,24 @@ def test_negative_ARCH_user_managed_drive_approval_tampering():
     ):
         data = copy.deepcopy(_load())
         data["arch_owner_approval"][field] = corrupted
+        with pytest.raises(AssertionError):
+            _check(data)
+
+
+def test_negative_S6_source_run_provenance_or_cleanup_tamper():
+    for field, corrupted in (
+        ("run_id", 1),
+        ("run_attempt", 2),
+        ("request_timestamp", "2026-11-17T08:00:00Z"),
+        ("target_run_source_sha", "0" * 40),
+        ("target_run_event", "push"),
+        ("target_run_head_branch", "temporary-branch"),
+        ("target_case_job_ids", {"417": 133928069072}),
+        ("target_both_case_approval_steps_success", False),
+        ("transport_success_run_id", 0),
+        ("temporary_workflow_removed", False),
+    ):
+        data = copy.deepcopy(_load())
+        data["arch_p3_dispatch_approval"][field] = corrupted
         with pytest.raises(AssertionError):
             _check(data)
