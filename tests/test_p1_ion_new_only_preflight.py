@@ -293,3 +293,30 @@ def test_new_run_electron_wall_rejects_native_eswallflux_duplicate():
     assert "P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_1" in result["errors"]
     assert result["c2_native_producer_collision_count"] == 1
     assert result["c2_native_producer_collisions"][0]["family"] == "electron_wall"
+
+
+def test_grouped_json_electron_bc_requires_native_fem_bc_retirement_not_flux_retirement():
+    from copy import deepcopy
+    new = deepcopy(JSON)
+    new["drift_diffusion_boundaries"] = {
+        "inlet outlet plasma_electrode plasma_metal plasma_right": {
+            "e_wall": {"type": "FEMElectronSheathBC"}
+        }
+    }
+    # An electron FEM boundary is a residual operator and must not coexist
+    # with the JSON-generated FEM boundary. The wall *flux* Material is a
+    # separately allowed source in partial Energy mode.
+    native_bc = DECK + """
+[BCs]
+  [electron_sheath]
+    type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC
+    variable = log_ne
+    boundary = plasma_electrode
+  []
+[]
+"""
+    result = module.inspect({"native.i": native_bc}, new)
+    assert "P1_NATIVE_ELECTRON_FEM_BC_OWNER_PRESENT_1" in result["errors"]
+    assert result["native_electron_bc_owner_count"] == 1
+    assert result["native_fv_owner_count"] == 0
+    assert result["c2_native_producer_collision_count"] == 0
