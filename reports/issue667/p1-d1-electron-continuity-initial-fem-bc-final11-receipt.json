@@ -1,0 +1,243 @@
+{
+  "schema": "issue667.p1_d1.source_bound_receipt.v1",
+  "task_id": "P1-D1",
+  "status": "PASS_STATIC_SOURCE_HYBRID_D_BOTH_CASES",
+  "evidence_scope": "Direct byte readback on source-bound P1-0 Hybrid Scratch D, NOT Physics New-only runtime or MOOSE P2.",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "p1_0_artifact": {
+    "run_id": 44182628032,
+    "artifact_id": 14372278070,
+    "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "final_11_layer_file_sha256": "11/11 MATCH per case"
+  },
+  "source_bound_integrated_json_417": {
+    "run_id": 44182540363,
+    "artifact_id": 14371664130,
+    "zip_sha256": "74b4ce486e7e615e3a593745a8218dfea63cc22ab418e634ec35f1288829be24",
+    "file": "unified_s6_417.json",
+    "file_sha256": "8f1f0e72038829b00fa50f4d6d68bec5c86015e2f400918379539cf9b767c7bc"
+  },
+  "archived_original": {
+    "417": {
+      "artifact_id": 13677089020,
+      "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+    },
+    "941": {
+      "artifact_id": 13677375813,
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    "identical_base_file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d"
+  },
+  "base_layer_1": {
+    "name": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "final_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "case": "417+941"
+  },
+  "state": {
+    "old_name": "log_ne",
+    "new_name": "log_e",
+    "old_variable_block_sha256": "a89b75252747163ebc1e4a665a78695ed52ddae851a21a253d8eb58fa6fecb9a",
+    "old_time_block_sha256": "f68198ebe33f82e43601df887b3931276610a487c3bfd5606de3a7ceeabc7e32",
+    "old_transport_block_sha256": "9507cdb05cae9db36ec31c612dc82f689002152510c751044390cba92cf2bad5",
+    "final_native_variable_declarations": 0,
+    "final_native_electron_ic_declarations": 0,
+    "final_legacy_log_ne_tokens": 0,
+    "generated_variable_owner": "DDContinuityEq::addSolverVariables -> MooseVariable",
+    "generated_initial_owner": "DDContinuityEq::addInitialConditions -> ConstantIC",
+    "generated_IC_formula": "ln(species.e.initial_number_density) - ln(Avogadro)",
+    "json_e_density_m3": 1000000000000001.6,
+    "pinned_original_log_molar_density": "-20.216123548032986",
+    "json_integrated_941_direct_readback": "NOT_IN_COMMON_ARTIFACT"
+  },
+  "electron_density_producer_chain": [
+    {
+      "name": "electron_molar_density",
+      "section": "FunctorMaterials",
+      "factory_type": "ADParsedFunctorMaterial",
+      "input": "log_e",
+      "output": "electron_molar_density",
+      "expression": "exp(u)",
+      "final_block_sha256": "d62268f610d606b407c0e042162bdd490dd86b4cd3d1a6dbb8fd57070acafe2a"
+    },
+    {
+      "name": "electron_physical_density",
+      "section": "FunctorMaterials",
+      "factory_type": "ADParsedFunctorMaterial",
+      "input": "electron_molar_density",
+      "output": "n_e_physical",
+      "expression": "6.02214076e23*ce",
+      "original_and_final_block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17"
+    },
+    {
+      "name": "electron_wall_flux",
+      "section": "FunctorMaterials",
+      "factory_type": "ESWallFluxMaterial",
+      "input": "n_e_physical",
+      "energy": "e_energy_eV",
+      "output": "e_wall_number_flux",
+      "final_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824"
+    }
+  ],
+  "electron_particle_FEM_BCs": [
+    {
+      "name": "electron_sheath",
+      "boundary": "plasma_electrode plasma_metal plasma_right",
+      "original_block_sha256": "385dce7736a5e18a637e64e0adb9d7b2d254d7534feac32ed7d780d3ed61f728",
+      "final_block_sha256": "d9ab87b8365ba483414939b7e3a7a30f39f4acd8b43b1c70a62ecf521c62ca79",
+      "original": {
+        "factory_type": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+        "variable": "log_ne",
+        "wall_number_flux": "electron_wall_number_flux"
+      },
+      "final": {
+        "factory_type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "e_wall_number_flux"
+      },
+      "in_final_layer": 1,
+      "changed_keys": [
+        "type",
+        "variable",
+        "wall_number_flux"
+      ],
+      "boundary_preserved": true
+    },
+    {
+      "name": "electron_cover_dielectric",
+      "boundary": "plasma_cover",
+      "original_block_sha256": "9597a7ebed3f40556e55db662981b7abe5842860778b263955a42c10087d3eae",
+      "final_block_sha256": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04",
+      "original": {
+        "factory_type": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+        "variable": "log_ne",
+        "wall_number_flux": "electron_wall_number_flux"
+      },
+      "final": {
+        "factory_type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "e_wall_number_flux"
+      },
+      "in_final_layer": 1,
+      "changed_keys": [
+        "type",
+        "variable",
+        "wall_number_flux"
+      ],
+      "boundary_preserved": true
+    },
+    {
+      "name": "electron_wafer_dielectric",
+      "boundary": "plasma_wafer",
+      "original_block_sha256": "6a7367b30a14c1eba2cffd65c83178b0643a8244f6eb51bba8e0bdce91eaa28a",
+      "final_block_sha256": "0f12b97314b9a0c2da88f9caa0c0512d67b9d0d7dc4ed6d664e0d51da905fe74",
+      "original": {
+        "factory_type": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+        "variable": "log_ne",
+        "wall_number_flux": "electron_wall_number_flux"
+      },
+      "final": {
+        "factory_type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "e_wall_number_flux"
+      },
+      "in_final_layer": 1,
+      "changed_keys": [
+        "type",
+        "variable",
+        "wall_number_flux"
+      ],
+      "boundary_preserved": true
+    },
+    {
+      "name": "electron_focus_ring_dielectric",
+      "boundary": "plasma_focus_ring",
+      "original_block_sha256": "7bc48dcb69663952eb21506b29674f51f728a8bc9fa5f44d5cf9092442074580",
+      "final_block_sha256": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa",
+      "original": {
+        "factory_type": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+        "variable": "log_ne",
+        "wall_number_flux": "electron_wall_number_flux"
+      },
+      "final": {
+        "factory_type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "e_wall_number_flux"
+      },
+      "in_final_layer": 1,
+      "changed_keys": [
+        "type",
+        "variable",
+        "wall_number_flux"
+      ],
+      "boundary_preserved": true
+    }
+  ],
+  "downstream_edges": [
+    [
+      "e_wall_number_flux",
+      "BCs/electron_sheath + electron_cover_dielectric + electron_wafer_dielectric + electron_focus_ring_dielectric"
+    ],
+    [
+      "n_e_physical",
+      "Postprocessors/ne_min and ne_max"
+    ],
+    [
+      "n_e_physical",
+      "FunctorMaterials/charge_number_density -> poisson_source"
+    ],
+    [
+      "log_e",
+      "AuxKernels/freeze_log_ne_t6 -> electron_density_rf_state_t6_aux -> Transfers/ne_to_maxwell_t6"
+    ]
+  ],
+  "per_case": {
+    "417": {
+      "final_layers_verified": 11,
+      "particle_fem_BCs_verified": 4,
+      "energy_fem_BCs_retained": 4,
+      "old_to_final_bc_boundary_preserved": 4,
+      "negative_tests_rejected": 12
+    },
+    "941": {
+      "final_layers_verified": 11,
+      "particle_fem_BCs_verified": 4,
+      "energy_fem_BCs_retained": 4,
+      "old_to_final_bc_boundary_preserved": 4,
+      "negative_tests_rejected": 12
+    }
+  },
+  "negative_controls": [
+    "missing_particle_bc",
+    "duplicate_particle_bc",
+    "wrong_log_variable",
+    "wrong_wall_flux",
+    "swapped_boundary",
+    "changed_factory",
+    "missing_json_density",
+    "negative_json_density",
+    "wrong_json_density",
+    "duplicate_native_electron_state",
+    "duplicate_native_electron_ic",
+    "unconverted_legacy_log_ne"
+  ],
+  "source_code_evidence": {
+    "continuity_path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "continuity_blob_sha": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "hybrid_preparer_path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py",
+    "hybrid_preparer_blob_sha": "8a76517c7863be77d8390cd04b0b3be055f2c147"
+  },
+  "local_full_receipt_sha256": "5f4e6e4985ed001dd37ddd137a2bbae9b4a317a53d4a32b388ece14bed27ef08",
+  "unresolved": [
+    "New-only-generated electron kernel/IC instances not inspected in MOOSE runtime warehouse",
+    "Independent final generated unified_s6_941.json bytes are not in shared P1-0 Artifact; 941 .i and pinned source contract verified",
+    "P1-E integration and issue #668 New-only ion cutover pending",
+    "Private Rate bytes excluded; Native P2/P3/P4=NOT_RUN; SCIENCE_HOLD"
+  ],
+  "P2": "NOT_RUN",
+  "P3": "NOT_RUN",
+  "P4": "NOT_RUN",
+  "new_only_P2": "HOLD",
+  "science": "SCIENCE_HOLD"
+}
