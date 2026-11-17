@@ -100,3 +100,28 @@ def test_source_contract_owns_12_fv_operators_without_binding_only_mode():
         'source_params.set<MooseFunctorName>("v") = "S_" + id + "_molar";',
     ):
         assert token in source
+
+
+def test_real_negative_p2_fixture_om_source_is_absent_but_other_contracts_survive():
+    negative_i = PILOT / "issue633_ion_continuity_missing_om_source_p2.i"
+    negative_j = PILOT / "issue633_ion_continuity_missing_om_source_p2.json"
+    positive_i, positive_json = _source_and_json()
+    mutated = json.loads(negative_j.read_text())
+    assert negative_i.read_text().replace(
+        "issue633_ion_continuity_missing_om_source_p2.json",
+        "issue633_ion_continuity_newonly_p2.json"
+    ).split("[Mesh]", 1)[1] == positive_i.split("[Mesh]", 1)[1]
+    assert {r["id"] for r in positive_json["reactions"]} == {
+        "EI-415", "EI-401", "EI-417"
+    }
+    assert {r["id"] for r in mutated["reactions"]} == {"EI-415", "EI-417"}
+    assert "EI-401" not in mutated["equations"]
+    assert all(r["products"].get("Om", 0) == r["reactants"].get("Om", 0)
+               for r in mutated["reactions"])
+    assert inspect({negative_i.name: negative_i.read_text()},
+                   mutated)["status"] == "P0_STATIC_PASS_ONLY"
+    # Deliberately shows selector-only preflight is weaker than the required
+    # C++ Source gate; the exact-head Native P2 negative must reject it.
+    smoke = (PILOT / "run_native_binding_smoke.sh").read_text()
+    assert "issue633_ion_continuity_missing_om_source_p2.i" in smoke
+    assert "requires a nonzero volume reaction source" in smoke
