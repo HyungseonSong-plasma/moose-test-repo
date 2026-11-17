@@ -1,0 +1,78 @@
+{
+  "schema_version": "issue667-p1-b3-provisional-v1",
+  "task_id": "P1-B3",
+  "case": "S6-417",
+  "status": "HOLD_P1_0_COMMON_MANIFEST_MISSING",
+  "evidence_class": "READ_ONLY_STATIC_SOURCE_RECONSTRUCTION_NOT_EXACT_11_LAYER_RECEIPT",
+  "observed_main_sha": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_pr": "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/665",
+  "historical_immutable_source_revision": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "layer_ordinal": null,
+  "expected_layer_name": "issue477_S3-415-401_extra_overlay.i",
+  "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+  "file_sha256": null,
+  "historical_parent_expected_file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+  "section": "FVKernels",
+  "object_name": "ei401_negative_ion_source",
+  "factory_type": "FVCoupledForce",
+  "variable": null,
+  "historical_source_variable": "log_nm",
+  "intended_canonical_variable": "log_Om",
+  "relevant_parameters": {
+    "v": "S_Om_molar_EI401",
+    "coef": "1.0",
+    "block": "plasma"
+  },
+  "block_sha256": null,
+  "candidate_historical_block_sha256": "6f65790ab238716cd1b7c56a61a9b20d06812919007156d4dfdef2cd0ebfbdbd",
+  "candidate_historical_block_sha256_scope": "142-byte generated legacy block including two-space indentation and trailing newline; not direct artifact readback and not post-transform accepted",
+  "provider_consumer_edges": [
+    {
+      "producer": "ei401_progress",
+      "type": "PhysicsElectronImpactRateMaterial",
+      "output": "R_EI401",
+      "target": "ei401_om_source"
+    },
+    {
+      "producer": "ei401_om_source",
+      "type": "ADParsedFunctorMaterial",
+      "expression": "R",
+      "input": "R_EI401",
+      "output": "S_Om_molar_EI401",
+      "target": "ei401_negative_ion_source"
+    },
+    {
+      "consumer": "ei401_negative_ion_source",
+      "type": "FVCoupledForce",
+      "input": "S_Om_molar_EI401",
+      "historical_variable": "log_nm",
+      "coef": "1.0"
+    }
+  ],
+  "provenance": [
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/29d1acc6ef7969908b86719e4b95c73a1565136d/experiments/Issue395_powered_chemistry_ladder/build_o2_attachment_overlay.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/29d1acc6ef7969908b86719e4b95c73a1565136d/.github/scripts/ei401_replaces_ei01_h23_ei412_ei941_14ch.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9c15a4f0e2cf8042cb0d4b2f18af31511021d168/experiments/Issue477_electron_shape/prepare_s3_401_op_production.py",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/667"
+  ],
+  "static_findings": {
+    "generated_object_count_expected": 1,
+    "observed_generator_template": "EI01 FVCoupledForce transformed by deterministic EI01->EI401 and R_attachment->R_EI401 substitutions",
+    "rate_table_expected_sha256": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+    "rate_table_bytes_read": false,
+    "scientific_acceptance": "SCIENCE_HOLD",
+    "native_P2": "NOT_RUN"
+  },
+  "unresolved": [
+    "P1-0 shared 11-layer immutable manifest not found in current Issue #667 body/comments",
+    "S6-417 actual ordered 11-layer source byte identity and layer ordinal not directly read",
+    "Exact source-layer sha256 and exact post-transform object block_sha256 not verified",
+    "Canonical log_nm -> log_Om migration at final 11-layer object not directly read",
+    "Independent uniqueness/no-other-Om-source verification awaits full 11-layer census",
+    "Private rate table inaccessible; expected SHA only, no byte read"
+  ],
+  "not_an_authorization_to_retire_native": true,
+  "not_a_science_or_native_runtime_pass": true,
+  "required_next_gate": "P1-0_COMMON_MANIFEST_AND_DIRECT_11_LAYER_READBACK"
+}
