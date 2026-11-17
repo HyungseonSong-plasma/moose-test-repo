@@ -68,6 +68,7 @@ def test_exact_native_26_owner_retirement_without_touching_other_operators(case)
 @pytest.mark.parametrize("case", ("417", "941"))
 def test_disposable_scratch_writes_are_exact_and_have_sha_receipts(tmp_path, case):
     names, source = fixture(case)
+    (tmp_path / ".issue633_disposable_scratch").write_text("issue633-scratch-only\n")
     for name, body in source.items():
         (tmp_path / name).write_text(body)
     result = retire_in_disposable_scratch(tmp_path, names)
@@ -83,6 +84,7 @@ def test_unknown_type_and_missing_source_fail_before_any_write(tmp_path):
     names, layers = fixture("417")
     changed = layers[names[1]].replace("type = FVCoupledForce", "type = NativeUnknown")
     layers[names[1]] = changed
+    (tmp_path / ".issue633_disposable_scratch").write_text("issue633-scratch-only\n")
     for name, value in layers.items():
         (tmp_path / name).write_text(value)
     with pytest.raises(CutoverError, match="ION26_UNCHARACTERIZED"):
@@ -108,6 +110,7 @@ def test_symlink_or_non_disposable_layer_path_rejected(tmp_path):
     names, layers = fixture("417")
     for name, value in layers.items():
         (tmp_path / name).write_text(value)
+    (tmp_path / ".issue633_disposable_scratch").write_text("issue633-scratch-only\n")
     target = tmp_path / "outside.i"
     target.write_text("# protected\n")
     link = tmp_path / names[0]
@@ -148,3 +151,12 @@ def test_exact_archived_native_base_21_owners_can_be_retired_with_five_source_ow
     assert "[sigma_surface_current]" in updated[names[0]]
     assert "[potential]" in updated[names[0]]
     assert (PILOT / "native/s6_c0_physics_base_no_d1.i").read_text() == original
+
+def test_unmarked_staged_files_cannot_be_mutated(tmp_path):
+    names, layers = fixture("417")
+    for name, text in layers.items():
+        (tmp_path / name).write_text(text)
+    with pytest.raises(CutoverError, match="ION26_REFUSE_UNMARKED"):
+        retire_in_disposable_scratch(tmp_path, names)
+    assert all((tmp_path / name).read_text() == body
+               for name, body in layers.items())
