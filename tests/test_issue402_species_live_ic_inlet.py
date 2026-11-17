@@ -151,5 +151,6 @@ def test_drift_diffusion_continuity_and_energy_do_not_generate_bcs():
     assert 'std::log(density) - std::log(PHYSICS_CONSTANTS::N_A)' in continuity
     assert '"FVConstantIC"' in continuity and '"ConstantIC"' in continuity
     assert "energyStateName" in energy and '"log_" + species + "_energy"' in energy
-    assert 'std::log(getParam<Real>("initial_molar_energy_density_eV"))' in energy
+    assert "std::log(initial_energy)" in energy
+    assert "1.5 * (*electron.temperature_eV) * (*electron.initial_number_density)" in energy
     assert "Finite-volume electron energy is not supported" in energy
