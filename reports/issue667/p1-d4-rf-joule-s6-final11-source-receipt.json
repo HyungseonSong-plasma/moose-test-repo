@@ -1,0 +1,195 @@
+{
+  "schema": "issue667.p1_d4.source_bound_receipt.v1",
+  "task_id": "P1-D4",
+  "issue": 667,
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "case_scope": [
+    "S6-417",
+    "S6-941"
+  ],
+  "date_utc": "2026-11-17",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "original_archive_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "source_scope": "PR665 exact-head reconstructed, canonicalized and pinned Hybrid Scratch D input 11 layers; not New-only 26-to-24 cutover",
+  "status": "SOURCE_STATIC_PASS_WITH_EXTERNAL_MAXWELL_RUNTIME_HOLD",
+  "p1_0": {
+    "run_id": 44180190753,
+    "artifact_id": 14372315897,
+    "artifact_name": "issue667-p1-0-sourcepin-9c15a4f-44180190753-1",
+    "artifact_digest": "sha256:962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "scope": "Actual 11 .i files + per-case manifest and FV block hashes"
+  },
+  "independent_verification": {
+    "run_id": 44184368558,
+    "job_id": 134396813216,
+    "workflow_source_commit": "8c95fd82b2c3bf814a1ad193121c5d2c44cdd5db",
+    "conclusion": "SUCCESS",
+    "receipt_artifact_id": 14372389346,
+    "receipt_artifact_name": "issue667-p1-d4-readback-44184368558-1",
+    "receipt_artifact_digest": "sha256:9e61f3623b4cc2b4126844c0f26d3f16b0ebbd63d6473adc4b3fd89a61dd20e7",
+    "receipt_file_name": "p1-d4-rf-joule-final11.json",
+    "actual_block_sha_locations": [
+      "cases.417.rf_energy.*.block_sha256",
+      "cases.941.rf_energy.*.block_sha256"
+    ],
+    "actual_file_sha_locations": [
+      "cases.417.file_sha[0..10].sha256",
+      "cases.941.file_sha[0..10].sha256"
+    ],
+    "note": "Hash bytes and object parameters are in successful exact-head verifier receipt; no projected original or prior C0 SHA has been promoted."
+  },
+  "cases": {
+    "417": {
+      "source_file_sha_matches": "11/11",
+      "independent_fv_block_sha_matches": "63/63",
+      "rf_energy_input_contract": "PASS",
+      "poisson_charge_static_edges": "PASS",
+      "negative_controls_rejected": "6/6",
+      "source_class": "HYBRID_D_NOT_NEW_ONLY"
+    },
+    "941": {
+      "source_file_sha_matches": "11/11",
+      "independent_fv_block_sha_matches": "63/63",
+      "rf_energy_input_contract": "PASS",
+      "poisson_charge_static_edges": "PASS",
+      "negative_controls_rejected": "6/6",
+      "source_class": "HYBRID_D_NOT_NEW_ONLY"
+    }
+  },
+  "observed_edges": [
+    {
+      "from": [
+        "E_real_rf_t6",
+        "E_imag_rf_t6",
+        "sigma_real_rf_t6"
+      ],
+      "to": "q_rf_eV_mol_t6",
+      "owner": "Materials/q_rf_eV_mol_t6",
+      "factory": "ParsedMaterial",
+      "formula": "enabled*scale*0.5*sigma_real_rf_t6*(E_real_rf_t6^2 + E_imag_rf_t6^2)/F",
+      "status": "STATIC_PASS"
+    },
+    {
+      "from": "q_rf_eV_mol_t6",
+      "to": "log_e_energy",
+      "owner": "Kernels/rf_heating_t6",
+      "factory": "MatBodyForce",
+      "parameter": "material_property=q_rf_eV_mol_t6",
+      "status": "STATIC_PASS"
+    },
+    {
+      "from": [
+        "log_ne_rf_state_t6",
+        "pressure_rf_state_t6",
+        "muN_rf_t6"
+      ],
+      "to": "sigma_real_rf_t6",
+      "owner": "Materials/sigma_real_rf_t6",
+      "factory": "ParsedMaterial",
+      "status": "STATIC_PASS"
+    },
+    {
+      "from": "mean_energy_rf_state_t6",
+      "to": "muN_rf_t6",
+      "owner": "Materials/muN_rf_t6",
+      "factory": "PiecewiseLinearInterpolationMaterial",
+      "status": "STATIC_PASS"
+    },
+    {
+      "from": [
+        "log_ne_rf_state_t6",
+        "log_energy_rf_state_t6"
+      ],
+      "to": "mean_energy_rf_state_t6",
+      "owner": "AuxKernels/mean_energy_rf_state_t6_aux",
+      "factory": "ParsedAux",
+      "status": "STATIC_PASS"
+    },
+    {
+      "from": [
+        "n_i_physical",
+        "n_op_physical",
+        "n_e_physical",
+        "n_m_physical"
+      ],
+      "to": "charge_number_density",
+      "owner": "FunctorMaterials/charge_number_density",
+      "status": "STATIC_PASS"
+    },
+    {
+      "from": "charge_number_density",
+      "to": "poisson_source",
+      "owner": "FunctorMaterials/poisson_source",
+      "status": "STATIC_PASS"
+    },
+    {
+      "from": "poisson_source",
+      "to": "potential",
+      "owner": "Kernels/phi_source",
+      "status": "STATIC_PASS"
+    },
+    {
+      "from": "charge_number_density",
+      "to": "charge_density_C_m3",
+      "owner": "FunctorMaterials/charge_density",
+      "status": "STATIC_PASS"
+    }
+  ],
+  "electrostatic_joule": {
+    "retired_scratch_native_object_names": [
+      "energy_joule",
+      "energy_time",
+      "energy_transport"
+    ],
+    "object_count_each": 0,
+    "physics_energy_overlay": "[Energy] with fem_potential = potential",
+    "physics_implementation": "physics_app/src/physics/plasma/DDEnergyEq.C::addFEKernels creates FEMLogMolarElectronJouleHeating with electron_log_density=log_e and potential",
+    "source_ownership_status": "STATIC_PASS",
+    "warehouse_generated_object_count": "NOT_RUN",
+    "physical_residual_equivalence": "NOT_RUN"
+  },
+  "rf_external": {
+    "actual_inputs": [
+      "Postprocessors/P_abs_maxwell_t6 (Receiver)",
+      "Postprocessors/rf_drive_scale_t6 (Receiver)",
+      "AuxVariables/E_real_rf_t6",
+      "AuxVariables/E_imag_rf_t6"
+    ],
+    "absence_of_historical_static_owners": [
+      "UserObjects/maxwell_solution_t6",
+      "AuxKernels/map_E_real_t6",
+      "AuxKernels/map_E_imag_t6"
+    ],
+    "finding": "Actual Scratch D uses Receiver-led RF setup, not the older generated T6 SolutionUserObject/Map_E static contract.",
+    "power_receiver_input_presence": "STATIC_PASS",
+    "external_maxwell_state_delivery": "UNRESOLVED_HOLD",
+    "runtime_transferred_E_field": "NOT_RUN",
+    "power_integral_closure": "NOT_RUN"
+  },
+  "negative_controls": {
+    "missing_rf_kernel": "REJECTED",
+    "duplicate_rf_kernel": "REJECTED",
+    "wrong_energy_target": "REJECTED",
+    "incorrect_maxwell_receiver_factory": "REJECTED",
+    "wrong_rf_material_property": "REJECTED",
+    "incomplete_charge_density_functor_inputs": "REJECTED"
+  },
+  "unresolved": [
+    "Runtime producer/transfer route for E_real_rf_t6 and E_imag_rf_t6 from Maxwell must be proven with external transfer/receivers, not inferred from historical template.",
+    "Runtime Physics-generated Joule and RF FE Kernel warehouse count not checked.",
+    "RF power and charge closure numeric or physical verification not run.",
+    "P1-E must independently integrate and revalidate all 29 workers/owners.",
+    "New-only ion FV cutover and Native P2/P3/P4 not run; SCIENCE_HOLD remains."
+  ],
+  "prohibited_changes_not_performed": [
+    "Original 10-layer/ZIP",
+    "P1-0 common manifest and Artifact",
+    "main",
+    "PR #665",
+    "workflow controls outside one-shot (removed)",
+    "private rate tables"
+  ],
+  "next_gate": "P1-E 29-slot readback/integration; separate dynamic Maxwell transfer and real New-only P2 checks before runtime acceptance",
+  "native_p2": "NOT_RUN",
+  "science": "SCIENCE_HOLD"
+}
