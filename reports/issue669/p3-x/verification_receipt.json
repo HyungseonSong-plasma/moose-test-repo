@@ -1,0 +1,106 @@
+{
+  "schema": "issue669.p3_x.preintegration.verification.v1",
+  "task_id": "P3-X",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "status": "SOURCE_ONLY_PREINTEGRATION_PASS__FULL_P3_X_HOLD",
+  "scope": "Integrated independent evidence only; P3-X production New-only cutover is explicitly NOT executed",
+  "worker_evidence": {
+    "requested_slots": 30,
+    "located_unique_source_bound_receipts": 19,
+    "not_located": 11,
+    "missing_slots": [
+      "P3-T5",
+      "P3-G2",
+      "P3-G6",
+      "P3-F8",
+      "P3-N3",
+      "P3-N5",
+      "P3-N6",
+      "P3-V1",
+      "P3-V2",
+      "P3-V3",
+      "P3-V4"
+    ],
+    "index": "reports/issue669/p3-x/worker_receipt_index.json",
+    "worker_source_status": "bounded static source verification; no automatic final New-only PASS promotion"
+  },
+  "input_evidence": {
+    "p1_hybrid_11_layer": {
+      "ci_run": 44180190753,
+      "artifact_id": 14372315897,
+      "zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620"
+    },
+    "p2_native_ion_retired_11_layer": {
+      "ci_run": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    },
+    "p2_manifest_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "case_evidence": {
+      "417": {
+        "p1_file_sha_verified": 11,
+        "p2_file_sha_verified": 11,
+        "old_native_kernel_removed": 14,
+        "old_native_bc_removed": 12,
+        "old_native_ion_remaining": 0,
+        "changed": 5,
+        "byte_identical_unchanged": 6,
+        "old_electron_fem_bc_preserved": 8,
+        "newonly_json_11th_overlay_bound": false
+      },
+      "941": {
+        "p1_file_sha_verified": 11,
+        "p2_file_sha_verified": 11,
+        "old_native_kernel_removed": 14,
+        "old_native_bc_removed": 12,
+        "old_native_ion_remaining": 0,
+        "changed": 5,
+        "byte_identical_unchanged": 6,
+        "old_electron_fem_bc_preserved": 8,
+        "newonly_json_11th_overlay_bound": false
+      }
+    }
+  },
+  "independent_local_audit": {
+    "script": "p3_x_verify_source_stage.py",
+    "inventory_json_sha256": "4966a472145ea7cde3c53235f5d26278257d1f3f216aaca88594c97356c91ce2",
+    "edges_json_sha256": "f9950b29549b401836960502a24a457e5f5651dd408e3416c6b427af1c1b5a5e",
+    "receipt_json_sha256": "6061025b1763113aba47a1b229645baa5e681f8b02f0f0f081c2622747eb5ce3",
+    "non_target_original_bytes_preserved": true,
+    "negative_controls_rejected": 8,
+    "negative_controls_total": 8,
+    "negative_fixture_case": "417",
+    "historical_archive_modified": false,
+    "private_rate_bytes_read": false
+  },
+  "newonly_contract": {
+    "json_417_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "json_941_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "electron_transport": {
+      "type": "lookup",
+      "unit": "reduced",
+      "bounds_policy": "clamp",
+      "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+    },
+    "prepared_42_row_electron_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "committed_default_100_row_table_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "actual_runtime_staged_table_sha_verified": false,
+    "hybrid_vs_newonly_electron_bc_collision_status": "POTENTIAL_DUPLICATE_WALL_CONTRIBUTION_HOLD"
+  },
+  "gates": {
+    "P1_E_SOURCE": "PASS",
+    "P2_668_STATIC_ION_RETIRE_26_TO_0": "PASS_BOTH_CASES",
+    "P2_668_FULL_PACKAGE": "HOLD_PRODUCTION_RUNNER_NEWONLY_JSON_OVERLAY",
+    "P3_X_19_RECEIPT_REVIEW": "PASS_BOUNDED_ONLY",
+    "P3_X_11_RECEIPTS": "MISSING",
+    "P3_X_ACTUAL_NEWONLY_BEFORE_AFTER_11_LAYER_JSON_SHA": "NOT_RUN",
+    "P3_X_ELECTRON_BC_SINGLE_OWNER_WAREHOUSE": "NOT_RUN",
+    "P3_X_DYNAMIC_RF_NEUTRAL_PRESSURE_CONSUMER": "NOT_RUN",
+    "P5_NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "integration_decision": "HOLD_ACTUAL_P3_X_CUTOVER_NO_CODE_EDIT_BEFORE_P2_PRODUCTION_GATE",
+  "security": "No private rate bytes in outputs; no original/baseline/main/PR665 modifications; no native execution, no workflow skips or dont_create_kernels bypass"
+}
