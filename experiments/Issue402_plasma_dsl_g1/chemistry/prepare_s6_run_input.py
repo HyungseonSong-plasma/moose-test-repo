@@ -628,9 +628,25 @@ def main() -> int:
                         help="JSON list of 10 S6 layer paths + migrated_continuity.i")
     parser.add_argument("--variant", choices=("417", "941"), required=True)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--newonly", action="store_true",
+                        help="Stage exact #668 New-only JSON/layer11 after pinned 26-owner Scratch retirement")
+    parser.add_argument("--case-manifest", type=Path,
+                        help="P1-0 exact-source 11-layer case manifest, mandatory for --newonly")
+    parser.add_argument("--moments-source", type=Path,
+                        help="Historical SHA-pinned 42-row electron table, mandatory for --newonly")
     args = parser.parse_args()
     ordered = json.loads(args.ordered_file.read_text())
-    report = prepare(args.staged_chem_dir, ordered, args.variant)
+    if args.newonly:
+        if args.case_manifest is None or args.moments_source is None:
+            parser.error("--newonly requires --case-manifest and --moments-source")
+        from prepare_s6_newonly import prepare_newonly
+        report = prepare_newonly(
+            args.staged_chem_dir, ordered, args.variant,
+            json.loads(args.case_manifest.read_text(encoding="utf-8")),
+            args.moments_source
+        )
+    else:
+        report = prepare(args.staged_chem_dir, ordered, args.variant)
     args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps(report, sort_keys=True))
     return 0
