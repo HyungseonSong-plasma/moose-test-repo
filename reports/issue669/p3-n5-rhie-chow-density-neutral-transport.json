@@ -1,0 +1,315 @@
+{
+  "schema": "issue669.p3n5.rie_chow_density_neutral_transport_byte_receipt.v1",
+  "task_id": "P3-N5",
+  "status": "PASS_STATIC_INPUT_BOTH_CASES__TRANSPORT_DATA_SCRATCH_STAGE_AND_NATIVE_RUNTIME_HOLD",
+  "source": {
+    "pr_number": 665,
+    "head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d"
+  },
+  "inputs": {
+    "p1_0": {
+      "ci_run": 44182628032,
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "p2_newonly_scratch": {
+      "ci_run": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    }
+  },
+  "cases": {
+    "417": {
+      "input_layers": 11,
+      "source_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "after_ion_retirement_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "objects_exactly_once": 16,
+      "unchanged_P1_object_block_bytes": 16,
+      "synthetic_parameter_negative_controls_rejected": 11
+    },
+    "941": {
+      "input_layers": 11,
+      "source_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "after_ion_retirement_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "objects_exactly_once": 16,
+      "unchanged_P1_object_block_bytes": 16,
+      "synthetic_parameter_negative_controls_rejected": 11
+    }
+  },
+  "shared_object_sha256": [
+    {
+      "section": "UserObjects",
+      "object_name": "rc",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "e2df5dc1d44676bb2466221b3b3b315e3e62b244b1473efe82a2c9485d5a7823",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "Variables",
+      "object_name": "pressure",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "neutral_state_dot_aliases",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "6ca8061be11a71d353b86fa4b09449bf4196bd9d3ca53b460ec86db6f4f2685e",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "neutral_mean_molar_mass",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "63507b639ce0fb75e645f6d0a9ece92c16ed7db564b70562c6cfbdcc3058c121",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "neutral_density",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "0377feafc0a96d9b69657564ccb303a15caa8492c3d2b962b3ba981449cf9871",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "neutral_mean_molar_mass_dot",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "f1ed653ae3832b64a7097f2f4bc66fc6788148f7743e3b78533dceff37e1c9c5",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "neutral_density_dot",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "3f6f3121b70f8b4131f5f16d2c063c66936972eb55020aba91cfe050bfdde2dc",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "neutral_transport",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "bf1973756380ff45177a9ddd98bd926005616c94ba531adb33118a1f77c202b3",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FunctorMaterials",
+      "object_name": "neutral_flow_constants",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "3ee55e8eebff36af7d54a4d80e885f41685e946b8ea9a435b34082b05026eeff",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FVKernels",
+      "object_name": "neutral_mass_time",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "a22d4bd658bf1cb3a4f5fd82aa8ef46775600723a2c62533946fa2ebb1851a34",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FVKernels",
+      "object_name": "neutral_mass_advection",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "caf28088002e2302d6248c96c1f29bddf5c75f6a8947faaf3edb9d8f52a44047",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FVKernels",
+      "object_name": "u_pressure",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "b495dc6a203c3955bb52e206198304802d5c134120135861505fde25007ccb39",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FVKernels",
+      "object_name": "v_pressure",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "de21314dbf65512bd847219066cbcb9d136c7f21d96f591c7c401474245fdada",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FVKernels",
+      "object_name": "O2s_diffusion",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "414b6418109266196203576f84152cbda48ecb1b7f855c24592c1bbf3433e76b",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FVKernels",
+      "object_name": "O_diffusion",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "80b2408fa37b40a2f13c668d868ece1022e98b7f5ad8a2d0eb4ebd0ecd7be512",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    },
+    {
+      "section": "FVKernels",
+      "object_name": "Os_diffusion",
+      "layer": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "block_sha256": "29b5e6cbec2e56b4c03e029f47a4c25a1853675ae28b054bc2d81da34c54cd20",
+      "source_case": "417_and_941",
+      "source_bytes_equal_original_P1_0": true,
+      "duplicate_count": 0
+    }
+  ],
+  "global_params": {
+    "rhie_chow_user_object": "rc",
+    "advected_interp_method": "upwind",
+    "velocity_interp_method": "rc"
+  },
+  "root_Physics_Plasmas": {
+    "pressure_Pa": "1.333223684",
+    "temperature_K": "300",
+    "state_model": "ideal_gas",
+    "in_layer": "migrated_continuity.i",
+    "JSON_selector_caveat": "currently unified_s6_417|941.json in staged overlay, not final new-only JSON"
+  },
+  "producer_consumer_edges": [
+    {
+      "producer": "Variables/pressure (INSFVPressureVariable)",
+      "consumers": [
+        "UserObjects/rc.pressure",
+        "FunctorMaterials/neutral_density",
+        "FunctorMaterials/neutral_density_dot",
+        "FunctorMaterials/neutral_transport.pressure",
+        "FVKernels/u_pressure.pressure",
+        "FVKernels/v_pressure.pressure"
+      ]
+    },
+    {
+      "producer": "Physics/Plasmas/temperature=300 K",
+      "consumers": [
+        "FunctorMaterials/neutral_density",
+        "FunctorMaterials/neutral_density_dot",
+        "FunctorMaterials/neutral_transport.temperature"
+      ]
+    },
+    {
+      "producer": "FunctorMaterials/neutral_mean_molar_mass -> Mn_neutral",
+      "consumers": [
+        "neutral_density",
+        "neutral_density_dot",
+        "O2s/O/Os_diffusion.mean_molar_mass"
+      ]
+    },
+    {
+      "producer": "FunctorMaterials/neutral_density -> rho_neutral",
+      "consumers": [
+        "FVKernels/neutral_mass_advection",
+        "FVKernels/O2s_diffusion",
+        "FVKernels/O_diffusion",
+        "FVKernels/Os_diffusion"
+      ]
+    },
+    {
+      "producer": "FunctorMaterials/neutral_density_dot -> drho_neutral_dt",
+      "consumers": [
+        "FVKernels/neutral_mass_time"
+      ]
+    },
+    {
+      "producer": "FunctorMaterials/neutral_transport (NVTransportMaterial) -> D_mix_O2s/D_mix_O/D_mix_Os",
+      "consumers": [
+        "FVKernels/O2s_diffusion",
+        "FVKernels/O_diffusion",
+        "FVKernels/Os_diffusion"
+      ]
+    }
+  ],
+  "transport_table": {
+    "root_ref": "../Issue21_qvt_six_species_bulk_advection/transport_data.txt",
+    "repo_path": "experiments/Issue21_qvt_six_species_bulk_advection/transport_data.txt",
+    "pr665_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+    "pr665_git_blob": "bcbb0a5939ca77a9c3b718fc1cc2ef7f2d45820f",
+    "bytes": 4875,
+    "readback_mode": "exact pinned HEAD file via GitHub connector",
+    "included_in_668_scratch_artifact": false,
+    "required_next_gate": "P3-X must stage table into both case Scratch and independently verify file SHA/relative path"
+  },
+  "source_implementation": {
+    "NVTransportMaterial_C_git_blob": "e463edcba0089383b0d82053625dba8df659875f",
+    "hybrid_preparer_git_blob": "8a76517c7863be77d8390cd04b0b3be055f2c147"
+  },
+  "negative_controls": {
+    "type": "11 synthetic in-memory parameter mutations per case; no Native runtime or whole-deck rejection claimed",
+    "count_per_case": 11,
+    "categories": [
+      "wrong rc pressure/velocity/global owner",
+      "wrong neutral density input/expression",
+      "wrong transport table path/pressure/temperature",
+      "wrong root pressure/temperature",
+      "cross-wired O diffusion coefficient"
+    ]
+  },
+  "local_independent_receipt_sha256": "f29ad18ddec756fd940582cce1dad178f313bc12452d9d8e634b34b21ec1d2b4",
+  "local_reproducible_bundle_sha256": "a9719c5982965c4622a39236eec57c668e6c518c8c1b0025b2929d635da80c99",
+  "unresolved": [
+    "Transport database is source-pinned but not physically present in #668 staged Scratch artifact; file path/SHA must be staged in P3-X",
+    "Runtime Rhie-Chow object instantiation and P05 Warehouse not observed; Native P2 belongs P5 #671",
+    "Both staged migrated_continuity.i still point to unified_s6_417|941.json, while #668 has no final new-only JSON bytes; P3-X must bind new-only JSON and assess single-owner pressure+energy contracts",
+    "P3-N6 separately owns full legacy p/p_fixed/T_g_fixed alias census",
+    "Native P3/P4 NOT_RUN; SCIENCE_HOLD"
+  ],
+  "gates": {
+    "P3_N5_STATIC": "PASS",
+    "P3_N5_NATIVE_RUNTIME": "HOLD",
+    "P3_X": "PENDING",
+    "TRANSPORT_DATA_ACTUAL_SCRATCH_STAGE": "HOLD",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "policy": {
+    "main_unchanged": true,
+    "pr665_unchanged": true,
+    "protected_original_inputs_unchanged": true,
+    "no_native_P3_P4": true,
+    "no_private_rate_raw": true
+  }
+}
