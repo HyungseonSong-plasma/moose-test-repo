@@ -61,3 +61,15 @@ def test_mode_flag_rejected():
     bad = DECK.replace("fvm_species = 'O2p Om Op'", "fvm_species = 'O2p Om Op'\n          fvm_kernel_ownership = physics")
     result = module.inspect({"migrated_continuity.i": bad}, JSON)
     assert "P1_MANUAL_OWNER_FLAG_FORBIDDEN" in result["errors"]
+
+
+def test_nonfinite_and_boolean_initial_density_rejected():
+    for invalid in (float("nan"), float("inf"), True, 0.0, -1.0):
+        bad = {"species": {**JSON["species"], "Om": {"initial_number_density": invalid}}}
+        result = module.inspect({"migrated_continuity.i": DECK}, bad)
+        assert "P1_JSON_INITIAL_NUMBER_DENSITY_INVALID:Om" in result["errors"]
+
+def test_invalid_species_identifier_rejected():
+    bad = DECK.replace("fvm_species = 'O2p Om Op'", "fvm_species = 'O2p Om Op-a'")
+    result = module.inspect({"migrated_continuity.i": bad}, JSON)
+    assert "P1_SPECIES_INVALID_IDENTIFIER:Op-a" in result["errors"]
