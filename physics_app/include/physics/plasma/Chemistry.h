@@ -41,7 +41,24 @@ struct NVTransportRecord
   bool equals(const NVTransportRecord & rhs) const;
 };
 
-// One explicitly declared mesh sideset and its electron boundary owner.
+// The C2 wall law parameters belong to JSON; fvm_species remains the only
+// discretization/generation selector. Do not use neutral-mixture molar mass
+// for this independent ion wall loss law.
+struct IonWallRecord
+{
+  std::string ion_number_density;
+  std::string potential;
+  std::string mobility;
+  std::string gas_temperature;
+  std::string block;
+  double molar_mass = 0.0;
+  double sticking = 1.0;
+  double ion_temperature_eV = 0.0;
+  double migration_gate_smoothing_width = 0.0;
+  bool use_element_gradient_for_potential = true;
+};
+
+// One explicitly declared mesh sideset and its typed boundary owner.
 // Aliases such as wafer and inlet are labels, not inferred mesh names.
 // A verbatim supported MOOSE BC declaration moved from an existing .i
 // [BCs] block. Its name, type, variable, and material Functor links are
@@ -52,6 +69,10 @@ struct BoundaryBCRecord
   std::string variable;
   std::string wall_number_flux;
   std::string mean_energy;
+  // The two FV ion forms deliberately use different sign/unit contracts.
+  std::string functor;
+  std::string signed_number_flux;
+  double factor = 0.0;
 };
 
 struct BoundaryRecord
@@ -73,6 +94,7 @@ struct SpeciesRecord
   // Other species may omit it. Strictly positive (log-state cannot encode zero).
   // No external [Variables]/[ICs] fallback for selected continuity species.
   std::optional<double> initial_number_density;
+  std::optional<IonWallRecord> ion_wall;
   // Scenario-specific initial data, never the instantaneous solver state.
   // Missing is different from an explicitly zero concentration.
   std::optional<double> initial_vol_mass_fraction;
@@ -132,6 +154,8 @@ public:
   bool fluidElectronEnergyTransport() const { return _fluid_electron_energy_transport; }
   const NVTransportRecord * nvTransport() const;
   bool hasBoundaries() const { return _has_boundaries; }
+  bool hasIonWalls() const;
+  const std::string & surfaceElectronWallFlux() const { return _surface_electron_wall_flux; }
   const std::map<std::string, BoundaryRecord> & boundaries() const
   {
     return _boundaries;
@@ -146,6 +170,7 @@ private:
   std::unique_ptr<NVTransportRecord> _nv_transport;
   bool _has_boundaries = false;
   std::map<std::string, BoundaryRecord> _boundaries;
+  std::string _surface_electron_wall_flux;
 };
 
 // Chemistry owns the Physics source projector and the validated JSON data model.
