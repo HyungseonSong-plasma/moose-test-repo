@@ -90,7 +90,7 @@ jobs:
               rates=[x for x in all_objects if x["name"]==RATE]
               check(len(rates)==1,"C3_EI401_RATE_OWNER_MISSING_OR_DUPLICATE:"+str(len(rates)))
               rate=rates[0]; rp=rate["params"]
-              check(rp.get("type")=="PhysicsElectronImpactRateMaterial","C3_EI401_FACTORY")
+              check(rp.get("type")=="EIRateCoefMaterial","C3_EI401_FACTORY:"+str(rp.get("type")))
               check(RATE_FUNCTOR in " ".join(rp.values()),"C3_EI401_RATE_OUTPUT_REFERENCE")
               return {"source":obj,"material_producer":producer,"rate_producer":rate}
 
