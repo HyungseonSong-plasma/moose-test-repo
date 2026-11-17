@@ -41,8 +41,8 @@ def test_actual_final_schema_is_one_complete_json_and_old_source_is_unchanged(ca
     assert len(new["equations"]) == 8
     assert {x["id"] for x in new["reactions"]} == set(new["equations"])
     assert set(new["drift_diffusion_boundaries"]) == {
-        "inlet outlet plasma_electrode plasma_metal plasma_right",
-        "plasma_cover plasma_wafer plasma_focus_ring",
+        "inlet outlet", "plasma_electrode plasma_metal plasma_right",
+        "plasma_cover", "plasma_wafer", "plasma_focus_ring",
     }
     assert validate(new) == {
         "ion_wall_materials": 3, "normal_fvbcs": 3, "dielectric_fvbcs": 9,
@@ -165,28 +165,33 @@ def test_production_cpp_owner_for_typed_fields_and_electron_initial_temperature(
 def test_grouped_electron_fem_and_ion_fv_boundary_contract(case):
     data = run_json(case)
     groups = data["drift_diffusion_boundaries"]
-    general = groups["inlet outlet plasma_electrode plasma_metal plasma_right"]
-    dielectric = groups["plasma_cover plasma_wafer plasma_focus_ring"]
-    assert len(general) == 5
-    assert len(dielectric) == 15
-    assert general["e_wall"] == {
-        "type": "FEMElectronSheathBC",
-        "sidesets": "plasma_electrode plasma_metal plasma_right",
-    }
-    assert general["e_energy_wall"]["type"] == "FEMElectronEnergySheathBC"
+    inlet = groups["inlet outlet"]
+    wall = groups["plasma_electrode plasma_metal plasma_right"]
+    assert len(inlet) == len(IONS) == 3
+    assert len(wall) == len(IONS) + 2 == 5
+    assert wall["e_wall"] == {"type": "FEMElectronSheathBC"}
+    assert wall["e_energy_wall"] == {"type": "FEMElectronEnergySheathBC"}
     for ident in IONS:
-        assert general[ident + "_wall"] == {"type": "FVFunctorNeumannBC"}
+        assert inlet[ident + "_wall"] == {"type": "FVFunctorNeumannBC"}
+        assert wall[ident + "_wall"] == {"type": "FVFunctorNeumannBC"}
     for side in ("cover", "wafer", "focus_ring"):
+        dielectric = groups["plasma_" + side]
+        assert len(dielectric) == len(IONS) + 2 == 5
         assert dielectric["e_" + side + "_dielectric"] == {
-            "type": "FEMElectronSheathBC", "sidesets": "plasma_" + side
+            "type": "FEMElectronSheathBC"
         }
-        assert dielectric["e_energy_" + side + "_dielectric"]["type"] == (
-            "FEMElectronEnergySheathBC"
-        )
+        assert dielectric["e_energy_" + side + "_dielectric"] == {
+            "type": "FEMElectronEnergySheathBC"
+        }
         for ident in IONS:
             assert dielectric[ident + "_" + side + "_dielectric"] == {
-                "type": "FVLogMolarDielectricFluxBC", "sidesets": "plasma_" + side
+                "type": "FVLogMolarDielectricFluxBC"
             }
+    declarations = [name for group in groups.values() for name in group]
+    assert len(declarations) == 23  # 3 ion walls recur across disjoint groups
+    assert len(set(declarations)) == 20  # precisely 12 FV + 8 electron FEM BC owners
+    assert all(set(bc) == {"type"} for group in groups.values()
+               for bc in group.values())
     assert data["ion_surface_current"]["electron_wall_number_flux"] == "e_wall_number_flux"
 
 
@@ -201,3 +206,37 @@ def test_new_parser_and_wall_migration_units_are_single_owner():
     assert 'params.addParam<MooseEnum>(\n      "wall_gradient"' in chem
     assert 'wall.set<std::string>("species_id") = "e";' in dd_energy
     assert 'wall.set<Real>("sticking") = chemistryData().species("e").sticking_coefficient;' in dd_energy
+    assert 'merged_bcs.emplace(' in chem
+    assert 'normalized_boundaries[joined]["bcs"][name] = owner.first;' in chem
+    assert 'spec.size() != 1' in chem
+    assert 'per-BC sidesets override' not in chem
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_sidesets_field_is_retired_and_merging_is_strict(case):
+    groups = run_json(case)["drift_diffusion_boundaries"]
+    for label, values in groups.items():
+        assert "sidesets" not in label
+        for bc in values.values():
+            assert "sidesets" not in bc
+
+    bad = run_json(case)
+    bad["drift_diffusion_boundaries"]["plasma_cover"]["e_cover_dielectric"][
+        "sidesets"] = "plasma_cover"
+    with pytest.raises(C2ContractError, match="MODERN_BOUNDARY_REDUNDANT_FIELD_OR_TYPE"):
+        validate(bad)
+
+    bad = run_json(case)
+    bad["drift_diffusion_boundaries"]["inlet outlet"]["O2p_wall"]["type"] = (
+        "FVLogMolarDielectricFluxBC"
+    )
+    with pytest.raises(C2ContractError, match="MODERN_BOUNDARY_REDUNDANT_FIELD_OR_TYPE"):
+        validate(bad)
+
+
+def test_native_electron_wall_and_energy_bcs_cover_all_three_dielectrics():
+    native = (PILOT / "native/s6_c0_physics_base_no_d1.i").read_text()
+    for side in ("cover", "wafer", "focus_ring"):
+        assert f"[electron_{side}_dielectric]" in native
+        assert f"[electron_energy_{side}]" in native
+        assert f"boundary = 'plasma_{side}'" in native
