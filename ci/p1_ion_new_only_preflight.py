@@ -123,34 +123,56 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
                            "type": block["params"].get("type"),
                            "variable": " ".join(matched),
                            "species": [tracked[v] for v in matched]})
-    # The 26 ion FV Kernel/BC retirements are not the entire C2 handoff.
-    # JSON/Physics also owns 3 ion wall Materials and the existing three
-    # cover/wafer/focus_ring surface-current output properties. Reject any
-    # explicitly retained provider, even if its block was renamed.
-    old_wall_names = {"ion_wall_flux", "negative_ion_wall_flux",
-                      "atomic_positive_ion_wall_flux", "O2p_wall", "Om_wall", "Op_wall"}
-    wall_types = {"PhysicsIonWallTotalFluxMaterial",
-                  "PhysicsIonWallFluxMaterial", "IonWallFluxMaterial"}
+    # Ion FV equation cutover is independent of lower-D surface-charge
+    # provenance. Retained Native wall-current sources are allowed when they
+    # do not overlap a new C2-generated Functor/material owner. New C2 is
+    # preferred when configured, but never forbid a disjoint Native producer
+    # merely because its implementation is old.
+    c2_ions = {ident for ident in fvm
+               if isinstance(species.get(ident), dict) and
+               any(key.startswith("wall_") for key in species[ident])}
+    c2_current = bool(c2_ions) and bool(mechanism.get("ion_surface_current"))
+    generated_wall_names = {ident + "_wall" for ident in c2_ions}
+    generated_wall_properties = {ident + "_wall_number_flux" for ident in c2_ions}
     current_names = {"cover_surface_current", "wafer_surface_current",
                      "focus_ring_surface_current"}
     current_outputs = {side + "_net_surface_current_density"
                        for side in ("cover", "wafer", "focus_ring")}
+    wall_types = {"PhysicsIonWallTotalFluxMaterial",
+                  "PhysicsIonWallFluxMaterial", "IonWallFluxMaterial"}
+    old_wall_names = {"ion_wall_flux", "negative_ion_wall_flux",
+                      "atomic_positive_ion_wall_flux"}
     explicit_functor = []
+    producer_conflicts = []
     for block in blocks:
         if block["parent"] != "FunctorMaterials":
             continue
         params = block["params"]
-        is_wall = block["name"] in old_wall_names or params.get("type") in wall_types
+        is_wall = (block["name"] in old_wall_names or
+                   block["name"] in generated_wall_names or
+                   params.get("type") in wall_types)
         is_current = (block["name"] in current_names or
                       params.get("property_name") in current_outputs)
-        if is_wall or is_current:
-            explicit_functor.append({"file": block["file"], "line": block["line"],
-                                     "name": block["name"], "type": params.get("type"),
-                                     "property_name": params.get("property_name"),
-                                     "family": "ion_wall" if is_wall else "surface_current"})
+        if not is_wall and not is_current:
+            continue
+        owner = {"file": block["file"], "line": block["line"],
+                 "name": block["name"], "type": params.get("type"),
+                 "property_name": params.get("property_name"),
+                 "family": "ion_wall" if is_wall else "surface_current"}
+        explicit_functor.append(owner)
+        names = set(params.get("prop_names", "").split())
+        conflict = (block["name"] in generated_wall_names or
+                    (params.get("type") in wall_types and
+                     params.get("species_id") in c2_ions) or
+                    bool(names & generated_wall_properties) or
+                    (c2_current and (block["name"] in current_names or
+                                      params.get("property_name") in current_outputs or
+                                      bool(names & current_outputs))))
+        if conflict:
+            producer_conflicts.append(owner)
     if contract == "new-only":
-        if explicit_functor:
-            errors.append(f"P1_EXPLICIT_ION_WALL_OR_CURRENT_OWNER_PRESENT_{len(explicit_functor)}")
+        if producer_conflicts:
+            errors.append(f"P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_{len(producer_conflicts)}")
         if native:
             errors.append(f"P1_NATIVE_FV_ION_OWNER_PRESENT_{len(native)}")
         status = "P0_STATIC_PASS_ONLY"
@@ -176,6 +198,8 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
             "native_fv_owners": native,
             "explicit_ion_wall_current_owner_count": len(explicit_functor),
             "explicit_ion_wall_current_owners": explicit_functor,
+            "c2_native_producer_collision_count": len(producer_conflicts),
+            "c2_native_producer_collisions": producer_conflicts,
             "runtime_generated_kernel_bc_count": "NOT_VERIFIED_P0_ONLY"}
 
 def main(argv=None) -> int:
