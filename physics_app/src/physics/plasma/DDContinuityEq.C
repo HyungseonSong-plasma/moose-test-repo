@@ -121,6 +121,10 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
   // Both FE and FV continuity generation require a complete explicit JSON
   // transport record; an absent section is not a Native-coefficient fallback.
   const auto & mechanism = chemistryData();
+  // MOOSE's existing dont_create_kernels is a whole-Physics binding-only
+  // control used by historical P2 IC tests, not an ion/Native ownership mode.
+  // Without that explicit control, selected species always generate Kernels.
+  const bool generate_kernels = !getParam<bool>("dont_create_kernels");
   const auto validate = [this, &mechanism](const std::vector<std::string> & ids,
                                             const std::string & option,
                                             const std::string & family)
@@ -137,19 +141,22 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
                    "'. Specify transport_coef=constant, lookup, or functor in species JSON.");
     }
   };
-  validate(_fem_species, "fem_species", "FEM");
-  validate(_fvm_species, "fvm_species", "FVM");
+  if (generate_kernels || mechanism.hasDDTransport())
+  {
+    validate(_fem_species, "fem_species", "FEM");
+    validate(_fvm_species, "fvm_species", "FVM");
+  }
 
   // Selection itself activates generation. Potential is transport data, not
   // an ownership switch; never silently downgrade to binding-only mode.
-  if (!isParamValid("fem_potential"))
+  if (generate_kernels && !isParamValid("fem_potential"))
     paramError("fem_potential",
                "Selected fem_species/fvm_species require an explicit potential "
                "for automatic FEM/FV drift-diffusion generation.");
 
   // FV selection is the cutover decision: no Native presence probe, no owner
   // Enum, and no partially generated species equation.
-  if (!fvm.empty())
+  if (!fvm.empty() && generate_kernels)
   {
     if (!chemistryEnabled())
       paramError("fvm_species",
@@ -228,6 +235,8 @@ DDContinuityEq::checkIntegrity() const
   const auto & fvm = _fvm_species;
   const auto variables = resolvedContinuityVariables(fem, fvm);
   validateExistingSpeciesVariables(fem, fvm, variables);
+  if (getParam<bool>("dont_create_kernels"))
+    return;
   for (std::size_t i = 0; i < fem.size(); ++i)
   {
     requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);
@@ -236,7 +245,7 @@ DDContinuityEq::checkIntegrity() const
       requireUniqueFEKernel("FunctorKernel", variables[i]);
   }
 
-  if (_fvm_species.empty() || getParam<bool>("dont_create_kernels"))
+  if (_fvm_species.empty())
     return;
 
   // MOOSE stores FV objects in TheWarehouse, not the FE KernelWarehouse.
@@ -451,8 +460,12 @@ DDContinuityEq::addFunctorMaterials()
   {
     const auto * config = mechanism.ddTransport(id);
     if (!config)
+    {
+      if (getParam<bool>("dont_create_kernels"))
+        continue; // Explicit MOOSE-wide binding-only P2; no DD coefficient owner.
       mooseError("DDContinuityEq selected species '", id,
                  "' has no JSON transport record after constructor validation.");
+    }
     const std::string type = "DDTransportMaterial";
     auto params = getFactory().getValidParams(type);
     params.set<std::string>("species_id") = id;
