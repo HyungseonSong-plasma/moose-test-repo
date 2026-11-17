@@ -903,9 +903,7 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
             fail(file, "empty parameter value in boundaries BC " + bc.key());
 
           // Do not double-own a physical residual under two different labels.
-          const auto & effective_sides =
-              entry.mesh_boundaries.empty() ? record.mesh_boundaries : entry.mesh_boundaries;
-          for (const auto & side : effective_sides)
+          for (const auto & side : record.mesh_boundaries)
           {
             const std::string key = entry.type + "/" + entry.variable + "/" + side;
             if (!operator_owners.insert(key).second)
@@ -1462,9 +1460,8 @@ PlasmasAction::act()
         if (!selected.count(id))
           mooseError("C2 FV BC targets unselected ion: ", name);
         const std::string flux = id + "_wall_number_flux";
-        const auto & effective_sides =
-            bc.mesh_boundaries.empty() ? boundary.mesh_boundaries : bc.mesh_boundaries;
-        const std::set<std::string> sides(effective_sides.begin(), effective_sides.end());
+        const std::set<std::string> sides(boundary.mesh_boundaries.begin(),
+                                           boundary.mesh_boundaries.end());
         if (normal)
         {
           if (name != id + "_wall" || sides != general_sides || bc.functor != flux)
@@ -1566,9 +1563,7 @@ PlasmasAction::act()
         auto params = _factory.getValidParams(bc.type);
         params.set<NonlinearVariableName>("variable") = bc.variable;
         std::vector<BoundaryName> sidesets;
-        const auto & effective_sides =
-            bc.mesh_boundaries.empty() ? boundary.mesh_boundaries : bc.mesh_boundaries;
-        for (const auto & side : effective_sides)
+        for (const auto & side : boundary.mesh_boundaries)
           sidesets.emplace_back(side);
         params.set<std::vector<BoundaryName>>("boundary") = sidesets;
         if (bc.type == "FVFunctorNeumannBC")
