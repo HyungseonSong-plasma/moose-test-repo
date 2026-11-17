@@ -87,22 +87,22 @@ jobs:
                   coupled_variables="log_ne_rf_state_t6 pressure_rf_state_t6")
               mun=unique(obs,"muN_rf_t6","Materials")
               ok(mun["params"].get("variable")=="mean_energy_rf_state_t6","RF_MOBILITY_MEAN_ENERGY_LINK")
-              print("D4_DEBUG_SOLUTION_NAMES="+str([(x['section'],x['object_name']) for x in obs if any(k in x['object_name'].lower() for k in ('maxwell','solution','rf_t6','map_e_'))]),flush=True)
-              print("D4_DEBUG_RF_OBJECTS="+repr([(x['section'],x['object_name'],x['params']) for x in obs if any(k in x['object_name'].lower() for k in ('rf_','maxwell','energy_joule','mean_energy_rf','solution','joule'))]),flush=True)
-              sol=unique(obs,"maxwell_solution_t6","UserObjects")
-              has(sol,type="SolutionUserObject",system_variables="E_real E_imag",timestep="LATEST")
-              er=unique(obs,"map_E_real_t6","AuxKernels");ei=unique(obs,"map_E_imag_t6","AuxKernels")
-              has(er,type="SolutionAux",solution="maxwell_solution_t6",from_variable="E_real",variable="E_real_rf_t6")
-              has(ei,type="SolutionAux",solution="maxwell_solution_t6",from_variable="E_imag",variable="E_imag_rf_t6")
-              freezes={}
-              for name,variable,coupled in (("freeze_log_ne_t6","log_ne_rf_state_t6","log_e"),
-                                             ("freeze_log_energy_t6","log_energy_rf_state_t6","log_e_energy"),
-                                             ("freeze_pressure_t6","pressure_rf_state_t6","p")):
-                  item=unique(obs,name,"AuxKernels")
-                  has(item,type="ParsedAux",variable=variable,coupled_variables=coupled)
-                  freezes[name]=item
+              # Actual staged S6 input has Receiver-led external Maxwell controls,
+              # not the historical static T6 SolutionUserObject/Map_E fields.
+              recv=unique(obs,"P_abs_maxwell_t6","Postprocessors")
+              has(recv,type="Receiver")
+              drive=unique(obs,"rf_drive_scale_t6","Postprocessors")
+              has(drive,type="Receiver")
+              er=unique(obs,"E_real_rf_t6","AuxVariables")
+              ei=unique(obs,"E_imag_rf_t6","AuxVariables")
+              has(er,block="plasma")
+              has(ei,block="plasma")
+              for name in ("log_ne_rf_state_t6","log_energy_rf_state_t6","pressure_rf_state_t6"):
+                  unique(obs,name,"AuxVariables")
               mean=unique(obs,"mean_energy_rf_state_t6_aux","AuxKernels")
               has(mean,type="ParsedAux",variable="mean_energy_rf_state_t6",coupled_variables="log_ne_rf_state_t6 log_energy_rf_state_t6")
+              density=unique(obs,"electron_density_rf_state_t6_aux","AuxKernels")
+              has(density,type="ParsedAux",variable="electron_density_rf_state_t6",coupled_variables="log_ne_rf_state_t6")
               raw=unique(obs,"q_rf_raw_t6","Materials")
               scaled=unique(obs,"q_rf_scaled_t6","Materials")
               has(raw,property_name="q_rf_raw_t6",material_property_names="sigma_real_rf_t6")
@@ -125,10 +125,13 @@ jobs:
               charge_c=unique(obs,"charge_density")
               ok("charge_number_density" in charge_c["params"].get("functor_names","").split(),"CHARGE_C_M3_INPUT")
               return dict(rf_kernel=rf,rf_power_material=qr,
-                          conductivity=sig,mobility_lookup=mun,maxwell_solution=sol,
-                          rf_maps=[er,ei],state_freezes=freezes,mean_energy=mean,
+                          conductivity=sig,mobility_lookup=mun,
+                          maxwell_receivers=[recv,drive],
+                          rf_field_aux_variables=[er,ei],
+                          mean_energy=mean,electron_density=density,
                           rf_diagnostics_materials=[raw,scaled],
                           poisson_charge=[charge,charge_c,source,phi],
+                          transferred_E_field_source="EXTERNAL_UNRESOLVED",
                           retired_native_joule_kernel_count=0,
                           new_energy_action_overlay_contains_fem_potential=True)
 
@@ -165,13 +168,13 @@ jobs:
               # Fail closed negative controls independently prove missing, duplicate, wrong energy,
               # wrong Maxwell variable, erroneous RF producer edge, wrong charge density and hash.
               tests={}
-              for mode in ("missing_rf","duplicate_rf","wrong_energy","wrong_maxwell_source","wrong_rf_property","wrong_charge_density"):
+              for mode in ("missing_rf","duplicate_rf","wrong_energy","wrong_maxwell_receiver","wrong_rf_property","wrong_charge_density"):
                   bad=copy.deepcopy(objects)
                   target=next(x for x in bad if x["object_name"]=="rf_heating_t6" and x["section"]=="Kernels")
                   if mode=="missing_rf":bad.remove(target)
                   elif mode=="duplicate_rf":bad.append(copy.deepcopy(target))
                   elif mode=="wrong_energy":target["params"]["variable"]="log_Om"
-                  elif mode=="wrong_maxwell_source":next(x for x in bad if x["object_name"]=="map_E_real_t6")["params"]["from_variable"]="B_real"
+                  elif mode=="wrong_maxwell_receiver":next(x for x in bad if x["object_name"]=="P_abs_maxwell_t6")["params"]["type"]="NotReceiver"
                   elif mode=="wrong_rf_property":target["params"]["material_property"]="q_wrong"
                   else:next(x for x in bad if x["object_name"]=="charge_number_density")["params"]["functor_names"]="n_e_physical"
                   try:canonical_energy(bad,texts[10])
