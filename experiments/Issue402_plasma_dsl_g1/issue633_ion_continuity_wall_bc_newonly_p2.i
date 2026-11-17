@@ -91,9 +91,8 @@
     initial_condition = 0
     block = plasma
   []
-[]
-[FVVariables]
   [pressure]
+    type = MooseVariableFVReal
     block = plasma
   []
 []
