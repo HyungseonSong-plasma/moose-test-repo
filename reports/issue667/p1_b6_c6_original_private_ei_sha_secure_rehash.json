@@ -1,0 +1,110 @@
+{
+  "schema": "issue667.p1_b6_c6.original_private_ei_sha_secure_rehash.v1",
+  "task": "P1-B6 private original EI hash; supplemental P1-C6 common+EI-941 original hash",
+  "status": "PASS_ALL_SIX_PROTECTED_ORIGINAL_EI_RATE_SHA",
+  "source_pr": 665,
+  "pr_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_original_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "source_archive_custody": {
+    "type": "existing repository GitHub Actions protected secret",
+    "reference": "OXYGEN24_RATES_TAR_XZ_B64",
+    "used_by_historical_workflow": ".github/workflows/issue477-s6-combined-407-2069-h25-once.yml",
+    "private_original_bytes_committed": false,
+    "private_original_bytes_artifacted": false,
+    "private_original_bytes_logged": false
+  },
+  "verification": {
+    "ci_run_id": 44190774410,
+    "ci_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44190774410",
+    "workflow_sha": "dbb49855008b79efce957006df095490dcd63335",
+    "ci_result": "SUCCESS",
+    "ci_artifact_id": 14376451636,
+    "ci_artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44190774410/artifacts/14376451636",
+    "ci_artifact_zip_sha256": "a382af3a6ebba656e070747814df45267e2880849fe6f492757ceda1c7058a20",
+    "ci_artifact_receipt_json_sha256": "6d8cbe128b5224a11ae67541caae3f816f3b8c98f92e81a82dc4c29bd561ea84",
+    "sha_recomputed_raw_bytes": 6,
+    "sha_exact_matches": 6,
+    "unique_target_tables": 6,
+    "numeric_rows_each": 100,
+    "numeric_shapes_pass": 6,
+    "negative_synthetic_shape_controls_rejected": 5,
+    "first_attempt_run_id": 44184920172,
+    "first_attempt_failure": "validation incorrectly counted 102 total lines instead of 100 numeric data rows after skipping comments; original SHA 3/3 already matched",
+    "first_attempt_sha_matches": 3,
+    "original_secret_unchanged_between_attempts_not_independently_proved": true
+  },
+  "rate_sha_results": [
+    {
+      "file": "EI-415_O2_X.txt",
+      "expected_sha256": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+      "observed_sha256_if_equal": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+      "sha_equal": true,
+      "numeric_rows": 100,
+      "numeric_shape_pass": true,
+      "method": "SHA256 of full raw original file bytes in protected Actions memory; no newline normalization"
+    },
+    {
+      "file": "EI-401_O2_X.txt",
+      "expected_sha256": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+      "observed_sha256_if_equal": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+      "sha_equal": true,
+      "numeric_rows": 100,
+      "numeric_shape_pass": true,
+      "method": "SHA256 of full raw original file bytes in protected Actions memory; no newline normalization"
+    },
+    {
+      "file": "EI-417_O2_X.txt",
+      "expected_sha256": "4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
+      "observed_sha256_if_equal": "4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
+      "sha_equal": true,
+      "numeric_rows": 100,
+      "numeric_shape_pass": true,
+      "method": "SHA256 of full raw original file bytes in protected Actions memory; no newline normalization"
+    },
+    {
+      "file": "EI-941_O_3P.txt",
+      "expected_sha256": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+      "observed_sha256_if_equal": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+      "sha_equal": true,
+      "numeric_rows": 100,
+      "numeric_shape_pass": true,
+      "method": "SHA256 of full raw original file bytes in protected Actions memory; no newline normalization"
+    },
+    {
+      "file": "EI-407_O2_X.txt",
+      "expected_sha256": "2565be45b9a13204583b6714a7d1b581cf29c157c78ac502d665649e4065b359",
+      "observed_sha256_if_equal": "2565be45b9a13204583b6714a7d1b581cf29c157c78ac502d665649e4065b359",
+      "sha_equal": true,
+      "numeric_rows": 100,
+      "numeric_shape_pass": true,
+      "method": "SHA256 of full raw original file bytes in protected Actions memory; no newline normalization"
+    },
+    {
+      "file": "EI-2069_O2_a1Delta.txt",
+      "expected_sha256": "5eba74c1870e0635a3e316e143961e9f04e259675ddad00fd8653de28980644a",
+      "observed_sha256_if_equal": "5eba74c1870e0635a3e316e143961e9f04e259675ddad00fd8653de28980644a",
+      "sha_equal": true,
+      "numeric_rows": 100,
+      "numeric_shape_pass": true,
+      "method": "SHA256 of full raw original file bytes in protected Actions memory; no newline normalization"
+    }
+  ],
+  "scope_notes": [
+    "Hash equality verifies byte identity with historically pinned expected SHA256. It does not establish scientific model equivalence or kinetic-law review.",
+    "H25 is an analytic law, not an original EI table and is not included in this SHA set.",
+    "Producer-to-consumer input binding is independently addressed by the S6-417/941 P1-0 11-layer source receipts.",
+    "Private rate bytes never written to GitHub repository, Actions logs, public artifact, or local user workspace.",
+    "Original private archive secret is a current protected repository secret; its historical name and the preexisting pinned digests provide provenance.",
+    "An unrelated public Boltzmann table is not substituted for original private EI table."
+  ],
+  "gates": {
+    "P1-B6_PRIVATE_EI_RATE_SHA": "PASS",
+    "P1-C6_PRIVATE_EI_RATE_SHA": "PASS_FOR_COMMON_AND_EI941",
+    "P1-E": "PENDING",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
