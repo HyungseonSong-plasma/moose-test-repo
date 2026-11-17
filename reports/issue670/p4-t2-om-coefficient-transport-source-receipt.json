@@ -1,0 +1,155 @@
+{
+  "schema": "issue670.p4_t2.s6_417_941.om_coefficients.source_receipt.v1",
+  "task_id": "P4-T2",
+  "verdict": "HOLD_SINGLE_COEFFICIENT_OWNER_COLLISION",
+  "static_subchecks": {
+    "original_parameter_parity": "PASS",
+    "negative_charge_preservation": "PASS",
+    "canonical_drift_diffusion_binding": "PASS",
+    "p2_ion26_retirement": "PASS",
+    "single_Om_coefficient_producer": "HOLD"
+  },
+  "scope": "S6-417 and S6-941 Om negative ion transport; independent real staged input-byte readback, immutable source evidence, and static mutation probes; no New-only Native solver run",
+  "source_baseline_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "latest_pr665_head_checked": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "pr674_head": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+  "pr674_base_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "latest_pr665_relevant_sources_unchanged": {
+    "unified_s6_417_newonly.json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "unified_s6_941_newonly.json": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "s6_c0_physics_base_no_d1.i": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+    "DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "DDTransportMaterial.C": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+    "p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35"
+  },
+  "proof": {
+    "p1_0": {
+      "run_id": 44180190753,
+      "artifact_id": 14372315897,
+      "zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+      "input_files_checked": 22
+    },
+    "p2_production_source": {
+      "run_id": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "input_files_checked": 22,
+      "ion_blocks_retired": 52,
+      "om_native_time_diffusion_drift_remaining": 0
+    },
+    "actual_source_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "original_c0_file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+    "p1_canonical_c0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "p2_ion_retired_c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+    "original_om": {
+      "var": "log_nm",
+      "mobility_name": "negative_ion_mobility",
+      "diffusion_name": "negative_ion_diffusion",
+      "charge_number": -1,
+      "nm_time_block_sha256": "11b82b2d249e46e8f22f50f628188c5ec3dc195a40a34d4e8ad52d8e4177077d",
+      "nm_diffusion_block_sha256": "fcd0c496230d039f7034e9164f74865bcb5792f56068ba31c8e41f69741936c7",
+      "nm_drift_block_sha256": "c1f40558902a0c7531f6e2f7e2bd8f48ed79762ed6aabdcdcd69b00290c630f2"
+    },
+    "p1_canonical_om": {
+      "variable": "log_Om",
+      "mobility": "Om_mobility",
+      "diffusion": "Om_diffusivity",
+      "charge_number": -1,
+      "nm_time_block_sha256": "e19423de93165f0362793d6da40032b97f1f6fc5964ad7f40d221cc721651348",
+      "nm_diffusion_block_sha256": "9e2ad0a3216ef24687857ce96127933348cfdc78fcea4e76538437cbeca884ee",
+      "nm_drift_block_sha256": "0f10ee33a80f436e67410ce7c15aa6e82042ab6516bb2585ff6e39c53f7650b9",
+      "drift": {
+        "potential": "potential",
+        "carrier": "carrier_one",
+        "charge_number": -1,
+        "advected_interp_method": "upwind",
+        "use_element_gradient_for_potential": true
+      }
+    },
+    "staged_legacy_constant": {
+      "object_name": "constants",
+      "factory": "ADGenericFunctorMaterial",
+      "layer_ordinal": 1,
+      "block_sha256": "f9c4beb247c2f1e7ba286aaf21919c07cc16a659cbf0d01987116506ad72bb73",
+      "exports": {
+        "Om_mobility": 10,
+        "Om_diffusivity": 0.25851999786435537
+      },
+      "carrier_one": 1,
+      "present_in_both_cases": true
+    },
+    "physics_generator": {
+      "type": "DDTransportMaterial",
+      "species_id": "Om",
+      "selected_model": "constant",
+      "publishes": [
+        "Om_mobility",
+        "Om_diffusivity"
+      ],
+      "legacy_collision_count": 2,
+      "evidence": "DDContinuityEq.C::addFunctorMaterials() creates DDTransportMaterial for selected JSON species; DDTransportMaterial.C adds _species+'_mobility'/'_diffusivity' for constant mode",
+      "source_preflight_duplicate_error": "P1_DUPLICATE_JSON_TRANSPORT_FUNCTOR_OWNER_1",
+      "preflight_executed": false,
+      "static_duplicate_derived": true
+    },
+    "cases": {
+      "417": {
+        "historical_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+        "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+        "json_species_Om": {
+          "charge_number": -1,
+          "transport_coef": {
+            "type": "constant",
+            "file": "none",
+            "unit": "physical",
+            "mobility": 10,
+            "diffusivity": 0.25851999786435537
+          }
+        },
+        "file_sha_checked_11": true,
+        "negative_contract_mutations_rejected": 10
+      },
+      "941": {
+        "historical_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+        "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+        "json_species_Om": {
+          "charge_number": -1,
+          "transport_coef": {
+            "type": "constant",
+            "file": "none",
+            "unit": "physical",
+            "mobility": 10,
+            "diffusivity": 0.25851999786435537
+          }
+        },
+        "file_sha_checked_11": true,
+        "negative_contract_mutations_rejected": 10
+      }
+    }
+  },
+  "negative_control_names": [
+    "json_mobility_wrong",
+    "json_diffusivity_wrong",
+    "json_unit_wrong",
+    "json_model_wrong",
+    "legacy_drift_charge_flipped",
+    "canonical_drift_charge_flipped",
+    "canonical_mobility_name_wrong",
+    "canonical_diffusivity_name_wrong",
+    "legacy_constant_mobility_wrong",
+    "legacy_constant_diffusivity_wrong"
+  ],
+  "negative_controls_total": 20,
+  "independent_local_full_receipt_sha256": "6768d7b94383cb46a6fb56efbdcd9213c45ecc42e2b8cba674e10d5e50350eca",
+  "proposed_resolution": "In a future P4-X single-writer disposable New-only Scratch cutover, remove only Om_mobility and Om_diffusivity from legacy [constants] prop_names and aligned prop_values while preserving the other five outputs including carrier_one. Do not change historical inputs or kinetics. Re-run source P0 and actual Native P2; record all postchange file/block SHA.",
+  "unresolved": [
+    "Static double-functor producer is present in Artifact #14380831538",
+    "Current PR674 base precedes latest PR665 head: synchronize under integration governance",
+    "P4-X single-owner & P0 preflight not passed",
+    "New-only MOOSE Warehouse/P05 Native P2 not run"
+  ],
+  "new_only_s6_native_p2": "NOT_RUN",
+  "native_p3_p4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "protected_rate_bytes_included": false
+}
