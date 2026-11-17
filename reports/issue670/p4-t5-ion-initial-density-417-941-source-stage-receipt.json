@@ -1,0 +1,330 @@
+{
+  "schema": "issue670.p4_t5.ion_initial_density_source_stage_receipt.v1",
+  "task_id": "P4-T5",
+  "issue": 670,
+  "parent_issue": 633,
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "date_utc": "2026-11-17",
+  "verdict": "SOURCE_AND_P2_PINNED_STAGE_STATIC_PASS__CURRENT_HEAD_RUNTIME_HOLD",
+  "immutable_review_source_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "previous_p2_stage_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_head_boundary": "PR #665 was updated after P2 #668 run; independent CI checked current b5c source bytes and previously pinned 9c P2 stage bytes. This does not establish a b5c-head native run.",
+  "source_files": {
+    "cpp": {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "git_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+    },
+    "chemistry_json_417": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "git_blob_sha1": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef"
+    },
+    "chemistry_json_941": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+      "git_blob_sha1": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+    }
+  },
+  "source_ownership": {
+    "ion_species": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "fvm_species_selector": "O2p Om Op",
+    "selected_initial_source": "species.<id>.initial_number_density in each New-only JSON",
+    "solver_state": "log_<species>",
+    "log_molar_conversion": "std::log(number_density) - std::log(PHYSICS_CONSTANTS::N_A)",
+    "conversion_constant_N_A_per_mol": 6.02214076e+23,
+    "physical_density_functor_formula": "N_A*exp(log_c)",
+    "physical_density_functor_names": [
+      "O2p_number_density",
+      "Om_number_density",
+      "Op_number_density"
+    ],
+    "expected_initial_factory": "FVConstantIC",
+    "Cxx_variable_uniqueness_guard": "variableExists(variable, error_if_aux=true)",
+    "Cxx_IC_uniqueness_guard": "shouldCreateIC(variable, ... error if already an IC=true)",
+    "actual_runtime_initial_condition_and_Functor_warehouse": "NOT_RUN"
+  },
+  "cases": {
+    "417": {
+      "evidence_class": "CURRENT_HEAD_SOURCE_VALUES_AND_PRIOR_P2_PINNED_STAGE_INPUT_BYTES",
+      "source_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "newonly_layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "files_sha256_recomputed_in_ci": 11,
+      "files": [
+        {
+          "layer_ordinal": 1,
+          "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 2,
+          "filename": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 3,
+          "filename": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 4,
+          "filename": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 5,
+          "filename": "issue477_S2-415_generation_overlay.i",
+          "file_sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 6,
+          "filename": "issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 7,
+          "filename": "issue477_S4-401-417_op_ionization_overlay.i",
+          "file_sha256": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 8,
+          "filename": "issue477_S5-417-407_o2_consumer_overlay.i",
+          "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 9,
+          "filename": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 10,
+          "filename": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+          "file_sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 11,
+          "filename": "migrated_continuity.i",
+          "file_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+          "source_of_sha": "current frozen New-only 11th overlay template verified against P2 staged byte SHA"
+        }
+      ],
+      "initial_density": {
+        "O2p": {
+          "variable": "log_O2p",
+          "charge": 1,
+          "initial_number_density_m_minus3": 1000000000000001.6,
+          "initial_log_molar": -20.21612354803299,
+          "original_historical_log_molar": -20.216123548032986,
+          "recovered_number_density_m_minus3": 999999999999998,
+          "generated_initial_condition_factory": "FVConstantIC",
+          "generated_expected_initial_condition_name": "[Continuity Physics name]_O2p_density_ic",
+          "actual_generated_initial_condition_block_sha256": null,
+          "actual_generated_initial_condition_warehouse_count": "NOT_RUN"
+        },
+        "Om": {
+          "variable": "log_Om",
+          "charge": -1,
+          "initial_number_density_m_minus3": 999999999999.9983,
+          "initial_log_molar": -27.123878827015126,
+          "original_historical_log_molar": -27.123878827015126,
+          "recovered_number_density_m_minus3": 999999999999.9983,
+          "generated_initial_condition_factory": "FVConstantIC",
+          "generated_expected_initial_condition_name": "[Continuity Physics name]_Om_density_ic",
+          "actual_generated_initial_condition_block_sha256": null,
+          "actual_generated_initial_condition_warehouse_count": "NOT_RUN"
+        },
+        "Op": {
+          "variable": "log_Op",
+          "charge": 1,
+          "initial_number_density_m_minus3": 999999999999.9983,
+          "initial_log_molar": -27.123878827015126,
+          "original_historical_log_molar": -27.123878827015126,
+          "recovered_number_density_m_minus3": 999999999999.9983,
+          "generated_initial_condition_factory": "FVConstantIC",
+          "generated_expected_initial_condition_name": "[Continuity Physics name]_Op_density_ic",
+          "actual_generated_initial_condition_block_sha256": null,
+          "actual_generated_initial_condition_warehouse_count": "NOT_RUN"
+        }
+      },
+      "manual_competing_solver_variable_or_ion_initial_condition": 0,
+      "actual_solver_variable_manual_owner": "NOT_PRESENT_IN_11_SOURCE_LAYERS",
+      "expected_single_json_initial_per_species": true,
+      "static_source_uniqueness": "PASS",
+      "dynamic_IC_warehouse_uniqueness": "HOLD_NOT_RUN",
+      "retired_old_native_ion_objects": 26
+    },
+    "941": {
+      "evidence_class": "CURRENT_HEAD_SOURCE_VALUES_AND_PRIOR_P2_PINNED_STAGE_INPUT_BYTES",
+      "source_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "newonly_layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "files_sha256_recomputed_in_ci": 11,
+      "files": [
+        {
+          "layer_ordinal": 1,
+          "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 2,
+          "filename": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 3,
+          "filename": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 4,
+          "filename": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 5,
+          "filename": "issue477_S2-415_generation_overlay.i",
+          "file_sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 6,
+          "filename": "issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 7,
+          "filename": "issue477_S4-401-941_op_ionization_overlay.i",
+          "file_sha256": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 8,
+          "filename": "issue477_S5-941-407_o2_consumer_overlay.i",
+          "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 9,
+          "filename": "issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 10,
+          "filename": "issue477_S6-941-407-2069-H25_H25_overlay.i",
+          "file_sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+          "source_of_sha": "#668 static 26-to-0 after-file SHA crosschecked against P2 production CI stage manifest"
+        },
+        {
+          "layer_ordinal": 11,
+          "filename": "migrated_continuity.i",
+          "file_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+          "source_of_sha": "current frozen New-only 11th overlay template verified against P2 staged byte SHA"
+        }
+      ],
+      "initial_density": {
+        "O2p": {
+          "variable": "log_O2p",
+          "charge": 1,
+          "initial_number_density_m_minus3": 1000000000000001.6,
+          "initial_log_molar": -20.21612354803299,
+          "original_historical_log_molar": -20.216123548032986,
+          "recovered_number_density_m_minus3": 999999999999998,
+          "generated_initial_condition_factory": "FVConstantIC",
+          "generated_expected_initial_condition_name": "[Continuity Physics name]_O2p_density_ic",
+          "actual_generated_initial_condition_block_sha256": null,
+          "actual_generated_initial_condition_warehouse_count": "NOT_RUN"
+        },
+        "Om": {
+          "variable": "log_Om",
+          "charge": -1,
+          "initial_number_density_m_minus3": 999999999999.9983,
+          "initial_log_molar": -27.123878827015126,
+          "original_historical_log_molar": -27.123878827015126,
+          "recovered_number_density_m_minus3": 999999999999.9983,
+          "generated_initial_condition_factory": "FVConstantIC",
+          "generated_expected_initial_condition_name": "[Continuity Physics name]_Om_density_ic",
+          "actual_generated_initial_condition_block_sha256": null,
+          "actual_generated_initial_condition_warehouse_count": "NOT_RUN"
+        },
+        "Op": {
+          "variable": "log_Op",
+          "charge": 1,
+          "initial_number_density_m_minus3": 999999999999.9983,
+          "initial_log_molar": -27.123878827015126,
+          "original_historical_log_molar": -27.123878827015126,
+          "recovered_number_density_m_minus3": 999999999999.9983,
+          "generated_initial_condition_factory": "FVConstantIC",
+          "generated_expected_initial_condition_name": "[Continuity Physics name]_Op_density_ic",
+          "actual_generated_initial_condition_block_sha256": null,
+          "actual_generated_initial_condition_warehouse_count": "NOT_RUN"
+        }
+      },
+      "manual_competing_solver_variable_or_ion_initial_condition": 0,
+      "actual_solver_variable_manual_owner": "NOT_PRESENT_IN_11_SOURCE_LAYERS",
+      "expected_single_json_initial_per_species": true,
+      "static_source_uniqueness": "PASS",
+      "dynamic_IC_warehouse_uniqueness": "HOLD_NOT_RUN",
+      "retired_old_native_ion_objects": 26
+    }
+  },
+  "independent_verification": {
+    "run_id": 44202660926,
+    "job_id": 134460467436,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44202660926",
+    "status": "SUCCESS",
+    "artifact_id": 14381572881,
+    "artifact_name": "issue670-p4-t5-44202660926-1",
+    "artifact_digest": "sha256:13ee4e9d7aa8516238c1440c8c896fe740594ffa05345a08916fa6a26fd8c3f8",
+    "artifact_json_file": "p4-t5-ion-density.json",
+    "method": "Exact checkout b5c HEAD; download old accepted P2 Stage Artifact 14380831538; read 417/941 11 actual inputs and P2 stage receipts, independently calculate 22 source file SHA; verify live source JSON/overlays SHA; parse all original input roots for manually competing FV solver/IC owners; negative mutations.",
+    "old_p2_stage_run": 44199587771,
+    "old_p2_artifact_id": 14380831538,
+    "old_p2_artifact_digest": "sha256:3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "old_p2_exact_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "source_static_retirement_receipt_git_blob": "ac0814415187fa93bf13bd56b2c0a7662e177464",
+    "negative_controls_rejected": 10,
+    "negative_controls_total": 10,
+    "first_attempt": {
+      "run_id": 44202561882,
+      "conclusion": "FAILED_TEST_HARNESS_SYNTAX_ONLY",
+      "reason": "Python multiline predicate error; no scientific/input failure claim"
+    }
+  },
+  "unresolved": [
+    "PhysicsApp generated FVConstantIC actual Warehouse 3-per-case and number_density Functor liveness NOT_RUN",
+    "PR665 b5c review HEAD is newer than the 9c-based P2 CI immutable stage; no b5c-run-equivalent claim",
+    "P4-D ion density/Poisson/diagnostic legacy aliases and dynamic consumers require P4-X",
+    "Native P2/P3/P4 and physical parity NOT_RUN; SCIENCE_HOLD"
+  ],
+  "next_gate": "P4-X readback of 417/941 final New-only consumer graph and P3-X shared owner handoff; Native generated 24 and live IC count assessed at P5",
+  "prohibited_actions_not_done": [
+    "no common source edits",
+    "no original archive edits",
+    "no main or PR665 merge",
+    "no private-rate bytes",
+    "no P3/P4 native run"
+  ],
+  "one_shot_workflow": "REMOVED_AFTER_PASS",
+  "native_p2": "NOT_RUN",
+  "native_p3": "NOT_RUN",
+  "native_p4": "NOT_RUN",
+  "science": "SCIENCE_HOLD"
+}
