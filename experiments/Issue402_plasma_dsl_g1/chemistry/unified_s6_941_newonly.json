@@ -5,7 +5,7 @@
       "charge_number": -1,
       "molar_mass": 5.485799096195737e-7,
       "temperature_eV": 2.6666666666666665,
-      "sticking_coefficient": 0,
+      "sticking_coefficient": 1,
       "initial_number_density": 1000000000000001.6,
       "transport_coef": {
         "type": "lookup",
@@ -13,7 +13,6 @@
         "unit": "reduced",
         "bounds_policy": "clamp"
       },
-      "wall_use_element_gradient_for_potential": null,
       "energy_transport_coef": "fluid"
     },
     "O2": {
@@ -29,8 +28,7 @@
         "type": "none",
         "file": "none",
         "unit": "none"
-      },
-      "wall_use_element_gradient_for_potential": null
+      }
     },
     "O": {
       "elements": {
@@ -45,8 +43,7 @@
         "type": "none",
         "file": "none",
         "unit": "none"
-      },
-      "wall_use_element_gradient_for_potential": null
+      }
     },
     "O2p": {
       "elements": {
@@ -61,8 +58,7 @@
         "type": "functor",
         "file": "none",
         "unit": "physical"
-      },
-      "wall_use_element_gradient_for_potential": true
+      }
     },
     "Om": {
       "elements": {
@@ -77,8 +73,7 @@
         "type": "functor",
         "file": "none",
         "unit": "physical"
-      },
-      "wall_use_element_gradient_for_potential": true
+      }
     },
     "Op": {
       "elements": {
@@ -93,8 +88,7 @@
         "type": "functor",
         "file": "none",
         "unit": "physical"
-      },
-      "wall_use_element_gradient_for_potential": true
+      }
     },
     "O2a": {
       "elements": {
@@ -109,8 +103,7 @@
         "type": "none",
         "file": "none",
         "unit": "none"
-      },
-      "wall_use_element_gradient_for_potential": null
+      }
     }
   },
   "equations": {
@@ -264,88 +257,90 @@
       "energy_loss_eV": 13.62
     }
   ],
-  "boundaries": {
+  "ion_surface_current": {
+    "electron_wall_number_flux": "e_wall_number_flux"
+  },
+  "drift_diffusion_boundaries": {
     "inlet outlet plasma_electrode plasma_metal plasma_right": {
-      "bcs": {
-        "O2p_wall": {
-          "type": "FVFunctorNeumannBC",
-          "variable": "log_O2p",
-          "functor": "O2p_wall_number_flux",
-          "factor": -1.6605390671738466e-24
-        },
-        "Om_wall": {
-          "type": "FVFunctorNeumannBC",
-          "variable": "log_Om",
-          "functor": "Om_wall_number_flux",
-          "factor": -1.6605390671738466e-24
-        },
-        "Op_wall": {
-          "type": "FVFunctorNeumannBC",
-          "variable": "log_Op",
-          "functor": "Op_wall_number_flux",
-          "factor": -1.6605390671738466e-24
-        }
+      "e_wall": {
+        "type": "FEMElectronSheathBC",
+        "sidesets": "plasma_electrode plasma_metal plasma_right"
+      },
+      "e_energy_wall": {
+        "type": "FEMElectronEnergySheathBC",
+        "sidesets": "plasma_electrode plasma_metal plasma_right"
+      },
+      "O2p_wall": {
+        "type": "FVFunctorNeumannBC"
+      },
+      "Om_wall": {
+        "type": "FVFunctorNeumannBC"
+      },
+      "Op_wall": {
+        "type": "FVFunctorNeumannBC"
       }
     },
-    "plasma_cover": {
-      "bcs": {
-        "O2p_cover_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_O2p",
-          "signed_number_flux": "O2p_wall_number_flux"
-        },
-        "Om_cover_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_Om",
-          "signed_number_flux": "Om_wall_number_flux"
-        },
-        "Op_cover_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_Op",
-          "signed_number_flux": "Op_wall_number_flux"
-        }
-      }
-    },
-    "plasma_wafer": {
-      "bcs": {
-        "O2p_wafer_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_O2p",
-          "signed_number_flux": "O2p_wall_number_flux"
-        },
-        "Om_wafer_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_Om",
-          "signed_number_flux": "Om_wall_number_flux"
-        },
-        "Op_wafer_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_Op",
-          "signed_number_flux": "Op_wall_number_flux"
-        }
-      }
-    },
-    "plasma_focus_ring": {
-      "bcs": {
-        "O2p_focus_ring_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_O2p",
-          "signed_number_flux": "O2p_wall_number_flux"
-        },
-        "Om_focus_ring_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_Om",
-          "signed_number_flux": "Om_wall_number_flux"
-        },
-        "Op_focus_ring_dielectric": {
-          "type": "FVLogMolarDielectricFluxBC",
-          "variable": "log_Op",
-          "signed_number_flux": "Op_wall_number_flux"
-        }
+    "plasma_cover plasma_wafer plasma_focus_ring": {
+      "e_cover_dielectric": {
+        "type": "FEMElectronSheathBC",
+        "sidesets": "plasma_cover"
+      },
+      "e_energy_cover_dielectric": {
+        "type": "FEMElectronEnergySheathBC",
+        "sidesets": "plasma_cover"
+      },
+      "O2p_cover_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_cover"
+      },
+      "Om_cover_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_cover"
+      },
+      "Op_cover_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_cover"
+      },
+      "e_wafer_dielectric": {
+        "type": "FEMElectronSheathBC",
+        "sidesets": "plasma_wafer"
+      },
+      "e_energy_wafer_dielectric": {
+        "type": "FEMElectronEnergySheathBC",
+        "sidesets": "plasma_wafer"
+      },
+      "O2p_wafer_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_wafer"
+      },
+      "Om_wafer_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_wafer"
+      },
+      "Op_wafer_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_wafer"
+      },
+      "e_focus_ring_dielectric": {
+        "type": "FEMElectronSheathBC",
+        "sidesets": "plasma_focus_ring"
+      },
+      "e_energy_focus_ring_dielectric": {
+        "type": "FEMElectronEnergySheathBC",
+        "sidesets": "plasma_focus_ring"
+      },
+      "O2p_focus_ring_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_focus_ring"
+      },
+      "Om_focus_ring_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_focus_ring"
+      },
+      "Op_focus_ring_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC",
+        "sidesets": "plasma_focus_ring"
       }
     }
-  },
-  "ion_surface_current": {
-    "electron_wall_number_flux": "electron_wall_number_flux"
   }
 }
