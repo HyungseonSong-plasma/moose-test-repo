@@ -2,6 +2,7 @@
 #include "Chemistry.h"
 #include "Physics.h"
 #include "FEProblemBase.h"
+#include "NonlinearSystemBase.h"
 #include "TheWarehouse.h"
 #include "Attributes.h"
 #include "FVKernel.h"
@@ -243,30 +244,37 @@ DDContinuityEq::checkIntegrity() const
   // both FV families; matching only the generated name would miss Native
   // residual objects with a different name on the same solver variable.
   const auto nl_number = getProblem().getNonlinearSystemBase(0).number();
-  std::vector<FVKernel *> kernels;
+  std::vector<FVKernel *> elemental;
+  std::vector<FVKernel *> flux;
   auto & warehouse = getProblem().theWarehouse();
   warehouse.query()
       .condition<AttribSystem>("FVElementalKernel")
       .condition<AttribSysNum>(nl_number)
       .condition<AttribThread>(0)
-      .queryInto(kernels);
+      .queryInto(elemental);
   warehouse.query()
       .condition<AttribSystem>("FVFluxKernel")
       .condition<AttribSysNum>(nl_number)
       .condition<AttribThread>(0)
-      .queryInto(kernels);
+      .queryInto(flux);
+  // queryInto clears its output. Preserve BOTH disjoint FV families.
+  std::vector<FVKernel *> kernels = elemental;
+  kernels.insert(kernels.end(), flux.begin(), flux.end());
 
-  std::vector<FVBoundaryCondition *> bcs;
+  std::vector<FVBoundaryCondition *> flux_bcs;
+  std::vector<FVBoundaryCondition *> dirichlet_bcs;
   warehouse.query()
       .condition<AttribSystem>("FVFluxBC")
       .condition<AttribSysNum>(nl_number)
       .condition<AttribThread>(0)
-      .queryInto(bcs);
+      .queryInto(flux_bcs);
   warehouse.query()
       .condition<AttribSystem>("FVDirichletBC")
       .condition<AttribSysNum>(nl_number)
       .condition<AttribThread>(0)
-      .queryInto(bcs);
+      .queryInto(dirichlet_bcs);
+  std::vector<FVBoundaryCondition *> bcs = flux_bcs;
+  bcs.insert(bcs.end(), dirichlet_bcs.begin(), dirichlet_bcs.end());
 
   for (const auto & id : _fvm_species)
   {
