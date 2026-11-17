@@ -1,0 +1,103 @@
+# INACTIVE STAGING TEMPLATE -- deliberately NOT installed under .github/workflows/.
+# Do not promote until Issue #633 P18-P24 and a new-only runner are exact-HEAD PASS.
+# Existing #535/#541 manual P3 workflows are separate and must not be changed.
+name: Issue633 New-only S6 400W 100us P3 (inactive draft)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Exact approved source revision; must match workflow SHA'
+        required: true
+        type: string
+      p3_approval:
+        description: 'Explicit approval for two costly NEW-ONLY 400W 100us cases'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue633-new-only-400w-100us-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  s6-new-only-p3:
+    name: NEW-ONLY S6-${{ matrix.case }} 400W 100us manual
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: ['417', '941']
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+    steps:
+      - name: Reject event, SHA, or missing independent New-only P3 approval
+        shell: bash
+        env:
+          APPROVAL: ${{ inputs.p3_approval }}
+          REQUESTED_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$APPROVAL" = "ISSUE633_NEW_ONLY_400W_100US_BOTH_CASES_APPROVED"
+          test "$REQUESTED_SHA" = "$GITHUB_SHA"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Confirm exact source and dedicated New-only runner readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f ci/guards/issue633_new_only_p0_p2.py
+          # NOT implemented at the staging phase. This fails closed until
+          # P19/P20 Scratch, P18 P0 and P23/P24 exact-head P1/P2 are accepted.
+          test -f experiments/Issue402_plasma_dsl_g1/run_issue633_new_only_s6_p3.py
+          test -f experiments/Issue402_plasma_dsl_g1/issue633_new_only_runner_contract.json
+      - name: Exact-source P0/P1/P2 with new-only Scratch (not Hybrid)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Separate runner must stage 11 layers and integrated JSON, reject
+          # original ion Native 14+12, build same-source physics-opt and run
+          # P0/P1/P2 WITHOUT any time integration. Receipt must identify
+          # the solver binary, input layers, JSON and 12+12 generated owners.
+          python3 experiments/Issue402_plasma_dsl_g1/run_issue633_new_only_s6_p3.py \
+            --case "${{ matrix.case }}" \
+            --source-sha "$GITHUB_SHA" \
+            --historical-sha "$HISTORICAL_SHA" \
+            --oci "$OCI" \
+            --phase p0-p2 \
+            --output "$RUNNER_TEMP/issue633_new_only_${{ matrix.case }}"
+      - name: Exact-head 400W 100us real P3 (manual approval only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 experiments/Issue402_plasma_dsl_g1/run_issue633_new_only_s6_p3.py \
+            --case "${{ matrix.case }}" \
+            --source-sha "$GITHUB_SHA" \
+            --historical-sha "$HISTORICAL_SHA" \
+            --oci "$OCI" \
+            --phase p3 --authorize-p3 --timeout-seconds 18000 \
+            --output "$RUNNER_TEMP/issue633_new_only_${{ matrix.case }}"
+      - name: Preserve bounded evidence only; no private rates, no science promotion
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue633-new-only-${{ matrix.case }}-${{ github.sha }}
+          retention-days: 45
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/issue633_new_only_${{ matrix.case }}/receipts/**
+            ${{ runner.temp }}/issue633_new_only_${{ matrix.case }}/status.json
+          # SCIENCE_HOLD remains even if P3 executes successfully.
