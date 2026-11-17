@@ -88,6 +88,7 @@ jobs:
               mun=unique(obs,"muN_rf_t6","Materials")
               ok(mun["params"].get("variable")=="mean_energy_rf_state_t6","RF_MOBILITY_MEAN_ENERGY_LINK")
               print("D4_DEBUG_SOLUTION_NAMES="+str([(x['section'],x['object_name']) for x in obs if any(k in x['object_name'].lower() for k in ('maxwell','solution','rf_t6','map_e_'))]),flush=True)
+              print("D4_DEBUG_RF_OBJECTS="+repr([(x['section'],x['object_name'],x['params']) for x in obs if any(k in x['object_name'].lower() for k in ('rf_','maxwell','energy_joule','mean_energy_rf','solution','joule'))]),flush=True)
               sol=unique(obs,"maxwell_solution_t6","UserObjects")
               has(sol,type="SolutionUserObject",system_variables="E_real E_imag",timestep="LATEST")
               er=unique(obs,"map_E_real_t6","AuxKernels");ei=unique(obs,"map_E_imag_t6","AuxKernels")
