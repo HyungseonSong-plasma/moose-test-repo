@@ -1,0 +1,117 @@
+{
+  "schema": "issue667.p1.d8.dynamic_caller_preservation_addendum.v2",
+  "task_id": "P1-D8",
+  "status": "PASS_BOUNDED_HISTORICAL_DYNAMIC_LINEAGE_NEW_ONLY_RUNTIME_HOLD",
+  "p1_d8_disposition": "S6-417/941 dynamic diagnostic callers are KNOWN ACTIVE, not zero; retain/rebind. This receipt closes bounded historical/output-name preservation but NOT New-only runtime zero-caller or transfer execution.",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "p1_0_source": {
+    "ci_run": 44182628032,
+    "artifact_id": 14372278070,
+    "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "case_layer_sha_verified": {
+      "417": "11/11",
+      "941": "11/11"
+    }
+  },
+  "historical_sources": {
+    "417": {
+      "artifact_id": 13677089020,
+      "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+    },
+    "941": {
+      "artifact_id": 13677375813,
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    }
+  },
+  "cases": {
+    "417": {
+      "p1_input_postprocessors": 136,
+      "original_runtime_csv_columns": 137,
+      "csv_pp_name_identity": "136/136",
+      "csv_rows": 461,
+      "csv_end_s": 0.0001,
+      "exodus_global_names": 136,
+      "exodus_frames": 461,
+      "exodus_sha256": "32641d361ac0e919c211039139049058541c10a1cb1b103e339f146bed329c1f",
+      "exodus_32_char_truncated_names": 13,
+      "exodus_truncation_collisions": 0,
+      "maxwell_t60_log_markers": 10628,
+      "solver_exit": 0,
+      "archived_alias_resolution": "4/4",
+      "canonical_alias_resolution": "4/4",
+      "ambiguous_alias_rejections": "4/4"
+    },
+    "941": {
+      "p1_input_postprocessors": 139,
+      "original_runtime_csv_columns": 140,
+      "csv_pp_name_identity": "139/139",
+      "csv_rows": 461,
+      "csv_end_s": 0.0001,
+      "exodus_global_names": 139,
+      "exodus_frames": 461,
+      "exodus_sha256": "2d417a4dc180165113bb8ae25916f1c64b2c9f0493fcfb278829435282550c19",
+      "exodus_32_char_truncated_names": 10,
+      "exodus_truncation_collisions": 0,
+      "maxwell_t60_log_markers": 10628,
+      "solver_exit": 0,
+      "archived_alias_resolution": "4/4",
+      "canonical_alias_resolution": "4/4",
+      "ambiguous_alias_rejections": "4/4"
+    }
+  },
+  "active_path_contracts": [
+    "Original Native P3 CSV and final Hybrid input Postprocessor names match 100%; CSV time column separate.",
+    "Issue3 analyzer constructs 30 dynamic surface names; 45 required PP + time names present in both staged input and original executed CSV.",
+    "One maxwell_t6 MultiApp, one rf_drive_pid_t6 Control, seven Transfers source wired with canonical electron state; historical Native executed child and produced time-dependent RF fields.",
+    "Current 11-layer artifact does NOT contain rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i; exact current child bytes/include closure still unverified.",
+    "Exodus global Postprocessor names longer than 32 characters are truncated, with 13/10 changes and zero alias collision; CSV full names retained.",
+    "Actual historical Exodus log_ne/log_ni/log_nm/log_nop and synthetic canonical log_e/log_O2p/log_Om/log_Op accepted by pinned species_plot.exodus_log_name; coexistence rejected 4/4 per case."
+  ],
+  "source_code_git_blob": {
+    "analyzer": "18633d742f7adc0ed688897bd9f8a7d95fc78068",
+    "species_plot": "36770b381d433bf6351178cf663b949e47fb4d06",
+    "time_trace": "04bc07813eb3e05368d87cc979df572466cf5463"
+  },
+  "replication": {
+    "verifier_sha256": "4dd88c6fa92a02fa7176a4fb69012ef711d9dc1b91141e41d97d516d6ccd4a0c",
+    "result_sha256": "6c3314a9e5ef9e4ae5c2f4dd766766a02a3cc9f218e01bb69c9ea5be3c896ee5",
+    "synthetic_mutation_controls": "8/8 REJECTED",
+    "native_solver": "NOT_RUN",
+    "private_rate_table_bytes": "NOT_READ"
+  },
+  "required_next_gates": [
+    {
+      "stage": "Issue #668 P2 package",
+      "requirement": "Stage exact Maxwell child input and transitive include closure with SHA; preserve/rebind dynamic diagnostic, wall/density, RF and control consumers through ion 26=>24 Scratch retirement."
+    },
+    {
+      "stage": "P5 Native P2",
+      "requirement": "Actual New-only --check-input with current child plus Warehouse/Material/Functor single-owner and no missing dynamic dependencies."
+    },
+    {
+      "stage": "Separate P3",
+      "requirement": "New actual CSV/Exodus names/frames and MultiApp Control/Transfer runtime liveness; no science acceptance from P1 source checks."
+    }
+  ],
+  "gates": {
+    "D8_BOUNDED_ACTIVE_CALLER_INVENTORY": "PASS",
+    "D8_HISTORICAL_RUNTIME_PRESERVATION": "PASS",
+    "D8_DYNAMIC_EXTERNAL_NAME_CONTRACT": "PASS_BOUNDED",
+    "D8_DYNAMIC_CALLER_ZERO": "NOT_PROVED_KNOWN_ACTIVE_CALLERS",
+    "D8_NEW_ONLY_RUNTIME": "HOLD",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "P1_E": "PENDING",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "native_retirement": false,
+    "original_archives_modified": false,
+    "main_modified": false,
+    "pr665_modified": false,
+    "workflow_modified": false
+  }
+}
