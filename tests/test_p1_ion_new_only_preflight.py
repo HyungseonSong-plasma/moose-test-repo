@@ -139,3 +139,18 @@ def test_legacy_contract_requires_full_three_species_census():
     result = module.inspect({"new-only.i": DECK}, JSON, "legacy-hybrid")
     assert "P1_LEGACY_KERNEL_COUNT_MISMATCH:O2p" in result["errors"]
     assert result["status"] == "FAIL"
+
+
+def test_legacy_canonical_names_after_scratch_remap_are_supported():
+    parts = [DECK]
+    for section, counts in (("FVKernels", module.LEGACY_S6_KERNEL_COUNTS),
+                            ("FVBCs", module.LEGACY_S6_BC_COUNTS)):
+        parts.append(f"[{section}]")
+        for sid, num in counts.items():
+            for i in range(num):
+                parts.extend((f"  [{sid}_{section}_{i}]", "    type = ArchivedObject",
+                              f"    variable = log_{sid}", "  []"))
+        parts.append("[]")
+    result = module.inspect({"old_post_transform.i": "\n".join(parts)}, JSON, "legacy-hybrid")
+    assert result["status"] == "P0_LEGACY_PROVENANCE_ONLY"
+    assert result["native_fv_owner_count"] == 26
