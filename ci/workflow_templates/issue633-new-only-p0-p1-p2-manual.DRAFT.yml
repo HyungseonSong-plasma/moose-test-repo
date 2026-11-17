@@ -1,0 +1,102 @@
+# INACTIVE TEMPLATE -- intentionally not under .github/workflows/.
+# P0/P1/P2 only, zero solver timesteps. Never substitute for #535/#541 Hybrid.
+name: Issue633 New-only source-bound P0 P1 P2 (inactive DRAFT)
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact integrated commit SHA
+        required: true
+        type: string
+      admission:
+        description: Type ISSUE633_NEW_ONLY_P0_P1_P2_APPROVED
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: issue633-new-only-p012-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  new-only-p012:
+    name: New-only S6-417 and 941 same-source P0/P1/P2 only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      EXPECTED_SHA: ${{ inputs.source_sha }}
+      APPROVAL: ${{ inputs.admission }}
+    steps:
+      - name: Gate exact SHA and explicit admission before expensive work
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$EXPECTED_SHA" = "$GITHUB_SHA"
+          test "$APPROVAL" = ISSUE633_NEW_ONLY_P0_P1_P2_APPROVED
+      - name: Checkout exact integrated source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: P0 static and New-only scratch admission for both cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q tests/test_issue633_new_only_p0_p2.py tests/test_issue633_fv_generation_contract.py tests/test_issue633_fv_warehouse_contract.py tests/test_issue633_c2_json_wiring.py tests/test_issue633_c2_wall_bc_contract.py
+          for CASE in 417 941; do
+            D="experiments/Issue402_plasma_dsl_g1/issue633_new_only/S6_${CASE}"
+            test -s "$D/manifest.json"
+            test -s "$D/unified_s6_${CASE}.json"
+            test -d "$D/11_layers"
+            python3 ci/guards/issue633_new_only_p0_p2.py --case "$CASE" --expected-head "$EXPECTED_SHA" --manifest "$D/manifest.json" --layers "$D/11_layers" --json "$D/unified_s6_${CASE}.json"
+          done
+          echo P0_INPUT_ONLY_PASS__P3_NOT_RUN_SCIENCE_HOLD
+      - name: Exact P1 physics-opt build and two P2 check-input operations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/issue633_new_only_p012"
+          docker pull "$OCI"
+          restore_owner() { sudo chown -R "$(id -u):$(id -g)" "$RUNNER_TEMP/issue633_new_only_p012" || true; }
+          trap restore_owner EXIT
+          docker run --rm --network none --user 0:0 --entrypoint /bin/bash --workdir /workspace \
+            --mount "type=bind,src=$PWD,dst=/workspace" \
+            --mount "type=bind,src=$RUNNER_TEMP/issue633_new_only_p012,dst=/evidence" \
+            --env "EXPECTED_SHA=$EXPECTED_SHA" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="$/utils" > /evidence/p1_build.log 2>&1
+              test -x physics_app/physics-opt
+              sha256sum physics_app/physics-opt > /evidence/p1_binary.sha256
+              for CASE in 417 941; do
+                D="experiments/Issue402_plasma_dsl_g1/issue633_new_only/S6_${CASE}"
+                python3 ci/guards/issue633_new_only_p0_p2.py --case "$CASE" --expected-head "$EXPECTED_SHA" \
+                  --manifest "$D/manifest.json" --layers "$D/11_layers" --json "$D/unified_s6_${CASE}.json" \
+                  --binary physics_app/physics-opt --output "/evidence/S6_${CASE}"
+              done
+            '
+          test -s "$RUNNER_TEMP/issue633_new_only_p012/p1_binary.sha256"
+          for CASE in 417 941; do
+            test -s "$RUNNER_TEMP/issue633_new_only_p012/S6_${CASE}/status.json"
+            test -s "$RUNNER_TEMP/issue633_new_only_p012/S6_${CASE}/p2.log"
+          done
+          echo P1_BUILD_AND_TWO_P2_CHECK_INPUTS_PASS__P3_NOT_RUN_SCIENCE_HOLD
+      - name: Upload source-bound P1/P2 receipt and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue633-new-only-p012-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/issue633_new_only_p012/**
