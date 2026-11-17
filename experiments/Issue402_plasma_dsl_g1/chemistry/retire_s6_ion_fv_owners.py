@@ -138,7 +138,7 @@ def cutover_texts(layers: dict[str, str]) -> tuple[dict[str, str], dict]:
                 raise CutoverError("ION26_NATIVE_FV_OWNER_REMAINS")
     return rewritten, {
         "schema": "issue633.s6_scratch_ion_native_26_retirement.v1",
-        "status": "NATIVE_ION_26_RETIRED_PENDING_PHYSICS_NEW24_P2",
+        "status": "NATIVE_ION_26_CUTOVER_PLAN_VALIDATED_P2_NOT_RUN",
         "old_native_fv_kernels": 14, "old_native_fv_bcs": 12,
         "expected_generated_fv_kernels": 12, "expected_generated_fv_bcs": 12,
         "per_species_old_owners": counts,
@@ -186,6 +186,7 @@ def retire_in_disposable_scratch(folder: Path, ordered: list[str]) -> dict:
     if any((directory / name).read_bytes() != after[name].encode("utf-8")
            for name in names):
         raise CutoverError("ION26_SCRATCH_READBACK_MISMATCH")
+    receipt["status"] = "SCRATCH_NATIVE_ION_26_RETIRED_NEW24_PENDING_P2"
     return receipt
 
 
