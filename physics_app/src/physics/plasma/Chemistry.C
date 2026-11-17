@@ -713,21 +713,35 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       const auto & groups = root.at("drift_diffusion_boundaries");
       if (!groups.is_object() || groups.empty())
         fail(file, "drift_diffusion_boundaries must be a nonempty object");
+
+      // Physical sidesets are declared ONCE by the enclosing JSON group.
+      // A BC name may occur in multiple disjoint groups; merge its sides
+      // into one MOOSE BC owner instead of registering duplicate residuals.
+      static const std::regex identifier(R"(^[A-Za-z_][A-Za-z_0-9]*$)");
+      std::set<std::string> declared_sides;
+      std::map<std::string, std::pair<Json, std::set<std::string>>> merged_bcs;
       for (auto group = groups.begin(); group != groups.end(); ++group)
       {
         if (!group.value().is_object() || group.value().empty())
-          fail(file, "drift_diffusion_boundaries group must contain direct BC objects: " + group.key());
-        Json resolved = Json::object();
+          fail(file, "drift_diffusion_boundaries group must contain direct BC objects: " +
+                         group.key());
+        std::set<std::string> group_sides;
+        std::istringstream sides(group.key());
+        for (std::string side; sides >> side;)
+          if (!std::regex_match(side, identifier) ||
+              !group_sides.insert(side).second ||
+              !declared_sides.insert(side).second)
+            fail(file, "overlapping or invalid drift_diffusion_boundaries sideset: " + side);
+        if (group_sides.empty())
+          fail(file, "drift_diffusion_boundaries group has no mesh sidesets");
+
         for (auto item = group.value().begin(); item != group.value().end(); ++item)
         {
           const auto & spec = item.value();
-          if (!spec.is_object() || !spec.contains("type") ||
-              !spec.at("type").is_string())
-            fail(file, "typed drift_diffusion_boundaries BC requires type: " + item.key());
-          for (auto field = spec.begin(); field != spec.end(); ++field)
-            if (field.key() != "type" && field.key() != "sidesets")
-              fail(file, "drift_diffusion_boundaries derives " + field.key() +
-                             " from BC species and type: " + item.key());
+          if (!std::regex_match(item.key(), identifier) ||
+              !spec.is_object() || spec.size() != 1 ||
+              !spec.contains("type") || !spec.at("type").is_string())
+            fail(file, "drift_diffusion_boundaries BC requires only type: " + item.key());
           const std::string type = spec.at("type").get<std::string>();
           const bool electron_energy = item.key().rfind("e_energy_", 0) == 0;
           const auto separator = item.key().find('_');
@@ -758,23 +772,36 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           else if (type == "FVFunctorNeumannBC")
           {
             bc["functor"] = species_id + "_wall_number_flux";
-            // The FV Neumann BC takes an inward-signed particle number flux:
-            // convert to log-molar molar flux with -1/N_A in one code owner.
+            // Convert outward particle flux to inward-signed molar Neumann
+            // flux once; the JSON never owns a numerical factor.
             bc["factor"] = -1.0 / 6.02214076e23;
           }
           else
             bc["signed_number_flux"] = species_id + "_wall_number_flux";
 
-          if (spec.contains("sidesets"))
+          const auto [owner, inserted] = merged_bcs.emplace(
+              item.key(), std::make_pair(bc, group_sides));
+          if (!inserted)
           {
-            if (!spec.at("sidesets").is_string() ||
-                spec.at("sidesets").get<std::string>().empty())
-              fail(file, "sidesets must be a nonempty subset string: " + item.key());
-            bc["sidesets"] = spec.at("sidesets");
+            if (owner->second.first != bc)
+              fail(file, "BC name has conflicting types or species across groups: " + item.key());
+            for (const auto & side : group_sides)
+              if (!owner->second.second.insert(side).second)
+                fail(file, "BC name repeats a physical sideset: " + item.key() + "/" + side);
           }
-          resolved[item.key()] = std::move(bc);
         }
-        normalized_boundaries[group.key()] = {{"bcs", std::move(resolved)}};
+      }
+
+      // The existing typed BC registry and warehouse guard use one logical
+      // owner per unique BC name, while different BCs may share sidesets.
+      for (const auto & [name, owner] : merged_bcs)
+      {
+        std::string joined;
+        for (const auto & side : owner.second)
+          joined += (joined.empty() ? "" : " ") + side;
+        if (!normalized_boundaries.contains(joined))
+          normalized_boundaries[joined] = {{"bcs", Json::object()}};
+        normalized_boundaries[joined]["bcs"][name] = owner.first;
       }
     }
 
@@ -808,11 +835,12 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           record.mesh_boundaries.push_back(side);
         if (record.mesh_boundaries.empty())
           fail(file, "empty boundaries mesh sideset key");
+        std::set<std::string> local_sides;
         for (const auto & side : record.mesh_boundaries)
           if (!std::regex_match(side, identifier) ||
-              !used_mesh_boundaries.insert(side).second)
-            fail(file, "invalid or duplicate boundaries mesh sideset: " +
-                           side);
+              !local_sides.insert(side).second ||
+              (!modern_boundaries && !used_mesh_boundaries.insert(side).second))
+            fail(file, "invalid or duplicate boundaries mesh sideset: " + side);
 
         for (auto bc = item.at("bcs").begin(); bc != item.at("bcs").end(); ++bc)
         {
@@ -834,26 +862,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           if (!particle && !energy && !fv_neumann && !fv_dielectric)
             fail(file, "boundaries BC type is not yet supported: " +
                            entry.type + " for " + bc.key());
-          if (spec.size() != (energy || fv_neumann ? 4 : 3) +
-                                 (spec.contains("sidesets") ? 1 : 0))
+          if (spec.size() != (energy || fv_neumann ? 4 : 3))
             fail(file, "wrong named arguments in boundaries BC " + bc.key());
-          if (spec.contains("sidesets"))
-          {
-            if (!modern_boundaries)
-              fail(file, "legacy boundaries forbids per-BC sidesets override");
-            std::istringstream selected_sides(spec.at("sidesets").get<std::string>());
-            const std::set<std::string> group_sides(record.mesh_boundaries.begin(),
-                                                     record.mesh_boundaries.end());
-            std::set<std::string> seen_sides;
-            for (std::string side; selected_sides >> side;)
-            {
-              if (!group_sides.count(side) || !seen_sides.insert(side).second)
-                fail(file, "BC sidesets override must be a unique group subset: " + bc.key());
-              entry.mesh_boundaries.push_back(side);
-            }
-            if (entry.mesh_boundaries.empty())
-              fail(file, "empty BC sidesets selection: " + bc.key());
-          }
           if (particle || energy)
           {
             if (!spec.contains("wall_number_flux") || !spec.at("wall_number_flux").is_string())
