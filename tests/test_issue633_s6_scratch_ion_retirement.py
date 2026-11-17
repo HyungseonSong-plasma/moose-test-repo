@@ -125,3 +125,26 @@ def test_same_module_is_not_a_native_p2_or_science_acceptance():
     assert 'P3": "NOT_RUN"' in source
     assert "SCIENCE_HOLD" in source
     assert "EXPECTED" in source and "14" in source and "12" in source
+
+
+@pytest.mark.parametrize("case", ("417", "941"))
+def test_exact_archived_native_base_21_owners_can_be_retired_with_five_source_owners(case):
+    """Prove the real pinned S6 C0 block types, factors and 12 BCs are accepted."""
+    names, layers = fixture(case)
+    original = (PILOT / "native/s6_c0_physics_base_no_d1.i").read_text()
+    canonical = original
+    for retired, new in (("log_ni", "log_O2p"), ("log_nm", "log_Om"),
+                         ("log_nop", "log_Op")):
+        canonical = canonical.replace(retired, new)
+    assert canonical != original
+    layers[names[0]] = canonical
+    updated, receipt = cutover_texts(layers)
+    assert (receipt["old_native_fv_kernels"], receipt["old_native_fv_bcs"]) == (14, 12)
+    base_owners = [o for o in receipt["retired_owners"] if o["file"] == names[0]]
+    assert len(base_owners) == 21  # 9 transport kernels + 12 ion FV BCs
+    assert len([o for o in base_owners if o["section"] == "FVKernels"]) == 9
+    assert len([o for o in base_owners if o["section"] == "FVBCs"]) == 12
+    assert "[neutral_mass_time]" in updated[names[0]]
+    assert "[sigma_surface_current]" in updated[names[0]]
+    assert "[potential]" in updated[names[0]]
+    assert (PILOT / "native/s6_c0_physics_base_no_d1.i").read_text() == original
