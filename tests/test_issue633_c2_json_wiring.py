@@ -49,7 +49,9 @@ def test_exact_three_materials_and_twelve_bcs_contract():
 
 @pytest.mark.parametrize("identity", ("O2p", "Om", "Op"))
 def test_missing_material_fails(identity):
-    fail(lambda d: d["species"][identity].pop("ion_wall"), "SELECTED_ION_WALL_OWNER_MISMATCH")
+    fail(lambda d: [d["species"][identity].pop(key) for key in list(d["species"][identity])
+                    if key.startswith("wall_")],
+         "SELECTED_ION_WALL_OWNER_MISMATCH")
 
 
 def test_unselected_or_duplicate_fvm_species_fails():
@@ -59,39 +61,44 @@ def test_unselected_or_duplicate_fvm_species_fails():
         validate(data(), ("O2p", "nonexistent"))
 
 
-def test_swapped_density_and_mobility_fail():
-    fail(lambda d: d["species"]["Om"]["ion_wall"].update(ion_number_density="O2p_number_density"),
-         "WRONG_DENSITY_FUNCTOR_Om")
-    fail(lambda d: d["species"]["Op"]["ion_wall"].update(mobility="Om_mobility"),
-         "WRONG_MOBILITY_FUNCTOR_Op")
+def test_density_and_mobility_wall_overrides_are_not_json_inputs():
+    fail(lambda d: d["species"]["Om"].update(ion_number_density="O2p_number_density"),
+         "REDUNDANT_WALL_SOURCE_FIELD_Om_ion_number_density")
+    fail(lambda d: d["species"]["Op"].update(wall_mobility="Om_mobility"),
+         "INVALID_ION_WALL_FIELDS_Op")
 
 
-def test_wrong_charge_mass_and_potential_fail():
+def test_wrong_charge_mass_and_redundant_potential_fail():
     fail(lambda d: d["species"]["Om"].update(charge_number=1), "WRONG_ION_CHARGE_Om")
-    fail(lambda d: d["species"]["O2p"]["ion_wall"].update(molar_mass=0.016),
+    fail(lambda d: d["species"]["O2p"].update(wall_molar_mass=0.016),
          "WRONG_WALL_MOLAR_MASS_O2p")
-    fail(lambda d: d["species"]["Op"]["ion_wall"].update(potential="wrong_potential"),
-         "WALL_POTENTIAL_MISMATCH_Op")
+    fail(lambda d: d["species"]["Op"].update(potential="wrong_potential"),
+         "REDUNDANT_WALL_SOURCE_FIELD_Op_potential")
 
 
 def test_unknown_wall_fields_or_missing_wall_parameters_fail():
-    fail(lambda d: d["species"]["Om"]["ion_wall"].update(output_prefix="negative_"),
+    fail(lambda d: d["species"]["Om"].update(wall_output_prefix="negative_"),
          "INVALID_ION_WALL_FIELDS_Om")
-    fail(lambda d: d["species"]["O2p"]["ion_wall"].pop("sticking"),
+    fail(lambda d: d["species"]["O2p"].pop("wall_sticking"),
          "INVALID_ION_WALL_FIELDS_O2p")
+    fail(lambda d: d["species"]["Om"].update(ion_wall={"sticking": 1}),
+         "RETIRED_ION_WALL_WRAPPER")
+    fail(lambda d: d["species"]["Op"].update(gas_temperature="T_g_fixed"),
+         "REDUNDANT_WALL_SOURCE_FIELD_Op_gas_temperature")
 
 
 @pytest.mark.parametrize("key,value,error", [
-    ("sticking", -1, "INVALID_STICKING"),
-    ("sticking", 2, "INVALID_STICKING"),
-    ("sticking", float("inf"), "INVALID_STICKING"),
-    ("sticking", True, "INVALID_STICKING"),
-    ("ion_temperature_eV", -0.1, "INVALID_ion_temperature_eV"),
-    ("migration_gate_smoothing_width", float("nan"), "INVALID_migration_gate_smoothing_width"),
-    ("use_element_gradient_for_potential", 1, "INVALID_GRADIENT_FLAG"),
+    ("wall_sticking", -1, "INVALID_STICKING"),
+    ("wall_sticking", 2, "INVALID_STICKING"),
+    ("wall_sticking", float("inf"), "INVALID_STICKING"),
+    ("wall_sticking", True, "INVALID_STICKING"),
+    ("wall_ion_temperature_eV", -0.1, "INVALID_wall_ion_temperature_eV"),
+    ("wall_migration_gate_smoothing_width", float("nan"),
+     "INVALID_wall_migration_gate_smoothing_width"),
+    ("wall_use_element_gradient_for_potential", 1, "INVALID_GRADIENT_FLAG"),
 ])
 def test_invalid_wall_physics_parameter_fails(key, value, error):
-    fail(lambda d: d["species"]["O2p"]["ion_wall"].update({key: value}), error)
+    fail(lambda d: d["species"]["O2p"].update({key: value}), error)
 
 
 def test_missing_or_swapped_normal_boundary_fails():
@@ -253,7 +260,10 @@ def test_electron_and_density_producers_are_external_conditions_not_c2_fabricati
     assert 'bc.wall_number_flux != "electron_wall_number_flux"' in energy
     # C2 checks explicit sources: ion_1/P09 and actual Scratch must prove
     # live O2p/Om/Op_number_density and selected electron wall source.
-    assert 'params.set<MooseFunctorName>("ion_number_density") = wall.ion_number_density;' in chem
+    assert 'params.set<MooseFunctorName>("ion_number_density") = id + "_number_density";' in chem
+    assert 'params.set<MooseFunctorName>("potential") = potential;' in chem
+    assert 'params.set<MooseFunctorName>("gas_temperature") = "temperature";' in chem
+    assert 'continuity.front()->getParam<std::vector<SubdomainName>>("block")' in chem
     assert 'functors.push_back(_data.surfaceElectronWallFlux());' in chem
     assert "1.602176634e-19*(" in chem
     assert 'current_expression += "-ge";' in chem
@@ -313,3 +323,23 @@ def test_cpp_charge_guard_preserves_signed_s6_three_ion_ledger():
     assert 'const int expected_charge = id == "Om" ? -1 : 1;' in source
     assert 'if (_data.species(id).charge_number != expected_charge)' in source
     assert 'current_expression += "-ge";' in source
+
+
+def test_flat_species_wall_schema_uses_one_moose_temperature_and_potential_owner():
+    overlay = data()
+    for id in ("O2p", "Om", "Op"):
+        record = overlay["species"][id]
+        assert "ion_wall" not in record
+        assert set(key for key in record if key.startswith("wall_")) == {
+            "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
+            "wall_migration_gate_smoothing_width",
+            "wall_use_element_gradient_for_potential",
+        }
+        assert not any(key in record for key in
+                       ("potential", "gas_temperature", "ion_number_density", "block"))
+    source = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
+    assert 'if (!gasStateEnabled())' in source
+    assert 'params.set<MooseFunctorName>("potential") = potential;' in source
+    assert 'params.set<MooseFunctorName>("gas_temperature") = "temperature";' in source
+    assert 'params.set<std::vector<SubdomainName>>("block") = blocks;' in source
+    assert "migration_gate_smoothing_width" in source
