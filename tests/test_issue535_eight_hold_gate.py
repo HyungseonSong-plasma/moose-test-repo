@@ -1,9 +1,12 @@
-"""Fail-closed P0 contract for the eight *formal* Issue #535 retirement HOLDs.
+"""Fail-closed retirement gate for Issue #535 owner-scoped six-caller acceptance.
 
-This does NOT attest private/off-platform callers, prove immutable storage,
-dispatch native P3, or promote numerical scientific acceptance.  The purpose is
-to prevent silent reactivation or unsupported formal status upgrades while
-the existing manual verification and owner/archival gates are resolved.
+The operator accepted residual, unobservable external/private/dynamic caller
+risk for exactly D2/D3/D4/A3/A4/B on 2026-11-17 (Issue #535 comment
+6941923213). This is an explicit *risk acceptance*, not global caller-zero.
+Five original verification obligations can be formally retired after exact-
+head CI and separate release review; FLOW B remains held for durable Artifact
+custody. ARCH DD/S6 were not included and stay HOLD. No scientific parity,
+WORM/Object Lock or automatic expensive P3 is asserted by this contract.
 """
 from __future__ import annotations
 
@@ -17,6 +20,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "ci/baselines/issue535_postrelease_eight_hold_gate_20261116.json"
+SOURCE_MAIN = "bde6931a0030eb8bd4dfc532a6f9209e639ef275"
+OWNER_RECEIPT = 6941923213
 
 ORIGINALS = {
     "D2": "9cfa70c6843fb3e4eeec572dc3df00fd4fe6b611",
@@ -28,6 +33,9 @@ ORIGINALS = {
     "DD": "068ef7f78b84b45dbf8c678522ada049d4a42b7a",
     "S6": "485439a723584ca5bbc8632a86c53574b0b1eb9a",
 }
+APPROVED = frozenset(("D2", "D3", "D4", "A3", "A4", "B"))
+SCOPED_RETIRED = frozenset(("D2", "D3", "D4", "A3", "A4"))
+FORMAL_HOLD = frozenset(("B", "DD", "S6"))
 ARCHIVE = {
     "DD": "docs/development/archive/issue402-dd-json-p3-smoke-once.yml.txt",
     "S6": "docs/development/archive/issue402-hybrid-json-s6-p3-p4-once.yml.txt",
@@ -39,15 +47,27 @@ REPLAY = {
            "ISSUE541_S6_400W_100US_BOTH_CASES_APPROVED"),
 }
 REQUIRED_GATES = {
-    "D2": {"EXTERNAL_CALLER_ATTESTATION"},
-    "D3": {"EXTERNAL_CALLER_ATTESTATION"},
-    "D4": {"EXTERNAL_CALLER_ATTESTATION"},
-    "A3": {"EXTERNAL_CALLER_ATTESTATION"},
-    "A4": {"EXTERNAL_CALLER_ATTESTATION"},
-    "B": {"EXTERNAL_CALLER_ATTESTATION", "RENEW_PRIVATE_B_ARTIFACT_READBACK_BEFORE_2026_11_27"},
-    "DD": {"EXTERNAL_CALLER_ATTESTATION", "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE"},
-    "S6": {"EXTERNAL_CALLER_ATTESTATION", "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE",
+    "D2": set(), "D3": set(), "D4": set(), "A3": set(), "A4": set(),
+    "B": {"DURABLE_ACCESSIBLE_B_ORIGINAL_ARTIFACT_CUSTODY"},
+    "DD": {"EXTERNAL_CALLER_ATTESTATION",
+           "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE"},
+    "S6": {"EXTERNAL_CALLER_ATTESTATION",
+           "IMMUTABLE_CUSTODY_OR_EXPLICIT_APPROVED_RETENTION_ALTERNATIVE",
            "FULL_400W_100US_REPLAY_EQUIVALENCE_OR_SEPARATE_APPROVED_WAIVER"},
+}
+REQUIRED_ROUTES = {
+    "D2": (".github/workflows/ci.yml#issue402_core_four_p0",
+           ".github/workflows/ci.yml#issue402_core_four_native_p2"),
+    "D3": (".github/workflows/ci.yml#issue402_core_four_p0",
+           ".github/workflows/ci.yml#issue402_core_four_native_p2"),
+    "D4": (".github/workflows/ci.yml#issue402_core_four_p0",
+           ".github/workflows/ci.yml#issue402_core_four_native_p2"),
+    "A3": (".github/workflows/ci.yml#issue402_ideal_gas_p0",
+           ".github/workflows/issue402-flow-native-p2-regression.yml#flow-native-p2"),
+    "A4": (".github/workflows/ci.yml#issue402_reaction_material_p0",),
+    "B": (".github/workflows/issue402-flow-native-p2-regression.yml#flow-native-p2",),
+    "DD": (".github/workflows/issue541-arch-dd-p3-replay.yml#bounded-p3",),
+    "S6": (".github/workflows/issue541-arch-s6-p3-p4-replay.yml#hybrid-native-s6",),
 }
 
 
@@ -62,18 +82,43 @@ def _git_blob(raw: bytes) -> str:
 def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
     assert data["schema"] == "issue535.postrelease_eight_hold_gate.v1"
     assert data["repository"] == "HyungseonSong-plasma/moose-test-repo"
-    assert re.fullmatch(r"[0-9a-f]{40}", data["source_main"])
-    assert data["source_main"] == "bde6931a0030eb8bd4dfc532a6f9209e639ef275"
+    assert data["source_main"] == SOURCE_MAIN
     assert data["checks"]["main_ci_conclusion"] == "success"
     assert data["checks"]["exact_pr_head_repo_ci_conclusion"] == "success"
     assert data["checks"]["full_p3_dispatched_this_audit"] is False
     assert data["authority"]["no_automatic_formal_promotion"] is True
+
     assert [x["cases"] for x in data["cycles"]] == [
-        ["D2", "D3"], ["D4", "A3"], ["A4", "B"], ["DD", "S6"]
+        ["D2", "D3"], ["D4", "A3"], ["A4", "B"], ["DD", "S6"],
     ]
+    assert [x["cases"] for x in data["approval_cycles"]] == [
+        ["D2", "D3"], ["D4", "A3"], ["A4", "B"],
+    ]
+    assert [x["state"] for x in data["approval_cycles"]] == [
+        "SCOPED_RETIRED_VERIFIED_AFTER_REQUIRED_CI",
+        "SCOPED_RETIRED_VERIFIED_AFTER_REQUIRED_CI",
+        "A4_SCOPED_VERIFIED_B_CALLER_RISK_ACCEPTED_DURABLE_CUSTODY_HOLD",
+    ]
+
+    approval = data["approval"]
+    assert approval["comment_id"] == OWNER_RECEIPT, "OWNER_RECEIPT_NOT_PROVEN"
+    assert approval["date_utc"] == "2026-11-17"
+    assert approval["source"] == "DIRECT_OPERATOR_CHAT_APPROVAL_SCOPED"
+    assert approval["owner"] == "repository-operator"
+    assert approval["approved_scope"] == ["D2", "D3", "D4", "A3", "A4", "B"]
+    assert approval["approval_effect"] == (
+        "ACCEPT_RESIDUAL_PRIVATE_DYNAMIC_EXTERNAL_CALLER_RISK_AND_REPLACEMENT_VERIFICATION_HANDOFF_ONLY"
+    )
+    assert approval["caller_zero_proven"] is False
+    for key in ("B_durable_custody_approved", "ARCH_DD_S6_approved",
+                "science_approved", "automatic_merging_approved"):
+        assert approval[key] is False, "APPROVAL_SCOPE_WIDENED:" + key
+
     cases = data["cases"]
     assert len(cases) == len(ORIGINALS) == 8
     assert {x["id"] for x in cases} == set(ORIGINALS)
+    assert {x["id"] for x in cases if x["formal_disposition"] == "RETIRED_VERIFIED"} == SCOPED_RETIRED
+    assert {x["id"] for x in cases if x["formal_disposition"] == "KEEP_HOLD"} == FORMAL_HOLD
 
     for x in cases:
         ident = x["id"]
@@ -84,35 +129,58 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
         assert original["git_blob"] == ORIGINALS[ident]
         assert original["declared_trigger"] == "OLD_BRANCH_PUSH_ONLY"
         assert original["original_executable_absent_main"] is True
-        assert not any(original[k] for k in ("declared_dispatch", "declared_workflow_call",
-                                              "declared_workflow_run", "declared_schedule"))
+        assert not any(original[k] for k in (
+            "declared_dispatch", "declared_workflow_call",
+            "declared_workflow_run", "declared_schedule",
+        ))
         assert path not in reintroduced and not (ROOT / path).exists(), (
-            "RETIRED_ORIGINAL_REINTRODUCED: " + ident
+            "RETIRED_ORIGINAL_REINTRODUCED:" + ident
         )
         assert original["old_branch_state"] == (
             "BRANCH_PRESENT_ORIGINAL_REMOVED" if ident in ARCHIVE else "BRANCH_ABSENT_404"
         )
-        hist = x["historic"]
-        assert hist["run_id"] > 0 and re.fullmatch(r"[0-9a-f]{40}", hist["source_sha"])
-        assert hist["event"] == "push"
-        assert hist["run_conclusion"] == ("failure" if ident in ARCHIVE else "success")
-        assert len(hist["artifacts"]) == (0 if ident == "A4" else 2 if ident == "S6" else 1)
-        for a in hist["artifacts"]:
-            assert a["id"] > 0 and a["bytes"] > 0
-            assert re.fullmatch(r"sha256:[0-9a-f]{64}", a["sha256_digest"])
-            assert re.fullmatch(r"\d{4}-\d\d-\d\dT.+Z", a["expires_at"])
-            assert a["expired"] is False  # Snapshot on 2026-11-16, not future availability.
+        historic = x["historic"]
+        assert historic["run_id"] > 0 and re.fullmatch(r"[0-9a-f]{40}", historic["source_sha"])
+        assert historic["event"] == "push"
+        assert historic["run_conclusion"] == (
+            "failure" if ident in ARCHIVE else "success"
+        )
+        assert len(historic["artifacts"]) == (
+            0 if ident == "A4" else 2 if ident == "S6" else 1
+        )
+        for art in historic["artifacts"]:
+            assert art["id"] > 0 and art["bytes"] > 0
+            assert re.fullmatch(r"sha256:[0-9a-f]{64}", art["sha256_digest"])
+            assert re.fullmatch(r"\d{4}-\d\d-\d\dT.+Z", art["expires_at"])
+            assert art["expired"] is False  # Snapshot evidence, not future availability.
+
         assert x["external_dynamic_caller"] == "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM"
         assert x["worm_object_lock"] == "NOT_PROVEN"
         assert x["science"] == "SCIENCE_HOLD" and x["p4"] == "NOT_ACCEPTED"
-        assert x["red_gates"] and set(x["red_gates"]) == REQUIRED_GATES[ident]
+        assert set(x["red_gates"]) == REQUIRED_GATES[ident]
         assert x["issue535_receipt"] > 0
-        assert x["owner_caller_risk_attestation"] is None
-        # A future RETIRED_VERIFIED must be implemented by a separately reviewed
-        # exact-SHA owner/retention evidence change, not a one-word manifest edit.
-        assert x["formal_disposition"] == "KEEP_HOLD", "UNAUTHORIZED_RETIREMENT:" + ident
 
-        assert x["replacement"]["routes"]
+        if ident in APPROVED:
+            receipt = x["owner_caller_risk_attestation"]
+            assert isinstance(receipt, dict), "MISSING_SCOPED_OPERATOR_ATTESTATION:" + ident
+            assert receipt["accepted"] is True
+            assert receipt["receipt_id"] == OWNER_RECEIPT
+            assert receipt["accepted_utc_date"] == "2026-11-17"
+            assert receipt["type"] == "OPERATOR_ACCEPTS_RESIDUAL_UNSEEN_PRIVATE_DYNAMIC_CALLERS"
+            assert receipt["not_independent_caller_zero"] is True
+            assert receipt["excludes_worm_and_science"] is True
+            scope = "ORIGINAL_P0_ONLY" if ident == "A4" else "ORIGINAL_P0_P1_P2_ONLY"
+            assert receipt["scope"] == scope and x["retirement_scope"] == scope
+            assert x["formal_disposition"] == (
+                "RETIRED_VERIFIED" if ident in SCOPED_RETIRED else "KEEP_HOLD"
+            ), "UNAUTHORIZED_RETIREMENT:" + ident
+        else:
+            assert x["owner_caller_risk_attestation"] is None, (
+                "ARCH_CALLER_ATTESTATION_NOT_AUTHORIZED:" + ident
+            )
+            assert x["formal_disposition"] == "KEEP_HOLD", "UNAUTHORIZED_RETIREMENT:" + ident
+
+        assert tuple(x["replacement"]["routes"]) == REQUIRED_ROUTES[ident]
         for ref in x["replacement"]["routes"]:
             file_name, sep, job = ref.partition("#")
             assert sep and job and file_name.startswith(".github/workflows/")
@@ -121,8 +189,32 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
                 "REPLACEMENT_JOB_LOST:" + ident + ":" + job
             )
 
+    B = next(x for x in cases if x["id"] == "B")
+    original_zip = B["historic"]["artifacts"][0]
+    assert original_zip["id"] == 14047452836
+    assert original_zip["sha256_digest"] == (
+        "sha256:95eca7994c105347a8948f9b06852ac3929eaddb9781cc01bad00ca31c88397b"
+    )
+    assert original_zip["expires_at"] == "2026-11-27T14:35:35Z"
+    readback = B["custody"]["fresh_original_zip_download"]
+    assert readback["github_artifact_id"] == original_zip["id"]
+    assert readback["sha256"] == original_zip["sha256_digest"].removeprefix("sha256:")
+    assert readback["zip_crc"] == "PASS_8_MEMBERS"
+    assert readback["issue535_receipt"] == 6933161334
+    assert readback["drive_new_upload_success"] is False
+    assert readback["durable_redundant_retention"] == "NOT_VERIFIED"
+    assert readback["provider_expiry_utc"] == original_zip["expires_at"]
+
+    assert data["approval_outcome"] == {
+        "newly_retired_verified_count": 5,
+        "still_hold_count": 3,
+        "original_wave1_prior_retired_verified_count": 2,
+        "wave1_proposed_formal_retired_verified_count": 7,
+        "wave1_proposed_formal_hold_count": 3,
+        "source": "USER_APPROVAL_CONDITIONED_ON_PR_EXACT_HEAD_CI_AND_MANUAL_MERGE_GATE",
+    }
     assert data["global_holds"] == {
-        "external_caller_risk": "NO_NEW_OPERATOR_SIGNOFF_RECEIVED",
+        "external_caller_risk": "PARTIAL_CORE_FLOW_ACCEPTED_ARCH_NOT_ACCEPTED",
         "worm": "NOT_PROVEN",
         "science": "SCIENCE_HOLD",
         "s6_p3": "100US_FULL_MAINTAINED_REPLAY_NOT_ACCEPTED",
@@ -139,14 +231,13 @@ def _verify_manual_only(text: str, approval: str) -> None:
     assert "SCIENCE_HOLD" in text
 
 
-def test_eight_originals_removed_and_all_formal_holds_fail_closed():
+def test_owner_scoped_formal_dispositions_and_retained_holds():
     _check(_load())
 
 
 def test_ARCH_originals_are_identical_nonexecutable_git_blobs():
     for ident, path in ARCHIVE.items():
-        raw = (ROOT / path).read_bytes()
-        assert _git_blob(raw) == ORIGINALS[ident]
+        assert _git_blob((ROOT / path).read_bytes()) == ORIGINALS[ident]
 
 
 def test_maintained_ARCH_replay_is_approval_and_source_sha_gated():
@@ -154,23 +245,64 @@ def test_maintained_ARCH_replay_is_approval_and_source_sha_gated():
         _verify_manual_only((ROOT / path).read_text(encoding="utf-8"), approval)
 
 
-def test_negative_reintroducing_each_of_eight_old_workflows_is_detected():
+def test_negative_reintroducing_each_of_eight_original_workflows_is_detected():
     data = _load()
     for x in data["cases"]:
         with pytest.raises(AssertionError, match="RETIRED_ORIGINAL_REINTRODUCED"):
             _check(data, reintroduced=frozenset({x["original"]["path"]}))
 
 
-def test_negative_premature_retired_verified_never_passes_by_manifest_edit():
-    for ident in ORIGINALS:
+def test_negative_missing_or_forged_operator_approval():
+    for ident in APPROVED:
+        for violation in ("missing", "wrong_receipt", "fake_caller_zero"):
+            data = copy.deepcopy(_load())
+            row = next(x for x in data["cases"] if x["id"] == ident)
+            if violation == "missing":
+                row["owner_caller_risk_attestation"] = None
+            elif violation == "wrong_receipt":
+                row["owner_caller_risk_attestation"]["receipt_id"] = -1
+            else:
+                row["external_dynamic_caller"] = "CALLER_ZERO_PROVEN"
+            with pytest.raises(AssertionError):
+                _check(data)
+
+
+def test_negative_premature_retirement_B_and_ARCH_DD_S6():
+    for ident in FORMAL_HOLD:
         data = copy.deepcopy(_load())
         row = next(x for x in data["cases"] if x["id"] == ident)
         row["formal_disposition"] = "RETIRED_VERIFIED"
-        with pytest.raises(AssertionError, match="UNAUTHORIZED_RETIREMENT"):
+        with pytest.raises(AssertionError):
             _check(data)
 
 
-def test_negative_approval_and_exact_source_sha_gates():
+def test_negative_unapproved_ARCH_caller_and_science_claims():
+    for ident in ("DD", "S6"):
+        data = copy.deepcopy(_load())
+        row = next(x for x in data["cases"] if x["id"] == ident)
+        row["owner_caller_risk_attestation"] = {
+            "accepted": True, "receipt_id": OWNER_RECEIPT,
+        }
+        with pytest.raises(AssertionError, match="ARCH_CALLER_ATTESTATION_NOT_AUTHORIZED"):
+            _check(data)
+
+
+def test_negative_A4_p0_only_and_B_durable_storage_holds():
+    data = copy.deepcopy(_load())
+    row = next(x for x in data["cases"] if x["id"] == "A4")
+    row["retirement_scope"] = "ORIGINAL_P0_P1_P2_ONLY"
+    with pytest.raises(AssertionError):
+        _check(data)
+    for key, value in (("drive_new_upload_success", True),
+                       ("durable_redundant_retention", "VERIFIED")):
+        data = copy.deepcopy(_load())
+        row = next(x for x in data["cases"] if x["id"] == "B")
+        row["custody"]["fresh_original_zip_download"][key] = value
+        with pytest.raises(AssertionError):
+            _check(data)
+
+
+def test_negative_manual_approval_and_exact_source_sha_gates():
     for path, approval in REPLAY.values():
         text = (ROOT / path).read_text(encoding="utf-8")
         with pytest.raises(AssertionError, match="NO_EXPLICIT_APPROVAL"):
@@ -180,12 +312,31 @@ def test_negative_approval_and_exact_source_sha_gates():
                                              'test "1" = "1"'), approval)
 
 
-def test_negative_falsified_artifact_custody_or_science_promotion():
-    for case in ("B", "DD", "S6"):
+def test_negative_source_identity_and_replacement_routing():
+    for ident in ORIGINALS:
         data = copy.deepcopy(_load())
-        row = next(x for x in data["cases"] if x["id"] == case)
-        row["red_gates"] = []
+        row = next(x for x in data["cases"] if x["id"] == ident)
+        row["original"]["git_blob"] = "0" * 40
+        with pytest.raises(AssertionError):
+            _check(data)
+        data = copy.deepcopy(_load())
+        row = next(x for x in data["cases"] if x["id"] == ident)
+        row["replacement"]["routes"] = []
+        with pytest.raises(AssertionError):
+            _check(data)
+
+
+def test_negative_false_WORM_science_or_scope_promotion():
+    for ident in ORIGINALS:
+        data = copy.deepcopy(_load())
+        row = next(x for x in data["cases"] if x["id"] == ident)
         row["worm_object_lock"] = "PROVEN"
         row["science"] = "SCIENCE_ACCEPTED"
         with pytest.raises(AssertionError):
+            _check(data)
+    for field in ("B_durable_custody_approved", "ARCH_DD_S6_approved",
+                  "science_approved", "automatic_merging_approved"):
+        data = copy.deepcopy(_load())
+        data["approval"][field] = True
+        with pytest.raises(AssertionError, match="APPROVAL_SCOPE_WIDENED"):
             _check(data)
