@@ -1,0 +1,109 @@
+{
+  "schema": "issue669.p3_n1.pressure_state_ic.compact.v1",
+  "task_id": "P3-N1",
+  "issue": 669,
+  "dependency_issue": 668,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "verdict": "SOURCE_STATIC_PASS__NEW_ONLY_P2_DEPENDENCY_HOLD",
+  "artifacts": {
+    "p1_0": {
+      "id": 14372278070,
+      "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010"
+    },
+    "historical_417": {
+      "id": 13677089020,
+      "sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+    },
+    "historical_941": {
+      "id": 13677375813,
+      "sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    }
+  },
+  "layer": {
+    "ordinal": 1,
+    "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "original_file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+    "final_hybrid_d_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+  },
+  "original": {
+    "section": "Variables",
+    "name": "p",
+    "factory": "INSFVPressureVariable",
+    "initial_condition_pa": "1.333223684",
+    "block": "plasma",
+    "block_sha256": "f4e3f12e7751f8f684aa2da772243ca6426bd44aed848203e097c043187fe432",
+    "count_417": 1,
+    "count_941": 1
+  },
+  "final_hybrid_d": {
+    "section": "Variables",
+    "name": "pressure",
+    "factory": "INSFVPressureVariable",
+    "block": "plasma",
+    "explicit_initial_condition": null,
+    "block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+    "count_417": 1,
+    "count_941": 1,
+    "remaining_explicit_p_count_417": 0,
+    "remaining_explicit_p_count_941": 0,
+    "overlay_root": "[Physics]/[Plasmas]",
+    "root_pressure_pa": "1.333223684",
+    "root_temperature_kelvin": "300",
+    "root_state_model": "ideal_gas",
+    "overlay_layer_417_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+    "overlay_layer_941_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+    "outlet_section": "FVBCs",
+    "outlet_name": "neutral_outlet_p",
+    "outlet_factory": "INSFVOutletPressureBC",
+    "outlet_variable": "pressure",
+    "outlet_boundary": "outlet",
+    "outlet_function": "${Physics/Plasmas/pressure}",
+    "outlet_block_sha256": "473158d972e44badb6ce8b6111c061fce0ff6f4d429a6fb368a3c2f297d9da8d"
+  },
+  "cpp_producer_contract": {
+    "source": "physics_app/src/physics/plasma/Chemistry.C",
+    "git_blob_sha": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "condition": "gasStateEnabled() && _problem->hasVariable(\"pressure\") && add_ics_physics",
+    "runtime_created_factory": "FVConstantIC",
+    "runtime_created_name": "plasma_initial_pressure",
+    "runtime_created_for_variable": "pressure",
+    "value_from": "[Physics]/[Plasmas]/pressure",
+    "other_functor_pressure_owner_created": false,
+    "pressure_producer": "solved INSFVPressureVariable, AD Functor",
+    "temperature_producer": "root ADGenericFunctorMaterial plasma_gas_temperature",
+    "live_neutral_density": "n_g=pressure/(1.380649e-23*temperature)",
+    "generated_object_readback_verified": false
+  },
+  "preparation_contract": {
+    "source": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py",
+    "git_blob_sha": "8a76517c7863be77d8390cd04b0b3be055f2c147",
+    "guard": "canonicalize_s6_root_gas_state validates unique original p, outlet, constants then retires original pressure IC scratch-only and rebinds roots",
+    "legacy_p_alias_retired": true,
+    "duplicate_explicit_pressure_ic": 0
+  },
+  "verification": {
+    "original_archived_layer_file_sha": "20/20",
+    "final_hybrid_d_layer_file_sha": "22/22",
+    "original_p_block_sha": "2/2",
+    "transformed_pressure_block_sha": "2/2",
+    "outlet_block_sha": "2/2",
+    "root_pressure_overlay_sha": "2/2",
+    "negative_mutation_controls": "34/34 REJECTED",
+    "method": "raw ZIP independent SHA-256 and exact [Variables]/[FVBCs] block byte parser with caller-scope checks; source-bound static C++ inspection",
+    "full_local_receipt_sha256": "6a7392711a6274ad29e46b9264024b4a7b7638d5c9b8339a7fbe06b4004906f5",
+    "verifier_local_sha256": "9d771fb169000d9b47c6d29ce71c0d46ef563dde8713652ccc3e88dbe3b11336"
+  },
+  "unresolved": [
+    "#668 full P2 package remains HOLD (static 26-to-0 retirement PASS does not imply full New-only actual integration)",
+    "No independently pinned post-P2 New-only 11-layer pressure and IC generated warehouse readback",
+    "No New-only Native --check-input, solver pressure evolution/semantic parity",
+    "N3 outlet, N4 neutral momentum and N5 Rhie-Chow full semantic verification are separate tasks"
+  ],
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "mutation_scope": "isolated P3-N1 evidence branch; shared issue body, main, PR #665 and original artifacts unchanged"
+}
