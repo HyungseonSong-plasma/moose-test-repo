@@ -1,0 +1,94 @@
+{
+  "schema": "issue667.p1_a2_1.final11_direct_bytes.v4",
+  "task_id": "P1-A2-1",
+  "supersedes_source_projection": "reports/issue667/p1-a2-1-general-fvbc-source-projection-hold.json",
+  "verdict": "PASS_STATIC_FINAL_11_LAYER_3_NORMAL_ION_FV_BC_PER_CASE",
+  "source_pr": 665,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "verification": "independent raw bytes readback of downloaded exact-source GitHub Actions artifacts; SHA256 recomputed locally (not copied from a CI-only status receipt)",
+  "artifacts": [
+    {
+      "run": 44182176604,
+      "id": 14372442471,
+      "source": "final_11layer_byte_receipt",
+      "case_417_files_sha_match": 11,
+      "case_941_files_sha_match": 11,
+      "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+    },
+    {
+      "run": 44182271555,
+      "id": 14372727434,
+      "source": "exact_head_scratch11",
+      "case_417_files_sha_match": 11,
+      "case_941_files_sha_match": 11,
+      "C0_sha256": "554f8a203594f1c92ed067a5c6078a997302f0d83ddcf04f2443cc38ce7abf76"
+    },
+    {
+      "run": 44182284212,
+      "id": 14373032046,
+      "source": "S6_417_independent_final11",
+      "case_417_files_sha_match": 11,
+      "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+    },
+    {
+      "run": 44180190753,
+      "id": 14372315897,
+      "source": "sourcepin",
+      "case_417_files_sha_match": 11,
+      "case_941_files_sha_match": 11,
+      "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+    }
+  ],
+  "cases": {
+    "S6_417": {
+      "status": "PASS_STATIC_FINAL11_NORMAL_FVBC",
+      "layer_count": 11,
+      "normal_BC_count": 3,
+      "normal_BC_exactly_once": true
+    },
+    "S6_941": {
+      "status": "PASS_STATIC_FINAL11_NORMAL_FVBC",
+      "layer_count": 11,
+      "normal_BC_count": 3,
+      "normal_BC_exactly_once": true
+    }
+  },
+  "normal_BC_parameters": {
+    "type": "FVFunctorNeumannBC",
+    "factor": "-1.6605390671738466e-24",
+    "boundary": "inlet outlet plasma_electrode plasma_metal plasma_right",
+    "section": "FVBCs",
+    "layer_ordinal": 1
+  },
+  "objects": [
+    {
+      "name": "ion_wall",
+      "variable": "log_O2p",
+      "functor": "O2p_wall_number_flux",
+      "block_sha256": "fa4ad1a51cbcd4b6ffa1dc8fba3438b66b27642a598bc35abca2513b9f0bacb3"
+    },
+    {
+      "name": "negative_ion_wall",
+      "variable": "log_Om",
+      "functor": "Om_wall_number_flux",
+      "block_sha256": "cf5d56c3af0f77832f08139360753ac8c300e24cd86f6fd24158e77893fe375b"
+    },
+    {
+      "name": "atomic_positive_ion_wall",
+      "variable": "log_Op",
+      "functor": "Op_wall_number_flux",
+      "block_sha256": "8a32490bce4f29361270661c094f8d0e45cb3555b8d9ce9127dd725ac340d67f"
+    }
+  ],
+  "claims_out_of_scope": [
+    "No global selection of authoritative Scratch D file SHA: independently preserved recipes differ at C0 whole-file level",
+    "No generated Physics warehouse equivalence",
+    "No Native P2 or numerical/science parity"
+  ],
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "local_full_receipt_sha256": "8f437340b51843fcba2895fac3432dbe4bd51b5a48fb4be4cbfcf0e2db7d489e",
+  "local_script": "verify_p1_a2_1_final11.py"
+}
