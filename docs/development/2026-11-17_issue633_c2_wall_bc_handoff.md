@@ -6,11 +6,10 @@
 
 As of the single-integrator PR #665, the **run-facing JSON has no species.ion_wall object**.
 Wall physical parameters are flat species fields:
-`wall_molar_mass`, `wall_sticking`, `wall_ion_temperature_eV`,
-`wall_migration_gate_smoothing_width` and
-`wall_use_element_gradient_for_potential`. The parameter values are
-unchanged from C2: 0.032/0.016 kg/mol, sticking=1, ion-temperature=0 eV,
-migration smoothing width=0.001 V/m, FEM element gradient=true.
+`wall_molar_mass`, `wall_sticking`, `wall_ion_temperature_eV`, and
+`wall_use_element_gradient_for_potential`. The unchanged wall-law values
+are 0.032/0.016 kg/mol, sticking=1, ion-temperature=0 eV, and FEM
+element gradient=true. Migration-gate smoothing is NOT JSON-owned.
 
 The wall's number-density and mobility Functors are derived from species ID,
 `<id>_number_density` and `<id>_mobility`; potential and block are read
@@ -19,6 +18,34 @@ from `[Physics]/[Plasmas]/[Transport]/[DriftDiffusion]/[Continuity]`
 `temperature`, published by the root `[Plasmas]` MOOSE input alongside
 `pressure`. No independent `T_g_fixed` provider is created by C2.
 The old `ion_wall` JSON object is explicitly rejected by the parser.
+The migrated numerical gate is specified **once per Continuity instance**
+in the MOOSE `.i` input, not once per species:
+```ini
+[Physics]
+  [Plasmas]
+    pressure = 1.333223684
+    temperature = 300
+    [Transport]
+      [DriftDiffusion]
+        [Continuity]
+          block = plasma
+          fvm_species = 'O2p Om Op'
+          fem_potential = potential
+          wall_migration_gate_smoothing_width = 0.001
+        []
+      []
+    []
+  []
+[]
+```
+Selected C2 walls require this option explicitly, with finite
+nonnegative value. `0` enables the exact hard `max(z E_n,0)` gate.
+The historical S6 C2 characterization uses `0.001 V/m`;
+there is no hidden numerical default. The parser rejects legacy
+`species.<id>.wall_migration_gate_smoothing_width` fields.
+Two new **non-executable until Scratch is staged** review fragments
+`issue633_newonly_s6_{417,941}_continuity.template.i` record the
+S6-specific `.i` placement. They do not constitute P2 evidence.
 
 This modifies only the active new-only integration candidate. Historical
 S6 source inputs and the separate hybrid recipe are immutable. Validation
