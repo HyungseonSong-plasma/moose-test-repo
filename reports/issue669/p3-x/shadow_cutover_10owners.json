@@ -1,0 +1,115 @@
+{
+  "schema": "issue669.p3_x.shadow_owner_retirement.source_only.v1",
+  "task_id": "P3-X",
+  "source_pr665_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "stacked_pr674_head": "4185d04ccded7fe1f6b6da8a5ecc2d0cdf339d75",
+  "source_input_artifact": {
+    "ci_run": 44199587771,
+    "id": 14380831538,
+    "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+  },
+  "status": "PASS_READONLY_DISPOSABLE_COPY_EXACT_10_BLOCK_REMOVALS_PER_CASE__NATIVE_HOLD",
+  "case_results": {
+    "417": {
+      "C0_sha256_before": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "C0_sha256_after": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "files_original_newonly_stage": 11,
+      "source_shadow_files": 11,
+      "files_modified": 1,
+      "files_unchanged": 10,
+      "removed_BCs": 8,
+      "removed_functor_materials": 2,
+      "source_physics_newonly_JSON_verified": true,
+      "table_42row_original_sha_verified": true,
+      "runtime_warehouse_executed": false
+    },
+    "941": {
+      "C0_sha256_before": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "C0_sha256_after": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "files_original_newonly_stage": 11,
+      "source_shadow_files": 11,
+      "files_modified": 1,
+      "files_unchanged": 10,
+      "removed_BCs": 8,
+      "removed_functor_materials": 2,
+      "source_physics_newonly_JSON_verified": true,
+      "table_42row_original_sha_verified": true,
+      "runtime_warehouse_executed": false
+    }
+  },
+  "deleted_exact_owner_blocks": [
+    {
+      "section": "BCs",
+      "name": "electron_sheath",
+      "block_sha256": "d9ab87b8365ba483414939b7e3a7a30f39f4acd8b43b1c70a62ecf521c62ca79"
+    },
+    {
+      "section": "BCs",
+      "name": "electron_cover_dielectric",
+      "block_sha256": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04"
+    },
+    {
+      "section": "BCs",
+      "name": "electron_wafer_dielectric",
+      "block_sha256": "0f12b97314b9a0c2da88f9caa0c0512d67b9d0d7dc4ed6d664e0d51da905fe74"
+    },
+    {
+      "section": "BCs",
+      "name": "electron_focus_ring_dielectric",
+      "block_sha256": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa"
+    },
+    {
+      "section": "BCs",
+      "name": "electron_energy_sheath",
+      "block_sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891"
+    },
+    {
+      "section": "BCs",
+      "name": "electron_energy_cover",
+      "block_sha256": "5e3c9b1853568945d1e99bc25cc7eb028f39d59b60b64824d4091a81b65b3f98"
+    },
+    {
+      "section": "BCs",
+      "name": "electron_energy_wafer",
+      "block_sha256": "fedc129efca3c592e13edb2c4a0d402693a02195029ee9cf86bd94bccc839884"
+    },
+    {
+      "section": "BCs",
+      "name": "electron_energy_focus_ring",
+      "block_sha256": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "electron_physical_density",
+      "block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "generated_provider": "n_e_physical"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "electron_wall_flux",
+      "block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "generated_provider": "e_wall_number_flux"
+    }
+  ],
+  "physics_generators": {
+    "newonly_fem_bc": "physics_app/src/physics/plasma/Chemistry.C (PlasmasAction::act add_bc) generates JSON-bound FEMElectronSheathBC/FEMElectronEnergySheathBC ×8",
+    "newonly_electron_density": "physics_app/src/physics/plasma/DDEnergyEq.C generates n_e_physical",
+    "newonly_electron_wall_flux": "DDEnergyEq.C creates ESWallFluxMaterial (species_id=e) publishing e_wall_number_flux"
+  },
+  "rejected_8_negative_controls": true,
+  "local_receipt_sha256": "bef062c89b7e2f4947f63915675917671aceb8c7f65dd2ba8dfa6ad0e5e869f4",
+  "local_shadow_zip_sha256": "86867d92a1260d4c13fecf10612c39169f2ebf970a1effb60d56d9433ddb5eb3",
+  "local_replay_script_sha256": "ded931704d30561027cb156f1ebfd6c1ff6f6cbb7d117d9fa7c06a2a9cfc6442",
+  "not_run": [
+    "Production runner P3-X owner deletion",
+    "Native P2 and actual C++ warehouse single owner",
+    "Native P3/P4",
+    "Scientific equivalence"
+  ],
+  "warnings": [
+    "This is not a PR674 source edit or merge",
+    "Ordinal-prefixed ZIP layers are evidence snapshots, not runnable deck names",
+    "No private rate bytes copied",
+    "Other new-only ion/source and dynamic consumers remain under P4/P5 gates"
+  ]
+}
