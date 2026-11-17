@@ -1,0 +1,112 @@
+{
+  "schema": "issue667.p1_c5.s6_941.source_receipt.v1",
+  "task_id": "P1-C5",
+  "case": "S6-941-407-2069-H25",
+  "status": "PASS_SOURCE_STATIC_FINAL_11_LAYER",
+  "scope": "Original Native Op Source #2 in final staged S6-941 11-layer inputs; no new-only or numerical parity claim",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "p1_0": {
+    "run_id": 44180190753,
+    "artifact_id": 14372315897,
+    "artifact_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "verified_11_layer_file_sha": "11/11",
+    "verified_FV_block_sha": "63/63",
+    "native_ion_FV_kernel_count": 14,
+    "native_ion_FV_BC_count": 12
+  },
+  "source": {
+    "layer_ordinal": 10,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+    "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+    "section": "FVKernels",
+    "object_name": "h25_atomic_positive_ion",
+    "factory_type": "FVCoupledForce",
+    "variable": "log_Op",
+    "parameters": {
+      "type": "FVCoupledForce",
+      "variable": "log_Op",
+      "v": "S_Op_molar_H25",
+      "coef": "1.0",
+      "block": "plasma"
+    },
+    "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01",
+    "line_start": 115,
+    "line_end": 121
+  },
+  "rate_producer": {
+    "section": "FunctorMaterials",
+    "object_name": "h25_progress",
+    "factory_type": "ADParsedFunctorMaterial",
+    "property_name": "R_H25",
+    "expression": "'1.204428152e7*(300.0/tg)^0.4*cp*c2'",
+    "block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+    "count": 1,
+    "synthetic_rate_producer_count": 0
+  },
+  "producer_consumer_edges": [
+    {
+      "from": "log_Op",
+      "to": "c_Op_H25",
+      "via": "h25_op_target"
+    },
+    {
+      "from": "rho_neutral w_O2_constraint",
+      "to": "c_O2_H25",
+      "via": "h25_o2_target"
+    },
+    {
+      "from": "c_Op_H25 c_O2_H25 Tg_H25_K",
+      "to": "R_H25",
+      "via": "h25_progress"
+    },
+    {
+      "from": "R_H25",
+      "to": "S_Op_molar_H25",
+      "via": "h25_op_loss",
+      "expression": "-R"
+    },
+    {
+      "from": "S_Op_molar_H25",
+      "to": "h25_atomic_positive_ion",
+      "via": "v",
+      "variable": "log_Op"
+    }
+  ],
+  "c4_nonduplication": {
+    "object_name": "ei941_atomic_positive_ion_source",
+    "layer_ordinal": 7,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+    "block_sha256": "06c9444eda41eb5cc47e28485db5f8e95dba64a52e93131ca2fcc1378367f433",
+    "variable": "log_Op",
+    "rhs": "S_Op_molar_EI941",
+    "distinct_from_C5": true,
+    "total_Op_FVCoupledForce_sources": 2
+  },
+  "historical_to_final": {
+    "original_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+    "original_h25_file_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+    "post_state_canonicalization_h25_file_sha256": "b9845f954a610fa08b2c9f306069901eec219644c1931f63c850bb38cf991dfb",
+    "final_h25_file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+    "byte_exact_remap": true
+  },
+  "negative_controls": {
+    "wrong_factory": "REJECTED",
+    "wrong_rhs": "REJECTED",
+    "wrong_loss_sign": "REJECTED",
+    "missing_source": "REJECTED",
+    "duplicate_source": "REJECTED",
+    "tampered_file_sha": "REJECTED"
+  },
+  "unresolved": [
+    "New-only Physics-generated Op RHS consumption not exercised",
+    "Native P2 not run for C5",
+    "H25 ion-neutral energy partition remains SCIENCE_HOLD"
+  ],
+  "private_rate_bytes_included": false,
+  "new_only_s6_p2": "HOLD",
+  "native_p2": "NOT_RUN",
+  "native_p3": "NOT_RUN",
+  "native_p4": "NOT_RUN",
+  "science": "SCIENCE_HOLD"
+}
