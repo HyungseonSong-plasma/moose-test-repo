@@ -9,8 +9,8 @@
   [Plasmas]
     files = plasma_species_initial_p2.json
     [Transport]
-      [Chemistry]
-      []
+      # No Chemistry Action: this binding-only test checks a pre-existing
+      # solver variable collision, not volume-rate production.
       [DriftDiffusion]
         [Continuity]
           fem_species = 'O2p'
