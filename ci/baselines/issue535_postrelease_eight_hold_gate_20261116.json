@@ -217,15 +217,22 @@
         "file_id": "1LsTjdZwjtsC3Xqgk5Oa2qjqAMC_FZ_WW"
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6941923213,
+        "scope": "ORIGINAL_P0_P1_P2_ONLY",
+        "accepted_utc_date": "2026-11-17",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_UNSEEN_PRIVATE_DYNAMIC_CALLERS",
+        "not_independent_caller_zero": true,
+        "excludes_worm_and_science": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
-      "formal_disposition": "KEEP_HOLD",
-      "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION"
-      ],
-      "issue535_receipt": 6932927005
+      "formal_disposition": "RETIRED_VERIFIED",
+      "red_gates": [],
+      "issue535_receipt": 6932927005,
+      "retirement_scope": "ORIGINAL_P0_P1_P2_ONLY"
     },
     {
       "id": "A3",
@@ -271,15 +278,22 @@
         "file_id": null
       },
       "external_dynamic_caller": "UNVERIFIED_ALL_BRANCHES_OFF_PLATFORM",
-      "owner_caller_risk_attestation": null,
+      "owner_caller_risk_attestation": {
+        "accepted": true,
+        "receipt_id": 6941923213,
+        "scope": "ORIGINAL_P0_P1_P2_ONLY",
+        "accepted_utc_date": "2026-11-17",
+        "type": "OPERATOR_ACCEPTS_RESIDUAL_UNSEEN_PRIVATE_DYNAMIC_CALLERS",
+        "not_independent_caller_zero": true,
+        "excludes_worm_and_science": true
+      },
       "worm_object_lock": "NOT_PROVEN",
       "science": "SCIENCE_HOLD",
       "p4": "NOT_ACCEPTED",
-      "formal_disposition": "KEEP_HOLD",
-      "red_gates": [
-        "EXTERNAL_CALLER_ATTESTATION"
-      ],
-      "issue535_receipt": 6932927005
+      "formal_disposition": "RETIRED_VERIFIED",
+      "red_gates": [],
+      "issue535_receipt": 6932927005,
+      "retirement_scope": "ORIGINAL_P0_P1_P2_ONLY"
     },
     {
       "id": "A4",
@@ -538,7 +552,7 @@
         "D4",
         "A3"
       ],
-      "state": "PENDING_EVIDENCE_CAS_WRITE"
+      "state": "SCOPED_RETIRED_VERIFIED_AFTER_REQUIRED_CI"
     },
     {
       "number": 3,
