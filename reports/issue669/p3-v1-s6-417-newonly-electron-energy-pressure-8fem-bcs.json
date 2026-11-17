@@ -1,0 +1,337 @@
+{
+  "schema": "issue669.p3_v1.s6_417.newonly_electron_energy_pressure_8fem_bc.v1",
+  "task_id": "P3-V1",
+  "issue": 669,
+  "case": "S6-417",
+  "status": "PASS_SOURCE_STATIC_CONTRACT__HOLD_NEW_ONLY_INTEGRATION_8_FEM_BC_OWNER_RETIREMENT",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr": 665,
+    "pr_status": "OPEN_DRAFT_UNMERGED",
+    "exact_pr_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "main_at_commit_creation": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d"
+  },
+  "scope": "Read-only pinned New-only 417 JSON, candidate overlay, C++ Action paths and independently pinned pre-retirement Hybrid 11-layer. No actual P2 New-only staging or native solver.",
+  "dependency": {
+    "P1_0_source_input": "PASS",
+    "P1_0_artifact_id": 14372278074,
+    "P2_issue": 668,
+    "P2_retirement_static": "PASS_26_TO_0_ISOLATED_SCRATCH",
+    "P2_full_DOD": "HOLD",
+    "P2_production_runner_hookup": "NOT_COMPLETE_AT_READ",
+    "P3_0": "UNCONFIRMED_PENDING_COMMON_PIN",
+    "P3_X": "NOT_RUN",
+    "actual_newonly_417_file_sha_manifest": "NOT_AVAILABLE",
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "newonly_json": {
+    "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+    "git_blob_sha": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "file_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "electron": {
+      "species": "e",
+      "charge_number": -1,
+      "molar_mass_kg_mol": 5.485799096195737e-7,
+      "initial_number_density_per_m3": 1000000000000001.6,
+      "temperature_eV": 2.6666666666666665,
+      "transport_coef": {
+        "type": "lookup",
+        "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+        "unit": "reduced",
+        "bounds_policy": "clamp"
+      }
+    },
+    "fem_particle_boundary_count": 4,
+    "fem_energy_boundary_count": 4,
+    "fem_total_count": 8,
+    "complete_ion_bc_spec_count": 15,
+    "note": "FV ion BCs in this scope are catalogue-only; their actual generated ownership is a separate P2/P3-X gate"
+  },
+  "newonly_overlay_template": {
+    "path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+    "git_blob_sha": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e",
+    "file_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+    "actual_staged_11th_layer_sha": "NOT_AVAILABLE",
+    "files": "chemistry/unified_s6_417_newonly.json",
+    "pressure_initial_pa": 1.333223684,
+    "temperature_K": 300,
+    "state_model": "ideal_gas",
+    "fem_species": "e",
+    "fvm_species": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "fem_potential": "potential",
+    "transport_coefficient": "fluid",
+    "continuity_and_energy_both_pinned": true
+  },
+  "expected_action_ownership": {
+    "root_pressure": "Solved INSFVPressureVariable pressure, single FVConstantIC from [Physics/Plasmas]/pressure when present",
+    "root_temperature": "Single root plasma_gas_temperature ADGenericFunctorMaterial; no second p_fixed or T_g_fixed",
+    "neutral_gas_density": "n_g=pressure/(1.380649e-23*temperature) from live pressure FV Functor",
+    "transport": "DDContinuityEq e DDTransportMaterial with e_energy_eV lookup, reduced/clamp; no second electron coefficient owner",
+    "energy": "DDEnergyEq creates/reuses log_e_energy; if auto-created and no explicit energy IC, 1.5*temperature_eV*initial_number_density/N_A",
+    "energy_computed_ic_molar_eV_m3": 6.642156268695398e-9,
+    "energy_computed_log_ic": -18.829829186913095,
+    "electron_energy_transport": "e_energy_mobility and e_energy_diffusivity = 5/3 electron particle coefficients",
+    "fem_bc_owner": "PlasmasAction Chemistry.C add_bc uses JSON boundary registry once for each unique BC name; only after existing eight legacy FEM BCs retired in scratch",
+    "no_production_runtime_validation": true
+  },
+  "cpp_paths": {
+    "parser": {
+      "path": "physics_app/src/physics/plasma/Chemistry.C",
+      "git_blob_sha": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "relevant_lines": [
+        "134-151",
+        "177-230",
+        "704-900",
+        "1558-1595",
+        "1604-1665"
+      ]
+    },
+    "continuity": {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "git_blob_sha": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "relevant_lines": [
+        "252-375",
+        "486-584"
+      ]
+    },
+    "energy": {
+      "path": "physics_app/src/physics/plasma/DDEnergyEq.C",
+      "git_blob_sha": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+      "relevant_lines": [
+        "21-143",
+        "150-200",
+        "250-308"
+      ]
+    },
+    "transport": {
+      "path": "physics_app/src/materials/DDTransportMaterial.C",
+      "git_blob_sha": "e75687d73d8ca6fead0eff411ad7ffbb814a6909"
+    }
+  },
+  "hybrid_baseline": {
+    "source_artifact_id": 14372278074,
+    "source_artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182663514/artifacts/14372278074",
+    "outer_artifact_zip_sha256": "584fd8eff989ab1f7f0a7582ae72b4dc2429f84b8b05ed91c1a46f89df88da5e",
+    "nested_real_11_layer_zip_sha256": "9923c7c875dff975ec203610e58797be7abbfe6a92be2173f1fbe525f49f1172",
+    "original_hybrid_layer_count": 11,
+    "original_hybrid_layer1_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "legacy_electron_8_fem_bc_exists": true,
+    "legacy_8_fem_bc_original_block_sha_pass": 8,
+    "result": "8 retained legacy FEM BC owners in 11-layer pre-retirement Hybrid source, 8 distinct New-only JSON owners target same species, variables and physical sidesets",
+    "readback_local_receipt": "issue669_p3_v1_hybrid_417_eight_fem_bc_static_crosscheck.json",
+    "readback_local_sha256": "c5f88844ef73945c1aa4f44f96161f310f3dfa287cc0aa0939ca8c084c645070"
+  },
+  "bc_mapping": [
+    {
+      "legacy_name": "electron_sheath",
+      "new_owner_name": "e_wall",
+      "factory_type": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "boundaries": [
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "source_hybrid_layer_ordinal": 1,
+      "source_hybrid_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_hybrid_block_sha256": "d9ab87b8365ba483414939b7e3a7a30f39f4acd8b43b1c70a62ecf521c62ca79",
+      "legacy_flux": "e_wall_number_flux",
+      "generated_flux": "e_wall_number_flux",
+      "generated_mean_energy": null,
+      "semantic_double_owner_if_not_retired": true,
+      "actual_generated_block_sha256": "NOT_GENERATED_IN_NEW_ONLY_SCRATCH"
+    },
+    {
+      "legacy_name": "electron_cover_dielectric",
+      "new_owner_name": "e_cover_dielectric",
+      "factory_type": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "boundaries": [
+        "plasma_cover"
+      ],
+      "source_hybrid_layer_ordinal": 1,
+      "source_hybrid_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_hybrid_block_sha256": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04",
+      "legacy_flux": "e_wall_number_flux",
+      "generated_flux": "e_wall_number_flux",
+      "generated_mean_energy": null,
+      "semantic_double_owner_if_not_retired": true,
+      "actual_generated_block_sha256": "NOT_GENERATED_IN_NEW_ONLY_SCRATCH"
+    },
+    {
+      "legacy_name": "electron_wafer_dielectric",
+      "new_owner_name": "e_wafer_dielectric",
+      "factory_type": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "boundaries": [
+        "plasma_wafer"
+      ],
+      "source_hybrid_layer_ordinal": 1,
+      "source_hybrid_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_hybrid_block_sha256": "0f12b97314b9a0c2da88f9caa0c0512d67b9d0d7dc4ed6d664e0d51da905fe74",
+      "legacy_flux": "e_wall_number_flux",
+      "generated_flux": "e_wall_number_flux",
+      "generated_mean_energy": null,
+      "semantic_double_owner_if_not_retired": true,
+      "actual_generated_block_sha256": "NOT_GENERATED_IN_NEW_ONLY_SCRATCH"
+    },
+    {
+      "legacy_name": "electron_focus_ring_dielectric",
+      "new_owner_name": "e_focus_ring_dielectric",
+      "factory_type": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "boundaries": [
+        "plasma_focus_ring"
+      ],
+      "source_hybrid_layer_ordinal": 1,
+      "source_hybrid_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_hybrid_block_sha256": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa",
+      "legacy_flux": "e_wall_number_flux",
+      "generated_flux": "e_wall_number_flux",
+      "generated_mean_energy": null,
+      "semantic_double_owner_if_not_retired": true,
+      "actual_generated_block_sha256": "NOT_GENERATED_IN_NEW_ONLY_SCRATCH"
+    },
+    {
+      "legacy_name": "electron_energy_sheath",
+      "new_owner_name": "e_energy_wall",
+      "factory_type": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "boundaries": [
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "source_hybrid_layer_ordinal": 1,
+      "source_hybrid_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_hybrid_block_sha256": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+      "legacy_flux": "e_wall_number_flux",
+      "generated_flux": "e_wall_number_flux",
+      "generated_mean_energy": "e_energy_eV",
+      "semantic_double_owner_if_not_retired": true,
+      "actual_generated_block_sha256": "NOT_GENERATED_IN_NEW_ONLY_SCRATCH"
+    },
+    {
+      "legacy_name": "electron_energy_cover",
+      "new_owner_name": "e_energy_cover_dielectric",
+      "factory_type": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "boundaries": [
+        "plasma_cover"
+      ],
+      "source_hybrid_layer_ordinal": 1,
+      "source_hybrid_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_hybrid_block_sha256": "5e3c9b1853568945d1e99bc25cc7eb028f39d59b60b64824d4091a81b65b3f98",
+      "legacy_flux": "e_wall_number_flux",
+      "generated_flux": "e_wall_number_flux",
+      "generated_mean_energy": "e_energy_eV",
+      "semantic_double_owner_if_not_retired": true,
+      "actual_generated_block_sha256": "NOT_GENERATED_IN_NEW_ONLY_SCRATCH"
+    },
+    {
+      "legacy_name": "electron_energy_wafer",
+      "new_owner_name": "e_energy_wafer_dielectric",
+      "factory_type": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "boundaries": [
+        "plasma_wafer"
+      ],
+      "source_hybrid_layer_ordinal": 1,
+      "source_hybrid_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_hybrid_block_sha256": "fedc129efca3c592e13edb2c4a0d402693a02195029ee9cf86bd94bccc839884",
+      "legacy_flux": "e_wall_number_flux",
+      "generated_flux": "e_wall_number_flux",
+      "generated_mean_energy": "e_energy_eV",
+      "semantic_double_owner_if_not_retired": true,
+      "actual_generated_block_sha256": "NOT_GENERATED_IN_NEW_ONLY_SCRATCH"
+    },
+    {
+      "legacy_name": "electron_energy_focus_ring",
+      "new_owner_name": "e_energy_focus_ring_dielectric",
+      "factory_type": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "boundaries": [
+        "plasma_focus_ring"
+      ],
+      "source_hybrid_layer_ordinal": 1,
+      "source_hybrid_file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_hybrid_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "original_hybrid_block_sha256": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138",
+      "legacy_flux": "e_wall_number_flux",
+      "generated_flux": "e_wall_number_flux",
+      "generated_mean_energy": "e_energy_eV",
+      "semantic_double_owner_if_not_retired": true,
+      "actual_generated_block_sha256": "NOT_GENERATED_IN_NEW_ONLY_SCRATCH"
+    }
+  ],
+  "conflict": {
+    "semantic_conflicting_bc_pairs_if_unretired": 8,
+    "same_new_and_legacy_sidesets": true,
+    "same_variable_by_type": true,
+    "same_current_flux_functor": true,
+    "same_energy_mean_functor": true,
+    "legacy_name_equals_generated_name": 0,
+    "issue": "Distinct object names do not prevent duplicate physical BC residuals when same variable + sideset + flux law are present.",
+    "needed_action": "During later P3-X ONLY: exactly retire the 8 old FEM BCs from disposable 417 New-only 11-layer, preserve all other boundary/Poisson/ion/wall objects, verify before/after block and file SHA and one BC per variable+physical sideset, then run actual Native P2.",
+    "do_not_change": "Do not edit historical archives, PR #665, or the current Hybrid baseline; do not claim this P3-V1 source-only receipt closes #668 or P3-X."
+  },
+  "table_note": {
+    "lookup_path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "tracked_100_row_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "historical_replay_42_row_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "final_newonly_staged_table_sha": "NOT_AVAILABLE",
+    "requires_explicit_table_version_lease": true
+  },
+  "tests": {
+    "static_JSON_overlay_contract_baseline": "PASS",
+    "injected_negative_controls": 21,
+    "negative_controls_rejected": 21,
+    "method": "Independent pure-source contract checker on exact SHA GitHub file content; not Native C++ parser nor real solver execution.",
+    "mutated_domains": [
+      "electron lookup absent/mode/unit/bounds",
+      "electron initial density and temperature",
+      "eight BC missing/mis-typed/duplicate/overlapping sidesets",
+      "root pressure and temperature missing/negative",
+      "energy transport nonfluid/missing potential",
+      "wrong unified JSON path"
+    ],
+    "actual_hybrid_file_sha_recomputed": 11,
+    "actual_hybrid_8_block_sha_recomputed": 8,
+    "actual_941_case_reference_8_block_sha_equal": 8,
+    "newonly_generated_bc_block_sha": "NOT_AVAILABLE"
+  },
+  "verdict": {
+    "S6_417_JSON_STATIC": "PASS",
+    "S6_417_OVERLAY_STATIC": "PASS",
+    "S6_417_8_FEM_BC_JSON_CATALOG": "PASS",
+    "PRE_RETIREMENT_8_FEM_BC_SOURCE_SHA": "PASS",
+    "P3_V1_SOURCE_STATIC": "PASS_WITH_BLOCKER",
+    "NEW_ONLY_FEM_BC_TRANSFER": "HOLD_8_OLD_OWNERS_REMAIN_IN_PRE_RETIREMENT_INPUT",
+    "NEW_ONLY_11_LAYER_INPUT_SHA": "HOLD_NOT_STAGED",
+    "NEW_ONLY_ELECTRON_PRESSURE_RUNTIME": "NOT_RUN",
+    "NATIVE_P2": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "protected": {
+    "immutable_archive_mutation": false,
+    "main_mutation": false,
+    "pr665_mutation": false,
+    "original_chemistry_json_mutation": false,
+    "native_step_execution": false
+  }
+}
