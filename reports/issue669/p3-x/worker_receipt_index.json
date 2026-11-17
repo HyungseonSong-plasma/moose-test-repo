@@ -1,8 +1,8 @@
 {
-  "schema": "issue669.p3_x.worker_receipt_index.v1",
+  "schema": "issue669.p3_x.worker_receipt_index.v2",
   "task_id": "P3-X",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
-  "verified_available_unique_slots": 19,
+  "verified_available_unique_slots": 26,
   "requested_unique_slots": 30,
   "scope_note": "Receipts fetched from isolated branches; exact HEAD token found and task_id matched. These are bounded source-only findings, not accepted final New-only runtime ownership.",
   "receipts": [
@@ -75,6 +75,16 @@
       "source_only_status": "PASS_READONLY_ORIGINAL_HYBRID_AND_P2_RETIREMENT_BLOCK_PRESERVATION__HOLD_NEWONLY_RUNTIME_OWNER",
       "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
       "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-f7-electron-energy-wafer-readonly-9c15a4f-20261117/reports/issue669/p3-f7-electron-energy-wafer-readonly-receipt.json"
+    },
+    {
+      "task_id": "P3-F8",
+      "source_branch": "issue-669-p3-f8-energy-focus-ring-preflight-20261117",
+      "source_path": "reports/issue669/p3-f8-energy-focus-ring-source-preflight.json",
+      "source_blob_sha1": "d2744e65814dbd131420849c0bbb7232fb25c781",
+      "source_pin_present": true,
+      "source_only_status": "SOURCE_STATIC_PASS_WITH_SCOPE_GATES__FINAL_NEWONLY_RUNTIME_HOLD",
+      "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-f8-energy-focus-ring-preflight-20261117/reports/issue669/p3-f8-energy-focus-ring-source-preflight.json"
     },
     {
       "task_id": "P3-G1",
@@ -157,6 +167,26 @@
       "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-n4-neutral-pressure-20261117/reports/issue669/p3-n4-neutral-mass-momentum-pressure.json"
     },
     {
+      "task_id": "P3-N5",
+      "source_branch": "issue-669-p3-n5-rhiechow-neutral-20261117",
+      "source_path": "reports/issue669/p3-n5-rhie-chow-density-neutral-transport.json",
+      "source_blob_sha1": "9c3a7c4644c32dd4d8bd9d0cdff88ad0d70e8fff",
+      "source_pin_present": true,
+      "source_only_status": "SOURCE_STATIC_PASS_WITH_SCOPE_GATES__FINAL_NEWONLY_RUNTIME_HOLD",
+      "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-n5-rhiechow-neutral-20261117/reports/issue669/p3-n5-rhie-chow-density-neutral-transport.json"
+    },
+    {
+      "task_id": "P3-N6",
+      "source_branch": "issue-669-p3-n6-alias-audit-20261117",
+      "source_path": "reports/issue669/p3-n6-pressure-temperature-legacy-alias-audit.json",
+      "source_blob_sha1": "caa4402669da75eab61891634791381e765a9013",
+      "source_pin_present": true,
+      "source_only_status": "SOURCE_STATIC_PASS_WITH_SCOPE_GATES__FINAL_NEWONLY_RUNTIME_HOLD",
+      "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-n6-alias-audit-20261117/reports/issue669/p3-n6-pressure-temperature-legacy-alias-audit.json"
+    },
+    {
       "task_id": "P3-T1",
       "source_branch": "issue-669-p3-t1-electron-transport-20261117",
       "source_path": "reports/issue669/p3-t1-electron-transport-contrast.json",
@@ -195,25 +225,71 @@
       "source_only_status": "STATIC_SOURCE_PASS__P2_DEPENDENCY_HOLD",
       "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
       "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-t4-s6-417-20261117/reports/issue669/p3-t4-s6-417-newonly-electron-source-receipt.json"
+    },
+    {
+      "task_id": "P3-V1",
+      "source_branch": "issue-669-p3-v1-s6-417-static-20261117",
+      "source_path": "reports/issue669/p3-v1-s6-417-newonly-electron-energy-pressure-8fem-bcs.json",
+      "source_blob_sha1": "3a38b65a723fcd88cd3e1673f175c2d1f4df02ca",
+      "source_pin_present": true,
+      "source_only_status": "SOURCE_STATIC_PASS_WITH_SCOPE_GATES__FINAL_NEWONLY_RUNTIME_HOLD",
+      "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-v1-s6-417-static-20261117/reports/issue669/p3-v1-s6-417-newonly-electron-energy-pressure-8fem-bcs.json"
+    },
+    {
+      "task_id": "P3-V2",
+      "source_branch": "issue-669-p3-v2-s6-941-20261117",
+      "source_path": "reports/issue669/p3-v2-s6-941-newonly-p0-source-and-stage-receipt.json",
+      "source_blob_sha1": "f457ab976c0e8da3bfe21c7951e537ee55d78621",
+      "source_pin_present": true,
+      "source_only_status": "SOURCE_STATIC_PASS_WITH_SCOPE_GATES__FINAL_NEWONLY_RUNTIME_HOLD",
+      "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-v2-s6-941-20261117/reports/issue669/p3-v2-s6-941-newonly-p0-source-and-stage-receipt.json"
+    },
+    {
+      "task_id": "P3-V3",
+      "source_branch": "issue-669-p3-v3-electron-transport-energy-negative-20261117",
+      "source_path": "reports/issue669/p3-v3-electron-transport-energy-negative-receipt.json",
+      "source_blob_sha1": "1e298f7e3702e5c456d6bb47afc816a6d36d9816",
+      "source_pin_present": true,
+      "source_only_status": "SOURCE_STATIC_PASS_WITH_SCOPE_GATES__FINAL_NEWONLY_RUNTIME_HOLD",
+      "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-v3-electron-transport-energy-negative-20261117/reports/issue669/p3-v3-electron-transport-energy-negative-receipt.json"
+    },
+    {
+      "task_id": "P3-V4",
+      "source_branch": "issue-669-p3-v4-pressure-ic-fembc-negatives-20261117",
+      "source_path": "reports/issue669/p3-v4-pressure-ic-fem-bc-negative-receipt.json",
+      "source_blob_sha1": "df051aa499a0c3e48a80eb74563ea4ed0f629586",
+      "source_pin_present": true,
+      "source_only_status": "SOURCE_STATIC_PASS_WITH_SCOPE_GATES__FINAL_NEWONLY_RUNTIME_HOLD",
+      "integration_verdict": "RECEIPT_LOCATED_SOURCE_ONLY__FINAL_NEWONLY_HOLD",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-669-p3-v4-pressure-ic-fembc-negatives-20261117/reports/issue669/p3-v4-pressure-ic-fem-bc-negative-receipt.json"
     }
   ],
   "missing_slots": [
     "P3-T5",
     "P3-G2",
     "P3-G6",
-    "P3-F8",
-    "P3-N3",
-    "P3-N5",
-    "P3-N6",
-    "P3-V1",
-    "P3-V2",
-    "P3-V3",
-    "P3-V4"
+    "P3-N3"
   ],
   "duplicate_preflight_not_counted": {
     "task_id": "P3-G1",
     "branch": "issue-669-p3-g1-electron-state-ic-preflight-20261117"
   },
   "all_30_completed": false,
-  "full_P3_X": "HOLD"
+  "full_P3_X": "HOLD",
+  "current_pr665_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "exact_head_bridge": {
+    "old_original_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "current_source_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "pr674_mergebasis": "3c961e94533f9676137fb96b2b0bae7e89653914",
+    "current_p2_stage_ci_run": 44201394393,
+    "old_stage_artifact_id": 14380831538,
+    "new_stage_artifact_id": 14381456912,
+    "per_file_bytes_compared": 179,
+    "per_file_sha256_equal": 179,
+    "source_files_checked_identical": 9,
+    "scope": "Old task receipts stay bound to old HEAD; artifact content identity and nine source blobs independently justify only same-file static source equivalence, not Native runtime PASS."
+  }
 }
