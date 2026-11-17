@@ -1128,6 +1128,166 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
 void
 PlasmasAction::act()
 {
+  // C2 is an opt-in JSON surface, with NO independent ownership-mode flag.
+  // DDContinuityEq.fvm_species is the only discretization selector. Old Native
+  // FV Kernel/BC owners must already have been removed from disposable Scratch.
+  bool has_ion_fv_bc = false;
+  for (const auto & [group, boundary] : _data.boundaries())
+    for (const auto & [name, bc] : boundary.bcs)
+      has_ion_fv_bc = has_ion_fv_bc ||
+          bc.type == "FVFunctorNeumannBC" || bc.type == "FVLogMolarDielectricFluxBC";
+  const bool c2_requested = _data.hasIonWalls() ||
+      !_data.surfaceElectronWallFlux().empty() || has_ion_fv_bc;
+
+  if (c2_requested)
+  {
+    const auto continuity = _awh.getActions<Plasma::DDContinuityEq>();
+    if (continuity.size() != 1)
+      mooseError("C2 requires exactly one DDContinuityEq species-selection owner");
+    const auto fvm = continuity.front()->getParam<std::vector<std::string>>("fvm_species");
+    const auto & potential = continuity.front()->getParam<VariableName>("fem_potential");
+    const std::set<std::string> allowed = {"O2p", "Om", "Op"};
+    std::set<std::string> selected, configured;
+    for (const auto & id : fvm)
+      if (id != "e" && _data.species(id).charge_number != 0)
+      {
+        if (!allowed.count(id))
+          mooseError("C2 has no characterized ion wall contract for selected species ", id);
+        selected.insert(id);
+      }
+    for (const auto & [id, record] : _data.speciesRecords())
+      if (record.ion_wall)
+        configured.insert(id);
+    if (selected.empty() || configured != selected)
+      mooseError("C2 selected fvm_species and species.<id>.ion_wall producers differ");
+    if (_data.surfaceElectronWallFlux().empty())
+      mooseError("C2 requires ion_surface_current.electron_wall_number_flux");
+
+    std::string common_block;
+    for (const auto & id : selected)
+    {
+      const auto & wall = *_data.species(id).ion_wall;
+      if (wall.potential != potential)
+        mooseError("C2 ion ", id, " wall potential differs from DDContinuityEq.fem_potential");
+      if (common_block.empty())
+        common_block = wall.block;
+      else if (common_block != wall.block)
+        mooseError("C2 ion walls must use the same plasma block for the surface-current ledger");
+    }
+
+    // Reject missing, extra, reordered/species-swapped or duplicate BCs.
+    // A general FV Neumann BC owns five sidesets as one operator; each
+    // dielectric BC owns one sideset, total four BC objects per species.
+    const std::set<std::string> general_sides = {
+        "inlet", "outlet", "plasma_electrode", "plasma_metal", "plasma_right"};
+    const std::map<std::string, std::string> dielectric_sides = {
+        {"cover", "plasma_cover"}, {"wafer", "plasma_wafer"},
+        {"focus_ring", "plasma_focus_ring"}};
+    std::set<std::string> seen;
+    std::size_t count = 0;
+    for (const auto & [group, boundary] : _data.boundaries())
+      for (const auto & [name, bc] : boundary.bcs)
+      {
+        const bool normal = bc.type == "FVFunctorNeumannBC";
+        const bool dielectric = bc.type == "FVLogMolarDielectricFluxBC";
+        if (!normal && !dielectric)
+          continue;
+        ++count;
+        if (bc.variable.rfind("log_", 0) != 0)
+          mooseError("C2 FV BC variable must use log_<species>: ", name);
+        const auto id = bc.variable.substr(4);
+        if (!selected.count(id))
+          mooseError("C2 FV BC targets unselected ion: ", name);
+        const std::string flux = id + "_wall_number_flux";
+        const std::set<std::string> sides(boundary.mesh_boundaries.begin(),
+                                           boundary.mesh_boundaries.end());
+        if (normal)
+        {
+          if (name != id + "_wall" || sides != general_sides || bc.functor != flux)
+            mooseError("C2 general FV BC name/sideset/species Functor mismatch: ", name);
+        }
+        else
+        {
+          bool matched = false;
+          for (const auto & [label, side] : dielectric_sides)
+            if (name == id + "_" + label + "_dielectric" && sides == std::set<std::string>{side})
+              matched = true;
+          if (!matched || bc.signed_number_flux != flux)
+            mooseError("C2 dielectric FV BC name/sideset/signed_number_flux mismatch: ", name);
+        }
+        if (!seen.insert(name).second)
+          mooseError("C2 duplicate FV BC name: ", name);
+      }
+    for (const auto & id : selected)
+    {
+      if (!seen.count(id + "_wall"))
+        mooseError("C2 missing general FV wall BC for ", id);
+      for (const auto & [label, side] : dielectric_sides)
+        if (!seen.count(id + "_" + label + "_dielectric"))
+          mooseError("C2 missing dielectric wall BC for ", id, " on ", side);
+    }
+    if (count != 4 * selected.size())
+      mooseError("C2 expected four ion wall BC objects per selected FV species, found ", count);
+
+    if (_current_task == "add_functor_material")
+    {
+      for (const auto & id : selected)
+      {
+        const auto & wall = *_data.species(id).ion_wall;
+        const auto type = "IonWallFluxMaterial";
+        auto params = _factory.getValidParams(type);
+        params.set<std::string>("species_id") = id;
+        params.set<MooseFunctorName>("ion_number_density") = wall.ion_number_density;
+        params.set<MooseFunctorName>("potential") = wall.potential;
+        params.set<MooseFunctorName>("mobility") = wall.mobility;
+        params.set<MooseFunctorName>("gas_temperature") = wall.gas_temperature;
+        params.set<Real>("charge_number") = _data.species(id).charge_number;
+        params.set<Real>("molar_mass") = wall.molar_mass;
+        params.set<Real>("sticking") = wall.sticking;
+        params.set<Real>("ion_temperature_eV") = wall.ion_temperature_eV;
+        params.set<Real>("migration_gate_smoothing_width") = wall.migration_gate_smoothing_width;
+        params.set<bool>("use_element_gradient_for_potential") =
+            wall.use_element_gradient_for_potential;
+        params.set<std::vector<SubdomainName>>("block") = {wall.block};
+        _problem->addFunctorMaterial(type, id + "_wall", params);
+      }
+
+      // Preserve the three existing dielectric surface-current consumer names
+      // and charge signs. These are derived from the SAME canonical wall Flux
+      // Functors as the 12 FV BCs; electron ownership remains independent.
+      std::vector<std::string> functors, symbols;
+      std::string current_expression;
+      for (const auto & id : {"O2p", "Op", "Om"})
+        if (selected.count(id))
+        {
+          const std::string symbol = id == std::string("O2p") ? "gi" :
+                                     id == std::string("Op") ? "gop" : "gm";
+          functors.push_back(std::string(id) + "_wall_number_flux");
+          symbols.push_back(symbol);
+          current_expression +=
+              (current_expression.empty() ? (_data.species(id).charge_number > 0 ? "" : "-")
+                                          : (_data.species(id).charge_number > 0 ? "+" : "-")) +
+              symbol;
+        }
+      functors.push_back(_data.surfaceElectronWallFlux());
+      symbols.push_back("ge");
+      current_expression += "-ge";
+      for (const auto & side : {"cover", "wafer", "focus_ring"})
+      {
+        const auto type = "ADParsedFunctorMaterial";
+        auto params = _factory.getValidParams(type);
+        params.set<std::string>("property_name") =
+            std::string(side) + "_net_surface_current_density";
+        params.set<std::vector<std::string>>("functor_names") = functors;
+        params.set<std::vector<std::string>>("functor_symbols") = symbols;
+        params.set<std::string>("expression") =
+            "1.602176634e-19*(" + current_expression + ")";
+        params.set<std::vector<SubdomainName>>("block") = {common_block};
+        _problem->addFunctorMaterial(type, std::string(side) + "_surface_current", params);
+      }
+    }
+  }
+
   // Root JSON is the sole ownership switch for the relocated, verbatim
   // [BCs] blocks, independent of the DD/NV taxonomy. There is deliberately NO .i
   // plasma_boundary toggle and NO implicit wall type interpretation.
@@ -1142,10 +1302,24 @@ PlasmasAction::act()
         for (const auto & side : boundary.mesh_boundaries)
           sidesets.emplace_back(side);
         params.set<std::vector<BoundaryName>>("boundary") = sidesets;
-        params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
-        if (bc.type == "FEMElectronEnergySheathBC")
-          params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
-        _problem->addBoundaryCondition(bc.type, name, params);
+        if (bc.type == "FVFunctorNeumannBC")
+        {
+          params.set<MooseFunctorName>("functor") = bc.functor;
+          params.set<Real>("factor") = bc.factor;
+          _problem->addFVBC(bc.type, name, params);
+        }
+        else if (bc.type == "FVLogMolarDielectricFluxBC")
+        {
+          params.set<MooseFunctorName>("signed_number_flux") = bc.signed_number_flux;
+          _problem->addFVBC(bc.type, name, params);
+        }
+        else
+        {
+          params.set<MooseFunctorName>("wall_number_flux") = bc.wall_number_flux;
+          if (bc.type == "FEMElectronEnergySheathBC")
+            params.set<MooseFunctorName>("mean_energy") = bc.mean_energy;
+          _problem->addBoundaryCondition(bc.type, name, params);
+        }
       }
 
   if (!gasStateEnabled() ||
