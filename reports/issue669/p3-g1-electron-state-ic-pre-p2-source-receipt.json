@@ -1,0 +1,162 @@
+{
+  "schema": "issue669.p3_g1.source_preflight.v1",
+  "task_id": "P3-G1",
+  "status": "PRE_P2_SOURCE_STATIC_PASS__P2_DEPENDENCY_HOLD",
+  "scope": "electron states log_ne->log_e and log_energy->log_e_energy, initial-condition ownership, actual S6-417/941 Hybrid 11-layer source bytes; no New-only execution",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr": 665,
+    "pr_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "p1_0_run": 44182628032,
+    "p1_0_artifact_id": 14372278070,
+    "p1_0_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+    "C0_final_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+  },
+  "cases": {
+    "417": {
+      "archived_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "original_layer_sha_verified": 10,
+      "hybrid_layer_sha_verified": 11,
+      "hybrid_overlay_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "external_state_blocks_remaining": 0,
+      "legacy_state_tokens_remaining": 0,
+      "negative_controls_rejected": 9
+    },
+    "941": {
+      "archived_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "original_layer_sha_verified": 10,
+      "hybrid_layer_sha_verified": 11,
+      "hybrid_overlay_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+      "external_state_blocks_remaining": 0,
+      "legacy_state_tokens_remaining": 0,
+      "negative_controls_rejected": 9
+    }
+  },
+  "archived_C0_state_objects": [
+    {
+      "name": "log_ne",
+      "canonical": "log_e",
+      "section": "Variables",
+      "layer": 1,
+      "original_C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "block_sha256": "a89b75252747163ebc1e4a665a78695ed52ddae851a21a253d8eb58fa6fecb9a",
+      "factory": "MooseVariable",
+      "family": "LAGRANGE",
+      "order": "FIRST",
+      "block": "plasma",
+      "initial_condition_log_molar": -20.216123548032986
+    },
+    {
+      "name": "log_energy",
+      "canonical": "log_e_energy",
+      "section": "Variables",
+      "layer": 1,
+      "original_C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "block_sha256": "9ffe95d812f464e8a6e0a73491d7bc5c104ea4e1fde3511e433cda435c880d30",
+      "factory": "MooseVariable",
+      "family": "LAGRANGE",
+      "order": "FIRST",
+      "block": "plasma",
+      "initial_condition_log_molar": -18.8298291869131
+    }
+  ],
+  "hybrid_producer_consumer_edges": [
+    {
+      "producer_object": "electron_molar_density",
+      "type": "ADParsedFunctorMaterial",
+      "input_state": "log_e",
+      "property_name": "electron_molar_density",
+      "section": "FunctorMaterials",
+      "layer": 1,
+      "block_sha256": "d62268f610d606b407c0e042162bdd490dd86b4cd3d1a6dbb8fd57070acafe2a"
+    },
+    {
+      "producer_object": "electron_molar_energy_density",
+      "type": "ADParsedFunctorMaterial",
+      "input_state": "log_e_energy",
+      "property_name": "electron_molar_energy_density",
+      "section": "FunctorMaterials",
+      "layer": 1,
+      "block_sha256": "452b1796e5f6cb668ab13de65721eb7c85e3f58ef3acc544fb8919ab96463a3a"
+    }
+  ],
+  "hybrid_IC": {
+    "continuity_fem_species": "e",
+    "energy_fem_species": "e",
+    "overlay_initial_molar_energy_density_eV": 6.6421562686953756e-9,
+    "overlay_energy_IC_source": "[Physics]/[Plasmas]/[Transport]/[DriftDiffusion]/[Energy]",
+    "source_distinction": "Hybrid overlay uses explicit Energy initial_molar_energy_density_eV; New-only planned overlay instead uses JSON e.temperature_eV fallback"
+  },
+  "newonly_SOURCE_ONLY_contract": {
+    "417": {
+      "json_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "blob_sha": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "overlay_path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+      "overlay_blob_sha": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e"
+    },
+    "941": {
+      "json_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+      "blob_sha": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "overlay_path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_941_continuity.template.i",
+      "overlay_blob_sha": "4daa6f080f3d7bbd35c9839110cbb955b8914fee"
+    },
+    "e_initial_number_density_m3": 1000000000000001.6,
+    "e_temperature_eV": 2.6666666666666665,
+    "expected_e_log_state": -20.21612354803299,
+    "expected_energy_log_state": -18.829829186913095,
+    "log_state_errors_vs_archive": {
+      "log_e_abs": 3.552713678800501e-15,
+      "log_e_energy_abs": 3.552713678800501e-15
+    },
+    "continuity_generator": {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "blob_sha": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "state": "log_e",
+      "IC": "ConstantIC from ln(species.e.initial_number_density)-ln(N_A)",
+      "fail_closed_duplicate": true
+    },
+    "energy_generator": {
+      "path": "physics_app/src/physics/plasma/DDEnergyEq.C",
+      "blob_sha": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+      "state": "log_e_energy",
+      "IC": "ConstantIC from log(1.5 * species.e.temperature_eV * species.e.initial_number_density / N_A)",
+      "fail_closed_missing_or_duplicate": true
+    }
+  },
+  "negative_tests": {
+    "cases": 2,
+    "total": 18,
+    "rejected": 18,
+    "types": [
+      "external_e_duplicate",
+      "external_e_energy_duplicate",
+      "legacy_e_reintroduced",
+      "wrong_density_input_state",
+      "wrong_energy_input_state",
+      "missing_density_producer",
+      "missing_energy_producer",
+      "incorrect_FEM_selection",
+      "energy_IC_magnitude_corrupted"
+    ]
+  },
+  "detailed_independent_receipt": {
+    "local_name": "p3_g1_preflight_receipt.json",
+    "sha256": "6e1b380029347f845ffba2f7c0f6c5ab22d9289a72392c65172bb3c415b7fb18",
+    "file_sha_list": "22 full-layer SHA entries in local receipt",
+    "verifier": "verify_p3_g1_preflight.py",
+    "verifier_sha256": "92590b758086cabae2117a48045bafb469baf02f2732c40bd57ce1c35403c540"
+  },
+  "gates": {
+    "P3_G1_PRE_P2": "PASS_SOURCE_STATIC",
+    "P3_G1_FINAL": "HOLD_P2_DEPENDENCY",
+    "P2_PACKAGE": "OPEN_NOT_COMPLETE",
+    "NEW_ONLY_NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "next_gate": "After #668 produces exact 417/941 post-retirement New-only Scratch .i files, recheck absence of duplicated e/energy variables and ICs against staged bytes, JSON, active warehouse and binary; do not promote this Hybrid source pass as New-only runtime pass.",
+  "safety": "Read-only validation of artifact bytes and code; only this task-specific evidence report added to independent issue branch. No changes to PR665, shared manifests, input/JSON, physics C++, workflows or main."
+}
