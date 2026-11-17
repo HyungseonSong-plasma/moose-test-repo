@@ -103,11 +103,16 @@ jobs:
               base = next(n for n in texts if "__C0_chemistry_off.i" in n)
               origin = texts[base]
               first = block_for("ion_cover_dielectric", origin)[0].group(0)
+              def targeted_edit(old, new):
+                  replacement = first.replace(old, new, 1)
+                  if replacement == first:
+                      raise ValueError("NEGATIVE_CONTROL_TARGET_NOT_FOUND_" + old)
+                  return origin.replace(first, replacement, 1)
               controls = {
-                "wrong_boundary": origin.replace("boundary = plasma_cover", "boundary = plasma_wafer", 1),
-                "wrong_variable": origin.replace("variable = log_O2p", "variable = log_Op", 1),
-                "wrong_factory": origin.replace("type = PhysicsFVLogMolarDielectricFluxBC", "type = UnknownCoverFactory", 1),
-                "wrong_signed_flux": origin.replace("signed_number_flux = O2p_wall_number_flux", "signed_number_flux = Om_wall_number_flux", 1),
+                "wrong_boundary": targeted_edit("boundary = plasma_cover", "boundary = plasma_wafer"),
+                "wrong_variable": targeted_edit("variable = log_O2p", "variable = log_Op"),
+                "wrong_factory": targeted_edit("type = PhysicsFVLogMolarDielectricFluxBC", "type = UnknownCoverFactory"),
+                "wrong_signed_flux": targeted_edit("signed_number_flux = O2p_wall_number_flux", "signed_number_flux = Om_wall_number_flux"),
                 "duplicate_owner": origin.replace("  [negative_ion_cover_dielectric]", first + "  [negative_ion_cover_dielectric]", 1),
                 "missing_owner": origin.replace(first, "", 1),
               }
