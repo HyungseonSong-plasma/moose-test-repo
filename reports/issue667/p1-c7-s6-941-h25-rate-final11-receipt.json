@@ -1,0 +1,197 @@
+{
+  "schema": "issue667.p1_c7.s6_941.h25_source_rate.final11.v1",
+  "task_id": "P1-C7",
+  "case": "941",
+  "issue": 667,
+  "status": "PASS_H25_ANALYTIC_LAW_AND_SOURCE_EDGES__SCIENCE_HOLD",
+  "scope": "Original H25 analytic reaction law R_H25, all H25 producer/consumer edges and 941 final Scratch D input. Not independent scientific rate validation.",
+  "source_pin": {
+    "integration_pr": 665,
+    "pr_head_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_head_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "historical_artifact_id": 13677375813,
+    "historical_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+    "p1_0_ci_run_id": 44180190753,
+    "p1_0_artifact_id": 14372315897,
+    "p1_0_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "original_file_sha256_verified": 10,
+    "final_file_sha256_verified": 11,
+    "final_fv_block_sha256_verified": 63,
+    "final_layer_ordinal": 10,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+    "original_layer10_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+    "final_layer10_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc"
+  },
+  "original_to_canonical": {
+    "only_changes": [
+      "log_nop -> log_Op (3 occurrences, including comment)",
+      "log_ni -> log_O2p (1 occurrence)",
+      "variable = p -> variable = pressure (1 occurrence)"
+    ],
+    "entire_file_matches_exact_rewrite": true,
+    "law_block_sha_identical_original_and_final": true,
+    "h25_named_object_count_original": 22,
+    "h25_named_object_count_final": 22
+  },
+  "analytic_rate": {
+    "object": "h25_progress",
+    "section": "FunctorMaterials",
+    "factory": "ADParsedFunctorMaterial",
+    "output": "R_H25",
+    "inputs": "c_Op_H25 c_O2_H25 Tg_H25_K",
+    "expression": "1.204428152e7*(300.0/tg)^0.4*cp*c2",
+    "temperature_source": {
+      "owner": "h25_fixed_tgas",
+      "Kelvin": 300
+    },
+    "rate_coefficient_m3_s_300K": 2e-17,
+    "kinetic_table": null,
+    "law_evidence": "Historical research-only provisional QDB-API 1115 screenshot recorded in original source comments (not independently validated by C7)"
+  },
+  "input_producers": [
+    {
+      "object": "h25_op_target",
+      "property": "c_Op_H25",
+      "source": "log_Op",
+      "expression": "exp(lncp)"
+    },
+    {
+      "object": "h25_o2_target",
+      "property": "c_O2_H25",
+      "inputs": "rho_neutral w_O2_constraint",
+      "expression": "rho*w2/0.032"
+    },
+    {
+      "object": "h25_fixed_tgas",
+      "property": "Tg_H25_K",
+      "expression": "300.0"
+    }
+  ],
+  "outputs": [
+    {
+      "object": "h25_op_loss",
+      "property": "S_Op_molar_H25",
+      "expression": "-R"
+    },
+    {
+      "object": "h25_o2p_birth",
+      "property": "S_O2p_molar_H25",
+      "expression": "R"
+    },
+    {
+      "object": "h25_o_mass",
+      "property": "S_O_mass_H25",
+      "expression": "0.016*R"
+    },
+    {
+      "object": "h25_o2_mass_implicit",
+      "property": "S_O2_mass_H25_implicit",
+      "expression": "-0.032*R"
+    },
+    {
+      "object": "h25_neutral_mass",
+      "property": "S_neutral_mass_H25",
+      "expression": "-0.016*R"
+    }
+  ],
+  "native_consumers": [
+    {
+      "object": "h25_atomic_positive_ion",
+      "type": "FVCoupledForce",
+      "variable": "log_Op",
+      "v": "S_Op_molar_H25",
+      "coef": "1.0"
+    },
+    {
+      "object": "h25_molecular_positive_ion",
+      "type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "v": "S_O2p_molar_H25",
+      "coef": "1.0"
+    },
+    {
+      "object": "h25_atomic_oxygen",
+      "type": "PhysicsFVSpeciesReactionSource",
+      "variable": "w_O",
+      "source": "S_O_mass_H25"
+    },
+    {
+      "object": "h25_neutral_pressure",
+      "type": "FVCoupledForce",
+      "variable": "pressure",
+      "v": "S_neutral_mass_H25",
+      "coef": "1.0"
+    }
+  ],
+  "closure_outputs": [
+    "S_charge_closure_H25",
+    "S_heavy_mass_closure_H25",
+    "S_neutral_mass_closure_H25",
+    "S_oxygen_nuclei_closure_H25"
+  ],
+  "postprocessor_consumers": [
+    "h25_progress_integral",
+    "h25_charge_closure_integral",
+    "h25_heavy_mass_closure_integral",
+    "h25_neutral_mass_closure_integral",
+    "h25_oxygen_atoms_closure_integral"
+  ],
+  "all_final_H25_object_block_sha256": {
+    "h25_op_target": "35fd499dc5b5718846fd33c2695d473780e5d0b08e0ab1b9c388e33d774e414b",
+    "h25_o2_target": "5881a9730f266bdff88aff8c2d039b7a06d8bc7df1f88317f8cc726fe0066b6a",
+    "h25_fixed_tgas": "ec511bcb3b0fcde38074bc6dd52eba8b09ee806a07b533970f910f0ef271672b",
+    "h25_progress": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+    "h25_op_loss": "da080a622842e6ba795f29535d5ba24be0a084739f6078c5084b2f8dbde643b1",
+    "h25_o2p_birth": "6f483b0cff456b77f9c5737ae7f67d6e9f4fd5e50d595f568d42857810dd94e7",
+    "h25_o_mass": "2c66569b469e97d8c5f3fc52afb3e2479ce8dcedbc07372778c7768e9476ef51",
+    "h25_o2_mass_implicit": "ae73f6ab368819ca715142850667523b09e621633f2828f0ae1b7937bd196773",
+    "h25_neutral_mass": "f34c32256ffdce217e89d3e9864e9865f36b0f3651730cd9c6cd46805c0a500f",
+    "h25_charge_closure": "c3cefd8839b2cc4a6ed3801478702ff7a86f5d752a363feb162bf6f4f6a5e313",
+    "h25_heavy_mass_closure": "85cb3bc096c36d8b109a63a1ac6524ef7906fb04c86c8d141003dcbeb5c5abab",
+    "h25_neutral_mass_closure": "d67cfabdb06da4f1bcfb10b5a98a81e3dd5be4dc047aab6678a45d2ef5f067ba",
+    "h25_oxygen_atoms_closure": "d50411a9998f6d9683dfae741c9ea6d053b833a5e536f85a0c212f973c951509",
+    "h25_atomic_positive_ion": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01",
+    "h25_molecular_positive_ion": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4",
+    "h25_atomic_oxygen": "a6e6f0be4a0a290b4c855ebca66761b27f16b1b3bd2791b9eee85309a5879cd9",
+    "h25_neutral_pressure": "5d079716d7bca48ad5c54948dabdcd11287bdc67ba6a68fd9530dfc67bc960bd",
+    "h25_progress_integral": "1f777f8d147b434bd59db935879ffd7be9c9c4fd4cc469a8465c5d20db19b662",
+    "h25_charge_closure_integral": "278b09d31e4e6cb1b6196a59922b6d1566f6f1b7a810f48709f7bfbfbb2116f7",
+    "h25_heavy_mass_closure_integral": "0cc5a1cb24ddb8e32c7bd22bcfe3a6059ef99401b2948b1c4d6c640b2ad132ff",
+    "h25_neutral_mass_closure_integral": "2a6b0c23749220a9490cecd0d7ee89913af7d190a8912b9039b4b75ed7671734",
+    "h25_oxygen_atoms_closure_integral": "c74ac6c476058b8e6ab7ece6b97945bdfad6df76f7da7189844db60697429d06"
+  },
+  "negative_tests_rejected": [
+    "MISSING_R_H25",
+    "DUPLICATE_R_H25",
+    "WRONG_RATE_COEFFICIENT",
+    "WRONG_TEMPERATURE_EXPONENT",
+    "WRONG_RATE_FUNCTOR",
+    "SYNTHETIC_TGAS_500K",
+    "WRONG_OP_INPUT",
+    "WRONG_O2_TARGET",
+    "WRONG_OP_LOSS_SIGN",
+    "WRONG_O2P_BIRTH_SIGN",
+    "WRONG_OP_CONSUMER_FUNCTOR",
+    "WRONG_NEUTRAL_CONSUMER_VARIABLE",
+    "TAMPERED_FINAL_FILE_SHA",
+    "TAMPERED_ARCHIVE_SHA"
+  ],
+  "non_overlapping_Op_source": "ei941_atomic_positive_ion_source (EI941) is independent from h25_atomic_positive_ion (H25)",
+  "unresolved": [
+    "Historical H25 reaction law is a provisional research-only parameterization; science acceptance HOLD.",
+    "Ion-neutral charge-transfer energy exchange not modelled in original H25.",
+    "Dynamic callers outside exposed .i inputs not exhaustively established; P1-E integration must combine independent D8 checks.",
+    "Hybrid Scratch D pre-26→24 cutover; no New-only Native P2 or physical parity verification."
+  ],
+  "safety": {
+    "private_rate_content_published": false,
+    "synthetic_H25_substitution": false,
+    "main_modified": false,
+    "pr665_modified": false,
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "new_only_s6_p2": "HOLD",
+    "science": "SCIENCE_HOLD"
+  }
+}
