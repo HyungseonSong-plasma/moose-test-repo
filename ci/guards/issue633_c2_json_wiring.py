@@ -18,9 +18,8 @@ MASS = {"O2p": 0.032, "Om": 0.016, "Op": 0.016}
 CHARGE = {"O2p": 1, "Om": -1, "Op": 1}
 FACTOR = -1.6605390671738466e-24
 WALL_FIELDS = {
-    "ion_number_density", "potential", "mobility", "gas_temperature",
-    "block", "molar_mass", "sticking", "ion_temperature_eV",
-    "migration_gate_smoothing_width", "use_element_gradient_for_potential",
+    "wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
+    "wall_migration_gate_smoothing_width", "wall_use_element_gradient_for_potential",
 }
 
 
@@ -45,32 +44,30 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
             set(selected) <= set(ION_IDS), "INVALID_SELECTED_SPECIES")
     species = overlay.get("species")
     require(isinstance(species, dict), "SPECIES_JSON_REQUIRED")
+    require(not any(isinstance(v, dict) and "ion_wall" in v for v in species.values()),
+            "RETIRED_ION_WALL_WRAPPER")
     with_walls = {k for k, v in species.items()
-                  if isinstance(v, dict) and "ion_wall" in v}
+                  if isinstance(v, dict) and any(str(key).startswith("wall_") for key in v)}
     require(with_walls == set(selected), "SELECTED_ION_WALL_OWNER_MISMATCH")
     for ident in selected:
         record = species[ident]
         require(record.get("charge_number") == CHARGE[ident], "WRONG_ION_CHARGE_" + ident)
-        wall = record["ion_wall"]
-        require(isinstance(wall, dict) and set(wall) == WALL_FIELDS,
-                "INVALID_ION_WALL_FIELDS_" + ident)
-        for key in ("ion_number_density", "potential", "mobility", "gas_temperature", "block"):
-            require(isinstance(wall[key], str) and bool(wall[key]),
-                    "INVALID_WALL_FUNCTOR_OR_BLOCK_" + ident + "_" + key)
-        require(wall["ion_number_density"] == ident + "_number_density",
-                "WRONG_DENSITY_FUNCTOR_" + ident)
-        require(wall["mobility"] == ident + "_mobility",
-                "WRONG_MOBILITY_FUNCTOR_" + ident)
-        require(wall["potential"] == "potential", "WALL_POTENTIAL_MISMATCH_" + ident)
-        require(wall["block"] == "plasma", "WALL_BLOCK_MISMATCH_" + ident)
-        require(finite_num(wall["molar_mass"], 1e-300) and
-                math.isclose(wall["molar_mass"], MASS[ident], rel_tol=1e-12),
+        require("ion_wall" not in record, "RETIRED_ION_WALL_WRAPPER_" + ident)
+        declared = {key for key in record if key.startswith("wall_")}
+        require(declared == WALL_FIELDS, "INVALID_ION_WALL_FIELDS_" + ident)
+        require(finite_num(record["wall_molar_mass"], 1e-300) and
+                math.isclose(record["wall_molar_mass"], MASS[ident], rel_tol=1e-12),
                 "WRONG_WALL_MOLAR_MASS_" + ident)
-        require(finite_num(wall["sticking"], 0, 1), "INVALID_STICKING_" + ident)
-        for key in ("ion_temperature_eV", "migration_gate_smoothing_width"):
-            require(finite_num(wall[key], 0), "INVALID_" + key + "_" + ident)
-        require(type(wall["use_element_gradient_for_potential"]) is bool,
+        require(finite_num(record["wall_sticking"], 0, 1), "INVALID_STICKING_" + ident)
+        for key in ("wall_ion_temperature_eV", "wall_migration_gate_smoothing_width"):
+            require(finite_num(record[key], 0), "INVALID_" + key + "_" + ident)
+        require(type(record["wall_use_element_gradient_for_potential"]) is bool,
                 "INVALID_GRADIENT_FLAG_" + ident)
+        # Potential, density, mobility, block and temperature are derived from
+        # Continuity/species ID and [Plasmas], never independently wall-owned.
+        for redundant in ("potential", "ion_number_density", "gas_temperature", "block"):
+            require(redundant not in record,
+                    "REDUNDANT_WALL_SOURCE_FIELD_" + ident + "_" + redundant)
 
     current = overlay.get("ion_surface_current")
     # The exact producer is explicit. In older generated DD it is the legacy
