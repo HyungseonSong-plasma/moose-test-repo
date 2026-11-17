@@ -1,0 +1,180 @@
+{
+  "schema": "issue670.p4_s7.s6_941.op_2to1.source_receipt.v1",
+  "task_id": "P4-S7",
+  "issue": 670,
+  "case": "941",
+  "status": "SOURCE_STATIC_PASS__NATIVE_AND_P4_X_HOLD",
+  "scope": "941 EI941(+Op) and H25(-Op) Native FV source retirement -> one Chemistry-generated S_Op_molar and one DDContinuityEq Op_source, static only",
+  "source_pin": {
+    "pr665_latest_observed_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "pr665_artifact_input_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "pr665_head_delta": {
+      "ahead_commits": 14,
+      "changed_files": "7 files: P2 runner, retirement, verification, reports only",
+      "reaction_and_generated_owner_source_blobs_unchanged": true
+    },
+    "pr674_reviewed_head": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+    "pr674_reviewed_delta": "1 CI merge gate workflow added, no source changes",
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "artifacts": {
+      "historical_941": {
+        "id": 13677375813,
+        "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+      },
+      "p1_hybrid": {
+        "id": 14372278070,
+        "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+      },
+      "p2_source_production": {
+        "ci_run": 44199587771,
+        "id": 14380831538,
+        "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+      }
+    }
+  },
+  "byte_readback": {
+    "archive_10_inputs": "10/10 SHA256 PASS",
+    "p1_hybrid_11_inputs": "11/11 SHA256 PASS",
+    "p2_newonly_11_inputs": "11/11 SHA256 PASS",
+    "p1_fv_block_total": 63,
+    "p2_fv_block_total": 37,
+    "retired_ion_native_owners": 26,
+    "removed_byte_blocks_reconstructed_exactly": true,
+    "non_target_byte_difference_count": 0,
+    "p2_existing_input_files_with_ion_deletions": 5,
+    "p2_existing_input_files_unchanged": 5,
+    "layer11_replaced_newonly": true
+  },
+  "original_two_source_owners": {
+    "EI941": {
+      "source_name": "ei941_atomic_positive_ion_source",
+      "layer": 7,
+      "filename": "issue477_S4-401-941_op_ionization_overlay.i",
+      "variable": "log_Op",
+      "factory": "FVCoupledForce",
+      "source_functor": "S_Op_molar_EI941",
+      "sign": "+R_EI941",
+      "coefficient": 1,
+      "p1_file_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43",
+      "p2_file_sha256": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa",
+      "p1_source_block_sha256": "06c9444eda41eb5cc47e28485db5f8e95dba64a52e93131ca2fcc1378367f433",
+      "p2_source_kernel_count": 0,
+      "producer": "ei941_op_source",
+      "producer_block_sha256": "6692daa1ab319ca8a18fedb99f1d03d9c2fd41f5b9f2a3705da5dcaf8fb0f3e9",
+      "rate_owner": "ei941_progress",
+      "rate_type": "EIRateCoefMaterial",
+      "rate_output": "R_EI941",
+      "rate_owner_block_sha256": "37327e9f9b6215f8675af8add85b93d107962ab2b83f5bc47f14350c2815fc46",
+      "private_rate_file_reference": "private_rates/EI-941_O_3P.txt",
+      "private_rate_raw_byte_sha_recomputed_here": false
+    },
+    "H25": {
+      "source_name": "h25_atomic_positive_ion",
+      "layer": 10,
+      "filename": "issue477_S6-941-407-2069-H25_H25_overlay.i",
+      "variable": "log_Op",
+      "factory": "FVCoupledForce",
+      "source_functor": "S_Op_molar_H25",
+      "sign": "-R_H25",
+      "coefficient": 1,
+      "p1_file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+      "p2_file_sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+      "p1_source_block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01",
+      "p2_source_kernel_count": 0,
+      "producer": "h25_op_loss",
+      "producer_block_sha256": "da080a622842e6ba795f29535d5ba24be0a084739f6078c5084b2f8dbde643b1",
+      "rate_owner": "h25_progress",
+      "rate_output": "R_H25",
+      "rate_law": "1.204428152e7*(300.0/tg)^0.4*cp*c2",
+      "fixed_temperature_K": 300,
+      "rate_owner_block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081"
+    }
+  },
+  "newonly_reaction_contract": {
+    "json_filename": "chemistry/unified_s6_941_newonly.json",
+    "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+    "reactants_products": {
+      "EI941": "e + O -> 2e + Op",
+      "H25": "Op + O2 -> O + O2p"
+    },
+    "op_stoichiometric_coefficients": {
+      "EI-941": 1,
+      "H25": -1
+    },
+    "expected_functor": "S_Op_molar",
+    "expected_expression": "(+1)*R_EI941 + (-1)*R_H25",
+    "units": "mol/(m^3 s)",
+    "expected_generated_material": "chemistry_Op_source",
+    "expected_FV_kernel": "Op_source",
+    "expected_factory": "FVCoupledForce",
+    "expected_variable": "log_Op",
+    "expected_v": "S_Op_molar",
+    "expected_coef": 1,
+    "runtime_generated_warehouse": "NOT_RUN"
+  },
+  "code_evidence": {
+    "Chemistry_C": {
+      "blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "lines": "36-49,1235-1294"
+    },
+    "DDContinuityEq_C": {
+      "blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "lines": "419-486"
+    },
+    "newonly941_json_blob": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "newonly941_template_blob": "4daa6f080f3d7bbd35c9839110cbb955b8914fee",
+    "new_p2_runner_git_blob": "999a7aa65bdc7011df6f64dd923570f464af1d39"
+  },
+  "negative_controls": {
+    "rejected_count": 17,
+    "cases": [
+      "EI941_MISSING",
+      "H25_MISSING",
+      "EI941_DUPLICATED",
+      "H25_DUPLICATED",
+      "EI941_PRODUCT_WRONG_SPECIES",
+      "H25_PRODUCT_OP_WRONG_SIGN",
+      "H25_REACTANT_OP_REMOVED",
+      "EI941_OP_PRODUCT_MISSING",
+      "EI941_WRONG_REACTION_EQUATION",
+      "H25_WRONG_REACTION_EQUATION",
+      "EI941_WRONG_UNITS",
+      "H25_WRONG_UNITS",
+      "OP_WRONG_CHARGE",
+      "RATE_ID_UNSUPPORTED",
+      "P2_FILE_SHA_TAMPER_REJECTED",
+      "H25_FILE_SHA_TAMPER_REJECTED",
+      "P1_FILE_SHA_TAMPER_REJECTED"
+    ]
+  },
+  "local_independent_reproducer": {
+    "receipt_filename": "issue670_p4_s7_s6_941_op_source_receipt.json",
+    "receipt_sha256": "70c154c067bd506f34ff1f71d570567155a2cd28b5e266099fca7ec5eaaa833a",
+    "script_filename": "verify_issue670_p4_s7.py",
+    "script_sha256": "ed8b7ace61ad9d9ce93c655fa647d506c73f7d7466ba315a886030db2923229a"
+  },
+  "unresolved": [
+    "The public artifact lacks private EI941 rate-table bytes; protected source SHA is delegated to P1-C6/P1-E.",
+    "No current New-only Native Warehouse run validates one instantiated Op_source, generated material, or numerical residual parity.",
+    "Full P4-X and P3 electron/energy/wall handoff are not complete.",
+    "H25 original research-only kinetics/energy partition not scientifically accepted."
+  ],
+  "gates": {
+    "P4_S7_SOURCE": "PASS",
+    "P2_SOURCE_ONLY": "PASS",
+    "P3_X": "PENDING",
+    "P4_X": "NOT_RUN",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "source_modified": false,
+    "pr665_modified": false,
+    "pr674_modified": false,
+    "main_modified": false,
+    "private_rate_bytes_published": false
+  }
+}
