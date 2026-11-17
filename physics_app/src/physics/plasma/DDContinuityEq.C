@@ -149,10 +149,13 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
 
   // Selection itself activates generation. Potential is transport data, not
   // an ownership switch; never silently downgrade to binding-only mode.
-  if (generate_kernels && !isParamValid("fem_potential"))
-    paramError("fem_potential",
-               "Selected fem_species/fvm_species require an explicit potential "
-               "for automatic FEM/FV drift-diffusion generation.");
+  if (generate_kernels)
+  {
+    if (!isParamValid("fem_potential"))
+      paramError("fem_potential",
+                 "Selected fem_species/fvm_species require an explicit potential "
+                 "for automatic FEM/FV drift-diffusion generation.");
+  }
 
   // FV selection is the cutover decision: no Native presence probe, no owner
   // Enum, and no partially generated species equation.
