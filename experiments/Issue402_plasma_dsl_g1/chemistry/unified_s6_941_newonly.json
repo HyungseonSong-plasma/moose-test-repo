@@ -12,8 +12,7 @@
         "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
         "unit": "reduced",
         "bounds_policy": "clamp"
-      },
-      "energy_transport_coef": "fluid"
+      }
     },
     "O2": {
       "elements": {
@@ -55,9 +54,11 @@
       "sticking_coefficient": 1,
       "initial_number_density": 1000000000000001.6,
       "transport_coef": {
-        "type": "functor",
+        "type": "constant",
         "file": "none",
-        "unit": "physical"
+        "unit": "physical",
+        "mobility": 10,
+        "diffusivity": 0.25851999786435537
       }
     },
     "Om": {
@@ -70,9 +71,11 @@
       "sticking_coefficient": 1,
       "initial_number_density": 999999999999.9983,
       "transport_coef": {
-        "type": "functor",
+        "type": "constant",
         "file": "none",
-        "unit": "physical"
+        "unit": "physical",
+        "mobility": 10,
+        "diffusivity": 0.25851999786435537
       }
     },
     "Op": {
@@ -85,9 +88,11 @@
       "sticking_coefficient": 1,
       "initial_number_density": 999999999999.9983,
       "transport_coef": {
-        "type": "functor",
+        "type": "constant",
         "file": "none",
-        "unit": "physical"
+        "unit": "physical",
+        "mobility": 10,
+        "diffusivity": 0.25851999786435537
       }
     },
     "O2a": {
