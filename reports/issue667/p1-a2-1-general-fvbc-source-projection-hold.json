@@ -1,0 +1,100 @@
+{
+  "schema": "issue667.p1_a2_1.source_replay.v3",
+  "task_id": "P1-A2-1",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "status": "ARCHIVED_10_LAYER_PASS__REPRODUCED_C_SCRATCH_PASS__FINAL_PR665_11_LAYER_HOLD",
+  "scope": "ONLY normal 3 FVFunctorNeumannBCs from C0. Dielectric, electron FEM, neutral, Wall material producers excluded",
+  "immutable_sources": {
+    "history_source": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "historical_zip_artifacts": {
+      "S6_417": 13677089020,
+      "S6_941": 13677375813
+    },
+    "historical_zip_sha256": {
+      "S6_417": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "S6_941": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    "historical_manifest_validation": "Both cases 10/10 ordered .i SHA256 checked from actual artifact bytes; first C0 identical",
+    "archived_c0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+    "independent_derived_single_kernel_C_c0_sha256": "66548d33947b227ca29849b0c52146100887d1795a66e0f90df11a94199fc5bf",
+    "independent_derived_archive_based_D_c0_pre_wall_sha256": "a1ae274aa4d379a641614925c6bc0f288a4730c9cfd2e4f20a68fc87732a0e7a",
+    "derivation_rule": "Archive C0 -> exact ne_transport block deletion -> ne_time block deletion -> bounded legacy state token replacements. Derived C hash matches common P1-0 C-only manifest; derived archive-D does not equal current PR665 D C0 and is not final evidence"
+  },
+  "cases": {
+    "S6_417": {
+      "historical_file_count": 10,
+      "normal_BC_unique_original10": 3,
+      "layer": 1,
+      "final_11_layer_direct_byte_check": "NOT_RUN"
+    },
+    "S6_941": {
+      "historical_file_count": 10,
+      "normal_BC_unique_original10": 3,
+      "layer": 1,
+      "final_11_layer_direct_byte_check": "NOT_RUN"
+    }
+  },
+  "bc_records": [
+    {
+      "name": "ion_wall",
+      "variable_archived": "log_ni",
+      "variable_target": "log_O2p",
+      "functor_archived": "ion_wall_number_flux",
+      "functor_target": "O2p_wall_number_flux",
+      "original_sha256": "28321ab9890265bbe94f576c0dc6b0746d7fcd1d277c7c376ca9f1699cff9563",
+      "projected_postwall_block_sha256_NOT_FINAL": "fa4ad1a51cbcd4b6ffa1dc8fba3438b66b27642a598bc35abca2513b9f0bacb3"
+    },
+    {
+      "name": "negative_ion_wall",
+      "variable_archived": "log_nm",
+      "variable_target": "log_Om",
+      "functor_archived": "negative_ion_wall_number_flux",
+      "functor_target": "Om_wall_number_flux",
+      "original_sha256": "775c6e73fe2d8396e084625d34cbe7c2186283df8d6fa89465620f6e44df2a54",
+      "projected_postwall_block_sha256_NOT_FINAL": "cf5d56c3af0f77832f08139360753ac8c300e24cd86f6fd24158e77893fe375b"
+    },
+    {
+      "name": "atomic_positive_ion_wall",
+      "variable_archived": "log_nop",
+      "variable_target": "log_Op",
+      "functor_archived": "atomic_positive_ion_wall_number_flux",
+      "functor_target": "Op_wall_number_flux",
+      "original_sha256": "eba7faf79890307dbff4c8d2d986e6cdb3a57349156b5c6cfd385539b582946d",
+      "projected_postwall_block_sha256_NOT_FINAL": "8a32490bce4f29361270661c094f8d0e45cb3555b8d9ce9127dd725ac340d67f"
+    }
+  ],
+  "shared_parameters": {
+    "factory_type": "FVFunctorNeumannBC",
+    "factor": "-1.6605390671738466e-24",
+    "boundary": "inlet outlet plasma_electrode plasma_metal plasma_right",
+    "section": "FVBCs"
+  },
+  "negative_controls": {
+    "total": 7,
+    "unexpected_flux": "REJECTED",
+    "wrong_factor": "REJECTED",
+    "wrong_boundary": "REJECTED",
+    "wrong_factory": "REJECTED",
+    "wrong_variable": "REJECTED",
+    "missing_bc": "REJECTED",
+    "duplicate_bc": "REJECTED"
+  },
+  "pr665_CI_report_only": {
+    "run_id": 44153215087,
+    "artifact_id": 14359823440,
+    "member": "issue402_option_s6_p2_status.json",
+    "cases_417_941_reported_layer_count": 11,
+    "D_wall_cutover_stage_c0_sha256": "eca12eaad83ce1d7bb370f66e44ede42db1924ee4681e78fd516eda9cc5588a7",
+    "CI_receipt_is_NOT_direct_final_bytes": true
+  },
+  "current_gate": {
+    "P1_0": "FINAL_11_LAYER_BYTES_NOT_PRESERVED",
+    "P1_A2_1": "PARTIAL_PASS_HOLD",
+    "native_P2": "HOLD",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "next": "At PR665 exact HEAD, preserve final 11 .i bytes each case in CI artifact (no private rates); independently compare each SHA and scan all 11 layer contents for 3 normal BC objects and rehash final blocks. Do not promote projected hashes to final lease.",
+  "supporting_local_receipt_sha256": "352aed49dd37562c45637bbb5a8e7516bbf6cba01ac43313562377662e00b45a"
+}
