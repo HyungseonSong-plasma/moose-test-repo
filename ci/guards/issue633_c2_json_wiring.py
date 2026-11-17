@@ -87,8 +87,12 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
     # A single group can own several sidesets. An electron FEM sheath operator
     # may share that group with ion FV BCs: do not falsely reject co-resident
     # electron consumers when the input's root boundaries records are merged.
-    required_groups = {" ".join(GENERAL), *(f"plasma_{s}" for s in DIELECTRIC)}
-    require(required_groups <= set(boundaries), "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
+    required_dielectric = {f"plasma_{s}" for s in DIELECTRIC}
+    has_general = any(set(key.split()) == set(GENERAL) and
+                      len(key.split()) == len(GENERAL)
+                      for key in boundaries if isinstance(key, str))
+    require(required_dielectric <= set(boundaries) and has_general,
+            "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
     found: dict[str, dict] = {}
     all_names: set[str] = set()
     used_sides: set[str] = set()
