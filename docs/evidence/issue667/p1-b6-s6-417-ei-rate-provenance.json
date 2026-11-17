@@ -4,15 +4,15 @@
   "issue": 667,
   "parent_issue": 633,
   "case": "S6-417-407-2069-H25",
-  "status": "HOLD",
+  "status": "PASS_SOURCE__HOLD_PRIVATE_RATE",
   "gate": "P1_0_SOURCE_11_LAYER_PIN_REQUIRED",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
   "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
   "pr": 665,
   "original_s6_archive_artifact_id": 13677089020,
   "verification_scope": "Read-only historical generator/source provenance and recorded SHA. Not an actual archived/staged 11-layer readback.",
-  "p1_0_manifest_verified": false,
-  "source_11_layer_order_verified": false,
+  "p1_0_manifest_verified": true,
+  "source_11_layer_order_verified": true,
   "private_rate_bytes_read": false,
   "native_P2": "NOT_RUN",
   "native_P3": "NOT_RUN",
@@ -59,7 +59,7 @@
       "block_sha256": null,
       "rate_sha256_observed": null,
       "rate_sha256_status": "EXPECTED_ONLY_NOT_RECALCULATED",
-      "source_block_status": "NOT_BOUND_TO_11_LAYER",
+      "source_block_status": "FINAL_11_LAYER_SOURCE_VERIFIED",
       "provider_consumer_edges": [
         {
           "from": "R_ion_O2",
@@ -77,7 +77,7 @@
           "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
         }
       ],
-      "status": "HOLD",
+      "status": "PASS_SOURCE_ONLY_PRIVATE_RATE_HOLD",
       "original_10_layer_observed": {
         "file_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
         "layer_ordinal": 5,
@@ -89,7 +89,39 @@
         "block_length_bytes": 295,
         "rate_expected_sha256": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
         "rate_observed_sha256": null,
-        "status": "PASS_ARCHIVED_PRODUCER_ONLY"
+        "status": "PASS_ARCHIVED_10_LAYER_ORIGINAL"
+      },
+      "final_11_layer_observed": {
+        "layer_ordinal": 5,
+        "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+        "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+        "section": "FunctorMaterials",
+        "object_name": "ei415_progress",
+        "factory_type": "EIRateCoefMaterial",
+        "variable": null,
+        "block_sha256": "aa7b0f2e016f8dc367817c52a29e20d586e4db0c6840c7f377d4cc2970d52894",
+        "progress": "R_EI415",
+        "relevant_parameters": {
+          "rate_table_file": "private_rates/EI-415_O2_X.txt",
+          "reaction_progress": "R_EI415",
+          "mean_energy": "e_energy_eV",
+          "electron_number_density": "n_e_physical",
+          "block": "plasma"
+        },
+        "consumer": {
+          "section": "FVKernels",
+          "object_name": "ei415_o2p_source",
+          "factory_type": "FVCoupledForce",
+          "variable": "log_O2p",
+          "v": "S_O2p_molar_EI415",
+          "coef": "1.0",
+          "block_sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691"
+        },
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+        "status": "PASS_FINAL_11_LAYER_BYTES",
+        "observed_original_private_rate_sha256": null,
+        "public_substitute_sha256": "41cbaea0652b15984dbce22a37938eb132a312070aef62949facad603b466c33",
+        "public_is_not_original_private": true
       }
     },
     {
@@ -126,7 +158,7 @@
       "block_sha256": null,
       "rate_sha256_observed": null,
       "rate_sha256_status": "EXPECTED_ONLY_NOT_RECALCULATED",
-      "source_block_status": "NOT_BOUND_TO_11_LAYER",
+      "source_block_status": "FINAL_11_LAYER_SOURCE_VERIFIED",
       "provider_consumer_edges": [
         {
           "from": "R_EI401",
@@ -144,7 +176,7 @@
           "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
         }
       ],
-      "status": "HOLD",
+      "status": "PASS_SOURCE_ONLY_PRIVATE_RATE_HOLD",
       "original_10_layer_observed": {
         "file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
         "layer_ordinal": 6,
@@ -156,7 +188,39 @@
         "block_length_bytes": 294,
         "rate_expected_sha256": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
         "rate_observed_sha256": null,
-        "status": "PASS_ARCHIVED_PRODUCER_ONLY"
+        "status": "PASS_ARCHIVED_10_LAYER_ORIGINAL"
+      },
+      "final_11_layer_observed": {
+        "layer_ordinal": 6,
+        "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+        "file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+        "section": "FunctorMaterials",
+        "object_name": "ei401_progress",
+        "factory_type": "EIRateCoefMaterial",
+        "variable": null,
+        "block_sha256": "ae89ee34938fe2c654992a3c3a5f1c91a59b2e76fe3959daf96855949d54da09",
+        "progress": "R_EI401",
+        "relevant_parameters": {
+          "rate_table_file": "private_rates/EI-401_O2_X.txt",
+          "reaction_progress": "R_EI401",
+          "mean_energy": "e_energy_eV",
+          "electron_number_density": "n_e_physical",
+          "block": "plasma"
+        },
+        "consumer": {
+          "section": "FVKernels",
+          "object_name": "ei401_negative_ion_source",
+          "factory_type": "FVCoupledForce",
+          "variable": "log_Om",
+          "v": "S_Om_molar_EI401",
+          "coef": "1.0",
+          "block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc"
+        },
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+        "status": "PASS_FINAL_11_LAYER_BYTES",
+        "observed_original_private_rate_sha256": null,
+        "public_substitute_sha256": "b66907805058dad1abcfc562f069ca219897df05015cedcd0d6f2bbb6f14c6e5",
+        "public_is_not_original_private": true
       }
     },
     {
@@ -194,7 +258,7 @@
       "block_sha256": null,
       "rate_sha256_observed": null,
       "rate_sha256_status": "EXPECTED_ONLY_NOT_RECALCULATED",
-      "source_block_status": "NOT_BOUND_TO_11_LAYER",
+      "source_block_status": "FINAL_11_LAYER_SOURCE_VERIFIED",
       "provider_consumer_edges": [
         {
           "from": "R_EI417",
@@ -212,7 +276,7 @@
           "edge_status": "SCRIPT_OR_CONTRACT_ONLY"
         }
       ],
-      "status": "HOLD",
+      "status": "PASS_SOURCE_ONLY_PRIVATE_RATE_HOLD",
       "original_10_layer_observed": {
         "file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
         "layer_ordinal": 7,
@@ -224,7 +288,39 @@
         "block_length_bytes": 306,
         "rate_expected_sha256": "4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
         "rate_observed_sha256": null,
-        "status": "PASS_ARCHIVED_PRODUCER_ONLY"
+        "status": "PASS_ARCHIVED_10_LAYER_ORIGINAL"
+      },
+      "final_11_layer_observed": {
+        "layer_ordinal": 7,
+        "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
+        "file_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
+        "section": "FunctorMaterials",
+        "object_name": "legacy8_h05_ei417_progress",
+        "factory_type": "EIRateCoefMaterial",
+        "variable": null,
+        "block_sha256": "a8836b06e5b80ae4c8ffe4a1cdbeb73474c129ed2192b4e981864c548539fde7",
+        "progress": "R_EI417",
+        "relevant_parameters": {
+          "rate_table_file": "private_rates/EI-417_O2_X.txt",
+          "reaction_progress": "R_EI417",
+          "mean_energy": "e_energy_eV",
+          "electron_number_density": "n_e_physical",
+          "block": "plasma"
+        },
+        "consumer": {
+          "section": "FVKernels",
+          "object_name": "legacy8_h05_ei417_op",
+          "factory_type": "FVCoupledForce",
+          "variable": "log_Op",
+          "v": "S_Op_molar_EI417",
+          "coef": "1.0",
+          "block_sha256": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7"
+        },
+        "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+        "status": "PASS_FINAL_11_LAYER_BYTES",
+        "observed_original_private_rate_sha256": null,
+        "public_substitute_sha256": "cbd41826a71f55767df6a9fc18fdd2a424f135b971e421194248760ac2f06dbc",
+        "public_is_not_original_private": true
       }
     }
   ],
@@ -236,15 +332,15 @@
     "Potential script-contract discrepancy: Issue477 S4 prepare_s3_401_op_production.py checks the token `type = RateCoeffMaterial`, whereas historical EI-417 generator CONTENT declares `type = PhysicsElectronImpactRateMaterial`; reconcile against exact archived S4/S6 bytes before accepting this generator path.",
     "Direct GitHub Actions artifact 13677089020 ZIP and archived 10/10 .i files matched SHA256; 3 EI source producer exact blocks verified with SHA256. DO NOT promote these original block hashes to transformed 11-layer evidence.",
     "Archived EI-417 producer is PhysicsElectronImpactRateMaterial despite a historical S4 helper checking for RateCoeffMaterial; actual archived bytes govern original-input identity.",
-    "Additional artifact 14034922005 contained readiness and P2 logs but zero .i files; private EI rate table bytes were not included in either inspected archive."
+    "Additional artifact 14034922005 contained readiness and P2 logs but zero .i files; private EI rate table bytes were not included in either inspected archive.",
+    "2026-11-17 P1-B6 final hybrid D input source PASS: downloaded three separate successful CI artifact ZIPs (14372315897, 14372442471, 14373032046), 11/11 .i SHA256s/actual bytes identical; independently extracted exact three EIRateCoefMaterial producer blocks and their FVCoupledForce consumers. This verifies source owner, not private rates.",
+    "Public Boltzmann table files have distinct SHA256 from protected historical EI tables. They must never replace the original private rate data or be classified as actual original rate SHA proof."
   ],
   "unresolved": [
-    "P1-0 immutable manifest and 11-layer exact order/source HEAD pin not available in Issue #667 body/comments at preflight read.",
-    "Original S6-417 11-layer source bytes and per-layer file_sha256 not independently read.",
-    "Exact producer object names/section/blocks/factory types and source-consumer edges not independently checked against actual S6-417 staged inputs.",
     "Private EI-415, EI-401, EI-417 rate table bytes not available for actual SHA-256 recomputation.",
     "Potential historical EI-417 generator-versus-preparer factory token discrepancy requires exact-source reconciliation.",
-    "Actual final 11-layer transformed input bytes and immutable P1-0 manifest remain missing; direct block SHA for final S6-417 HOLD."
+    "Actual protected EI-415/EI-401/EI-417 private rate bytes were absent from public 11-layer artifacts, so only archival expected SHA values are available.",
+    "No native P2/P3/P4 or scientific equivalence for #633 New-only cutover has been established."
   ],
   "promotion_policy": "DO_NOT_PROMOTE_TO_P1_PASS; P1-E must rebind all entries to verified P1-0 manifest and independently recompute SHA/edges.",
   "evidence_urls": [
@@ -334,6 +430,39 @@
     "includes_post_transform_11_layers": false
   },
   "archived_original_10_layer_status": "PASS",
-  "final_11_layer_status": "HOLD",
-  "private_rate_sha_recomputed": false
+  "final_11_layer_status": "PASS_EXACT_SOURCE_BYTES",
+  "private_rate_sha_recomputed": false,
+  "rate_private_table_status": "HOLD",
+  "final_11_layer_evidence": {
+    "case": "417",
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "source_ci_run_ids": [
+      44180190753,
+      44182176604,
+      44182284212
+    ],
+    "source_ci_artifact_ids": [
+      14372315897,
+      14372442471,
+      14373032046
+    ],
+    "cross_artifact_byte_identity": "PASS_EXACT_11_OF_11",
+    "all_11_file_sha256_verified": true,
+    "all_three_rate_producer_block_sha256_verified": true,
+    "producer_3_unique": true,
+    "consumer_3_unique": true,
+    "native_ion_fv_kernels": 14,
+    "native_ion_fv_bcs": 12,
+    "include_directives": 0,
+    "final_11_layer_full_sha_authority": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-0-417-finalbytes-20261117/reports/issue667/p1_0_s6_417_final_11_layer_sha_manifest.json",
+    "original_rate_table_bytes_read": false,
+    "public_rate_tables_sha_compared": true,
+    "intermediate_artifact_excluded": 14372727434,
+    "private_rate_sha256_status": "HOLD_EXPECTED_ONLY",
+    "science": "SCIENCE_HOLD",
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN"
+  }
 }
