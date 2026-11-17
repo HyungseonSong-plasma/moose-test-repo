@@ -73,41 +73,86 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
                 "INVALID_GRADIENT_FLAG_" + ident)
 
     current = overlay.get("ion_surface_current")
+    # The exact producer is explicit. In older generated DD it is the legacy
+    # electron_wall_number_flux; canonical S6 scratch can publish e_wall_number_flux.
     require(isinstance(current, dict) and
             set(current) == {"electron_wall_number_flux"} and
-            current["electron_wall_number_flux"] == "electron_wall_number_flux",
+            isinstance(current["electron_wall_number_flux"], str) and
+            current["electron_wall_number_flux"] in {
+                "electron_wall_number_flux", "e_wall_number_flux"},
             "INVALID_SURFACE_CURRENT_ELECTRON_CONSUMER")
 
     boundaries = overlay.get("boundaries")
     require(isinstance(boundaries, dict), "MISSING_BOUNDARIES")
-    expected_groups = {" ".join(GENERAL), *(f"plasma_{s}" for s in DIELECTRIC)}
-    require(set(boundaries) == expected_groups, "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
+    # A single group can own several sidesets. An electron FEM sheath operator
+    # may share that group with ion FV BCs: do not falsely reject co-resident
+    # electron consumers when the input's root boundaries records are merged.
+    required_dielectric = {f"plasma_{s}" for s in DIELECTRIC}
+    has_general = any(set(key.split()) == set(GENERAL) and
+                      len(key.split()) == len(GENERAL)
+                      for key in boundaries if isinstance(key, str))
+    require(required_dielectric <= set(boundaries) and has_general,
+            "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
     found: dict[str, dict] = {}
+    all_names: set[str] = set()
+    used_sides: set[str] = set()
+    operator_owners: set[tuple[str, str, str]] = set()
     for sides, group in boundaries.items():
+        members = sides.split()
+        require(bool(members) and len(set(members)) == len(members) and
+                not (set(members) & used_sides), "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
+        used_sides.update(members)
         require(isinstance(group, dict) and set(group) == {"bcs"} and
                 isinstance(group["bcs"], dict), "INVALID_BC_GROUP")
+        require(bool(group["bcs"]), "EMPTY_BC_GROUP")
         for name, bc in group["bcs"].items():
-            require(name not in found, "DUPLICATE_BC_NAME_" + name)
+            require(name not in all_names, "DUPLICATE_BC_NAME_" + name)
+            all_names.add(name)
             require(isinstance(bc, dict), "INVALID_BC_ENTRY_" + name)
-            found[name] = bc
-            require(bc.get("variable", "").startswith("log_"), "INVALID_BC_VARIABLE_" + name)
-            ident = bc["variable"][4:]
+            typ = bc.get("type")
+            variable = bc.get("variable")
+            require(isinstance(typ, str) and bool(typ), "INVALID_BC_TYPE_" + name)
+            require(isinstance(variable, str) and bool(variable),
+                    "INVALID_BC_VARIABLE_" + name)
+            for side in members:
+                key = (typ, variable, side)
+                require(key not in operator_owners, "DUPLICATE_BC_OPERATOR_" + name)
+                operator_owners.add(key)
+            if typ in {"FEMElectronSheathBC", "FEMElectronEnergySheathBC"}:
+                required = {"type", "variable", "wall_number_flux"}
+                if typ == "FEMElectronEnergySheathBC":
+                    required.add("mean_energy")
+                expected_electron_variable = (
+                    "log_e_energy" if typ == "FEMElectronEnergySheathBC" else "log_e")
+                require(set(bc) == required and variable == expected_electron_variable and
+                        bc["wall_number_flux"] == "electron_wall_number_flux" and
+                        (typ != "FEMElectronEnergySheathBC" or
+                         bc["mean_energy"] == "e_energy_eV"),
+                        "INVALID_EXISTING_FEM_ELECTRON_BC_" + name)
+                continue
+            require(typ in {"FVFunctorNeumannBC", "FVLogMolarDielectricFluxBC"},
+                    "UNSUPPORTED_FV_BC_TYPE_" + name)
+            require(variable.startswith("log_"), "INVALID_BC_VARIABLE_" + name)
+            ident = variable[4:]
             require(ident in selected, "UNSELECTED_ION_BC_" + name)
             flux = ident + "_wall_number_flux"
-            if sides == " ".join(GENERAL):
+            found[name] = bc
+            if typ == "FVFunctorNeumannBC":
+                require(set(members) == set(GENERAL),
+                        "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
                 require(name == ident + "_wall", "WRONG_NEUMANN_BC_NAME_" + name)
                 require(set(bc) == {"type", "variable", "functor", "factor"} and
-                        bc["type"] == "FVFunctorNeumannBC" and
                         bc["functor"] == flux and
                         finite_num(bc["factor"]) and
                         math.isclose(bc["factor"], FACTOR, rel_tol=1e-12, abs_tol=0.0),
                         "WRONG_NEUMANN_TYPE_FLUX_FACTOR_" + name)
             else:
-                side = sides.removeprefix("plasma_")
+                side = next((s for s in DIELECTRIC
+                             if members == ["plasma_" + s]), None)
+                require(side is not None, "MISSING_EXTRA_OR_OVERLAPPING_SIDESETS")
                 require(name == f"{ident}_{side}_dielectric",
                         "WRONG_DIELECTRIC_BC_NAME_" + name)
                 require(set(bc) == {"type", "variable", "signed_number_flux"} and
-                        bc["type"] == "FVLogMolarDielectricFluxBC" and
                         bc["signed_number_flux"] == flux,
                         "WRONG_DIELECTRIC_TYPE_OR_SIGNED_FLUX_" + name)
     expected = {ident + "_wall" for ident in selected}
