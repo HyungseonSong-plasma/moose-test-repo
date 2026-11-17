@@ -25,56 +25,56 @@
   [inlet_side]
     type = ParsedGenerateSideset
     input = plasma_block
-    combinatorial_geometry = 'abs(x) < 1e-10 && y < 0.5'
+    combinatorial_geometry = 'abs(x) < 1e-10 & y < 0.5'
     normal = '-1 0 0'
     new_sideset_name = inlet
   []
   [outlet_side]
     type = ParsedGenerateSideset
     input = inlet_side
-    combinatorial_geometry = 'abs(x) < 1e-10 && y > 0.5'
+    combinatorial_geometry = 'abs(x) < 1e-10 & y > 0.5'
     normal = '-1 0 0'
     new_sideset_name = outlet
   []
   [plasma_electrode_side]
     type = ParsedGenerateSideset
     input = outlet_side
-    combinatorial_geometry = 'abs(x - 1) < 1e-10 && y < 0.5'
+    combinatorial_geometry = 'abs(x - 1) < 1e-10 & y < 0.5'
     normal = '1 0 0'
     new_sideset_name = plasma_electrode
   []
   [plasma_metal_side]
     type = ParsedGenerateSideset
     input = plasma_electrode_side
-    combinatorial_geometry = 'abs(x - 1) < 1e-10 && y > 0.5'
+    combinatorial_geometry = 'abs(x - 1) < 1e-10 & y > 0.5'
     normal = '1 0 0'
     new_sideset_name = plasma_metal
   []
   [plasma_right_side]
     type = ParsedGenerateSideset
     input = plasma_metal_side
-    combinatorial_geometry = 'abs(y - 1) < 1e-10 && x < 0.5'
+    combinatorial_geometry = 'abs(y - 1) < 1e-10 & x < 0.5'
     normal = '0 1 0'
     new_sideset_name = plasma_right
   []
   [plasma_cover_side]
     type = ParsedGenerateSideset
     input = plasma_right_side
-    combinatorial_geometry = 'abs(y - 1) < 1e-10 && x > 0.5'
+    combinatorial_geometry = 'abs(y - 1) < 1e-10 & x > 0.5'
     normal = '0 1 0'
     new_sideset_name = plasma_cover
   []
   [plasma_wafer_side]
     type = ParsedGenerateSideset
     input = plasma_cover_side
-    combinatorial_geometry = 'abs(y) < 1e-10 && x < 0.5'
+    combinatorial_geometry = 'abs(y) < 1e-10 & x < 0.5'
     normal = '0 -1 0'
     new_sideset_name = plasma_wafer
   []
   [plasma_focus_ring_side]
     type = ParsedGenerateSideset
     input = plasma_wafer_side
-    combinatorial_geometry = 'abs(y) < 1e-10 && x > 0.5'
+    combinatorial_geometry = 'abs(y) < 1e-10 & x > 0.5'
     normal = '0 -1 0'
     new_sideset_name = plasma_focus_ring
   []
