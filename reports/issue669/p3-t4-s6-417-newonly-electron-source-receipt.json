@@ -1,0 +1,165 @@
+{
+  "schema": "issue669.p3_t4.s6_417_electron_source_receipt.v1",
+  "task_id": "P3-T4",
+  "issue": 669,
+  "parent_issue": 633,
+  "dependency_issue": 668,
+  "case": "S6-417",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "verdict": "STATIC_SOURCE_PASS__P2_DEPENDENCY_HOLD",
+  "evidence_class": "PR665 EXACT-HEAD public repository source, not staged New-only Scratch",
+  "dependency": {
+    "package": "P2 #668",
+    "observed_issue_state": "open",
+    "independent_newonly_ion_26_retirement_receipt": "NOT_VERIFIED",
+    "newonly_actual_11_layer_before_after_sha256": "NOT_VERIFIED"
+  },
+  "files": [
+    {
+      "role": "newonly_electron_json",
+      "file_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "json_pointer": "/species/e",
+      "layer_ordinal": null
+    },
+    {
+      "role": "newonly_continuity_overlay_template",
+      "file_path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+      "sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "layer_ordinal": null
+    },
+    {
+      "role": "electron_lookup_table",
+      "file_path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "rows": 100,
+      "layer_ordinal": null
+    }
+  ],
+  "expected_scratch_integration": {
+    "newonly_layer_ordinal": 11,
+    "staged_layer_file_sha256": null,
+    "staged_overlay_block_sha256": null,
+    "realized_overlay_path": null,
+    "status": "NOT_RUN_P2_DEPENDENCY_HOLD"
+  },
+  "electron_transport": {
+    "species": "e",
+    "charge_number": -1,
+    "transport_coef": {
+      "type": "lookup",
+      "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "unit": "reduced",
+      "bounds_policy": "clamp"
+    },
+    "initial_number_density_m_minus_3": 1000000000000001.6,
+    "derived_initial_log_molar": -20.216123548032986,
+    "legacy_pinned_initial_log_molar": -20.216123548032986,
+    "initial_source": "/species/e/initial_number_density in source JSON",
+    "file_path_resolution": "JSON-parent-relative source tree path verified; actual New-only Scratch lookup path NOT verified"
+  },
+  "overlay_binding": {
+    "files": "chemistry/unified_s6_417_newonly.json",
+    "root_pressure_pa": 1.333223684,
+    "root_temperature_K": 300,
+    "state_model": "ideal_gas",
+    "continuity": {
+      "fem_species": [
+        "e"
+      ],
+      "fvm_species": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "fem_potential": "potential",
+      "migration_smoothing_width": 0.001
+    },
+    "energy": {
+      "fem_species": [
+        "e"
+      ],
+      "fem_potential": "potential",
+      "transport_coefficient": "fluid"
+    },
+    "binding_status": "SOURCE_TEMPLATE_RESOLVES_TO_SOURCE_JSON",
+    "staged_newonly_binding_status": "NOT_VERIFIED"
+  },
+  "producer_consumer_edges": [
+    {
+      "producer": "[Physics]/[Plasmas]/files",
+      "consumer": "source JSON species.e",
+      "evidence": "STATIC_TEMPLATE_BINDING"
+    },
+    {
+      "producer": "species.e.transport_coef lookup",
+      "consumer": "DDContinuityEq::ddTransport(e)",
+      "evidence": "STATIC_SOURCE_CONTRACT"
+    },
+    {
+      "producer": "electron_moments.txt",
+      "consumer": "DDTransportMaterial electron lookup",
+      "evidence": "STATIC_PATH_AND_100_ROWS"
+    },
+    {
+      "producer": "species.e.initial_number_density",
+      "consumer": "DDContinuityEq::addInitialConditions -> log_e",
+      "evidence": "STATIC_SOURCE_AND_CXX_FORMULA"
+    },
+    {
+      "producer": "[Energy].transport_coefficient=fluid",
+      "consumer": "DDTransportMaterial energy closure/energy transport",
+      "evidence": "STATIC_SOURCE_AND_CXX_CONTRACT"
+    },
+    {
+      "producer": "root pressure=1.333223684, temperature=300",
+      "consumer": "reduced electron lookup transport coefficients",
+      "evidence": "STATIC_ROOT_GAS_BINDING"
+    }
+  ],
+  "independent_verification": {
+    "ci_run_id": 44196955974,
+    "ci_job_id": 134440797876,
+    "ci_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44196955974",
+    "artifact_id": 14379601757,
+    "artifact_name": "issue669-p3-t4-417-source-44196955974-1",
+    "artifact_digest": "sha256:0d4cf1c9aa4912c85882488590a4f3cc76472c4137ec1f14102f93536b9da679",
+    "artifact_receipt_file": "p3-t4-417-source-audit.json",
+    "method": "checkout exact PR HEAD; independent raw file SHA-256; JSON duplicate-key guard; table numerical and path check; overlay binding; C++ source invariants; mutation negative controls",
+    "conclusion": "SUCCESS",
+    "negative_controls": {
+      "missing_transport": "REJECTED",
+      "wrong_unit": "REJECTED",
+      "wrong_bounds": "REJECTED",
+      "wrong_table_path": "REJECTED",
+      "missing_initial": "REJECTED",
+      "changed_initial": "REJECTED",
+      "wrong_overlay_filename": "REJECTED",
+      "missing_e_continuity": "REJECTED",
+      "wrong_energy_closure": "REJECTED",
+      "missing_gas_pressure": "REJECTED"
+    }
+  },
+  "unresolved": [
+    "P2 #668 actual source-bound 417 11-layer ion 26-retirement receipt not confirmed",
+    "New-only 417 actual staged files/overlay layer ordinal and byte/block SHA remain unavailable",
+    "Runtime lookup table path resolution inside disposable New-only Scratch not verified",
+    "No actual PhysicsApp binary Warehouse e/energy ownership instantiated; Native --check-input not run",
+    "P3-X single-writer integration, P5 acceptance and physical/scientific equivalence not run"
+  ],
+  "guardrails": {
+    "full_native_p2": "NOT_RUN",
+    "native_p3": "NOT_RUN",
+    "native_p4": "NOT_RUN",
+    "science": "SCIENCE_HOLD",
+    "main_merge": "NOT_DONE",
+    "private_rate_raw_bytes": "NOT_READ",
+    "original_archive_inputs": "UNMODIFIED",
+    "shared_producer_sources": "UNMODIFIED",
+    "newonly_json_and_overlay": "UNMODIFIED",
+    "one_shot_workflow": "REMOVED_AFTER_CI",
+    "branch_changes": "Only this task-specific report remains against pinned PR665 HEAD"
+  },
+  "next_gate": "After #668 accepts both actual 11-layer New-only Scratch retirements, P3-X must bind this source contract to S6-417 actual staged input and independently recompute file/block SHA; Native P2 belongs to P5."
+}
