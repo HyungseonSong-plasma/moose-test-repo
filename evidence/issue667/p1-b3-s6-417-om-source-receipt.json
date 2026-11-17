@@ -1,14 +1,14 @@
 {
-  "schema_version": "issue667-p1-b3-provisional-v1",
+  "schema_version": "issue667-p1-b3-verification-v2",
   "task_id": "P1-B3",
   "case": "S6-417",
-  "status": "HOLD_P1_0_COMMON_MANIFEST_MISSING",
-  "evidence_class": "READ_ONLY_STATIC_SOURCE_RECONSTRUCTION_NOT_EXACT_11_LAYER_RECEIPT",
+  "status": "PARTIAL_VERIFIED_FINAL_11_LAYER_DIRECT_BYTES_HOLD",
+  "evidence_class": "ORIGINAL_10_LAYER_DIRECT_ARCHIVE_SHA_PLUS_ARCH_CI_11_LAYER_INTERMEDIATE_SHA_AND_ISOLATED_FINAL_RECONSTRUCTION",
   "observed_main_sha": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
   "source_pr": "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/665",
   "historical_immutable_source_revision": "29d1acc6ef7969908b86719e4b95c73a1565136d",
-  "layer_ordinal": null,
+  "layer_ordinal": 6,
   "expected_layer_name": "issue477_S3-415-401_extra_overlay.i",
   "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
   "file_sha256": null,
@@ -65,14 +65,106 @@
     "native_P2": "NOT_RUN"
   },
   "unresolved": [
-    "P1-0 shared 11-layer immutable manifest not found in current Issue #667 body/comments",
-    "S6-417 actual ordered 11-layer source byte identity and layer ordinal not directly read",
-    "Exact source-layer sha256 and exact post-transform object block_sha256 not verified",
-    "Canonical log_nm -> log_Om migration at final 11-layer object not directly read",
-    "Independent uniqueness/no-other-Om-source verification awaits full 11-layer census",
-    "Private rate table inaccessible; expected SHA only, no byte read"
+    "P1-0 common immutable manifest and exact final post-chemistry/post-hybrid 11-layer .i bytes not found",
+    "Final S3 source-file SHA and B3 block SHA are reproducible candidates, not direct final artifact readback",
+    "Exact final 11-layer all-object uniqueness and Physics-generated Om_source versus Native duplicate check require new staging/warehouse validation",
+    "Private EI-401 table bytes remain inaccessible; only expected SHA is known"
   ],
   "not_an_authorization_to_retire_native": true,
   "not_a_science_or_native_runtime_pass": true,
-  "required_next_gate": "P1-0_COMMON_MANIFEST_AND_DIRECT_11_LAYER_READBACK"
+  "required_next_gate": "P1-0_FINAL_11_LAYER_BYTES_CAPTURE_AND_EXACT_HEAD_HIT_WAREHOUSE_P05",
+  "final_file_sha256": null,
+  "historical_verified_file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+  "historical_verified_block_sha256": "6f65790ab238716cd1b7c56a61a9b20d06812919007156d4dfdef2cd0ebfbdbd",
+  "actual_ci_intermediate_sha256": {
+    "canonical_state": "66c3623f3635e6005b4d4cbe229f2d4add2ece24babd5e37a127b79cd4067c5c",
+    "factory_remap": "2caadf16de0d1464ec9fbf7b873554fdefdc2583fd914ea04f7d4433d4910fb6"
+  },
+  "source_file_reconstructed_sha256": {
+    "after_chemistry": "cb92b8de3701eae65f440eb827be416bc2a1ec3ab7608b6f0179a6d9426afdf0",
+    "after_hybrid": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0"
+  },
+  "reconstructed_post_transform_block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
+  "readback": {
+    "artifact_id": 13677089020,
+    "original_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "original_10_layers_sha256_all_match_manifest": true,
+    "archived_native_om_source_count": 1,
+    "duplicated_source_mutation_rejected": true,
+    "ci_artifact_id": 14359967780,
+    "intermediate_11_layer_SHA_ledger_consistent": true,
+    "final_11_layer_files_in_artifact": false,
+    "runtime_P05_first_failure": "log_O2p / ni_time Native/Physics duplicate",
+    "om_generated_vs_native_runtime_duplicate": "NOT_REACHED",
+    "original_10_layer_om_source_duplicate": "NO",
+    "final_11_layer_om_source_duplicate_direct": "HOLD"
+  },
+  "intermediate_11_layer_file_sha256": [
+    {
+      "ordinal": 1,
+      "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "sha256": "f82edf90e3f6f260b3ddd26c39f81587808258c0cda86a37b37b73c307f0a607",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 2,
+      "file": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+      "sha256": "d176c42b1451f041e8be15dd27bb47081bff52aff743b2383ef7d12004d16d12",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 3,
+      "file": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+      "sha256": "00f86807bf7e3617afc043fa528c432c57ef49c14e5ce707178ab1e1e7522914",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 4,
+      "file": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+      "sha256": "fe3bdb7bfdd05327fa1a7fa26f58e8ac25612df173c6bcfbef5af5c4dfee8249",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 5,
+      "file": "issue477_S2-415_generation_overlay.i",
+      "sha256": "4e2e4fdde4d19be1d5c8b311121a9517205f54c4eca98b913b2e9ee1fe8f694c",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 6,
+      "file": "issue477_S3-415-401_extra_overlay.i",
+      "sha256": "2caadf16de0d1464ec9fbf7b873554fdefdc2583fd914ea04f7d4433d4910fb6",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 7,
+      "file": "issue477_S4-401-417_op_ionization_overlay.i",
+      "sha256": "fbfe8d023d196b17e89fe0d71f00d0ea0ad1e025682c0de458323cfcb0c6070c",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 8,
+      "file": "issue477_S5-417-407_o2_consumer_overlay.i",
+      "sha256": "3e233370f2742997f61f8c81caf6da08aaee7cac619f40af99cbab7128d650bd",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 9,
+      "file": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+      "sha256": "b41a9c5bebebedff27548e8a5032819a53a28cca372ae8b2563f55faaed42aba",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 10,
+      "file": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+      "sha256": "b9845f954a610fa08b2c9f306069901eec219644c1931f63c850bb38cf991dfb",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    },
+    {
+      "ordinal": 11,
+      "file": "migrated_continuity.i",
+      "sha256": "ec03ff9109c924186952210bbb47b9a34194dcd240f2ee61aab316d24f9e87b3",
+      "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    }
+  ]
 }
