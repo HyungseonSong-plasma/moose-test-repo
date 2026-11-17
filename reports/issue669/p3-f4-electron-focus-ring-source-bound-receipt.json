@@ -1,0 +1,250 @@
+{
+  "schema": "issue669.P3_F4.electron_focus_ring.source_bound_receipt.v1",
+  "task_id": "P3-F4",
+  "issue": 669,
+  "source_pr": 665,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "object_name": "electron_focus_ring_dielectric",
+  "task_alias": "electron_focus_ring",
+  "scope": "electron particle FEM cover at plasma_focus_ring, NOT P3-F8 energy owner",
+  "verification_method": "offline independent GitHub Artifact ZIP SHA-256/CRC, all 11 ordered per-case .i SHA, historical raw block, exact hybrid/newonly rooted object sha, semantic production edge and 17 fault-injected negative controls per case",
+  "local_full_independent_receipt_sha256": "7b7f058b7c4246260f505cf501512d862aef536b795b23dfe1fa4c1e61bf4f37",
+  "files_recomputed_total_per_stage": 22,
+  "artifact_provenance": {
+    "original_10_layer_zip": {
+      "417": {
+        "artifact_id": 13677089020,
+        "sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+      },
+      "941": {
+        "artifact_id": 13677375813,
+        "sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+      }
+    },
+    "p1_hybrid": {
+      "run_id": 44182628032,
+      "artifact_id": 14372278070,
+      "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "internal_common_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010"
+    },
+    "p2_disposable_scratch": {
+      "run_id": 44196762787,
+      "artifact_id": 14379920938,
+      "sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4",
+      "mode": "P0_SOURCE_ONLY"
+    }
+  },
+  "source_code_pins": {
+    "input_migrator": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py",
+      "git_blob_sha": "8a76517c7863be77d8390cd04b0b3be055f2c147"
+    },
+    "fem_bc": {
+      "path": "physics_app/src/bcs/FEMElectronSheathBC.C",
+      "git_blob_sha": "78d8489f8e98ecdfb134c4b5620fd66544a8ca52",
+      "physics_registration": "PhysicsApp",
+      "source_equation": "test * plasma-side FaceArg outward e_wall_number_flux / N_A"
+    },
+    "wall_producer": {
+      "path": "physics_app/src/materials/ESWallFluxMaterial.C",
+      "git_blob_sha": "7f0981608dad18e896b36af8fc8248211da381c6",
+      "property_rule": "species_id=e creates e_wall_number_flux"
+    }
+  },
+  "cases": {
+    "417": {
+      "case_stage_reference": "source-only post-ion retirement 11-layer, NOT final Physics New-only integration",
+      "source_layer_ordinal": 1,
+      "source_layer_basename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "historical_source": {
+        "file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+        "block_start_line": 844,
+        "block_size_bytes": 202,
+        "block_sha256": "7bc48dcb69663952eb21506b29674f51f728a8bc9fa5f44d5cf9092442074580",
+        "type": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+        "variable": "log_ne",
+        "wall_number_flux": "electron_wall_number_flux",
+        "boundary": "plasma_focus_ring"
+      },
+      "hybrid_final_11_layer": {
+        "source_layer_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "block_start_line": 765,
+        "block_size_bytes": 169,
+        "block_sha256": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa",
+        "source_file_count_verified": 11,
+        "section": "BCs",
+        "name": "electron_focus_ring_dielectric",
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "e_wall_number_flux",
+        "boundary": "plasma_focus_ring"
+      },
+      "newonly_disposable_scratch": {
+        "source_layer_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+        "block_start_line": 696,
+        "block_size_bytes": 169,
+        "block_sha256": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa",
+        "source_file_count_verified": 11,
+        "section": "BCs",
+        "name": "electron_focus_ring_dielectric",
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "e_wall_number_flux",
+        "boundary": "plasma_focus_ring"
+      },
+      "producer": {
+        "owner": "electron_wall_flux",
+        "section": "FunctorMaterials",
+        "type": "ESWallFluxMaterial",
+        "species_id": "e",
+        "produced_functor": "e_wall_number_flux",
+        "electron_density": "n_e_physical",
+        "mean_energy": "e_energy_eV",
+        "potential": "potential",
+        "sticking": "1.0",
+        "use_element_gradient_for_potential": "true",
+        "block": "plasma",
+        "block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+        "unique_in_hybrid_and_newonly": true,
+        "same_block_sha256_in_both_stages": true
+      },
+      "non_target_F8_energy_bc": {
+        "name": "electron_energy_focus_ring",
+        "type": "FEMElectronEnergySheathBC",
+        "boundary": "plasma_focus_ring",
+        "variable": "log_e_energy",
+        "mean_energy": "e_energy_eV",
+        "block_sha256": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138",
+        "intact_in_hybrid_and_newonly": true
+      },
+      "target_object_unique_across_all_11_layers": true,
+      "negative_controls": {
+        "missing_cover": "REJECTED_AS_EXPECTED",
+        "duplicate_cover": "REJECTED_AS_EXPECTED",
+        "wrong_factory": "REJECTED_AS_EXPECTED",
+        "wrong_variable": "REJECTED_AS_EXPECTED",
+        "wrong_flux": "REJECTED_AS_EXPECTED",
+        "wrong_boundary": "REJECTED_AS_EXPECTED",
+        "wrong_section": "REJECTED_AS_EXPECTED",
+        "missing_flux_producer": "REJECTED_AS_EXPECTED",
+        "duplicate_flux_producer": "REJECTED_AS_EXPECTED",
+        "wrong_species": "REJECTED_AS_EXPECTED",
+        "wrong_material_factory": "REJECTED_AS_EXPECTED",
+        "wrong_source_density": "REJECTED_AS_EXPECTED",
+        "energy_not_particle": "REJECTED_AS_EXPECTED",
+        "wrong_producer_potential": "REJECTED_AS_EXPECTED",
+        "wrong_producer_gradient": "REJECTED_AS_EXPECTED",
+        "missing_F8_energy": "REJECTED_AS_EXPECTED",
+        "wrong_F8_boundary": "REJECTED_AS_EXPECTED"
+      },
+      "negative_controls_pass": 17,
+      "status": "PASS_STATIC_SOURCE_BOUND",
+      "case": "417"
+    },
+    "941": {
+      "case_stage_reference": "source-only post-ion retirement 11-layer, NOT final Physics New-only integration",
+      "source_layer_ordinal": 1,
+      "source_layer_basename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "historical_source": {
+        "file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+        "block_start_line": 844,
+        "block_size_bytes": 202,
+        "block_sha256": "7bc48dcb69663952eb21506b29674f51f728a8bc9fa5f44d5cf9092442074580",
+        "type": "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+        "variable": "log_ne",
+        "wall_number_flux": "electron_wall_number_flux",
+        "boundary": "plasma_focus_ring"
+      },
+      "hybrid_final_11_layer": {
+        "source_layer_file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "block_start_line": 765,
+        "block_size_bytes": 169,
+        "block_sha256": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa",
+        "source_file_count_verified": 11,
+        "section": "BCs",
+        "name": "electron_focus_ring_dielectric",
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "e_wall_number_flux",
+        "boundary": "plasma_focus_ring"
+      },
+      "newonly_disposable_scratch": {
+        "source_layer_file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+        "block_start_line": 696,
+        "block_size_bytes": 169,
+        "block_sha256": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa",
+        "source_file_count_verified": 11,
+        "section": "BCs",
+        "name": "electron_focus_ring_dielectric",
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e",
+        "wall_number_flux": "e_wall_number_flux",
+        "boundary": "plasma_focus_ring"
+      },
+      "producer": {
+        "owner": "electron_wall_flux",
+        "section": "FunctorMaterials",
+        "type": "ESWallFluxMaterial",
+        "species_id": "e",
+        "produced_functor": "e_wall_number_flux",
+        "electron_density": "n_e_physical",
+        "mean_energy": "e_energy_eV",
+        "potential": "potential",
+        "sticking": "1.0",
+        "use_element_gradient_for_potential": "true",
+        "block": "plasma",
+        "block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+        "unique_in_hybrid_and_newonly": true,
+        "same_block_sha256_in_both_stages": true
+      },
+      "non_target_F8_energy_bc": {
+        "name": "electron_energy_focus_ring",
+        "type": "FEMElectronEnergySheathBC",
+        "boundary": "plasma_focus_ring",
+        "variable": "log_e_energy",
+        "mean_energy": "e_energy_eV",
+        "block_sha256": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138",
+        "intact_in_hybrid_and_newonly": true
+      },
+      "target_object_unique_across_all_11_layers": true,
+      "negative_controls": {
+        "missing_cover": "REJECTED_AS_EXPECTED",
+        "duplicate_cover": "REJECTED_AS_EXPECTED",
+        "wrong_factory": "REJECTED_AS_EXPECTED",
+        "wrong_variable": "REJECTED_AS_EXPECTED",
+        "wrong_flux": "REJECTED_AS_EXPECTED",
+        "wrong_boundary": "REJECTED_AS_EXPECTED",
+        "wrong_section": "REJECTED_AS_EXPECTED",
+        "missing_flux_producer": "REJECTED_AS_EXPECTED",
+        "duplicate_flux_producer": "REJECTED_AS_EXPECTED",
+        "wrong_species": "REJECTED_AS_EXPECTED",
+        "wrong_material_factory": "REJECTED_AS_EXPECTED",
+        "wrong_source_density": "REJECTED_AS_EXPECTED",
+        "energy_not_particle": "REJECTED_AS_EXPECTED",
+        "wrong_producer_potential": "REJECTED_AS_EXPECTED",
+        "wrong_producer_gradient": "REJECTED_AS_EXPECTED",
+        "missing_F8_energy": "REJECTED_AS_EXPECTED",
+        "wrong_F8_boundary": "REJECTED_AS_EXPECTED"
+      },
+      "negative_controls_pass": 17,
+      "status": "PASS_STATIC_SOURCE_BOUND",
+      "case": "941"
+    }
+  },
+  "gates": {
+    "P3_F4_STATIC": "PASS",
+    "P2_PACKAGE_668_FULL_DOD": "HOLD",
+    "P3_0_COMMON_NEWONLY_PIN": "PENDING",
+    "P3_X": "NOT_RUN",
+    "NEW_ONLY_NATIVE_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "#668 full P2 owner cutover plus actual New-only JSON and 11th Physics overlay integration still pending",
+    "C++ warehouse / Functor runtime late binding unproved",
+    "No native --check-input, timestep execution, or scientific/numerical parity claim"
+  ],
+  "privacy": "No private rate bytes published; original archives, PR665 and main untouched"
+}
