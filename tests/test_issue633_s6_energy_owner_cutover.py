@@ -28,8 +28,16 @@ def new_deck(case):
     return (PILOT / f"issue633_newonly_s6_{case}_continuity.template.i").read_text()
 
 
-def check(case, *layers):
+def check(case, *layers, add_pressure=True):
     files = {"migrated_continuity.i": new_deck(case)}
+    if add_pressure:
+        files["staged_pressure.i"] = (
+            "[Variables]\n"
+            "  [pressure]\n"
+            "    type = INSFVPressureVariable\n"
+            "    block = plasma\n"
+            "  []\n[]\n"
+        )
     files.update({f"scratch_{n}.i": value for n, value in enumerate(layers)})
     return preflight.inspect(files, new_mechanism(case), "new-only")
 
@@ -143,9 +151,11 @@ def test_native_electron_fem_boundary_must_be_retired():
 def test_pressure_variable_migrates_to_canonical_name_without_double_ic():
     source = "[Variables]\n  [pressure]\n    type = INSFVPressureVariable\n"
     # Root Plasmas sets FVConstantIC on the solved pressure variable.
-    duplicate = check("417", source + "    initial_condition = 1.333223684\n  []\n[]")
+    duplicate = check("417", source + "    initial_condition = 1.333223684\n  []\n[]",
+                      add_pressure=False)
     assert "P1_DUPLICATE_ROOT_PRESSURE_IC:scratch_0.i" in duplicate["errors"]
-    migrated = check("417", source + "    block = plasma\n  []\n[]")
+    migrated = check("417", source + "    block = plasma\n  []\n[]",
+                     add_pressure=False)
     assert migrated["status"] == "P0_STATIC_PASS_ONLY", migrated["errors"]
 
 
@@ -179,3 +189,16 @@ def test_native_s6_pressure_has_neutral_flow_dependents_to_rename():
         assert expected in text
     # No static proof here that all 10 archived layers have been renamed;
     # the 11-layer staged P1 and real physics-opt P2 remain independent gates.
+
+
+def test_missing_solved_pressure_cannot_be_replaced_by_constant_gas_functor():
+    result = check("941", add_pressure=False)
+    assert "P1_SOLVED_S6_PRESSURE_OWNER_COUNT_0" in result["errors"]
+
+
+@pytest.mark.parametrize("name", ("log_e", "log_e_energy"))
+def test_new_energy_variables_must_be_physics_owned(name):
+    extra = f"[Variables]\n  [{name}]\n    family = LAGRANGE\n"
+    extra += "    order = FIRST\n    block = plasma\n  []\n[]\n"
+    result = check("941", extra)
+    assert "P1_NATIVE_ELECTRON_OR_OLD_PRESSURE_VARIABLE_OWNER_1" in result["errors"]
