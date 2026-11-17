@@ -1,0 +1,115 @@
+{
+  "schema": "issue670.p4_s8.941.rate_source_static.v1",
+  "task_id": "P4-S8",
+  "case": "941",
+  "source_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "original_p1_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "integration": "PR #674 merged into PR #665 feature branch; PR #665 remains draft, main unchanged",
+  "scope": "S6-941 EI/H25 rate provenance and five Native ion FV Source operators to three JSON Chemistry species sources",
+  "proof": {
+    "p1_0": {
+      "ci": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182628032",
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "p2_original": {
+      "ci": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44199587771",
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+    },
+    "p2_premerge_exacthead": {
+      "ci": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44201394393",
+      "artifact_id": 14381456912,
+      "ci_head": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+      "zip_sha256": "5497c80badab09d7d3266a4c81e2a5d2272a1c9cc216e94e192c8ec1ecd78e95",
+      "zip_members_byte_identical_to_first_p2": "179/179"
+    },
+    "private_rates": {
+      "ci": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44190774410",
+      "artifact_id": 14376451636,
+      "zip_sha256": "a382af3a6ebba656e070747814df45267e2880849fe6f492757ceda1c7058a20",
+      "contents": "SHA-only secure receipt, no private bytes"
+    }
+  },
+  "current_head_unchanged_s8_git_blobs": {
+    "json": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "overlay": "4daa6f080f3d7bbd35c9839110cbb955b8914fee",
+    "chemistry_cpp": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "continuity_cpp": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+  },
+  "static_checks": {
+    "actual_p1_941_layers_sha": "11/11",
+    "actual_p2_941_layers_sha": "11/11",
+    "removed_ion_native_owners": "26/26",
+    "removed_reaction_source_kernels": "5/5",
+    "original_ei_rate_materials_preserved": "5/5",
+    "original_h25_material_preserved": "1/1",
+    "original_rate_source_bridges_preserved": "5/5",
+    "rejected_negative_mutations": "25/25"
+  },
+  "source_projection": {
+    "O2p": {
+      "unit": "mol/(m^3 s)",
+      "source_functor": "S_O2p_molar",
+      "expression": "R_EI415 + R_H25",
+      "removed_native_objects": [
+        "ei415_o2p_source",
+        "h25_molecular_positive_ion"
+      ]
+    },
+    "Om": {
+      "unit": "mol/(m^3 s)",
+      "source_functor": "S_Om_molar",
+      "expression": "R_EI401",
+      "removed_native_objects": [
+        "ei401_negative_ion_source"
+      ]
+    },
+    "Op": {
+      "unit": "mol/(m^3 s)",
+      "source_functor": "S_Op_molar",
+      "expression": "R_EI941 - R_H25",
+      "removed_native_objects": [
+        "ei941_atomic_positive_ion_source",
+        "h25_atomic_positive_ion"
+      ]
+    }
+  },
+  "removed_native_source_block_sha256": {
+    "ei415_o2p_source": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+    "ei401_negative_ion_source": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
+    "ei941_atomic_positive_ion_source": "06c9444eda41eb5cc47e28485db5f8e95dba64a52e93131ca2fcc1378367f433",
+    "h25_atomic_positive_ion": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01",
+    "h25_molecular_positive_ion": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4"
+  },
+  "protected_original_ei_rate_sha256": {
+    "EI-415_O2_X.txt": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+    "EI-401_O2_X.txt": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+    "EI-941_O_3P.txt": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+    "EI-407_O2_X.txt": "2565be45b9a13204583b6714a7d1b581cf29c157c78ac502d665649e4065b359",
+    "EI-2069_O2_a1Delta.txt": "5eba74c1870e0635a3e316e143961e9f04e259675ddad00fd8653de28980644a"
+  },
+  "h25": {
+    "source_object": "h25_progress",
+    "block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+    "property_name": "R_H25",
+    "law": "1.204428152e7*(300.0/tg)^0.4*cp*c2",
+    "rate_table": "NONE (analytical)",
+    "species_signs": {
+      "O2p": "+1",
+      "Op": "-1"
+    }
+  },
+  "local_independent_full_receipt_sha256": "46841c4cbe0c11f186956f089ac1c7bc903db2113e38199037d1a3b3300efc9e",
+  "limits": {
+    "private_rate_bytes_locally_rehashed": false,
+    "private_rate_tables_in_public_p2_artifact": false,
+    "native_warehouse_generated_three_sources_verified": false,
+    "native_p2": "NOT_RUN",
+    "native_p3": "NOT_RUN",
+    "native_p4": "NOT_RUN",
+    "p4_x": "PENDING",
+    "scientific_acceptance": "SCIENCE_HOLD"
+  },
+  "verdict": "P4-S8_SOURCE_STATIC_BOUND_PASS / NEW_ONLY_RUNTIME_HOLD"
+}
