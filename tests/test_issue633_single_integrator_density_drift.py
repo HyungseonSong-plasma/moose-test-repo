@@ -43,6 +43,7 @@ def test_generated_fv_drift_skips_exact_c2_wall_sides_from_json():
         'bc.variable == variable',
         'bc.type == "FVFunctorNeumannBC"',
         'bc.type == "FVLogMolarDielectricFluxBC"',
+        'drift_params.set<MooseEnum>("advected_interp_method") = "upwind";',
         "wall_sidesets.insert(boundary.mesh_boundaries.begin(),",
         'if (mechanism.hasIonWalls() && wall_sidesets.size() != 8)',
         'drift_params.set<std::vector<BoundaryName>>("boundaries_to_avoid")',
