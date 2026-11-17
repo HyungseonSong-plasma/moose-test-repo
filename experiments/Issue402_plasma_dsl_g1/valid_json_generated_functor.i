@@ -23,6 +23,8 @@
       [DriftDiffusion]
         [Continuity]
           fvm_species = O2p
+          # P2-only binding/JSON coefficient fixture, not a full FV equation.
+          dont_create_kernels = true
         []
       []
     []
