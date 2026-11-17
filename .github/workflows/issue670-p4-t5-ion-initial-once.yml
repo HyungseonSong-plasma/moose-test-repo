@@ -116,8 +116,8 @@ jobs:
                   section=x["section"];name=x["object_name"];p=x["params"]
                   if section in ("Variables","FVVariables") and name in targets|legacy:
                       out.append({"cause":"EXTERNAL_SOLVER_VARIABLE","object":x})
-                  if section in ("ICs","FVICs","FVInitialConditions","InitialConditions") and
-                     p.get("variable") in targets|legacy:
+                  if (section in ("ICs","FVICs","FVInitialConditions","InitialConditions") and
+                    p.get("variable") in (targets | legacy)):
                       out.append({"cause":"EXTERNAL_ION_IC","object":x})
               return out
           report_cases={}
