@@ -313,6 +313,10 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     // Do not admit a separate JSON override that can silently diverge.
     if (root.is_object() && root.contains("boundaries_to_avoid"))
       fail(file, "boundaries_to_avoid is derived from JSON boundaries; remove the duplicate field");
+    if (root.is_object() &&
+        (root.contains("migration_smoothing_width") ||
+         root.contains("wall_migration_gate_smoothing_width")))
+      fail(file, "migration_smoothing_width is MOOSE [Continuity]-only, not JSON");
     if (!root.is_object() || !root.contains("species") ||
         !root.contains("equations") || !root.contains("reactions") ||
         !root["species"].is_object() || !root["equations"].is_object() ||
