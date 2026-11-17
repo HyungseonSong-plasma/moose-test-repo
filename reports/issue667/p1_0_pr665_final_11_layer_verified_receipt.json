@@ -35,7 +35,18 @@
     "science": "SCIENCE_HOLD",
     "private_rate_table_bytes_in_artifact": false,
     "original_archive_writes": 0,
-    "main_or_pr665_mutation": 0
+    "main_or_pr665_mutation": 0,
+    "independent_second_ci_crosscheck": {
+      "run_id": 44180190753,
+      "artifact_id": 14372315897,
+      "artifact_outer_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+      "byte_identical_files": 22,
+      "compared_files": 22,
+      "discrepancies": 0,
+      "status": "PASS",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44180190753/artifacts/14372315897"
+    }
   },
   "cases": {
     "417": {
@@ -100,7 +111,7 @@
     }
   },
   "prior_partial_manifest": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/802de3a494838bdf624b935f59d315ae785aab14/reports/issue667/p1_0_common_manifest_partial.json",
-  "next_obligation": "P1-E: reconcile all 29 independent receipts at this source_head; P2 #668: separately retire 26 native ion objects in disposable Scratch, then later Native P2; do not promote scientific acceptance",
+  "next_obligation": "P1-E: merge 29 receipts against exact SHA pin shared by independent artifacts 14372278074 and 14372315897; complete P1 owner census independently. P2 #668 new-only ion26 retirement still separate.",
   "unresolved": [
     "All 29 P1 worker receipts not yet reconciled by P1-E; common P1-0 pin does not imply P1-E closure",
     "PR #665 hybrid 11-layer retains native 26 owners; actual New-only 26->24 cutover, Native P2, P3, P4 remain future separate gates"
