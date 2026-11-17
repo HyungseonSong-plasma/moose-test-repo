@@ -158,3 +158,8 @@ def test_wall_and_dielectric_classes_are_registered_by_ion2_donor():
     assert 'registerMooseObject("PhysicsApp", FVLogMolarDielectricFluxBC);' in dielectric_bc
     assert 'return gamma_signed / PHYSICS_CONSTANTS::N_A;' in dielectric_bc
     assert 'species_id + "_wall_" + suffix' in wall
+    # Unity translation units include the legacy and C2 material together.
+    # Helper functions need unique linkage names; laws and factory identities stay unchanged.
+    assert "namespace IonWallC2Detail" in wall
+    for helper in ("isFaceArg", "outwardPositivePart", "outwardNormal", "faceElectricField"):
+        assert "IonWallC2Detail::" + helper in wall
