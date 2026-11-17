@@ -75,7 +75,7 @@ def validate(overlay: dict, selected=ION_IDS) -> dict[str, int]:
     current = overlay.get("ion_surface_current")
     require(isinstance(current, dict) and
             set(current) == {"electron_wall_number_flux"} and
-            current["electron_wall_number_flux"] == "e_wall_number_flux",
+            current["electron_wall_number_flux"] == "electron_wall_number_flux",
             "INVALID_SURFACE_CURRENT_ELECTRON_CONSUMER")
 
     boundaries = overlay.get("boundaries")
