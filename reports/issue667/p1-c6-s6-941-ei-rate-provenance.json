@@ -1,0 +1,153 @@
+{
+  "schema": "issue667.p1_c6.s6_941.rate_provenance.v1",
+  "task_id": "P1-C6",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "case": "S6-941-407-2069-H25",
+  "status": "PASS_PUBLIC_SOURCE_AND_11_LAYER_PRODUCER_EDGES__HOLD_PRIVATE_RATE_SHA",
+  "validation": {
+    "final_11_layer_ci_run": 44180190753,
+    "final_11_layer_artifact_id": 14372315897,
+    "final_artifact_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "final_layers_verified": 11,
+    "original_10_layer_artifact_id": 13677375813,
+    "original_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+    "original_layers_verified": 10,
+    "progress_producer_count": 3,
+    "negative_mutation_tests_rejected": 8,
+    "private_rate_file_bytes_read": false,
+    "private_rate_sha256_recomputed": false,
+    "public_rate_table_row_count_each": 100,
+    "public_table_content_source": "physics_app/data/electron_impact/boltz/*.txt at pinned PR665 HEAD; hash recomputed on text obtained through live connected GitHub",
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "rates": [
+    {
+      "reaction": "EI-415",
+      "layer_ordinal": 5,
+      "layer_file": "issue477_S2-415_generation_overlay.i",
+      "final_layer_file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+      "original_layer_file_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
+      "producer": "ei415_progress",
+      "producer_factory": "EIRateCoefMaterial",
+      "producer_block_sha256": "aa7b0f2e016f8dc367817c52a29e20d586e4db0c6840c7f377d4cc2970d52894",
+      "original_producer_block_sha256": "a209ed7aa0c184b1dfa2c7dddacf46eff075294abb363568753f776506a9a371",
+      "rate_functor": "R_EI415",
+      "target_molar_concentration": "c_O2_EI415",
+      "source_functor": "S_O2p_molar_EI415",
+      "consumer": "ei415_o2p_source",
+      "consumer_variable": "log_O2p",
+      "private_rate_path": "private_rates/EI-415_O2_X.txt",
+      "expected_private_rate_sha256_not_recomputed": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+      "public_table_sha256": "41cbaea0652b15984dbce22a37938eb132a312070aef62949facad603b466c33",
+      "public_git_blob_sha1": "4ece8676cd98d14bab534edbdf1a6fd9c8be7cf6",
+      "old_to_new_deltas": {
+        "type": [
+          "PhysicsElectronImpactRateMaterial",
+          "EIRateCoefMaterial"
+        ],
+        "mean_energy": [
+          "mean_en_solved",
+          "e_energy_eV"
+        ],
+        "reaction_progress": [
+          "R_ion_O2",
+          "R_EI415"
+        ]
+      },
+      "public_rate_path": "physics_app/data/electron_impact/boltz/EI-415_O2_X.txt",
+      "progress_input_factors": {
+        "mean_energy": "e_energy_eV",
+        "electron_number_density": "n_e_physical",
+        "target_molar_concentration": "c_O2_EI415"
+      },
+      "source_to_consumer_edge": "ei415_progress => R_EI415 => S_O2p_molar_EI415 => ei415_o2p_source => log_O2p",
+      "public_table_is_byte_parity_with_private_rate": false
+    },
+    {
+      "reaction": "EI-401",
+      "layer_ordinal": 6,
+      "layer_file": "issue477_S3-415-401_extra_overlay.i",
+      "final_layer_file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+      "original_layer_file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+      "producer": "ei401_progress",
+      "producer_factory": "EIRateCoefMaterial",
+      "producer_block_sha256": "ae89ee34938fe2c654992a3c3a5f1c91a59b2e76fe3959daf96855949d54da09",
+      "original_producer_block_sha256": "3e96329c05d1604d1e4eda9486c4f13ac614a64b2544e635b133955747626b0b",
+      "rate_functor": "R_EI401",
+      "target_molar_concentration": "c_O2_EI401",
+      "source_functor": "S_Om_molar_EI401",
+      "consumer": "ei401_negative_ion_source",
+      "consumer_variable": "log_Om",
+      "private_rate_path": "private_rates/EI-401_O2_X.txt",
+      "expected_private_rate_sha256_not_recomputed": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+      "public_table_sha256": "b66907805058dad1abcfc562f069ca219897df05015cedcd0d6f2bbb6f14c6e5",
+      "public_git_blob_sha1": "24df46abe6bf001be650785415446e5be245622a",
+      "old_to_new_deltas": {
+        "type": [
+          "PhysicsElectronImpactRateMaterial",
+          "EIRateCoefMaterial"
+        ],
+        "mean_energy": [
+          "mean_en_solved",
+          "e_energy_eV"
+        ]
+      },
+      "public_rate_path": "physics_app/data/electron_impact/boltz/EI-401_O2_X.txt",
+      "progress_input_factors": {
+        "mean_energy": "e_energy_eV",
+        "electron_number_density": "n_e_physical",
+        "target_molar_concentration": "c_O2_EI401"
+      },
+      "source_to_consumer_edge": "ei401_progress => R_EI401 => S_Om_molar_EI401 => ei401_negative_ion_source => log_Om",
+      "public_table_is_byte_parity_with_private_rate": false
+    },
+    {
+      "reaction": "EI-941",
+      "layer_ordinal": 7,
+      "layer_file": "issue477_S4-401-941_op_ionization_overlay.i",
+      "final_layer_file_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43",
+      "original_layer_file_sha256": "0eabf2873f31704362493277bf760b35c4c302bf2b3e60617da245bf864b68b3",
+      "producer": "ei941_progress",
+      "producer_factory": "EIRateCoefMaterial",
+      "producer_block_sha256": "37327e9f9b6215f8675af8add85b93d107962ab2b83f5bc47f14350c2815fc46",
+      "original_producer_block_sha256": "eb01000235bbad6ebc7bd45607af11da4ead965c907042ec89075b973ba146bc",
+      "rate_functor": "R_EI941",
+      "target_molar_concentration": "c_O_EI941",
+      "source_functor": "S_Op_molar_EI941",
+      "consumer": "ei941_atomic_positive_ion_source",
+      "consumer_variable": "log_Op",
+      "private_rate_path": "private_rates/EI-941_O_3P.txt",
+      "expected_private_rate_sha256_not_recomputed": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+      "public_table_sha256": "5b2e5cf0f51de9d5b96b73befea84e619eecb1032abaa2334e7bbbb46212336e",
+      "public_git_blob_sha1": "1c85c36afbc9249f79aaff09cdcb564700649b9b",
+      "old_to_new_deltas": {
+        "type": [
+          "PhysicsElectronImpactRateMaterial",
+          "EIRateCoefMaterial"
+        ],
+        "mean_energy": [
+          "mean_en_solved",
+          "e_energy_eV"
+        ]
+      },
+      "public_rate_path": "physics_app/data/electron_impact/boltz/EI-941_O_3P.txt",
+      "progress_input_factors": {
+        "mean_energy": "e_energy_eV",
+        "electron_number_density": "n_e_physical",
+        "target_molar_concentration": "c_O_EI941"
+      },
+      "source_to_consumer_edge": "ei941_progress => R_EI941 => S_Op_molar_EI941 => ei941_atomic_positive_ion_source => log_Op",
+      "public_table_is_byte_parity_with_private_rate": false
+    }
+  ],
+  "unsupported_claims": [
+    "Original Private Rate SHA256 was recorded in historical manifest; original table bytes intentionally unavailable. No independent private SHA recomputation.",
+    "Public Boltzmann EI tables are not a byte-identical replacement claim for historical private rates.",
+    "No native --check-input, P3 or P4 was run; runtime generated functor reachability and science parity remain unverified.",
+    "Prior legacy generator Factory metadata is superseded for actual final Scratch D by EIRateCoefMaterial; only observed transform deltas above are allowed."
+  ]
+}
