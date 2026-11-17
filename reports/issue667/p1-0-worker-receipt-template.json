@@ -1,0 +1,24 @@
+{
+  "schema": "issue667.p1_worker_receipt.v1",
+  "task_id": null,
+  "case": null,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "common_pin_path": "reports/issue667/p1-0-common-pin.json",
+  "common_pin_blob_sha": null,
+  "layer_ordinal": null,
+  "file_path": null,
+  "file_sha256": null,
+  "section": null,
+  "object_name": null,
+  "factory_type": null,
+  "variable": null,
+  "relevant_parameters": {},
+  "block_sha256": null,
+  "provider_consumer_edges": [],
+  "status": "HOLD",
+  "unresolved": [
+    "P1-0 final 11-layer readback and transformed block hash verification pending"
+  ],
+  "native_p2": "NOT_RUN",
+  "science": "SCIENCE_HOLD"
+}
