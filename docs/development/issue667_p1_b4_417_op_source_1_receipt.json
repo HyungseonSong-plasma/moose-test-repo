@@ -3,8 +3,8 @@
   "task_id": "P1-B4",
   "case": "S6-417",
   "owner_scope": "Op Source #1 only",
-  "status": "HOLD_PENDING_P1_0_DIRECT_11_LAYER_READBACK",
-  "evidence_class": "PINNED_GENERATOR_STATIC_CANDIDATE_NOT_ARCHIVED_11_LAYER",
+  "status": "PASS_ARCHIVED_SOURCE_AND_REPRODUCED_C_11_LAYER__PR665_FINAL_STAGED_HOLD",
+  "evidence_class": "DIRECT_HISTORICAL_ZIP_BYTES_AND_VERIFIED_11_LAYER_C_SCRATCH_RECONSTRUCTION",
   "source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
   "observed_repository_main_sha": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
   "observed_integration_pr": {
@@ -22,9 +22,9 @@
     "generation_call": "prepare_s3_401_op_production.py assigns text=overlay_module.CONTENT then new_overlay.write_text(text)"
   },
   "layer_ordinal": 7,
-  "layer_ordinal_basis": "inferred: six verified S3 parent layers plus S4 EI417 overlay; NOT checked against a P1-0 S6-417 manifest",
+  "layer_ordinal_basis": "direct readback of pinned artifact #13677089020 case_manifest.input_paths 7th entry, preserved as #7 in derived C 11-layer scratch",
   "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
-  "file_sha256": null,
+  "file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
   "generated_expected_file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
   "section": "FVKernels",
   "object_name": "legacy8_h05_ei417_op",
@@ -35,7 +35,7 @@
     "coef": "1.0",
     "block": "plasma"
   },
-  "block_sha256": null,
+  "block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e",
   "generated_expected_block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e",
   "generated_block_sha256_scope": "exact LF-delimited text from 2-space-indented [legacy8_h05_ei417_op] through its closing '  []\\n', 7 lines",
   "generator_duplicate_object_count": 1,
@@ -54,32 +54,31 @@
   "source_links": [
     "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/29d1acc6ef7969908b86719e4b95c73a1565136d/.github/scripts/oxygen_legacy8_h05_ei417_100us.py#L27-L152",
     "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/ebcfd9e662bc40f0473d8da05da95d11b61789f8/experiments/Issue477_electron_shape/prepare_s3_401_op_production.py#L181-L197",
-    "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/667"
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/667",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/802de3a494838bdf624b935f59d315ae785aab14/reports/issue667/p1_0_common_manifest_partial.json",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42589883028"
   ],
   "validation": {
     "performed": [
-      "read exact pinned generator blob",
-      "extract immutable generator CONTENT literal",
-      "check exact object presence once",
-      "compute generated overlay and kernel block SHA-256",
-      "verify SHA-256 implementation against abc known digest",
-      "read current issue #667, main HEAD, PR #665"
+      "download immutable historical S6-417 artifact #13677089020 ZIP",
+      "SHA-256 verify ZIP matches historical 441eb637... immutable pin",
+      "read actual 10 `.i` entries in artifact and compare all 10 bytes SHA to case_manifest.json",
+      "extract exact B4 and B5 FVKernels object block bytes; recompute SHA-256 from raw archived bytes",
+      "independently match B4 generator expectation and B5 prior static receipt",
+      "reproduce exact prior C single-kernel migration Scratch 11-layer (remove ne_transport from first source; append deterministic migrated_continuity.i)",
+      "check both B4 and B5 occur once in original 10 and C Scratch 11; different name, functor, layer, SHA",
+      "read archived 417 and 941 native ion kernel 14/BC 12 owner totals",
+      "read-back verified common P1-0 partial pin branch and this dedicated B4 branch"
     ],
     "not_performed": [
-      "P1-0 immutable 11-layer manifest verification",
-      "actual archived S6-417 overlay file readback",
-      "actual archived block SHA-256 comparison",
-      "include chain identity",
-      "cross-slot B4/B5 source uniqueness direct 11-layer check",
-      "Native P1/P2/P3/P4",
-      "CI"
+      "direct #665 final Chemistry/New-only staged Scratch 11-layer byte readback",
+      "source-to-runtime private rate table byte rehash",
+      "Native P2, P3, P4, scientific parity"
     ]
   },
   "unresolved": [
-    "Issue #667 P1-0 manifest/ten original plus migrated continuity readback is not yet recorded in active issue body or comments",
-    "Bind candidate to exact S6-417 layer ordinal, file byte SHA-256, resolved include path and block SHA-256 using authoritative P1-0 manifest",
-    "Independently compare the other Op source assigned to P1-B5 to exclude duplicate assignment",
-    "Check whether stage transforms altered the kernel block (e.g. log_nop to log_Op); generated-historical SHA must not be promoted to staged SHA"
+    "P1-0 is PARTIAL: PR #665 final Chemistry/New-only staged Scratch 11-layer exact byte SHA differs by construction from the archived/C single-kernel candidate and remains unverified",
+    "P1-E must verify exact latest PR #665 final staged 11-layer full file+block SHA and no new duplicate owners before final promotion"
   ],
   "next_action": "P1-0 manifest becomes available -> re-read exact S6-417 layer and validate candidate source bytes and block SHA; then promote B4 only if direct evidence matches; otherwise HOLD",
   "invariant_flags": {
@@ -89,5 +88,51 @@
     "pr665_modified": false,
     "science_hold": true,
     "new_only_s6_p2_hold": true
+  },
+  "direct_archive": {
+    "artifact_id": 13677089020,
+    "action_run_id": 42589883028,
+    "archive_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "archive_case_manifest_sha256": "b56df6473d3a6e0fefc398f93acacc3afd2a19444135fd2c8d24b2f85b4e1082",
+    "file_sha_matches_case_manifest": true,
+    "source_kernel_block_readback": true,
+    "all_ten_input_layers_manifest_match": true
+  },
+  "p1_0_common_pin": {
+    "commit_sha": "802de3a494838bdf624b935f59d315ae785aab14",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/802de3a494838bdf624b935f59d315ae785aab14/reports/issue667/p1_0_common_manifest_partial.json",
+    "status": "PARTIAL_PASS_ARCHIVED_10_CANDIDATE_11_RECONSTRUCTED_PR665_FINAL_HOLD",
+    "derived_11th_sha256": "90012682cc301c7895a9f8240f6cb0646faf1f3d7f4a6173ac00ecc7352c906e",
+    "scratch_reconstruction_method": "single-kernel C migration only, not the latest PR #665 final chemistry/new-only stage"
+  },
+  "peer_b5": {
+    "task_id": "P1-B5",
+    "object_name": "h25_atomic_positive_ion",
+    "layer_ordinal": 10,
+    "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+    "file_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+    "block_sha256": "988613b29ab8eea9d63e1ba2401cbfdabe679800e4a6ee516fe3f7d940b83e08",
+    "factory_type": "FVCoupledForce",
+    "variable": "log_nop",
+    "v": "S_Op_molar_H25",
+    "archived_10_layer_object_occurrences": 1,
+    "derived_C_11_layer_object_occurrences": 1,
+    "owner_task_receipt": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9237a19b1f2d2bbd2812c450c2a180d7546702d9/reports/issue667/p1-b5-s6-417-op-h25-source.json"
+  },
+  "cross_verification": {
+    "B4_archived_10_layer_occurrences": 1,
+    "B5_archived_10_layer_occurrences": 1,
+    "B4_derived_C_11_layer_occurrences": 1,
+    "B5_derived_C_11_layer_occurrences": 1,
+    "different_object_names": true,
+    "different_source_functors": true,
+    "different_blocks": true,
+    "different_source_layers": true,
+    "duplicate_assignment": false,
+    "FVKernels_section_and_FVCoupledForce_both": true,
+    "S6_417_ion_fvkernels": 14,
+    "S6_417_ion_fvbcs": 12,
+    "S6_417_extra_source_fvkernels": 5,
+    "native_p2_claim": false
   }
 }
