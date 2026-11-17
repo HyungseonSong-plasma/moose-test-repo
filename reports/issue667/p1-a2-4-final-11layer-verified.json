@@ -1,0 +1,140 @@
+{
+  "schema": "issue667.p1_a2_4.final_11layer_verified.v1",
+  "issue": 667,
+  "task_id": "P1-A2-4",
+  "date_utc": "2026-11-17",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_ref": "PR #665 exact pinned integration source",
+  "status": "PASS_SCRATCH_D_INPUT_BYTES_ONLY",
+  "evidence_scope": "Actually staged and artifact-preserved hybrid Scratch D 11 .i files. Not New-only cutover or Native P2/P3/P4.",
+  "producer": {
+    "run_id": 44180190753,
+    "artifact_id": 14372315897,
+    "artifact_name": "issue667-p1-0-sourcepin-9c15a4f-44180190753-1",
+    "archive_digest": "sha256:962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "status": "SUCCESS"
+  },
+  "independent_verifier": {
+    "run_id": 44181889413,
+    "job_id": 134388083324,
+    "commit_sha": "cecbd66513c20e42c2f586cd7e6fcd672117e0d1",
+    "artifact_id": 14371842780,
+    "artifact_name": "issue667-p1-a2-4-readback-44181889413-1",
+    "artifact_digest": "sha256:d89e1f637dd7a0e74d0269420e58d7a5d14a148aea2e5f3b73b88dfd5465ff05",
+    "conclusion": "SUCCESS",
+    "logic": "Independent byte SHA-256 over 11 inputs, block-byte parser, sourcepin manifest matching, exact 3-object alias/factory/flux/BC checks, mutation-negative controls"
+  },
+  "cases": {
+    "417": {
+      "status": "PASS",
+      "file_sha256": "11/11 independent match to P1-0 producer manifest",
+      "focus_ring_bc": "3/3 exactly once",
+      "negative_controls_rejected": "3/3",
+      "layer_ordinal": 1,
+      "objects": [
+        {
+          "object_name": "ion_focus_ring_dielectric",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "variable": "log_O2p",
+          "signed_number_flux": "O2p_wall_number_flux",
+          "block_sha256": "830e2cddd31b70308732cf4dab3e7d4327d38c34d0200ec50da4fcf011eee761",
+          "section": "FVBCs",
+          "layer_ordinal": 1,
+          "boundary": "plasma_focus_ring",
+          "explicit_factor": "ABSENT",
+          "effective_Cxx_conversion": "+1/N_A",
+          "status": "EXACT_BYTES_READBACK_PASS"
+        },
+        {
+          "object_name": "negative_ion_focus_ring_dielectric",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "variable": "log_Om",
+          "signed_number_flux": "Om_wall_number_flux",
+          "block_sha256": "b96509870ac57132a0d71588709753b065ec699afe36917cf715480e5480febe",
+          "section": "FVBCs",
+          "layer_ordinal": 1,
+          "boundary": "plasma_focus_ring",
+          "explicit_factor": "ABSENT",
+          "effective_Cxx_conversion": "+1/N_A",
+          "status": "EXACT_BYTES_READBACK_PASS"
+        },
+        {
+          "object_name": "atomic_positive_ion_focus_ring_dielectric",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "variable": "log_Op",
+          "signed_number_flux": "Op_wall_number_flux",
+          "block_sha256": "bd7e0cf631d41a4670e1a744af6c94bc66d57e1aace960acb183249906425e62",
+          "section": "FVBCs",
+          "layer_ordinal": 1,
+          "boundary": "plasma_focus_ring",
+          "explicit_factor": "ABSENT",
+          "effective_Cxx_conversion": "+1/N_A",
+          "status": "EXACT_BYTES_READBACK_PASS"
+        }
+      ]
+    },
+    "941": {
+      "status": "PASS",
+      "file_sha256": "11/11 independent match to P1-0 producer manifest",
+      "focus_ring_bc": "3/3 exactly once",
+      "negative_controls_rejected": "3/3",
+      "layer_ordinal": 1,
+      "objects": [
+        {
+          "object_name": "ion_focus_ring_dielectric",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "variable": "log_O2p",
+          "signed_number_flux": "O2p_wall_number_flux",
+          "block_sha256": "830e2cddd31b70308732cf4dab3e7d4327d38c34d0200ec50da4fcf011eee761",
+          "section": "FVBCs",
+          "layer_ordinal": 1,
+          "boundary": "plasma_focus_ring",
+          "explicit_factor": "ABSENT",
+          "effective_Cxx_conversion": "+1/N_A",
+          "status": "EXACT_BYTES_READBACK_PASS"
+        },
+        {
+          "object_name": "negative_ion_focus_ring_dielectric",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "variable": "log_Om",
+          "signed_number_flux": "Om_wall_number_flux",
+          "block_sha256": "b96509870ac57132a0d71588709753b065ec699afe36917cf715480e5480febe",
+          "section": "FVBCs",
+          "layer_ordinal": 1,
+          "boundary": "plasma_focus_ring",
+          "explicit_factor": "ABSENT",
+          "effective_Cxx_conversion": "+1/N_A",
+          "status": "EXACT_BYTES_READBACK_PASS"
+        },
+        {
+          "object_name": "atomic_positive_ion_focus_ring_dielectric",
+          "factory_type": "PhysicsFVLogMolarDielectricFluxBC",
+          "variable": "log_Op",
+          "signed_number_flux": "Op_wall_number_flux",
+          "block_sha256": "bd7e0cf631d41a4670e1a744af6c94bc66d57e1aace960acb183249906425e62",
+          "section": "FVBCs",
+          "layer_ordinal": 1,
+          "boundary": "plasma_focus_ring",
+          "explicit_factor": "ABSENT",
+          "effective_Cxx_conversion": "+1/N_A",
+          "status": "EXACT_BYTES_READBACK_PASS"
+        }
+      ]
+    }
+  },
+  "observations": [
+    "Both cases retain identical canonicalized Focus ring BC byte blocks in their validated Scratch D layer 1.",
+    "The archive-original C0, repository C0 source, and transformed final Scratch D blocks have different SHA; no cross-stage SHA promotion.",
+    "Canonical Scratch D Flux identifiers are O2p_wall_number_flux, Om_wall_number_flux and Op_wall_number_flux.",
+    "Factor parameter absent from the three blocks. Legacy registered C++ residual divides signed_number_flux by N_A."
+  ],
+  "negative_claims": [
+    "No complete P1-E 29-slot integration acceptance",
+    "No New-only 26-to-24 cutover verification",
+    "No Native Physics P1/P2/P3/P4 execution or science parity claim",
+    "Private Rate original bytes were not included or inspected"
+  ],
+  "next_gate": "P1-E independently integrate all 29 receipts and 26 owner objects for both case inputs, preserve unique producer/consumer edges; later P2 #668 New-only retirement is independently gated",
+  "one_shot_verifier_workflow": "removed after successful CI; no permanent workflow modification"
+}
