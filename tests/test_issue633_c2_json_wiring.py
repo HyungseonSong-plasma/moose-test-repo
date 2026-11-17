@@ -143,7 +143,8 @@ def test_cpp_factory_generation_and_legacy_fem_path_stays_separate():
     assert 'params.set<std::string>("species_id") = id;' in src
     assert '_problem->addFunctorMaterial(type, id + "_wall", params);' in src
     assert 'params.set<MooseFunctorName>("signed_number_flux") = bc.signed_number_flux;' in src
-    assert 'params.set<Real>("factor") = bc.factor;' in src
+    assert 'params.set<MooseFunctorName>("factor") = factor_value.str();' in src
+    assert 'std::setprecision(std::numeric_limits<Real>::max_digits10)' in src
     assert src.count('_problem->addFVBC(bc.type, name, params);') == 2
     assert '_problem->addBoundaryCondition(bc.type, name, params);' in src
     for side in ("cover", "wafer", "focus_ring"):
