@@ -177,19 +177,22 @@
       "coef": 1
     },
     "Cpp_implementation": "Chemistry::addFunctorMaterials projects reaction.net(id)*R_k into one ADParsedFunctorMaterial per species; DDContinuityEq::addFVKernels generates one FVCoupledForce consuming S_Op_molar",
-    "generated_warehouse_objects_observed": false
+    "generated_warehouse_objects_observed": false,
+    "physics_overlay_chemistry_activation_verified": true,
+    "physics_overlay_chemistry_activation_block": "[Physics]/[Plasmas]/[Transport]/[Chemistry] block=plasma"
   },
   "independent_verification": {
-    "verifier_sha256": null,
-    "local_full_receipt_sha256": "11ba3cc173e724cca6ad5a52480017de4c46c0a91111ffacdf968d2acc19b7e8",
-    "public_bundle_sha256": "40d8669a281761df202b144f8a34ae2fa336b0281b5e71af0ab9e3479598d4c1",
+    "verifier_sha256": "0ec6cf03be22d6b4782e3c4713abcf9a8f9d73528c27f1ca578ab6940ef768a1",
+    "local_full_receipt_sha256": "d144a0a3b83fd47967478f0312af81609aa891f767a4b29a27b35d763970c9c8",
+    "public_bundle_sha256": "09c45df3cdd144c739559b2c6bd1c69d240afa65242deac40646b9a6e99b3a56",
     "original_historical_zip_checked": true,
     "p1_zip_sha_checked": true,
     "p2_zip_digest_matched_GitHub": true,
     "exact_source_blocks_checked": 8,
     "preserved_source_rate_related_blocks": 6,
-    "synthetic_negative_mutations_rejected": "19/19",
-    "native_negative_tests_run": 0
+    "synthetic_negative_mutations_rejected": "20/20",
+    "native_negative_tests_run": 0,
+    "synthetic_includes_missing_Chemistry_activation_negative": true
   },
   "unresolved": [
     "P2 source-only Artifact proves 2 legacy Op source FV kernels retired, NOT that Chemistry and DDContinuityEq generated exactly one live Op material+FVKernel in the MOOSE Warehouse. P5 Native P2 must prove it.",
