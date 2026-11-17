@@ -1452,8 +1452,9 @@ PlasmasAction::act()
         if (!selected.count(id))
           mooseError("C2 FV BC targets unselected ion: ", name);
         const std::string flux = id + "_wall_number_flux";
-        const std::set<std::string> sides(boundary.mesh_boundaries.begin(),
-                                           boundary.mesh_boundaries.end());
+        const auto & effective_sides =
+            bc.mesh_boundaries.empty() ? boundary.mesh_boundaries : bc.mesh_boundaries;
+        const std::set<std::string> sides(effective_sides.begin(), effective_sides.end());
         if (normal)
         {
           if (name != id + "_wall" || sides != general_sides || bc.functor != flux)
