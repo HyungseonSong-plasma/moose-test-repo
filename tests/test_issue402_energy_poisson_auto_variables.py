@@ -10,7 +10,8 @@ def test_energy_autogeneration_requires_positive_molar_energy():
     for token in ('"initial_molar_energy_density_eV"', "std::isfinite(initial)",
                   "initial <= 0.0", "variableExists(variable",
                   "getProblem().addVariable(", "getProblem().addInitialCondition(",
-                  'std::log(getParam<Real>("initial_molar_energy_density_eV"))',
+                  'std::log(initial_energy)',
+                  '1.5 * (*electron.temperature_eV) * (*electron.initial_number_density)',
                   '"add_variables_physics"', '"add_ics_physics"'):
         assert token in code
 
