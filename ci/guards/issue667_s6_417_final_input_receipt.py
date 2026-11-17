@@ -158,7 +158,10 @@ def produce(control: Path, archive: Path, output: Path):
             r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
             r"^  \[\](?:\r?\n|$)"
         )
-        matches = list(pattern.finditer(text))
+        matches = [
+            m for m in pattern.finditer(text)
+            if re.findall(r"(?m)^\[([A-Za-z0-9_]+)\]\s*$", text[:m.start()])[-1:] == ["FVKernels"]
+        ]
         if len(matches) != 1 or not re.search(
             r"(?m)^    v\s*=\s*" + re.escape(producer) + r"\s*$",
             matches[0].group("body"),
