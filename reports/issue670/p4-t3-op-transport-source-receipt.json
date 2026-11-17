@@ -1,0 +1,166 @@
+{
+  "schema": "issue670.p4-t3-op-mobility-diffusivity-source-bound.v1",
+  "task_id": "P4-T3",
+  "issue": 670,
+  "case": [
+    "417",
+    "941"
+  ],
+  "verdict": {
+    "source_static": "PASS_VALUES_SIGN_PROVENANCE",
+    "single_owner": "HOLD_DOUBLE_PROVIDER_DECLARATION",
+    "native_acceptance": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "pin": {
+    "original_pr665_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "current_pr665_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "p2_pr674": "MERGED_INTO_665",
+    "p2_merge_commit": "3c961e94533f9676137fb96b2b0bae7e89653914",
+    "p2_source_ci_sha": "15f3e387b1c2c3b95c10232c6fe9d5884565c8f3",
+    "p2_run": 44199587771,
+    "p2_artifact": 14380831538,
+    "p2_artifact_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "p1_run": 44182628032,
+    "p1_artifact": 14372278070,
+    "p1_artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "active_contract_unchanged_at_latest_pr_head": {
+      "JSON_417_git_blob": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "JSON_941_git_blob": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "DDContinuityEq_C_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "DDTransportMaterial_C_git_blob": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+      "Chemistry_C_git_blob": "045de080e3d836d75495b1749d75d5d3deea2330"
+    },
+    "important": "CI archive inputs are bound to original exact source pin, not an independent latest-b5c1de full rerun. Relevant JSON/C++ byte-identity checked at latest integrated PR HEAD."
+  },
+  "common": {
+    "original_archive_C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+    "P1_hybrid_C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "P2_production_C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+    "C0_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "original_legacy": {
+      "material_owner": "[FunctorMaterials]/constants",
+      "material_block_sha256": "c6f05531f908138bac28975027618968bb2cd72e7364d0f260679eabc5a5092e",
+      "mobility_name": "atomic_positive_ion_mobility",
+      "mobility_value": "10",
+      "diffusivity_name": "atomic_positive_ion_diffusion",
+      "diffusivity_value": "0.25851999786435537",
+      "nop_drift_sha256": "621f25032651bd4d30b640475d78c753e9f9460ad7548c335d305ead05c9b36f",
+      "nop_diffusion_sha256": "7a1ff2d22ffb8669b7a5394f79bd013affd36788b38460c921745b2c80f1f057",
+      "charge_number": "+1"
+    },
+    "P1_hybrid": {
+      "nop_drift_sha256": "f6d86fe0188e7341e4ff986a03af71024daa04a132833948a2055439167ceeec",
+      "nop_diffusion_sha256": "8d32aa74ca81921bb14bf83944726aaa7fa46b9ea62c27943099ebc240738708",
+      "mobility_name": "Op_mobility",
+      "diffusivity_name": "Op_diffusivity"
+    },
+    "P2_surviving_source": {
+      "section": "FunctorMaterials",
+      "object_name": "constants",
+      "factory_type": "ADGenericFunctorMaterial",
+      "layer_ordinal": 1,
+      "block_sha256": "f9c4beb247c2f1e7ba286aaf21919c07cc16a659cbf0d01987116506ad72bb73",
+      "variable_or_block": "plasma",
+      "mobility_name": "Op_mobility",
+      "mobility_value": "10",
+      "diffusivity_name": "Op_diffusivity",
+      "diffusivity_value": "0.25851999786435537",
+      "surviving_wall_consumer": "atomic_positive_ion_wall_flux",
+      "surviving_wall_consumer_block_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e",
+      "wall_mobility": "Op_mobility",
+      "wall_charge_number": "+1"
+    },
+    "newonly_JSON_Op_contract": {
+      "species_id": "Op",
+      "elements": {
+        "O": 1
+      },
+      "molar_mass": 0.016,
+      "charge_number": 1,
+      "transport_coef": {
+        "type": "constant",
+        "file": "none",
+        "unit": "physical",
+        "mobility": 10,
+        "diffusivity": 0.25851999786435537
+      }
+    },
+    "generated_physics_path": {
+      "overlay_11_Continuity": "fvm_species='O2p Om Op'",
+      "fem_potential": "potential",
+      "DDContinuityEq_C": "addFunctorMaterials => DDTransportMaterial(model=constant, Op mobility/diffusivity numeric), addFVKernel FVLogMolarDiffusion coeff=Op_diffusivity, FVLogMolarElectrostaticDrift mobility=Op_mobility charge=+1",
+      "DDTransportMaterial_C": "In model=constant (_functor=false) emits Op_mobility and Op_diffusivity through addFunctorProperty; unlike model=functor, no suppression of canonical output names",
+      "duplicate_risk": "C0 ADGenericFunctorMaterial already declares Op_mobility/Op_diffusivity on plasma; source has two coefficient-producing declarations if selected Physics executes",
+      "fix_owner": "P4-X must select exactly one coefficient provider; if removing old C0 Op properties preserve carrier_one and non-target mobility/diffusivity and wall consumer references; verify Warehouse before Native P2"
+    }
+  },
+  "cases": {
+    "417": {
+      "old_archive_artifact": 13677089020,
+      "old_archive_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "p2_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "newonly_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "p1_files_sha": "11/11",
+      "p2_files_sha": "11/11",
+      "old_ion_blocks_removed_sha": "26/26",
+      "native_remaining": 0
+    },
+    "941": {
+      "old_archive_artifact": 13677375813,
+      "old_archive_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "p2_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "newonly_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "p1_files_sha": "11/11",
+      "p2_files_sha": "11/11",
+      "old_ion_blocks_removed_sha": "26/26",
+      "native_remaining": 0
+    }
+  },
+  "independent_verification": {
+    "local_report": "P4-T3_Op_transport_independent_receipt.json",
+    "local_report_sha256": "5138d0b73545e051493dbc51b1b66d2dc2f11f5144eedaf39cd77647b0c1d685",
+    "local_report_size_bytes": 20803,
+    "negative_mutations_rejected": "17/17",
+    "cases_compared": "417 and 941 original 10-layer C0 + P1 all 11-layer files + P2 all 11-layer files + P2 JSON + P2 11th overlay",
+    "exact_old_ion_block_sha_verified": "26/26 per case",
+    "P1_to_P2_file_sha_verified": "11/11 per case",
+    "mutation_classes": [
+      "charge_minus_one",
+      "charge_zero",
+      "mobility_wrong",
+      "mobility_nan",
+      "diffusivity_wrong",
+      "diffusivity_negative",
+      "transport_functor",
+      "transport_lookup",
+      "unit_reduced",
+      "file_extra",
+      "model_untyped",
+      "foreign_source",
+      "wrong_mass",
+      "missing_diffusivity",
+      "missing_charge",
+      "mobility_string",
+      "diffusivity_string"
+    ]
+  },
+  "gates": {
+    "P4_T3_STATIC_VALUE_AND_SIGN": "PASS",
+    "P4_T3_SINGLE_COEFFICIENT_OWNER": "HOLD_STATIC_DOUBLE_PROVIDER",
+    "P2_SOURCE_STAGE": "PASS",
+    "P3_X": "PENDING",
+    "P4_X": "PENDING",
+    "LATEST_HEAD_NEW_NATIVE_WAREHOUSE": "NOT_RUN",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "unresolved": [
+    "Original P2 CI source pin is 9c15a4f, current PR665 HEAD is b5c1de; relevant JSON/C++ Git blobs equal but no latest-head whole-run claim",
+    "Native MOOSE assembly not executed; actual duplicate Functor registration and old wall aliases must be checked by P4-X or Native P2",
+    "Do not remove carrier_one or electron/RF/neutral/non-target constants while fixing Op coefficient ownership"
+  ],
+  "preservation": "Audit and isolated receipt only. No edits to main, PR #665, original archives, new-only JSON, C++, workflows, protected source, or Native science state."
+}
