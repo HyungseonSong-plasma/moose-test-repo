@@ -1,7 +1,7 @@
 {
-  "schema": "issue669.p3_x.source_only.inventory.v1",
+  "schema": "issue669.p3_x.source_only.inventory.v2",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
-  "status": "PASS_ORIGINAL_HYBRID_P2_RETIREMENT_BYTES__HOLD_NEWONLY_OWNERS",
+  "status": "PR674_NEWONLY_SOURCE_STAGE_PASS__P3X_10_OWNER_SHADOW_PASS__HOLD_NATIVE",
   "input_artifacts": {
     "p1_final_hybrid": {
       "ci_run": 44180190753,
@@ -145,5 +145,51 @@
   },
   "full_independent_local_sha_inventory_sha256": "4966a472145ea7cde3c53235f5d26278257d1f3f216aaca88594c97356c91ce2",
   "case_input_hashes": "P1 and P2 ZIP embedded manifests/retirement_receipt.json contain each exact 11-file SHA; full 22-file before/after rehash independently verified in local full inventory.",
-  "safe_scope": "No production runner or Native execution. This evidence records existing Hybrid/P2 staged source files only."
+  "safe_scope": "No production runner or Native execution. This evidence records existing Hybrid/P2 staged source files only. New PR674 exact-byte New-only stage and separate 10-owner shadow were verified later; actual source/production cutover is NOT applied.",
+  "source_branch_stages": {
+    "P2_668_historical_hybrid_retired_ion": {
+      "artifact_id": 14379920938,
+      "recorded_originally_in_this_inventory": true
+    },
+    "P2_668_production_newonly": {
+      "pr": 674,
+      "pr_head": "4185d04ccded7fe1f6b6da8a5ecc2d0cdf339d75",
+      "run_id": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "cases": [
+        "417",
+        "941"
+      ],
+      "newonly_overlay_bound": true,
+      "electron_42row_table_staged_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "both_json_sha_match": true
+    },
+    "P3_X_disposable_shadow": {
+      "source_run": 44199587771,
+      "legacy_bc_blocks_removed": 8,
+      "legacy_functor_blocks_removed": 2,
+      "changed_stage_file_count_per_case": 1,
+      "unchanged_stage_file_count_per_case": 10,
+      "resulting_c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "receipt_file": "reports/issue669/p3-x/shadow_cutover_10owners.json",
+      "native_runtime": "NOT_RUN"
+    }
+  },
+  "source_only_collision_candidates": [
+    {
+      "section": "FunctorMaterials",
+      "name": "electron_physical_density",
+      "original_block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "old_output_functor": "n_e_physical",
+      "target_newonly_owner": "DDEnergyEq generated ADParsedFunctorMaterial"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "electron_wall_flux",
+      "original_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "old_output_functor": "e_wall_number_flux",
+      "target_newonly_owner": "DDEnergyEq generated ESWallFluxMaterial"
+    }
+  ]
 }
