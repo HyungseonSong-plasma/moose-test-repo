@@ -278,7 +278,7 @@ def inspect(layers: dict[str, str], mechanism: dict, contract: str = "new-only")
                         and b["params"].get("species_id") == "e"
                     ) or b["params"].get("property_name") in {
                         "n_e_physical", "e_energy_eV", "e_wall_number_flux"
-                    )
+                    }
                 )
             ]
             if old_materials:
