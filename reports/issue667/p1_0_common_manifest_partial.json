@@ -1,0 +1,249 @@
+{
+  "schema": "issue667.p1_0_common_pin.compact.v1",
+  "status": "PARTIAL_PASS_ARCHIVED_10_CANDIDATE_11_RECONSTRUCTED_PR665_FINAL_HOLD",
+  "source_commit": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "repository_main_observed": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+  "integration_pr": {
+    "number": 665,
+    "head_sha_observed": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "state": "OPEN_DRAFT_UNMERGED"
+  },
+  "archive_action_run": 42589883028,
+  "input_prefix": "experiments/Issue395_powered_chemistry_ladder/",
+  "path_rule": "Original archive `input_paths` is ordered argv -i list; generated layer 11 is scratch appended with basename migrated_continuity.i",
+  "include_resolution": "All 10 archived .i layers + deterministic sidecar have zero !include directives by bytescan; external rate-table refs and runtime paths are not materialized or verified.",
+  "scratch_reconstruction": {
+    "origin": "experiments/Issue402_plasma_dsl_g1/prepare_s6_single_kernel_migration.py@ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "origin_git_blob": "166b38bffc4d8ba835cc58532741be569015dff5",
+    "transformation": "Remove exactly one [FVKernels]/[ne_transport] block from layer 1; retain other nine archived inputs byte-identically; append verbatim migration overlay as layer 11",
+    "derived_layer_1_sha256": "66548d33947b227ca29849b0c52146100887d1795a66e0f90df11a94199fc5bf",
+    "derived_layer_11_sha256": "90012682cc301c7895a9f8240f6cb0646faf1f3d7f4a6173ac00ecc7352c906e",
+    "actual_final_pr665_chemistry_or_newonly_staged_bytes_readback": false
+  },
+  "evidence_scopes": {
+    "archived_10_layer_bytes": "DIRECT_ZIP_READBACK_SHA256_MATCH_CASE_MANIFEST",
+    "derived_11_layer": "REPRODUCED_SINGLE_KERNEL_C_SCRATCH_ONLY",
+    "final_11_layer_pr665": "NOT_VERIFIED",
+    "native_p2": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "cases": {
+    "417": {
+      "artifact_id": 13677089020,
+      "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "case_manifest_sha256": "b56df6473d3a6e0fefc398f93acacc3afd2a19444135fd2c8d24b2f85b4e1082",
+      "native_ion_fvkernels_derived_11": 14,
+      "native_ion_fvbcs_derived_11": 12,
+      "source_ion_fvkernels_derived_11": 5,
+      "layers": [
+        {
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+          "scratch_candidate_sha256": "66548d33947b227ca29849b0c52146100887d1795a66e0f90df11a94199fc5bf",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 2,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+          "scratch_candidate_sha256": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 3,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "83690b3c5484aa39061704ea453e93bde3c12e17674cc80b7b92c3532078a02e",
+          "scratch_candidate_sha256": "83690b3c5484aa39061704ea453e93bde3c12e17674cc80b7b92c3532078a02e",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 4,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "c9a38edcc377d7a698d407e9eea9e6f74b4f2072f786eda2b5a6a2b18fa0ff6f",
+          "scratch_candidate_sha256": "c9a38edcc377d7a698d407e9eea9e6f74b4f2072f786eda2b5a6a2b18fa0ff6f",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 5,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+          "file_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
+          "scratch_candidate_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 6,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+          "scratch_candidate_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 7,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
+          "file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
+          "scratch_candidate_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 8,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-417-407_o2_consumer_overlay.i",
+          "file_sha256": "d5aa2c61df2a7ec39814f2aad45bd4ef6c0d1badf808c880d0a8395029e18a02",
+          "scratch_candidate_sha256": "d5aa2c61df2a7ec39814f2aad45bd4ef6c0d1badf808c880d0a8395029e18a02",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 9,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "691c0ee8de270f1ce3a6371692b6fba57cd293ba14aa7291fa665ab6583fe2c4",
+          "scratch_candidate_sha256": "691c0ee8de270f1ce3a6371692b6fba57cd293ba14aa7291fa665ab6583fe2c4",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 10,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+          "file_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+          "scratch_candidate_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 11,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+          "file_sha256": null,
+          "scratch_candidate_sha256": "90012682cc301c7895a9f8240f6cb0646faf1f3d7f4a6173ac00ecc7352c906e",
+          "archive_bytes_verified": false
+        }
+      ],
+      "op_sources": [
+        {
+          "task": "P1-B4",
+          "name": "legacy8_h05_ei417_op",
+          "layer_ordinal": 7,
+          "type": "FVCoupledForce",
+          "variable": "log_nop",
+          "v": "S_Op_molar_EI417",
+          "block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e"
+        },
+        {
+          "task": "P1-B5",
+          "name": "h25_atomic_positive_ion",
+          "layer_ordinal": 10,
+          "type": "FVCoupledForce",
+          "variable": "log_nop",
+          "v": "S_Op_molar_H25",
+          "block_sha256": "988613b29ab8eea9d63e1ba2401cbfdabe679800e4a6ee516fe3f7d940b83e08"
+        }
+      ]
+    },
+    "941": {
+      "artifact_id": 13677375813,
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "case_manifest_sha256": "c06ca51b93b18abe2b6de6607cec390a692b224887f3a3b8e623c8b70b9321dd",
+      "native_ion_fvkernels_derived_11": 14,
+      "native_ion_fvbcs_derived_11": 12,
+      "source_ion_fvkernels_derived_11": 5,
+      "layers": [
+        {
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+          "scratch_candidate_sha256": "66548d33947b227ca29849b0c52146100887d1795a66e0f90df11a94199fc5bf",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 2,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+          "scratch_candidate_sha256": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 3,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "83690b3c5484aa39061704ea453e93bde3c12e17674cc80b7b92c3532078a02e",
+          "scratch_candidate_sha256": "83690b3c5484aa39061704ea453e93bde3c12e17674cc80b7b92c3532078a02e",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 4,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "c9a38edcc377d7a698d407e9eea9e6f74b4f2072f786eda2b5a6a2b18fa0ff6f",
+          "scratch_candidate_sha256": "c9a38edcc377d7a698d407e9eea9e6f74b4f2072f786eda2b5a6a2b18fa0ff6f",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 5,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+          "file_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
+          "scratch_candidate_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 6,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+          "scratch_candidate_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 7,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+          "file_sha256": "0eabf2873f31704362493277bf760b35c4c302bf2b3e60617da245bf864b68b3",
+          "scratch_candidate_sha256": "0eabf2873f31704362493277bf760b35c4c302bf2b3e60617da245bf864b68b3",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 8,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-941-407_o2_consumer_overlay.i",
+          "file_sha256": "d5aa2c61df2a7ec39814f2aad45bd4ef6c0d1badf808c880d0a8395029e18a02",
+          "scratch_candidate_sha256": "d5aa2c61df2a7ec39814f2aad45bd4ef6c0d1badf808c880d0a8395029e18a02",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 9,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "691c0ee8de270f1ce3a6371692b6fba57cd293ba14aa7291fa665ab6583fe2c4",
+          "scratch_candidate_sha256": "691c0ee8de270f1ce3a6371692b6fba57cd293ba14aa7291fa665ab6583fe2c4",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 10,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+          "file_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+          "scratch_candidate_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+          "archive_bytes_verified": true
+        },
+        {
+          "layer_ordinal": 11,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+          "file_sha256": null,
+          "scratch_candidate_sha256": "90012682cc301c7895a9f8240f6cb0646faf1f3d7f4a6173ac00ecc7352c906e",
+          "archive_bytes_verified": false
+        }
+      ],
+      "op_sources": [
+        {
+          "name": "ei941_atomic_positive_ion_source",
+          "layer_ordinal": 7,
+          "type": "FVCoupledForce",
+          "variable": "log_nop",
+          "v": "S_Op_molar_EI941",
+          "block_sha256": "350c652f1eb70de0838de09e3d564d2b3bc5ea953067ca097844e8442dddf43c"
+        },
+        {
+          "name": "h25_atomic_positive_ion",
+          "layer_ordinal": 10,
+          "type": "FVCoupledForce",
+          "variable": "log_nop",
+          "v": "S_Op_molar_H25",
+          "block_sha256": "988613b29ab8eea9d63e1ba2401cbfdabe679800e4a6ee516fe3f7d940b83e08"
+        }
+      ]
+    }
+  },
+  "unresolved": [
+    "This common manifest pins actual archive 10-layer bytes and reproducible 11-layer C scratch. It does not have direct bytes for latest PR #665 final Chemistry/New-only staged 11-layer.",
+    "Final P1-0 acceptance still requires exact-head final staged files and include/runtime binding readback; do not promote these reconstructed SHA values as final PR #665 SHA.",
+    "Private kinetic table bytes are not distributed. No native P2/P3/P4 executed."
+  ]
+}
