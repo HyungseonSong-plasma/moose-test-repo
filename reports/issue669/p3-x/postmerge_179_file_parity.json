@@ -1,0 +1,31 @@
+{
+  "schema": "issue669.p3_x.new_pr665_content_identity.v1",
+  "task_id": "P3-X",
+  "old_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "new_pr665_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "pr674_merge_commit": "3c961e94533f9676137fb96b2b0bae7e89653914",
+  "old_p2_artifact_id": 14380831538,
+  "old_p2_artifact_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+  "new_p2_ci_run": 44201394393,
+  "new_p2_ci_head": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+  "new_p2_artifact_id": 14381456912,
+  "new_p2_artifact_zip_sha256": "5497c80badab09d7d3266a4c81e2a5d2272a1c9cc216e94e192c8ec1ecd78e95",
+  "entries_old": 179,
+  "entries_new": 179,
+  "filename_set_identical": true,
+  "all_179_entries_byte_equal": true,
+  "relevant_source_file_git_blobs_identical_at_new_pr_head": 9,
+  "full_179_entry_sha_manifest_local_sha256": "6ce6b5e483311cebe9fa8c679dd45f3f668f31e808700aac954f127fbe11cf3a",
+  "full_179_entry_manifest_local_file": "p3_x_postmerge_artifact_179byte_parity.json",
+  "worker_receipts_source_bound": 26,
+  "missing_worker_receipts": [
+    "P3-T5",
+    "P3-G2",
+    "P3-G6",
+    "P3-N3"
+  ],
+  "production_P3_X_cutover": "NOT_RUN",
+  "native_P2_P3_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "constraints": "Latest source and CI artifact byte identity is not Native Warehouse ownership or science proof; no protected rate bytes."
+}
