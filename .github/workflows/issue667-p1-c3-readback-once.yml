@@ -1,0 +1,180 @@
+name: Issue667 P1-C3 S6-941 Om source pinned byte verification (P0 only)
+on:
+  push:
+    branches: [issue-667-p1-c3-941-om-source-20261117]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue667-p1-c3-941-source
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download pinned P1-0 actual 11-layer Scratch D Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: issue667-p1-0-sourcepin-9c15a4f-44180190753-1
+          run-id: 44180190753
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: capture
+      - name: Independent 11 file and Om Source/Rate edge byte readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import copy, hashlib, json, re
+          from pathlib import Path
+
+          PIN="9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          HIST="29d1acc6ef7969908b86719e4b95c73a1565136d"
+          CASE="941"
+          SOURCE="ei401_negative_ion_source"
+          MATERIAL="ei401_om_source"
+          RATE="ei401_progress"
+          FLUX="S_Om_molar_EI401"
+          RATE_FUNCTOR="R_EI401"
+          LAYER="issue477_S3-415-401_extra_overlay.i"
+          ROOT=Path("capture")
+          OUT=Path("receipt"); OUT.mkdir(exist_ok=True)
+          def digest(b):return hashlib.sha256(b).hexdigest()
+          def check(cond,label):
+              if not cond:raise ValueError(label)
+
+          def parse(data,name,ordinal):
+              text=data.decode("utf-8")
+              out=[];stack=[];offset=0
+              for lineno,line in enumerate(data.splitlines(keepends=True),1):
+                  match=re.fullmatch(rb"\[([^\[\]]*)\]",line.strip())
+                  if match:
+                      symbol=match[1].decode("utf-8")
+                      if symbol: stack.append((symbol,offset,lineno))
+                      elif stack:
+                          obj,start,first=stack.pop()
+                          if len(stack)==1:
+                              section=stack[0][0]
+                              raw=data[start:offset+len(line)]
+                              params={}
+                              for item in raw.decode("utf-8").splitlines()[1:-1]:
+                                  m=re.fullmatch(r"\s*([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.*?)\s*",item)
+                                  if m:
+                                      check(m[1] not in params,"DUPLICATE_PARAMETER:"+obj+":"+m[1])
+                                      params[m[1]]=m[2].strip().strip("'\"")
+                              out.append({"section":section,"name":obj,"params":params,"layer_ordinal":ordinal,
+                                          "file_name":name,"line_start":first,"line_end":lineno,
+                                          "block_sha256":digest(raw)})
+                  offset+=len(line)
+              check(not stack,"UNBALANCED_INPUT:"+name)
+              check(not re.search(rb"(?m)^\s*!include\b",data),"UNRESOLVED_INCLUDE:"+name)
+              return out
+
+          def inspect(all_objects):
+              src=[x for x in all_objects if x["name"]==SOURCE and x["section"]=="FVKernels"]
+              check(len(src)==1,"C3_SOURCE_MISSING_OR_DUPLICATE:"+str(len(src)))
+              obj=src[0];p=obj["params"]
+              for k,want in {"type":"FVCoupledForce","variable":"log_Om","v":FLUX,"coef":"1.0","block":"plasma"}.items():
+                  check(p.get(k)==want,"C3_SOURCE_PARAM:"+k+":"+str(p.get(k)))
+              check(obj["layer_ordinal"]==6 and obj["file_name"]==LAYER,"C3_WRONG_LAYER")
+
+              mats=[x for x in all_objects if x["name"]==MATERIAL]
+              check(len(mats)==1,"C3_OM_PRODUCER_MISSING_OR_DUPLICATE:"+str(len(mats)))
+              producer=mats[0]; pp=producer["params"]
+              check(pp.get("type")=="ADParsedFunctorMaterial","C3_OM_PRODUCER_TYPE")
+              check(pp.get("property_name")==FLUX,"C3_OM_OUTPUT_FUNCTOR")
+              check(RATE_FUNCTOR in pp.get("functor_names","").split(),"C3_OM_RATE_INPUT")
+              check(pp.get("functor_symbols")=="R" and pp.get("expression")=="R","C3_OM_RATE_EXPRESSION")
+              check(pp.get("block")=="plasma","C3_OM_MATERIAL_BLOCK")
+
+              rates=[x for x in all_objects if x["name"]==RATE]
+              check(len(rates)==1,"C3_EI401_RATE_OWNER_MISSING_OR_DUPLICATE:"+str(len(rates)))
+              rate=rates[0]; rp=rate["params"]
+              check(rp.get("type")=="PhysicsElectronImpactRateMaterial","C3_EI401_FACTORY")
+              check(RATE_FUNCTOR in " ".join(rp.values()),"C3_EI401_RATE_OUTPUT_REFERENCE")
+              return {"source":obj,"material_producer":producer,"rate_producer":rate}
+
+          folder=ROOT/("S6-"+CASE)
+          check(folder.is_dir() and not folder.is_symlink(),"CASE_NOT_STAGED")
+          manifest=json.loads((folder/"manifest.json").read_bytes())
+          check(manifest.get("case")==CASE and manifest.get("source_head")==PIN
+                and manifest.get("historical_head")==HIST,"MANIFEST_IDENTITY")
+          order=manifest["input_order"]
+          layer_records=manifest["layers"]
+          check(len(order)==11 and len(layer_records)==11 and len(set(order))==11
+                and order[-1]=="migrated_continuity.i","ORDERED_11_LAYER_BAD")
+          check(set(p.name for p in folder.iterdir())==set(order)|{"manifest.json"},"NOT_ALLOWLISTED_ARTIFACT")
+          check(set(p.name for p in ROOT.iterdir())=={"S6-417","S6-941","status.json"},"NOT_ALLOWLISTED_ARCHIVE_ROOT")
+          status=json.loads((ROOT/"status.json").read_bytes())
+          check(status.get("cases",{}).get(CASE)=="SOURCE_BYTE_PIN_PASS","SOURCEPIN_CASE_GATE")
+          all_objects=[]; all_fv=[]; file_receipts=[]
+          for ordinal,(name,r) in enumerate(zip(order,layer_records,strict=True),1):
+              check(name==r["filename"] and ordinal==r["layer_ordinal"] and
+                    not name.startswith(".") and name==Path(name).name,"BAD_LAYER_NAME")
+              path=folder/name
+              check(path.is_file() and not path.is_symlink(),"BAD_INPUT_PATH")
+              data=path.read_bytes()
+              check(0<len(data)<=150000 and b"\x00" not in data,"BAD_INPUT_BYTES")
+              sha=digest(data)
+              check(sha==r["file_sha256"] and len(data)==r["size_bytes"],"FILE_SHA_MISMATCH:"+name)
+              objs=parse(data,name,ordinal)
+              all_objects.extend(objs)
+              all_fv.extend(x for x in objs if x["section"] in ("FVKernels","FVBCs"))
+              file_receipts.append({"layer_ordinal":ordinal,"file_name":name,"sha256":sha,"size_bytes":len(data)})
+          idx={(x["section"],x["name"]) for x in all_fv}
+          check(len(idx)==len(all_fv),"DUPLICATE_FV_OWNER_IN_11_LAYER")
+          ref_index={(r["layer_ordinal"],r["section"],r["object_name"]):r["block_sha256"] for r in manifest["fv_object_blocks"]}
+          check(len(ref_index)==len(manifest["fv_object_blocks"]),"DUPLICATE_SOURCEPIN_MANIFEST_ENTRY")
+          check(len(all_fv)==len(ref_index),"INCOMPLETE_FV_INVENTORY")
+          for x in all_fv:
+              check(ref_index.get((x["layer_ordinal"],x["section"],x["name"]))==x["block_sha256"],
+                    "BLOCK_SHA_MISMATCH:"+x["name"])
+          target=inspect(all_objects)
+          # Fail-closed mutation controls: source missing, doubled, wrong variable, wrong source edge,
+          # incorrect Material rate input, and wrong source file SHA.
+          controls={}
+          for mutation in ("missing_source","duplicate_source","wrong_variable","wrong_v","wrong_rate_input"):
+              bad=copy.deepcopy(all_objects)
+              src=next(x for x in bad if x["name"]==SOURCE and x["section"]=="FVKernels")
+              mat=next(x for x in bad if x["name"]==MATERIAL)
+              if mutation=="missing_source":bad.remove(src)
+              elif mutation=="duplicate_source":bad.append(copy.deepcopy(src))
+              elif mutation=="wrong_variable":src["params"]["variable"]="log_Op"
+              elif mutation=="wrong_v":src["params"]["v"]="S_wrong"
+              else:mat["params"]["functor_names"]="R_wrong"
+              try:inspect(bad)
+              except ValueError:controls[mutation]="REJECTED"
+              else:raise ValueError("NEGATIVE_FALSE_PASS:"+mutation)
+          mutated_file_receipt=copy.deepcopy(file_receipts)
+          mutated_file_receipt[5]["sha256"]="0"*64
+          check(mutated_file_receipt[5]["sha256"]!=layer_records[5]["file_sha256"],"NEGATIVE_FILE_SHA_NOT_REJECTED")
+          controls["wrong_file_sha"]="REJECTED"
+          report={"schema":"issue667.p1_c3.s6_941_sourcepin.v1","task_id":"P1-C3",
+                  "case":"S6-941","source_head":PIN,"historical_source_head":HIST,
+                  "upstream_p1_0_run":44180190753,"upstream_artifact_id":14372315897,
+                  "status":"SOURCE_STATIC_PASS_IN_FINAL_SCRATCH_D",
+                  "evidence_scope":"Actual 11-layer Hybrid Scratch D bytes only. NOT New-only, P2, P3, P4 or scientific acceptance",
+                  "file_sha_verified_count":len(file_receipts),"layers":file_receipts,
+                  "fv_object_blocks_independently_checked":len(all_fv),
+                  "target":target,"negative_controls":controls,
+                  "expected_private_EI401_table_sha256":"185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+                  "private_rate_table_bytes_inspected":False,
+                  "rate_chain_class":"Public source graph only. Runtime rate table resolution and semantic parity NOT_RUN",
+                  "next_gate":"P1-E independent 29-slot integration; P2 #668 native owner retirement; P5 #671 actual New-only Physics P2",
+                  "science":"SCIENCE_HOLD"}
+          out=OUT/"p1-c3-s6-941-om-source-readback.json"
+          out.write_text(json.dumps(report,sort_keys=True,indent=2)+"\n",encoding="utf-8")
+          print("P1_C3_941_SOURCE="+str(target["source"]),flush=True)
+          print("P1_C3_941_PRODUCER="+str(target["material_producer"]),flush=True)
+          print("P1_C3_941_RATE="+str(target["rate_producer"]),flush=True)
+          print(f"P1_C3_S6_941_FILES=11/11 FV_BLOCKS={len(all_fv)} SOURCE=1/1 CHAIN=3/3 NEGATIVES=6/6_REJECTED",flush=True)
+          print("P1_C3_S6_941_SOURCE_STATIC_PASS_RUNTIME_HOLD",flush=True)
+          PY
+      - name: Preserve only P1-C3 JSON readback receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue667-p1-c3-941-readback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: receipt/
+          if-no-files-found: warn
+          retention-days: 30
