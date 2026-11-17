@@ -27,7 +27,7 @@ def test_newonly_s6_inputs_explicitly_preserve_001_v_per_m_width():
     for case in CASES:
         path = PILOT / f"issue633_newonly_s6_{case}_continuity.template.i"
         text = path.read_text()
-        assert f"unified_s6_{case}.json" in text
+        assert f"chemistry/unified_s6_{case}_newonly.json" in text
         assert "issue633_c2_wall_3ion_overlay.json" in text
         assert "fvm_species = 'O2p Om Op'" in text
         assert "fem_potential = potential" in text
