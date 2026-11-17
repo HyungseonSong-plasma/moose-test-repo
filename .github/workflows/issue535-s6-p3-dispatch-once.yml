@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   dispatch-manual-s6:
-    if: ${{ github.event_name == 'push' && github.run_attempt == 1 && contains(github.event.head_commit.added, '.github/workflows/issue535-s6-p3-dispatch-once.yml') }}
+    if: ${{ github.event_name == 'push' && github.ref_name == 'issue535-s6-p3-dispatch-once-20261117' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -34,7 +34,7 @@ jobs:
           test "$GITHUB_EVENT_NAME" = "push"
           test "$GITHUB_REF_NAME" = "issue535-s6-p3-dispatch-once-20261117"
           test "$GITHUB_RUN_ATTEMPT" = "1"
-          jq -e --arg p ".github/workflows/issue535-s6-p3-dispatch-once.yml" '.head_commit.added | index($p) != null' "$GITHUB_EVENT_PATH" >/dev/null
+          jq -e --arg m "issue535-approved-s6-full-p3-dispatch-at-8263-once" '.head_commit.message == $m' "$GITHUB_EVENT_PATH" >/dev/null
           API="https://api.github.com/repos/$GITHUB_REPOSITORY"
           headers=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
           actual="$(curl -fsS "${headers[@]}" "$API/branches/main" | jq -r '.commit.sha')"
