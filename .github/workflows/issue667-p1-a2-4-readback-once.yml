@@ -31,9 +31,9 @@ jobs:
           PIN="9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
           ORIGIN="29d1acc6ef7969908b86719e4b95c73a1565136d"
           EXPECTED={
-            "ion_focus_ring_dielectric":("log_O2p","ion_wall_number_flux"),
-            "negative_ion_focus_ring_dielectric":("log_Om","negative_ion_wall_number_flux"),
-            "atomic_positive_ion_focus_ring_dielectric":("log_Op","atomic_positive_ion_wall_number_flux")
+            "ion_focus_ring_dielectric":("log_O2p","O2p_wall_number_flux"),
+            "negative_ion_focus_ring_dielectric":("log_Om","Om_wall_number_flux"),
+            "atomic_positive_ion_focus_ring_dielectric":("log_Op","Op_wall_number_flux")
           }
           ROOT=Path("capture")
           OUT=Path("readback")
