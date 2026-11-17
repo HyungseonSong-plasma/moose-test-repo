@@ -5,7 +5,7 @@
 # generates each correctly typed state and rejects preexisting owners first.
 [Physics]
   [Plasmas]
-    files = issue633_ion_continuity_newonly_p2.json
+    files = plasma_species_initial_p2.json
     [Transport]
       [Chemistry]
       []
