@@ -1,10 +1,10 @@
 # Issue #633 NEW-ONLY target Continuity overlay; not a standalone S6 input.
-# Stage in a disposable 11-layer Scratch directory with the pinned JSON files
+# Stage in a disposable 11-layer Scratch directory with the integrated JSON
 # and existing external electron/rate/neutral/RF owners. This is NOT P2 PASS.
 # Keep historical Hybrid templates and original Native inputs unchanged.
 [Physics]
   [Plasmas]
-    files = 'unified_s6_417.json issue633_c2_wall_3ion_overlay.json'
+    files = 'chemistry/unified_s6_417_newonly.json'
     pressure = 1.333223684
     temperature = 300
     state_model = ideal_gas
