@@ -3,9 +3,9 @@
   "task_id": "P1-B4",
   "case": "S6-417",
   "owner_scope": "Op Source #1 only",
-  "status": "PASS_ARCHIVED_SOURCE_AND_REPRODUCED_C_11_LAYER__PR665_FINAL_STAGED_HOLD",
-  "evidence_class": "DIRECT_HISTORICAL_ZIP_BYTES_AND_VERIFIED_11_LAYER_C_SCRATCH_RECONSTRUCTION",
-  "source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "status": "PASS_PR665_EXACT_HEAD_FINAL_HYBRID_11_LAYER_SHA",
+  "evidence_class": "CI_EXACT_PR_HEAD_P0_SCRATCH_BYTES_PLUS_INDEPENDENT_ARTIFACT_READBACK",
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
   "observed_repository_main_sha": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
   "observed_integration_pr": {
     "number": 665,
@@ -24,18 +24,18 @@
   "layer_ordinal": 7,
   "layer_ordinal_basis": "direct readback of pinned artifact #13677089020 case_manifest.input_paths 7th entry, preserved as #7 in derived C 11-layer scratch",
   "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
-  "file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
+  "file_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
   "generated_expected_file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
   "section": "FVKernels",
   "object_name": "legacy8_h05_ei417_op",
   "factory_type": "FVCoupledForce",
-  "variable": "log_nop",
+  "variable": "log_Op",
   "relevant_parameters": {
     "v": "S_Op_molar_EI417",
     "coef": "1.0",
     "block": "plasma"
   },
-  "block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e",
+  "block_sha256": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7",
   "generated_expected_block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e",
   "generated_block_sha256_scope": "exact LF-delimited text from 2-space-indented [legacy8_h05_ei417_op] through its closing '  []\\n', 7 lines",
   "generator_duplicate_object_count": 1,
@@ -56,7 +56,9 @@
     "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/ebcfd9e662bc40f0473d8da05da95d11b61789f8/experiments/Issue477_electron_shape/prepare_s3_401_op_production.py#L181-L197",
     "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/667",
     "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/802de3a494838bdf624b935f59d315ae785aab14/reports/issue667/p1_0_common_manifest_partial.json",
-    "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42589883028"
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42589883028",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182663514/artifacts/14372278074",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/97931a1b1c7d1f6c5a32937736d9af62467ddcfe/reports/issue667/p1_0_pr665_final_11_layer_verified_receipt.json"
   ],
   "validation": {
     "performed": [
@@ -68,17 +70,20 @@
       "reproduce exact prior C single-kernel migration Scratch 11-layer (remove ne_transport from first source; append deterministic migrated_continuity.i)",
       "check both B4 and B5 occur once in original 10 and C Scratch 11; different name, functor, layer, SHA",
       "read archived 417 and 941 native ion kernel 14/BC 12 owner totals",
-      "read-back verified common P1-0 partial pin branch and this dedicated B4 branch"
+      "read-back verified common P1-0 partial pin branch and this dedicated B4 branch",
+      "fetch exact PR665 HEAD code at 9c15a4f...",
+      "CI P0 scratch hybrid 11-layer generation success, run 44182663514",
+      "download immutable GitHub Artifact 14372278074 and independently rehash all 22 .i files and 52 ion Kernel/BC blocks",
+      "validate B4 and B5 each appear exactly once in same final 417 11-layer input and have different functors, files, and SHA"
     ],
     "not_performed": [
-      "direct #665 final Chemistry/New-only staged Scratch 11-layer byte readback",
-      "source-to-runtime private rate table byte rehash",
-      "Native P2, P3, P4, scientific parity"
+      "Native P2/P3/P4 execution",
+      "Scientific equivalence or run-time acceptance",
+      "P1-E aggregate of all 29 receipts"
     ]
   },
   "unresolved": [
-    "P1-0 is PARTIAL: PR #665 final Chemistry/New-only staged Scratch 11-layer exact byte SHA differs by construction from the archived/C single-kernel candidate and remains unverified",
-    "P1-E must verify exact latest PR #665 final staged 11-layer full file+block SHA and no new duplicate owners before final promotion"
+    "P1-E still must reconcile other independent worker receipts; B4 exact-head P0 receipt does not imply Native P2 or science acceptance"
   ],
   "next_action": "P1-0 manifest becomes available -> re-read exact S6-417 layer and validate candidate source bytes and block SHA; then promote B4 only if direct evidence matches; otherwise HOLD",
   "invariant_flags": {
@@ -99,11 +104,12 @@
     "all_ten_input_layers_manifest_match": true
   },
   "p1_0_common_pin": {
-    "commit_sha": "802de3a494838bdf624b935f59d315ae785aab14",
-    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/802de3a494838bdf624b935f59d315ae785aab14/reports/issue667/p1_0_common_manifest_partial.json",
-    "status": "PARTIAL_PASS_ARCHIVED_10_CANDIDATE_11_RECONSTRUCTED_PR665_FINAL_HOLD",
-    "derived_11th_sha256": "90012682cc301c7895a9f8240f6cb0646faf1f3d7f4a6173ac00ecc7352c906e",
-    "scratch_reconstruction_method": "single-kernel C migration only, not the latest PR #665 final chemistry/new-only stage"
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "status": "PASS_EXACT_HEAD_P0_FINAL_HYBRID_SCRATCH_11_LAYER",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/97931a1b1c7d1f6c5a32937736d9af62467ddcfe/reports/issue667/p1_0_pr665_final_11_layer_verified_receipt.json",
+    "manifest_sha256": "cf08568b0255486005a6e8b6541689dc42dbd434ba5dd8b80eecb4886b66b1fc",
+    "artifact_id": 14372278074,
+    "exact_final_11_layer_case": "417"
   },
   "peer_b5": {
     "task_id": "P1-B5",
@@ -120,19 +126,43 @@
     "owner_task_receipt": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9237a19b1f2d2bbd2812c450c2a180d7546702d9/reports/issue667/p1-b5-s6-417-op-h25-source.json"
   },
   "cross_verification": {
-    "B4_archived_10_layer_occurrences": 1,
-    "B5_archived_10_layer_occurrences": 1,
-    "B4_derived_C_11_layer_occurrences": 1,
-    "B5_derived_C_11_layer_occurrences": 1,
+    "B4_final_11_layer_occurrences": 1,
+    "B5_final_11_layer_occurrences": 1,
     "different_object_names": true,
-    "different_source_functors": true,
-    "different_blocks": true,
-    "different_source_layers": true,
+    "different_functors": true,
+    "different_layers": true,
+    "different_block_sha256": true,
     "duplicate_assignment": false,
-    "FVKernels_section_and_FVCoupledForce_both": true,
-    "S6_417_ion_fvkernels": 14,
-    "S6_417_ion_fvbcs": 12,
-    "S6_417_extra_source_fvkernels": 5,
-    "native_p2_claim": false
-  }
+    "matched_file_sha256": true,
+    "matched_block_sha256": true,
+    "native_ion_fvkernels": 14,
+    "native_ion_fvbcs": 12,
+    "peer_B5": {
+      "object_name": "h25_atomic_positive_ion",
+      "layer_ordinal": 10,
+      "variable": "log_Op",
+      "v": "S_Op_molar_H25",
+      "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+      "block_sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01"
+    }
+  },
+  "historical_original_file_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
+  "historical_original_block_sha256": "2c419b394e1e9e24d85d202d075e6009708c7a160798214b835bef6bacc92a7e",
+  "historical_original_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "provider_consumer_edges": [
+    {
+      "from": "R_EI417",
+      "via": "S_Op_molar_EI417",
+      "to": "[FVKernels]/legacy8_h05_ei417_op",
+      "variable": "log_Op",
+      "status": "P0_SOURCE_BOUND"
+    },
+    {
+      "from": "R_H25",
+      "via": "S_Op_molar_H25",
+      "to": "[FVKernels]/h25_atomic_positive_ion",
+      "variable": "log_Op",
+      "status": "P0_SOURCE_BOUND_PEER_UNIQUE"
+    }
+  ]
 }
