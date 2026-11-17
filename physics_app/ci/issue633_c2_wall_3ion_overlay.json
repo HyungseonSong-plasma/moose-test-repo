@@ -8,7 +8,6 @@
       "wall_molar_mass": 0.032,
       "wall_sticking": 1,
       "wall_ion_temperature_eV": 0,
-      "wall_migration_gate_smoothing_width": 0.001,
       "wall_use_element_gradient_for_potential": true
     },
     "Om": {
@@ -19,7 +18,6 @@
       "wall_molar_mass": 0.016,
       "wall_sticking": 1,
       "wall_ion_temperature_eV": 0,
-      "wall_migration_gate_smoothing_width": 0.001,
       "wall_use_element_gradient_for_potential": true
     },
     "Op": {
@@ -30,7 +28,6 @@
       "wall_molar_mass": 0.016,
       "wall_sticking": 1,
       "wall_ion_temperature_eV": 0,
-      "wall_migration_gate_smoothing_width": 0.001,
       "wall_use_element_gradient_for_potential": true
     }
   },
