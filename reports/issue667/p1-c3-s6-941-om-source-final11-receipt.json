@@ -34,9 +34,11 @@
     "layer_ordinal": 6,
     "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
     "filename": "issue477_S3-415-401_extra_overlay.i",
-    "file_sha256": "Recorded in immutable CI readback artifact receipt under layers[5].sha256 (11/11 independently matched); not re-extracted through GitHub connector",
+    "file_sha256": null,
     "prior_reconstruction_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
-    "prior_reconstruction_status": "PRIOR_B3_PROJECTION_ONLY; do not promote as exact current file SHA without artifact field comparison"
+    "prior_reconstruction_status": "PRIOR_B3_PROJECTION_ONLY; do not promote as exact current file SHA without artifact field comparison",
+    "sha256_evidence_locator": "GitHub Actions artifact 14373596298, p1-c3-s6-941-om-source-readback.json at layers[5].sha256",
+    "sha256_verification": "PASS: independent file bytes matched common sourcepin manifest SHA; exact digest bytes not duplicated into this repository summary"
   },
   "source_kernel": {
     "section": "FVKernels",
