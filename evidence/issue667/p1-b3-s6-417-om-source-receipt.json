@@ -1,9 +1,9 @@
 {
-  "schema_version": "issue667-p1-b3-verification-v2",
+  "schema_version": "issue667-p1-b3-actual-11-layer-byte-readback-v3",
   "task_id": "P1-B3",
   "case": "S6-417",
-  "status": "PARTIAL_VERIFIED_FINAL_11_LAYER_DIRECT_BYTES_HOLD",
-  "evidence_class": "ORIGINAL_10_LAYER_DIRECT_ARCHIVE_SHA_PLUS_ARCH_CI_11_LAYER_INTERMEDIATE_SHA_AND_ISOLATED_FINAL_RECONSTRUCTION",
+  "status": "PASS_HYBRID_SCRATCH_D_11_LAYER_SOURCE_ONLY",
+  "evidence_class": "INDEPENDENT_ORIGINAL_ARTIFACT_BYTES_ARCHIVE_UNZIP_AND_SHA256_NOT_RECONSTRUCTION",
   "observed_main_sha": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
   "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
   "source_pr": "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/665",
@@ -11,12 +11,12 @@
   "layer_ordinal": 6,
   "expected_layer_name": "issue477_S3-415-401_extra_overlay.i",
   "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
-  "file_sha256": null,
+  "file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
   "historical_parent_expected_file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
   "section": "FVKernels",
   "object_name": "ei401_negative_ion_source",
   "factory_type": "FVCoupledForce",
-  "variable": null,
+  "variable": "log_Om",
   "historical_source_variable": "log_nm",
   "intended_canonical_variable": "log_Om",
   "relevant_parameters": {
@@ -24,7 +24,7 @@
     "coef": "1.0",
     "block": "plasma"
   },
-  "block_sha256": null,
+  "block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
   "candidate_historical_block_sha256": "6f65790ab238716cd1b7c56a61a9b20d06812919007156d4dfdef2cd0ebfbdbd",
   "candidate_historical_block_sha256_scope": "142-byte generated legacy block including two-space indentation and trailing newline; not direct artifact readback and not post-transform accepted",
   "provider_consumer_edges": [
@@ -65,15 +65,15 @@
     "native_P2": "NOT_RUN"
   },
   "unresolved": [
-    "P1-0 common immutable manifest and exact final post-chemistry/post-hybrid 11-layer .i bytes not found",
-    "Final S3 source-file SHA and B3 block SHA are reproducible candidates, not direct final artifact readback",
-    "Exact final 11-layer all-object uniqueness and Physics-generated Om_source versus Native duplicate check require new staging/warehouse validation",
-    "Private EI-401 table bytes remain inaccessible; only expected SHA is known"
+    "Actual New-only 26=>24 ion owner retirement and Physics-generated Om_source have not been validated against MOOSE runtime Warehouse",
+    "Native P2/P3/P4 not executed in P1 source pin",
+    "Private EI-401 Rate bytes excluded; expected Rate SHA is not reverified",
+    "P1-E integration and new-only Physics P2 #668 remain separate acceptance gates"
   ],
   "not_an_authorization_to_retire_native": true,
   "not_a_science_or_native_runtime_pass": true,
-  "required_next_gate": "P1-0_FINAL_11_LAYER_BYTES_CAPTURE_AND_EXACT_HEAD_HIT_WAREHOUSE_P05",
-  "final_file_sha256": null,
+  "required_next_gate": "P1-E_BIND_ALL_29_RECEIPTS_TO_ARTIFACT_14372315897_THEN_P2_668_NEW_ONLY",
+  "final_file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
   "historical_verified_file_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
   "historical_verified_block_sha256": "6f65790ab238716cd1b7c56a61a9b20d06812919007156d4dfdef2cd0ebfbdbd",
   "actual_ci_intermediate_sha256": {
@@ -86,18 +86,32 @@
   },
   "reconstructed_post_transform_block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
   "readback": {
-    "artifact_id": 13677089020,
-    "original_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
-    "original_10_layers_sha256_all_match_manifest": true,
-    "archived_native_om_source_count": 1,
-    "duplicated_source_mutation_rejected": true,
-    "ci_artifact_id": 14359967780,
-    "intermediate_11_layer_SHA_ledger_consistent": true,
-    "final_11_layer_files_in_artifact": false,
-    "runtime_P05_first_failure": "log_O2p / ni_time Native/Physics duplicate",
-    "om_generated_vs_native_runtime_duplicate": "NOT_REACHED",
-    "original_10_layer_om_source_duplicate": "NO",
-    "final_11_layer_om_source_duplicate_direct": "HOLD"
+    "artifact_id": 14372315897,
+    "workflow_run_id": 44180190753,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44180190753/artifacts/14372315897",
+    "artifact_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "artifact_zip_hash_equals_github_digest": true,
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "original_10_layer_archive_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "original_10_layer_archive_sha_match_manifest": true,
+    "actual_S6_417_11_input_file_sha_count": "11/11",
+    "actual_S6_417_fv_object_block_param_sha_count": "63/63",
+    "actual_S6_417_native_ion_kernels": 14,
+    "actual_S6_417_native_ion_fvbcs": 12,
+    "actual_S6_417_om_native_source_count": 1,
+    "actual_S6_417_EI401_rate_producer_count": 1,
+    "actual_S6_417_EI401_om_functor_producer_count": 1,
+    "actual_S6_417_duplicate_fv_names": 0,
+    "actual_S6_941_11_input_file_sha_count": "11/11",
+    "actual_S6_941_fv_object_block_param_sha_count": "63/63",
+    "actual_S6_941_om_native_source_count": 1,
+    "independent_negative_controls_417": 5,
+    "independent_negative_controls_941": 5,
+    "runtime_new_only_om_warehouse_duplicate": "NOT_CHECKED",
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
   },
   "intermediate_11_layer_file_sha256": [
     {
@@ -165,6 +179,103 @@
       "file": "migrated_continuity.i",
       "sha256": "ec03ff9109c924186952210bbb47b9a34194dcd240f2ee61aab316d24f9e87b3",
       "phase": "after canonical state and factory remap, before chemistry/hybrid"
+    }
+  ],
+  "actual_final_11_layer_file_sha256": [
+    {
+      "layer_ordinal": 1,
+      "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 2,
+      "filename": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+      "file_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 3,
+      "filename": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+      "file_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 4,
+      "filename": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+      "file_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 5,
+      "filename": "issue477_S2-415_generation_overlay.i",
+      "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 6,
+      "filename": "issue477_S3-415-401_extra_overlay.i",
+      "file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 7,
+      "filename": "issue477_S4-401-417_op_ionization_overlay.i",
+      "file_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 8,
+      "filename": "issue477_S5-417-407_o2_consumer_overlay.i",
+      "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 9,
+      "filename": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+      "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 10,
+      "filename": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+      "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    },
+    {
+      "layer_ordinal": 11,
+      "filename": "migrated_continuity.i",
+      "file_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+      "source": "READ_FROM_EXACT_ACTIONS_ARTIFACT_BYTES"
+    }
+  ],
+  "actual_b3_provider_chain": [
+    {
+      "layer_ordinal": 6,
+      "name": "ei401_progress",
+      "section": "FunctorMaterials",
+      "type": "EIRateCoefMaterial",
+      "produces": "R_EI401",
+      "block_sha256": "ae89ee34938fe2c654992a3c3a5f1c91a59b2e76fe3959daf96855949d54da09"
+    },
+    {
+      "layer_ordinal": 6,
+      "name": "ei401_om_source",
+      "section": "FunctorMaterials",
+      "type": "ADParsedFunctorMaterial",
+      "produces": "S_Om_molar_EI401",
+      "expression": "'R'",
+      "block_sha256": "e3b8eb02861bfb246117bf1f3f9a2d1d7eb52f7404b49243c768445b5e46a062"
+    },
+    {
+      "layer_ordinal": 6,
+      "name": "ei401_negative_ion_source",
+      "section": "FVKernels",
+      "type": "FVCoupledForce",
+      "variable": "log_Om",
+      "v": "S_Om_molar_EI401",
+      "coef": "1.0",
+      "block_sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc"
     }
   ]
 }
