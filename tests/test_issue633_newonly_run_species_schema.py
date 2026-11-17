@@ -20,7 +20,6 @@ NAMES = {"e", "O2", "O", "O2p", "Om", "Op", "O2a"}
 COMMON = {
     "elements", "charge_number", "molar_mass", "temperature_eV",
     "sticking_coefficient", "initial_number_density", "transport_coef",
-    "wall_use_element_gradient_for_potential",
 }
 IONS = {"O2p", "Om", "Op"}
 N_A = 6.02214076e23
@@ -34,16 +33,16 @@ def run_json(case):
 def test_actual_final_schema_is_one_complete_json_and_old_source_is_unchanged(case):
     new = run_json(case)
     old = json.loads((CHEM / f"unified_s6_{case}.json").read_text())
-    assert set(new) == {"species", "equations", "reactions", "boundaries", "ion_surface_current"}
+    assert set(new) == {"species", "equations", "reactions", "drift_diffusion_boundaries", "ion_surface_current"}
     assert set(new["species"]) == NAMES
     assert new["equations"] == old["equations"]
     assert new["reactions"] == old["reactions"]
     assert len(new["reactions"]) == 8
     assert len(new["equations"]) == 8
     assert {x["id"] for x in new["reactions"]} == set(new["equations"])
-    assert set(new["boundaries"]) == {
+    assert set(new["drift_diffusion_boundaries"]) == {
         "inlet outlet plasma_electrode plasma_metal plasma_right",
-        "plasma_cover", "plasma_wafer", "plasma_focus_ring",
+        "plasma_cover plasma_wafer plasma_focus_ring",
     }
     assert validate(new) == {
         "ion_wall_materials": 3, "normal_fvbcs": 3, "dielectric_fvbcs": 9,
@@ -71,6 +70,7 @@ def test_all_seven_species_have_same_core_keys(case):
         assert {"type", "file", "unit"} <= set(entry["transport_coef"])
         assert "pressure" not in entry and "gas_temperature" not in entry
         for retired in ("wall_molar_mass", "wall_sticking", "wall_ion_temperature_eV",
+                        "wall_use_element_gradient_for_potential",
                         "mobility", "diffusivity", "table_file", "table_units"):
             assert retired not in entry, (ident, retired)
     assert species["e"]["molar_mass"] == pytest.approx(5.485799096195737e-7)
@@ -78,11 +78,9 @@ def test_all_seven_species_have_same_core_keys(case):
     assert species["e"]["initial_number_density"] is not None
     assert species["e"]["energy_transport_coef"] == "fluid"
     for ident in IONS:
-        assert species[ident]["wall_use_element_gradient_for_potential"] is True
         assert species[ident]["sticking_coefficient"] == 1
         assert species[ident]["temperature_eV"] is None  # existing T_g fallback
-    for ident in NAMES - IONS:
-        assert species[ident]["wall_use_element_gradient_for_potential"] is None
+    assert species["e"]["sticking_coefficient"] == 1  # preserve electron sheath absorption
     for ident in {"O2", "O", "O2a"}:
         assert species[ident]["transport_coef"] == {
             "type": "none", "file": "none", "unit": "none"
@@ -110,6 +108,7 @@ def test_new_only_template_owns_pressure_temperature_potential_and_gate(case):
     assert "issue633_c2_wall_3ion_overlay.json" not in deck
     assert "pressure = 1.333223684" in deck
     assert "temperature = 300" in deck
+    assert "wall_gradient = adjacent_element" in deck
     assert "fem_potential = potential" in deck
     assert "fvm_species = 'O2p Om Op'" in deck
     assert "migration_smoothing_width = 0.001" in deck
@@ -132,6 +131,9 @@ def test_modern_schema_negative_controls_are_fail_closed(case):
          "RETIRED_SPECIES_FIELD_Om_wall_molar_mass"),
         (lambda d: d["species"]["O2p"].__setitem__("temperature_eV", -1.0),
          "INVALID_TEMPERATURE_EV_O2p"),
+        (lambda d: d["species"]["O2p"].__setitem__(
+            "wall_use_element_gradient_for_potential", True),
+         "WALL_GRADIENT_MUST_BE_PLASMAS_O2p"),
     ]
     for mutate, reason in cases:
         changed = deepcopy(original)
@@ -157,3 +159,45 @@ def test_production_cpp_owner_for_typed_fields_and_electron_initial_temperature(
     assert 'const auto & electron = chemistryData().species("e")' in energy
     assert '1.5 * (*electron.temperature_eV) * (*electron.initial_number_density)' in energy
     assert 'params.set<Real>("value") = std::log(initial_energy)' in energy
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_grouped_electron_fem_and_ion_fv_boundary_contract(case):
+    data = run_json(case)
+    groups = data["drift_diffusion_boundaries"]
+    general = groups["inlet outlet plasma_electrode plasma_metal plasma_right"]
+    dielectric = groups["plasma_cover plasma_wafer plasma_focus_ring"]
+    assert len(general) == 5
+    assert len(dielectric) == 15
+    assert general["e_wall"] == {
+        "type": "FEMElectronSheathBC",
+        "sidesets": "plasma_electrode plasma_metal plasma_right",
+    }
+    assert general["e_energy_wall"]["type"] == "FEMElectronEnergySheathBC"
+    for ident in IONS:
+        assert general[ident + "_wall"] == {"type": "FVFunctorNeumannBC"}
+    for side in ("cover", "wafer", "focus_ring"):
+        assert dielectric["e_" + side + "_dielectric"] == {
+            "type": "FEMElectronSheathBC", "sidesets": "plasma_" + side
+        }
+        assert dielectric["e_energy_" + side + "_dielectric"]["type"] == (
+            "FEMElectronEnergySheathBC"
+        )
+        for ident in IONS:
+            assert dielectric[ident + "_" + side + "_dielectric"] == {
+                "type": "FVLogMolarDielectricFluxBC", "sidesets": "plasma_" + side
+            }
+    assert data["ion_surface_current"]["electron_wall_number_flux"] == "e_wall_number_flux"
+
+
+def test_new_parser_and_wall_migration_units_are_single_owner():
+    chem = (ROOT / "physics_app/src/physics/plasma/Chemistry.C").read_text()
+    dd_energy = (ROOT / "physics_app/src/physics/plasma/DDEnergyEq.C").read_text()
+    assert '"drift_diffusion_boundaries"' in chem
+    assert 'bc["factor"] = -1.0 / 6.02214076e23;' in chem
+    assert 'bc["wall_number_flux"] = "e_wall_number_flux";' in chem
+    assert 'bc["signed_number_flux"] = species_id + "_wall_number_flux";' in chem
+    assert 'getParam<MooseEnum>("wall_gradient") == "adjacent_element"' in chem
+    assert 'params.addParam<MooseEnum>(\n      "wall_gradient"' in chem
+    assert 'wall.set<std::string>("species_id") = "e";' in dd_energy
+    assert 'wall.set<Real>("sticking") = chemistryData().species("e").sticking_coefficient;' in dd_energy
