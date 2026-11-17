@@ -461,8 +461,11 @@ DDContinuityEq::addFVKernels()
         if (bc.variable == variable &&
             (bc.type == "FVFunctorNeumannBC" ||
              bc.type == "FVLogMolarDielectricFluxBC"))
-          wall_sidesets.insert(boundary.mesh_boundaries.begin(),
-                               boundary.mesh_boundaries.end());
+        {
+          const auto & sides =
+              bc.mesh_boundaries.empty() ? boundary.mesh_boundaries : bc.mesh_boundaries;
+          wall_sidesets.insert(sides.begin(), sides.end());
+        }
     // The selected species' FV BC catalogue is the sole source of boundary
     // exclusion. Its cardinality is scenario-dependent; no S6-specific count.
     if (mechanism.hasIonWalls() && wall_sidesets.empty())
