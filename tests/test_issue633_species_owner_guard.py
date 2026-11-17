@@ -101,5 +101,21 @@ def test_any_explicit_native_fv_owner_rejected(section):
                 mechanism(), "DUPLICATE_NATIVE_OWNER")
 
 
+@pytest.mark.parametrize("legacy_var", ("log_ni", "log_nm", "log_nop"))
+@pytest.mark.parametrize("section", ("FVKernels", "FVBCs"))
+def test_historical_s6_native_ion_variable_aliases_rejected(section, legacy_var):
+    # The old S6 Native states are log_ni/nm/nop, not log_O2p/Om/Op.
+    # Missing this alias map would produce a false caller-zero / false cutover.
+    native = f"""
+[{section}]
+  [old_ion]
+    type = FVDiffusion
+    variable = {legacy_var}
+  []
+[]
+"""
+    expect_fail(BASE_INPUT + native, mechanism(), "DUPLICATE_NATIVE_OWNER")
+
+
 def test_unresolved_layers_fail_closed():
     expect_fail(BASE_INPUT + "!include ion_native.i\n", mechanism(), "UNRESOLVED_LAYER")
