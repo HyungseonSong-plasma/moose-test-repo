@@ -31,18 +31,26 @@ in the MOOSE `.i` input, not once per species:
           block = plasma
           fvm_species = 'O2p Om Op'
           fem_potential = potential
-          wall_migration_gate_smoothing_width = 0.001
+          migration_smoothing_width = 0.001
         []
       []
     []
   []
 []
 ```
-Selected C2 walls require this option explicitly, with finite
-nonnegative value. `0` enables the exact hard `max(z E_n,0)` gate.
-The historical S6 C2 characterization uses `0.001 V/m`;
-there is no hidden numerical default. The parser rejects legacy
-`species.<id>.wall_migration_gate_smoothing_width` fields.
+The `[Continuity]` option is now **optional** with a default of `0.0` V/m.
+Both an omitted option and explicit `migration_smoothing_width = 0`
+select the exact hard outward-only `max(z E_n,0)` gate. Positive widths
+preserve the existing tanh smoothing calculation. Negative or nonfinite
+values are rejected. The historical S6 C2 characterization uses an
+**explicit** `0.001 V/m` in the New-only S6-417/941 templates to avoid
+silently changing that scenario's numerical behavior.
+The parser rejects `migration_smoothing_width` and retired
+`wall_migration_gate_smoothing_width` anywhere in mechanism JSON.
+The lower-level existing `IonWallFluxMaterial` factory still accepts
+`migration_gate_smoothing_width` internally to preserve historical
+Native inputs; the new `[Continuity]` option maps into that factory
+parameter without introducing a second user-facing JSON owner.
 Two new **non-executable until Scratch is staged** review fragments
 `issue633_newonly_s6_{417,941}_continuity.template.i` record the
 S6-specific `.i` placement. They do not constitute P2 evidence.
