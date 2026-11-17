@@ -153,3 +153,29 @@ def test_energy_physics_selector_is_required_and_json_is_not_owner():
     bad = new_deck("417").replace("          transport_coefficient = fluid\n", "")
     result = preflight.inspect({"migrated_continuity.i": bad}, new_mechanism("417"))
     assert "P1_ELECTRON_FLUID_TRANSPORT_SELECTOR_MISSING" in result["errors"]
+
+
+@pytest.mark.parametrize("coefficient", ("O2p_mobility", "O2p_diffusivity"))
+def test_json_owned_constant_rejects_duplicate_native_functor(coefficient):
+    data = "[FunctorMaterials]\n  [native_mobility_duplicate]\n"
+    data += "    type = ADGenericFunctorMaterial\n"
+    data += f"    prop_names = {coefficient}\n"
+    data += "    prop_values = 10\n  []\n[]\n"
+    result = check("417", data)
+    assert "P1_DUPLICATE_JSON_TRANSPORT_FUNCTOR_OWNER_1" in result["errors"]
+    assert result["duplicate_constant_transport_owners"][0]["name"] == (
+        "native_mobility_duplicate"
+    )
+
+
+def test_native_s6_pressure_has_neutral_flow_dependents_to_rename():
+    text = archived_base()
+    assert "[p]" in text
+    for expected in (
+        "pressure = p", "variable = p", "functor = p",
+        "functor_names = 'p Mn_neutral",
+        "functor_names = 'p Mn_neutral dp_state_dt",
+    ):
+        assert expected in text
+    # No static proof here that all 10 archived layers have been renamed;
+    # the 11-layer staged P1 and real physics-opt P2 remain independent gates.
