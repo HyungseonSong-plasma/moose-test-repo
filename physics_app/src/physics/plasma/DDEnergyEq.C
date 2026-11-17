@@ -89,9 +89,16 @@ DDEnergyEq::addSolverVariables()
     return;
   }
   if (!isParamValid("initial_molar_energy_density_eV"))
-    paramError("initial_molar_energy_density_eV",
-               "Auto-created log_e_energy requires an explicit positive initial molar "
-               "energy density [eV mol/m^3].");
+  {
+    const auto & electron = chemistryData().species("e");
+    if (!electron.initial_number_density || !electron.temperature_eV ||
+        *electron.temperature_eV <= 0.0)
+      paramError("initial_molar_energy_density_eV",
+                 "Auto-created log_e_energy requires either explicit .i initial_molar_energy_density_eV "
+                 "or species.e initial_number_density and positive temperature_eV in JSON.");
+    // For an isotropic Maxwellian, mean electron energy = (3/2) k_B T_e.
+    // temperature_eV is the energy-scale k_B*T_e in electronvolts.
+  }
 
   const std::string type = "MooseVariable";
   auto params = getFactory().getValidParams(type);
@@ -113,7 +120,22 @@ DDEnergyEq::addInitialConditions()
   auto params = getFactory().getValidParams(type);
   params.set<VariableName>("variable") = variable;
   // The solved state is log of molar energy density, not log(number density).
-  params.set<Real>("value") = std::log(getParam<Real>("initial_molar_energy_density_eV"));
+  // A new-run species.e temperature_eV is an optional IC source when no
+  // separate .i initial energy density is supplied. An existing Native
+  // log_e_energy state keeps its own initial condition unchanged.
+  Real initial_energy = 0.0;
+  if (isParamValid("initial_molar_energy_density_eV"))
+    initial_energy = getParam<Real>("initial_molar_energy_density_eV");
+  else
+  {
+    const auto & electron = chemistryData().species("e");
+    initial_energy =
+        1.5 * (*electron.temperature_eV) * (*electron.initial_number_density) /
+        PHYSICS_CONSTANTS::N_A;
+  }
+  if (!std::isfinite(initial_energy) || initial_energy <= 0.0)
+    paramError("initial_molar_energy_density_eV", "Derived initial electron energy must be finite and positive.");
+  params.set<Real>("value") = std::log(initial_energy);
   assignBlocks(params, _blocks);
   getProblem().addInitialCondition(type, name() + "_initial_energy", params);
 }
