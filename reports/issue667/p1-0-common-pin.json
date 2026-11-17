@@ -1,0 +1,254 @@
+{
+  "schema": "issue667.p1_0.provenance_pin.v1",
+  "task_id": "P1-0",
+  "status": "ARCHIVED_10_LAYERS_DIRECT_VERIFIED__FINAL_11_LAYER_HOLD",
+  "source": {
+    "main_sha": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "integration_pr": 665,
+    "integration_head_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_source_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "git_source_pin": "exact SHA; never floating main"
+  },
+  "evidence": {
+    "historical": "Original GitHub Actions artifact ZIP bytes downloaded and rehashed directly",
+    "ci": "GitHub Actions run 44153215087 artifact 14359967780 status.json intermediate scratch migration/type remap; does not contain actual final staged 11 files",
+    "companion_conversation_manifest_sha256": "57caad13d9e33a2c82114d8ab87117c25c7b64518713f678113731b2a914bb24"
+  },
+  "cases": {
+    "417": {
+      "artifact_id": 13677089020,
+      "original_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "archive_manifest_order_recomputed": true,
+      "archive_original_ion_owners": {
+        "FVKernels": 14,
+        "FVBCs": 12
+      },
+      "expected_staged_files": 11,
+      "final_staged_verified_files": 0,
+      "layers": [
+        {
+          "ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "original_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 2,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "filename": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "original_sha256": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 3,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "filename": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "original_sha256": "83690b3c5484aa39061704ea453e93bde3c12e17674cc80b7b92c3532078a02e",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 4,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "filename": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "original_sha256": "c9a38edcc377d7a698d407e9eea9e6f74b4f2072f786eda2b5a6a2b18fa0ff6f",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 5,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+          "filename": "issue477_S2-415_generation_overlay.i",
+          "original_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 6,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+          "filename": "issue477_S3-415-401_extra_overlay.i",
+          "original_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 7,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
+          "filename": "issue477_S4-401-417_op_ionization_overlay.i",
+          "original_sha256": "477b8da348bbf7b9a9e432d1c6a50460ea88624fdbaf6800edd30df4fdb64667",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 8,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-417-407_o2_consumer_overlay.i",
+          "filename": "issue477_S5-417-407_o2_consumer_overlay.i",
+          "original_sha256": "d5aa2c61df2a7ec39814f2aad45bd4ef6c0d1badf808c880d0a8395029e18a02",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 9,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+          "filename": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+          "original_sha256": "691c0ee8de270f1ce3a6371692b6fba57cd293ba14aa7291fa665ab6583fe2c4",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 10,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+          "filename": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+          "original_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 11,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+          "filename": "migrated_continuity.i",
+          "original_sha256": null,
+          "original_readback": "NOT_APPLICABLE",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        }
+      ]
+    },
+    "941": {
+      "artifact_id": 13677375813,
+      "original_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "archive_manifest_order_recomputed": true,
+      "archive_original_ion_owners": {
+        "FVKernels": 14,
+        "FVBCs": 12
+      },
+      "expected_staged_files": 11,
+      "final_staged_verified_files": 0,
+      "layers": [
+        {
+          "ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "original_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 2,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "filename": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "original_sha256": "f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 3,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "filename": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "original_sha256": "83690b3c5484aa39061704ea453e93bde3c12e17674cc80b7b92c3532078a02e",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 4,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "filename": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "original_sha256": "c9a38edcc377d7a698d407e9eea9e6f74b4f2072f786eda2b5a6a2b18fa0ff6f",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 5,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+          "filename": "issue477_S2-415_generation_overlay.i",
+          "original_sha256": "ba9bf5711f8c7fcd3e48077b502212018e4dcbe0f64bd3d0d3acb733c0483c10",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 6,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+          "filename": "issue477_S3-415-401_extra_overlay.i",
+          "original_sha256": "2a98b5331ee1fc42b4dd7ade84caad7eb8f23070acf276ed576d407ba7fc18c8",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 7,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+          "filename": "issue477_S4-401-941_op_ionization_overlay.i",
+          "original_sha256": "0eabf2873f31704362493277bf760b35c4c302bf2b3e60617da245bf864b68b3",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 8,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-941-407_o2_consumer_overlay.i",
+          "filename": "issue477_S5-941-407_o2_consumer_overlay.i",
+          "original_sha256": "d5aa2c61df2a7ec39814f2aad45bd4ef6c0d1badf808c880d0a8395029e18a02",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 9,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+          "filename": "issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+          "original_sha256": "691c0ee8de270f1ce3a6371692b6fba57cd293ba14aa7291fa665ab6583fe2c4",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 10,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+          "filename": "issue477_S6-941-407-2069-H25_H25_overlay.i",
+          "original_sha256": "7a84ac4f2096b0b3093b4790e72a74f7e862edc8fc14908837a41334248303cd",
+          "original_readback": "PASS",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        },
+        {
+          "ordinal": 11,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+          "filename": "migrated_continuity.i",
+          "original_sha256": null,
+          "original_readback": "NOT_APPLICABLE",
+          "final_staged_sha256": null,
+          "final_staged_readback": "NOT_VERIFIED"
+        }
+      ]
+    }
+  },
+  "constraints": {
+    "legacy_archive_immutable": true,
+    "delete_native_owners": false,
+    "new_only_native_p2": "HOLD",
+    "science": "SCIENCE_HOLD",
+    "native_p3_p4": "NOT_RUN",
+    "private_rate_bytes_published": false,
+    "final_stage_source_required": true,
+    "original_source_sha_must_not_be_used_as_final_stage_sha": true
+  },
+  "next_gate": "Re-stage exact PR #665 checkout from the two pinned archived ZIPs, preserve all final 11 .i bytes in a secured artifact, re-read file and block SHA256 and record include path resolution per case. Do not promote until complete."
+}
