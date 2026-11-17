@@ -1,0 +1,325 @@
+{
+  "schema": "issue667.P1-A1-1.actual_final11_source_bound_receipt.v1",
+  "task_id": "P1-A1-1",
+  "issue_number": 667,
+  "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_pr_number": 665,
+  "common_p1_0_manifest_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9691f7f7741566fda93e1ee6f3fcb603e6532261/reports/issue667/p1-0-s6-417-941-immutable-source-pin.json",
+  "common_p1_0_manifest_git_blob_sha": "98825604d09cf18884be83f47752cb4f1a3813ce",
+  "common_p1_0_ci_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182628032",
+  "common_p1_0_artifact_id": 14372278070,
+  "common_p1_0_artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182628032/artifacts/14372278070",
+  "common_p1_0_artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+  "common_p1_0_internal_manifest_sha256": "14a8eb65dc00e424efdce2ab6f8a44a8bf4447f95500a9bfbb01bf403667e010",
+  "verification": "Independent local byte readback of downloaded GitHub Artifact: ZIP sha+CRC, common_manifest sha, 22 of 22 actual .i file sha+size, six chosen object blocks SHA+parameters+names+section, case-to-case identity, 11 negative mutation cases in each case",
+  "cases": {
+    "417": {
+      "status": "PASS_STATIC_ACTUAL_FINAL_11LAYER_SOURCE_BOUND",
+      "original_archive_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "ordered_layer_count": 11,
+      "all_11_layer_file_sha256_independently_recomputed_match": true,
+      "ordered_layer_file_sha256": [
+        {
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "layer_ordinal": 2,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+        },
+        {
+          "layer_ordinal": 3,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+        },
+        {
+          "layer_ordinal": 4,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+        },
+        {
+          "layer_ordinal": 5,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+          "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531"
+        },
+        {
+          "layer_ordinal": 6,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0"
+        },
+        {
+          "layer_ordinal": 7,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
+          "file_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c"
+        },
+        {
+          "layer_ordinal": 8,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-417-407_o2_consumer_overlay.i",
+          "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+        },
+        {
+          "layer_ordinal": 9,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+        },
+        {
+          "layer_ordinal": 10,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+          "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc"
+        },
+        {
+          "layer_ordinal": 11,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+          "file_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895"
+        }
+      ],
+      "objects": [
+        {
+          "object_name": "ni_time",
+          "section": "FVKernels",
+          "factory_type": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_O2p",
+          "relevant_parameters": {
+            "type": "PhysicsFVLogMolarElectronTimeDerivative",
+            "variable": "log_O2p",
+            "block": "plasma"
+          },
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+          "block_size_bytes": 110,
+          "block_start_line": 546,
+          "sha_method": "SHA-256 of exact ASCII/UTF-8 object block from [name] through closing [] newline",
+          "case": "417"
+        },
+        {
+          "object_name": "ni_diffusion",
+          "section": "FVKernels",
+          "factory_type": "PhysicsFVLogMolarElectronDiffusion",
+          "variable": "log_O2p",
+          "relevant_parameters": {
+            "type": "PhysicsFVLogMolarElectronDiffusion",
+            "variable": "log_O2p",
+            "coeff": "O2p_diffusivity",
+            "block": "plasma"
+          },
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "block_sha256": "756532a19a6accda73f9283536e082da97be32170416abcfb61d3427bc910f4c",
+          "block_size_bytes": 138,
+          "block_start_line": 551,
+          "sha_method": "SHA-256 of exact ASCII/UTF-8 object block from [name] through closing [] newline",
+          "case": "417"
+        },
+        {
+          "object_name": "ni_drift",
+          "section": "FVKernels",
+          "factory_type": "PhysicsFVLogMolarElectrostaticDrift",
+          "variable": "log_O2p",
+          "relevant_parameters": {
+            "type": "PhysicsFVLogMolarElectrostaticDrift",
+            "variable": "log_O2p",
+            "carrier": "carrier_one",
+            "mobility": "O2p_mobility",
+            "charge_number": "1",
+            "potential": "potential",
+            "use_element_gradient_for_potential": "true",
+            "advected_interp_method": "upwind",
+            "boundaries_to_avoid": "inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring",
+            "block": "plasma"
+          },
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "block_sha256": "d4f7b0af5fc56ee562355fe4fd36729e6cd360a6af6c7ca50e6148b3c752a3fd",
+          "block_size_bytes": 419,
+          "block_start_line": 557,
+          "sha_method": "SHA-256 of exact ASCII/UTF-8 object block from [name] through closing [] newline",
+          "case": "417"
+        }
+      ],
+      "target_object_count": 3,
+      "target_object_occurrences_across_11_layers": {
+        "ni_time": 1,
+        "ni_diffusion": 1,
+        "ni_drift": 1
+      },
+      "negative_controls_passed": 11,
+      "negative_controls": {
+        "omit_ni_time": "REJECTED",
+        "duplicate_ni_time": "REJECTED",
+        "wrong_time_factory": "REJECTED",
+        "wrong_variable": "REJECTED",
+        "wrong_diffusivity": "REJECTED",
+        "wrong_drift_mobility": "REJECTED",
+        "wrong_drift_charge": "REJECTED",
+        "wrong_drift_carrier": "REJECTED",
+        "wrong_upwind": "REJECTED",
+        "wrong_potential_gradient": "REJECTED",
+        "wrong_boundary_avoidance": "REJECTED"
+      }
+    },
+    "941": {
+      "status": "PASS_STATIC_ACTUAL_FINAL_11LAYER_SOURCE_BOUND",
+      "original_archive_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "ordered_layer_count": 11,
+      "all_11_layer_file_sha256_independently_recomputed_match": true,
+      "ordered_layer_file_sha256": [
+        {
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+        },
+        {
+          "layer_ordinal": 2,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+        },
+        {
+          "layer_ordinal": 3,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+        },
+        {
+          "layer_ordinal": 4,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "file_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+        },
+        {
+          "layer_ordinal": 5,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+          "file_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531"
+        },
+        {
+          "layer_ordinal": 6,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+          "file_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0"
+        },
+        {
+          "layer_ordinal": 7,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+          "file_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43"
+        },
+        {
+          "layer_ordinal": 8,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-941-407_o2_consumer_overlay.i",
+          "file_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+        },
+        {
+          "layer_ordinal": 9,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+          "file_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+        },
+        {
+          "layer_ordinal": 10,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+          "file_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc"
+        },
+        {
+          "layer_ordinal": 11,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+          "file_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0"
+        }
+      ],
+      "objects": [
+        {
+          "object_name": "ni_time",
+          "section": "FVKernels",
+          "factory_type": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_O2p",
+          "relevant_parameters": {
+            "type": "PhysicsFVLogMolarElectronTimeDerivative",
+            "variable": "log_O2p",
+            "block": "plasma"
+          },
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+          "block_size_bytes": 110,
+          "block_start_line": 546,
+          "sha_method": "SHA-256 of exact ASCII/UTF-8 object block from [name] through closing [] newline",
+          "case": "941"
+        },
+        {
+          "object_name": "ni_diffusion",
+          "section": "FVKernels",
+          "factory_type": "PhysicsFVLogMolarElectronDiffusion",
+          "variable": "log_O2p",
+          "relevant_parameters": {
+            "type": "PhysicsFVLogMolarElectronDiffusion",
+            "variable": "log_O2p",
+            "coeff": "O2p_diffusivity",
+            "block": "plasma"
+          },
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "block_sha256": "756532a19a6accda73f9283536e082da97be32170416abcfb61d3427bc910f4c",
+          "block_size_bytes": 138,
+          "block_start_line": 551,
+          "sha_method": "SHA-256 of exact ASCII/UTF-8 object block from [name] through closing [] newline",
+          "case": "941"
+        },
+        {
+          "object_name": "ni_drift",
+          "section": "FVKernels",
+          "factory_type": "PhysicsFVLogMolarElectrostaticDrift",
+          "variable": "log_O2p",
+          "relevant_parameters": {
+            "type": "PhysicsFVLogMolarElectrostaticDrift",
+            "variable": "log_O2p",
+            "carrier": "carrier_one",
+            "mobility": "O2p_mobility",
+            "charge_number": "1",
+            "potential": "potential",
+            "use_element_gradient_for_potential": "true",
+            "advected_interp_method": "upwind",
+            "boundaries_to_avoid": "inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring",
+            "block": "plasma"
+          },
+          "layer_ordinal": 1,
+          "file_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "file_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "block_sha256": "d4f7b0af5fc56ee562355fe4fd36729e6cd360a6af6c7ca50e6148b3c752a3fd",
+          "block_size_bytes": 419,
+          "block_start_line": 557,
+          "sha_method": "SHA-256 of exact ASCII/UTF-8 object block from [name] through closing [] newline",
+          "case": "941"
+        }
+      ],
+      "target_object_count": 3,
+      "target_object_occurrences_across_11_layers": {
+        "ni_time": 1,
+        "ni_diffusion": 1,
+        "ni_drift": 1
+      },
+      "negative_controls_passed": 11,
+      "negative_controls": {
+        "omit_ni_time": "REJECTED",
+        "duplicate_ni_time": "REJECTED",
+        "wrong_time_factory": "REJECTED",
+        "wrong_variable": "REJECTED",
+        "wrong_diffusivity": "REJECTED",
+        "wrong_drift_mobility": "REJECTED",
+        "wrong_drift_charge": "REJECTED",
+        "wrong_drift_carrier": "REJECTED",
+        "wrong_upwind": "REJECTED",
+        "wrong_potential_gradient": "REJECTED",
+        "wrong_boundary_avoidance": "REJECTED"
+      }
+    }
+  },
+  "overall_status": "PASS_P1_A1_1_STATIC_ACTUAL_FINAL_11_LAYER_BYTES",
+  "handoff": "P1-E only; 29 task receipts still separately required",
+  "native_p2": "NOT_RUN",
+  "new_only_s6_p2": "HOLD",
+  "native_p3": "NOT_RUN",
+  "native_p4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "privacy": "No private rate byte copied. No original .i / native code or PR665 modified."
+}
