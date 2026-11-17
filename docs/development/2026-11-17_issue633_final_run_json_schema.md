@@ -13,8 +13,9 @@ drift-diffusion boundaries. They instantiate 12 ion FV BC objects and 8
 electron/energy FEM sheath BC objects without changing the historic
 electron's inlet/outlet boundary treatment. The source has one electron
 surface-current selector. There is **no synthetic progress rate** in
-either file. Eight live `R_*` progress producers and all upstream coefficient
-Functors must be available in a staged new-only Scratch input before P2.
+either file. Eight live `R_*` progress producers must be available in staged
+new-only Scratch input before P2. Ion mobility/diffusivity are now self-owned
+JSON constants; external ion coefficient Functor producers are not required.
 Reactions are retained byte-semantically from the pinned unified Hybrid files.
 
 ## Uniform species base
@@ -31,9 +32,11 @@ same base fields:
   "sticking_coefficient": 1,
   "initial_number_density": 1000000000000001.6,
   "transport_coef": {
-    "type": "functor",
+    "type": "constant",
     "file": "none",
-    "unit": "physical"
+    "unit": "physical",
+    "mobility": 10,
+    "diffusivity": 0.25851999786435537
   }
 }
 ```
@@ -82,20 +85,25 @@ same base fields:
   The table consumes canonical `e_energy_eV` and live `pressure` /
   `temperature` Functors. Both gas quantities come exclusively from
   MOOSE `[Plasmas]`; no species-level gas aliases are accepted.
-- Ions O2p, Om, Op: `{"type":"functor","file":"none","unit":"physical"}`.
-  C++ derives `<species>_mobility` and `<species>_diffusivity`. The pinned
-  original S6 Native coefficient providers supply **physical** values.
-  Writing `unit:"reduced"` here would falsely assert N-scaled transport
-  that the Functor Material does **not** convert and is rejected.
+- Ions O2p, Om, Op: `{"type":"constant","file":"none","unit":"physical","mobility":10,"diffusivity":0.25851999786435537}`.
+  The explicit **user-defined JSON values** reproduce the archived S6 Native
+  constants for all three ions. The Species-owned `DDTransportMaterial`
+  generates `<species>_mobility` and `<species>_diffusivity` Functors.
+  No upstream Native ion coefficient Material is required. These are
+  **physical** mobility [m²/(V s)] and diffusivity [m²/s], not reduced
+  coefficients. The parser and P0 guard reject negative or nonfinite values.
 - Other neutrals: `{"type":"none","file":"none","unit":"none"}` means no DD
   transport object; independently owned Navier–Stokes/neutral transport
   remains unchanged.
-- `constant` mode remains supported for synthetic fixtures via the same
-  object plus numeric `mobility` and `diffusivity`, `file:"none"`,
-  `unit:"physical"`.
+- `functor` mode remains available for other scenarios whose physical
+  coefficients are genuinely supplied by an independent upstream Material.
 
-Only `species.e` additionally declares `energy_transport_coef:"fluid"`,
-because it owns the separately selected electron-energy physics.
+`species.e.energy_transport_coef` is **forbidden** in new-only JSON.
+Electron energy transport closure belongs in MOOSE
+`[Energy] transport_coefficient = fluid`. Selecting `fluid` requests
+`(5/3)*e_mobility` and `(5/3)*e_diffusivity` from the existing electron
+lookup `DDTransportMaterial`, in addition to all full Energy equation
+Kernels when `fem_potential` is supplied.
 
 ## Reactions and wall/BC ownership
 
@@ -139,27 +147,39 @@ because it owns the separately selected electron-energy physics.
   electron-energy BC. This exactly preserves the Native S6 electron
   particle/energy sheath on cover, wafer and focus_ring without widening
   the inlet/outlet electron residual.
-- The new ion wall Functors and a **single** electron wall Flux feed the
-  three surface-current properties. In the S6 ion-only cutover the
-  `[Energy]` action stays in partial mode: its existing Native electron
-  `ESWallFluxMaterial` is retained with `species_id=e`, publishing
-  `e_wall_number_flux`. When a future full `[Energy] fem_potential` enables
-  the Physics-generated `ESWallFluxMaterial`, the Native electron
-  provider must be retired to prevent a duplicate source. The lower-D
-  Native surface-charge equations remain permitted if no producer
-  collision exists.
-- **Important additional Scratch cutover:** these grouped JSON entries
-  explicitly generate **8 FEM electron/electron-energy sheath BCs**.
-  The 8 historical Native electron FEM BC objects must therefore be retired
-  in disposable Scratch before validating a new-only run. They are
-  separate from the 14 Native ion FV Kernels and 12 Native ion FV BCs.
-  Retiring electron *BCs* does not require retiring the Native electron
-  wall **Flux Functor** in partial Energy mode. The preflight rejects
-  duplicate Native FEM electron BC owners. Original historical inputs
-  remain untouched; this is a separate P2 HOLD until staged and proven.
+- The new ion wall Functors and **Physics-generated** electron
+  `ESWallFluxMaterial` provide current/charge ledger inputs. S6 New-only
+  now selects **full** `[Energy] fem_potential = potential`, so it creates
+  `log_e_energy` Time, Transport, Joule and chemistry-energy Kernels,
+  `e_energy_eV`, `n_e_physical` and the canonical
+  `e_wall_number_flux`. The legacy electron-wall Material and the
+  independent `electron_transport`, `mean_energy`,
+  `electron_physical_density` owners must be retired in disposable
+  Scratch to avoid duplicate Functor registration. The lower-D Native
+  surface-charge equations remain, consuming unchanged
+  `cover/wafer/focus_ring_net_surface_current_density` names.
+- **Important Scratch cutover:** the 8 original Native electron/
+  electron-energy FEM BCs and redundant electron Energy Time/Transport/Joule
+  and Chemistry Kernels must be removed from the disposable Scratch input.
+  Their consumers are generated by `DDContinuityEq`, `DDEnergyEq` and
+  `PlasmasAction`. This is independent of the 14 Native ion FV Kernels
+  and 12 Native ion FV BCs. Original historical files remain untouched;
+  actual Scratch P2 and runtime producer/consumer reachability are HOLD.
+- The original S6 solved pressure variable is **`p`**, not
+  `pressure`. Scratch must rename its solver variable and all neutral
+  velocity/mass/pressure consumers from `p` to `pressure`, and remove
+  the old variable's `initial_condition`; `[Plasmas] pressure`
+  provides the unique canonical `FVConstantIC`. Likewise
+  `log_ne -> log_e`, `log_energy -> log_e_energy`,
+  `mean_en_solved -> e_energy_eV` and
+  `electron_wall_number_flux -> e_wall_number_flux` must be completed
+  without leaving residual Native aliases or duplicate physical owners.
+  Preflight now rejects these names for modern S6 new-only inputs.
 - `pressure`, `temperature`, `wall_gradient` (root),
   `fem_potential`, FV species selection and
-  `migration_smoothing_width` (Continuity) belong to MOOSE `.i` input.
+  `migration_smoothing_width` (Continuity), plus
+  `fem_potential` and `transport_coefficient = fluid` (Energy)
+  belong to MOOSE `.i` input.
   S6 has a solved FV variable `pressure` that already provides its live
   Functor; root pressure is that variable's initial condition, **not** a
   competing constant pressure Functor. Root temperature produces its
