@@ -1,0 +1,209 @@
+{
+  "schema": "issue667.p1e.verification_receipt.partial.v1",
+  "status": "PARTIAL_SOURCE_STATIC_PASS__P1E_INTEGRATION_HOLD",
+  "provenance": {
+    "source_pr": 665,
+    "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "source_scope": "PR665 pre-retirement Hybrid Scratch D 11-layer only",
+    "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "ci_input_artifacts": [
+      {
+        "id": 14372278070,
+        "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+      },
+      {
+        "id": 14372278074,
+        "sha256": "584fd8eff989ab1f7f0a7582ae72b4dc2429f84b8b05ed91c1a46f89df88da5e"
+      }
+    ],
+    "local_full_evidence_bundle_sha256": "607cd21b0253008a78eb2583f29dc4d8e40c2f5352db1a20ce9a7960bbf8410f"
+  },
+  "readback": {
+    "cases": 2,
+    "files_sha_match": "22/22",
+    "two_artifacts_byte_identical": "22/22",
+    "native_ion_block_sha_match": "52/52",
+    "FVKernels_each": 14,
+    "FVBCs_each": 12,
+    "ion_sources_each": 5,
+    "static_producer_edges": "10/10",
+    "wall_flux_materials_each": 3,
+    "original_archived_zip_sha256": {
+      "417": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "941": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    "original_archived_inputs_sha_match": "20/20",
+    "independent_negative_controls": "8/8 rejected",
+    "duplicate_ion_owner_names": 0,
+    "extra_ion_owners": 0,
+    "unresolved_includes": 0
+  },
+  "worker_receipts": {
+    "expected": 29,
+    "found": 23,
+    "missing": [
+      "A1-1",
+      "A1-2",
+      "B1",
+      "B2",
+      "B7",
+      "D6"
+    ],
+    "ledger": [
+      {
+        "task_id": "A1-3",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-a1-3-op-archive-20261117/reports/issue667/p1-a1-3-op-final11-sourcepin-verification.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "A2-1",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-a2-1-general-fvbc-evidence-20261117/reports/issue667/p1-a2-1-final11-direct-byte-readback-v4.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "A2-2",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-a2-2-cover-source-bound-20261117/docs/development/issue667/p1-a2-2-cover-source-bound-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "A2-3",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-a2-3-wafer-final11-20261117/reports/issue667/p1-a2-3-wafer-final11-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "A2-4",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-a2-4-focus-ring-20261117/reports/issue667/p1-a2-4-final-11layer-verified.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "B3",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b3-source-417-20261117/evidence/issue667/p1-b3-s6-417-om-source-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "B4",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b4-20261117/docs/development/issue667_p1_b4_417_op_source_1_receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "B5",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b5-h25-source-20261117/reports/issue667/p1-b5-s6-417-final-staged-h25-source-pass.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "B6",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-b6-ei-rate-20261117/docs/evidence/issue667/p1-b6-s6-417-ei-rate-provenance.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "C1",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-c1-941-o2p-ei415-20261117/reports/issue667/p1-c1-s6-941-ei415-o2p-final11-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "C2",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-c2-941-o2p-h25-20261117/reports/issue667/p1-c2-s6-941-o2p-h25-source.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "C3",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-c3-941-om-source-20261117/reports/issue667/p1-c3-s6-941-om-source-final11-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "C4",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-c4-s6-941-op-source-20261117/reports/issue667/p1-c4-s6-941-op-ei941-final11-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "C5",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-c5-op-h25-941-20261117/reports/issue667/p1-c5-s6-941-op-h25-source.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "C6",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-c6-s6-941-ei-provenance-9c15a4f-20261117/reports/issue667/p1-c6-s6-941-ei-rate-provenance.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "C7",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-c7-941-h25-rate-20261117/reports/issue667/p1-c7-s6-941-h25-rate-final11-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "D1",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-d1-electron-continuity-20261117/reports/issue667/p1-d1-electron-continuity-initial-fem-bc-final11-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "D2",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-d2-electron-energy-20261117/reports/issue667/p1-d2-electron-energy-transport.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "D3",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-d3-pressure-neutral-20261117/reports/issue667/p1-d3-pressure-neutral-final11-source-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "D4",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-d4-rf-joule-20261117/reports/issue667/p1-d4-rf-joule-s6-final11-source-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "D5",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-d5-poisson-density-20261117/reports/issue667/p1-d5-poisson-density-receipt.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "D7",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-d7-surface-current-20261117/reports/issue667/p1-d7-surface-current-lowerd-preserved-source.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "D8",
+        "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-667-p1-d8-diagnostics-20261117/reports/issue667/p1-d8-diagnostics-external-callers.json",
+        "status": "PRESENT_SOURCE_BOUND_WITH_SCOPE_LIMITS"
+      },
+      {
+        "task_id": "A1-1",
+        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+      },
+      {
+        "task_id": "A1-2",
+        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+      },
+      {
+        "task_id": "B1",
+        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+      },
+      {
+        "task_id": "B2",
+        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+      },
+      {
+        "task_id": "B7",
+        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+      },
+      {
+        "task_id": "D6",
+        "status": "MISSING_INDEPENDENT_WORKER_RECEIPT__P1E_BYTE_CENSUS_ONLY"
+      }
+    ]
+  },
+  "gates": {
+    "P1_0": "PASS_EXACT_HEAD_SOURCE",
+    "P1_E": "HOLD",
+    "P2_newonly_retirement": "NOT_RUN",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "unresolved": [
+    "Six independent worker receipts not available even though relevant object bytes were independently checked",
+    "Private EI original table SHA not independently recomputed; manifest digest is expected-only",
+    "Dynamic external caller zero and runtime warehouse ownership unproven",
+    "This is pre-retirement Hybrid D, not 26->24 New-only cutover"
+  ]
+}
