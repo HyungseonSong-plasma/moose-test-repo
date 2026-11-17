@@ -43,7 +43,13 @@ def test_json_drives_species_transport_without_i_material_blocks():
 def test_continuity_maps_both_species_families_to_ddmaterial():
     code = (ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
     assert '"require_json_transport"' not in code
-    assert "chemistryData().hasDDTransport()" in code
+    # A selected species always needs its JSON transport record: no silent
+    # Native-coefficient bypass when the entire section is missing.
+    assert "chemistryData().hasDDTransport()" not in code
+    assert "if (!mechanism.ddTransport(id))" in code
+    assert 'validate(_fem_species, "fem_species", "FEM")' in code
+    assert 'validate(_fvm_species, "fvm_species", "FVM")' in code
+    assert "Existing Native coefficient owners remain" not in code
     assert "validate(_fem_species, \"fem_species\", \"FEM\")" in code
     assert "validate(_fvm_species, \"fvm_species\", \"FVM\")" in code
     assert 'const auto * config = mechanism.ddTransport(id)' in code
@@ -97,3 +103,21 @@ def test_legacy_s6_is_not_silently_overridden():
         for item in ("chemistry/oxygen_s6_common.json", f"chemistry/oxygen_s6_{variant}.json"):
             source = json.loads((PILOT / item).read_text())
             assert "transport_coefficients" not in source
+
+
+
+def test_selected_species_has_no_native_transport_fallback():
+    code = (ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
+    # Both empty and partially defined transport JSON must fail on selected IDs.
+    # Source-based P0: native input/OCI --check-input remains a separate P2 gate.
+    assert "No front-end transport switch" not in code
+    assert "an absent section is not a Native-coefficient fallback." in code
+    assert 'paramError(option,' in code
+    assert 'Specify transport_coef=constant, lookup, or functor' in code
+    assert 'mooseError("DDContinuityEq selected species' in code
+    assert "if (!config)\n      continue" not in code
+
+    # The scenario fixture intentionally omits Om. It must be rejected rather
+    # than silently inheriting Native coefficients for an explicitly FV species.
+    missing = json.loads((PILOT / "invalid_json_dd_missing_om_p2.json").read_text())
+    assert "transport_coef" not in missing["species"]["Om"]
