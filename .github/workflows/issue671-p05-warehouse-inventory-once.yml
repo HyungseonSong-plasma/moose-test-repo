@@ -34,7 +34,7 @@ jobs:
           git diff --name-only "$BASE_HEAD" HEAD | sort > "$RUNNER_TEMP/actual-changes.txt"
           printf '%s\n' '.github/workflows/issue671-p05-warehouse-inventory-once.yml' 'physics_app/src/physics/plasma/DDContinuityEq.C' > "$RUNNER_TEMP/approved-changes.txt"
           diff -u "$RUNNER_TEMP/approved-changes.txt" "$RUNNER_TEMP/actual-changes.txt"
-          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 12bbfa74064c1b3d3ad135d137bcfeb5d425fdaa
+          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = d8c8069eb573a73338037c912e880de328d5a1fe
           test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 045de080e3d836d75495b1749d75d5d3deea2330
           test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
           test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
