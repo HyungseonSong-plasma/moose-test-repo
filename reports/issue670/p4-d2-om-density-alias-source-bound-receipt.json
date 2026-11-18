@@ -1,0 +1,236 @@
+{
+  "schema": "issue670.p4_d2.negative_ion_density.source_bound.v1",
+  "task_id": "P4-D2",
+  "issue": 670,
+  "source_pr": 665,
+  "current_source_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "artifact_stage_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "verdict": "PASS_STATIC_ALIAS_GRAPH_AND_CANONICAL_FORMULA__HOLD_NATIVE_P2",
+  "task_scope": "Om physical number density: n_m_physical -> Om_number_density, producer/consumer SHA only",
+  "provenance": {
+    "historical_417": {
+      "artifact_id": 13677089020,
+      "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb"
+    },
+    "historical_941": {
+      "artifact_id": 13677375813,
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    "P1_hybrid": {
+      "run_id": 44182628032,
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "P2_production": {
+      "run_id": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+    },
+    "P3_X_production": {
+      "run_id": 44256823392,
+      "artifact_id": 14405784430,
+      "zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6"
+    },
+    "zip_sha_crc": "PASS_ALL_FIVE_ZIPS",
+    "file_sha": "66_OF_66_CASE_STAGE_INPUT_FILES_REHASHED_MATCH_MANIFESTS"
+  },
+  "current_source_code_git_blobs": {
+    "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py": "b17feb16c70ff28c090b6687a46044cff826072e",
+    "ci/p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35"
+  },
+  "legacy_alias_path": [
+    {
+      "from": "log_nm",
+      "stage": "historical",
+      "to": "negative_ion_molar_density"
+    },
+    {
+      "from": "log_Om",
+      "stage": "P3X",
+      "to": "negative_ion_molar_density",
+      "formula": "exp(log_Om)",
+      "units": "mol/m3"
+    },
+    {
+      "from": "negative_ion_molar_density",
+      "to": "n_m_physical",
+      "formula": "6.02214076e23 * c_m",
+      "units": "1/m3"
+    }
+  ],
+  "generated_physics_path": {
+    "action": "[Physics]/[Plasmas]/[Transport]/[DriftDiffusion]/[Continuity]",
+    "fvm_species": "O2p Om Op",
+    "fem_species": "e",
+    "manual_Om_variable_owner_count": 0,
+    "Om_JSON_charge_number": -1,
+    "Om_JSON_model": "constant",
+    "Om_JSON_molar_mass": 0.016,
+    "Om_JSON_initial_number_density": 999999999999.9983,
+    "om_ion_wall_record_creation": "Chemistry.C: charged heavy species with enabled transport creates species.ion_wall",
+    "material_generation": "DDContinuityEq::addFunctorMaterials: one ADParsedFunctorMaterial property_name=Om_number_density when hasIonWalls and Om selected and dont_create_kernels absent",
+    "generated_formula": "N_A * exp(log_Om)",
+    "generated_runtime_instantiation": "NOT_RUN",
+    "deduplication": "Exactly one explicit old-name alias producer; no explicit Om_number_density producer. Distinct output identifiers may encode the same physical density; runtime check still required."
+  },
+  "verified_consumer_graph": [
+    "n_m_physical -> charge_number_density (ni+nop-ne-nm) -> poisson_source -> Kernels/phi_source (potential)",
+    "n_m_physical -> charge_number_density -> charge_density_C_m3 -> Postprocessors/charge_integral",
+    "n_m_physical -> FunctorMaterials/negative_ion_wall_flux (species_id Om, charge_number -1)",
+    "n_m_physical -> Postprocessors/nm_min, nm_max"
+  ],
+  "block_hashes": [
+    {
+      "object": "negative_ion_molar_density",
+      "section": "FunctorMaterials",
+      "block_sha256": "1ff82e895a076dcc406ccb44d36c7f20ce31efdf26102fb09ed2a50cafda3584",
+      "role": "log_Om -> exp(log_Om), mol/m^3"
+    },
+    {
+      "object": "negative_ion_physical_density",
+      "section": "FunctorMaterials",
+      "block_sha256": "0950b71a88d6bf3451aa03fb8ca257625819d3e4861493e0bad46aa6f0e92263",
+      "role": "N_A * negative_ion_molar_density, emits n_m_physical"
+    },
+    {
+      "object": "charge_number_density",
+      "section": "FunctorMaterials",
+      "block_sha256": "8fca600fe127ec76fe0a6b642460858b3a84cb2c43bbb13225f02a57ec04e6af",
+      "role": "ni+nop-ne-nm; Om negative"
+    },
+    {
+      "object": "charge_density",
+      "section": "FunctorMaterials",
+      "block_sha256": "463d17536ee97f21d001c698cb06bfd36ba9d16a5aadb7781b8445783f84a5c7",
+      "role": "charge_number_density -> charge_density_C_m3"
+    },
+    {
+      "object": "poisson_source",
+      "section": "FunctorMaterials",
+      "block_sha256": "95259beac613226b1bb0a52743d09d5136a37500c0504e531d0f470aff4ba5f6",
+      "role": "charge_number_density -> poisson_source"
+    },
+    {
+      "object": "phi_source",
+      "section": "Kernels",
+      "block_sha256": "062570461eafeed5d4f1721a35592ac727eb8e9d794c4b72355f4c2bcee13725",
+      "role": "FunctorKernel potential consumes poisson_source"
+    },
+    {
+      "object": "negative_ion_wall_flux",
+      "section": "FunctorMaterials",
+      "block_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162",
+      "role": "PhysicsIonWallFluxMaterial species Om, charge -1, ion_number_density=n_m_physical"
+    },
+    {
+      "object": "nm_min",
+      "section": "Postprocessors",
+      "block_sha256": "c1ad5033028105c9756f22155913a8c427d09128a83daaffcbbbb719a234d3be",
+      "role": "n_m_physical min"
+    },
+    {
+      "object": "nm_max",
+      "section": "Postprocessors",
+      "block_sha256": "9eb58ecdedb8e1d6b7810f526d73872cad48ec8932a6c589eddf9a0562279068",
+      "role": "n_m_physical max"
+    },
+    {
+      "object": "charge_integral",
+      "section": "Postprocessors",
+      "block_sha256": "4c2137b46b76f661afbf6884c0ac66ec3f1b55789c4c66d24c4055eceddd80df",
+      "role": "charge_density_C_m3"
+    },
+    {
+      "object": "charge_number_min",
+      "section": "Postprocessors",
+      "block_sha256": "f6f3a0ce3827e211006242c83532f94d155a281b47935be955ea90367f97df35",
+      "role": "charge_number_density min"
+    },
+    {
+      "object": "charge_number_max",
+      "section": "Postprocessors",
+      "block_sha256": "50427aaf6c4e1e64f873d3c1f7177f9cd22fcf4e1b3af7cfee2d393118b02c94",
+      "role": "charge_number_density max"
+    }
+  ],
+  "cases": {
+    "417": {
+      "case": "417",
+      "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "raw_10layer_c0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "raw_molar_block_sha256": "1d4731721302a0ab9280329e8362ce8f7ca0caaafef940e07af28898d092ea77",
+      "raw_molar_state": "log_nm",
+      "raw_alias_block_sha256": "0950b71a88d6bf3451aa03fb8ca257625819d3e4861493e0bad46aa6f0e92263",
+      "hybrid_c0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "p2_c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "p3x_c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "new_molar_block_sha256": "1ff82e895a076dcc406ccb44d36c7f20ce31efdf26102fb09ed2a50cafda3584",
+      "retained_alias_block_sha256": "0950b71a88d6bf3451aa03fb8ca257625819d3e4861493e0bad46aa6f0e92263",
+      "explicit_n_m_physical_providers": 1,
+      "explicit_Om_number_density_providers": 0,
+      "expected_generated_Om_number_density": 1,
+      "legacy_alias_direct_consumer_count": 4,
+      "om_initial_number_density_m3": 999999999999.9983,
+      "case_negative_mutations_rejected": 28,
+      "P1_P2_P3X_source_input_file_sha": "11_OF_11_EACH_STAGE_PASS",
+      "p3x_all_12_target_block_sha_preserved_vs_P2": true
+    },
+    "941": {
+      "case": "941",
+      "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "raw_10layer_c0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "raw_molar_block_sha256": "1d4731721302a0ab9280329e8362ce8f7ca0caaafef940e07af28898d092ea77",
+      "raw_molar_state": "log_nm",
+      "raw_alias_block_sha256": "0950b71a88d6bf3451aa03fb8ca257625819d3e4861493e0bad46aa6f0e92263",
+      "hybrid_c0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "p2_c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "p3x_c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "new_molar_block_sha256": "1ff82e895a076dcc406ccb44d36c7f20ce31efdf26102fb09ed2a50cafda3584",
+      "retained_alias_block_sha256": "0950b71a88d6bf3451aa03fb8ca257625819d3e4861493e0bad46aa6f0e92263",
+      "explicit_n_m_physical_providers": 1,
+      "explicit_Om_number_density_providers": 0,
+      "expected_generated_Om_number_density": 1,
+      "legacy_alias_direct_consumer_count": 4,
+      "om_initial_number_density_m3": 999999999999.9983,
+      "case_negative_mutations_rejected": 28,
+      "P1_P2_P3X_source_input_file_sha": "11_OF_11_EACH_STAGE_PASS",
+      "p3x_all_12_target_block_sha_preserved_vs_P2": true
+    }
+  },
+  "negative_controls": {
+    "source": "Independent offline mutation of copies of P3-X actual .i bytes and per-case JSON, semantic validation function (NOT production P0 or Native)",
+    "per_case": 28,
+    "total_rejected": 56,
+    "families": [
+      "missing/duplicate/wrong density producer",
+      "incorrect molar/log state and Avogadro scaling",
+      "wrong charge sign/Poisson RHS/coulomb charge inputs",
+      "wall Om density/charge/species mismatch",
+      "diagnostic consumption broken",
+      "missing Om Continuity selection and forbidden bypass",
+      "explicit Om_number_density duplicate",
+      "invalid Om JSON charge/density/transport"
+    ],
+    "full_local_audit_sha256": "c9ffe79c871847a403df93a2c251475a98513f6b44b65a248e5ffd17835920b3"
+  },
+  "status_gates": {
+    "P2_PRODUCTION_SOURCE": "PASS",
+    "P3_X_SOURCE_IN_PR665": "MERGED",
+    "P4_D2": "PASS_STATIC_SOURCE",
+    "P4_X": "PENDING",
+    "NEW_ONLY_NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "unresolved": [
+    "Actual PhysicsApp Warehouse Om_number_density generated Property and old n_m_physical Functor late binding are not runtime-proven.",
+    "Historical active callers, wall flux and Poisson semantics beyond source graph require P5 check-input and P4-X cross-species integration.",
+    "Om mobility/diffusivity ownership conflict from P4-T2 is outside D2 and remains separately gated."
+  ],
+  "safety": "No edits to original Native/10-layer/ZIP, production staging, JSON, PhysicsApp, PR665, main or any private EI rate bytes."
+}
