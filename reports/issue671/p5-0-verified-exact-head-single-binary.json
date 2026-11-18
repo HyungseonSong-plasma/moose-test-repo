@@ -1,0 +1,114 @@
+{
+  "schema": "issue671.p5_0.single_binary_artifact_verified_source_bound.v1",
+  "task": "P5-0",
+  "verdict": "PASS_ONE_EXACT_HEAD_PHYSICSAPP_BINARY_BUILD_WITH_PORTABLE_APP_LIBS__NATIVE_P2_HOLD",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source": {
+    "draft_pr": 665,
+    "pr_head_exact": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
+    "source_tree": "433833c1fe2c8cb6debf4cd7e6d47f987e5c3422",
+    "head_confirmed_unchanged_after_ci": true,
+    "p4_x_seven_owner_cutover_source": true,
+    "p4_x_full_acceptance": "HOLD"
+  },
+  "build": {
+    "workflow_run_id": 44279232578,
+    "workflow_job_id": 134717242613,
+    "workflow_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44279232578",
+    "workflow_conclusion": "SUCCESS",
+    "runner": "ubuntu-24.04",
+    "source_checkout_exact_pr_head": true,
+    "image": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "compiler": "g++ (GCC) 13.3.1 20240611 (Red Hat 13.3.1-2)",
+    "method": "opt",
+    "command": "make -C physics_app -j2 app_non_unity_dirs='%/utils'",
+    "build_count_in_this_job": 1,
+    "build_log_sha256": "5bdda6ecfdcb2b8da8e6cd066f427cecfea1f33cdbbc5a483039cf521928b3c8",
+    "toolchain_log_sha256": "d3b0da452081bace314b2e9e0053db5c42e41865f2139c0a9cfdf11dcd08e4a7"
+  },
+  "artifact": {
+    "id": 14416831615,
+    "name": "issue671-p5-0-common-binary-3bf1777ee4c1",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44279232578/artifacts/14416831615",
+    "zip_sha256": "b97c997ac0c665628c1b3eace3bd577496bbf4333f7fbff74dbe12700aa575c8",
+    "zip_size_bytes": 1463109,
+    "zip_crc": "PASS",
+    "tar_bundle_sha256": "b8f222c03280ff9df3013835f7fec1404c4a727aefbd92dfff77ad5ef87be6d2",
+    "tar_bundle_size_bytes": 1384929,
+    "actual_executable_raw_bytes_present": true,
+    "actual_runtime_app_libs_present": true,
+    "retention_days": 7,
+    "private_rate_bytes_present": false
+  },
+  "binary": {
+    "name": "bin/physics-opt",
+    "sha256": "bb55d25bbd8505d83c3f29ab1cb6478845d94f627548014c230375926cf335b0",
+    "size_bytes": 67368,
+    "elf_dynamic": true,
+    "tar_copy_byte_equal_to_uploaded_executable": true
+  },
+  "app_runtime_libs": {
+    "libphysics-opt.so.0": {
+      "sha256": "dfe96d724bf666d4ba04b05760732422f9696438bd7d04e5311f944399d16a64",
+      "size_bytes": 4978008
+    },
+    "libphysics_test-opt.so.0": {
+      "sha256": "fb7c3913a73770f6bcb0060d4063d7a739f7fa1145ee73d27268c4dfe5421852",
+      "size_bytes": 105984
+    }
+  },
+  "independent_checks": {
+    "download_actual_artifact_zip": true,
+    "CRC": "PASS",
+    "rehashed_elf_binary": true,
+    "rehashed_tar_archive": true,
+    "tar_safe_relative_paths": "PASS",
+    "rehashed_two_app_libraries": true,
+    "rehashed_build_log": true,
+    "rehashed_toolchain_log": true,
+    "rehashed_cli_version_log": true,
+    "bundle_executable_mode": "0755",
+    "source_head_bound": true,
+    "runtime_smoke": "PASS_ISOLATED_VENDOR_OCI_VERSION_ONLY",
+    "runtime_version_output": "Application Version: 9f388366",
+    "local_full_receipt_sha256": "852a30b47c554f19fb52949d8c023ace625c58d45449a448022f275c3fccfb07"
+  },
+  "rules": {
+    "deployment": "One immutable tar blob used read-only by S6-417, S6-941 and P05 negative jobs, extracted in isolated case-local scratch; same pinned OCI vendor layer and LD_LIBRARY_PATH include tar lib",
+    "private_rates": "Stage in protected Native job, never put in binary Artifact",
+    "sources_immutable": true,
+    "p2_check_input_not_performed": true,
+    "no_science_timestep": true
+  },
+  "gates": {
+    "P5_0_P1": "PASS_SOURCE_BOUND_EXACT_HEAD",
+    "P5_0_COMMON_BINARY": "PASS_SOURCE_ONLY_BUILD",
+    "P5_0_COMMON_RUNTIME_BUNDLE": "PASS_ARTIFACT_BYTES_AND_ISOLATED_VERSION_SMOKE",
+    "P4_X_7_SOURCE": "PASS",
+    "P4_X_FULL": "HOLD",
+    "P5_B2_417": "NOT_RUN",
+    "P5_C2_941": "NOT_RUN",
+    "P5_N1_N8_NATIVE": "NOT_RUN",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "historical_attempts": [
+    {
+      "run": 44277958545,
+      "result": "P1_BUILD_PASS_BUT_ONLY_EXE_NO_SO_BUNDLE",
+      "note": "Not reused for final binary."
+    },
+    {
+      "run": 44279122537,
+      "result": "P1_BUILD_PASS_PACKAGING_FAIL_JSON_TRAILING_LITERAL_SLASH_N",
+      "note": "No portable runtime accepted."
+    },
+    {
+      "run": 44279232578,
+      "result": "SUCCESS_P1_BINARY_AND_RUNTIME_BUNDLE",
+      "note": "Only this final immutable Artifact is approved for downstream same-binary usage."
+    }
+  ]
+}
