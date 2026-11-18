@@ -1,0 +1,138 @@
+{
+  "schema": "issue671.arch_ni_time.p05_two_real_native_mutations.v1",
+  "scope": "Exact ARCH ni_time re-insertion: canonical log_O2p and historical log_ni, each in independent protected scratch for S6-417 and S6-941; same exact-source binary.",
+  "status": "PASS_FOUR_REAL_NATIVE_EXPECTED_REJECTIONS__CANONICAL_P05__HISTORICAL_VARIABLE_GUARD",
+  "source_identity": {
+    "source_repository": "HyungseonSong-plasma/moose-test-repo",
+    "source_pr": 665,
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "source_cpp_DDContinuityEq_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "workflow_branch": "issue-671-p05-arch-ni-time-two-real-native-20261118",
+    "workflow_commit": "07cbfd869b984fc783d3f351ed523e7a78a81403",
+    "workflow_path": ".github/workflows/issue671-arch-ni-time-two-native-once.yml",
+    "ci_run_id": 44311107973,
+    "ci_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44311107973",
+    "ci_job_id": 134825175874,
+    "ci_conclusion": "success",
+    "ci_artifact_id": 14430693102,
+    "ci_artifact_zip_sha256": "0df5c5a295858980758fb11d2990fa9119626c0339cd009b8b218d5063cfd02a",
+    "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "binary_newly_built": true,
+    "binary_sha256": "f40850b50954362423a80f471174cb2d49e5a1ed44c03b16cb222d4dde9b211e"
+  },
+  "baseline": {
+    "source": "P1 11-layer 417/941 artifact 14372278070 SHA verified independently",
+    "P1_canonical_block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+    "historical_original_block_sha256": "7584d0d048b95b1ff1a697bb942bf192fc0b59216f07253ddcde0699bb0211a2",
+    "newonly_source_artifact_id": 14406746397,
+    "P4X_C0_canonical_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+    "archived_native_ion_retirement_per_case": 26,
+    "physics_generated_kernel_contract_per_case": 12,
+    "physics_generated_bc_contract_per_case": 12,
+    "clean_native_case_417_and_941": "--check-input exit=0 and Syntax OK"
+  },
+  "mutations": {
+    "ARCH_CANON": {
+      "type": "PhysicsFVLogMolarElectronTimeDerivative",
+      "object": "ni_time",
+      "variable": "log_O2p",
+      "block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+      "C0_after_sha256": "3916aeb8c540d4b059139d00b280843d70f53afa74855cd1623e7e5e1c74e23b",
+      "first_failure_class": "P05",
+      "first_error": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+      "expected_exit": 1
+    },
+    "ARCH_ORIGINAL": {
+      "type": "PhysicsFVLogMolarElectronTimeDerivative",
+      "object": "ni_time",
+      "variable": "log_ni",
+      "block_sha256": "7584d0d048b95b1ff1a697bb942bf192fc0b59216f07253ddcde0699bb0211a2",
+      "C0_after_sha256": "e7c0b162571204a001da3705067734003ff38887a744b2496987c57459ea246a",
+      "first_failure_class": "LEGACY_VARIABLE_PRECHECK",
+      "first_error": "No nonlinear variable named log_ni found. Did you specify an auxiliary variable when you meant to specify a nonlinear variable (or vice-versa)?",
+      "expected_exit": 1
+    }
+  },
+  "cases": {
+    "417": {
+      "clean_syntax_ok": true,
+      "clean_exit_code": 0,
+      "original_public_scratch_restored_by_SHA": true,
+      "mutants": {
+        "ARCH_CANON": {
+          "exit": 1,
+          "first_failure_class": "P05",
+          "C0_before_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+          "C0_after_sha256": "3916aeb8c540d4b059139d00b280843d70f53afa74855cd1623e7e5e1c74e23b",
+          "log_sha256": "569f0c0e07203b367a0af6c6e9f0777ecf7f8ceb83a87c077310ad4b5b597f20"
+        },
+        "ARCH_ORIGINAL": {
+          "exit": 1,
+          "first_failure_class": "LEGACY_VARIABLE_PRECHECK",
+          "C0_before_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+          "C0_after_sha256": "e7c0b162571204a001da3705067734003ff38887a744b2496987c57459ea246a",
+          "log_sha256": "8c0d640f05f5a1384ced2f84be1ef3dcaed0b07b7320ce825c645ad4d025cee5"
+        }
+      }
+    },
+    "941": {
+      "clean_syntax_ok": true,
+      "clean_exit_code": 0,
+      "original_public_scratch_restored_by_SHA": true,
+      "mutants": {
+        "ARCH_CANON": {
+          "exit": 1,
+          "first_failure_class": "P05",
+          "C0_before_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+          "C0_after_sha256": "3916aeb8c540d4b059139d00b280843d70f53afa74855cd1623e7e5e1c74e23b",
+          "log_sha256": "a298d70a45573be639b0470346dd007f196e979420db73f318b4f70618477144"
+        },
+        "ARCH_ORIGINAL": {
+          "exit": 1,
+          "first_failure_class": "LEGACY_VARIABLE_PRECHECK",
+          "C0_before_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+          "C0_after_sha256": "e7c0b162571204a001da3705067734003ff38887a744b2496987c57459ea246a",
+          "log_sha256": "922fa8b91d658553c5d1b010b6158f59c31014f390ba784b84a34425c16d3d31"
+        }
+      }
+    }
+  },
+  "verification": {
+    "real_native_mutants": 4,
+    "expected_error_matches": 4,
+    "canonical_P05_rejections": 2,
+    "historical_legacy_missing_variable_rejections": 2,
+    "per_case_independent_scratch": true,
+    "per_mutation_only_C0_changed": true,
+    "per_mutation_other_files_unmodified_sha": true,
+    "public_stage_file_sha_restored": true,
+    "protected_EI_rates_published": false,
+    "protected_tmpfs_cleanup_verified": true,
+    "independent_replay_script": "verify_arch_ni_time_two_native_ci.py",
+    "independent_replay_script_sha256": "bf8a29fc93ca0e09397ad0ca8e56c682ea0670c5a8e034e54175a345ceba3829",
+    "independent_verified_result_sha256": "0cc23cbd3eaacda756412ec4a8c29a3d89ade8bd85a072c53706b6c5de6b188e"
+  },
+  "critical_interpretation": {
+    "canonical": "The restored ni_time with variable=log_O2p reaches live DDContinuityEq::checkIntegrity() and is rejected by the P05 FV Warehouse owner predicate, proving exact canonical ARCH BC/generation conflict detection.",
+    "historical": "The untouched historical ni_time with variable=log_ni is rejected BEFORE P05 because log_ni is not an existing nonlinear variable in the New-only model. Do not misstate this as a P05 hit.",
+    "P0_legacy_guard": "The P0 preflight also enumerates legacy log_ni/log_nm/log_nop owners; not the observed first failure of this Native replay.",
+    "generated_24": "12 kernels and 12 BCs are enforced by the C++ integrity contract; clean native check-input passes, but no independent per-object Warehouse dump was exported."
+  },
+  "gates": {
+    "EXACT_ARCH_CANONICAL_NATIVE": "PASS_P05",
+    "EXACT_ARCH_HISTORICAL_NATIVE": "PASS_VARIABLE_PRECHECK",
+    "NEW_ONLY_CLEAN_NATIVE_CHECK_INPUT": "PASS",
+    "ARCH_26_TO_PHYSICS_24_SOURCE": "PASS",
+    "PHYSICS_WAREHOUSE_OBJECT_DUMP": "NOT_EXPORTED",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "source_modified": false,
+    "pr665_modified": false,
+    "main_modified": false,
+    "historical_archive_modified": false,
+    "protected_private_rate_rows_exported": false
+  }
+}
