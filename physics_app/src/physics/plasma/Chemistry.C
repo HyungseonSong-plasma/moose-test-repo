@@ -1553,6 +1553,11 @@ PlasmasAction::act()
           params.set<std::vector<SubdomainName>>("block") = blocks;
         _problem->addFunctorMaterial(type, std::string(side) + "_surface_current", params);
       }
+      // Construction-level Action ownership receipt (not a face evaluation).
+      mooseInfo("D8_C2_ACTION_OWNERS ion_wall_factory=IonWallFluxMaterial",
+                " ion_wall_owners=3", " surface_current_owners=3",
+                " current_expression=gi+gop-gm-ge",
+                " wall_functors=O2p_wall_number_flux,Op_wall_number_flux,Om_wall_number_flux,e_wall_number_flux");
     }
   }
 

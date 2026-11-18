@@ -306,6 +306,11 @@ DDEnergyEq::addFunctorMaterials()
   }
   assignBlocks(wall, _blocks);
   getProblem().addFunctorMaterial(wall_type, name() + "_sheath_wall_flux", wall);
+  // Generated providers are generated once from the real electron Energy Action.
+  // Constructor-time binding/evaluation remains independently observed.
+  mooseInfo("D8_E_DENSITY_ACTION density_owner=", name() + "_number_density",
+            " n_e_physical from=log_e wall_owner=", name() + "_sheath_wall_flux",
+            " wall_factory=ESWallFluxMaterial e_wall=e_wall_number_flux");
 }
 
 }

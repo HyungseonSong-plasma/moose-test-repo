@@ -1,4 +1,5 @@
 #include "PhysicsLowerDSurfaceCurrent.h"
+#include <iostream>
 
 #include "FEProblemBase.h"
 #include "FaceInfo.h"
@@ -31,6 +32,11 @@ PhysicsLowerDSurfaceCurrent::PhysicsLowerDSurfaceCurrent(const InputParameters &
   if (_tid == 0)
     getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")
         ->setErrorOnJacobianNonzeroReallocation(false);
+  // Actual getFunctor binding in the compiled Lower-D residual caller.
+  if (_tid == 0)
+    std::cout << "D8_LOWERD_CTOR owner=" << name()
+              << " current=" << getParam<MooseFunctorName>("surface_current_density")
+              << std::endl;
 }
 
 ADReal
