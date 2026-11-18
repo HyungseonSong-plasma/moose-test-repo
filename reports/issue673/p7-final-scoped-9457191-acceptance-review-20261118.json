@@ -1,0 +1,137 @@
+{
+  "schema": "issue673.p7.final_scoped_reviewer_acceptance.v1",
+  "date_utc": "2026-11-18",
+  "source": {
+    "pr": 665,
+    "head": "9457191f4c0693ae886586edd961965867ccd5c0",
+    "tree": "5444cfcba2d1cddd15322c4dc7f67cf23690b840",
+    "state": "OPEN_DRAFT_UNMERGED",
+    "main_current": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "main_base_in_pr": "fb77673d7bbbbeb389549929a8f57724c703ff7e",
+    "behind_main_commits": 4
+  },
+  "verdicts": {
+    "P7_PACKAGE_FINAL": "PASS_SCOPED_P0_P1_P2_AND_D8_3NS",
+    "P7_CONNECTIVITY_CUTOVER": "PASS_SCOPED_417_941",
+    "P7_SCIENTIFIC_RELEASE": "HOLD_SCIENCE_HOLD",
+    "P7_MAIN_MERGE": "HOLD_NOT_AUTHORIZED",
+    "SCIENCE_HOLD": "ACTIVE",
+    "NATIVE_P3_P4_100US": "NOT_RUN",
+    "FLOW_HYBRID": "KEEP_HOLD",
+    "ARCH_HYBRID": "KEEP_HOLD",
+    "PUBLIC_D_HISTORICAL": "KEEP_HOLD",
+    "ION_FVM_LEGACY": "KEEP_HOLD_PRE_NATIVE"
+  },
+  "CI": {
+    "run_id": 44366325757,
+    "event": "pull_request",
+    "status": "completed",
+    "conclusion": "success",
+    "job_success": 20,
+    "job_total": 20,
+    "workflow_template_blob_sha": "543de1708171f3bf9052f46c0baf927f14fd1c65"
+  },
+  "binaries": {
+    "artifact_id": 14458195502,
+    "zip_sha256": "d0b83a2cde6bea28546399236494392e3317cda7eeedeb5a71aa30f975ed7bef",
+    "tar_sha256": "9622a3a37f2c144f622faec63e829fa7ef74dc2bebd5ed7fa7eec342bc3472eb",
+    "elf_sha256": "b327aea7f496809779dd233336d8c62d15ab021accdb13e552efe1a750c72e18",
+    "app_libs_sha256": [
+      "59f09eb9d88b42d5932bad848a7b3ff33faebfb843b3790247d868aea28abbee",
+      "31abf727e4a40d7e2d91a6ba45d26f9d7b682cde198cf4d43188609c53e33db8"
+    ],
+    "build_count": 1
+  },
+  "native": {
+    "newonly": {
+      "artifact": 14458752206,
+      "case_ids": [
+        "417",
+        "941"
+      ],
+      "p2": "PASS_BOTH",
+      "typed_per_case": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "eFEMBC": 8
+      },
+      "negative_expected": "16_OF_16"
+    },
+    "public_d_original100": {
+      "artifact": 14459116868,
+      "case_ids": [
+        "417",
+        "941"
+      ],
+      "table_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "p2": "PASS_BOTH",
+      "typed_per_case": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "eFEMBC": 8
+      },
+      "negative_expected": "16_OF_16",
+      "historical_42row_is_not_equivalent": true
+    },
+    "same_binary_reused": true,
+    "protected_cleanup": "PASS",
+    "source_restoration": "PASS"
+  },
+  "d8": {
+    "run": 44409942970,
+    "artifact": 14475669657,
+    "zip_sha256": "0348c6255d2a6e59a2c921fc8f4b7d47f5307259358bc74067216e543456e6f6",
+    "source_head": "9457191f4c0693ae886586edd961965867ccd5c0",
+    "mode": "NEW_ONLY",
+    "cases": [
+      "417",
+      "941"
+    ],
+    "physical_steps": 3,
+    "duration_ns": 3,
+    "same_w1_binary": true,
+    "Rf_Maxwell_7Transfers_Wall_Current_Poisson": "PASS_BOTH",
+    "direct_computeQpResidual_function_entry_trace": false
+  },
+  "legacy": {
+    "public_artifact": 14456672534,
+    "arch_artifact": 14457016880,
+    "flow_run": 44366325812,
+    "flow_result": "FAIL_P2_S6_417_CHECK_INPUT_FAILED",
+    "arch_two_case_p05_ni_time": "EXPECTED_REJECTIONS",
+    "public_b_historical_control": "PASS_ONLY",
+    "public_d_historical": "KEEP_HOLD"
+  },
+  "audits": {
+    "original_github_zip_count": 6,
+    "this_review": {
+      "checks_passed": 141,
+      "checks_total": 141,
+      "status": "PASS",
+      "local_full_json_sha256": "20e3f0a949123dfd1d04e0338357195d3156a1e194c93d7e4fbf0877889e1f27"
+    },
+    "previous_native": {
+      "checks_passed": 385,
+      "checks_total": 385
+    },
+    "previous_d8": {
+      "checks_passed": 257,
+      "checks_total": 257
+    }
+  },
+  "open_decisions": [
+    "Direct raw TheWarehouse memory traversal not shown; actual post-add FEProblemBase plus P05 integrity is measured",
+    "D8 assembled residual is not direct computeQpResidual entry trace",
+    "100us P3/P4 science semantics still NOT_RUN; no scientific parity",
+    "Standalone FLOW Hybrid FAIL and historical ARCH/Public D KEEP_HOLD",
+    "PR #665 behind latest main by 4 commits; main merge needs separate approval/revalidation",
+    "Unique open PR changes require independent file-level review; do not auto-close"
+  ],
+  "flags": {
+    "changes_to_physics": false,
+    "ci_rerun": false,
+    "main_merge": false,
+    "PR665_mutated": false,
+    "science_workflow_dispatched": false
+  }
+}
