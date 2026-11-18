@@ -101,9 +101,24 @@ jobs:
                   require("type = MooseVariableFVReal" in block(var,name),"FVM_VARIABLE_FAMILY_CHANGED")
               ker=section(text,"FVKernels")
               require(len(children(ker))==12,"FVM_KERNEL_COUNT_NOT_12")
-              for name in ("ne_time","ne_diffusion","ne_drift","ni_time","ni_diffusion","ni_drift",
-                           "energy_time","energy_diffusion","energy_drift","energy_joule","phi_diffusion","phi_source"):
-                  block(ker,name)
+              kernel_contract={
+                 "ne_time":("PhysicsFVLogMolarElectronTimeDerivative","log_ne"),
+                 "ne_diffusion":("PhysicsFVLogMolarElectronDiffusion","log_ne"),
+                 "ne_drift":("PhysicsFVLogMolarElectrostaticDrift","log_ne"),
+                 "ni_time":("PhysicsFVLogMolarElectronTimeDerivative","log_ni"),
+                 "ni_diffusion":("PhysicsFVLogMolarElectronDiffusion","log_ni"),
+                 "ni_drift":("PhysicsFVLogMolarElectrostaticDrift","log_ni"),
+                 "energy_time":("PhysicsFVLogMolarElectronTimeDerivative","log_e_energy"),
+                 "energy_diffusion":("PhysicsFVLogMolarElectronDiffusion","log_e_energy"),
+                 "energy_drift":("PhysicsFVLogMolarElectrostaticDrift","log_e_energy"),
+                 "energy_joule":("PhysicsFVElectronEnergyJouleHeating","log_e_energy"),
+                 "phi_diffusion":("FVDiffusion","potential"),
+                 "phi_source":("FVCoupledForce","potential"),
+              }
+              for name,(factory,variable) in kernel_contract.items():
+                  obj=block(ker,name)
+                  require("type = "+factory in obj,"FVM_KERNEL_FACTORY_CHANGED_"+name)
+                  require("variable = "+variable in obj,"FVM_KERNEL_VARIABLE_CHANGED_"+name)
               require("charge_number = 1" in block(ker,"ni_drift"),"ION_CHARGE_SIGN_CHANGED")
               require("charge_number = -1" in block(ker,"ne_drift"),"ELECTRON_CHARGE_SIGN_CHANGED")
               bc=section(text,"FVBCs")
