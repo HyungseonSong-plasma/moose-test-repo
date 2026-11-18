@@ -1,0 +1,37 @@
+name: Issue633 P6C3 New-only Hybrid route guards exact HEAD P0
+on:
+  push:
+    branches: [issue-633-p6c3-newonly-route-p0-once-20261118]
+    paths: [.github/workflows/issue633-p6c3-route-guards-p0-once.yml]
+permissions:
+  contents: read
+jobs:
+  exact-candidate-source-guards:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout immutable exact P6-C3 and New-only merged candidate
+        uses: actions/checkout@v4
+        with:
+          ref: 933e5be1578f3df2a9d94818c07aefc2a2586d04
+          path: candidate
+          persist-credentials: false
+      - name: Run exact source P6 21, New-only 18, Template, Trigger, Artifact, P05 guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd candidate
+          test "$(git rev-parse HEAD)" = 933e5be1578f3df2a9d94818c07aefc2a2586d04
+          test ! -e .github/workflows/issue633-p6c3-route-guards-p0-once.yml
+          python3 -m py_compile ci/guards/p6_ci_workflow_safety_guard.py ci/guards/issue633_s6_ci_route_guard.py ci/issue633_required_newonly_s6_native_p2.py
+          python3 ci/guards/issue633_s6_ci_route_guard.py --self-test --check
+          python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check
+          python3 ci/guards/workflow_surface_guard.py --self-test
+          python3 ci/guards/workflow_surface_guard.py --check
+          python3 ci/guards/issue541_artifact_evidence_guard.py --self-test
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-policy
+          python3 ci/workflow_harness.py --self-test
+          python3 ci/workflow_harness.py --check
+          python3 -m pytest -q tests/test_issue672_p6_ci_workflow_safety.py
+          echo ISSUE633_P6C3_NEWONLY_ROUTE_EXACT_CANDIDATE_P0_PASS
