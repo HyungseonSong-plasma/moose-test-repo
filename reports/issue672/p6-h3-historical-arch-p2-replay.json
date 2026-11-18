@@ -1,60 +1,65 @@
 {
-  "schema": "issue672.p6_h3.pinned_historical_arch_p2_replay_dispatch.v1",
-  "task": "P6-H3",
-  "issue": 672,
-  "status": "HISTORICAL_PINNED_P2_JOB_RERUN_ACCEPTED__IN_PROGRESS",
-  "scope": "S6-417 + S6-941 historical 11-layer hybrid Native P2-only; no P3/P4 timesteps",
-  "approval": "user explicitly requested approved historical compatible P2-only execution after P6-H2; historical pin from P6-H1 decision",
-  "h2_evidence": {
-    "commit": "846543da3e7ce316a2b29fde8935e7d3eec19ab3",
-    "status": "OBSERVED_CURRENT_HEAD_P05_FAIL_BOTH_CASES__SOURCE_COUNTEREXAMPLES_36_OF_36_PASS"
+  "schema": "issue672.p6_h3.historical_compat_native_p2_final.v2",
+  "task_id": "P6-H3",
+  "verdict": "HISTORICAL_PINNED_ARCH_HYBRID_NATIVE_P2_PASS_BOTH_CASES__MODERN_ARCH_P05_HOLD",
+  "source_sha": "5d15c4054a00aa9fa8a778a87bb21690a3a5469b",
+  "historical_input_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+  "p2_only_runner_blob": "533dfa16395c041c610130f90d0489300fdd548f",
+  "exact_workflow_blob": "84cd7d60508f9a93739e50fa93dfc4405ddc8dc1",
+  "run_id": 43883076025,
+  "run_attempt": 2,
+  "old_job_id": 133353818041,
+  "new_job_id": 134820962860,
+  "new_job_conclusion": "success",
+  "run_overall_conclusion": "failure",
+  "run_overall_note": "The overall old workflow still has a separately failed job from the historical attempt; P6-H3 target job itself completed SUCCESS.",
+  "new_artifact_id": 14429419728,
+  "new_artifact_zip_sha256": "2967fe46aad41bfcb845da76c2da0a1be86540f4099d9f7e6350362902e7411a",
+  "new_artifact_bytes": 8671,
+  "new_zip_sha_and_crc_verified": true,
+  "new_shared_binary_sha256": "bae1df84749224519346acd1fbe2bbaf6857e50d9d2a77cb7f97b1637331bc1a",
+  "case_417": {
+    "P0": "PASS",
+    "P1": "PASS_SOURCE_BOUND_BINARY",
+    "P2": "PASS",
+    "native_exit_code": 0,
+    "syntax_ok": true,
+    "log_sha256": "30151a47fe0de6bcc68b95c60a449f2796deef9e7794ef08ea70a793cfb65523",
+    "integrated_json_sha256": "8f1f0e72038829b00fa50f4d6d68bec5c86015e2f400918379539cf9b767c7bc",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN"
   },
-  "source": {
-    "historical_compatible_ref": "5d15c4054a00aa9fa8a778a87bb21690a3a5469b",
-    "original_inputs_ref": "29d1acc6ef7969908b86719e4b95c73a1565136d",
-    "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
-    "pinned_workflow_blob": "84cd7d60508f9a93739e50fa93dfc4405ddc8dc1",
-    "p2_only_runner_blob": "533dfa16395c041c610130f90d0489300fdd548f"
+  "case_941": {
+    "P0": "PASS",
+    "P1": "PASS_SOURCE_BOUND_BINARY",
+    "P2": "PASS",
+    "native_exit_code": 0,
+    "syntax_ok": true,
+    "log_sha256": "de9e8ffac6d7a06000d4f698391382a78c8b68f7d538e10075b269f08cf7698e",
+    "integrated_json_sha256": "fc3e1d35ce0c20657f6ed3db125bb9a79251150467e0aec48c079a6dcadb3973",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN"
   },
-  "action": {
-    "method": "rerun one historical successful job only; NO new workflow, PR-trigger, source or guard changes",
-    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43883076025",
-    "run_id": 43883076025,
-    "run_attempt": 2,
-    "old_job_id": 133353818041,
-    "new_job_id": 134820962860,
-    "accepted_by_github": true,
-    "last_observed_status": "in_progress",
-    "last_observed_stage": "P1 build exact-source Native once for both S6-417 and S6-941",
-    "workflow_is_P2_only": true
-  },
-  "historical_baseline": {
-    "previous_artifact_id": 14234186951,
-    "previous_zip_sha256": "7d2b1593f9ef7e4cbce714d637a9894a6109f2738e721be751ecb9609828f634",
-    "previous_both_native_P2": "PASS",
-    "previous_shared_binary_sha256": "82a93f4b91ad709409698f8051b73bbf75a9de2dc437c31d45ba325dccebc6dc"
-  },
-  "new_attempt": {
-    "job": "IN_PROGRESS",
-    "new_artifact": "NOT_AVAILABLE",
-    "new_417_P2": "NOT_YET_OBSERVED",
-    "new_941_P2": "NOT_YET_OBSERVED",
-    "new_binary_sha256": "NOT_YET_AVAILABLE"
-  },
-  "postcompletion_readback": {
-    "script": "verify_issue672_p6_h3.py",
-    "script_sha256": "6f9ef2dbdea9e9143c64d1ed10d01ddb57fbbe5aeaf88541a6891ab742eb9265",
-    "requirements": "new artifact ZIP SHA/CRC, both 417+941 status/log exit 0 + Syntax OK, exact historical source/OCI, exact same new job binary SHA, no P3/P4, JSON/mesh continuity"
+  "historical_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+  "historical_old_artifact_id": 14234186951,
+  "historical_old_zip_sha256": "7d2b1593f9ef7e4cbce714d637a9894a6109f2738e721be751ecb9609828f634",
+  "independent_readback": {
+    "original_and_new_case_json_sha": "2/2 IDENTICAL",
+    "original_and_new_mesh_sha": "2/2 IDENTICAL",
+    "local_full_receipt_file": "issue672_P6-H3_historical_arch_P2_run_receipt.json",
+    "local_full_receipt_sha256": "e2cb01bd8d661845518b2bd84a77392da757715ce2dd97991d86b94b15365b60",
+    "reproduction_script": "verify_issue672_p6_h3.py",
+    "reproduction_script_sha256": "6f9ef2dbdea9e9143c64d1ed10d01ddb57fbbe5aeaf88541a6891ab742eb9265"
   },
   "gates": {
     "H2": "PASS",
-    "H3_DISPATCH": "ACCEPTED",
-    "H3_NATIVE_P2": "RUNNING_NOT_ACCEPTED",
-    "CURRENT_HEAD_HYBRID": "KEEP_HOLD_P05",
-    "NEW_ONLY": "SEPARATE",
+    "H3_PINNED_HISTORICAL_P2": "PASS",
+    "CURRENT_HEAD_ARCH": "KEEP_HOLD_P05",
+    "CURRENT_HEAD_NEW_ONLY": "SEPARATE",
     "P3": "NOT_RUN",
     "P4": "NOT_RUN",
-    "SCIENCE": "SCIENCE_HOLD"
+    "science": "SCIENCE_HOLD"
   },
-  "mutation_scope": "One receipt file on dedicated P6-H3 branch; no modification to PR #665, main, CI, Physics code or P05."
+  "mutation_scope": "Only report on isolated branch; main, PR #665, P05, workflow and protected source unchanged"
 }
