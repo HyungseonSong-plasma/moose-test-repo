@@ -141,9 +141,9 @@ def static_contract(s):
                 "type":"constant","file":"none","unit":"physical",
                 "mobility":10,"diffusivity":0.25851999786435537},
                 "S6_ION_TRANSPORT_CHANGED_"+case+"_"+id)
-            delta=sum(rx.get("products",{}).get(id,0)-rx.get("reactants",{}).get(id,0)
-                      for rx in doc["reactions"])
-            reject(delta!=0,"CHEMISTRY_ION_NO_NONZERO_SOURCE_"+case+"_"+id)
+            nonzero_any=any(rx.get("products",{}).get(id,0)!=rx.get("reactants",{}).get(id,0)
+                            for rx in doc["reactions"])
+            reject(nonzero_any,"CHEMISTRY_ION_NO_NONZERO_SOURCE_"+case+"_"+id)
     reject(contract["D4"]["generated_FV_requirements"]["source_functors"]==
            ["S_O2p_molar","S_Om_molar","S_Op_molar"] and
            contract["D4"]["generated_FV_requirements"]["retire_all_legacy_ion_FV"].startswith(
