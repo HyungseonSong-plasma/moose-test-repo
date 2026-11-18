@@ -184,6 +184,8 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
     need("\n  issue541_arch_s6_hybrid_native_p2:" not in workflow,
          "OLD_ARCH_AUTOMATIC_JOB_STILL_PRESENT")
     new_job = job_block(workflow, "issue633_newonly_s6_native_p2_required")
+    need("echo ISSUE633_NEWONLY_S6_417_941_BOTH_REQUIRED_P2_PASS" in new_job,
+         "TWO_CASES_NATIVE_P2_SUCCESS_MUST_BE_EXPLICIT")
     for banned in BANNED_NATIVE:
         need(banned not in new_job, "NEWONLY_BYPASS_" + banned.replace(" ", "_"))
 
