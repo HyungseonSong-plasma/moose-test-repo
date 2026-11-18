@@ -1,0 +1,155 @@
+name: Issue672 P6-H independent ni_time P05 and historical 100-row Native evidence custody
+on:
+  push:
+    branches: [issue-672-p6-h-ni-time-historic-custody-20261118]
+    paths: [.github/workflows/issue672-p6-h-ni-time-historic-independent-once.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  independent-artifact-custody:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: P0 pin exact current source and one-file evidence-only diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git merge-base 52067302d16074592503d0ef6b903cc344f55a08 HEAD)" = 52067302d16074592503d0ef6b903cc344f55a08
+          git diff --name-only 52067302d16074592503d0ef6b903cc344f55a08 HEAD > changed.txt
+          test "$(wc -l < changed.txt)" -eq 1
+          grep -Fxq .github/workflows/issue672-p6-h-ni-time-historic-independent-once.yml changed.txt
+          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 13b25226d463b8fd1e4acaee16358f8f17d710a0
+          test "$(git hash-object experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i)" = 793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa
+          echo P6_H_CURRENT_P05_SOURCE_PIN_PASS
+      - name: Download immutable Native evidence ZIPs without protected rate credentials
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          curl --fail --silent --show-error --location --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14430693102/zip" -o evidence/p05.zip
+          curl --fail --silent --show-error --location --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14436442632/zip" -o evidence/historical.zip
+          echo '0df5c5a295858980758fb11d2990fa9119626c0339cd009b8b218d5063cfd02a  evidence/p05.zip' | sha256sum -c -
+          echo 'ae112219034dfa0a456ed41ef62974a0603992a0607d4845b45c2a549ae3275d  evidence/historical.zip' | sha256sum -c -
+          echo P6_H_BOTH_ORIGINAL_NATIVE_ZIP_SHA_PASS
+      - name: Independently verify original 100-row historical ELF and 4 Native log bytes plus P05 2x2 receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, io, json, tarfile, zipfile
+          from pathlib import Path
+          sha = lambda b: hashlib.sha256(b).hexdigest()
+          source_head='52067302d16074592503d0ef6b903cc344f55a08'
+          artifacts = {
+            'p05': ('evidence/p05.zip', '0df5c5a295858980758fb11d2990fa9119626c0339cd009b8b218d5063cfd02a'),
+            'historical': ('evidence/historical.zip','ae112219034dfa0a456ed41ef62974a0603992a0607d4845b45c2a549ae3275d'),
+          }
+          zipfiles={}
+          for kind,(name,expected) in artifacts.items():
+              raw=Path(name).read_bytes()
+              assert sha(raw)==expected, kind+'_ZIP_SHA_MISMATCH'
+              z=zipfile.ZipFile(io.BytesIO(raw))
+              assert z.testzip() is None, kind+'_ZIP_CRC_FAIL'
+              assert len(z.namelist())==len(set(z.namelist())),kind+'_ZIP_DUPLICATE_ENTRY'
+              assert all(not n.startswith('/') and '..' not in Path(n).parts for n in z.namelist())
+              zipfiles[kind]=z
+          def one(z,suffix):
+              matches=[n for n in z.namelist() if n.endswith(suffix) and not n.endswith('/')]
+              assert len(matches)==1, ('EXPECTED_UNIQUE_ZIP_MEMBER',suffix,matches)
+              return z.read(matches[0])
+          hist=zipfiles['historical']
+          old=json.loads(one(hist,'receipt.json'))
+          assert old['P2']=='PASS_HISTORICAL_100ROW_ONLY' and old['historical_four_way_real_p2']
+          assert old['original_100row_unchanged'] is True
+          assert old['binary_build_source']=='1efdd922096df10239cff8adc132e8f3811c1a63'
+          assert old['historical_source_sha']=='29d1acc6ef7969908b86719e4b95c73a1565136d'
+          assert old['real_parent_mesh_sha256']=='ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc'
+          expected_logs={
+            '417_B':'e71bdb93ebead39e4c80650c467a9c087845f8fc97020e2cfa84e8fc9392b25d',
+            '417_D':'cb30a117ad9679b464966b5a3507258817470dc51507c9d43dac0c1916438f72',
+            '941_B':'b63e67815cceac7de7498b09fb84d713d9046dbba098016cc61f10c0b122c2e9',
+            '941_D':'05240b30b0d1755b9028052a7618f41ae50e3c90230de24b434aeff8686aeace',
+          }
+          assert set(old['cases'])==set(expected_logs)
+          for label,expected in expected_logs.items():
+              raw=one(hist,f'S6_{label}_P2.log')
+              assert sha(raw)==expected, 'HISTORIC_NATIVE_LOG_SHA_'+label
+              assert old['cases'][label]['log_sha256']==expected
+              assert old['cases'][label]['exit_code']==0 and old['cases'][label]['syntax_ok']
+              assert b'Syntax OK' in raw
+              assert old['cases'][label]['input_layer_count']==(10 if label.endswith('_B') else 11)
+          bundle=one(hist,'real_elf_libraries.tar.gz')
+          assert sha(bundle)=='7be95ccf586dd4613bf6643f1e794371e644b0a717f9ebdbf41252324bd18fa0'
+          with tarfile.open(fileobj=io.BytesIO(bundle),mode='r:gz') as tar:
+              entries=[e for e in tar.getmembers() if e.isfile()]
+              expected_elf={
+                'physics-opt':'617b8316d7519c560964c3df8bc4ee2c9f50ca16b9d7448889860e43ce144a07',
+                'libphysics-opt.so.0':'6dc69fa9ca4c515f664e4db9c9ba42aaa2883555248ff3ceeabea8afde5e1675',
+                'libphysics_test-opt.so.0':'88f90c3fa59f947f5694fd1969f1fc181f4e15bd624b19fbae398bef3575ba33',
+              }
+              assert {Path(e.name).name for e in entries}==set(expected_elf)
+              for entry in entries:
+                  assert not entry.issym() and not entry.islnk()
+                  data=tar.extractfile(entry).read()
+                  assert data[:4]==b'\x7fELF' and sha(data)==expected_elf[Path(entry.name).name]
+          assert old['binary_sha256_independently_rehashed']==expected_elf['physics-opt']
+          neg=json.loads(one(zipfiles['p05'],'p05_negative_receipt.json'))
+          assert neg['status']=='PASS_4_ARCH_NI_TIME_NATIVE_REJECTIONS'
+          assert neg['source_head']=='74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f'
+          assert neg['native_expected_rejections']==4 and neg['native_tests_completed']==4
+          assert neg['tmpfs_cleanup_verified'] is True and not neg['private_data_in_artifacts']
+          assert set(neg['cases'])=={'417','941'}
+          proof={}
+          for case,cr in neg['cases'].items():
+              assert cr['clean_exit']==0 and cr['clean_syntax_ok']
+              assert cr['source_restoration']=='SHA_ALL_PUBLIC_FILES_UNCHANGED'
+              assert set(cr['tests'])=={'ARCH_CANON','ARCH_ORIGINAL'}
+              assert cr['tests']['ARCH_CANON']['matched_expected'] and cr['tests']['ARCH_ORIGINAL']['matched_expected']
+              assert cr['tests']['ARCH_CANON']['exit_code']!=0 and cr['tests']['ARCH_ORIGINAL']['exit_code']!=0
+              assert 'P05' in cr['tests']['ARCH_CANON']['first_failure_class']
+              assert cr['tests']['ARCH_ORIGINAL']['first_failure_class'] in ('LEGACY_VARIABLE_PRECHECK','P05')
+              proof[case]={k:{'exit':v['exit_code'],'first_failure_class':v['first_failure_class'],
+                             'log_sha256':v['log_sha256']} for k,v in cr['tests'].items()}
+          receipt={
+            'verdict':'PASS_INDEPENDENT_HISTORICAL_NATIVE_ARTIFACT_BYTES_AND_P05_NEGATIVE_RECEIPT',
+            'current_newonly_head':source_head,
+            'current_p05_cpp_git_blob':'13b25226d463b8fd1e4acaee16358f8f17d710a0',
+            'current_arch_native_C0_git_blob':'793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa',
+            'original_negative_native_run':44311107973,'negative_native_source_head':neg['source_head'],
+            'negative_p05_native_4_of_4':True,'negative_source_restoration_and_cleanup':True,
+            'historical_native_run':44324197618,'historical_runtime_head':old['binary_build_source'],
+            'original_historical_source':old['historical_source_sha'],
+            'historical_native_100row_four_cases':4,'historical_100row_unchanged':True,
+            'historical_log_sha256':expected_logs,'historical_elf_sha256':expected_elf,
+            'archive_zip_sha256':{k:v[1] for k,v in artifacts.items()},
+            'p05_negative_details':proof,
+            'compatibility_p2':'PASS_PINNED_HISTORICAL_ONLY',
+            'newonly_p05_compatibility':'NOT_ATTESTED',
+            'hybrid_with_newonly':'KEEP_HOLD','native_timestep':'NOT_RUN','science':'SCIENCE_HOLD',
+            'no_private_rates_accessed_in_audit':True,
+          }
+          out=Path('p6_h_independent_custody_receipt.json')
+          out.write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+          print('P6_H_INDEPENDENT_NATIVE_ZIP_SHA_CRC_TWO_OF_TWO_PASS')
+          print('P6_H_HISTORICAL_ORIGINAL100ROW_BD_417941_LOGS_FOUR_OF_FOUR_PASS')
+          print('P6_H_HISTORICAL_REAL_ELF_AND_2_LIBS_THREE_OF_THREE_PASS')
+          print('P6_H_NI_TIME_417941_CANON_ORIGINAL_P05_REJECTION_4_OF_4_RECEIPT_PASS')
+          print('P6_H_VERDICT=HISTORICAL_P2_ONLY_PASS NEWONLY_HYBRID_KEEP_HOLD SCIENCE_HOLD')
+          PY
+      - name: Publish sanitized evidence-only receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue672-p6-h-independent-ni-time-historical-custody
+          path: p6_h_independent_custody_receipt.json
+          if-no-files-found: warn
+          retention-days: 14
