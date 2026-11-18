@@ -24,6 +24,9 @@ CASES = ("417", "941")
 EXPECTED_C0 = "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
 HISTORICAL_PLASMA_MESH_SHA = "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc"
 PLASMA_MESH_NAME = "baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+NEUTRAL_TRANSPORT_REL = "experiments/Issue21_qvt_six_species_bulk_advection/transport_data.txt"
+NEUTRAL_TRANSPORT_SHA = "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d"
+PUBLIC_ELASTIC = ("o2_elastic.txt", "o_elastic.txt")
 
 
 def digest(data: bytes) -> str:
@@ -38,7 +41,8 @@ def sha_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def prepare(artifact: Path, out: Path, historical_mesh: Path) -> dict:
+def prepare(artifact: Path, out: Path, historical_mesh: Path,
+            historical_support_root: Path) -> dict:
     """Extract ONLY public source-stage inputs, rejecting symlinks and traversal."""
     if sha_file(artifact) != P3X_ARTIFACT_SHA:
         raise ValueError("P5_D8_PINNED_P3X_ARTIFACT_ZIP_SHA_MISMATCH")
@@ -47,6 +51,15 @@ def prepare(artifact: Path, out: Path, historical_mesh: Path) -> dict:
     mesh_bytes = historical_mesh.read_bytes()
     if digest(mesh_bytes) != HISTORICAL_PLASMA_MESH_SHA:
         raise ValueError("P5_D8_HISTORICAL_PLASMA_MESH_SHA_MISMATCH")
+    historical_support_root = Path(historical_support_root).resolve(strict=True)
+    neutral_src = historical_support_root / NEUTRAL_TRANSPORT_REL
+    if neutral_src.is_symlink() or not neutral_src.is_file() or sha_file(neutral_src) != NEUTRAL_TRANSPORT_SHA:
+        raise ValueError("P5_D8_PINNED_PUBLIC_NEUTRAL_TRANSPORT_DATABASE_MISSING_OR_SHA_DRIFT")
+    elastic_src = [historical_support_root / "experiments/Issue395_powered_chemistry_ladder" / n
+                   for n in PUBLIC_ELASTIC]
+    for file in elastic_src:
+        if file.is_symlink() or not file.is_file() or file.stat().st_size < 256:
+            raise ValueError("P5_D8_HISTORICAL_PUBLIC_ELASTIC_TABLE_MISSING")
     if out.exists():
         raise ValueError("P5_D8_REFUSE_EXISTING_DISPOSABLE_SCRATCH")
     out.mkdir(parents=True)
@@ -93,6 +106,20 @@ def prepare(artifact: Path, out: Path, historical_mesh: Path) -> dict:
             plasma_mesh.write_bytes(mesh_bytes)
             if sha_file(plasma_mesh) != HISTORICAL_PLASMA_MESH_SHA:
                 raise ValueError("P5_D8_PLASMA_MESH_READBACK_FAILED")
+            neutral_target = work / NEUTRAL_TRANSPORT_REL
+            neutral_target.parent.mkdir(parents=True, exist_ok=True)
+            neutral_target.write_bytes(neutral_src.read_bytes())
+            if sha_file(neutral_target) != NEUTRAL_TRANSPORT_SHA:
+                raise ValueError("P5_D8_PUBLIC_NEUTRAL_DB_READBACK_SHA_CHANGED")
+            public_elastic_shas = {}
+            for public_file in elastic_src:
+                dest = work / "experiments/Issue395_powered_chemistry_ladder" / public_file.name
+                if dest.exists() and dest.read_bytes() != public_file.read_bytes():
+                    raise ValueError("P5_D8_PUBLIC_ELASTIC_ARTIFACT_CONFLICT")
+                dest.write_bytes(public_file.read_bytes())
+                if sha_file(dest) != sha_file(public_file):
+                    raise ValueError("P5_D8_PUBLIC_ELASTIC_READBACK_SHA_CHANGED")
+                public_elastic_shas[public_file.name] = sha_file(dest)
             if files < 15:
                 raise ValueError("P5_D8_MISSING_CHILD_MESH_TABLE_AND_11_LAYERS_" + case)
             layer_sha = {}
@@ -125,6 +152,8 @@ def prepare(artifact: Path, out: Path, historical_mesh: Path) -> dict:
             cases[case] = {"workspace": str(work), "ordered": ordered,
                            "source_files": files, "layer_sha256": layer_sha,
                            "plasma_mesh_sha256": sha_file(plasma_mesh),
+                           "neutral_transport_sha256": sha_file(neutral_target),
+                           "public_elastic_sha256": public_elastic_shas,
                            "child_sha256": sha_file(child), "mesh_sha256": sha_file(mesh),
                            "json_sha256": sha_file(jpath),
                            "electron_table_sha256": sha_file(epath)}
@@ -180,6 +209,7 @@ def main() -> int:
     ap.add_argument("--artifact", type=Path, required=True)
     ap.add_argument("--source", type=Path, required=True)
     ap.add_argument("--historical-mesh", type=Path, required=True)
+    ap.add_argument("--historical-support-root", type=Path, required=True)
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--repo-head", required=True)
     ap.add_argument("--timeout", type=int, default=360)
@@ -189,7 +219,8 @@ def main() -> int:
     if args.timeout < 1 or args.repo_head != subprocess.check_output(
             ["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip():
         raise ValueError("P5_D8_ACTIVE_SOURCE_HEAD_PIN_MISMATCH")
-    cases = prepare(args.artifact, args.output / "scratch", args.historical_mesh)
+    cases = prepare(args.artifact, args.output / "scratch",
+                    args.historical_mesh, args.historical_support_root)
     result = {
         "schema": "issue671.p5_d8_newonly_diagnostic.v1",
         "status": "SOURCE_STAGE_ONLY_P4_NOT_COMPLETED",
