@@ -32,7 +32,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git merge-base --is-ancestor "$BASE_HEAD" HEAD
           git diff --name-only "$BASE_HEAD" HEAD | sort > "$RUNNER_TEMP/actual-changes.txt"
-          printf '%s\n' '.github/workflows/issue671-p05-real-warehouse-once.yml' > "$RUNNER_TEMP/approved-changes.txt"
+          printf '%s\n' '.github/workflows/issue671-p05-warehouse-inventory-once.yml' 'physics_app/src/physics/plasma/DDContinuityEq.C' > "$RUNNER_TEMP/approved-changes.txt"
           diff -u "$RUNNER_TEMP/approved-changes.txt" "$RUNNER_TEMP/actual-changes.txt"
           test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 12bbfa74064c1b3d3ad135d137bcfeb5d425fdaa
           test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 045de080e3d836d75495b1749d75d5d3deea2330
