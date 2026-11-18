@@ -1,0 +1,117 @@
+{
+  "schema": "issue670.poisson_rhs.native_numeric_evaluation.real_cpp.v1",
+  "task": "P4-D4 / D8 Poisson RHS numerical evaluation",
+  "issue": 670,
+  "verdict": "PASS_REAL_CPP_POISSON_RHS_5_CASES_AND_DISCRETE_FEM_POTENTIAL__HOLD_FULL_S6_DYNAMIC_SCIENCE",
+  "scope": "Actual compiled PhysicsApp ADParsedFunctorMaterial number_density charge RHS and FunctorKernel on 1D 8-cell steady generated mesh; controlled synthetic log-molar states; not actual S6-417/941 nonlinear plasma solve",
+  "source": {
+    "integration_PR": 665,
+    "latest_HEAD_at_test": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "W1_source_HEAD": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+    "source_diff_W1_to_latest_exact": [
+      "tests/test_issue633_s6_scratch_ion_retirement.py"
+    ],
+    "physics_CPP_unchanged": true,
+    "archived_native_S6_C0_git_blob": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+    "P3X_source_artifact_id": 14406746397,
+    "P3X_artifact_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "P3X_both_S6_417_and_941_poisson_blocks_verified": true,
+    "P3X_charge_number_density_block_sha256": "66ae9a6f8eab5024b872b315f81345e5e056e0c606d7262fa399cf7ff1ad0630",
+    "P3X_charge_density_block_sha256": "7dc439f551cf38ab9a82f90f622ed6493779f1bf456e33fd653a55202086af59",
+    "P3X_poisson_source_block_sha256": "68c84da863e4996a7cd551a46bc8d553824ef81e16f7a400b247d86e23d34c64",
+    "P3X_phi_source_consumer": "FunctorKernel; variable=potential; functor=poisson_source; functor_on_rhs=true",
+    "P4X_only_7_target_functor_blocks_changed_not_Poisson": true
+  },
+  "numeric_definition": {
+    "number_density_m3": "nq=n_i_physical+n_op_physical-n_e_physical-n_m_physical",
+    "charge_C_m3": "rho=1.602176634e-19*nq",
+    "poisson_RHS_V_m2": "f=1.8095128179727827e-08*nq",
+    "log_to_physical_density": "n=6.02214076e23*exp(log(n_molar))",
+    "canonical_numeric_expr_used": true,
+    "epsilon_property_type": "ADGenericConstantMaterial (real archived S6 materials type)",
+    "boundary": "Zero Dirichlet, x=0 and x=1; 8 uniform 1D linear FEM elements",
+    "independent_fem_mean_oracle": "potential_avg = poisson_rhs * (1 - 1/8^2) / 12 = poisson_rhs * 21/256",
+    "expected_potential_positive_V": "148436.598349329830859375",
+    "expected_potential_negative_V": "-148436.598349329830859375"
+  },
+  "actual_native": {
+    "CI_run_id": 44302447593,
+    "CI_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44302447593",
+    "executed_head": "bbf49abd07e503568aa59ab3c23d782a15fd1a57",
+    "job_name": "numeric_rhs",
+    "conclusion": "success",
+    "observed_cases": 5,
+    "exit_code_zero_cases": 5,
+    "convergence": "5/5 Solve Converged! in actual decoded native logs",
+    "csv_final_rows_verified": 5,
+    "worst_absolute_RHS_error_V_m2": "1.73e-8",
+    "worst_absolute_potential_mean_discrete_FEM_error_V": "1.69140625e-10",
+    "artifact_id": 14427470578,
+    "artifact_link": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44302447593/artifacts/14427470578",
+    "artifact_zip_sha256": "6fe4676e50e44438d8560b5b08f9305006f495941a32ef930a26d396aebddd06",
+    "artifact_zip_crc": "PASS",
+    "embedded_receipt_sha256": "28ad7f1410a171d0d45e9da2838a4e9be0cbeac31a9d1094c365004d5d54ec93",
+    "independent_result_file": "issue670_poisson_rhs_independent_numeric_receipt.json",
+    "independent_result_sha256": "8d8ffbce9cfc6e12126186896d522a6964c5e3017aed8a7ba61e00992d3ae921",
+    "actual_cases": {
+      "balanced": {
+        "nq_m3": 0,
+        "rho_C_m3": 0,
+        "rhs_V_m2": 0,
+        "potential_avg_V": 0
+      },
+      "O2p_plus": {
+        "nq_m3": 100000000000000,
+        "rho_C_m3": 0.00001602176634,
+        "rhs_V_m2": 1809512.8179728,
+        "potential_avg_V": 148436.59834933
+      },
+      "Op_plus": {
+        "nq_m3": 100000000000000,
+        "rho_C_m3": 0.00001602176634,
+        "rhs_V_m2": 1809512.8179728,
+        "potential_avg_V": 148436.59834933
+      },
+      "electron_plus": {
+        "nq_m3": -100000000000000,
+        "rho_C_m3": -0.00001602176634,
+        "rhs_V_m2": -1809512.8179728,
+        "potential_avg_V": -148436.59834933
+      },
+      "Om_plus": {
+        "nq_m3": -100000000000000,
+        "rho_C_m3": -0.00001602176634,
+        "rhs_V_m2": -1809512.8179728,
+        "potential_avg_V": -148436.59834933
+      }
+    }
+  },
+  "binary": {
+    "W1_ci_run": 44293156216,
+    "W1_artifact_id": 14422701532,
+    "W1_artifact_zip_sha256": "ce50a51f2ab565b5dc6aced272adcf12f1075f7593417c603ce05274c8291c18",
+    "inner_bundle_tar_sha256": "705e1f3fa58c4da3c1d76cbca7f2a761045f8f46ee6f54d3391aeaf5ab62033c",
+    "executable_physics_opt_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+    "app_libphysics_opt_so_sha256": "3274751989604b06e7e7e677435b16c874388a4f7b8735b059eafc605fbb7e51",
+    "app_libphysics_test_opt_so_sha256": "86aa0d4ebe18d731e7e052f5ad62594b1a3b48074f848693b0958f728b61ba80",
+    "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "source_equivalence_note": "Latest integration HEAD 74a differs from W1 source head 05d only in pytest fixture, no Physics C++ or archived S6 C0 changes. The binary is NOT claimed as rebuilt at HEAD 74a."
+  },
+  "debug_provenance": {
+    "initial_job_run_id": 44301819055,
+    "initial_job_verdict": "FAILED_PRE_EVALUATION_FIXTURE_MATERIAL_PROPERTY_TYPE",
+    "first_error": "ADMatDiffusion requires relative_permittivity as AD material property, not ADGenericFunctorMaterial",
+    "corrected_fixture_using_archived_S6_ADGenericConstantMaterial": true,
+    "fixed_run_id": 44302447593
+  },
+  "constraints": {
+    "private_EI_raw_not_accessed": true,
+    "no_science_or_S6_417_941_dynamic_timesteps": true,
+    "final_S6_RHS_native_dynamic_evaluation": "NOT_RUN",
+    "D8_full_caller_runtime_numeric": "HOLD",
+    "P5_final_Native_P2": "NOT_PROMOTED",
+    "SCIENCE_HOLD": true,
+    "main_unchanged": true,
+    "PR665_unchanged": true
+  }
+}
