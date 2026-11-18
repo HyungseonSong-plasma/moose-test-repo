@@ -249,6 +249,11 @@ jobs:
           nm -D "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so" | grep -Fq '_ZN13FEProblemBase7addFVBC'
           nm -D "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so" | grep -Fq '_ZN13FEProblemBase20addBoundaryCondition'
           sha256sum "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so" > "$RUNNER_TEMP/p05-in/tracer.sha256"
+          # The protected /dev/shm mount is noexec; load observer from read-only /workspace.
+          cp "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so" physics_app/p5x_owner_tracer.so
+          chmod 0755 physics_app/p5x_owner_tracer.so
+          cmp physics_app/p5x_owner_tracer.so "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so"
+          test "$(git rev-parse HEAD)" = "$BASE_HEAD"
           echo P5X_AUDIT_ONLY_SHARED_OBJECT_COMPILATION_PASS
 
       - name: Protected original EI Rate, clean controls, and N1-N8 actual Native mutants
@@ -343,7 +348,7 @@ jobs:
                    "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
                    "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
                    "--mount",f"type=bind,src={work},dst=/case",oci,"-lc",
-                   "set -euo pipefail; source /environment; "+("P5X_REGISTER_LOG=/case/p5x_registrations.log LD_PRELOAD=/case/libp5x_owner_tracer.so " if trace else "")+"/workspace/physics_app/physics-opt --check-input -i "+
+                   "set -euo pipefail; source /environment; "+("P5X_REGISTER_LOG=/case/p5x_registrations.log LD_PRELOAD=/workspace/physics_app/p5x_owner_tracer.so " if trace else "")+"/workspace/physics_app/physics-opt --check-input -i "+
                    " ".join(shlex.quote(x) for x in ordered)]
               try:
                   p=subprocess.run(cmd,text=True,capture_output=True,timeout=480,check=False,
@@ -400,14 +405,16 @@ jobs:
                   stage_rates(work,case,rates)
                   observer=Path(os.environ["P5X_OWNER_SO"])
                   assert observer.is_file() and observer.stat().st_size>10000
-                  shutil.copyfile(observer,work/"libp5x_owner_tracer.so")
-                  (work/"libp5x_owner_tracer.so").chmod(0o700)
+                  # Observer stays in untracked /workspace (noexec private scratch has only rate/data).
                   rc,log=native(work,expected_case["ordered_inputs"],receipt["binary_sha256"],trace=True)
                   valid=(rc==0 and "Syntax OK" in log)
                   tracefile=work/"p5x_registrations.log"
                   if not tracefile.is_file():
                       diag=re.search(r"P5X_INTERPOSER_UNRESOLVED[^\n]{0,150}",log)
                       reason=("_"+diag.group(0) if diag else "")
+                      if "cannot be preloaded" in log: reason+="_LD_PRELOAD_CANNOT_LOAD"
+                      if "symbol lookup error" in log: reason+="_SYMBOL_LOOKUP_ERROR"
+                      if "Segmentation fault" in log: reason+="_PROCESS_SEGFAULT"
                       raise RuntimeError("OWNER_INTERPOSER_NOT_INVOKED_"+case+"_rc_"+str(rc)+reason)
                   from collections import Counter
                   events=[line.split("\t") for line in tracefile.read_text().splitlines()]
