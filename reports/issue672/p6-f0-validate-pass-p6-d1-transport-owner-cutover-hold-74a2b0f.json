@@ -1,0 +1,196 @@
+{
+  "schema": "issue672.p6_f0_ci_validation_and_p6_d1_transport_cutover_scope.v1",
+  "issue": 672,
+  "source_pin": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "pr": 665,
+    "head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "draft": true,
+    "predecessor_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+    "intervening_compare": {
+      "commit_count": 6,
+      "changed_paths": [
+        "tests/test_issue633_s6_scratch_ion_retirement.py"
+      ]
+    }
+  },
+  "verdict": "P6_F0_PASS_NATIVE_CI_LOG__P6_D1_CONTRACT_IDENTIFIED_IMPLEMENTATION_HOLD__OTHERS_HOLD",
+  "P6_F0": {
+    "status": "PASS_CI_VERIFIED",
+    "implementation_owner": "Already committed on PR665 before this investigation; this receipt does not claim to have authored the fix",
+    "test_file": "tests/test_issue633_s6_scratch_ion_retirement.py",
+    "test_blob_git_sha1": "5df7a81bb647919e079efe275004cb4982f70844",
+    "fixed_calls": "retire_in_disposable_scratch(...,exact_manifest=fixture_manifest(...),expected_source_head=FIXTURE_SOURCE_HEAD)",
+    "production_function": "retire_s6_ion_fv_owners.py::retire_in_disposable_scratch",
+    "production_required_keyword_only": [
+      "exact_manifest",
+      "expected_source_head"
+    ],
+    "production_function_blob_git_sha1": "41219d43c63aa2c6db025a48831ccc9a6493190e",
+    "workflow_run": 44297212655,
+    "job_id": 134777261452,
+    "job_name": "validate",
+    "job_conclusion": "success",
+    "pytest": {
+      "passed": 1566,
+      "skipped": 13,
+      "failed": 0
+    },
+    "earlier_ref": {
+      "run": 44283348884,
+      "failed": 5,
+      "passed": 1558,
+      "skipped": 13
+    },
+    "no_production_safety_guard_relaxation": true
+  },
+  "P6_D1": {
+    "status": "HOLD_PENDING_CROSS_OWNER_SOURCE_INTEGRATION_AND_COMPATIBILITY_AUTHORITY",
+    "detected_failures": {
+      "public_D": {
+        "run": 44297212655,
+        "job": "plasma_native_regression",
+        "cases": {
+          "417": "HOLD_CHECK_INPUT_EXIT1",
+          "941": "HOLD_CHECK_INPUT_EXIT1"
+        },
+        "first_error": "Missing drift-diffusion transport JSON record for FEM species 'e'",
+        "location": "migrated_continuity.i:11.11"
+      },
+      "FLOW_D": {
+        "run": 44297212567,
+        "job": "flow-native-p2",
+        "case_417": "HOLD_CHECK_INPUT_EXIT1",
+        "case_941": "NOT_RUN_AFTER_417_FAILED",
+        "first_error": "Missing drift-diffusion transport JSON record for FEM species 'e'",
+        "location": "migrated_continuity.i:18.11"
+      }
+    },
+    "exact_source_blobs": {
+      "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py": "a6414baf70590b79f4b4ee4cb16c4b9039355f40",
+      "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json": "c563f54b4914773f153b170fb8b5b63f2687c170",
+      "experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py": "96c8ca548392a1ad08334b87b082dd1595893070",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py": "60a12878a26969fdf1ae26eab47694244b601634",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py": "8a76517c7863be77d8390cd04b0b3be055f2c147",
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "physics_app/src/materials/DDTransportMaterial.C": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330"
+    },
+    "actual_options": {
+      "public_overlay_files": "plasma_species_only.json",
+      "public_overlay_selected_FEM": [
+        "e"
+      ],
+      "selected_FVM": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "source_species_record_keys_e": [
+        "elements",
+        "charge_number"
+      ],
+      "also_missing_transport_for": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "public_D_manual_transport_materials": {
+        "electron": {
+          "name": "electron_transport",
+          "factory_after_scratch_cutover": "DDTransportMaterial",
+          "species_id": "e",
+          "model": "lookup",
+          "table_file": "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+          "table_units": "reduced",
+          "pressure": "p",
+          "gas_temperature": "T_g_fixed",
+          "bounds_policy": "clamp",
+          "fluid_energy": true,
+          "original_factory": "PhysicsElectronTransportLookupMaterial"
+        },
+        "ions": [
+          "O2p_species_transport_alias",
+          "Om_species_transport_alias",
+          "Op_species_transport_alias"
+        ],
+        "ion_model": "functor",
+        "ion_sources": {
+          "O2p": [
+            "ion_mobility",
+            "ion_diffusion"
+          ],
+          "Om": [
+            "negative_ion_mobility",
+            "negative_ion_diffusion"
+          ],
+          "Op": [
+            "atomic_positive_ion_mobility",
+            "atomic_positive_ion_diffusion"
+          ]
+        },
+        "count_total": 4
+      },
+      "new_Physics_generation": "DDContinuityEq.C generates DDTransportMaterial for each selected fem_species/fvm_species when species transport JSON is present and dont_create_kernels=false",
+      "potential_transport_duplicate_owner_if_only_JSON_added": "4 manual + 4 generated; same outputs e_mobility/e_diffusivity, electron_mobility/electron_diffusion, and each ion mobility/diffusivity",
+      "electron_energy_closure_hazard": "Manual original DDTransportMaterial has fluid_energy=true, publishing electron_energy_mobility/electron_energy_diffusion. New auto-generated e transport only sets fluid_energy=true when a unique DDEnergyEq action requests [Energy] transport_coefficient=fluid. The option-only Public D Continuity overlay has no [Energy] action. Removing manual e transport without separate verified closure cutover can strand energy consumers.",
+      "original_source_upstream_data_authority": "Pinned original electron lookup Material/table, not fabricated constants. Canonical S6 Hybrid New-only is a DIFFERENT mechanistic contract and cannot be silently copied onto Public D.",
+      "cross_lane_FLOW": "FLOW run_chemistry_s6_p2_only.py calls prepare_s6_run_input.prepare for a D-base/Hybrid path, not the separate full prepare_hybrid_json_s6.prepare and not production --newonly; do not assume identical JSON and provider ownership.",
+      "P05_followon": "After transport JSON gate, D and FLOW still retain Native FV ion objects and may hit ARCH's already-observed P05 ni_time collision; must preserve intended legacy comparison vs new-only scope and never disable checkIntegrity."
+    },
+    "required_change_sequence": [
+      "Agree maintained Public D/FLOW candidate identity: historical compatible Hybrid with strict provenance vs truly New-only; do not conflate them.",
+      "In disposable D/FLOW scratch only, bind each of four selected species to its already-proven transport coefficient source, including verified electron lookup table path and gas state; validate JSON schema and pinned bytes before any writes.",
+      "Retire/rebind exact manual DDTransportMaterial owners when generated Physics takes their outputs, preserving electron-energy 5/3 closure, old charged transport AD Functors, Poisson, wall and diagnostics; require before/after block SHA and downstream consumer census.",
+      "Apply exact Native ion Kernel/BC ownership contract coherently to mode; ARCH Hybrid must remain historical KEEP_HOLD if it cannot simultaneously satisfy P05 without scientific contract changes.",
+      "Run both cases via single exact-head PhysicsApp binary and --check-input with real mesh/table and warehouse inventory; prove uniqueness and 8 FEM electron/sheath owner compatibility.",
+      "Run focused pytest mutation tests for missing/duplicate transport record, wrong species, wrong lookup SHA/relative path, duplicate material outputs, wrong gas Functor, fluid_energy alias loss and Native 26 reappearance.",
+      "Only after P6 user-approved lane contract and #535/#541 surface approval decide workflow/template update or permanent KEEP_HOLD. No skip, no dont_create_kernels and no artificial green."
+    ],
+    "explicit_nochange_this_slot": [
+      "Physics C++",
+      "production S6 JSON",
+      "original 10-layer/11-layer",
+      "CI YAML",
+      "main",
+      "PR665",
+      "private EI table bytes"
+    ]
+  },
+  "P6_OTHER_CURRENT_CI": {
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "repository_ci": {
+      "run": 44297212655,
+      "status": "completed",
+      "conclusion": "failure",
+      "validate": "PASS",
+      "public_D": "HOLD",
+      "ARCH": "HOLD_P05_ni_time"
+    },
+    "FLOW": {
+      "run": 44297212567,
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    "Ion_FVM": {
+      "run": 44297212333,
+      "status": "completed",
+      "conclusion": "failure",
+      "first_error": "RETIRED_GROUNDED_SHEATH_BCS",
+      "timestep_executed": false
+    },
+    "science_acceptance": "HOLD"
+  },
+  "gates": {
+    "P6_F0_PYTEST_VALIDATE": "PASS_1566_PASSED_13_SKIPPED_EXACT_HEAD",
+    "P6_D1_ROOT_CAUSE": "PASS_SOURCE_AND_LIVE_FAILURE",
+    "P6_D1_PROPOSED_REPAIR": "HOLD_MULTIPLE_OWNER_AND_ENERGY_CLOSURE",
+    "P6_D1_NATIVE_TEST": "NOT_RUN",
+    "P6_H1_ARCH": "KEEP_HOLD_UNTIL_COMPATIBLE_HISTORICAL_RUN_PROVEN",
+    "P6_I1_ION_FVM": "KEEP_HOLD_RETIRED_SHEATH_PHYSICS_CONTRACT",
+    "P6_NEWONLY_LANE": "HOLD_DEPENDENT_P4X_P5",
+    "P6_CI_TEMPLATE_PARITY": "NOT_RUN",
+    "NATIVE_P3_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
