@@ -1,0 +1,74 @@
+{
+  "schema": "issue672.p6x.three_integration_conditions_disposition.v1",
+  "revision_date": "2026-11-18",
+  "scope": "Evidence/approval disposition only; no Physics, protected EI, main, PR665, PR684, P05 or historical runner mutation",
+  "tested_parent_pr665_head": "52067302d16074592503d0ef6b903cc344f55a08",
+  "mode_guard": "Historical and current-head Physics modes remain distinct; never normalize Native failure to green",
+  "conditions": {
+    "artifact_consumer_compatibility": {
+      "status": "FIRST_ATTEMPT_BACKWARD_COMPAT_CODE_AND_P0_TEST_PASS__EXTERNAL_CONSUMER_ATTESTATION_HOLD",
+      "implementation": "Four canonical run_id-run_attempt-head_SHA artifacts always upload; four old names also upload only if github.run_attempt==1, from identical bounded paths; never overwrite old names on rerun.",
+      "ci_template_git_blob": "24a2b278c3bd33649cb2c83be33e7abb2febd4eb",
+      "real_P0_guard_run": 44344988303,
+      "real_P0_guard_source": "24a3a1b94a61274f396b09d6741f3f8a4d7e131d",
+      "source_guard_mutations": "21/21 REJECTED",
+      "pytest": "2/2 PASS",
+      "workflow_harness": "SELFTEST_AND_CHECK_PASS",
+      "workflow_surface": "SELFTEST_AND_CHECK_PASS",
+      "temporary_workflow": "removed after test; changed production-code blobs preserved",
+      "external_consumer": "UNKNOWN; first-attempt compatibility retained, future run-attempt consumers must resolve canonical name via workflow run+attempt+head metadata",
+      "remaining_validation": "Real standard PR-trigger Repository CI on this final branch must demonstrate both canonical+legacy artifact names for each of 4 Native jobs with independent ZIP/member SHA parity"
+    },
+    "public_D_flow_electron_transport": {
+      "status": "KEEP_HOLD_HISTORICAL__SCIENCE_MODE_CUTOVER_NOT_AUTHORIZED",
+      "Public_D": {
+        "source_json": "plasma_species_only.json missing selected e/O2p/Om/Op transport_coef",
+        "original_electron_table": "100-row original reduced/clamp lookup, SHA256 994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+        "newonly_electron_table": "42-row separate contract, SHA256 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+        "latest_real_native_first_error": "Missing drift-diffusion transport JSON record for FEM species 'e', 417 & 941",
+        "candidate_pr684": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c OPEN_DRAFT_HOLD",
+        "candidate_pr684_native_next_error": "FV species kernels require [Physics]/[Plasmas]/[Transport]/[Chemistry] to generate species source functors",
+        "authority": "P6-D2 #535/#541 approves historical reference/retirement only. No automatic grant of Physics-generated Chemistry FV Source/100-vs-42 numerical equivalence.",
+        "next": "Approved Public D standalone Chemistry Source generation ownership design or independently pinned historical P2-only compatible runner; then two actual case-specific Native --check-input/P05 with original 100-row table."
+      },
+      "FLOW": {
+        "historical_hybrid": "KEEP_HOLD (user-approved). Retain 26 legacy ion FV owners and history as oracle; do not run overlapping with new generated 12+12 at same modern Physics HEAD.",
+        "modern_pr684_both_cases": "417+941 real Native P05 rejects ni_time overlap after e transport cutover.",
+        "newonly": "Separately conditional approved disposable original 26->0 source migration; 12 FVKernel +12 FVBC generated only with explicit Chemistry and P4-X producer cutover. Not historical FLOW PASS.",
+        "same_head_final": "P5-X full 12+12+8 live Warehouse / full D8 and 16 negatives exact HEAD/ELF same-binary remains separate gate."
+      },
+      "forbidden": [
+        "Synthetic electron coefficients",
+        "Replace 100-row table with 42-row by default",
+        "Manual/Physics duplicate material producers",
+        "Silently splice New-only JSON into historical Hybrid",
+        "Bypass P05 or dont_create_kernels",
+        "Continue-on-error or skip historical failure to green"
+      ]
+    },
+    "ARCH_historical_hybrid": {
+      "status": "HISTORICAL_PINNED_P2_PASS__MODERN_P05_KEEP_HOLD",
+      "historical_source": "5d15c4054a00aa9fa8a778a87bb21690a3a5469b",
+      "historical_native_P2_run_id": 43883076025,
+      "historical_native_P2_run_attempt": 2,
+      "historical_P2_job_id": 134820962860,
+      "cases_417_941": "BOTH Syntax OK, exit0 P2 only at historical pin",
+      "current_head_417_941": "Both Native P05 ni_time [PhysicsFVLogMolarElectronTimeDerivative] duplicate on log_O2p",
+      "ownership": "Historical 14 FV kernels+12 FVBC retained vs 12 generated FV kernels+12 FVBC; no mixed dual-owner mode",
+      "decision": "Retain immutable historical archive and pinned compatibility P2-only, modern Hybrid KEEP_HOLD without P05 bypass. New-only separate.",
+      "current_ci": "Allow authentic fail-closed failure result to appear; don't disguise as success or skip.",
+      "future_approval": "If a modern Hybrid Physics mode is desired, separate physics-owner and source/semantic compatibility authority and same exact-HEAD native proof are mandatory."
+    }
+  },
+  "integration": {
+    "P6_C3": "SOURCE_P0_PASS__REAL_ALIAS_ARTIFACT_PENDING",
+    "P6_X": "KEEP_HOLD_PENDING_EXTERNAL_CALLERS_AND_MODE_AUTHORITY",
+    "PR687": "OLDER_SOURCE_EXACT_HEAD_VALIDATE_PASS__FULL_REPO_CI_FAIL_EXPECTED",
+    "PR688": "DRAFT_VALIDATION_ONLY",
+    "PR665": "UNMODIFIED",
+    "PR684": "UNMODIFIED_DRAFT_HOLD",
+    "main": "UNMODIFIED",
+    "P3_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
