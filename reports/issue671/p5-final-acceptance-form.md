@@ -122,3 +122,23 @@
 ---
 
 [Source/Artifact 증거 대장](./p5-source-artifact-evidence-ledger.md) · [기계 판독 게이트 인덱스](./p5-evidence-gate-index.json)
+
+## F. W1 바이너리 후보 인계 (P5-X에서 재검증·최종 연결)
+
+**W1 물리적 Artifact byte SHA PASS:** CI [#44293156216](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44293156216), [Artifact #14422701532](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44293156216/artifacts/14422701532), ZIP `ce50a51f2ab565b5dc6aced272adcf12f1075f7593417c603ce05274c8291c18`.
+
+| W1 검증 항목 | 실물 증거 | 최종 P5-X 적용 |
+|---|---|---|
+| Build HEAD | `05d7ce4eceb81769cb2f0146c51535fc35e74ac1` | PR #665 최신 HEAD와 재대조 |
+| Tree | `0385fbf71ef384bbad02a4222f2e799deb02b9a6` | 정확한 tree 동일성 검사 |
+| Executable | `cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc` | B2/C2/N* 로그에서 같은 SHA 확인 |
+| App `.so` | `3274751989604b06e7e7e677435b16c874388a4f7b8735b059eafc605fbb7e51` | 동일 배포 TAR에서 로드 |
+| App test `.so` | `86aa0d4ebe18d731e7e052f5ad62594b1a3b48074f848693b0958f728b61ba80` | 동일 배포 TAR에서 로드 |
+| Runtime TAR SHA | `705e1f3fa58c4da3c1d76cbca7f2a761045f8f46ee6f54d3391aeaf5ab62033c` | 런타임 파일의 원본 SHA 핀 |
+| Build command | `make -C physics_app -j2 app_non_unity_dirs='%/utils'` | 한 차례 빌드 |
+| Native `--check-input` | **NOT_RUN** | 417/941 독립 Native 실행 결과 대기 |
+| N1–N8 native negatives / D8 | **NOT_RUN** | 실제 exit/log, restore, live callers 대기 |
+
+**W1 후보와 최종 HEAD 구분:** 증거 정리 중 PR #665 HEAD는 `74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f`로 전진했고 빌드 HEAD 이후의 diff는 테스트 파일 1개 수정이었다. 이 차이를 명시한 독립 동일성 검증 없이는 W1 ELF를 **최종 HEAD exact build**로 자동 표시하지 않는다. P5-X는 최신 HEAD를 다시 pin한 뒤 동일 바이너리/라이브러리에서 417·941·음성 job이 실행됐음을 실물로 증명한다. 완료 전 `P5_NATIVE_P2=HOLD`, `SCIENCE_HOLD`.
+
+**이 절은 완성된 W8 양식에 최신 W1 실물 값을 전달하는 handoff이며 최종 판정을 대신하지 않는다.**
