@@ -379,6 +379,7 @@ DDContinuityEq::checkIntegrity() const
     unsigned int fv_kernel_count = 0;
     unsigned int fv_bc_count = 0;
     unsigned int fe_bc_count = 0;
+    std::ostringstream typed_inventory;
     for (const auto * kernel : kernels)
     {
       const auto & parameters = kernel->parameters();
@@ -389,8 +390,8 @@ DDContinuityEq::checkIntegrity() const
         if (variable == continuityStateName(id))
         {
           ++fv_kernel_count;
-          mooseInfo("P6_D4_TYPED FV_KERNEL name=", kernel->name(), " type=", kernel->type(),
-                    " variable=", variable);
+          typed_inventory << "P6_D4_TYPED FV_KERNEL name=" << kernel->name()
+                          << " type=" << kernel->type() << " variable=" << variable << "\n";
         }
     }
     for (const auto * bc : bcs)
@@ -403,8 +404,8 @@ DDContinuityEq::checkIntegrity() const
         if (variable == continuityStateName(id))
         {
           ++fv_bc_count;
-          mooseInfo("P6_D4_TYPED FV_BC name=", bc->name(), " type=", bc->type(),
-                    " variable=", variable);
+          typed_inventory << "P6_D4_TYPED FV_BC name=" << bc->name()
+                          << " type=" << bc->type() << " variable=" << variable << "\n";
         }
     }
     const auto & integrated =
@@ -419,11 +420,14 @@ DDContinuityEq::checkIntegrity() const
         continue;
       const auto variable = parameters.get<NonlinearVariableName>("variable");
       ++fe_bc_count;
-      mooseInfo("P6_D4_TYPED FEM_BC name=", bc->name(), " type=", bc->type(),
-                " variable=", variable);
+      typed_inventory << "P6_D4_TYPED FEM_BC name=" << bc->name()
+                      << " type=" << bc->type() << " variable=" << variable << "\n";
     }
-    mooseInfo("P6_D4_TYPED_TOTAL FV_KERNEL=", fv_kernel_count, " FV_BC=", fv_bc_count,
-              " FEM_BC=", fe_bc_count);
+    // One logging call, not one per object: Moose de-duplicates messages from
+    // a repeated callsite. This captures every Warehouse object in one record.
+    mooseInfo("P6_D4_TYPED_INVENTORY_BEGIN\n", typed_inventory.str(),
+              "P6_D4_TYPED_TOTAL FV_KERNEL=", fv_kernel_count, " FV_BC=", fv_bc_count,
+              " FEM_BC=", fe_bc_count, "\nP6_D4_TYPED_INVENTORY_END");
   }
 }
 
