@@ -1,0 +1,94 @@
+{
+  "schema": "issue671.p5_n3.native_ion_fvbc_reinsertion.compact_source_only.v1",
+  "task_id": "P5-N3",
+  "issue": 671,
+  "status": "SOURCE_STATIC_RAW_BYTE_NEGATIVE_40_OF_40_PASS__NATIVE_P05_RUNTIME_HOLD",
+  "reviewed_pr665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "original_runner_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_ci_artifacts": {
+    "P1": {
+      "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182628032",
+      "artifact_id": 14372278070,
+      "downloaded_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "P3_X": {
+      "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44256823392",
+      "artifact_id": 14405784430,
+      "downloaded_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6"
+    }
+  },
+  "raw_bc_block_shas_both_cases": {
+    "ion_wall": "fa4ad1a51cbcd4b6ffa1dc8fba3438b66b27642a598bc35abca2513b9f0bacb3",
+    "negative_ion_wall": "cf5d56c3af0f77832f08139360753ac8c300e24cd86f6fd24158e77893fe375b",
+    "atomic_positive_ion_wall": "8a32490bce4f29361270661c094f8d0e45cb3555b8d9ce9127dd725ac340d67f",
+    "ion_cover_dielectric": "6cf04ff67cabc68ad5852678c5c83c646495f994c5bf6c7dfc3628d637812d5b",
+    "negative_ion_cover_dielectric": "61acf3daa0654c6beb7220c7aaca1f3dbab944e9586a09e756aa2d419014ff02",
+    "atomic_positive_ion_cover_dielectric": "f44eddb6f571b5bc1b33cbe08a772bba4dcc86f129f53fe4127b715f47cfbe45",
+    "ion_wafer_dielectric": "07256ce1face22d3fbe6b318d5e1857bf61289b2619adfea3cefec707a37b31c",
+    "negative_ion_wafer_dielectric": "ce57b0e42089b7266f623359eeb56cc4349cda356b9503ef37fb244e8cedbea3",
+    "atomic_positive_ion_wafer_dielectric": "4f6259aa4c0c1d69495581e27e229fc9b4d3e4fb3dcbd59ff09c8ff53ad2937b",
+    "ion_focus_ring_dielectric": "830e2cddd31b70308732cf4dab3e7d4327d38c34d0200ec50da4fcf011eee761",
+    "negative_ion_focus_ring_dielectric": "b96509870ac57132a0d71588709753b065ec699afe36917cf715480e5480febe",
+    "atomic_positive_ion_focus_ring_dielectric": "bd7e0cf631d41a4670e1a744af6c94bc66d57e1aace960acb183249906425e62"
+  },
+  "cases": {
+    "417": {
+      "source_11_layer_sha": "11/11 PASS",
+      "final_stage_11_layer_sha": "11/11 PASS",
+      "final_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "old_bc_block_sha": "12/12 PASS",
+      "JSON_generated_FV_BCs_expected": 12,
+      "single_old_bc_insertions_rejected": 12,
+      "grouped_old_bc_insertions_rejected": 8,
+      "total_static_fail_closed": "20/20",
+      "baseline_unchanged": true
+    },
+    "941": {
+      "source_11_layer_sha": "11/11 PASS",
+      "final_stage_11_layer_sha": "11/11 PASS",
+      "final_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "old_bc_block_sha": "12/12 PASS",
+      "JSON_generated_FV_BCs_expected": 12,
+      "single_old_bc_insertions_rejected": 12,
+      "grouped_old_bc_insertions_rejected": 8,
+      "total_static_fail_closed": "20/20",
+      "baseline_unchanged": true
+    }
+  },
+  "source_guard": {
+    "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "git_blob_sha": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "action": "DDContinuityEq::checkIntegrity / registerMooseAction(check_integrity)",
+    "warehouse_systems": [
+      "FVFluxBC",
+      "FVDirichletBC"
+    ],
+    "compared": "same solver variable + expected JSON BC name and exact Factory + exactly-one cardinality",
+    "unexpected": "P05 legacy, duplicate or unexpected FV BC",
+    "duplicate": "P05 partial or duplicate FV BC owner",
+    "actual_cpp_guard_executed": false
+  },
+  "verification": {
+    "method": "Exact P1 object bytes independently extracted and SHA-pinned, reinserted into ephemeral P3-X C0 buffer; the C++ P05 name/Factory/variable predicate independently modeled against expected JSON BC catalogue; simulated generated BCs not a Warehouse observation.",
+    "source_layers_sha": "22/22 PASS",
+    "stage_layers_sha": "22/22 PASS",
+    "retired_FVBC_block_sha": "24/24 PASS",
+    "negative_byte_mutations": "40/40 STATIC REJECTED",
+    "original_artifacts_modified": false,
+    "output_deterministic_reexecution": true,
+    "local_full_receipt": "issue671_P5-N3_native_ion_fvbc_negative_receipt.json",
+    "local_full_receipt_sha256": "164e9a86b923b544e404ba4ef600de1afcd8e5f899d9ca5aa553b2812515563b",
+    "local_reproduction_script": "verify_issue671_p5_n3.py",
+    "local_script_sha256": "5fb233253e8e50ee512053b3d1e672c423f7d8af732613a540f9f934202067e5"
+  },
+  "remaining_gates": {
+    "P4_X_single_writer_source_integration": "HOLD",
+    "P5_0_same_exact_head_binary_SHA": "NOT_RUN",
+    "P5_N3_real_physics_opt_check_input": "NOT_RUN",
+    "generated_12_FVBC_Warehouse": "NOT_RUN",
+    "Native_P2": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "caveat": "40 simulated P05 fail-closed cases are verified source predicates only. No claim is made that an actual native MOOSE binary rejected mutations. Follow #671 to execute after P4-X and P5-0.",
+  "mutation_scope": "Isolated new receipt file; no edits to common CI/source, main, PR #665 or #671 issue body."
+}
