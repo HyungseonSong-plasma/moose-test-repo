@@ -1,0 +1,163 @@
+{
+  "schema": "issue672.p6_d4.actual_public_D_scratch_real_chemistry_ion26_electron3_native_p2.v1",
+  "verdict": "P6_D4_PUBLIC_D_PREPARED42_ACTUAL_NATIVE_P2_PASS_417_941__P05_ION12_GUARDED__D4_FINAL_HOLD_NO_12_ION_BCS_OR_E8_INVENTORY",
+  "date": "2026-11-18",
+  "source": {
+    "parent_PR684": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "parent_PR665_at_source": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "latest_PR665_after_concurrent_work": "52067302d16074592503d0ef6b903cc344f55a08",
+    "historical": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "pilot_exact_source_commit": "070b7fe96de5ee64012813841f0b4091051de806",
+    "pilot_source_driver_sha_commit": "48d0735c2a1394bd621ed6b483d6ad91e52bba44",
+    "pilot_helper_source_sha_commit": "070b7fe96de5ee64012813841f0b4091051de806",
+    "pilot_branch": "issue-672-p6-d4-real-chemistry-public-d-scratch-20261118",
+    "production_PR684_mutated": false,
+    "production_PR665_mutated": false,
+    "main_mutated": false,
+    "pilot_not_pr_merge": true
+  },
+  "inputs": {
+    "public_research_prepared_42": {
+      "rows": 42,
+      "sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "mode": "EXISTING_PUBLIC_RESEARCH_PREPARED_42ROW"
+    },
+    "historical_original_100": {
+      "rows": 100,
+      "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "source_unchanged": true,
+      "PR684_pilot_D": "PRE_NATIVE_REJECT_SHA_PIN_EXPECTED",
+      "historical_compat_P2": "SEPARATE_PASS_4_OF_4_ON_PINNED_OLD_ELF"
+    },
+    "cases": [
+      "417",
+      "941"
+    ],
+    "staged_layers": 11,
+    "private_original_EI_rates_used": false,
+    "reaction_mechanism": {
+      "species": 7,
+      "reactions": 8,
+      "common": 7,
+      "case417": "EI-417",
+      "case941": "EI-941",
+      "real_not_dummy": true
+    },
+    "owner_cutover": {
+      "old_four_manual_transport_materials_retired_each_case": 4,
+      "old_ion_fv_kernel_retired_each_case": 14,
+      "old_ion_fv_bc_retired_each_case": 12,
+      "old_ion_total_retired_each_case": 26,
+      "old_electron_particle_functor_rhs_retired_each_case": 3,
+      "old_electron_energy_rhs_preserved_not_proven_semantically_equivalent": true,
+      "old_electron_fem_bc_eight_source_preflight": "PASS_EXISTING_SOURCE_8",
+      "generated_electron_particle_rhs": "single Chemistry S_e_molar",
+      "generated_ion_sources": [
+        "S_O2p_molar",
+        "S_Om_molar",
+        "S_Op_molar"
+      ],
+      "generated_ion_fv_kernel_expected": 12,
+      "generated_ion_fv_kernel_p05": "CXX_CHECK_INTEGRITY_ENFORCED_ONE_EACH_4_PER_ION_NATIVELY_PASSED",
+      "generated_ion_fv_bc_expected": 12,
+      "generated_ion_fv_bc_source_current": "NOT_GENERATED__NO_DRIFT_DIFFUSION_BOUNDARIES_JSON",
+      "electron_FEM_BC_live_inventory": "NOT_CAPTURED"
+    }
+  },
+  "actual_CI": {
+    "run": 44335683548,
+    "conclusion": "SUCCESS_EVIDENCE_COLLECTION_INCLUDES_NATIVE_P2_PASS",
+    "artifact_id": 14442930347,
+    "artifact_sha256": "f15c4f3dbc60b5740548cd8d4ea7dd264f47d82c4653e8eacedbe27a6ee1a784",
+    "zip_crc": "PASS",
+    "members": 21,
+    "one_exact_source_elf_used_all_cases": true,
+    "elf_sha256": "4fc7804101e2a45accb3cfa66e3634149435a4dfc46305451c03685e659d7118",
+    "elf_bytes_exported": false,
+    "app_libraries_custody": "NOT_ATTACHED",
+    "case42": {
+      "417_B": {
+        "exit": 0,
+        "syntax_ok": true
+      },
+      "941_B": {
+        "exit": 0,
+        "syntax_ok": true
+      },
+      "417_D": {
+        "exit": 0,
+        "syntax_ok": true,
+        "native_log_sha256": "b5c560e80fbe858b1e5c91dd00891177538c84d002b8fc89f210e35114fca989"
+      },
+      "941_D": {
+        "exit": 0,
+        "syntax_ok": true,
+        "native_log_sha256": "7bf76090fedb85df43e22c28e89e1d33a1461dcbd217994201d9c15f12522247"
+      }
+    },
+    "case100": {
+      "B_417": "EXIT0_SYNTAX_OK",
+      "B_941": "EXIT0_SYNTAX_OK",
+      "D_417": "PRE_NATIVE_REJECT_SHA_GUARD",
+      "D_941": "PRE_NATIVE_REJECT_SHA_GUARD"
+    },
+    "source_report_sha256": "33f08a274f868bd5e7ed1912076d638fb75e377cea3bdef4fb378e2612d77cdf",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "incremental_replay": {
+    "first": {
+      "run": 44332531750,
+      "artifact": 14438684818,
+      "zip_sha256": "60e4a170f60956065119176e008fb2a3be61eaf1a0f866b5043cc1a2e7924f6d",
+      "first_blocker": "D4 staged path prefix preflight",
+      "result": "HOLD_PRE_NATIVE"
+    },
+    "second": {
+      "run": 44332802398,
+      "artifact": 14441261552,
+      "zip_sha256": "9b1235d06cba5453efb67025611753f145fef4520de7b9957b359345dc6a90d5",
+      "old_ion26_retired": true,
+      "real_chemistry_7_8": true,
+      "first_error": "generated FunctorKernel on log_e must have exactly one owner; observed four",
+      "result": "HOLD_PRE_P05_FE_SOURCE_UNIQUE"
+    },
+    "third": {
+      "run": 44335683548,
+      "artifact": 14442930347,
+      "actual_case417": "EXIT0_SYNTAX_OK",
+      "actual_case941": "EXIT0_SYNTAX_OK"
+    }
+  },
+  "P05_contract": {
+    "ion_FV_kernel_total": "12_REQUIRED_AND_TYPED_CHECK_INTEGRITY_ENFORCED",
+    "ion_FV_BC_total": "12_REQUIRED_BUT_NO_JSON_FV_BC_CATALOGUE_PROVIDED",
+    "electron_FEM_BC_count": "8_EXPECTED_SOURCE_CONTRACT_PRESERVED__LIVE_INVENTORY_NOT_REHASHED",
+    "why_native_P2_does_not_imply_12BC": "DDContinuityEq.checkIntegrity checks expected BCs derived from JSON; without drift_diffusion_boundaries the selected-ion catalogue may be empty, so syntax OK can occur without 12 generated ion FV BC. Do not assert P05 12+12+8.",
+    "remaining": "Design and independently approve boundary/ion wall physical equivalence and source functors; populate SHA-bound ion 12 JSON boundary declarations without duplicating preserved 8 electron FEM BC or original wall/current/Poisson owners, rerun actual same-ELF P05 inventory and negative cases."
+  },
+  "gates": {
+    "D2_INPUT_MODE": "PASS",
+    "D4_REAL_CHEMISTRY_SOURCE_BINDING": "PASS_SOURCE_AND_NATIVE_P2",
+    "D4_MANUAL_TRANSPORT_FOUR_OWNER": "PASS_SOURCE",
+    "D4_ION_NATIVE_26_TO_0": "PASS_SOURCE",
+    "D4_ELECTRON_PARTICLE_THREE_TO_SINGLE_SOURCE": "PASS_NATIVE_P2",
+    "D5_PUBLIC_D_PREPARED42_P2": "PASS_417_941_ON_ISOLATED_PILOT",
+    "D4_FULL_12_FV_BC": "HOLD_NOT_IMPLEMENTED",
+    "D4_EIGHT_ELECTRON_FEM_BC_LIVE": "HOLD_NOT_INVENTORIED",
+    "D4_ELECTRON_ENERGY_NUMERICAL_PARITY": "HOLD",
+    "D4_PROTECTED_RATE_ORIGINAL_SCIENCE": "NOT_REEVALUATED",
+    "PR684_MERGE": "HOLD_NOT_MERGED",
+    "PR665_EXACT_NEW_HEAD_PILOT": "HOLD_HEAD_MOVED",
+    "P6_X": "HOLD",
+    "P7_FINAL": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "next": [
+    "Do not transplant New-only C2 wall model into Public D without separate boundary law parity acceptance.",
+    "Add original-law compatible 12 ion FV BC catalogue and 8 electron FEM BC proof preserving pressure, energy and wall signed flux.",
+    "Run exact updated PR665 HEAD single ELF/source check Native 417/941, Warehouse 12+12+8, mutation negatives, D8/full RF separately.",
+    "Review PR684 only after both source and physics owner approvals; no automatic P3/P4 or merge."
+  ]
+}
