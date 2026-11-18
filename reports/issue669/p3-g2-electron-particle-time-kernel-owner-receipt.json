@@ -1,0 +1,139 @@
+{
+  "schema": "issue669.p3_g2.electron_time_continuity_source_receipt.v1",
+  "task_id": "P3-G2",
+  "issue": 669,
+  "parent_issue": 633,
+  "dependency_issue": 668,
+  "date_utc": "2026-11-18",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "immutable_review_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "source_stage_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "status": "P3_G2_STATIC_NO_DUPLICATE_NATIVE_ELECTRON_KERNEL__NATIVE_RUNTIME_HOLD",
+  "scope": "Actual source-only P2 #668 New-only staged 11-layer .i bytes for S6-417/941; source C++ pinned to current review head. No native physics runtime.",
+  "original_c0_ne_time": {
+    "source_path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+    "source_blob_sha1": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+    "section": "Kernels",
+    "object_name": "ne_time",
+    "factory_type": "PhysicsFEMLogMolarTimeDerivative",
+    "variable": "log_ne",
+    "block": "plasma",
+    "lines": [
+      538,
+      542
+    ],
+    "exact_raw_block_sha256": "69251e2c12484930b6d24a0108e646d42dbec37015546b1ab5e9bcc2184994b0",
+    "sha_scope": "Opening 2-space [ne_time] through closing 2-space [] without following newline; 101 UTF-8 bytes",
+    "source_stage_note": "Original immutable C0 source contains ne_time; stage generator retires/rebinds electron old residual, so original object must not be mistaken for a staged object."
+  },
+  "current_source_contract": {
+    "file": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "git_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "generated_time": {
+      "name": "e_time",
+      "type": "FEMLogMolarTimeDerivative",
+      "variable": "log_e"
+    },
+    "generated_transport": {
+      "name": "e_transport",
+      "type": "FEMLogMolarDriftDiffusion",
+      "variable": "log_e"
+    },
+    "conditional_source": {
+      "name": "e_source",
+      "type": "FunctorKernel",
+      "variable": "log_e",
+      "condition": "chemistryEnabled and hasSpeciesSource(e)"
+    },
+    "integrity_guard": "requireUniqueFEKernel is applied by type and solver variable to FE time, transport, and conditional source; actual Warehouse never inspected",
+    "rule": "A different name (ne_time versus e_time) does not imply a different electron residual owner."
+  },
+  "producer_consumer_edges": [
+    {
+      "producer": "New-only JSON species.e and Continuity fem_species=e",
+      "consumer": "DDContinuityEq addFEKernels e_time / log_e",
+      "kind": "SOURCE_CONTRACT_ONLY"
+    },
+    {
+      "producer": "New-only JSON species.e transport_coef lookup",
+      "consumer": "DDContinuityEq addFEKernels e_transport / log_e",
+      "kind": "SOURCE_CONTRACT_ONLY"
+    },
+    {
+      "producer": "DDContinuityEq checkIntegrity",
+      "consumer": "FE KernelWarehouse per variable factory uniqueness",
+      "kind": "GUARD_SOURCE_EXISTS_RUNTIME_NOT_RUN"
+    }
+  ],
+  "independent_verification": {
+    "run_id": 44255920974,
+    "job_id": 134637457763,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44255920974",
+    "conclusion": "SUCCESS",
+    "artifact_id": 14405692457,
+    "artifact_name": "issue669-p3-g2-44255920974-1",
+    "artifact_digest": "sha256:fe0ec0abcffd671f69caff7a534604ee75df16e2e7883a4c42f6e13734ccbc8e",
+    "artifact_receipt_path": "g2-receipt/p3-g2-electron-owners.json",
+    "prior_p2_run_id": 44199587771,
+    "prior_p2_artifact_id": 14380831538,
+    "prior_p2_digest": "sha256:3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "rehash_method": "Full 11-layer exact bytes independently SHA256 checked against per-case stage after manifest, typed top-level Kernels parser and per-object block SHA calculation; source current JSON/overlay independent SHA; C++ generated operator contract source inspected",
+    "synthetic_negative_classification": {
+      "legacy_ne_time_on_log_e": "REJECTED",
+      "same_name_e_time_native": "REJECTED",
+      "differently_named_FEM_transport": "REJECTED"
+    },
+    "source_stage_difference": "P2 stage artifact exact source HEAD 9c15a4f differs from current PR665 review HEAD b5c1de7; no current HEAD Native run inferred"
+  },
+  "cases": {
+    "417": {
+      "verdict": "STATIC_NATIVE_ELECTRON_CONTINUITY_ABSENT_RUNTIME_HOLD",
+      "source_stage_sha_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "stage_file_sha256_checks": "11/11 exact byte rehash to source artifact receipt",
+      "stage_file_sha256_locator": "CI Artifact #14405692457 -> g2-receipt/p3-g2-electron-owners.json -> cases.417.layer_file_sha256",
+      "staged_newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "staged_11th_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "remaining_native_electron_particle_time_kernels": 0,
+      "remaining_native_electron_continuity_kernels": 0,
+      "native_e_time_kernel_block_sha256": null,
+      "native_e_transport_kernel_block_sha256": null,
+      "absence_reason": "Independent scan of every [Kernels] object on actual 11-layer stage found 0 FE log-molar electron residual owners",
+      "generated_e_time_e_transport_runtime_count": "NOT_RUN",
+      "generated_e_time_e_transport_uniqueness": "HOLD_WAREHOUSE"
+    },
+    "941": {
+      "verdict": "STATIC_NATIVE_ELECTRON_CONTINUITY_ABSENT_RUNTIME_HOLD",
+      "source_stage_sha_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "stage_file_sha256_checks": "11/11 exact byte rehash to source artifact receipt",
+      "stage_file_sha256_locator": "CI Artifact #14405692457 -> g2-receipt/p3-g2-electron-owners.json -> cases.941.layer_file_sha256",
+      "staged_newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "staged_11th_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "remaining_native_electron_particle_time_kernels": 0,
+      "remaining_native_electron_continuity_kernels": 0,
+      "native_e_time_kernel_block_sha256": null,
+      "native_e_transport_kernel_block_sha256": null,
+      "absence_reason": "Independent scan of every [Kernels] object on actual 11-layer stage found 0 FE log-molar electron residual owners",
+      "generated_e_time_e_transport_runtime_count": "NOT_RUN",
+      "generated_e_time_e_transport_uniqueness": "HOLD_WAREHOUSE"
+    }
+  },
+  "unresolved": [
+    "Native FE Warehouse actual generated e_time/e_transport/e_source counts and factory uniqueness at current binary SHA",
+    "Other electron wall/BC and electron-energy owner reconciliation belongs to P3-X",
+    "P5 Native --check-input not performed; cannot claim physics/residual equivalence",
+    "Source-only staged Artifact was produced at earlier immutable HEAD; latest Source C++ checked separately"
+  ],
+  "next_gate": "P3-X combine all 30 source-bound receipts and electron-energy/BC owner cutover, then P5 Native P2 tests (including FE KernelWarehouse)",
+  "guardrails": {
+    "shared_source_mutation": false,
+    "PR665_mutation": false,
+    "main_mutation": false,
+    "original_archive_mutation": false,
+    "private_rate_raw_bytes_read": false,
+    "one_shot_workflow": "REMOVED_AFTER_CI_PASS",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
