@@ -1,0 +1,143 @@
+{
+  "schema": "issue671.p5_a4.current_head_oci_build_path_source_audit.v2",
+  "task_id": "P5-A4",
+  "issue": 671,
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "verdict": "PASS_SOURCE_BUILD_OCI_PATH_RECIPE__HOLD_FINAL_P5_0_CURRENT_HEAD_BUILD",
+  "exact_integration": {
+    "pr": 665,
+    "source_head": "65794d5f33449499349b97b7eaba13e1c4821688",
+    "source_tree": "75d09e875c08727a2781b2048bed9743fc9bc7d9",
+    "state": "OPEN_DRAFT",
+    "p4_x_production": "NOT_INTEGRATED",
+    "new_secure_ei_stage": "INTEGRATED"
+  },
+  "previous_receipt": {
+    "branch": "issue-671-p5-a4-oci-recipe-20261118",
+    "commit": "833ca695d549ca1aef8f7986720866d1f1491c4f",
+    "old_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "old_tree": "0d14b997f24a1458f085bd0d1d766d2d34ecb22d",
+    "status": "RECIPE_VALID_AT_OLD_HEAD_ONLY",
+    "reason": "P5-A3 protected handoff changed PR #665 HEAD and tree; cannot treat prior exact-pin build recipe as current P5-0 evidence"
+  },
+  "oci": {
+    "image": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "platform": "linux/amd64",
+    "CI_runner": "ubuntu-24.04",
+    "parent_base_tag": "idaholab/moose-dev:2026.06.16",
+    "image_label_runtime_inspect": "NOT_RUN_DOCKER_UNAVAILABLE"
+  },
+  "dependencies": {
+    "MOOSE": {
+      "sha": "9f388366ccf38b9c34542ec5561198249fde0ac9",
+      "path": "/opt/physics_vendor/moose"
+    },
+    "CRANE": {
+      "sha": "ba26970cf419dcac563a20ed7079d445bc6341c3",
+      "path": "/opt/physics_vendor/crane"
+    },
+    "SQUIRREL": {
+      "sha": "16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1",
+      "path": "/opt/physics_vendor/squirrel"
+    },
+    "ZAPDOS": {
+      "sha": "9eceffbc46048c3760bbfa9a7f1ca681ae35af1d",
+      "path": "/opt/physics_vendor/zapdos"
+    }
+  },
+  "build": {
+    "setup": "source /environment",
+    "method": "opt",
+    "command": "make -C physics_app -j2 app_non_unity_dirs='%/utils'",
+    "source_mount": "/workspace",
+    "working_dir": "/workspace/physics_app",
+    "executable": "/workspace/physics_app/physics-opt",
+    "modules": {
+      "ALL_MODULES": "no",
+      "ELECTROMAGNETICS": "yes",
+      "FLUID_PROPERTIES": "yes",
+      "NAVIER_STOKES": "yes",
+      "STOCHASTIC_TOOLS": "yes"
+    },
+    "stale_binary_guard": "physics_app/physics-opt must not exist before P5-0 build",
+    "source_sha_guard": "git HEAD and HEAD^{tree} checked before any build"
+  },
+  "source_readback": {
+    "previous_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "current_head": "65794d5f33449499349b97b7eaba13e1c4821688",
+    "git_blobs_all_equal": "8/8",
+    "sha_by_path": {
+      "physics_app/dependencies.lock": "0aae0ffb5699fcd5c17e8ebe9ea4f2effde9ff47",
+      "physics_app/Makefile": "07cc31f9274d598a3363cd3c7a8d5d589707294f",
+      "experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh": "1258279bbcd4df06381a7e398a750c0834dd0931",
+      "ci/physics-build-base/Dockerfile": "ac1cb0a4e77ca3c283de2a6711a56eaccaba6839",
+      ".github/workflows/ci.yml": "c8cbd38369108229af7cf2395893a4539f05e024",
+      ".github/workflows/physics-build-base.yml": "ed5a1b4bc1d3061437cc8ec9e0b50cca00d69216",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py": "b17feb16c70ff28c090b6687a46044cff826072e",
+      "ci/guards/issue671_secure_ei_rate_scratch.py": "cd75238df8083f54b5b08330e46f88276ff8370a"
+    }
+  },
+  "local_reproducer": {
+    "script_filename": "p5_a4_verify_build_environment.sh",
+    "script_sha256": "ee44223953c13095e8a51f895e135028538698a21da6d5432f957cd60920387e",
+    "bash_n": "PASS",
+    "non_checkout_guard": {
+      "exit_code": 2,
+      "status": "REJECTED"
+    },
+    "bad_option_guard": {
+      "exit_code": 2,
+      "status": "REJECTED"
+    },
+    "actual_correct_checkout_positive": "NOT_RUN",
+    "actual_OCI_pull_or_compiler_verification": "NOT_RUN"
+  },
+  "input_paths": {
+    "public_neutral_transport_data": "experiments/Issue21_qvt_six_species_bulk_advection/transport_data.txt",
+    "neutral_transport_public_git_blob": "bcbb0a5939ca77a9c3b718fc1cc2ef7f2d45820f",
+    "parent_plasma_mesh": "baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+    "parent_plasma_mesh_git_tree": "NOT_IN_SOURCE_TREE_REQUIRES_AUTHORIZED_SCRATCH_STAGE",
+    "protected_EI_rates": "experiments/Issue395_powered_chemistry_ladder/private_rates/",
+    "protected_EI_staging": "P5-A3 protected 6/6 original SHA, case 5/5 each in tmpfs via #44268361259; case Native process and secret staging together NOT_RUN",
+    "protected_EI_source_git_blob": "cd75238df8083f54b5b08330e46f88276ff8370a"
+  },
+  "recent_native_diagnostic": {
+    "run_id": 44264892696,
+    "source_head": "41ab61e442a497db2388c025075237bd24cfd025",
+    "artifact_id": 14409249389,
+    "artifact_zip_sha256": "753edf03760988a7ec5139efc6d4bc21b60e1c9c8cc03ed3de0f90dc53e210ec",
+    "reported_binary_sha256": "81426ad190627b92f2360ec5340b50ac20216698cf5e9513f2531c2b9ed0280a",
+    "executable_bytes_available_for_independent_rehash": false,
+    "cases": {
+      "417": {
+        "exit_code": 1,
+        "log_sha256": "ff47d414e783dba5e2403ec6f5ecd949c3e7f04f8b04b67b7f30be7fdf0d7b2f"
+      },
+      "941": {
+        "exit_code": 1,
+        "log_sha256": "e04d150627c1d4d505419c5915502534573dd45f93d5af0c70b8718fdafaa871"
+      }
+    },
+    "first_failure": "PhysicsLookupTable1D missing private_rates/EI-415_O2_X.txt; newer P5-A3 secure staging is separate and occurred later",
+    "diagnostic_is_current_PR665_native_receipt": false
+  },
+  "unresolved": [
+    "P4-X final Production Runner integration and head repin",
+    "P5-0 real current/final-head single clean P1 binary build, compiler version, OCI label and binary SHA",
+    "P5-0 immutable binary reuse by both independent case Scratch and P05 negatives",
+    "P5 secure private rate stage must share same job with --check-input and purge secrets on exit",
+    "Actual source/Factory Warehouse 12 generated ion FV Kernel +12 FVBC, 0 retired Native ion owners, true Native P05 negatives"
+  ],
+  "gates": {
+    "P5_A4_SOURCE_RECIPE_AND_PATH": "PASS",
+    "P5_A4_OCI_IMAGE_COMPILER_RUNTIME": "HOLD_NOT_INSPECTED",
+    "P5_0_BINARY": "NOT_BUILT_CURRENT_HEAD",
+    "P5_417_941_SHARED_BINARY": "NOT_ESTABLISHED",
+    "P4_X_PRODUCTION": "HOLD",
+    "P5_NATIVE_P2": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": "No main, draft PR665, shared build scripts, workflows, historical inputs, private rates, or Native science jobs modified by audit; only independent branch report."
+}
