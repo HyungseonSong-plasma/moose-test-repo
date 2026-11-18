@@ -1,0 +1,178 @@
+{
+  "schema": "issue671.p5_c6.s6_941.native_log_artifact_provenance.v1",
+  "task_id": "P5-C6",
+  "classification": "INDEPENDENT_SOURCE_ONLY_READBACK_AND_MISATTRIBUTION_REJECTION",
+  "verdict": "HOLD_NATIVE_P4X_P50_C2_UNSATISFIED",
+  "current_at_start": {
+    "draft_pr": 665,
+    "source_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "P2_source_only": "PASS",
+    "P3_X_source_only": "PASS",
+    "P4_X": "NOT_INTEGRATED",
+    "P5_0": "NOT_RUN"
+  },
+  "source_only_941": {
+    "run_id": 44257739203,
+    "artifact_id": 14406746397,
+    "artifact_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "artifact_kind": "P3-X SOURCE_ONLY; NOT P5-C2 NATIVE",
+    "provenance": "P3-X source artifact committed prior to P4-X and different from future final New-only runtime",
+    "raw_zip_sha_recomputed": true,
+    "zip_crc": "PASS",
+    "ordered_input_count": 11,
+    "ordered_inputs": [
+      {
+        "layer": 1,
+        "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+        "sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+      },
+      {
+        "layer": 2,
+        "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+        "sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+      },
+      {
+        "layer": 3,
+        "path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+        "sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+      },
+      {
+        "layer": 4,
+        "path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+        "sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+      },
+      {
+        "layer": 5,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+        "sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76"
+      },
+      {
+        "layer": 6,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+        "sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05"
+      },
+      {
+        "layer": 7,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+        "sha256": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa"
+      },
+      {
+        "layer": 8,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-941-407_o2_consumer_overlay.i",
+        "sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+      },
+      {
+        "layer": 9,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+        "sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+      },
+      {
+        "layer": 10,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+        "sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc"
+      },
+      {
+        "layer": 11,
+        "path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+        "sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+      }
+    ],
+    "file_sha_against_embedded_receipt": "11_OF_11_PASS",
+    "manifest_source_sha256": "AVAILABLE_IN_LOCAL_FULL_RECEIPT",
+    "newonly_941_json_path": "experiments/Issue395_powered_chemistry_ladder/chemistry/unified_s6_941_newonly.json",
+    "newonly_941_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "reaction_branch": "EI-941 (not EI-417); 8 reactions",
+    "old_ion_native_owners_removed": 26,
+    "old_electron_native_owners_removed": 10,
+    "electron_lookup_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "electron_lookup_rows": 42,
+    "maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "maxwell_include_base_sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+    "maxwell_include_overlay_sha256": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45",
+    "mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "native_check_input": "NOT_RUN",
+    "native_log_present": false,
+    "native_binary_sha256": null,
+    "native_exit_code": null
+  },
+  "existing_head_ci_not_qualifying": {
+    "head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "legacy_hybrid": {
+      "workflow_run": 44257942498,
+      "artifact_id": 14407271608,
+      "artifact_zip_sha256": "e971bfeade6aff1b926272b2a135f90e1451f85393ef3239aab18121828856c1",
+      "case": "941",
+      "mode": "chemistry_hybrid_json_native",
+      "binary_sha256": "0fb4411d164350785af598ff34cee662cd91179469e9d384faace575a0d5a940",
+      "input_json_sha256": "fc3e1d35ce0c20657f6ed3db125bb9a79251150467e0aec48c079a6dcadb3973",
+      "log_sha256": "79b4f6edc8626325420ac7d63cca1ddadc926d9ce74f888757b48a8e392e1bc8",
+      "exit_code": 1,
+      "syntax_ok": false,
+      "error": "P05 FV Native/Physics duplicate or unexpected owner on log_O2p: ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+      "accept_for_NewOnly_P5_C6": false,
+      "reason": "Different Hybrid input JSON, native owner duplication, nonzero exit; do not transplant binary/log evidence"
+    },
+    "public_flow": {
+      "workflow_run": 44257942522,
+      "artifact_id": 14407510852,
+      "artifact_zip_sha256": "9b4933d24c7a01497921f29c5cbc79c3ffe830e9a53b49ac8810514e0d23c40e",
+      "case_941_native_P2_log_present": false,
+      "accept_for_NewOnly_P5_C6": false
+    }
+  },
+  "acceptance_contract": {
+    "case": "941",
+    "requires": [
+      "P4-X source cutover integrated and final SHA pinned",
+      "P5-0 exact-head PhysicsApp binary built once, SHA/OCI/flags pinned",
+      "P5-C2 physically executes final 941 New-only 11-layer --check-input",
+      "native exit code=0 with Syntax OK, full log digest, artifact ID and immutable bytes",
+      "same-head Factory/P05 Warehouse 12 kernel +12 BC owner absence of collision"
+    ],
+    "final_P4X_11layer_sha256": null,
+    "final_P5_0_binary_sha256": null,
+    "final_941_native_log_sha256": null,
+    "final_941_native_exit_code": null,
+    "final_941_native_artifact_id": null
+  },
+  "in_memory_negative_metadata_controls": {
+    "rejected": "6_OF_6",
+    "cases": [
+      "source_only_no_log",
+      "hybrid_wrong_mode_and_nonzero_exit",
+      "binary_digest_missing",
+      "wrong_417_json_digest",
+      "exit_nonzero",
+      "P4X_unintegrated"
+    ],
+    "does_not_claim_solver_tests": true
+  },
+  "local_raw_byte_receipt": {
+    "filename": "p5_c6_s6_941_native_log_provenance_receipt.json",
+    "sha256": "e7cfadfc4f556a927caf6414d3e6565565b6925c450d48106267cb2baa361cb8"
+  },
+  "gates": {
+    "P5_C6_941_P3X_SOURCE_INPUTS": "PASS_11_OF_11",
+    "P5_C6_941_JSON_SOURCE_SHA": "PASS",
+    "P5_C6_HYBRID_HISTORICAL_NATIVE_FAILURE_CUSTODY": "PASS_PROVENANCE_ONLY",
+    "P4_X": "HOLD",
+    "P5_0_BINARY": "NOT_RUN",
+    "P5_C2_941_NEWONLY_CHECK_INPUT": "NOT_RUN",
+    "P5_C6_FINAL_NEWONLY_NATIVE_LOG_SHA": "NOT_AVAILABLE",
+    "P5_C6": "HOLD",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "security": {
+    "protected_private_EI_rate_bytes_in_artifacts": false,
+    "private_EI_rate_final_native_mount": "NOT_VERIFIED"
+  },
+  "mutation": {
+    "historical_input": false,
+    "PR665": false,
+    "main": false,
+    "physics_code": false
+  }
+}
