@@ -319,63 +319,63 @@ jobs:
                           "pass":bool(constructor_ok),
                           "scope":"actual compiled constructor bindings; not residual/face evaluation"}
 
-                  # NUMERICAL D8: actual face evaluation and ADKernel::computeQpResidual.
-                  # Twelve-file diagnostic: source eleven layers unmodified; private rates never exported.
-                  diag_rel="experiments/Issue395_powered_chemistry_ladder/d8_wall_residual_probe.i"
-                  diag=chem/"d8_wall_residual_probe.i"
-                  diag.write_text(
-                      "[MultiApps]\n  inactive = maxwell_t6\n[]\n"
-                      "[Transfers]\n"
-                      "  inactive = 'drive_to_maxwell_t6 ne_to_maxwell_t6 mean_en_to_maxwell_t6 "
-                      "pressure_to_maxwell_t6 E_real_from_maxwell_t6 E_imag_from_maxwell_t6 "
-                      "P_abs_from_maxwell_t6'\n[]\n"
-                      "[Controls]\n  inactive = rf_drive_pid_t6\n[]\n"
-                      "[Executioner]\n  num_steps = 1\n  nl_max_its = 2\n[]\n"
-                      "[Outputs]\n  checkpoint = false\n  exodus = false\n  csv = false\n[]\n")
-                  args=["docker","run","--rm","--network","none","--entrypoint","/bin/bash",
-                        "--user","0:0","--workdir","/case",
-                        "--env","OXYGEN_RESEARCH_400=1","--env","OXYGEN_RESEARCH_FULL24=0",
-                        "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
-                        "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
-                        "--mount",f"type=bind,src={work},dst=/case",oci,"-lc",
-                        "source /environment; /workspace/physics_app/physics-opt -i "+
-                        " ".join(shlex.quote(p) for p in expected["ordered_inputs"]+[diag_rel])+
-                        " --n-threads=1"]
-                  try:
-                      p=subprocess.run(args,text=True,capture_output=True,timeout=270,check=False,env=os.environ.copy())
-                      numeric_rc=p.returncode
-                      numeric_log=p.stdout+"\n"+p.stderr
-                  except subprocess.TimeoutExpired as exc:
-                      numeric_rc=124
-                      decoder=lambda x:x.decode(errors="replace") if isinstance(x,bytes) else (x or "")
-                      numeric_log=decoder(exc.stdout)+"\n"+decoder(exc.stderr)+"\nD8_NUMERIC_TIMEOUT\n"
-                  numfile=out/f"S6-{case}_native_wall_face_residual.log"
-                  numfile.write_text(numeric_log)
-                  faces=re.findall(
-                      r"D8_WALL_FACE_VALUE kind=(number|mass) owner=(O2p_wall|Om_wall|Op_wall) "
-                      r"face_id=(\d+) (?:surface=([^\s]+) migration=([^\s]+) )?value=([^\s]+)",numeric_log)
-                  electron=re.findall(r"D8_E_WALL_FACE_VALUE owner=(\w+) face_id=(\d+) "
-                                      r"drop_V=([^\s]+) value=([^\s]+)",numeric_log)
-                  lowerd=re.findall(r"D8_LOWERD_RESIDUAL_VALUE owner=(\w+) face_id=(\d+) element_id=(\d+) "
-                                   r"qp=(\d+) current=([^\s]+) residual=([^\s]+)",numeric_log)
-                  finite=lambda x:__import__("math").isfinite(float(x))
-                  wanted={(k,sp+"_wall") for k in ("number","mass") for sp in ("O2p","Om","Op")}
-                  ion_ok=({(q[0],q[1]) for q in faces}==wanted and
-                          all(finite(v) for q in faces for v in q[3:] if v))
-                  electron_ok=(bool(electron) and all(finite(q[2]) and finite(q[3]) for q in electron))
-                  lowerd_ok=({q[0] for q in lowerd}==
-                             {"sigma_surface_current","sigma_wafer_surface_current",
-                              "sigma_focus_ring_surface_current"} and
-                             all(finite(q[4]) and finite(q[5]) for q in lowerd))
-                  receipt["case_results"][case]["D8_ACTUAL_FACE_AND_RESIDUAL"]={
-                      "scope":"S6 real eleven layers plus bounded 12th numerical diagnostic overlay; RF inactive",
-                      "diagnostic_overlay_sha256":digest(diag),
-                      "numerical_run_exit_code":numeric_rc,"numerical_log_sha256":digest(numfile),
-                      "ion_face_values":faces,"electron_face_values":electron,"lowerd_residual_values":lowerd,
-                      "ion_face_ok":bool(ion_ok),"electron_face_ok":bool(electron_ok),
-                      "lowerd_residual_ok":bool(lowerd_ok),
-                      "actual_numerical_gate_pass":bool(ion_ok and electron_ok and lowerd_ok),
-                      "original_11_layer_sha_unchanged":all(digest(chem/n)==h for n,h in expected["11_layer_sha256"].items())}
+                      # NUMERICAL D8: actual face evaluation and ADKernel::computeQpResidual.
+                      # Twelve-file diagnostic: source eleven layers unmodified; private rates never exported.
+                      diag_rel="experiments/Issue395_powered_chemistry_ladder/d8_wall_residual_probe.i"
+                      diag=chem/"d8_wall_residual_probe.i"
+                      diag.write_text(
+                          "[MultiApps]\n  inactive = maxwell_t6\n[]\n"
+                          "[Transfers]\n"
+                          "  inactive = 'drive_to_maxwell_t6 ne_to_maxwell_t6 mean_en_to_maxwell_t6 "
+                          "pressure_to_maxwell_t6 E_real_from_maxwell_t6 E_imag_from_maxwell_t6 "
+                          "P_abs_from_maxwell_t6'\n[]\n"
+                          "[Controls]\n  inactive = rf_drive_pid_t6\n[]\n"
+                          "[Executioner]\n  num_steps = 1\n  nl_max_its = 2\n[]\n"
+                          "[Outputs]\n  checkpoint = false\n  exodus = false\n  csv = false\n[]\n")
+                      args=["docker","run","--rm","--network","none","--entrypoint","/bin/bash",
+                            "--user","0:0","--workdir","/case",
+                            "--env","OXYGEN_RESEARCH_400=1","--env","OXYGEN_RESEARCH_FULL24=0",
+                            "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
+                            "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
+                            "--mount",f"type=bind,src={work},dst=/case",oci,"-lc",
+                            "source /environment; /workspace/physics_app/physics-opt -i "+
+                            " ".join(shlex.quote(p) for p in expected["ordered_inputs"]+[diag_rel])+
+                            " --n-threads=1"]
+                      try:
+                          p=subprocess.run(args,text=True,capture_output=True,timeout=270,check=False,env=os.environ.copy())
+                          numeric_rc=p.returncode
+                          numeric_log=p.stdout+"\n"+p.stderr
+                      except subprocess.TimeoutExpired as exc:
+                          numeric_rc=124
+                          decoder=lambda x:x.decode(errors="replace") if isinstance(x,bytes) else (x or "")
+                          numeric_log=decoder(exc.stdout)+"\n"+decoder(exc.stderr)+"\nD8_NUMERIC_TIMEOUT\n"
+                      numfile=out/f"S6-{case}_native_wall_face_residual.log"
+                      numfile.write_text(numeric_log)
+                      faces=re.findall(
+                          r"D8_WALL_FACE_VALUE kind=(number|mass) owner=(O2p_wall|Om_wall|Op_wall) "
+                          r"face_id=(\d+) (?:surface=([^\s]+) migration=([^\s]+) )?value=([^\s]+)",numeric_log)
+                      electron=re.findall(r"D8_E_WALL_FACE_VALUE owner=(\w+) face_id=(\d+) "
+                                          r"drop_V=([^\s]+) value=([^\s]+)",numeric_log)
+                      lowerd=re.findall(r"D8_LOWERD_RESIDUAL_VALUE owner=(\w+) face_id=(\d+) element_id=(\d+) "
+                                       r"qp=(\d+) current=([^\s]+) residual=([^\s]+)",numeric_log)
+                      finite=lambda x:__import__("math").isfinite(float(x))
+                      wanted={(k,sp+"_wall") for k in ("number","mass") for sp in ("O2p","Om","Op")}
+                      ion_ok=({(q[0],q[1]) for q in faces}==wanted and
+                              all(finite(v) for q in faces for v in q[3:] if v))
+                      electron_ok=(bool(electron) and all(finite(q[2]) and finite(q[3]) for q in electron))
+                      lowerd_ok=({q[0] for q in lowerd}==
+                                 {"sigma_surface_current","sigma_wafer_surface_current",
+                                  "sigma_focus_ring_surface_current"} and
+                                 all(finite(q[4]) and finite(q[5]) for q in lowerd))
+                      receipt["case_results"][case]["D8_ACTUAL_FACE_AND_RESIDUAL"]={
+                          "scope":"S6 real eleven layers plus bounded 12th numerical diagnostic overlay; RF inactive",
+                          "diagnostic_overlay_sha256":digest(diag),
+                          "numerical_run_exit_code":numeric_rc,"numerical_log_sha256":digest(numfile),
+                          "ion_face_values":faces,"electron_face_values":electron,"lowerd_residual_values":lowerd,
+                          "ion_face_ok":bool(ion_ok),"electron_face_ok":bool(electron_ok),
+                          "lowerd_residual_ok":bool(lowerd_ok),
+                          "actual_numerical_gate_pass":bool(ion_ok and electron_ok and lowerd_ok),
+                          "original_11_layer_sha_unchanged":all(digest(chem/n)==h for n,h in expected["11_layer_sha256"].items())}
                   # One independent Native Warehouse negative on a post-stage private Scratch copy.
                   # Preserve both clean inputs, EI bytes and the unchanged production P05 guard.
                   neg=private/"417-P05-unexpected-kernel"
@@ -442,11 +442,13 @@ jobs:
                       and x["D8_actual_ctor_bindings"]["pass"]
                       for x in receipt["case_results"].values()) and
                   receipt.get("negative_control",{}).get("p05_expected_rejection") and
-                  receipt["tmpfs_private_removed_on_exit"]):
-                  receipt["warehouse_actual_12_plus_12"]="PASS_D8_NATIVE_CONSTRUCTOR_BINDINGS_AND_WAREHOUSE_12_PLUS_12_EACH_CASE"
+                  receipt["tmpfs_private_removed_on_exit"] and
+                  all(x.get("D8_ACTUAL_FACE_AND_RESIDUAL",{}).get("actual_numerical_gate_pass")
+                      for x in receipt["case_results"].values())):
+                  receipt["warehouse_actual_12_plus_12"]="PASS_BOTH_CASES_ACTUAL_WALL_FACE_AND_LOWERD_RESIDUAL_WITH_P05_12_PLUS_12"
                   status=0
               else:
-                  receipt["warehouse_actual_12_plus_12"]="HOLD_NATIVE_REJECTED_BEFORE_FULL_ACCEPTANCE"
+                  receipt["warehouse_actual_12_plus_12"]="HOLD_INCOMPLETE_OR_FAILED_ACTUAL_NUMERICAL_FACE_RESIDUAL_PROBE"
           except Exception as exc:
               os.environ.pop("PROTECTED_ARCHIVE_B64",None)
               receipt["guard_or_harness_failure_class"]=type(exc).__name__
