@@ -83,5 +83,5 @@ def test_new_public_d_contract_never_installs_legacy_bypass():
     src = Path(public_d.__file__).read_text()
     assert "P3_NOT_RUN" not in src
     assert "dont_create_kernels" not in src
-    assert "D compatibility runner" not in src
+    assert "def run_historical_public_d_compat" not in src
     assert "HISTORICAL_100_ROW" not in src
