@@ -1,0 +1,116 @@
+{
+  "schema": "issue671.p5_a4.physicsapp_p1_build_oci_recipe.source.v1",
+  "task_id": "P5-A4",
+  "issue": 671,
+  "status": "PASS_BUILD_OCI_RECIPE_SOURCE_ONLY__P5_0_P1_BINARY_NOT_RUN",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr": 665,
+    "exact_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "exact_tree": "0d14b997f24a1458f085bd0d1d766d2d34ecb22d",
+    "pr_open_draft": true,
+    "p3_x_merged_in_pr665": true,
+    "p4_x_integration": "PENDING_AT_OBSERVATION"
+  },
+  "oci": {
+    "image": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "platform": "linux/amd64",
+    "ci_host": "ubuntu-24.04",
+    "base_moose_dev_tag": "2026.06.16",
+    "vendor_revisions": {
+      "moose": "9f388366ccf38b9c34542ec5561198249fde0ac9",
+      "crane": "ba26970cf419dcac563a20ed7079d445bc6341c3",
+      "squirrel": "16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1",
+      "zapdos": "9eceffbc46048c3760bbfa9a7f1ca681ae35af1d"
+    },
+    "source_dependency_lock_blob": "0aae0ffb5699fcd5c17e8ebe9ea4f2effde9ff47"
+  },
+  "build_contract": {
+    "source_harness": "experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh",
+    "command": "make -C physics_app -j2 app_non_unity_dirs='%/utils'",
+    "environment": {
+      "MOOSE_DIR": "/opt/physics_vendor/moose",
+      "CRANE_DIR": "/opt/physics_vendor/crane",
+      "SQUIRREL_DIR": "/opt/physics_vendor/squirrel",
+      "ZAPDOS_DIR": "/opt/physics_vendor/zapdos",
+      "METHOD": "opt"
+    },
+    "module_flags": {
+      "ALL_MODULES": "no",
+      "ELECTROMAGNETICS": "yes",
+      "FLUID_PROPERTIES": "yes",
+      "NAVIER_STOKES": "yes",
+      "STOCHASTIC_TOOLS": "yes"
+    },
+    "setup": "source /environment",
+    "container_network": "none",
+    "same_job_binary_reuse_only": true
+  },
+  "pinned_repository_evidence": {
+    ".github/workflows/ci.yml": "c8cbd38369108229af7cf2395893a4539f05e024",
+    "physics_app/dependencies.lock": "0aae0ffb5699fcd5c17e8ebe9ea4f2effde9ff47",
+    "physics_app/Makefile": "07cc31f9274d598a3363cd3c7a8d5d589707294f",
+    "experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh": "1258279bbcd4df06381a7e398a750c0834dd0931",
+    "ci/physics-build-base/Dockerfile": "ac1cb0a4e77ca3c283de2a6711a56eaccaba6839",
+    ".github/workflows/physics-build-base.yml": "ed5a1b4bc1d3061437cc8ec9e0b50cca00d69216"
+  },
+  "recipe": {
+    "path": "reports/issue671/p5-a4/build_recipe.md",
+    "local_full_executable": "p5_a4_build_recipe.sh",
+    "local_full_executable_sha256": "3cd720c01d26ecb483e0245df6b0a15462f6f92ed9c6517783ed472978e5226d",
+    "local_full_executable_bytes": 7288,
+    "local_detailed_receipt_sha256": "5a95d59fea99bc86f9274661fd5ebe4e274d23701506d6f0489a22793698ce7c",
+    "bash_syntax": "PASS",
+    "embedded_receipt_python_compile": "PASS",
+    "negative_guards": [
+      {
+        "name": "WRONG_WORKING_DIRECTORY",
+        "tested": true,
+        "exit_code": 2,
+        "error": "P5_A4_FAIL_CLOSED: run from a clean checkout root"
+      },
+      {
+        "name": "STALE_SOURCE_HEAD",
+        "tested": true,
+        "exit_code": 2,
+        "error": "P5_A4_FAIL_CLOSED: HEAD changed; re-pin after P4-X; do not reuse this recipe"
+      }
+    ]
+  },
+  "P5_0_required_future_capture": {
+    "compiler_toolchain_versions": "NOT_CAPTURED",
+    "docker_image_inspection_sha256": "NOT_CAPTURED",
+    "binary_sha256": "NOT_BUILT",
+    "native_build_log_sha256": "NOT_RUN",
+    "factory_registry_sha": "NOT_OBSERVED",
+    "same_exact_head_417_941_native_binary": "NOT_BUILT",
+    "any_native_check_input": "NOT_RUN"
+  },
+  "gates": {
+    "P5_A4_SOURCE_RECIPE": "PASS",
+    "P4_X": "PENDING",
+    "P5_0_BINARY": "NOT_RUN",
+    "P5_417_NATIVE_P2": "NOT_RUN",
+    "P5_941_NATIVE_P2": "NOT_RUN",
+    "P5_NATIVE_NEGATIVES": "NOT_RUN",
+    "P5_WAREHOUSE_12_KERNEL_12_BC": "NOT_RUN",
+    "D8_DYNAMIC_CALLERS": "HOLD",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "limitations": [
+    "Current pin predates P4-X; new integration HEAD invalidates the P1 build expectation and must be explicitly refreshed.",
+    "Compiler version, image inspect and binary SHA are only proven by running P5-0 on a clean checkout, not by source audit.",
+    "Existing historical/synthetic Native P1/P2 evidence cannot be reused as new S6 native proof."
+  ],
+  "safety": {
+    "no_native_build_performed": true,
+    "no_check_input_performed": true,
+    "main_modified": false,
+    "pr665_modified": false,
+    "physics_sources_modified": false,
+    "workflow_modified": false,
+    "private_rates_exposed": false
+  }
+}
