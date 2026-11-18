@@ -1,0 +1,84 @@
+{
+  "schema": "issue671.p5x.d8.same_74a_W1.real_original_417_941_RF_Maxwell_3ns.v1",
+  "task": "P5-X-D8",
+  "verdict": "PASS_ORIGINAL_417_941_FULL_RF_COUPLED_3NS_SAME_74A_W1__HOLD_100US_AND_EXACT_NEW_HEAD",
+  "source": {
+    "target_pr": 665,
+    "W1_git_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "current_pr_head_on_read": "52067302d16074592503d0ef6b903cc344f55a08",
+    "source_diff_only": [
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "tests/test_issue633_newonly_run_species_schema.py"
+    ],
+    "exact_current_HEAD_identical": false
+  },
+  "W1": {
+    "source_build_run": 44319316180,
+    "artifact": 14435245012,
+    "source_zip_sha256": "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd",
+    "W1_elf_actual_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "libphysics_sha256": "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd",
+    "libphysics_test_sha256": "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6",
+    "pinned_OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "actual_native": {
+    "run": 44330414176,
+    "artifact": 14440965401,
+    "zip_sha256": "9192319a52d8674d66186c2859b1f433c8627afdfb16a8108be8e40418a32bbb",
+    "ZIP_CRC": "PASS",
+    "W1_actual_ELF_byte_match": true,
+    "W1_identity_bytes_match": true,
+    "original_plasma_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "real_maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "unchanged_11layer_each_case": 11,
+    "retired_native_ion": 26,
+    "retired_old_electron": 10,
+    "removed_duplicate_old_materials": 6,
+    "carrier_one_preserved": true,
+    "secure_EI_rate_count_each_case": 5,
+    "tmpfs_cleanup": true,
+    "original_TimeSequenceStepper": true,
+    "RF_enabled": true,
+    "max_physical_steps": 3,
+    "final_time_s": 3e-9,
+    "original_full_100us": "NOT_RUN",
+    "case_417": {
+      "input_P2_exit": 0,
+      "RF_3ns_exit": 0,
+      "child_power_W": 209.31596771096,
+      "parent_received_power_W": 209.31596771096,
+      "seven_transfers": true,
+      "parent_child_physical_state_evolved": true
+    },
+    "case_941": {
+      "input_P2_exit": 0,
+      "RF_3ns_exit": 0,
+      "child_power_W": 209.31597896021,
+      "parent_received_power_W": 209.31597896021,
+      "seven_transfers": true,
+      "parent_child_physical_state_evolved": true
+    }
+  },
+  "independent_verification": {
+    "script_filename": "p5x_d8_same_w1_verify.py",
+    "script_sha256": "2cd3ed0183bc09c90182dbd8c6c7b68f9ea1355468d4a74b1b753dbbd0f20375",
+    "detailed_output": "p5x-d8-same-w1-independent-audit.json",
+    "output_sha256": "a283acc01eac22c106122e3188163edb821f5c5dea27fdf6d9f42adb2e57a837",
+    "real_zip_ELF_and_receipt_assertions": "79_OF_79_PASS",
+    "prior_diagnostic_reproduction_run": 44310451787,
+    "caveats": [
+      "Full raw MOOSE logs and CSV files are not included, only sanitized excerpts, parsed values and job-calculated log/CSV SHA receipts.",
+      "Exact original 11-layer bytes were validated at preparation and retained 11 SHA receipts, but raw 11 .i bytes not included in final ZIP.",
+      "Three 1ns time steps validate actual full parent/child RF coupling, not scientific parity over 100us."
+    ]
+  },
+  "gates": {
+    "same_74a_W1_source_and_ELF": "PASS",
+    "D8_actual_original_RF_Maxwell_parent_child_417_941": "PASS_BOUNDED_3NS",
+    "original_s6_full_100us": "SCIENCE_HOLD_NOT_RUN",
+    "current_520_Git_SHA_exact_W1": "HOLD_HEAD_DRIFT",
+    "warehouse_12plus12_electron8_same_W1": "SEPARATE_WORKER_HOLD_AT_THIS_RECEIPT",
+    "final_P5X": "HOLD"
+  },
+  "mutation_scope": "Isolated report commit only; original EI/input/main/PR665/shared CI/Physics code not changed."
+}
