@@ -1,0 +1,39 @@
+{
+  "schema": "issue669.p3x.outstanding_worker_slot.v1",
+  "source_pr": 665,
+  "source_pr_head_before_p3x": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "p1_0_archived_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "p3x_CI_run": 44255749142,
+  "p3x_artifact_id": 14405638218,
+  "p3x_artifact_zip_sha256": "1c68a9622357cd13990521dad85504adf49c70916f2424c3511b600e2583e159",
+  "p3x_stage_head": "95d0cd11edfd666f0e33838d5114d9a273c8b05a",
+  "evidence_scope": "ACTUAL_SOURCE_ONLY_ARTIFACT_BYTE_READBACK__NOT_NATIVE_CXX_WAREHOUSE",
+  "Native_P2": "NOT_RUN",
+  "Native_P3": "NOT_RUN",
+  "Native_P4": "NOT_RUN",
+  "SCIENCE": "SCIENCE_HOLD",
+  "task_id": "P3-G6",
+  "status": "PASS_ELECTRON_MOLAR_ENERGY_DERIVED_FUNCTORS_PRESERVED_AND_OLD_DUP_PRODUCERS_ZERO",
+  "local_independent_detailed_receipt_sha256": "93493335ee89433fb7bfe05d74011d43023f3e09cdbd847a92a0c5546fc1ffee",
+  "independent_task_proof": {
+    "cases": [
+      "417",
+      "941"
+    ],
+    "retained_each_case": {
+      "electron_molar_density": "d62268f610d606b407c0e042162bdd490dd86b4cd3d1a6dbb8fd57070acafe2a",
+      "electron_molar_energy_density": "452b1796e5f6cb668ab13de65721eb7c85e3f58ef3acc544fb8919ab96463a3a",
+      "electron_physical_energy_density": "77a496774cef51d3905b90fdcb98da8e261d4c3969622508aa19a53481bf2ccc"
+    },
+    "old_n_e_physical_explicit_functor_producers_remaining_each": 0,
+    "old_e_wall_number_flux_explicit_functor_producers_remaining_each": 0,
+    "deleted_old_material_block_sha_each": [
+      "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824"
+    ],
+    "generation_planned_source": "physics_app/src/physics/plasma/DDEnergyEq.C",
+    "generation_source_blob": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "negative_controls_rejected": 2,
+    "mean_energy_and_wall_flux_live_warehouse": "HOLD_NATIVE"
+  }
+}
