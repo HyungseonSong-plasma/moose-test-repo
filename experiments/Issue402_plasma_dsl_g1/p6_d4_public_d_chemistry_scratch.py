@@ -166,6 +166,16 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
             src=re.sub(r"(?<![A-Za-z0-9_])"+re.escape(old)+r"(?![A-Za-z0-9_])",new,src)
         after[name]=src
     after["migrated_continuity.i"]=after_overlay
+    # Retain original wall and surface-current producer bytes exactly.
+    # Only the 12 old FV BC consumers are removed, and registered again
+    # via the JSON. A changed plasma wall flux law must fail closed.
+    c0_after=wall_bridge.extract_objects(after[wall_bridge.ORIGINAL_C0])
+    for source_name in [v[1] for v in wall_bridge.SPECIES.values()]+list(
+            wall_bridge.ARCHIVE_CURRENT_SHA):
+        expected=original_wall_receipts[source_name]["sha256"]
+        found=c0_after.get(("FunctorMaterials",source_name),{})
+        if found.get("sha")!=expected:
+            raise ValueError("P6_D4_BC12_WALL_PRODUCER_MUTATED_"+source_name)
     changes={chem/name:src.encode("utf-8") for name,src in after.items()
              if src.encode("utf-8")!=raw[name]}
     out=chem/f"public_D_{case}_chemistry.json"
