@@ -1,0 +1,118 @@
+{
+  "schema": "issue671.p5_0.exact_pr665_one_build_full_binary_sha_receipt.v1",
+  "task": "P5-0 latest PR665 HEAD exact source single-build ELF + 2 app shared libraries",
+  "verdict": "PASS_EXACT_HEAD_SINGLE_BUILD__ELF_PLUS_2_APP_LIBS__INDEPENDENT_DOWNLOAD_SHA_CRC",
+  "source": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "pr665": 665,
+    "pr665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "source_tree": "10ab018235f047bf1abc250d3b18005b9156752a",
+    "workflow_branch": "issue-671-p5-0-singlebuild-74a2b0f-20261118",
+    "workflow_commit": "2b9e5edd903e323318df75992fc18b3218129d52",
+    "branch_delta_to_source": "one added one-shot workflow; no production file diff"
+  },
+  "oci": {
+    "build": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "lock_git_blob": "0aae0ffb5699fcd5c17e8ebe9ea4f2effde9ff47",
+    "vendor_label_contract": "MOOSE/CRANE/SQUIRREL/ZAPDOS against physics_app/dependencies.lock: Actions PASS"
+  },
+  "build": {
+    "command": "make -C physics_app -j2 app_non_unity_dirs=\"%/utils\"",
+    "invocations": 1,
+    "run": 44319316180,
+    "job": 134853743189,
+    "workflow": ".github/workflows/issue671-p5-0-exact-74a2b0f-app-libs-once.yml",
+    "run_conclusion": "success",
+    "job_conclusion": "success",
+    "steps": [
+      "Checkout immutable exact HEAD PASS",
+      "OCI/source/vendor labels PASS",
+      "Build once PASS",
+      "ELF/SONAME/linkage and archive roundtrip PASS",
+      "Upload artifact PASS"
+    ],
+    "build_log_sha256": "5bdda6ecfdcb2b8da8e6cd066f427cecfea1f33cdbbc5a483039cf521928b3c8",
+    "toolchain_log_sha256": "069772ddb3e8df032f756ae6e78329deb4125790fd612f90797933c8c55158c1",
+    "source_pin_sha_is_not_workflow_commit": true,
+    "minor_warning": "MOOSE prebuild emitted an ignored git dubious-ownership diagnostic; build/link and 3 ELF checks succeeded; embedded revision string is not independently certified."
+  },
+  "binary_files": [
+    {
+      "archive_member": "physics-opt",
+      "source": "physics_app/physics-opt",
+      "sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+      "bytes": 67368,
+      "elf_magic": "PASS",
+      "needed_app_sonames": [
+        "libphysics-opt.so.0",
+        "libphysics_test-opt.so.0"
+      ]
+    },
+    {
+      "archive_member": "lib/libphysics-opt.so.0",
+      "source": "physics_app/lib/libphysics-opt.so.0",
+      "sha256": "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd",
+      "bytes": 4869600,
+      "elf_magic": "PASS",
+      "soname": "libphysics-opt.so.0"
+    },
+    {
+      "archive_member": "lib/libphysics_test-opt.so.0",
+      "source": "physics_app/test/lib/libphysics_test-opt.so.0",
+      "sha256": "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6",
+      "bytes": 105984,
+      "elf_magic": "PASS",
+      "soname": "libphysics_test-opt.so.0"
+    }
+  ],
+  "artifact": {
+    "id": 14435245012,
+    "run_id": 44319316180,
+    "name": "issue671-p5-0-exact-74a2b0f-exe-app-libs",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44319316180/artifacts/14435245012",
+    "outer_zip_sha256": "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd",
+    "outer_zip_bytes": 1375903,
+    "outer_zip_members": [
+      "identity.json",
+      "sha256sums.txt",
+      "build.log",
+      "toolchain.log",
+      "physics-opt-and-app-libs.tar.gz"
+    ],
+    "zip_crc": "PASS",
+    "inner_tar_gz_sha256": "12f198cd17101b23b67a61a2fe95247af9c4c860d36b04ebf16b8dc91d4dadeb",
+    "inner_tar_gz_bytes": 1361924,
+    "inner_tar_members": 3,
+    "tar_roundtrip": "PASS",
+    "CI_manifest_sha256": "240e60a2b2f47b54ccd82b6f4427be21b5cecc8b054fc14365370cb3127b8dfd",
+    "CI_log_uploaded_zip_sha256_matches_connector_digest": true
+  },
+  "independent_verification": {
+    "method": "Downloaded exact artifact #14435245012 via GitHub connector, independently recalculated outer ZIP SHA/size/CRC; read exact metadata, build/toolchain logs and SHA256SUMS; decompressed inner TAR and independently hashed each actual ELF member, length, ELF magic; executed readelf -d to verify both SONAMEs and executable's two direct app-library dependencies.",
+    "checks_passed": 41,
+    "checks_failed": 0,
+    "local_verifier_name": "verify_p5_0_exact_74a2b0f.py",
+    "local_verifier_sha256": "4eca5b684eb99dc256635715ee8a016d7c2dff38f35f54f34f489926f2cd6e5f",
+    "local_independent_json_name": "p5_0_exact_74a2b0f_independent_receipt.json",
+    "local_independent_json_sha256": "bbb8bf0bc87e057c6a4306a454233a1279fb6f3e8443d30b1bd82db2ac57bb0d"
+  },
+  "gates": {
+    "P5_0_SOURCE_OCI_LOCK": "PASS",
+    "P5_0_EXACT_HEAD_SINGLE_BUILD": "PASS",
+    "P5_0_ELF_AND_TWO_LIBRARIES": "PASS",
+    "P5_0_ARTIFACT_INDEPENDENT_SHA_CRC": "PASS",
+    "P5_X_OFFICIAL_FINAL_ACCEPTANCE": "HOLD_NOT_FULL_NATIVE",
+    "P5_417_941_NATIVE_P2": "NOT_RUN_IN_THIS_JOB",
+    "P05_WAREHOUSE": "NOT_RUN_IN_THIS_JOB",
+    "P3_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "security": {
+    "private_EI_rates": "NOT_STAGED_NOT_UPLOADED",
+    "vendor_libs": "NOT_PACKAGED_ONLY_2_APP_LIBS",
+    "main_changed": false,
+    "PR665_changed": false,
+    "workflow_mutations": "one isolated branch and report only; no shared ci.yml/template"
+  },
+  "handoff": "Use this exact source HEAD+OCI+ELF/2 libs as P5-X W1 gate. Stage independent full 417/941 New-only 11-layer with mesh and protected EI Rate in approved private scratch. Run --check-input and P05 with same binary/sha, inspect D8 consumers and negatives; no automatic P3/P4."
+}
