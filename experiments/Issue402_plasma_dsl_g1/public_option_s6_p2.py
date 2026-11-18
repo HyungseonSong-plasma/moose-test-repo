@@ -405,7 +405,7 @@ def cutover_staged_D_transport_owners(chemistry: Path, ordered: list[str],
         raise ValueError('P6_D1_UNKNOWN_TABLE_AUTHORITY')
     expected_sha, expected_rows, (lo, hi) = authorities[table_authority]
     if not table_path.is_file() or table_path.is_symlink():
-        raise ValueError('P6_D1_AUTHORITY_LOOKUP_NOT_REGULAR')
+        raise ValueError('P6_D1_AUTHORITY_TABLE_SHA_MISMATCH_NOT_REGULAR')
     table_bytes = table_path.read_bytes()
     if hashlib.sha256(table_bytes).hexdigest() != expected_sha:
         raise ValueError('P6_D1_'+table_authority.upper()+'_ELECTRON_TABLE_SHA_MISMATCH')
