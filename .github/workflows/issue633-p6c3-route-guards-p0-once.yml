@@ -14,7 +14,7 @@ jobs:
       - name: Checkout immutable exact P6-C3 and New-only merged candidate
         uses: actions/checkout@v4
         with:
-          ref: 933e5be1578f3df2a9d94818c07aefc2a2586d04
+          ref: 381de40e46c92582669e867d90cb4ce0a170e116
           path: candidate
           persist-credentials: false
       - name: Run exact source P6 21, New-only 18, Template, Trigger, Artifact, P05 guards
@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           cd candidate
-          test "$(git rev-parse HEAD)" = 933e5be1578f3df2a9d94818c07aefc2a2586d04
+          test "$(git rev-parse HEAD)" = 381de40e46c92582669e867d90cb4ce0a170e116
           test ! -e .github/workflows/issue633-p6c3-route-guards-p0-once.yml
           python3 -m py_compile ci/guards/p6_ci_workflow_safety_guard.py ci/guards/issue633_s6_ci_route_guard.py ci/issue633_required_newonly_s6_native_p2.py
           python3 ci/guards/issue633_s6_ci_route_guard.py --self-test --check
