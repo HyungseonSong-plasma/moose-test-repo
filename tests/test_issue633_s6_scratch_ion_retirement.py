@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from hashlib import sha256
 from pathlib import Path
 import sys
 
@@ -13,6 +14,9 @@ sys.path.insert(0, str(PILOT))
 from chemistry.retire_s6_ion_fv_owners import (  # noqa: E402
     CutoverError, cutover_texts, retire_in_disposable_scratch,
 )
+
+# Deliberately synthetic; never claim these fixtures are historical pinned S6 bytes.
+FIXTURE_SOURCE_HEAD = "issue633-test-fixture-only"
 
 
 def fixture(case):
@@ -48,6 +52,30 @@ def fixture(case):
     return names, layers
 
 
+def fixture_manifest(names, layers):
+    """Build the production-shaped 11-file/26-block immutable pin from test bytes."""
+    _, evidence = cutover_texts(layers)
+    return {
+        "source_head": FIXTURE_SOURCE_HEAD,
+        "layers": [
+            {"file_path": name, "file_sha256": sha256(layers[name].encode("utf-8")).hexdigest()}
+            for name in names
+        ],
+        "ion_native_blocks": [
+            {"file_path": owner["file"], "section": owner["section"],
+             "object_name": owner["name"], "block_sha256": owner["old_block_sha256"]}
+            for owner in evidence["retired_owners"]
+        ],
+    }
+
+
+def retire_pinned(folder, names, layers):
+    return retire_in_disposable_scratch(
+        folder, names, exact_manifest=fixture_manifest(names, layers),
+        expected_source_head=FIXTURE_SOURCE_HEAD,
+    )
+
+
 @pytest.mark.parametrize("case", ("417", "941"))
 def test_exact_native_26_owner_retirement_without_touching_other_operators(case):
     names, layers = fixture(case)
@@ -72,7 +100,9 @@ def test_disposable_scratch_writes_are_exact_and_have_sha_receipts(tmp_path, cas
     (tmp_path / ".issue633_disposable_scratch").write_text("issue633-scratch-only\n")
     for name, body in source.items():
         (tmp_path / name).write_text(body)
-    result = retire_in_disposable_scratch(tmp_path, names)
+    result = retire_pinned(tmp_path, names, source)
+    assert result["source_head"] == FIXTURE_SOURCE_HEAD
+    assert result["exact_pin_verified"] is True
     assert len(result["retired_owners"]) == 26
     assert result["status"] == "SCRATCH_NATIVE_ION_26_RETIRED_NEW24_PENDING_P2"
     assert all(result["files"][n]["before_sha256"] == result["files"][n]["after_sha256"]
@@ -84,13 +114,21 @@ def test_disposable_scratch_writes_are_exact_and_have_sha_receipts(tmp_path, cas
 
 def test_unknown_type_and_missing_source_fail_before_any_write(tmp_path):
     names, layers = fixture("417")
+    pinned = fixture_manifest(names, layers)
     changed = layers[names[1]].replace("type = FVCoupledForce", "type = NativeUnknown")
     layers[names[1]] = changed
     (tmp_path / ".issue633_disposable_scratch").write_text("issue633-scratch-only\n")
     for name, value in layers.items():
         (tmp_path / name).write_text(value)
+    with pytest.raises(CutoverError, match="ION26_PINNED_FILE_SHA_MISMATCH"):
+        retire_in_disposable_scratch(
+            tmp_path, names, exact_manifest=pinned,
+            expected_source_head=FIXTURE_SOURCE_HEAD,
+        )
+    # The original semantic guard still rejects a noncanonical kernel factory
+    # when invoked independently of the exact-byte outer staging gate.
     with pytest.raises(CutoverError, match="ION26_UNCHARACTERIZED"):
-        retire_in_disposable_scratch(tmp_path, names)
+        cutover_texts(layers)
     assert all((tmp_path / name).read_text() == value for name, value in layers.items())
     layers[names[1]] = "# source owner missing\n"
     with pytest.raises(CutoverError, match="ION26_OWNER_CENSUS_CHANGED"):
@@ -119,7 +157,7 @@ def test_symlink_or_non_disposable_layer_path_rejected(tmp_path):
     link.unlink()
     link.symlink_to(target)
     with pytest.raises(CutoverError, match="ION26_STAGED_PATH_NOT_PLAIN_FILE"):
-        retire_in_disposable_scratch(tmp_path, names)
+        retire_pinned(tmp_path, names, layers)
     assert target.read_text() == "# protected\n"
 
 
@@ -159,6 +197,33 @@ def test_unmarked_staged_files_cannot_be_mutated(tmp_path):
     for name, text in layers.items():
         (tmp_path / name).write_text(text)
     with pytest.raises(CutoverError, match="ION26_REFUSE_UNMARKED"):
-        retire_in_disposable_scratch(tmp_path, names)
+        retire_pinned(tmp_path, names, layers)
+    assert all((tmp_path / name).read_text() == body
+               for name, body in layers.items())
+
+
+@pytest.mark.parametrize("tamper", ("source_head", "file_sha", "block_sha"))
+def test_pinned_manifest_tamper_rejected_without_any_scratch_write(tmp_path, tamper):
+    """The hardened mandatory exact-pin API must reject forged custody data."""
+    names, layers = fixture("417")
+    (tmp_path / ".issue633_disposable_scratch").write_text("issue633-scratch-only\n")
+    for name, text in layers.items():
+        (tmp_path / name).write_text(text)
+    pinned = fixture_manifest(names, layers)
+    expected_head = FIXTURE_SOURCE_HEAD
+    if tamper == "source_head":
+        expected_head += "-wrong"
+        error = "ION26_SOURCE_HEAD_PIN_MISMATCH"
+    elif tamper == "file_sha":
+        pinned["layers"][0]["file_sha256"] = "0" * 64
+        error = "ION26_PINNED_FILE_SHA_MISMATCH"
+    else:
+        pinned["ion_native_blocks"][0]["block_sha256"] = "0" * 64
+        error = "ION26_PINNED_BLOCK_SHA_OR_OWNER_MISMATCH"
+    with pytest.raises(CutoverError, match=error):
+        retire_in_disposable_scratch(
+            tmp_path, names, exact_manifest=pinned,
+            expected_source_head=expected_head,
+        )
     assert all((tmp_path / name).read_text() == body
                for name, body in layers.items())
