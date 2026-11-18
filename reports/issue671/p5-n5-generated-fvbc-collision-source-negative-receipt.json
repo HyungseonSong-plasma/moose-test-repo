@@ -1,0 +1,375 @@
+{
+  "schema": "issue671.p5_n5.generated_fvbc_negative_source_model.v1",
+  "task_id": "P5-N5",
+  "issue_number": 671,
+  "related_integration_issue": 670,
+  "verdict": "PASS_REAL_INPUT_SHA_AND_84_OF_84_INDEPENDENT_MODEL_NEGATIVES__HOLD_NATIVE_P05",
+  "contract": "P5-N5: Generated FV BC collisions — reject duplicate/missing/wrong name, variable, factory and sideset in 417/941, without editing production input",
+  "source_context": {
+    "PR665_current_exact_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "PR665_draft": true,
+    "P2_668": "SOURCE_ONLY_PASS",
+    "P3_X_669": "SOURCE_ONLY_PASS_MERGED_IN_PR665",
+    "P4_X_670": "PARTIAL_SOURCE_STAGE1_ONLY_NOT_INTEGRATED",
+    "expected_runtime_gate": "P5-0 once P4-X single-writer merge and identical binary SHA accepted",
+    "source_code_exact_blobs_sha1": {
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "ci/p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35"
+    }
+  },
+  "readback": {
+    "real_stage_ci_run": 44256823392,
+    "real_stage_artifact_id": 14405784430,
+    "real_stage_artifact_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "source_input_head_in_artifact": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "ZIP_CRC": "PASS",
+    "sha256_file_matches": 22,
+    "newonly_JSON_SHA_both": "PASS",
+    "layer11_Physics_SHA_both": "PASS",
+    "old_ion_26_to_0_each_case": "PASS_FROM_VERIFIED_P3X_SOURCE_STAGE",
+    "input_manual_generated_BC_owners": 0,
+    "generated_BC_owners_observed_in_CXX_Warehouse": null,
+    "local_independent_verifier_sha256": "1cf96378eb9c2fbea1d71062881863fe701c3e3a2c6ccc5ce121df3d6d192ef2",
+    "local_detailed_receipt_sha256": "43265ccab232d6522f60ef7d32b9e44b36a14406092c79c2c24c9b8a5f9ee0b4",
+    "reproducible_command": "python verify_p5_n5_generated_bc_collisions.py p4_w6_p3x_exact_417_941.zip p5_n5_417_941_generated_bc_negative_receipt.json"
+  },
+  "explicit_expected_owners_each_case": [
+    {
+      "name": "O2p_wall",
+      "factory": "FVFunctorNeumannBC",
+      "variable": "log_O2p",
+      "boundaries": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "O2p_wall_number_flux",
+      "flux_factor": "-1/N_A",
+      "raw_json_occurrences": 2,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "O2p_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_O2p",
+      "boundaries": [
+        "plasma_cover"
+      ],
+      "signed_number_flux": "O2p_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "O2p_wafer_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_O2p",
+      "boundaries": [
+        "plasma_wafer"
+      ],
+      "signed_number_flux": "O2p_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "O2p_focus_ring_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_O2p",
+      "boundaries": [
+        "plasma_focus_ring"
+      ],
+      "signed_number_flux": "O2p_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "Om_wall",
+      "factory": "FVFunctorNeumannBC",
+      "variable": "log_Om",
+      "boundaries": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "Om_wall_number_flux",
+      "flux_factor": "-1/N_A",
+      "raw_json_occurrences": 2,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "Om_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Om",
+      "boundaries": [
+        "plasma_cover"
+      ],
+      "signed_number_flux": "Om_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "Om_wafer_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Om",
+      "boundaries": [
+        "plasma_wafer"
+      ],
+      "signed_number_flux": "Om_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "Om_focus_ring_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Om",
+      "boundaries": [
+        "plasma_focus_ring"
+      ],
+      "signed_number_flux": "Om_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "Op_wall",
+      "factory": "FVFunctorNeumannBC",
+      "variable": "log_Op",
+      "boundaries": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "Op_wall_number_flux",
+      "flux_factor": "-1/N_A",
+      "raw_json_occurrences": 2,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "Op_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Op",
+      "boundaries": [
+        "plasma_cover"
+      ],
+      "signed_number_flux": "Op_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "Op_wafer_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Op",
+      "boundaries": [
+        "plasma_wafer"
+      ],
+      "signed_number_flux": "Op_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    },
+    {
+      "name": "Op_focus_ring_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Op",
+      "boundaries": [
+        "plasma_focus_ring"
+      ],
+      "signed_number_flux": "Op_wall_number_flux",
+      "outward_molar_residual": "signed_number_flux/N_A",
+      "raw_json_occurrences": 1,
+      "logical_owner_count": 1
+    }
+  ],
+  "C2_source_contract": {
+    "raw_JSON_FVBC_entries": 15,
+    "logical_unique_FVBC_names": 12,
+    "ion_bc_total": 12,
+    "two_general_groups": [
+      "inlet outlet",
+      "plasma_electrode plasma_metal plasma_right"
+    ],
+    "intended_general_merging": "O2p_wall, Om_wall, Op_wall appear twice each across disjoint group keys; C++ merge map creates only one BC per ion on 5 sidesets",
+    "dielectric_group_names": [
+      "plasma_cover",
+      "plasma_wafer",
+      "plasma_focus_ring"
+    ],
+    "generated_variables": [
+      "log_O2p",
+      "log_Om",
+      "log_Op"
+    ],
+    "selected_ion_charges": {
+      "O2p": 1,
+      "Om": -1,
+      "Op": 1
+    },
+    "parser_rejection_properties": [
+      "reject overlapping/duplicate physical sidesets",
+      "reject malformed type-only BC JSON",
+      "reject unknown/neutral species",
+      "reject ion/electron type mismatch",
+      "reject conflicting same BC name across groups",
+      "reject noncanonical BC name/flux/boundary combinations",
+      "reject missing or excess unique ion FV BC objects"
+    ],
+    "P05_source_code_warehouse_queries": [
+      "FVFluxBC",
+      "FVDirichletBC"
+    ],
+    "P05_source_code_assertions": [
+      "same NL system and thread 0",
+      "for each selected log_ion reject unrecognized name/factory",
+      "require each expected BC from validated JSON present exactly once; absence or duplicate FAIL"
+    ]
+  },
+  "negative_test_harness": {
+    "method": "Actual pinned production-staged ZIP and its real per-case JSON are source inputs. Python independent transcription of Chemistry JSON normalization/C2 and DDContinuityEq::checkIntegrity(P05) predicates executes in-memory perturbations. NO C++ parser or native warehouse executed.",
+    "positive_controls_per_case": [
+      "real stage JSON 12 logical ion FVBCs",
+      "O2p_wall two groups normalized to one owner",
+      "Om_wall two groups normalized to one owner",
+      "Op_wall two groups normalized to one owner",
+      "modeled P05 baseline exactly 12 names and variables"
+    ],
+    "JSON_C2_model_mutant_names": [
+      "omit_O2p_wall_inlet",
+      "omit_Om_wall_electrode",
+      "omit_Op_cover",
+      "omit_O2p_wafer",
+      "omit_Om_focus",
+      "wall_type_split",
+      "cover_wrong_type",
+      "wafer_unsupported_type",
+      "extra_bc_field",
+      "wrong_wafer_side",
+      "overlap_general_sides",
+      "duplicate_sides_same_group",
+      "add_general_to_wafer",
+      "add_conflicting_general_to_cover",
+      "unknown_species_prefix",
+      "neutral_species_bc",
+      "rename_wafer_bc",
+      "extra_unknown_wall",
+      "wrong_electron_factory",
+      "missing_type",
+      "charge_sign_flipped",
+      "missing_entire_boundary_root",
+      "nonobject_bc_group",
+      "empty_bc_group",
+      "name_missing_species_prefix",
+      "retired_schema_conflict",
+      "mixed_modern_historical",
+      "duplicate_new_physical_side_group",
+      "misplace_focus_on_wafer",
+      "wrong_ion_factory_general"
+    ],
+    "P05_model_warehouse_mutant_names": [
+      "duplicate_O2p_wall",
+      "omit_Om_wall",
+      "wrong_name_Op_cover",
+      "wrong_type_O2p_wafer",
+      "wrong_variable_Om_focus",
+      "insert_legacy_O2p_wall",
+      "insert_extra_new_ion_owner",
+      "duplicate_mismatched_type_Op_wall",
+      "reassign_O2p_wall_to_Op",
+      "omit_all_Om_dielectrics",
+      "reuse_Om_wafer_in_different_family",
+      "duplicate_O2p_cover_across_flux_dirichlet"
+    ],
+    "JSON_negative_rejected_per_case": 30,
+    "P05_negative_rejected_per_case": 12,
+    "all_negative_rejected": 84,
+    "all_negative_total": 84,
+    "all_positive_passed": 10,
+    "all_positive_total": 10,
+    "data_protection": "Only in-memory JSON/Python mock mutations; original .i/JSON/artifact/private tables untouched; no native timestep run."
+  },
+  "cases": {
+    "417": {
+      "case": "S6-417-407-2069-H25",
+      "staged_input_sha256_verified": 11,
+      "staged_newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "staged_layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "selected_fv_ions": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "expected_FVBC_names": 12,
+      "raw_JSON_FVBC_occurrences": 15,
+      "source_stage_manual_generated_FVBC_names_present": 0,
+      "positive_model_checks": 5,
+      "negative_json_source_guard_model_rejected": 30,
+      "negative_P05_Warehouse_model_rejected": 12,
+      "negative_total_rejected": 42,
+      "negative_total_attempted": 42,
+      "actual_CXX_parser_run": false,
+      "actual_Warehouse_query_run": false
+    },
+    "941": {
+      "case": "S6-941-407-2069-H25",
+      "staged_input_sha256_verified": 11,
+      "staged_newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "staged_layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "selected_fv_ions": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "expected_FVBC_names": 12,
+      "raw_JSON_FVBC_occurrences": 15,
+      "source_stage_manual_generated_FVBC_names_present": 0,
+      "positive_model_checks": 5,
+      "negative_json_source_guard_model_rejected": 30,
+      "negative_P05_Warehouse_model_rejected": 12,
+      "negative_total_rejected": 42,
+      "negative_total_attempted": 42,
+      "actual_CXX_parser_run": false,
+      "actual_Warehouse_query_run": false
+    }
+  },
+  "known_native_probe": {
+    "ci_run_id": 44262035027,
+    "status": "WORKFLOW_SUCCESS_DIAGNOSTIC_COLLECTION",
+    "source_head": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f",
+    "actual_S6_417_exit": 1,
+    "actual_S6_941_exit": 1,
+    "first_error": "missing baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz parent plasma mesh",
+    "conclusion": "early failed pre-P4-X probe did not reach accepted Warehouse; not a P5-N5 Native negative test or P05 PASS"
+  },
+  "unresolved": [
+    "Latest P4-X #670 has partial 7-provider Scratch investigation only; production runner integration and consumer preservation not complete.",
+    "Current P3-X stage still has duplicate static provider paths: six ion mobility/diffusivity constants vs generated DDTransportMaterial, three ion-wall materials vs generated IonWallFluxMaterial and three net surface-current materials vs Chemistry.",
+    "Parent plasma mesh missing in earlier exploratory native diagnostics; P5-0 must pin actual mesh SHA and final identical binary on the single integrated HEAD.",
+    "Actual C++ parser negative error messages and actual P05 Warehouse 12/12 are NOT_RUN and require the approved P5-0 build and P5-B/C runners."
+  ],
+  "gates": {
+    "P5_N5_REAL_STAGE_SOURCE_SHA": "PASS_22_22",
+    "P5_N5_STAGED_JSON_LAYER11_SHA": "PASS_BOTH",
+    "P5_N5_EXPECTED_12_FVBC_CONTRACT": "PASS_SOURCE",
+    "P5_N5_INDEPENDENT_JSON_NEGATIVES": "PASS_60_60_MODEL",
+    "P5_N5_INDEPENDENT_P05_NEGATIVES": "PASS_24_24_MODEL",
+    "P5_N5_NATIVE_JSON_PARSER_NEGATIVES": "NOT_RUN",
+    "P5_N5_NATIVE_P05_WAREHOUSE_NEGATIVES": "NOT_RUN",
+    "P4_X": "PARTIAL_NOT_INTEGRATED_HOLD",
+    "P5_0_BINARY": "PENDING",
+    "NATIVE_P2": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
