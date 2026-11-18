@@ -1,0 +1,89 @@
+{
+  "schema": "issue672.p6_d4.transport_owner_decision.v1",
+  "slot": "P6-D4",
+  "verdict": "PASS_CANDIDATE_SOURCE_CHECKS_10_OF_10__HOLD_TABLE_LINEAGE_AND_ACTUAL_NATIVE",
+  "authority": {
+    "parent_PR665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "candidate_Draft_PR684_head": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "merged_into_PR665": false,
+    "D1_actual_source_replay": "reports/issue672/p6-d1-real-transport-owner-cutover-417-941-source-replay.json",
+    "D3_original_source": "reports/issue672/p6-d3-public-d-transport-lookup-unit-charge-original-sha.json"
+  },
+  "source": {
+    "D4_driver": "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py",
+    "D4_git_blob": "28e34e4352bec25006aca42e9abcac9acc584cc8",
+    "C_plus_plus_e_closure_change": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "candidate_CPP_git_blob": "2d120416d1bfe7c5454d0a7e955dcd6d9a763abc",
+    "source_checks": "10/10 PASS read-only exact code predicates; no new Scratch Native execution",
+    "PR684_reported_18_controls": "18/18 source only",
+    "independent_CI_run": 44308677460,
+    "independent_CI_head": "eb79442972a330a0bf8497ca533e66e1ec8c14a1",
+    "CI_delta": "three additional one-shot files/commits, no Native 417/941 P2 proof"
+  },
+  "single_owner_handoff": {
+    "retired_materials": [
+      "electron_transport",
+      "O2p_species_transport_alias",
+      "Om_species_transport_alias",
+      "Op_species_transport_alias"
+    ],
+    "count": 4,
+    "retire_where": "disposable S6-417/941 D C0 and 11th overlay, after historical lookup Factory remap; B remains untouched",
+    "owner_after": "generated Physics DDTransportMaterial selected for e/O2p/Om/Op; manual equivalent owners deleted",
+    "charge": {
+      "e": -1,
+      "O2p": 1,
+      "Om": -1,
+      "Op": 1
+    },
+    "ion_functors": {
+      "O2p": [
+        "ion_mobility",
+        "ion_diffusion"
+      ],
+      "Om": [
+        "negative_ion_mobility",
+        "negative_ion_diffusion"
+      ],
+      "Op": [
+        "atomic_positive_ion_mobility",
+        "atomic_positive_ion_diffusion"
+      ]
+    },
+    "energy": "fluid closure 5/3 (mobility and diffusion), both new/legacy Energy consumers must be checked",
+    "wall": "8 FEM sheath BC consumers must be retained; no arbitrary wall law substitutions",
+    "other": "charge density/Poisson, neutral root pressure and temperature, RF and source ownership preserved",
+    "independent_source_417_941": {
+      "before_C0_sha256": "59de47aaa0d822e2e04445d4d2249816ab42e4d9a7c974d91a1b7eeae7a8fa14",
+      "after_C0_sha256": "e9917b094ab6c13525192fe4b8e3b287d4bd4cf421c8584b7145a396dd6c652e",
+      "before_D_overlay_sha256": "edf3f8e8194927e93783d136066799d60df2673af9245d6d4b990fb7d267b513",
+      "after_D_overlay_sha256": "f643c6b75357cdb05da55f0e2055f9fc61ff9dcc4ff23f3a61e6963ec833c60b",
+      "after_D_JSON_sha256": "fd091b85a12b2099e6c15e5e815924bfb0d83eae12de78a916da87878a0b56d6",
+      "source_replay_origin": "PR684 exact source reported separate real-archive static replay, not newly re-executed here"
+    }
+  },
+  "lookup_lineage_discriminator": {
+    "D3_original_public_repo_table": {
+      "rows": 100,
+      "raw_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+    },
+    "CI_400W_prepared_table": {
+      "raw_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "preparer": "issue402-canonical-s6-d-once.yml lines 57-65 copies historical .github/oxygen25_eedf/initial_mixture_23xsec_transport.txt over ../Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+    },
+    "candidate_PR684_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "verdict": "TWO_DISTINCT_TABLE_IDENTITIES. Candidate is pinned to 42-row CI staged table; do not assert original 100-row Public D repository bytes are equivalent. Check exact actual job-specific table precedence, explicit authority and test preservation before final acceptance."
+  },
+  "gates": {
+    "P6_D4_4_OWNER_CANDIDATE": "PASS_SOURCE_PREVIEW",
+    "P6_D4_ACTUAL_SHA_CONTROL": "PR684_REPORTED_NOT_NATIVE",
+    "P6_D4_TABLE_IDENTITY": "HOLD_AUTHORITY_AND_STAGING_PROOF",
+    "P6_D4_LEGACY_8_FEM_BC": "HOLD_RUNTIME_PRESERVATION",
+    "P6_D4_PR665_INTEGRATION": "NOT_MERGED",
+    "P6_D5_NATIVE_P2": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "next": "Confirm 42-row actual CI table vs 100-row original Public D authority; make independently repeatable 417/941 11-layer D scratch proof with 4 retirement SHA, 8 FEM BC and 5/3 consumer preservation; then D5 exact-head real Native P2/P05. Keep old B untouched.",
+  "method": "Read candidate PR684 source and parent PR665, independently assert 10 static cutover invariants, cross-check D1 real archive source receipt and D3 original 100-row table; inspect actual Canonical D CI pre-stage table-copy source. No solver/integration/workflow edits.",
+  "mutations": "task-only receipt branch; PR684, PR665, main, inputs, CI unchanged"
+}
