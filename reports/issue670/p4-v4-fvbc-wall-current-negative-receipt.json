@@ -1,0 +1,286 @@
+{
+  "schema": "issue670.p4_v4.fvBC_wall_current_negative_receipt.v1",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "parent_issue": 633,
+  "issue": 670,
+  "task_id": "P4-V4",
+  "date_utc": "2026-11-18",
+  "verdict": "STATIC_INPUT_AND_49_ADVERSARIAL_REJECTIONS_PASS__P4X_SURFACE_CURRENT_PRODUCER_HOLD",
+  "review_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "stage_production_source_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "scope": "417/941 actual P3-X source-only New-only Scratch 11-layer bytes, current JSON/overlay, Python C2 contract mirror, official Python P0 preflight, C++ source textual invariants. Not native execution.",
+  "upstream": {
+    "p3x_run_id": 44257739203,
+    "p3x_artifact_id": 14406746397,
+    "p3x_artifact_digest": "sha256:592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "source_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "ion_26_to_0_each_case": true,
+    "electron_8BC_and_2Functor_owners_retired_each_case": true,
+    "production_runner_status": "SOURCE_ONLY_PASS_RUNTIME_HOLD"
+  },
+  "independent_verification": {
+    "run_id": 44261282207,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44261282207",
+    "job_id": 134654974392,
+    "conclusion": "SUCCESS",
+    "workflow_commit": "95afe6a3ddd640250a60567fe47419515e39bd23",
+    "artifact_id": 14407089607,
+    "artifact_name": "issue670-p4-v4-negative-44261282207-1",
+    "artifact_digest": "sha256:876233ee06a3f8391990cbbfcd609580a0139fed35015b8ad49c8c1035b68d1f",
+    "full_detailed_receipt_in_artifact": "p4v4-receipt/p4-v4-adversarial-readback.json",
+    "method": "GitHub checkout pinned 395e; download original P3X staged artifact; recompute SHA256 of every staged .i byte for both cases; verify stage/JSON/overlay SHA and object block SHA; run project official P0 inspector against unmodified source; execute 44 source/mirror object mutation controls + 5 C++ string invariant changes.",
+    "case_specific_adverse_tests": 22,
+    "cases": 2,
+    "Cxx_source_mutation_tests": 5,
+    "negative_total": 49,
+    "negative_rejected": 49,
+    "Cxx_actual_parser_invocation": false,
+    "native_PhysicsApp_invocation": false
+  },
+  "current_contract": {
+    "source_Cxx": "physics_app/src/physics/plasma/Chemistry.C",
+    "source_Cxx_git_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "canonical_ion_species": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "ion_charge_number": {
+      "O2p": 1,
+      "Op": 1,
+      "Om": -1
+    },
+    "canonical_FVBC_count": 12,
+    "general_FVBC_count": 3,
+    "general_FVBC_sidesets": [
+      "inlet",
+      "outlet",
+      "plasma_electrode",
+      "plasma_metal",
+      "plasma_right"
+    ],
+    "dielectric_FVBC_count": 9,
+    "dielectric_sidesets": [
+      "plasma_cover",
+      "plasma_wafer",
+      "plasma_focus_ring"
+    ],
+    "Neumann_factor": {
+      "value": -1.6605390671738466e-24,
+      "expression": "-1.0/6.02214076e23",
+      "mathematical_unit": "mol per particle",
+      "Cxx_conversion_stage": "Chemistry.C typed modern JSON BC normalization",
+      "must_be_applied_once": true,
+      "JSON_extra_factor_forbidden": true
+    },
+    "dielectric": {
+      "input": "<ion>_wall_number_flux",
+      "parameter": "signed_number_flux",
+      "extra_N_A_factor_in_JSON": false
+    },
+    "electron_wall_input": "e_wall_number_flux",
+    "expected_surface_current_density": {
+      "cover": "cover_net_surface_current_density",
+      "wafer": "wafer_net_surface_current_density",
+      "focus_ring": "focus_ring_net_surface_current_density"
+    },
+    "signed_current_expression": "1.602176634e-19*(gi+gop-gm-ge)",
+    "signed_current_producer_functors": [
+      "O2p_wall_number_flux",
+      "Op_wall_number_flux",
+      "Om_wall_number_flux",
+      "e_wall_number_flux"
+    ],
+    "retained_LowerD_sigma_consumers": [
+      "sigma_s",
+      "sigma_wafer",
+      "sigma_focus_ring"
+    ]
+  },
+  "cases": {
+    "417": {
+      "stage_input_type": "P3-X disposable New-only source-only Scratch",
+      "stage_origin_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "current_review_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+      "staged_11layer_file_sha256_verified": "11/11",
+      "actual_stage_file_and_block_SHA_evidence": {
+        "artifact_id": 14407089607,
+        "path": "p4v4-receipt/p4-v4-adversarial-readback.json",
+        "file_locator": "cases.417.source_files[*].sha256",
+        "per_current_producer_block_locator": "cases.417.current_and_downstream.<cover|wafer|focus_ring>.legacy_producer.block_sha256",
+        "current_consumer_block_locator": "cases.417.current_and_downstream.<cover|wafer|focus_ring>.sigma_consumer.block_sha256",
+        "current_diagnostic_block_locator": "cases.417.current_and_downstream.<cover|wafer|focus_ring>.diagnostic.block_sha256"
+      },
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "newonly_layer11_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "static_JSON_canonical_ion_fvBC_owner_count": 12,
+      "BC_split": {
+        "general_ion_FVFunctorNeumannBC": 3,
+        "dielectric_ion_FVLogMolarDielectricFluxBC": 9
+      },
+      "original_8_unique_sidesets": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right",
+        "plasma_cover",
+        "plasma_wafer",
+        "plasma_focus_ring"
+      ],
+      "electron_FEM_BC_source_count": 8,
+      "existing_staged_surface_current_producers": [
+        "cover_surface_current",
+        "wafer_surface_current",
+        "focus_ring_surface_current"
+      ],
+      "old_surface_current_producer_count": 3,
+      "sigma_surface_current_lowerD_consumers": [
+        "sigma_surface_current",
+        "sigma_wafer_surface_current",
+        "sigma_focus_ring_surface_current"
+      ],
+      "diagnostic_surface_current_consumers": [
+        "cover_net_surface_current",
+        "wafer_net_surface_current",
+        "focus_ring_net_surface_current"
+      ],
+      "new_Cxx_ion_wall_and_surface_current_generator": "STATIC_DECLARED_NOT_INSTANTIATED",
+      "official_existing_P0_preflight": {
+        "status": "FAIL_EXPECTED",
+        "cause": "Surviving native FunctorMaterials surface current producers overlap newly declared C2-generated current owner identities/properties",
+        "rejection_evidence_locator": "cases.417.official_preflight_producer_collisions",
+        "not_native_run": true
+      },
+      "negative_controls_total": 22,
+      "negative_controls_rejected": 22,
+      "static_verdict": "INPUT_AND_NEGATIVE_TESTS_PASS_WITH_DUPLICATE_PRODUCER_HOLD",
+      "runtime_warehouse_status": "NOT_RUN"
+    },
+    "941": {
+      "stage_input_type": "P3-X disposable New-only source-only Scratch",
+      "stage_origin_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "current_review_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+      "staged_11layer_file_sha256_verified": "11/11",
+      "actual_stage_file_and_block_SHA_evidence": {
+        "artifact_id": 14407089607,
+        "path": "p4v4-receipt/p4-v4-adversarial-readback.json",
+        "file_locator": "cases.941.source_files[*].sha256",
+        "per_current_producer_block_locator": "cases.941.current_and_downstream.<cover|wafer|focus_ring>.legacy_producer.block_sha256",
+        "current_consumer_block_locator": "cases.941.current_and_downstream.<cover|wafer|focus_ring>.sigma_consumer.block_sha256",
+        "current_diagnostic_block_locator": "cases.941.current_and_downstream.<cover|wafer|focus_ring>.diagnostic.block_sha256"
+      },
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "newonly_layer11_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "static_JSON_canonical_ion_fvBC_owner_count": 12,
+      "BC_split": {
+        "general_ion_FVFunctorNeumannBC": 3,
+        "dielectric_ion_FVLogMolarDielectricFluxBC": 9
+      },
+      "original_8_unique_sidesets": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right",
+        "plasma_cover",
+        "plasma_wafer",
+        "plasma_focus_ring"
+      ],
+      "electron_FEM_BC_source_count": 8,
+      "existing_staged_surface_current_producers": [
+        "cover_surface_current",
+        "wafer_surface_current",
+        "focus_ring_surface_current"
+      ],
+      "old_surface_current_producer_count": 3,
+      "sigma_surface_current_lowerD_consumers": [
+        "sigma_surface_current",
+        "sigma_wafer_surface_current",
+        "sigma_focus_ring_surface_current"
+      ],
+      "diagnostic_surface_current_consumers": [
+        "cover_net_surface_current",
+        "wafer_net_surface_current",
+        "focus_ring_net_surface_current"
+      ],
+      "new_Cxx_ion_wall_and_surface_current_generator": "STATIC_DECLARED_NOT_INSTANTIATED",
+      "official_existing_P0_preflight": {
+        "status": "FAIL_EXPECTED",
+        "cause": "Surviving native FunctorMaterials surface current producers overlap newly declared C2-generated current owner identities/properties",
+        "rejection_evidence_locator": "cases.941.official_preflight_producer_collisions",
+        "not_native_run": true
+      },
+      "negative_controls_total": 22,
+      "negative_controls_rejected": 22,
+      "static_verdict": "INPUT_AND_NEGATIVE_TESTS_PASS_WITH_DUPLICATE_PRODUCER_HOLD",
+      "runtime_warehouse_status": "NOT_RUN"
+    }
+  },
+  "negative_test_classes": [
+    "ion wafer boundary omitted",
+    "ion BC wrong factory",
+    "physical sideset duplicated",
+    "general boundary group missing",
+    "unexpected BC name",
+    "electron BC wrong type",
+    "electron wall BC missing",
+    "extraneous Neumann factor (double-factor route)",
+    "positive Neumann factor injected",
+    "extraneous dielectric signed flux override",
+    "negative-ion charge sign inverted",
+    "wrong e_wall_number_flux alias",
+    "surface current electron flux field missing",
+    "repeated ion operator across new sideset",
+    "wrong FV species selector",
+    "binding-only bypass",
+    "Om surface current sign inverted",
+    "electron surface current sign inverted",
+    "wrong surface current flux producer",
+    "duplicate existing surface current Producer",
+    "Lower-D sigma consumer disconnected",
+    "staged layer SHA mutated",
+    "C++ -1/N_A conversion source invariant removed",
+    "C++ electron surface current sign source invariant removed",
+    "C++ BC operator uniqueness source guard removed",
+    "C++ dielectric signed flux source invariant removed",
+    "C++ surface current factory creation source invariant removed"
+  ],
+  "critical_p0_finding": {
+    "preflight_status": "FAIL_EXPECTED_NOT_A_BROKEN_TEST",
+    "legacy_surface_current_owners_retained_each_case": 3,
+    "cxx_generated_surface_current_owners_expected_each_case": 3,
+    "collision_reason": "same names/properties of new Chemistry.C-generated cover/wafer/focus_ring surface current owners; legacy stage retains three explicit FunctorMaterials",
+    "no_native_warehouse_claim": true
+  },
+  "integration_handoff": {
+    "owner": "P4-X single writer only",
+    "required": [
+      "retire/rebind three existing current Producers using exact per-case block SHA",
+      "inspect and remove/rebind any old ion wall Functor providers that overlap generated sources",
+      "retain lower-D sigma time/current Kernels and all three surface current diagnostic postprocessors",
+      "preserve canonical +O2p +Op -Om -e current sign and -1/N_A only at general Neumann BC",
+      "rehash final 417/941 11-layer inputs, prove exact target deletion and non-target byte preservation",
+      "run native P5 real check-input and verify actual 12 BC + 3 current Producer Warehouse counts"
+    ],
+    "delegated_gate": "P4-X then P5 Native P2, not complete in V4"
+  },
+  "unresolved": [
+    "Current source-only P0 fails due overlapping old/new current producer contract and cannot be declared integrated PASS",
+    "Actual C++ ChemistryData parser was not compiled or run; 49 controls are source-level independent negative checks",
+    "No actual Native generated FVBC/Wall/Current Warehouse inventory or dynamic Functor resolution",
+    "No numeric wall current parity, long run, native P3/P4 or scientific equivalence"
+  ],
+  "mutation_scope": {
+    "PR665_modified": false,
+    "main_modified": false,
+    "original_10layer_ZIP_modified": false,
+    "private_rate_raw_bytes_inspected": false,
+    "one_shot_workflow": "REMOVED_AFTER_SUCCESS",
+    "worker_branch_only_receipt": true
+  },
+  "native_p2": "NOT_RUN",
+  "native_p3": "NOT_RUN",
+  "native_p4": "NOT_RUN",
+  "science": "SCIENCE_HOLD"
+}
