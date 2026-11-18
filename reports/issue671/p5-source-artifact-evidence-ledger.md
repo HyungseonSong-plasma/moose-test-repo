@@ -57,3 +57,18 @@
 **P5-X 최종 단일 Writer만** 게이트 수용값을 확정하고 #671 본문/통합 브랜치를 갱신한다. 소스/아티팩트 영수증의 존재만으로 Native P2, D8 또는 science를 PASS로 처리하지 않는다.
 
 **연결 문서:** [P5 최종 판정 양식](./p5-final-acceptance-form.md) · [기계 판독형 증거 인덱스](./p5-evidence-gate-index.json)
+
+## 5. W1 최신 P5-0 바이너리 영수증 보강 — 2026-11-18 (W8 완료 이후 P5-X handoff)
+
+> **W8 상태는 DOCUMENTATION_COMPLETE.** 아래는 기존 W8 출력을 폐기하거나 변경 게이트를 자동 PASS시키는 자료가 아니라, **P5-X가 소비할 신규 W1 검증 Artifact**이다.
+
+- [**W1 CI #44293156216**](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44293156216) / [**Artifact #14422701532**](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44293156216/artifacts/14422701532), GitHub digest·독립 다운로드 ZIP SHA-256 **`ce50a51f2ab565b5dc6aced272adcf12f1075f7593417c603ce05274c8291c18`** (1,375,989 B), CRC PASS.
+- **빌드 source HEAD** `05d7ce4eceb81769cb2f0146c51535fc35e74ac1`, tree `0385fbf71ef384bbad02a4222f2e799deb02b9a6`, OCI `ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008`. Build count 1, `make -C physics_app -j2 app_non_unity_dirs='%/utils'`.
+- ZIP member `physics-opt-and-app-libs.tar.gz` (SHA-256 `705e1f3fa58c4da3c1d76cbca7f2a761045f8f46ee6f54d3391aeaf5ab62033c`), **실제 tar member 바이트 직접 재해시**:
+  - `physics-opt` 67,368 B · `cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc` (executable).
+  - `lib/libphysics-opt.so.0` 4,869,600 B · `3274751989604b06e7e7e677435b16c874388a4f7b8735b059eafc605fbb7e51`.
+  - `lib/libphysics_test-opt.so.0` 105,984 B · `86aa0d4ebe18d731e7e052f5ad62594b1a3b48074f848693b0958f728b61ba80`.
+- Build log SHA `5bdda6ecfdcb2b8da8e6cd066f427cecfea1f33cdbbc5a483039cf521928b3c8`, toolchain log SHA `069772ddb3e8df032f756ae6e78329deb4125790fd612f90797933c8c55158c1`. `identity.json` / `sha256sums.txt` / TAR member 실물 값 일치. Artifact에 raw private EI rate 없음; MOOSE vendor system libraries는 OCI에서 공급.
+- **정확한 증거 수준:** `W1_P5_0_BINARY_AND_APP_LIBRARIES=PASS_SHA_VERIFIED_FOR_05d7_HEAD`; **Native check-input NOT_RUN**, 두 case Warehouse 통합·N1–N8·D8 NOT_VERIFIED. W1은 Native P2 성공 근거가 아님.
+- **Source HEAD drift:** 영수증 보강 시 PR #665 HEAD가 `74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f`로 이동함. `05d7…`→`74a…` compare: 6 commits, 변경 경로는 `tests/test_issue633_s6_scratch_ion_retirement.py` 한 개. C++/배포 Runner 변경은 diff에서 관측되지 않았지만 **엄격한 final `source_head` 일치 조건은 충족하지 않음**; P5-X는 재고정·재검증 또는 승인된 동일성 계약을 별도 증빙해야 함.
+- **P5-X 남은 필드:** 최종 HEAD/tree/ELF·lib SHA, 두 Native 417/941 성공 exit/log/Artifact, 실물 P05(ion 12+12 및 electron), D8 동적 호출자, N1–N8 정확한 실패·원상복원 및 정상/음성 동일 HEAD/바이너리. Native 과학 P3/P4는 계속 `SCIENCE_HOLD`.
