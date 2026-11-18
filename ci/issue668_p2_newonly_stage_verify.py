@@ -185,6 +185,79 @@ def assert_no_write_failure(folder: Path, root: Path, case: str, moments: Path, 
     return tweak + ":REJECTED_NO_WRITE"
 
 
+def p3x_exact_owner_negative_controls(base: zipfile.ZipFile, case: str, folder: Path) -> list[str]:
+    """Exercise the *actual* P3-X preflight on real source bytes before mutation.
+
+    These are in-memory, fail-closed structural mutations; separate P2 CLI
+    negative controls prove that bad inputs do not write staged scratch files.
+    """
+    import copy
+    sys.path.insert(0, str(RUNNER.parent))
+    from retire_s6_electron_newonly_owners import (
+        inspect_electron_contract, objects, CutoverError, C0
+    )
+    manifest = json.loads(base.read(f"cases/{case}/case_manifest.json"))
+    ordered = manifest["ordered_input_paths"]
+    layers = {Path(x).name: base.read(f"cases/{case}/final_11_inputs/{Path(x).name}")
+              for x in ordered}
+    js = json.loads((folder / "chemistry" / f"unified_s6_{case}_newonly.json").read_text())
+    assert inspect_electron_contract(layers, ordered, js)["retired_electron_FEM_BCs"] == 8
+
+    def modify_object(section: str, name: str, transformation):
+        source = layers[C0].decode()
+        matched = [m for s, m in objects(source) if s == section and m["name"] == name]
+        assert len(matched) == 1, (section, name)
+        m = matched[0]
+        old = m.group(0)
+        new = transformation(old)
+        assert old != new, (section, name)
+        result = dict(layers)
+        result[C0] = (source[:m.start()] + new + source[m.end():]).encode()
+        return result
+
+    sample = [
+        ("bad_e_bc_factory", modify_object("BCs", "electron_sheath",
+            lambda b: b.replace("FEMElectronSheathBC", "InvalidFEMElectronSheathBC")), js),
+        ("bad_e_bc_variable", modify_object("BCs", "electron_sheath",
+            lambda b: b.replace("variable = log_e", "variable = log_O2p")), js),
+        ("bad_e_bc_flux", modify_object("BCs", "electron_sheath",
+            lambda b: b.replace("wall_number_flux = e_wall_number_flux",
+                                "wall_number_flux = old_e_wall_number_flux")), js),
+        ("bad_e_bc_boundary", modify_object("BCs", "electron_sheath",
+            lambda b: b.replace("plasma_electrode plasma_metal plasma_right", "plasma_wrong")), js),
+        ("bad_energy_mean", modify_object("BCs", "electron_energy_sheath",
+            lambda b: b.replace("mean_energy = e_energy_eV", "mean_energy = unknown_energy")), js),
+        ("duplicate_e_bc", modify_object("BCs", "electron_sheath", lambda b: b + b), js),
+        ("missing_e_bc", modify_object("BCs", "electron_sheath", lambda b: ""), js),
+        ("bad_e_density_property", modify_object("FunctorMaterials", "electron_physical_density",
+            lambda b: b.replace("property_name = n_e_physical", "property_name = duplicate_density")), js),
+        ("bad_e_wall_species", modify_object("FunctorMaterials", "electron_wall_flux",
+            lambda b: b.replace("species_id = e", "species_id = O2p")), js),
+        ("bad_solved_pressure", modify_object("Variables", "pressure",
+            lambda b: b.replace("type = INSFVPressureVariable", "type = MooseVariableFVReal")), js),
+        ("missing_e_functor", modify_object("FunctorMaterials", "electron_wall_flux", lambda b: ""), js),
+    ]
+    no_wall = copy.deepcopy(js)
+    no_wall["drift_diffusion_boundaries"]["plasma_electrode plasma_metal plasma_right"].pop("e_wall")
+    sample.append(("missing_json_e_wall", layers, no_wall))
+    wrong_energy = copy.deepcopy(js)
+    wrong_energy["drift_diffusion_boundaries"]["plasma_wafer"]["e_energy_wafer_dielectric"]["type"] = "WrongFEMEnergyBC"
+    sample.append(("wrong_json_e_energy_factory", layers, wrong_energy))
+    duplicate_e = copy.deepcopy(js)
+    duplicate_e["drift_diffusion_boundaries"]["plasma_cover"]["e_wall"] = {"type": "FEMElectronSheathBC"}
+    sample.append(("duplicate_json_e_wall_region", layers, duplicate_e))
+    rejected = []
+    for name, candidate_layers, candidate_json in sample:
+        try:
+            inspect_electron_contract(candidate_layers, ordered, candidate_json)
+        except CutoverError:
+            rejected.append(name + ":REJECTED_BEFORE_ANY_WRITE")
+        else:
+            raise AssertionError("P3X negative unexpectedly accepted: " + name)
+    assert len(rejected) == 14
+    return rejected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-zip", type=Path, required=True)
@@ -198,6 +271,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     rows = {}
     neg = {}
+    p3x_neg = {}
     for case in ("417", "941"):
         root = out / "cases" / case
         root.mkdir(parents=True)
@@ -208,6 +282,7 @@ def main() -> int:
             raise AssertionError(f"New-only {case} failed: {run.stderr[-1800:]}")
         report = json.loads(receipt.read_text())
         rows[case] = postcheck(folder, manifest, report, base, case)
+        p3x_neg[case] = p3x_exact_owner_negative_controls(base, case, folder)
         neg[case] = []
         for tweak in ("wrong_head", "file_tamper", "wrong_moments", "missing_marker"):
             negroot = out / "negatives" / (case + "_" + tweak)
@@ -224,6 +299,8 @@ def main() -> int:
         "p2_maxwell_artifact_sha256": MAXWELL_ARTIFACT_SHA,
         "cases": rows, "negative_tests": neg,
         "negative_rejected": sum(map(len, neg.values())),
+        "p3_x_negative_controls": p3x_neg,
+        "p3_x_negative_controls_rejected": sum(map(len, p3x_neg.values())),
         "p3_x_electron_source_only": "PASS_EXACT_TEN_OLD_BC_FUNCTOR_OWNERS_RETIRED_PER_CASE",
         "scope": "P2+P3-X source-only static stage, excludes dynamic/liveness/MOOSE runtime",
         "d8_historical_and_physical_child_stage": "PASS_BOUNDED",
