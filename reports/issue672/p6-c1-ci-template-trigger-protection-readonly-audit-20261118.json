@@ -1,0 +1,277 @@
+{
+  "schema": "issue672.p6_c1.ci_workflow_template_parity_and_trigger_review.v1",
+  "task": "P6-C1",
+  "issue": 672,
+  "verification_date": "2026-11-18",
+  "verdict": "PASS_EXACT_TEMPLATE_PARITY_AND_CI_HARNESS__HOLD_TRIGGER_COST_AND_POLICY_GAPS_BEFORE_C3",
+  "reference": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr665": 665,
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "main_head_at_audit": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "issue672_ownership": "P6-C1 read-only; CI/template modifications owned exclusively by P6-X/C3 single writer",
+    "no_mutations_to_workflows_or_template": true
+  },
+  "byte_identity": {
+    "pr665_ci": {
+      "path": ".github/workflows/ci.yml",
+      "blob_sha1": "c8cbd38369108229af7cf2395893a4539f05e024",
+      "length_bytes": 73097,
+      "lines": 1470
+    },
+    "pr665_template": {
+      "path": "ci/workflow_templates/general-ci.yml",
+      "blob_sha1": "c8cbd38369108229af7cf2395893a4539f05e024",
+      "length_bytes": 73097,
+      "lines": 1470
+    },
+    "main_ci_sha1": "c8cbd38369108229af7cf2395893a4539f05e024",
+    "main_template_sha1": "c8cbd38369108229af7cf2395893a4539f05e024",
+    "pr665_bytes_equal": true,
+    "main_bytes_equal": true,
+    "main_vs_pr665_equal": true,
+    "profiles_sha1": "6696b4a3ed4e4bc0e7e80e862e64f9c801b0803c",
+    "generator_sha1": "d72fa06f2b40b4cde6bcb98719c312fe11183d74",
+    "surface_guard_sha1": "744b7a40922be3ea4a945f22bcd5c5c374499f67",
+    "generator_general_route": {
+      "key": "general",
+      "trigger": "push_pull_request",
+      "output": ".github/workflows/ci.yml",
+      "template": "ci/workflow_templates/general-ci.yml"
+    }
+  },
+  "real_CI_positive": {
+    "run_id": 44297212655,
+    "validate_job_id": 134777261452,
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "job_conclusion": "success",
+    "pytest": {
+      "passed": 1566,
+      "skipped": 13,
+      "failed": 0
+    },
+    "log_markers": {
+      "WORKFLOW_HARNESS_SELF_TEST=PASS": 148,
+      "WORKFLOW_HARNESS_CHECK=PASS": 149,
+      "WORKFLOW_SURFACE_GUARD_SELF_TEST=PASS": 159,
+      "WORKFLOW_SURFACE_GUARD=PASS": 160,
+      "1566 passed, 13 skipped": 1111
+    },
+    "note": "Validates actual unmodified HEAD, not simulated future edits. Full repository CI has other failing Native lanes and cannot be globally called PASS."
+  },
+  "workflow_trigger": {
+    "on_push": {
+      "branches": [
+        "main"
+      ],
+      "paths_filter": "NONE",
+      "jobs": "Jobs without PR-only condition; no general P3 timestep"
+    },
+    "on_pull_request": {
+      "branches": [
+        "main"
+      ],
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "edited"
+      ],
+      "paths_filter": "NONE"
+    },
+    "permissions_top_level": {
+      "contents": "read"
+    },
+    "no_events": [
+      "workflow_dispatch",
+      "pull_request_target",
+      "workflow_run",
+      "issue_comment"
+    ],
+    "general_job_count": 17,
+    "workflow_level_concurrency": "ABSENT",
+    "on_same_repo_PR_synchronize": {
+      "eligible_job_count": 17
+    },
+    "on_same_repo_PR_title_edited_no_base_change": {
+      "eligible_job_count": 12,
+      "filtered_job_count": 5,
+      "eligible_jobs": [
+        "issue402_json_rate_p0",
+        "issue402_s6_reference_receipt",
+        "issue402_legacy_p0_inventory",
+        "issue402_ideal_gas_p0",
+        "issue402_core_four_p0",
+        "issue402_core_four_native_p2",
+        "plasma_native_regression",
+        "issue541_group_a_evidence",
+        "issue402_reaction_material_p0",
+        "issue541_arch_dd_native_p2",
+        "issue541_arch_replay_p0",
+        "issue541_arch_s6_hybrid_native_p2"
+      ],
+      "filtered_jobs": [
+        "issue541_evidence_identity_p0",
+        "validate",
+        "runtime-smoke",
+        "boltzmann-eepf-controls",
+        "artifact-api-probe"
+      ],
+      "note": "Eligibility derived from YAML job-level conditions for same-repository PR edited event with no base change, not an actually dispatched edit test."
+    },
+    "same_repo_pr_native_jobs": [
+      {
+        "name": "issue402_core_four_native_p2",
+        "timeout_minutes": 120
+      },
+      {
+        "name": "plasma_native_regression",
+        "timeout_minutes": 120
+      },
+      {
+        "name": "issue541_arch_dd_native_p2",
+        "timeout_minutes": 45
+      },
+      {
+        "name": "issue541_arch_s6_hybrid_native_p2",
+        "timeout_minutes": 120
+      }
+    ],
+    "native_job_timeout_minutes_sum_upper_bound": 405,
+    "general_total_job_timeout_minutes_sum_upper_bound": 590,
+    "cost_note": "Sums of per-job timeout ceilings, NOT actual runtime, pricing, or a forecast; CI jobs may be concurrent.",
+    "fork_guards": "The four Native P1/P2 jobs require pull_request.head.repo.full_name to equal HyungseonSong-plasma/moose-test-repo; no unrestricted fork Native job established.",
+    "edited_base_change_note": "validate/runtime-smoke and two other source guards explicitly allow PR edited events when github.event.changes.base != null.",
+    "non_main_target_PR": "General CI does not trigger for PR #684 targeting Draft #665 head branch, by branch filter."
+  },
+  "native_and_science_protection": {
+    "native_build_image": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "runtime_image": "ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c",
+    "exact_checkout_source_pin": "Most source-critical CI jobs assert checkout against github.event.pull_request.head.sha or github.sha. Native jobs explicitly pin source and build container.",
+    "no_general_p3_command": true,
+    "protected_EI_material_in_general_Repo_CI": "No general workflow secrets.* interpolation or private EI raw rate upload was found in inspected ci.yml; this is not a proof against all external/reusable workflows.",
+    "artifacts_upload_error_jobs": [
+      "issue541_evidence_identity_p0",
+      "validate",
+      "boltzmann-eepf-controls",
+      "issue402_core_four_p0",
+      "issue402_core_four_native_p2",
+      "plasma_native_regression",
+      "artifact-api-probe"
+    ],
+    "artifacts_upload_warn_jobs": [
+      "issue541_group_a_evidence",
+      "issue541_arch_dd_native_p2",
+      "issue541_arch_s6_hybrid_native_p2"
+    ],
+    "warn_concern": "The three jobs include if: always() and if-no-files-found: warn. A missing upload does not independently fail the upload step; downstream accepted evidence must still be checked.",
+    "SCIENCE_HOLD": "No full P3/P4 general-ci solver timestep; it would be incorrect to infer science acceptance from a successful static/P2 CI."
+  },
+  "special_workflow_control": {
+    "profiles": {
+      "issue493-public-p3": "deferred",
+      "issue493-public-p3-diagnostic": "deferred",
+      "issue493-public-p3-b-completion": "deferred",
+      "issue493-public-bc-results-p4": "active"
+    },
+    "deferred_outputs_absent_from_repo": 3,
+    "active_one_shot": {
+      "output": ".github/workflows/issue493-public-bc-results-p4-once.yml",
+      "template": "ci/workflow_templates/issue493-public-bc-results-p4-job.yml",
+      "rendered_byte_equality": true,
+      "output_git_blob_sha1": "729d5cc9a8530d7dffadaabd3440c58aaaa5b6ca",
+      "template_git_blob_sha1": "064479b233174c2a2b129a5c7c92cbed671fdf69",
+      "trigger": "push on main + paths:[.github/workflows/issue493-public-bc-results-p4-once.yml]",
+      "timeout_minutes_per_arm": 360,
+      "impact": "Changing this active workflow file on main can intentionally trigger expensive P3/P4; normal changes to ci.yml or generated general-ci template do not satisfy self-path."
+    },
+    "arch_manual_P3": {
+      "dd": {
+        "file": ".github/workflows/issue541-arch-dd-p3-replay.yml",
+        "sha1": "342069640ed958898a4d28585fdf4eead545a0ad",
+        "trigger": "workflow_dispatch_only",
+        "approval": "ISSUE541_DD_TWO_STEP_P3_APPROVED",
+        "exact_source_sha_required": true,
+        "concurrency_defined": true
+      },
+      "s6": {
+        "file": ".github/workflows/issue541-arch-s6-p3-p4-replay.yml",
+        "sha1": "6c673628eac4693abe0d74b04fc31578a39b3971",
+        "trigger": "workflow_dispatch_only",
+        "approval": "ISSUE541_S6_400W_100US_BOTH_CASES_APPROVED",
+        "exact_source_sha_required": true,
+        "concurrency_defined": true
+      }
+    },
+    "optional_FLOW": {
+      "file": ".github/workflows/issue402-flow-native-p2-regression.yml",
+      "sha1": "3f2360f7ae71ed9081dfa55aeba5119f5c44a9b0",
+      "guard_allows_events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "guard_disallows_auto_push": true,
+      "pull_request_target": "main",
+      "paths_filter": true
+    }
+  },
+  "negative_static_mutation": {
+    "mutation": "Replace plasma_native_regression job-level same-repo PR condition with if: true in BOTH generated general template and ci.yml (only in-memory)",
+    "mutated_generated_and_workflow_equal": true,
+    "generated_general_trigger_and_required_job_predicates_still_hold": true,
+    "surface_guard_CI_PR_type_and_validate_runtime_filter_predicates_still_hold": true,
+    "actual_native_execution": false,
+    "actual_python_mutation_self_test": false,
+    "assertion_scope": "Source-static reproduction of selected hard-coded predicates, NOT a claim every repository test would accept this mutation. It demonstrates blind spots in current workflow_harness.render(general) and workflow_surface_guard.check, as they do not explicitly assert this Native job condition."
+  },
+  "branch_protection_readback": {
+    "GET_main_branch_protection": "403_RESOURCE_NOT_ACCESSIBLE_BY_INTEGRATION",
+    "GET_pr665_branch_protection": "403_RESOURCE_NOT_ACCESSIBLE_BY_INTEGRATION",
+    "GET_repository_rulesets": "200_EMPTY_ARRAY",
+    "verified_main_required_checks": false,
+    "conclusion": "Do not infer branch is unprotected or protected; required status checks/rulesets outside connector visibility may exist."
+  },
+  "risks": [
+    {
+      "severity": "MEDIUM",
+      "id": "EDITED_EVENT_COST",
+      "evidence": "4 internal Native P1/P2 jobs remain eligible on same-repository PR edited without base change, 405 timeout-min ceiling summed.",
+      "fix_owner": "P6-C3_SINGLE_WRITER",
+      "recommended": "Gate Native P1/P2 and other expensive jobs on edited-no-base-change; preserve synchronize/opened/reopened/base-change exact-HEAD execution. Add negative regression for metadata edits."
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "GUARD_CONTRACT_GAP",
+      "evidence": "Guard tests require edited filter for validate/runtime-smoke only; generator checks names/branch triggers but does not enforce exact if of all Native jobs.",
+      "fix_owner": "P6-C3_SINGLE_WRITER",
+      "recommended": "Assert all 4 native PR-only same-repo guards and cost-sensitive edited filters in the source harness and workflow surface guard, with copy-of-template in-memory mutation negatives."
+    },
+    {
+      "severity": "LOW_TO_MEDIUM",
+      "id": "ARTIFACT_MISSING_WARN",
+      "evidence": "Three evidence-upload steps use if-no-files-found: warn, including two ARCH Native P1/P2 workflows.",
+      "fix_owner": "P6-C3_SINGLE_WRITER",
+      "recommended": "Classify mandatory vs optional on-failure artifacts; mandatory receipts must require if-no-files-found: error or equivalent postcondition, while diagnostics may remain WARN if not required."
+    },
+    {
+      "severity": "UNKNOWN",
+      "id": "BRANCH_REQUIRED_CHECKS_UNREADABLE",
+      "evidence": "GitHub integration 403 on branch-protection endpoints; rulesets list empty.",
+      "fix_owner": "REPO_ADMIN",
+      "recommended": "Independently verify main/PR665 required checks and enforcement through authorized admin UI or privileged read; do not claim protection without this."
+    }
+  ],
+  "gates": {
+    "P6_C1_BYTE_PARITY": "PASS_EXACT_MAIN_AND_PR665",
+    "P6_C1_WORKFLOW_HARNESS": "PASS_REAL_VALIDATE_CI",
+    "P6_C1_SURFACE_GUARD": "PASS_REAL_VALIDATE_CI",
+    "P6_C1_GENERAL_TRIGGER": "PASS_SOURCE_AUDIT",
+    "P6_C1_EDITED_COST_PROTECTION": "GAP_4_NATIVE_JOBS",
+    "P6_C1_SPECIAL_P3_PROTECTION": "PASS_SOURCE_REVIEW",
+    "P6_C1_BRANCH_PROTECTION": "UNVERIFIED_403",
+    "P6_C1_CI_TEMPLATE_EDITS": "NOT_PERFORMED_SINGLE_WRITER_C3",
+    "P6_C3_WORKFLOW_INTEGRATION": "PENDING",
+    "P6_X_FINAL_ACCEPTANCE": "HOLD",
+    "SCIENCE": "HOLD"
+  }
+}
