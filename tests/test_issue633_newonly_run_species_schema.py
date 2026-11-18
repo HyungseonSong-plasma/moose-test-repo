@@ -255,3 +255,31 @@ def test_native_electron_wall_and_energy_bcs_cover_all_three_dielectrics():
         assert f"[electron_{side}_dielectric]" in native
         assert f"[electron_energy_{side}]" in native
         assert f"boundary = 'plasma_{side}'" in native
+
+
+def test_ion_fvm_newonly_workflow_cannot_reenter_retired_fem_or_timesteps():
+    """New-only CI is an explicit P0 surface, never the old 150/200-step P3."""
+    workflow = (ROOT / '.github/workflows/ion-fvm-hybrid-staged-dt.yml').read_text()
+    assert 'Ion-FVM New-only S6 source P0' in workflow
+    assert "variant: ['417', '941']" in workflow
+    assert 'prepare_s6_run_input.py' in workflow
+    assert 'prepare_s6_newonly.py' in workflow
+    assert 'ION_FVM_NEWONLY_S6_' in workflow
+    assert 'P1=NOT_RUN P2=NOT_RUN P3=NOT_RUN SCIENCE_HOLD' in workflow
+    assert 'FEMElectronSheathBC' in workflow
+    assert 'FEMElectronEnergySheathBC' in workflow
+    assert 'retire_p4_duplicate_owners(' in workflow
+    assert "'P2':'NOT_RUN'" in workflow
+    for old in (
+        'prepare_ion_fvm_hybrid_staged_dt.py',
+        'prepare_ion_fvm_hybrid_contour.py',
+        'prepare_full_fem_contour_mesh.py',
+        'generate_contour_mesh.py',
+        'TimeSequenceStepper',
+        'expected_steps: 150',
+        'expected_steps: 200',
+        'timeout --signal=TERM',
+        'physics-opt -i',
+        'make -C physics_app',
+    ):
+        assert old not in workflow, f'RETIRED_ION_FVM_CALLER_REINTRODUCED: {old}'
