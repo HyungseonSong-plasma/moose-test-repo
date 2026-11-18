@@ -47,8 +47,8 @@ jobs:
           alternative=historical/.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           echo "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387  $original" | sha256sum --check -
           echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $alternative" | sha256sum --check -
-          test "$(wc -l < "$original")" -eq 100
-          test "$(wc -l < "$alternative")" -eq 42
+          test "$(awk 'END {print NR}' "$original")" -eq 100
+          test "$(awk 'END {print NR}' "$alternative")" -eq 42
           test ! -e historical/experiments/Issue395_powered_chemistry_ladder/private_rates
           test ! -e control/physics_app/physics-opt
           python3 -m py_compile ci/issue672_historical_100row_native_p2.py
@@ -70,7 +70,7 @@ jobs:
           (cd historical && export CHATGPT_WORK_BASE_SHA="$HISTORY_SHA" && bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400)
           original=historical/experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
           echo "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387  $original" | sha256sum --check -
-          test "$(wc -l < "$original")" -eq 100
+          test "$(awk 'END {print NR}' "$original")" -eq 100
           test -s historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh
           test ! -e historical/experiments/Issue395_powered_chemistry_ladder/private_rates
           echo HISTORICAL_400W_PARENT_MESH_WITH_100ROW_UNMODIFIED_PASS
@@ -130,7 +130,7 @@ jobs:
         run: |
           original=historical/experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
           echo "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387  $original" | sha256sum --check -
-          test "$(wc -l < "$original")" -eq 100
+          test "$(awk 'END {print NR}' "$original")" -eq 100
           test "$(git -C historical rev-parse HEAD)" = "$HISTORY_SHA"
       - name: Upload sanitized four Native logs and independently rehashable real ELF
         if: always()
