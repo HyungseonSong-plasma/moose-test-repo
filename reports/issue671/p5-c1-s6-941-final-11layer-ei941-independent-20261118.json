@@ -1,0 +1,163 @@
+{
+  "schema": "issue671.p5_c1.s6_941_final_ei941_independent_bytes.v1",
+  "task": "P5-C1 S6-941 final source input SHA & EI-941 branch",
+  "verdict": "SOURCE_BYTES_11_OF_11_PASS__EI941_BRANCH_PASS__NATIVE_P2_HOLD",
+  "source": {
+    "pr": 665,
+    "pin": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+    "historical_input_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p4_cutover_git_blob": "a3f9d93ea1095c9d00053e5104bb7326d1af8f31",
+    "production_prepare_git_blob": "d2091291161033a9662b0d583567f9c35d26c006",
+    "json_source_git_blob": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "release_note": "P4 source unchanged on current PR head after #679 single ion-wall Factory merger"
+  },
+  "proof": {
+    "original_p1_zip": {
+      "artifact_id": 14372278070,
+      "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "zip_crc": "PASS",
+      "original_11layer_file_sha": "11_OF_11_RECOMPUTED"
+    },
+    "p3x_zip": {
+      "artifact_id": 14406746397,
+      "sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+      "zip_crc": "PASS",
+      "actual_staged_11layer_sha": "11_OF_11_RECOMPUTED"
+    },
+    "p4x_final": {
+      "method": "Take actual P3-X raw C0; validate exact seven original object SHA; replace constants block with carrier_one only; delete six old ion-wall and surface-current materials; verify exact post-C0 SHA. All 10 other .i files preserve their original P3-X byte stream.",
+      "p3x_c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "final_c0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "seven_original_blocks_SHA": "7_OF_7_PASS",
+      "final_layer_SHA": "11_OF_11_PASS",
+      "non_c0_byte_immutability": "10_OF_10_PASS",
+      "old_factory_string_remains": false
+    },
+    "newonly_json": {
+      "sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "reaction_count": 8,
+      "unique_ids": true,
+      "ei941": true,
+      "ei417": false,
+      "ei941_source_layer": "issue477_S4-401-941_op_ionization_overlay.i",
+      "ei941_reaction": "e + O -> 2e + Op",
+      "energy_loss_ev": 13.62,
+      "rate_reference": "private_rates/EI-941_O_3P.txt",
+      "case417_rejected_negative": "PASS_SEPARATE_EI417_ONLY"
+    },
+    "private_rates": {
+      "source_path_set": [
+        "EI-415_O2_X.txt",
+        "EI-401_O2_X.txt",
+        "EI-941_O_3P.txt",
+        "EI-407_O2_X.txt",
+        "EI-2069_O2_a1Delta.txt"
+      ],
+      "path_reference_set": "5_OF_5_PASS",
+      "ei941_historical_sha256_from_prior_secure_ci": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+      "current_turn_private_raw_sha_recalculated": false,
+      "private_bytes_exported": false
+    },
+    "electron_lookup": {
+      "rows": 42,
+      "sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "file": "Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "transport": "lookup/reduced/clamp"
+    },
+    "mesh": {
+      "qvt_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+      "parent_plasma_artifact_id": 12349847563,
+      "parent_plasma_zip_sha256": "f07f082267e159ad87ce1cdab79c95fcd8d78cdc6ed1a6168c4fa09ae1f132a2",
+      "parent_plasma_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+      "parent_plasma_mesh_size_bytes": 174352,
+      "CRC": "PASS"
+    },
+    "maxwell_includes": {
+      "count": 3,
+      "sha256": {
+        "issue397_maxwell_steady_abs1e11.i": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+        "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+        "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_overlay.i": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45"
+      }
+    },
+    "final_ordered_layers": [
+      {
+        "order": 1,
+        "filename": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+        "sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490"
+      },
+      {
+        "order": 2,
+        "filename": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+        "sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+      },
+      {
+        "order": 3,
+        "filename": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+        "sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+      },
+      {
+        "order": 4,
+        "filename": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+        "sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+      },
+      {
+        "order": 5,
+        "filename": "issue477_S2-415_generation_overlay.i",
+        "sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76"
+      },
+      {
+        "order": 6,
+        "filename": "issue477_S3-415-401_extra_overlay.i",
+        "sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05"
+      },
+      {
+        "order": 7,
+        "filename": "issue477_S4-401-941_op_ionization_overlay.i",
+        "sha256": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa"
+      },
+      {
+        "order": 8,
+        "filename": "issue477_S5-941-407_o2_consumer_overlay.i",
+        "sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+      },
+      {
+        "order": 9,
+        "filename": "issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+        "sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+      },
+      {
+        "order": 10,
+        "filename": "issue477_S6-941-407-2069-H25_H25_overlay.i",
+        "sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc"
+      },
+      {
+        "order": 11,
+        "filename": "migrated_continuity.i",
+        "sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+      }
+    ],
+    "independent_local_outputs": {
+      "verifier": "p5_c1_s6_941_independent_recheck.py",
+      "verifier_sha256": "aa4727c26973234428848ccaa6ed9c8f6814144c73e8b741ebe98cc18e2c6fdd",
+      "full_receipt": "p5_c1_s6_941_final_11layer_sha_receipt.json",
+      "full_receipt_sha256": "7548661cdb0005a588b2b30935d7912ddd36bb6ebb3f22dd9e0f2a4ecbddffa3",
+      "public_input_zip": "s6_941_final_p4x_11layer_public_inputs.zip",
+      "public_input_zip_sha256": "e7652f45ae77dbff1db140b0a99f1c3a7ac8cfdccbfaa0a4aec30ee51ff1c9ea",
+      "private_rate_file_bytes_present": false
+    },
+    "gates": {
+      "P5_C1_SOURCE": "PASS",
+      "P5_C1_EI_941_BRANCH": "PASS",
+      "P5_C1_FINAL_11_LAYER_SHA": "PASS",
+      "P5_C1_QVT_AND_PARENT_MESH_SHA": "PASS",
+      "P5_C1_PRIVATE_EI_941_RATE_PROVENANCE": "LINKED_PREVIOUS_PROTECTED_CI__NOT_REHASHED_IN_PUBLIC_ENV",
+      "P5_C2_NATIVE_941": "NOT_RUN",
+      "P5_0_LATEST_HEAD_BINARY": "HOLD_PREVIOUS_BINARY_SOURCE_3bf1777",
+      "D8_DYNAMIC": "HOLD",
+      "P4_X_FULL": "HOLD",
+      "SCIENCE": "SCIENCE_HOLD"
+    },
+    "scope": "Independent source raw-byte/hash reconstruction and negative branch comparison only. Exact current-head final Native binary + protected EI rate/check-input not executed. Historical and source ZIPs untouched."
+  }
+}
