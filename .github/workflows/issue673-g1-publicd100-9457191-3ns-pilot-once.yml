@@ -135,7 +135,7 @@ jobs:
               # Exact original P1 numerical contract, read only from the source C0.
               import re,math
               c0text=(folder/C0).read_text()
-              match=re.search(r"time_sequence\\s*=\\s*'([^']+)'",c0text)
+              match=re.search(r"time_sequence\s*=\s*'([^']+)'",c0text)
               assert match is not None,"G1_TIME_SEQUENCE_MISSING"
               times=[float(v) for v in match.group(1).split()]
               steps=[b-a for a,b in zip(times,times[1:])]
