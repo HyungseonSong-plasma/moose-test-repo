@@ -85,7 +85,7 @@
     block = 1
   []
   [ion_wall_flux]
-    type = PhysicsIonWallFluxMaterial
+    type = IonWallFluxMaterial
     ion_number_density = n_i_physical
     potential = potential
     mobility = ion_mobility

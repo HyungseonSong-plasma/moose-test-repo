@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "physics_app"
 
 RETIRED_FILES = (
+    "src/functormaterials/PhysicsIonWallFluxMaterial.C",
+    "include/functormaterials/PhysicsIonWallFluxMaterial.h",
     "src/functormaterials/PhysicsIonWallTotalFluxMaterial.C",
     "src/materials/PhysicsElectronDiffusionSurfaceCharge.C",
     "include/materials/PhysicsElectronDiffusionSurfaceCharge.h",
@@ -79,7 +81,8 @@ def test_active_log_molar_wall_boundary_conditions_remain():
 
 def test_active_wall_and_surface_charge_owners_remain():
     for rel in (
-        "src/functormaterials/PhysicsIonWallFluxMaterial.C",
+        "src/functormaterials/IonWallFluxMaterial.C",
+        "include/functormaterials/IonWallFluxMaterial.h",
         "src/kernels/PhysicsLowerDSurfaceCurrent.C",
         "src/bcs/PhysicsADSurfaceChargePoissonBC.C",
         "src/fvkernels/PhysicsFVLogMolarElectronTransport.C",

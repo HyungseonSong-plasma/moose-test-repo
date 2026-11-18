@@ -22,7 +22,7 @@ def _block(text, section):
 
 def _assert_wall_wiring(deck, species):
     material = _block(deck, species + "_wall")
-    assert "type = PhysicsIonWallFluxMaterial" in material
+    assert "type = IonWallFluxMaterial" in material
     assert f"species_id = {species}" in material
     assert f"ion_number_density = {species}_number_density" in material
     assert f"mobility = {species}_mobility" in material
@@ -33,7 +33,7 @@ def _assert_wall_wiring(deck, species):
 
 
 def test_species_first_wall_functors_and_duplicate_owner_prevention():
-    ion = source("physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C")
+    ion = source("physics_app/src/functormaterials/IonWallFluxMaterial.C")
     for old, tail in (
         ("ion_surface_number_flux", "surface_number_flux"),
         ("ion_migration_number_flux", "migration_number_flux"),
@@ -52,8 +52,8 @@ def test_species_first_wall_functors_and_duplicate_owner_prevention():
                 "PhysicsIonWallTotalFluxMaterial.C").exists()
     staged = source(
         "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py")
-    assert 'if material_type == "PhysicsIonWallTotalFluxMaterial":' in staged
-    assert '"    type = PhysicsIonWallFluxMaterial"' in staged
+    assert '"PhysicsIonWallTotalFluxMaterial"}:' in staged
+    assert '"    type = IonWallFluxMaterial"' in staged
     assert "S6_WALL_RETIRED_TYPE_STILL_PRESENT" in staged
 
 
