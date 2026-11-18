@@ -1,0 +1,250 @@
+{
+  "schema": "issue670.p4_c3.s6_focus_ring_current.source_only.v1",
+  "task_id": "P4-C3",
+  "verdict": "PASS_SOURCE_SHA_SIGN_CONSUMER_EDGES__HOLD_STATIC_C2_DUPLICATE_OWNER_RISK",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "review_pr": 665,
+    "review_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "archival_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P2_integration_sha": "3c961e94533f9676137fb96b2b0bae7e89653914",
+    "P3X_integration_sha": "c5a40648863c7d2525b4a2a449840b86d70af3c4",
+    "P3X_CI_run": 44256823392,
+    "actual_artifact_id": 14405784430,
+    "artifact_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "zip_crc": "PASS",
+    "CXX_path": "physics_app/src/physics/plasma/Chemistry.C",
+    "CXX_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "actual_C0_SHA256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+  },
+  "methodology": "Locally downloaded exact CI ZIP; independent full ZIP SHA256 and CRC, 11/11 case .i file SHA compared against newonly_stage_receipt.json for 417 and 941; MOOSE nested bracket parser recalculated block SHA (raw opening line through closing [], omit last newline), JSON charge and BC checks; source C++ Chemistry.C read via pinned GitHub blob; 34 synthetic localized fail-closed static negative mutations. No MOOSE Native execution.",
+  "cases": {
+    "417": {
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "stage_epoch": "P3-X source-only, PR665 merged",
+      "case_file_sha256_checks": "11/11 independently verified",
+      "file_sha256_by_layer": {
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+        "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+        "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+        "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+        "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+        "issue477_S4-401-417_op_ionization_overlay.i": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a",
+        "issue477_S5-417-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+        "issue477_S6-417-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+        "issue477_S6-417-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+        "migrated_continuity.i": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+      },
+      "source_layer": 1,
+      "source_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_file_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "json_file_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "source_object": "FunctorMaterials/focus_ring_surface_current",
+      "source_factory_type": "ADParsedFunctorMaterial",
+      "property_name": "focus_ring_net_surface_current_density",
+      "source_functor_names": [
+        "O2p_wall_number_flux",
+        "Op_wall_number_flux",
+        "Om_wall_number_flux",
+        "e_wall_number_flux"
+      ],
+      "source_symbols": [
+        "gi",
+        "gop",
+        "gm",
+        "ge"
+      ],
+      "source_expression": "1.602176634e-19*(gi+gop-gm-ge)",
+      "source_block": "plasma",
+      "original_explicit_producer_count": 1,
+      "generated_CXX_same_name_producer_expected_count": 1,
+      "combined_without_retiring_original": "OWNER_NAME_AND_PROPERTY_CONFLICT_EXPECTED_STATIC",
+      "live_generated_count": "NOT_RUN",
+      "source_and_consumer_blocks_sha256": {
+        "FunctorMaterials/focus_ring_surface_current": "0e4fc483dc52d3925fbfecd12fcb7158dcd45bc8ad44999389ee698b25c1d597",
+        "Kernels/sigma_focus_ring_surface_current": "10e13ca2ff751be08840048efc151504e28562082c7d715a2503c0f61154e081",
+        "Kernels/sigma_focus_ring_time": "97731eab6dc8be5a08aa58cafd9f4cb87f44c5e690e5a97303c2e691178845fc",
+        "Variables/sigma_focus_ring": "5f3159c38f1d6ffbe34a5ba5a9e7453912883c8ee914c388eb4b49d061d825f5",
+        "Postprocessors/focus_ring_net_surface_current": "4356b44510c86785633d8484fbff53f6339b34b7e7426c9d330e7c35c9d17273",
+        "Postprocessors/focus_ring_electron_primary_flux": "63749301fdb0bd8227f36bd4713e3314dabc2926e46004a04ce14c8f7ada3167",
+        "Postprocessors/focus_ring_O2p_flux": "247e1c0d93a9cea1bd4ee8a05433980a5035d17300f746590626556c913a74ef",
+        "Postprocessors/focus_ring_Op_flux": "e76263fd2fc91944cf075d05318e88cabb22bc23fb90a79ffa28cf9fa255384a",
+        "Postprocessors/focus_ring_Om_flux": "bbdde2a652723135f2775b178f3c269a9e555fa5e871dc3fa04023235352003a"
+      },
+      "physical_unit": "A/m^2",
+      "charges": {
+        "O2p": 1,
+        "Op": 1,
+        "Om": -1,
+        "e": -1
+      },
+      "json_ion_surface_current": {
+        "electron_wall_number_flux": "e_wall_number_flux"
+      },
+      "focus_ring_json_BC_names": [
+        "O2p_focus_ring_dielectric",
+        "Om_focus_ring_dielectric",
+        "Op_focus_ring_dielectric",
+        "e_focus_ring_dielectric",
+        "e_energy_focus_ring_dielectric"
+      ],
+      "resolved_consumer_edges": [
+        "focus_ring_net_surface_current_density -> Kernels/sigma_focus_ring_surface_current[PhysicsLowerDSurfaceCurrent,variable=sigma_focus_ring,block=focus_ring_surface]",
+        "sigma_focus_ring -> Kernels/sigma_focus_ring_time[ADTimeDerivative,block=focus_ring_surface]",
+        "focus_ring_net_surface_current_density -> Postprocessors/focus_ring_net_surface_current[ADSideIntegralFunctorPostprocessor,boundary=plasma_focus_ring]",
+        "e_wall_number_flux -> Postprocessors/focus_ring_electron_primary_flux[boundary=plasma_focus_ring]",
+        "O2p/Op/Om_wall_number_flux -> their respective focus_ring_*_flux Postprocessors[boundary=plasma_focus_ring]"
+      ]
+    },
+    "941": {
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "stage_epoch": "P3-X source-only, PR665 merged",
+      "case_file_sha256_checks": "11/11 independently verified",
+      "file_sha256_by_layer": {
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+        "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+        "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+        "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+        "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+        "issue477_S4-401-941_op_ionization_overlay.i": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa",
+        "issue477_S5-941-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+        "issue477_S6-941-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+        "issue477_S6-941-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+        "migrated_continuity.i": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+      },
+      "source_layer": 1,
+      "source_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "source_file_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "json_file_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "source_object": "FunctorMaterials/focus_ring_surface_current",
+      "source_factory_type": "ADParsedFunctorMaterial",
+      "property_name": "focus_ring_net_surface_current_density",
+      "source_functor_names": [
+        "O2p_wall_number_flux",
+        "Op_wall_number_flux",
+        "Om_wall_number_flux",
+        "e_wall_number_flux"
+      ],
+      "source_symbols": [
+        "gi",
+        "gop",
+        "gm",
+        "ge"
+      ],
+      "source_expression": "1.602176634e-19*(gi+gop-gm-ge)",
+      "source_block": "plasma",
+      "original_explicit_producer_count": 1,
+      "generated_CXX_same_name_producer_expected_count": 1,
+      "combined_without_retiring_original": "OWNER_NAME_AND_PROPERTY_CONFLICT_EXPECTED_STATIC",
+      "live_generated_count": "NOT_RUN",
+      "source_and_consumer_blocks_sha256": {
+        "FunctorMaterials/focus_ring_surface_current": "0e4fc483dc52d3925fbfecd12fcb7158dcd45bc8ad44999389ee698b25c1d597",
+        "Kernels/sigma_focus_ring_surface_current": "10e13ca2ff751be08840048efc151504e28562082c7d715a2503c0f61154e081",
+        "Kernels/sigma_focus_ring_time": "97731eab6dc8be5a08aa58cafd9f4cb87f44c5e690e5a97303c2e691178845fc",
+        "Variables/sigma_focus_ring": "5f3159c38f1d6ffbe34a5ba5a9e7453912883c8ee914c388eb4b49d061d825f5",
+        "Postprocessors/focus_ring_net_surface_current": "4356b44510c86785633d8484fbff53f6339b34b7e7426c9d330e7c35c9d17273",
+        "Postprocessors/focus_ring_electron_primary_flux": "63749301fdb0bd8227f36bd4713e3314dabc2926e46004a04ce14c8f7ada3167",
+        "Postprocessors/focus_ring_O2p_flux": "247e1c0d93a9cea1bd4ee8a05433980a5035d17300f746590626556c913a74ef",
+        "Postprocessors/focus_ring_Op_flux": "e76263fd2fc91944cf075d05318e88cabb22bc23fb90a79ffa28cf9fa255384a",
+        "Postprocessors/focus_ring_Om_flux": "bbdde2a652723135f2775b178f3c269a9e555fa5e871dc3fa04023235352003a"
+      },
+      "physical_unit": "A/m^2",
+      "charges": {
+        "O2p": 1,
+        "Op": 1,
+        "Om": -1,
+        "e": -1
+      },
+      "json_ion_surface_current": {
+        "electron_wall_number_flux": "e_wall_number_flux"
+      },
+      "focus_ring_json_BC_names": [
+        "O2p_focus_ring_dielectric",
+        "Om_focus_ring_dielectric",
+        "Op_focus_ring_dielectric",
+        "e_focus_ring_dielectric",
+        "e_energy_focus_ring_dielectric"
+      ],
+      "resolved_consumer_edges": [
+        "focus_ring_net_surface_current_density -> Kernels/sigma_focus_ring_surface_current[PhysicsLowerDSurfaceCurrent,variable=sigma_focus_ring,block=focus_ring_surface]",
+        "sigma_focus_ring -> Kernels/sigma_focus_ring_time[ADTimeDerivative,block=focus_ring_surface]",
+        "focus_ring_net_surface_current_density -> Postprocessors/focus_ring_net_surface_current[ADSideIntegralFunctorPostprocessor,boundary=plasma_focus_ring]",
+        "e_wall_number_flux -> Postprocessors/focus_ring_electron_primary_flux[boundary=plasma_focus_ring]",
+        "O2p/Op/Om_wall_number_flux -> their respective focus_ring_*_flux Postprocessors[boundary=plasma_focus_ring]"
+      ]
+    }
+  },
+  "static_negative_tests": {
+    "total": 34,
+    "rejected": 34,
+    "per_case": 17,
+    "scope": "synthetic static parser tests only",
+    "classes": [
+      "missing focus current producer",
+      "wrong property",
+      "wrong factory",
+      "wrong ion flux order",
+      "reversed negative ion sign",
+      "reversed electron sign",
+      "wrong elementary charge scale",
+      "wrong Lower-D source",
+      "wrong Lower-D state",
+      "wrong current observer Functor",
+      "wrong focus-ring boundary",
+      "wrong electron observer Functor",
+      "wrong O2p observer Functor",
+      "duplicate explicit owner",
+      "wrong JSON electron flux",
+      "wrong Om charge",
+      "wrong focus dielectric BC type"
+    ]
+  },
+  "generated_CXX_contract": {
+    "material_object_name": "focus_ring_surface_current",
+    "type": "ADParsedFunctorMaterial",
+    "property_name": "focus_ring_net_surface_current_density",
+    "functor_names": [
+      "O2p_wall_number_flux",
+      "Op_wall_number_flux",
+      "Om_wall_number_flux",
+      "e_wall_number_flux"
+    ],
+    "functor_symbols": [
+      "gi",
+      "gop",
+      "gm",
+      "ge"
+    ],
+    "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+    "generation_condition": "C2 JSON ion wall/BC selected; one DDContinuityEq Action; selected species O2p,Om,Op; add_functor_material; see Chemistry.C lines 1395-1555",
+    "runtime_actual_created": "NOT_RUN",
+    "preexisting_explicit_identical_object": "YES in each C0",
+    "owner_resolution": "HOLD_CUTOVER_REQUIRED"
+  },
+  "critical_finding": "The current P3-X disposable C0 retains FunctorMaterials/focus_ring_surface_current with property_name focus_ring_net_surface_current_density; Chemistry.C C2 also attempts to add focus_ring_surface_current with the same property. Without a narrowly scoped P4-X retirement, the static owner specification is duplicative. Sign/units match but uniqueness is NOT PASS.",
+  "gates": {
+    "P2_source": "PASS",
+    "P3X_source": "PASS",
+    "P4C3_input_provenance_and_signed_formula": "PASS",
+    "P4C3_single_current_owner": "HOLD_STATIC_COLLISION",
+    "P4X_source_cutover": "NOT_RUN",
+    "P5_Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "required_handoff": [
+    "P4-X: retire exact old FunctorMaterials/focus_ring_surface_current in disposable C0 under file/block SHA gate, preserve sigma_focus_ring_lower-D kernel and postprocessors and non-target bytes; prove exactly one current producer after C2 generation",
+    "P4-X/P5: verify canonical ion wall flux and e_wall_number_flux live bindings, sign, charge source count and boundary plasma_focus_ring",
+    "P5: Native --check-input, live Functor Warehouse/FV BC/LowerD owner uniqueness and semantic compatibility; science remains separate"
+  ],
+  "local_audit": {
+    "script": "p4_c3_verify.py",
+    "script_sha256": "87eeb2dc07b4cda35f97a1a1f036f9054208a245c1bdfe505529f39939b02ad5",
+    "receipt": "p4-c3-independent-receipt.json",
+    "receipt_sha256": "254a456c78c39ff096ef00856f3dab1a8bfd760c064e37d7ea5b7ead22d530a5"
+  },
+  "mutation_scope": "only isolated evidence-branch JSON; unchanged PR665/main, native scientific workflow NOT_RUN; no private EI raw data"
+}
