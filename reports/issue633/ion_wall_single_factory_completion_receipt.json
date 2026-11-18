@@ -1,0 +1,63 @@
+{
+  "schema": "issue633.ion_wall_single_factory.source_build.v1",
+  "scope": "Fully eliminate duplicate old PhysicsIonWallFluxMaterial C++ implementation and temporary IonWallC2Detail namespace, migrate maintained input paths; P2/P3 science remains separate.",
+  "base_pr": 665,
+  "stacked_pr": 679,
+  "base_integration_head": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
+  "source_branch": "issue-633-ion-wall-single-factory-20261118",
+  "post_validation_branch_head_before_receipt": "50dcd5eea94ace76847cee7fd6d117b5dff4bc3d",
+  "permanent_source_git_blobs": {
+    "new_wall_CPP": "c965e1c2de9d1ba8eec6f3180c9eaeb5ca324fde",
+    "new_wall_header": "b5b03c9fdd128c4f4fe39c0ac7149b56e56ee2ae",
+    "action_uses_new_factory": true,
+    "action_git_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "c2_regression_test_blob": "b4bfbe29f05c005e51b1be1382f9c149890ce8ef"
+  },
+  "deleted_files": [
+    "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C",
+    "physics_app/include/functormaterials/PhysicsIonWallFluxMaterial.h"
+  ],
+  "registration": "registerMooseObject(\"PhysicsApp\", IonWallFluxMaterial);",
+  "internal_helper_namespace": "anonymous with unique ionWall* symbols",
+  "temporary_IonWallC2Detail_present": false,
+  "physical_parity": "Prior old vs new C++ full-source comparison after normalizing only class/helper identities and one comment: exact string equality, zero unrelated source lines changed.",
+  "historical_inputs": "Original archived 10/11-layer inputs SHA and raw bytes unmodified; old Factory names recognized as historical input only, canonical scratch output new IonWallFluxMaterial.",
+  "verified_ci": [
+    {
+      "run_id": 44280896854,
+      "tested_head": "9e0c2563026c1c77b9164a0212cbe22c8c69ad28",
+      "conclusion": "success",
+      "pytest_count": 578,
+      "native_P1_build": "PASS",
+      "ci_source_P0_artifact_id": 14415829444,
+      "ci_native_P1_artifact_id": 14417860608,
+      "binary_sha256_CI_record": "38f0c47af893b51d7acbdecf717308be6a18ad84267588fcd79d5e658aba082e"
+    },
+    {
+      "run_id": 44281956063,
+      "tested_head": "ab4ea975f39dcfca1736410c3d932c93964bfc6f",
+      "conclusion": "success",
+      "pytest_count": 614,
+      "native_P1_build": "PASS",
+      "source_test_artifact_id": 14417306980,
+      "source_test_artifact_zip_sha256": "0984647f444c35542724a78c5e70985f6682ec00f6c70b61e0344509812853d6",
+      "test_log_sha256": "0e9b27935151d48ff4836d8cd127272b5bef5e16f3c78d04ba4cc2b85dd78b18",
+      "native_build_artifact_id": 14417278324,
+      "native_build_artifact_zip_sha256": "89a5d7ce57793d3bbbac8433c4618ae77b03577e34109c9b70d4ccc76cc1a655",
+      "build_log_sha256": "1414595b68433a1ff3101a78a1853fe0855d021a07e23ac5dce04acf0c14fdce",
+      "binary_sha256_CI_record": "75dbb3e2eff81e50f736cd2e451e1c7935515594b810e85b8dbf3ed7c7665c6f"
+    }
+  ],
+  "binary_bytes_in_artifact": false,
+  "binary_sha_claim": "CI sha256sum of built executable verified against downloadable record; actual executable bytes were not uploaded for separate local rehash.",
+  "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+  "one_shot_validation_workflow": "REMOVED_AFTER_SUCCESS; ABSENCE_READBACK_PASS",
+  "source_only_gate": "PASS",
+  "native_P1_unity_build": "PASS",
+  "native_S6_417_941_check_input": "NOT_RUN_FOR_THIS_REFACTOR",
+  "native_P05_factory_warehouse": "NOT_RUN",
+  "native_science": "SCIENCE_HOLD",
+  "main_modified": false,
+  "protected_private_rate_bytes_accessed": false,
+  "original_ion_wall_physics_changed": false
+}
