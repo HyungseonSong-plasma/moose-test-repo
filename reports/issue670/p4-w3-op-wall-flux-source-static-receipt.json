@@ -1,0 +1,107 @@
+{
+  "schema": "issue670.p4-w3.op-wall.source-bound.v1",
+  "task_id": "P4-W3",
+  "pr665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "readback_revalidated_source_blobs": {
+    "chemistry_cpp": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "ddcontinuity_cpp": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "legacy_op_wall_cpp": "215e9c81720e6813be22a8a51405fe99639cf0ab",
+    "new_ion_wall_cpp": "101586edf05ed19525072b4a43c181ba57dc3589",
+    "preflight": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+    "json_417": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "json_941": "9568e2cae6640a755f9403c4f58e077c801b998c"
+  },
+  "actual_input_evidence": {
+    "p3x_artifact_id": 14405784430,
+    "p3x_ci_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44256823392",
+    "artifact_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "p3x_stage_ci_head": "3bc1438fc5e25890536d3456c372ef1e600a3f04",
+    "note": "P3-X artifact stage_receipt.source_head is inherited P1 base 9c15a4..., not latest PR665 head; relevant current source Git blobs reread and verified unchanged",
+    "cases": {
+      "417": {
+        "layers_file_sha256": "11/11 PASS",
+        "C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "op_legacy_block_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e",
+        "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef"
+      },
+      "941": {
+        "layers_file_sha256": "11/11 PASS",
+        "C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "op_legacy_block_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e",
+        "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+      }
+    }
+  },
+  "original_op": {
+    "section": "FunctorMaterials",
+    "object": "atomic_positive_ion_wall_flux",
+    "factory": "PhysicsIonWallFluxMaterial",
+    "producer_count_per_case": 1,
+    "species_id": "Op",
+    "density": "n_op_physical",
+    "mobility": "Op_mobility",
+    "potential": "potential",
+    "gas_temperature": "temperature",
+    "charge_number": 1,
+    "molar_mass_kg_mol": 0.016,
+    "sticking": 1,
+    "ion_temperature_eV": 0,
+    "migration_gate_smoothing_width_V_m": 0.001,
+    "use_element_gradient_for_potential": true,
+    "output": "Op_wall_number_flux"
+  },
+  "generated_op_expected": {
+    "source": "PlasmasAction::act add_functor_material",
+    "factory": "IonWallFluxMaterial",
+    "object_name": "Op_wall",
+    "species_id": "Op",
+    "density": "Op_number_density",
+    "mobility": "Op_mobility",
+    "potential": "potential",
+    "gas_temperature": "temperature",
+    "charge_number": 1,
+    "molar_mass_kg_mol": 0.016,
+    "sticking": 1,
+    "ion_temperature_eV": 0,
+    "migration_gate_smoothing_width_V_m": 0.001,
+    "use_element_gradient_for_potential": true,
+    "output": "Op_wall_number_flux"
+  },
+  "consumers": [
+    "Op_wall general FVFunctorNeumannBC (one generated object across two JSON groups)",
+    "Op_cover_dielectric",
+    "Op_wafer_dielectric",
+    "Op_focus_ring_dielectric",
+    "cover_surface_current",
+    "wafer_surface_current",
+    "focus_ring_surface_current",
+    "three Op wall Postprocessors"
+  ],
+  "sign_units": "outward particle flux n[1/m^3] * mobility[m^2/(V s)] * outward positive drift field[V/m]; thermal surface+ outward migration, charge z=+1; mass flux = number flux * 0.016/N_A; surface current Op term +e*gop",
+  "static_double_owner_collision": {
+    "found": true,
+    "per_case_explicit_wall_material_count": 1,
+    "per_case_new_generated_wall_material_expected": 1,
+    "shared_property": "Op_wall_number_flux",
+    "preflight_expected_guard": "P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_3 (all 3 retained ion wall materials)",
+    "guard_execution": "NOT_RUN in this P4-W3 audit",
+    "runtime_duplicate_instantiation": "NOT_TESTED"
+  },
+  "mutation_tests": {
+    "cases": 2,
+    "per_case": 27,
+    "rejected": 54,
+    "class": "offline source/schema fault injections only"
+  },
+  "independent_local_full_receipt_sha256": "f4c4d0eb082b121dc609bdd1a912aaf4dfa4ac13fc69cfac1bd3e3f3eb76f417",
+  "unresolved": [
+    "P4-X must eliminate the retained original Op wall Material in disposable Scratch or otherwise prove a single authoritative Op_wall_number_flux provider; preserve unrelated density aliases, diagnostics and surface-current consumers",
+    "Op mobility coefficient duplicate owner tracked in P4-T3",
+    "Native P05 Warehouse and face orientation/physics parity require later execution"
+  ],
+  "verdict": "P4-W3_PARAMETER_SOURCE_PARITY_PASS__GENERATED_SINGLE_OWNER_HOLD",
+  "newonly_native_p2": "HOLD",
+  "native_p3": "NOT_RUN",
+  "native_p4": "NOT_RUN",
+  "science": "SCIENCE_HOLD"
+}
