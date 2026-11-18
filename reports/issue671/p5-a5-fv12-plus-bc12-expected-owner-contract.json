@@ -1,0 +1,1286 @@
+{
+  "schema": "issue671.p5_a5.fv_owner_expected_12plus12.v1",
+  "task_id": "P5-A5",
+  "issue": 671,
+  "upstream_issue": 670,
+  "verdict": "PASS_SOURCE_BOUND_EXPECTED_FV_OWNER_MATRIX_12_KERNELS_12_BCS_PER_CASE__NATIVE_HOLD",
+  "scope": "P5-A5 is owner expectation/source contract only. Generated C++ Warehouse objects have no input block bytes or block SHA. Do not claim 24 objects instantiated, one binary tested, or Native P2 PASS.",
+  "source": {
+    "PR665_exact_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "historical_original_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "P1_0_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p1_actual_input_artifact_id": 14372278070,
+    "p1_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "P3_X_CI_run": 44256823392,
+    "P3_X_actual_source_artifact_id": 14405784430,
+    "P3_X_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "P3_X_final_pr665_merged": true,
+    "code_blobs_sha1": {
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "ci/p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+      "physics_app/src/fvbcs/FVLogMolarDielectricFluxBC.C": "08306f4545b806368a2c90bac0c83dacc5e7c9b5"
+    },
+    "private_rate_raw_bytes_accessed": false
+  },
+  "verified_evidence": {
+    "archived_2cases_11layer_SHA_count": 22,
+    "p3x_2cases_11layer_SHA_count": 22,
+    "before_ion_26blocks_sha_count": 52,
+    "source_ion_26to0_per_case": true,
+    "zip_integrity_p1_p3x": "PASS",
+    "original_wafer_bc_retirement_and_other_owner_bytes": "P3X exact deletion/source preserved per upstream receipts",
+    "real_stage_json_overlay_sha": "PASS_BOTH",
+    "synthetic_mutations_rejected": 30,
+    "synthetic_mutations_total": 30,
+    "verifier_script_sha256": "387b40cd409ca8f844464b3d597d727470dfdec6c0858acfb13a96867a0270ac",
+    "detailed_independent_json_sha256": "690884b8abdf266deff5eb55370592c18e922787c49993365aa5da4a4efb48a5",
+    "authored_verifier_mode": "independent python zip CRC + SHA/file+old block extraction + JSON/overlay+BC contract + in-memory negatives. This is not an MOOSE P05 execution."
+  },
+  "normalization": {
+    "JSON_general_groups": [
+      "inlet outlet",
+      "plasma_electrode plasma_metal plasma_right"
+    ],
+    "general_wall_name_occurs_twice_in_JSON_per_ion": true,
+    "runtime_unique_FVFunctorNeumannBC_per_ion": 1,
+    "ion_general_BC_total": 3,
+    "ion_dielectric_BC_total": 9,
+    "total_expected_ion_BCs": 12,
+    "general_FVFunctorNeumann_factor": "-1/N_A",
+    "dielectric_FV_flux_residual": "signed_number_flux/N_A",
+    "positive_signed_flux_direction": "outward plasma",
+    "_note": "Do not count 2 JSON groups x 3 ions as 6 different general wall BC objects."
+  },
+  "expectations": {
+    "kernel_total_per_case": 12,
+    "bc_total_per_case": 12,
+    "total_per_case": 24,
+    "case_isolation": "417 and 941 are independent Warehouse runs, not 48 objects in one Warehouse",
+    "kernel_factories": [
+      [
+        "time",
+        "FVLogMolarTimeDerivative"
+      ],
+      [
+        "diffusion",
+        "FVLogMolarDiffusion"
+      ],
+      [
+        "drift",
+        "FVLogMolarElectrostaticDrift"
+      ],
+      [
+        "source",
+        "FVCoupledForce"
+      ]
+    ],
+    "bc_factories": [
+      {
+        "suffix": "wall",
+        "factory": "FVFunctorNeumannBC",
+        "boundaries": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ]
+      },
+      {
+        "suffix": "cover_dielectric",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "boundaries": [
+          "plasma_cover"
+        ]
+      },
+      {
+        "suffix": "wafer_dielectric",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "boundaries": [
+          "plasma_wafer"
+        ]
+      },
+      {
+        "suffix": "focus_ring_dielectric",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "boundaries": [
+          "plasma_focus_ring"
+        ]
+      }
+    ],
+    "kernel_owners": [
+      {
+        "section": "FVKernels",
+        "object_name": "O2p_time",
+        "factory_type": "FVLogMolarTimeDerivative",
+        "variable": "log_O2p",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "O2p_diffusion",
+        "factory_type": "FVLogMolarDiffusion",
+        "variable": "log_O2p",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "coeff": "O2p_diffusivity"
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "O2p_drift",
+        "factory_type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_O2p",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "mobility": "O2p_mobility",
+        "potential": "potential",
+        "carrier": "carrier_one",
+        "charge_number": 1,
+        "advected_interp_method": "upwind",
+        "use_element_gradient_for_potential": true,
+        "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "O2p_source",
+        "factory_type": "FVCoupledForce",
+        "variable": "log_O2p",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "v": "S_O2p_molar",
+        "coef": 1,
+        "units": "mol/(m^3 s)",
+        "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "Om_time",
+        "factory_type": "FVLogMolarTimeDerivative",
+        "variable": "log_Om",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "Om_diffusion",
+        "factory_type": "FVLogMolarDiffusion",
+        "variable": "log_Om",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "coeff": "Om_diffusivity"
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "Om_drift",
+        "factory_type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_Om",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "mobility": "Om_mobility",
+        "potential": "potential",
+        "carrier": "carrier_one",
+        "charge_number": -1,
+        "advected_interp_method": "upwind",
+        "use_element_gradient_for_potential": true,
+        "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "Om_source",
+        "factory_type": "FVCoupledForce",
+        "variable": "log_Om",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "v": "S_Om_molar",
+        "coef": 1,
+        "units": "mol/(m^3 s)",
+        "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "Op_time",
+        "factory_type": "FVLogMolarTimeDerivative",
+        "variable": "log_Op",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "Op_diffusion",
+        "factory_type": "FVLogMolarDiffusion",
+        "variable": "log_Op",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "coeff": "Op_diffusivity"
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "Op_drift",
+        "factory_type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_Op",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "mobility": "Op_mobility",
+        "potential": "potential",
+        "carrier": "carrier_one",
+        "charge_number": 1,
+        "advected_interp_method": "upwind",
+        "use_element_gradient_for_potential": true,
+        "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+      },
+      {
+        "section": "FVKernels",
+        "object_name": "Op_source",
+        "factory_type": "FVCoupledForce",
+        "variable": "log_Op",
+        "block": "plasma",
+        "generation": "DDContinuityEq::addFVKernels",
+        "generated_object_block_sha256": null,
+        "v": "S_Op_molar",
+        "coef": 1,
+        "units": "mol/(m^3 s)",
+        "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+      }
+    ],
+    "bc_owners": [
+      {
+        "section": "FVBCs",
+        "object_name": "O2p_wall",
+        "factory_type": "FVFunctorNeumannBC",
+        "variable": "log_O2p",
+        "boundary": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "charge_number": 1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "O2p_wall_number_flux",
+        "functor_argument": "functor",
+        "flux_to_molar": "-1/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "O2p_cover_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "boundary": [
+          "plasma_cover"
+        ],
+        "charge_number": 1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "O2p_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "O2p_wafer_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "boundary": [
+          "plasma_wafer"
+        ],
+        "charge_number": 1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "O2p_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "O2p_focus_ring_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "boundary": [
+          "plasma_focus_ring"
+        ],
+        "charge_number": 1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "O2p_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "Om_wall",
+        "factory_type": "FVFunctorNeumannBC",
+        "variable": "log_Om",
+        "boundary": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "charge_number": -1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "Om_wall_number_flux",
+        "functor_argument": "functor",
+        "flux_to_molar": "-1/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "Om_cover_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "boundary": [
+          "plasma_cover"
+        ],
+        "charge_number": -1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "Om_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "Om_wafer_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "boundary": [
+          "plasma_wafer"
+        ],
+        "charge_number": -1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "Om_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "Om_focus_ring_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "boundary": [
+          "plasma_focus_ring"
+        ],
+        "charge_number": -1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "Om_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "Op_wall",
+        "factory_type": "FVFunctorNeumannBC",
+        "variable": "log_Op",
+        "boundary": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "charge_number": 1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "Op_wall_number_flux",
+        "functor_argument": "functor",
+        "flux_to_molar": "-1/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "Op_cover_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "boundary": [
+          "plasma_cover"
+        ],
+        "charge_number": 1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "Op_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "Op_wafer_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "boundary": [
+          "plasma_wafer"
+        ],
+        "charge_number": 1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "Op_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      },
+      {
+        "section": "FVBCs",
+        "object_name": "Op_focus_ring_dielectric",
+        "factory_type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "boundary": [
+          "plasma_focus_ring"
+        ],
+        "charge_number": 1,
+        "block": "plasma",
+        "generation": "PlasmasAction::act(add_bc)",
+        "functor": "Op_wall_number_flux",
+        "functor_argument": "signed_number_flux",
+        "flux_to_molar": "signed_number_flux/N_A",
+        "generated_object_block_sha256": null
+      }
+    ]
+  },
+  "case_evidence": {
+    "417": {
+      "case": "S6-417-407-2069-H25",
+      "stage_artifact_prefix": "cases/417/experiments/Issue395_powered_chemistry_ladder/",
+      "staged_11_input_file_shas_verified": 11,
+      "original_11_input_shas_verified": 11,
+      "original_native_ion_block_shas_recomputed": 26,
+      "native_ion_owners_before": 26,
+      "native_ion_owners_after_staging": 0,
+      "expected_new_FVKernels": 12,
+      "expected_new_FVBCs": 12,
+      "staged_newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "staged_layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "json_selected_ion_species": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "fvm_species_exact": "O2p Om Op",
+      "json_general_wall_occurrences_each_species": 2,
+      "normalized_single_BC_owner_per_species": true,
+      "negative_test_rejections": 15,
+      "owner_list_source": {
+        "kernels": [
+          {
+            "section": "FVKernels",
+            "object_name": "O2p_time",
+            "factory_type": "FVLogMolarTimeDerivative",
+            "variable": "log_O2p",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "O2p_diffusion",
+            "factory_type": "FVLogMolarDiffusion",
+            "variable": "log_O2p",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "coeff": "O2p_diffusivity"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "O2p_drift",
+            "factory_type": "FVLogMolarElectrostaticDrift",
+            "variable": "log_O2p",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "mobility": "O2p_mobility",
+            "potential": "potential",
+            "carrier": "carrier_one",
+            "charge_number": 1,
+            "advected_interp_method": "upwind",
+            "use_element_gradient_for_potential": true,
+            "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "O2p_source",
+            "factory_type": "FVCoupledForce",
+            "variable": "log_O2p",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "v": "S_O2p_molar",
+            "coef": 1,
+            "units": "mol/(m^3 s)",
+            "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Om_time",
+            "factory_type": "FVLogMolarTimeDerivative",
+            "variable": "log_Om",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Om_diffusion",
+            "factory_type": "FVLogMolarDiffusion",
+            "variable": "log_Om",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "coeff": "Om_diffusivity"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Om_drift",
+            "factory_type": "FVLogMolarElectrostaticDrift",
+            "variable": "log_Om",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "mobility": "Om_mobility",
+            "potential": "potential",
+            "carrier": "carrier_one",
+            "charge_number": -1,
+            "advected_interp_method": "upwind",
+            "use_element_gradient_for_potential": true,
+            "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Om_source",
+            "factory_type": "FVCoupledForce",
+            "variable": "log_Om",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "v": "S_Om_molar",
+            "coef": 1,
+            "units": "mol/(m^3 s)",
+            "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Op_time",
+            "factory_type": "FVLogMolarTimeDerivative",
+            "variable": "log_Op",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Op_diffusion",
+            "factory_type": "FVLogMolarDiffusion",
+            "variable": "log_Op",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "coeff": "Op_diffusivity"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Op_drift",
+            "factory_type": "FVLogMolarElectrostaticDrift",
+            "variable": "log_Op",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "mobility": "Op_mobility",
+            "potential": "potential",
+            "carrier": "carrier_one",
+            "charge_number": 1,
+            "advected_interp_method": "upwind",
+            "use_element_gradient_for_potential": true,
+            "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Op_source",
+            "factory_type": "FVCoupledForce",
+            "variable": "log_Op",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "v": "S_Op_molar",
+            "coef": 1,
+            "units": "mol/(m^3 s)",
+            "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+          }
+        ],
+        "BCs": [
+          {
+            "section": "FVBCs",
+            "object_name": "O2p_wall",
+            "factory_type": "FVFunctorNeumannBC",
+            "variable": "log_O2p",
+            "boundary": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "O2p_wall_number_flux",
+            "functor_argument": "functor",
+            "flux_to_molar": "-1/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "O2p_cover_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_O2p",
+            "boundary": [
+              "plasma_cover"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "O2p_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "O2p_wafer_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_O2p",
+            "boundary": [
+              "plasma_wafer"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "O2p_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "O2p_focus_ring_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_O2p",
+            "boundary": [
+              "plasma_focus_ring"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "O2p_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Om_wall",
+            "factory_type": "FVFunctorNeumannBC",
+            "variable": "log_Om",
+            "boundary": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "charge_number": -1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Om_wall_number_flux",
+            "functor_argument": "functor",
+            "flux_to_molar": "-1/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Om_cover_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Om",
+            "boundary": [
+              "plasma_cover"
+            ],
+            "charge_number": -1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Om_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Om_wafer_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Om",
+            "boundary": [
+              "plasma_wafer"
+            ],
+            "charge_number": -1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Om_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Om_focus_ring_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Om",
+            "boundary": [
+              "plasma_focus_ring"
+            ],
+            "charge_number": -1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Om_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Op_wall",
+            "factory_type": "FVFunctorNeumannBC",
+            "variable": "log_Op",
+            "boundary": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Op_wall_number_flux",
+            "functor_argument": "functor",
+            "flux_to_molar": "-1/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Op_cover_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Op",
+            "boundary": [
+              "plasma_cover"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Op_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Op_wafer_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Op",
+            "boundary": [
+              "plasma_wafer"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Op_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Op_focus_ring_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Op",
+            "boundary": [
+              "plasma_focus_ring"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Op_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          }
+        ]
+      }
+    },
+    "941": {
+      "case": "S6-941-407-2069-H25",
+      "stage_artifact_prefix": "cases/941/experiments/Issue395_powered_chemistry_ladder/",
+      "staged_11_input_file_shas_verified": 11,
+      "original_11_input_shas_verified": 11,
+      "original_native_ion_block_shas_recomputed": 26,
+      "native_ion_owners_before": 26,
+      "native_ion_owners_after_staging": 0,
+      "expected_new_FVKernels": 12,
+      "expected_new_FVBCs": 12,
+      "staged_newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "staged_layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "json_selected_ion_species": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "fvm_species_exact": "O2p Om Op",
+      "json_general_wall_occurrences_each_species": 2,
+      "normalized_single_BC_owner_per_species": true,
+      "negative_test_rejections": 15,
+      "owner_list_source": {
+        "kernels": [
+          {
+            "section": "FVKernels",
+            "object_name": "O2p_time",
+            "factory_type": "FVLogMolarTimeDerivative",
+            "variable": "log_O2p",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "O2p_diffusion",
+            "factory_type": "FVLogMolarDiffusion",
+            "variable": "log_O2p",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "coeff": "O2p_diffusivity"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "O2p_drift",
+            "factory_type": "FVLogMolarElectrostaticDrift",
+            "variable": "log_O2p",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "mobility": "O2p_mobility",
+            "potential": "potential",
+            "carrier": "carrier_one",
+            "charge_number": 1,
+            "advected_interp_method": "upwind",
+            "use_element_gradient_for_potential": true,
+            "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "O2p_source",
+            "factory_type": "FVCoupledForce",
+            "variable": "log_O2p",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "v": "S_O2p_molar",
+            "coef": 1,
+            "units": "mol/(m^3 s)",
+            "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Om_time",
+            "factory_type": "FVLogMolarTimeDerivative",
+            "variable": "log_Om",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Om_diffusion",
+            "factory_type": "FVLogMolarDiffusion",
+            "variable": "log_Om",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "coeff": "Om_diffusivity"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Om_drift",
+            "factory_type": "FVLogMolarElectrostaticDrift",
+            "variable": "log_Om",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "mobility": "Om_mobility",
+            "potential": "potential",
+            "carrier": "carrier_one",
+            "charge_number": -1,
+            "advected_interp_method": "upwind",
+            "use_element_gradient_for_potential": true,
+            "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Om_source",
+            "factory_type": "FVCoupledForce",
+            "variable": "log_Om",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "v": "S_Om_molar",
+            "coef": 1,
+            "units": "mol/(m^3 s)",
+            "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Op_time",
+            "factory_type": "FVLogMolarTimeDerivative",
+            "variable": "log_Op",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Op_diffusion",
+            "factory_type": "FVLogMolarDiffusion",
+            "variable": "log_Op",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "coeff": "Op_diffusivity"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Op_drift",
+            "factory_type": "FVLogMolarElectrostaticDrift",
+            "variable": "log_Op",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "mobility": "Op_mobility",
+            "potential": "potential",
+            "carrier": "carrier_one",
+            "charge_number": 1,
+            "advected_interp_method": "upwind",
+            "use_element_gradient_for_potential": true,
+            "boundaries_to_avoid": "derive from JSON ion wall BC group sidesets"
+          },
+          {
+            "section": "FVKernels",
+            "object_name": "Op_source",
+            "factory_type": "FVCoupledForce",
+            "variable": "log_Op",
+            "block": "plasma",
+            "generation": "DDContinuityEq::addFVKernels",
+            "generated_object_block_sha256": null,
+            "v": "S_Op_molar",
+            "coef": 1,
+            "units": "mol/(m^3 s)",
+            "residual_semantics": "FVCoupledForce consumes +1 molar source with negative residual"
+          }
+        ],
+        "BCs": [
+          {
+            "section": "FVBCs",
+            "object_name": "O2p_wall",
+            "factory_type": "FVFunctorNeumannBC",
+            "variable": "log_O2p",
+            "boundary": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "O2p_wall_number_flux",
+            "functor_argument": "functor",
+            "flux_to_molar": "-1/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "O2p_cover_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_O2p",
+            "boundary": [
+              "plasma_cover"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "O2p_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "O2p_wafer_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_O2p",
+            "boundary": [
+              "plasma_wafer"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "O2p_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "O2p_focus_ring_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_O2p",
+            "boundary": [
+              "plasma_focus_ring"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "O2p_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Om_wall",
+            "factory_type": "FVFunctorNeumannBC",
+            "variable": "log_Om",
+            "boundary": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "charge_number": -1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Om_wall_number_flux",
+            "functor_argument": "functor",
+            "flux_to_molar": "-1/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Om_cover_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Om",
+            "boundary": [
+              "plasma_cover"
+            ],
+            "charge_number": -1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Om_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Om_wafer_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Om",
+            "boundary": [
+              "plasma_wafer"
+            ],
+            "charge_number": -1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Om_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Om_focus_ring_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Om",
+            "boundary": [
+              "plasma_focus_ring"
+            ],
+            "charge_number": -1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Om_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Op_wall",
+            "factory_type": "FVFunctorNeumannBC",
+            "variable": "log_Op",
+            "boundary": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Op_wall_number_flux",
+            "functor_argument": "functor",
+            "flux_to_molar": "-1/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Op_cover_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Op",
+            "boundary": [
+              "plasma_cover"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Op_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Op_wafer_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Op",
+            "boundary": [
+              "plasma_wafer"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Op_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          },
+          {
+            "section": "FVBCs",
+            "object_name": "Op_focus_ring_dielectric",
+            "factory_type": "FVLogMolarDielectricFluxBC",
+            "variable": "log_Op",
+            "boundary": [
+              "plasma_focus_ring"
+            ],
+            "charge_number": 1,
+            "block": "plasma",
+            "generation": "PlasmasAction::act(add_bc)",
+            "functor": "Op_wall_number_flux",
+            "functor_argument": "signed_number_flux",
+            "flux_to_molar": "signed_number_flux/N_A",
+            "generated_object_block_sha256": null
+          }
+        ]
+      }
+    }
+  },
+  "P05_static_guard": {
+    "code_source": "DDContinuityEq::checkIntegrity",
+    "FVKernel_Warehouse_queries": [
+      "FVElementalKernel",
+      "FVFluxKernel"
+    ],
+    "FVBC_Warehouse_queries": [
+      "FVFluxBC",
+      "FVDirichletBC"
+    ],
+    "required_selection": "AttribSysNum(current nonlinear system), AttribThread(0)",
+    "criteria": "for each selected variable log_O2p,log_Om,log_Op reject missing, unexpected or duplicate name/Factory or any extra Native kernel/BC on that variable",
+    "expected_FVKernel_types": "exact 4 per selected species",
+    "expected_FVBC_types": "derived from normalized JSON; C2 validates 4 unique BCs per ion in S6, not generic hardcoded 4 per all fixtures",
+    "run_status": "CODE_READ_STATIC_ONLY_NOT_EXECUTED"
+  },
+  "blockers": [
+    {
+      "name": "P4_X_SOURCE_OWNER_CUTOVER",
+      "status": "HOLD",
+      "why": "Issue #670 still OPEN and P4-X exact source integration not accepted; latest P3-X stage still exposes production/legacy duplicate provider paths.",
+      "remediation": "P4-X single integration; rerun input SHA and preflight on exact current merged source before P5-0 build."
+    },
+    {
+      "name": "DUPLICATE_ION_TRANSPORT_FUNCTOR",
+      "status": "HOLD_SOURCE_COLLISION",
+      "producers": "legacy constants O2p/Om/Op mobility and diffusivity vs generated DDTransportMaterial constant mode",
+      "required": "remove only six duplicate coeff outputs; retain carrier_one=1.0 for drift"
+    },
+    {
+      "name": "DUPLICATE_ION_WALL_FUNCTOR",
+      "status": "HOLD_SOURCE_COLLISION",
+      "producers": "legacy PhysicsIonWallFluxMaterial x3 vs new Chemistry IonWallFluxMaterial x3",
+      "required": "one owner per <ion>_wall_number_flux, preserve all real BC/density/Poisson consumers"
+    },
+    {
+      "name": "DUPLICATE_SURFACE_CURRENT",
+      "status": "HOLD_SOURCE_COLLISION",
+      "producers": "legacy cover,wafer,focus_ring net surface current x3 vs Chemistry auto generation",
+      "required": "preserve Lower-D sigma and signed charge paths with one producer"
+    },
+    {
+      "name": "P5_0_NATIVE_BINARY",
+      "status": "NOT_BUILT",
+      "why": "No common exact-HEAD PhysicsApp binary SHA or actual --check-input/P05 observation in this A5 task"
+    },
+    {
+      "name": "D8_NEWONLY_WAREHOUSE_FUNCTOR",
+      "status": "HOLD_NOT_OBSERVED",
+      "why": "RF/Maxwell/Poisson/dynamic consumer liveness needs Native P5."
+    }
+  ],
+  "gates": {
+    "P5_A5_EXPECTED_ION_FV_KERNEL_12": "PASS_SOURCE",
+    "P5_A5_EXPECTED_ION_FV_BC_12": "PASS_SOURCE",
+    "P5_A5_JSON_BOUNDARY_MERGE": "PASS_SOURCE",
+    "P5_A5_ORIGINAL_BLOCK_SHA": "PASS_52_52",
+    "P5_A5_NEWONLY_STAGE_SHA": "PASS_44_44_FILE_COMPARISONS",
+    "P5_A5_NEGATIVES": "PASS_30_30",
+    "P4_X": "HOLD",
+    "P5_0_SOURCE_BINARY_PIN": "PENDING",
+    "P5_B3_B4_C3_C4_WAREHOUSE": "NOT_RUN",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
