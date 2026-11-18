@@ -1,0 +1,120 @@
+{
+  "schema": "issue671.p5x.exact_head_9457191_same_w1_full_rf_d8_3ns.acceptance.v1",
+  "date_utc": "2026-11-18",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source": {
+    "pr": 665,
+    "head": "9457191f4c0693ae886586edd961965867ccd5c0",
+    "tree": "5444cfcba2d1cddd15322c4dc7f67cf23690b840",
+    "draft": true,
+    "merged_to_main": false
+  },
+  "workflow": {
+    "branch": "issue-671-p5x-exact-9457191-d8-full-rf-3ns-20261118",
+    "commit": "29b5a9622b6530065781dfd1330f6b5431b39957",
+    "run": 44409942970,
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "job_steps_success": 13,
+    "job_steps_total": 13
+  },
+  "exact_W1": {
+    "artifact_id": 14458195502,
+    "build_workflow_run": 44366325757,
+    "zip_sha256": "d0b83a2cde6bea28546399236494392e3317cda7eeedeb5a71aa30f975ed7bef",
+    "tar_sha256": "9622a3a37f2c144f622faec63e829fa7ef74dc2bebd5ed7fa7eec342bc3472eb",
+    "build_count": 1,
+    "physics_opt_sha256": "b327aea7f496809779dd233336d8c62d15ab021accdb13e552efe1a750c72e18",
+    "libraries_sha256": {
+      "libphysics-opt.so.0": "59f09eb9d88b42d5932bad848a7b3ff33faebfb843b3790247d868aea28abbee",
+      "libphysics_test-opt.so.0": "31abf727e4a40d7e2d91a6ba45d26f9d7b682cde198cf4d43188609c53e33db8"
+    },
+    "rebuild_performed": false
+  },
+  "actual_D8": {
+    "artifact_id": 14475669657,
+    "artifact_zip_sha256": "0348c6255d2a6e59a2c921fc8f4b7d47f5307259358bc74067216e543456e6f6",
+    "source_mode": "FULL_11_LAYER_S6_NEWONLY_WITH_PROTECTED_ORIGINAL_EI",
+    "staged_cases": [
+      "417",
+      "941"
+    ],
+    "maxwell_child": true,
+    "transfers": 7,
+    "observables_per_case": 34,
+    "physical_steps": 3,
+    "final_time_s": 3e-9,
+    "solver_exit_0_each": true,
+    "syntax_ok_each": true,
+    "all_original_11_layers_unchanged_each": true,
+    "private_EI_rates_protected_and_removed": true,
+    "postprocessors_validated": true,
+    "assembled_residual_evidence": "DISCRETE_VARIABLE_ASSEMBLED_RESIDUAL_L2_NOT_KERNEL_FUNCTION_ENTRY"
+  },
+  "independent_audit": {
+    "result": "PASS",
+    "checks_total": 257,
+    "checks_passed": 257,
+    "auditor_sha256": "7384534e8d0daabc9dabeb1f0e9a6b956ae5d9ef14a3c16e48e4d4b81494be3c",
+    "auditor_json_sha256": "f1222c9520864a0e4fe756ecc8666bcdc84315d9eb788cdf2cf778ec7add210e",
+    "original_zip_crc_pass": true,
+    "original_elf_and_libraries_sha_pass": true,
+    "w1_identity_byte_equal": true,
+    "baseline_520_D8_artifact_id": 14448238106,
+    "baseline_520_zip_sha256": "54d50a3f18336c3b95300f3adc0ff72d19cebfa19e38fffdc32dd2e040188248",
+    "comparison_tolerance": {
+      "physical_observables_30_per_case": {
+        "rtol": 1e-10,
+        "atol": 1e-16
+      },
+      "assembled_residual_l2_4_per_case": {
+        "atol": 1e-12
+      }
+    },
+    "cases": {
+      "417": {
+        "rf_P_abs_child_W": 209.31596771096,
+        "rf_P_abs_parent_W": 209.31596771096,
+        "observables_exact_equal_to_520": 29,
+        "observables_total": 34,
+        "physical_within_tolerance": "30/30",
+        "assembled_residual_within_tolerance": "4/4",
+        "cover_current_A": -3.6011286276022,
+        "wafer_current_A": -0.85181504110183,
+        "focus_current_A": -0.057864287198826,
+        "poisson_charge_C": 6.0425364377895e-8,
+        "poisson_source_integral": 6824.4954427714
+      },
+      "941": {
+        "rf_P_abs_child_W": 209.31597896021,
+        "rf_P_abs_parent_W": 209.31597896021,
+        "observables_exact_equal_to_520": 19,
+        "observables_total": 34,
+        "physical_within_tolerance": "30/30",
+        "assembled_residual_within_tolerance": "4/4",
+        "cover_current_A": -3.601129411267,
+        "wafer_current_A": -0.85181503581398,
+        "focus_current_A": -0.057864285539619,
+        "poisson_charge_C": 6.0425366778037e-8,
+        "poisson_source_integral": 6824.4957138455
+      }
+    }
+  },
+  "verdict": {
+    "exact_945_W1_binary_reuse": "PASS",
+    "P5X_D8_3ns_417_941": "PASS_SCOPED",
+    "P7_D8_BOUNDED_EVIDENCE": "PASS",
+    "P7_FINAL": "HOLD_SEPARATE_FINAL_WRITER_DECISION",
+    "P3_P4_100us": "NOT_RUN",
+    "science": "SCIENCE_HOLD",
+    "historical_hybrid": "KEEP_HOLD",
+    "main_merge": "NOT_AUTHORIZED"
+  },
+  "limitations": [
+    "Single W1 reused but 945/520 D8 receipt is numerically close, not byte-identical.",
+    "External 34 Postprocessors and discrete assembled variable L2 do not trace the kernel computeQpResidual function entry.",
+    "Sanitized artifacts do not export raw full stdout or protected EI rate table bytes.",
+    "3ns bounded coupled execution is not evidence of 100us stability/science equivalence."
+  ]
+}
