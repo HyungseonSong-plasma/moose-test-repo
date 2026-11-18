@@ -1,0 +1,125 @@
+{
+  "schema": "issue671.p5x.same_w1.actual_Warehouse_typed_inventory_gating_decision.v1",
+  "date_utc": "2026-11-18",
+  "task": "P5-X-WAREHOUSE",
+  "verdict": "P05_LIVE_INTEGRITY_NATIVE_417_941_PASS_BOTH__TYPE_REGISTRATION_EVIDENCE_HOLD_EXTERNAL_INTERPOSER_FAILURE",
+  "source": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "pr665_latest_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "w1_source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "git_diff_exactly_two_non_runtime_files": [
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "tests/test_issue633_newonly_run_species_schema.py"
+    ],
+    "w1_actual_binary_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "W1_elf_build_artifact": 14435245012,
+    "one_shared_ELF": true
+  },
+  "expected_owner_contract": {
+    "physics": "DDContinuityEq generated 3 ion states O2p,Om,Op x {Time,Diffusion,Drift,AggregatedSource}",
+    "fv_kernels": 12,
+    "fv_bcs": 12,
+    "electron_FE_BCs": 8,
+    "kernel_types": [
+      "FVLogMolarTimeDerivative",
+      "FVLogMolarDiffusion",
+      "FVLogMolarElectrostaticDrift",
+      "FVCoupledForce"
+    ],
+    "bc_types": [
+      "FVFunctorNeumannBC",
+      "FVLogMolarDielectricFluxBC"
+    ],
+    "electron_bc_types": [
+      "FEMElectronSheathBC",
+      "FEMElectronEnergySheathBC"
+    ],
+    "variables": {
+      "O2p": "log_O2p",
+      "Om": "log_Om",
+      "Op": "log_Op",
+      "e": "log_e"
+    },
+    "unique_expected_each_object": true,
+    "retired_Native_ion_26": true,
+    "source_git_blobs": {
+      "DDContinuityEq_C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "Chemistry_C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "case_417_json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "case_941_json": "9568e2cae6640a755f9403c4f58e077c801b998c"
+    }
+  },
+  "positive_previous_exact_W1": {
+    "run": 44322557957,
+    "artifact": 14436920479,
+    "CI_conclusion": "success",
+    "S6_417_native_exit0_syntax": true,
+    "S6_941_native_exit0_syntax": true,
+    "same_w1_16_negative_mutants_expected_rejection": "PASS_16_OF_16",
+    "guard": "Live C++ DDContinuityEq::checkIntegrity traverses TheWarehouse of FVElementalKernel + FVFluxKernel and FVFluxBC + FVDirichletBC; enforces for selected ions correct factory/type/name/variable and exactly-one, rejects unexpected owners. Electron FE BC source-generated count 8 is a separate requirement not covered by this FV guard.",
+    "receipt_commit": "b5c4cb8e32a5f7036db35962c7a68751505a5d8d",
+    "limitation": "The prior successful same-W1 Artifact has no per-object typed warehouse memory snapshot; clean P05 PASS proves consistency with C++ integrity checks but not an independently materialized owner listing. Electron 8 FE BC not shown as a raw live list."
+  },
+  "external_trace_probe": {
+    "intent": "Observe real successful FEProblemBase::addFVKernel, addFVBC, addBoundaryCondition registration calls without altering original W1 ELF and after original-call audit. External LD_PRELOAD changes runtime process/ABI and is NOT a trusted substitute for an unmodified Warehouse dump.",
+    "first_run": {
+      "id": 44330174638,
+      "artifact": 14437359853,
+      "conclusion": "failure_before_417_clean_case",
+      "scope": "external observer not invoked; no typed list"
+    },
+    "second_run": {
+      "id": 44331627749,
+      "artifact": 14439607417,
+      "conclusion": "failure_before_417_clean_case",
+      "scope": "source mounted observer from private scratch; no typed list"
+    },
+    "third_run": {
+      "id": 44332887001,
+      "artifact": 14440860832,
+      "conclusion": "failure_before_417_clean_case",
+      "scope": "observer moved to executable workspace; no typed list"
+    },
+    "fourth_diagnostic": {
+      "id": 44334095167,
+      "artifact": 14440607895,
+      "ZIP_SHA256": "e27939a027b216ce0d27598174051523d6905024cc94e5d54bdbd96b22b2c478",
+      "CRC": "PASS",
+      "receipt_status": "HOLD_NATIVE_OR_HARNESS",
+      "exact_safe_failure": "OWNER_INTERPOSER_NOT_INVOKED_417_rc_1",
+      "native_exit_first_case": 1,
+      "registered_owners_emitted": 0,
+      "mutants_started": 0,
+      "categories": {
+        "ld_preload_cannot_load": false,
+        "undefined_symbol": false,
+        "dlsym_error": false,
+        "segfault": false,
+        "permission_denied": false,
+        "mpi_abort": false,
+        "native_error": false,
+        "syntax_ok": false
+      },
+      "safe_excerpt": [],
+      "combined_stdout_stderr_bytes": 143,
+      "combined_log_digest_in_receipt": "4c4864c0fba6089179833bf17e1309da03390b47e38621e481e9255e08254719",
+      "private_tmpfs_cleanup": true,
+      "private_raw_rate_bytes_uploaded": false
+    },
+    "impact": "External tracer is unsupported for this exact binary/container; do NOT reinterpret exit1 as P05 duplicate or as a failure of original unmodified clean Native. No observed 12+12+8 typed owner listing qualified from these attempts."
+  },
+  "safe_follow_up": {
+    "recommended": "If a detailed native record is mandatory, add an approved temporary read-only Warehouse-iteration probe to an independently built diagnostic binary with a separate source SHA. It can validate actual memory objects but by definition will not be the exact same W1 ELF; alternatively seek a supported runtime introspection option with unchanged W1 that exports types, or obtain accepted P05 plus separately source-bound FE BC type evidence under explicit criteria.",
+    "prohibit": "Do not switch off P05, alter physics types or original JSON, use dont_create_kernels, or treat trace failure as passed object list."
+  },
+  "final_gates": {
+    "original_exact_74a_W1_native_two_cases": "PASS",
+    "original_exact_74a_W1_native_negatives_16": "PASS",
+    "original_exact_74a_W1_D8_full_architecture_RF_3ns": "PASS",
+    "detailed_same_ELF_warehouse_12_12_and_electron_8": "HOLD",
+    "current_520_HEAD_exact_build": "HOLD",
+    "original_100us_science": "NOT_RUN_SCIENCE_HOLD",
+    "final_P5X": "HOLD"
+  },
+  "mutation_scope": "Only an isolated report file. No PR665, main, shared CI, PhysicsApp original W1, P05, private rates, or source inputs modified."
+}
