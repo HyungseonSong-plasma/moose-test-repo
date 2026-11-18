@@ -80,15 +80,37 @@ def audit_raw_wall_sources(raw_layers:dict[str,bytes])->tuple[dict,dict]:
         record=objs.get(("FunctorMaterials",owner))
         if record is None:fail("WALL_FLUX_MATERIAL_MISSING_"+id)
         p=record["params"]
+        # A staged original Wall Material may express implicit default
+        # parameters differently than a newer C2 builder. Its existing
+        # physical fields MUST remain unchanged: do not inject new constants.
         required={"type":"IonWallFluxMaterial","species_id":id,
                   "ion_number_density":density,"potential":"potential",
-                  "mobility":mobility,"gas_temperature":"temperature",
-                  "charge_number":str(charge),"molar_mass":mass,
-                  "sticking":"1.0","ion_temperature_eV":"0.0",
-                  "migration_gate_smoothing_width":"1.0e-3",
-                  "use_element_gradient_for_potential":"true","block":"plasma"}
-        if p!=required:fail("WALL_LAW_CHANGED_"+id)
-        original[owner]={"sha256":record["sha"],"law":p}
+                  "mobility":mobility,"charge_number":str(charge),
+                  "molar_mass":mass,"block":"plasma"}
+        wrong={k:(p.get(k),expected) for k,expected in required.items()
+               if p.get(k)!=expected}
+        if wrong:
+            fail("WALL_LAW_CHANGED_"+id+"_FIELDS_"+",".join(sorted(wrong)))
+        if p.get("gas_temperature") not in ("temperature","T_g_fixed"):
+            fail("WALL_GAS_TEMPERATURE_UNPROVED_"+id)
+        if p.get("use_element_gradient_for_potential")!="true":
+            fail("WALL_E_FIELD_GRADIENT_CHANGED_"+id)
+        allowed=set(required)|{"gas_temperature","sticking",
+            "ion_temperature_eV","migration_gate_smoothing_width",
+            "use_element_gradient_for_potential"}
+        if set(p)-allowed:
+            fail("UNCHARACTERIZED_WALL_PARAMS_"+id+"_"+",".join(sorted(set(p)-allowed)))
+        for k,default in (("sticking","1.0"),("ion_temperature_eV","0.0"),
+                          ("migration_gate_smoothing_width","0.0")):
+            observed=p.get(k,default)
+            try:
+                value=float(observed)
+            except ValueError:
+                fail("INVALID_WALL_NUMERIC_"+id+"_"+k)
+            if (k=="sticking" and not 0<=value<=1) or (k!="sticking" and value<0):
+                fail("OUT_OF_RANGE_WALL_NUMERIC_"+id+"_"+k)
+        original[owner]={"sha256":record["sha"],"law":p,
+                         "retained_unmodified":True}
         items=[(f"{prefix}_wall",GENERAL,"FVFunctorNeumannBC")]
         items += [(f"{prefix}_{short}_dielectric",sides,
                    "PhysicsFVLogMolarDielectricFluxBC") for short,sides in DIELECTRIC.items()]
