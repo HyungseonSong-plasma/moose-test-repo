@@ -1,0 +1,84 @@
+{
+  "schema": "issue672.p6_c2.approval_auto_science_p05.v1",
+  "slot": "P6-C2",
+  "verdict": "PASS_READONLY_12_OF_12_SOURCE_POLICY_CHECKS__C3_REMEDIATION_HOLD",
+  "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "blobs": {
+    ".github/workflows/ci.yml": "c8cbd38369108229af7cf2395893a4539f05e024",
+    "ci/workflow_templates/general-ci.yml": "c8cbd38369108229af7cf2395893a4539f05e024",
+    ".github/workflows/ion-fvm-hybrid-staged-dt.yml": "230e4367e7a688f297747b7f03bb0fdfaf4e4d23",
+    ".github/workflows/issue402-canonical-s6-d-once.yml": "6d8eb34b45876dcec08714dba7d8cb68cd19862a",
+    "ci/guards/workflow_surface_guard.py": "744b7a40922be3ea4a945f22bcd5c5c374499f67",
+    "ci/p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+    "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+  },
+  "static_checks": {
+    "number": 12,
+    "passed": 12,
+    "all_direct_exact_source": true,
+    "assertions": [
+      "general CI and generated template exact byte equality",
+      "PR edited trigger present",
+      "Ion-FVM PR and main trigger",
+      "Ion-FVM actual transient command after check-input",
+      "Ion-FVM 200+150 timestep matrices",
+      "Canonical D one-shot main push self-path trigger",
+      "Canonical D 417+941 cases",
+      "surface guard accepts self-path main push one-shot shape",
+      "DDContinuityEq P05 returns if dont_create_kernels",
+      "DDContinuityEq P05 returns if _fvm_species.empty",
+      "new-only P0 forbids explicit dont_create_kernels",
+      "P0 exact-three FVM selected set checked only in legacy branch"
+    ]
+  },
+  "risk_register": [
+    {
+      "id": "COST_EDITED",
+      "facts": "P6-C1 audit shows 4 Native P1/P2 jobs eligible on metadata-only edited action (405 min sum of timeout ceilings, not actual elapsed time)",
+      "decision": "C3 single writer add cost-aware edited guard and negative regression without skipping actual source synchronizes"
+    },
+    {
+      "id": "CANONICAL_PUBLIC_AUTOP3",
+      "facts": "issue402-canonical-s6-d-once.yml main push own YAML path runs two 100us P3 cases, no typed approval at trigger",
+      "decision": "Do not edit/activate YAML without separate workflow/science owner approval; cost guard and manual approval need design"
+    },
+    {
+      "id": "ION_FVM_AUTOSTEP",
+      "facts": "ion-fvm-hybrid-staged-dt.yml can run 200 and 150 timestep transient after input preparation; old retired error is not a safety gate",
+      "decision": "Split future diagnostic P0/P2-only lane from manually approved new-physics time integration; keep existing failure visible"
+    },
+    {
+      "id": "P05_CONDITIONAL",
+      "facts": "C++ checkIntegrity returns on dont_create_kernels and empty fvm_species; source preflight rejects explicit bypass, but does not enforce exact 3 species in new-only branch",
+      "decision": "Add New-only fvm_species exact {O2p,Om,Op}, assert 12 FVKernel +12 FVBC live Warehouse and fail closed mutated omission/extra"
+    },
+    {
+      "id": "ARTIFACT_WARN",
+      "facts": "C1 identified 3 warn if-no-files-found upload sites, including ARCH Native",
+      "decision": "Mandatory acceptance artifacts must have explicit existence verification or error; optional failure diagnostics may retain warn"
+    },
+    {
+      "id": "APPROVAL_535_541",
+      "facts": "Historic ten-workflow retirement and typed old 400W/100us S6 Hybrid P3 approval are bounded; do not authorize new-only science or C2 for retired grounded FEM",
+      "decision": "Maintain separate approval records for D/F/ARCH/I conversion and manual P3/P4; no silent job skip or P05 weakening"
+    }
+  ],
+  "current_evidence": {
+    "CI": 44297212655,
+    "validate": "1566 passed/13 skipped",
+    "whole_workflow": "FAIL",
+    "IonFVM_run": 44297212333,
+    "I1_before_solver": true,
+    "source_guard_check": "PASS_STATIC_NOT_NATIVE_NEGATIVES"
+  },
+  "gates": {
+    "P6_C2": "PASS_AUDIT",
+    "P6_C3": "HOLD_SINGLE_WRITER",
+    "COST_GUARD": "HOLD",
+    "P05_NEWONLY_EXACT_SELECTED_SET": "HOLD_GUARD",
+    "NEW_PHYSICS_APPROVAL": "HOLD",
+    "SCIENCE": "HOLD"
+  },
+  "method": "Independently retrieved seven current exact-head source blobs, evaluated 12 in-memory source invariants, checked actual Ion-FVM job timing and C1/D2 approval reports. No GitHub workflow edit, mutation run, Native job, or timestep executed.",
+  "mutation": "standalone report-only branch; main/PR665/workflow/template unchanged"
+}
