@@ -1,0 +1,100 @@
+{
+  "schema": "issue672.p6_h.ni_time_historical_compatibility.independent_audit.v1",
+  "source": {
+    "current_pr": 665,
+    "current_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "current_p05_cpp_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "same_cpp_blob_as_negative_source": true,
+    "original_arch_C0_git_blob": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa"
+  },
+  "independent_audit": {
+    "run_id": 44338627249,
+    "workflow_head": "0e1e5800adb6e89cf2b91ed19a8fbc1f3f3d3f04",
+    "verdict": "PASS",
+    "artifact_id": 14443505429,
+    "artifact_zip_sha256_upload_reported": "2b8e652e743c48795c3d0c8dbeb5b417c9f1ca736832bf8a18c5e5ecf6fd0ecc",
+    "original_native_zip_sha_crc": "PASS_2_OF_2",
+    "historical_native_log_sha": "PASS_4_OF_4",
+    "physical_elf_and_libraries_sha": "PASS_3_OF_3",
+    "native_execution_in_this_audit": "NOT_RUN"
+  },
+  "ni_time_native_negative": {
+    "run_id": 44311107973,
+    "artifact_id": 14430693102,
+    "original_zip_sha256": "0df5c5a295858980758fb11d2990fa9119626c0339cd009b8b218d5063cfd02a",
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "cases": [
+      "417",
+      "941"
+    ],
+    "mutations_per_case": [
+      "ARCH_CANON_log_O2p",
+      "ARCH_ORIGINAL_log_ni"
+    ],
+    "status": "PASS_4_INTENDED_NATIVE_REJECTIONS",
+    "canon_failure": "P05_duplicate_unexpected_native_time_owner",
+    "original_failure": "legacy_log_ni_variable_precheck",
+    "staged_original_restored": true,
+    "private_tmpfs_cleanup": true,
+    "native_compatibility": "KEEP_HOLD"
+  },
+  "historic_compatible_p2": {
+    "run_id": 44324197618,
+    "artifact_id": 14436442632,
+    "original_zip_sha256": "ae112219034dfa0a456ed41ef62974a0603992a0607d4845b45c2a549ae3275d",
+    "physics_source_head": "1efdd922096df10239cff8adc132e8f3811c1a63",
+    "original_historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "original_table_rows": 100,
+    "original_table_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "separate_public_42row_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "source_table_unchanged": true,
+    "parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "runtime_elf_sha256": "617b8316d7519c560964c3df8bc4ee2c9f50ca16b9d7448889860e43ce144a07",
+    "cases": {
+      "S6_417_B": {
+        "layers": 10,
+        "exit_code": 0,
+        "syntax_ok": true,
+        "log_sha256": "e71bdb93ebead39e4c80650c467a9c087845f8fc97020e2cfa84e8fc9392b25d"
+      },
+      "S6_417_D": {
+        "layers": 11,
+        "exit_code": 0,
+        "syntax_ok": true,
+        "log_sha256": "cb30a117ad9679b464966b5a3507258817470dc51507c9d43dac0c1916438f72"
+      },
+      "S6_941_B": {
+        "layers": 10,
+        "exit_code": 0,
+        "syntax_ok": true,
+        "log_sha256": "b63e67815cceac7de7498b09fb84d713d9046dbba098016cc61f10c0b122c2e9"
+      },
+      "S6_941_D": {
+        "layers": 11,
+        "exit_code": 0,
+        "syntax_ok": true,
+        "log_sha256": "05240b30b0d1755b9028052a7618f41ae50e3c90230de24b434aeff8686aeace"
+      }
+    },
+    "verdict": "PASS_4_HISTORICAL_ONLY"
+  },
+  "decision": {
+    "historical_mode": "PASS_PINNED_HISTORICAL_P2_ONLY",
+    "current_native_physics_hybrid": "KEEP_HOLD",
+    "current_newonly_p2": "SEPARATE_ACCEPTANCE_EVIDENCE_NOT_FROM_HISTORICAL_RUN",
+    "owners": "DO_NOT_MIX_HISTORICAL_26_NATIVE_WITH_NEWONLY_12_PLUS_12_GENERATED",
+    "avoid": [
+      "disable_p05",
+      "dont_create_kernels",
+      "silent_bc_substitution",
+      "automatic_p3_p4"
+    ],
+    "science": "SCIENCE_HOLD"
+  },
+  "security": {
+    "private_archive_access_during_new_audit": false,
+    "repository_main_mutated": false,
+    "pr665_modified": false,
+    "original_source_mutated": false
+  }
+}
