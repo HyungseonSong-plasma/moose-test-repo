@@ -1,0 +1,155 @@
+{
+  "schema": "issue669.p3_n3.pressure_outlet.independent_byte_audit.v1",
+  "task_id": "P3-N3",
+  "issue": 669,
+  "scope": "S6-417 and S6-941 original 11-layer New-only pressure variable -> root Plasmas pressure -> FV outlet BC static provenance. No Native execution.",
+  "status": "PASS_EXACT_P3X_SOURCE_PRESSURE_OUTLET_SINGLE_OWNER__HOLD_NATIVE_WAREHOUSE",
+  "provenance": {
+    "pr665_baseline_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "artifact_generator_branch": "issue-669-p3-x-electron-source-cutover-20261118",
+    "artifact_generator_ci_head": "95d0cd11edfd666f0e33838d5114d9a273c8b05a",
+    "artifact_source_manifest_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p3_x_ci_run_id": 44255749142,
+    "p3_x_ci_artifact_id": 14405638218,
+    "p3_x_ci_zip_sha256": "1c68a9622357cd13990521dad85504adf49c70916f2424c3511b600e2583e159",
+    "independent_baseline_p2_ci_run_id": 44201394393,
+    "independent_baseline_p2_artifact_id": 14381456912,
+    "baseline_zip_sha256": "5497c80badab09d7d3266a4c81e2a5d2272a1c9cc216e94e192c8ec1ecd78e95",
+    "existing_GitHub_N3_receipt": "reports/issue669/p3-n3-neutral-outlet-root-pressure-source.json",
+    "live_cpp_source_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "cpp_path": "physics_app/src/physics/plasma/Chemistry.C",
+    "cpp_git_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330"
+  },
+  "cases": {
+    "417": {
+      "ordered_input_file_count": 11,
+      "files_sha256_recomputed_from_ci_artifact": 11,
+      "before_vs_after_11_layer_sha_comparisons": 11,
+      "modified_layers_from_P2_only": [
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i"
+      ],
+      "C0_sha256_before": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "C0_sha256_after": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "pressure_object": {
+        "section": "Variables",
+        "name": "pressure",
+        "type": "INSFVPressureVariable",
+        "block": "plasma",
+        "explicit_initial_condition": false,
+        "owners_count": 1,
+        "block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e"
+      },
+      "neutral_outlet_p": {
+        "section": "FVBCs",
+        "name": "neutral_outlet_p",
+        "type": "INSFVOutletPressureBC",
+        "variable": "pressure",
+        "boundary": "outlet",
+        "function": "${Physics/Plasmas/pressure}",
+        "owners_count": 1,
+        "block_sha256": "473158d972e44badb6ce8b6111c061fce0ff6f4d429a6fb368a3c2f297d9da8d"
+      },
+      "physics_root": {
+        "path": "Physics/Plasmas",
+        "pressure_Pa": 1.333223684,
+        "temperature_K": 300,
+        "state_model": "ideal_gas",
+        "root_parameter_occurrence_count": 1
+      },
+      "pressure_and_outlet_block_sha_preserved_before_after": true,
+      "legacy_alias_owner_count": 0,
+      "legacy_alias_tokens_p_fixed_T_g_fixed_count": 0,
+      "positive_checks": "PASS",
+      "negative_mutations_rejected": 16,
+      "native_runtime": "NOT_RUN"
+    },
+    "941": {
+      "ordered_input_file_count": 11,
+      "files_sha256_recomputed_from_ci_artifact": 11,
+      "before_vs_after_11_layer_sha_comparisons": 11,
+      "modified_layers_from_P2_only": [
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i"
+      ],
+      "C0_sha256_before": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "C0_sha256_after": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "pressure_object": {
+        "section": "Variables",
+        "name": "pressure",
+        "type": "INSFVPressureVariable",
+        "block": "plasma",
+        "explicit_initial_condition": false,
+        "owners_count": 1,
+        "block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e"
+      },
+      "neutral_outlet_p": {
+        "section": "FVBCs",
+        "name": "neutral_outlet_p",
+        "type": "INSFVOutletPressureBC",
+        "variable": "pressure",
+        "boundary": "outlet",
+        "function": "${Physics/Plasmas/pressure}",
+        "owners_count": 1,
+        "block_sha256": "473158d972e44badb6ce8b6111c061fce0ff6f4d429a6fb368a3c2f297d9da8d"
+      },
+      "physics_root": {
+        "path": "Physics/Plasmas",
+        "pressure_Pa": 1.333223684,
+        "temperature_K": 300,
+        "state_model": "ideal_gas",
+        "root_parameter_occurrence_count": 1
+      },
+      "pressure_and_outlet_block_sha_preserved_before_after": true,
+      "legacy_alias_owner_count": 0,
+      "legacy_alias_tokens_p_fixed_T_g_fixed_count": 0,
+      "positive_checks": "PASS",
+      "negative_mutations_rejected": 16,
+      "native_runtime": "NOT_RUN"
+    }
+  },
+  "cpp_contract": {
+    "root_mode": "solved Navier-Stokes pressure variable",
+    "pressure_functor": "variable pressure itself; no separate constant Functor pressure, p, p_fixed, T_g_fixed",
+    "root_initial_condition": "PlasmasAction::act(task add_ics_physics) generates FVConstantIC(name=plasma_initial_pressure, variable=pressure, value=Physics/Plasmas/pressure)",
+    "root_temperature": "ADGenericFunctorMaterial name=plasma_gas_temperature property=temperature",
+    "gas_density": "ADParsedFunctorMaterial name=plasma_gas_n_g expression=pressure/(1.380649e-23*temperature)",
+    "source_scope": "static C++ producer contract only; actual C++ Warehouse registration not run",
+    "outlet_bc_function": "Input substitution: ${Physics/Plasmas/pressure} on neutral_outlet_p (BC is under [FVBCs], not [BCs])"
+  },
+  "independent_tests": {
+    "positive_cases": 2,
+    "negative_cases_per_case": 16,
+    "negative_total_rejected": 32,
+    "classes": [
+      "missing_pressure",
+      "duplicate_pressure",
+      "wrong_pressure_type",
+      "wrong_pressure_block",
+      "injected_pressure_initial_condition",
+      "missing_outlet",
+      "duplicate_outlet",
+      "wrong_outlet_type",
+      "wrong_outlet_boundary",
+      "wrong_outlet_variable",
+      "wrong_outlet_function",
+      "changed_root_pressure",
+      "missing_root_pressure",
+      "duplicate_root_pressure",
+      "wrong_root_temperature",
+      "legacy_gas_alias"
+    ],
+    "all_negative_mutations_run_against_actual_CI_input_bytes": true,
+    "local_independent_verifier_python_sha256": "8ee18066374042e5b6cd0217aa54123e6efd6ca0c260fec4ca0b7155fdeebeb5",
+    "local_independent_audit_receipt_sha256": "5c79fcfba6a4102a58b9f8484899783be5f611b01e98b8b05872716ee5de8885"
+  },
+  "unresolved": [
+    "Final P3-X Native C++ Warehouse pressure FVConstantIC singleton, pressure/no extra constant Functor, and neutral_outlet_p registration/liveness NOT_RUN",
+    "Live neutral pressure/temperature consumer interaction and runtime BoundaryID mapping NOT_RUN",
+    "Native P2/P3/P4 and scientific equivalence are not established by this source-only CI artifact"
+  ],
+  "private_rate_raw_bytes_read": false,
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "mutation_scope": "N3 evidence-only supplemental audit on existing task branch; no change to model inputs, runner, main or PR665"
+}
