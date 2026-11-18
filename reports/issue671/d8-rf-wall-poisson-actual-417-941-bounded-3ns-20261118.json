@@ -1,0 +1,119 @@
+{
+  "schema": "issue671.d8.s6_full_original_rf_wall_surface_current_poisson_same_W1_3ns.v1",
+  "date_utc": "2026-11-18",
+  "gate": "D8_COUPLED_S6_ORIGINAL_RF_WALL_CURRENT_POISSON_BOUNDED_3NS",
+  "verdict": "PASS_BOTH_417_941_REAL_BOUNDED_RF_PLUS_8_POSTPROCESSOR_NUMERICS_SAME_W1",
+  "source": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "pr": 665,
+    "exact_production_source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "exact_tree": "10ab018235f047bf1abc250d3b18005b9156752a",
+    "latest_pr665_head_at_verification": "52067302d16074592503d0ef6b903cc344f55a08",
+    "latest_head_equal_to_W1": false,
+    "compared_changes_only": [
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "tests/test_issue633_newonly_run_species_schema.py"
+    ],
+    "original_11_layers_per_case": 11,
+    "input_orig_11_layer_scratch_SHA_preserved_by_job": true,
+    "native_retired_ion_FV_per_case": 26,
+    "native_retired_old_electron_per_case": 10,
+    "duplicate_C0_producer_materials_removed_per_case": 6,
+    "original_parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "original_Maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698"
+  },
+  "actual": {
+    "run_id": 44337988067,
+    "job_id": 134919807070,
+    "result": "completed/success",
+    "artifact_id": 14442342839,
+    "artifact_name": "issue671-d8-exact-W1-S6-417-941-rf-wall-poisson-3ns",
+    "zip_sha256": "3a38a8598c8a9b4f9f17b46d0772d20190bba7f795cebb14cc059f6ac75ada73",
+    "zip_crc": "PASS",
+    "original_RF_on": true,
+    "original_TimeSequenceStepper_on": true,
+    "extra_diagnostic_pp_only": true,
+    "bounded_time_s": 3e-9,
+    "physical_step_limit": 3,
+    "all_7_RF_Transfers_actual_numeric": true,
+    "both_cases_Maxwell_child_converged": true,
+    "shared_w1_elf_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "shared_w1_source_build_run": 44319316180,
+    "shared_w1_artifact_id": 14435245012,
+    "shared_w1_zip_sha256": "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd",
+    "app_libs_sha256": {
+      "libphysics-opt.so.0": "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd",
+      "libphysics_test-opt.so.0": "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6"
+    },
+    "secure_original_EI_rate_files_per_case": 5,
+    "secure_tmpfs_removed": true,
+    "cases": {
+      "417": {
+        "native_check_input_exit": 0,
+        "actual_rf_3ns_exit": 0,
+        "maxwell_child_P_abs_W": 209.31596771096,
+        "parent_received_P_abs_W": 209.31596771096,
+        "actual_d8_integrated_functor_values": {
+          "rf_d8_cover_O2p_number": 1174501223786600000,
+          "rf_d8_cover_Om_number": 27396658122147,
+          "rf_d8_cover_Op_number": 1182433349344800,
+          "rf_d8_cover_electron_number": 23652133267958000000,
+          "rf_d8_cover_current": -3.6011286276022,
+          "rf_d8_wafer_current": -0.85181504110183,
+          "rf_d8_focus_current": -0.057864287198826,
+          "rf_d8_poisson_source": 6824.4954427714
+        },
+        "wall_electron_count": 4,
+        "surface_current_count": 3,
+        "poisson_source_integral_present": true,
+        "source_shas_preserved": true,
+        "native_full_log_sha256_job_generated": "13d6e2e4e5050d8bd126d62f9130c7aeab9b2488317eb9b1c9f9a9afeba9e7b4"
+      },
+      "941": {
+        "native_check_input_exit": 0,
+        "actual_rf_3ns_exit": 0,
+        "maxwell_child_P_abs_W": 209.31597896021,
+        "parent_received_P_abs_W": 209.31597896021,
+        "actual_d8_integrated_functor_values": {
+          "rf_d8_cover_O2p_number": 1174502458933900000,
+          "rf_d8_cover_Om_number": 27396657876227,
+          "rf_d8_cover_Op_number": 1182239778651200,
+          "rf_d8_cover_electron_number": 23652139200785000000,
+          "rf_d8_cover_current": -3.601129411267,
+          "rf_d8_wafer_current": -0.85181503581399,
+          "rf_d8_focus_current": -0.05786428553962,
+          "rf_d8_poisson_source": 6824.4957138455
+        },
+        "wall_electron_count": 4,
+        "surface_current_count": 3,
+        "poisson_source_integral_present": true,
+        "source_shas_preserved": true,
+        "native_full_log_sha256_job_generated": "53aaf926babbd0c0f01545bfc5c13bd8bab75d3d3dbbeced31d4c457ddb4ca82"
+      }
+    }
+  },
+  "verification": {
+    "independent_actual_zip_downloaded_and_hashed": true,
+    "independent_old_rf_zip_downloaded_and_hashed": true,
+    "independent_w1_tar_ELF_and_2_libs_SHA_verified": true,
+    "postprocessor_values_finite_both_cases": true,
+    "case_417_941_values_not_identically_copied": true,
+    "original_noninstrumented_RF_results_same_values": true,
+    "independent_assertions_total": 78,
+    "independent_assertions_pass": 78,
+    "verification_script_sha256": "f52a55489eb9056fe682672c12e0ed2c0639fe37cb2a483cb0fbeb36116febc0",
+    "verification_json_sha256": "e54390853e170166eb857c955a15d4b81fe5e7826695292e14f5660d283d0ed3"
+  },
+  "scope": {
+    "numeric_values_are": "ADSideIntegralFunctorPostprocessor boundary integrals and ADElementIntegralFunctorPostprocessor volume integral, not raw per-face local values or local residuals",
+    "direct_computeQpResidual_trace_in_same_rf_job": "NOT_RECORDED",
+    "prior_rf_off_actual_computeQpResidual": "PASS_OTHER_INSTRUMENTED_BINARY_JOB_44303391987_NOT_SAME_W1",
+    "raw_full_solver_logs_and_CSV_independent_SHA_recompute": "NOT_POSSIBLE_PUBLIC_ARTIFACT_SANITIZED_EXCERPTS_AND_JOB_RECEIPTS_ONLY",
+    "raw_11_layer_bytes_public_artifact": "NOT_INCLUDED_SHA_RECEIPTS_ONLY",
+    "exact_latest_pr665_head_source_compatibility": "HOLD_CURRENT_520_HEAD_NOT_EXACT_74A_W1",
+    "typed_warehouse_12_12_electron8_same_w1": "HOLD_NO_TRUSTED_RAW_OWNER_LIST",
+    "full_RF_100us_scientific_equivalence": "NOT_RUN_SCIENCE_HOLD",
+    "final_P5_X_acceptance": "HOLD"
+  },
+  "mutation_safety": "Isolated one-shot workflow diagnostic branch only, no changes to main, PR665, P05, PhysicsApp, original source 11 layers, Private EI raw rates, or shared CI; one 3ns test per case."
+}
