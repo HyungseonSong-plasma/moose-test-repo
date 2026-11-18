@@ -150,7 +150,20 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue541-arch-s6-hybrid-compat-keep-hold-${{ github.sha }}
+          name: issue541-arch-s6-hybrid-p2-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: |
+            issue541_arch_s6_p2_evidence/*/status.json
+            issue541_arch_s6_p2_evidence/*/native_P2.log
+            control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
+            control/experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload first-attempt legacy artifact alias (compatibility only)
+        if: ${{ always() && github.run_attempt == 1 }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-arch-s6-hybrid-p2-${{ github.sha }}
           path: |
             issue541_arch_s6_p2_evidence/*/status.json
             issue541_arch_s6_p2_evidence/*/native_P2.log
