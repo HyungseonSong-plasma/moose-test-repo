@@ -1,4 +1,5 @@
 # TEMPORARY P6-C1/C2/C3 source-only guard execution harness.
+# Corrected aliases after fail-closed proof: 24a2b278c3bd33649cb2c83be33e7abb2febd4eb
 # Scoped to this branch AND this file path; delete once evidence is read back.
 # Does not build PhysicsApp, run Native, dispatch P3/P4, use protected EI,
 # or alter .github/workflows/ci.yml.
