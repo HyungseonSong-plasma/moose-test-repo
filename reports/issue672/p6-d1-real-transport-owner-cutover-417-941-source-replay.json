@@ -1,0 +1,119 @@
+{
+  "schema": "issue672.p6_d1.actual_transport_owner_cutover_source_replay_v1",
+  "issue": 672,
+  "draft_pr": 684,
+  "parent_pr": 665,
+  "base_source_SHA": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "implemented_commit": "4c42777c431eee2152bd174a9dee4aa31a063f50",
+  "source_status": "PASS_ACTUAL_SOURCE_IMPLEMENTATION_IN_ISOLATED_DRAFT_PR",
+  "changes": [
+    "Public D disposable Scratch: one historical C0 electron DDTransportMaterial plus three explicit manual ion aliases retired; equivalent e/O2p/Om/Op JSON transport declarations created only after exact old SHA/type/source/table checks",
+    "FLOW D-base: reuse source-proven ARCH Hybrid prepare_hybrid_json_s6.prepare with exact owner retirement, integrated 7-species/8-reaction JSON, root gas and original ion Functor bindings",
+    "DDContinuityEq.C: honor historical legacy flat species.e.energy_transport_coef=fluid as 5/3 energy projection in generated single DDTransportMaterial; reject incompatible Energy Physics action",
+    "Source-pinned portable positive/negative tests added; untouched full New-only typed JSON and P05"
+  ],
+  "readback_blobs_git_sha1": {
+    "physics_app/src/physics/plasma/DDContinuityEq.C": "2d120416d1bfe7c5454d0a7e955dcd6d9a763abc",
+    "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py": "28e34e4352bec25006aca42e9abcac9acc584cc8",
+    "experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py": "6c6dcf6516d4169e4481f305dc882862253acbe9",
+    "tests/test_issue672_p6_d1_transport_owner_cutover.py": "041a37f4162192f9cf4ae7d59f59382f9c439c82"
+  },
+  "real_archived_input_replay": {
+    "cases": {
+      "417": {
+        "archive_zip": "s6_417_archived_native.zip",
+        "archive_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+        "source_archive_10_layers": 10,
+        "zip_crc": "PASS",
+        "C0_actual_original_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+        "original_e_transport_block_sha256": "a66565c4f83a6aa0152958421988b3d4b21fc50f0772250d574014badaca06ca",
+        "canonical_e_DDTransport_block_sha256": "545e3dc0e58ba1125081d21e89a99a409c4802692dc004aeb4a5339c43fe87a4",
+        "retired_material_names": [
+          "electron_transport",
+          "O2p_species_transport_alias",
+          "Om_species_transport_alias",
+          "Op_species_transport_alias"
+        ],
+        "retired_count": 4,
+        "before_sha256": {
+          "C0": "59de47aaa0d822e2e04445d4d2249816ab42e4d9a7c974d91a1b7eeae7a8fa14",
+          "OVERLAY": "edf3f8e8194927e93783d136066799d60df2673af9245d6d4b990fb7d267b513",
+          "JSON": "c312c6ff671dcf934ebd340ecb0a75cc0e9ce6b297d57105f9c53b3a0f65781d"
+        },
+        "after_sha256": {
+          "C0": "e9917b094ab6c13525192fe4b8e3b287d4bd4cf421c8584b7145a396dd6c652e",
+          "OVERLAY": "f643c6b75357cdb05da55f0e2055f9fc61ff9dcc4ff23f3a61e6963ec833c60b",
+          "JSON": "fd091b85a12b2099e6c15e5e815924bfb0d83eae12de78a916da87878a0b56d6"
+        },
+        "public_e_moments_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+        "JSON_transport_owners": 4,
+        "source_replay": "PASS_4_MANUAL_MATERIAL_REMOVALS",
+        "native_p05": "NOT_RUN"
+      },
+      "941": {
+        "archive_zip": "p4_s6_original941.zip",
+        "archive_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+        "source_archive_10_layers": 10,
+        "zip_crc": "PASS",
+        "C0_actual_original_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+        "original_e_transport_block_sha256": "a66565c4f83a6aa0152958421988b3d4b21fc50f0772250d574014badaca06ca",
+        "canonical_e_DDTransport_block_sha256": "545e3dc0e58ba1125081d21e89a99a409c4802692dc004aeb4a5339c43fe87a4",
+        "retired_material_names": [
+          "electron_transport",
+          "O2p_species_transport_alias",
+          "Om_species_transport_alias",
+          "Op_species_transport_alias"
+        ],
+        "retired_count": 4,
+        "before_sha256": {
+          "C0": "59de47aaa0d822e2e04445d4d2249816ab42e4d9a7c974d91a1b7eeae7a8fa14",
+          "OVERLAY": "edf3f8e8194927e93783d136066799d60df2673af9245d6d4b990fb7d267b513",
+          "JSON": "c312c6ff671dcf934ebd340ecb0a75cc0e9ce6b297d57105f9c53b3a0f65781d"
+        },
+        "after_sha256": {
+          "C0": "e9917b094ab6c13525192fe4b8e3b287d4bd4cf421c8584b7145a396dd6c652e",
+          "OVERLAY": "f643c6b75357cdb05da55f0e2055f9fc61ff9dcc4ff23f3a61e6963ec833c60b",
+          "JSON": "fd091b85a12b2099e6c15e5e815924bfb0d83eae12de78a916da87878a0b56d6"
+        },
+        "public_e_moments_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+        "JSON_transport_owners": 4,
+        "source_replay": "PASS_4_MANUAL_MATERIAL_REMOVALS",
+        "native_p05": "NOT_RUN"
+      }
+    },
+    "local_receipt_sha256": "c6b1a0521cec04034a1fa4b8ce97a692f56158a51c60afb148a3274f2dab8b52",
+    "verifier_sha256": "e86aae0fa2c01506ece2128ebc1b96afb884c874a2d51dbafbcf2bf72cbb639d",
+    "limitation": "Real original 10-layer and C0 readback, canonical electron lookup Material migration and 4-material cutover on Scratch with reviewed option D overlay and exact original electron moments; NOT full MOOSE 11-layer execution or actual Warehouse"
+  },
+  "independent_local_tests": {
+    "public_cutover_positives_and_negatives": 16,
+    "static_flow_energy_source": 2,
+    "total": 18,
+    "passed": 18,
+    "native_ci_run": false
+  },
+  "integration_truth": {
+    "draft_PR_684_base": "issue-633-ion23-integration-20261117",
+    "repository_CI_trigger": "pull_request only branches main; draft PR targets #665 branch so no CI observed",
+    "parent_PR665_test": {
+      "run": 44297212655,
+      "head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "pytest": "1566 passed; 13 skipped"
+    },
+    "known_remaining": "Legacy ion Native 26 owners still conflict with generated Physics P05; P4-X/P5 Native integration and parent mesh/binary pin required",
+    "no_private_EI_rate_bytes": true,
+    "no_scientific_parity_claim": true
+  },
+  "gates": {
+    "P6_D1_IMPLEMENTED": "PASS_SOURCE",
+    "P6_D1_ARCHIVE_417": "PASS_EXACT_BYTES",
+    "P6_D1_ARCHIVE_941": "PASS_EXACT_BYTES",
+    "P6_D1_LOCAL_TESTS": "PASS_18_18",
+    "P6_D1_11_LAYER_NATIVE_P2": "NOT_RUN",
+    "P6_D1_LIVE_TRANSPORT_WAREHOUSE": "NOT_OBSERVED",
+    "P6_D1_PARENT_PR665_INTEGRATED": false,
+    "P4_X": "PENDING",
+    "NATIVE_P2": "HOLD",
+    "SCIENCE": "HOLD"
+  }
+}
