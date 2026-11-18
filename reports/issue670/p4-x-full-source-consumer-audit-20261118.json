@@ -1,0 +1,219 @@
+{
+  "schema": "issue670.p4_x.full_source_consumer_graph_audit.v1",
+  "issue": 670,
+  "task_id": "P4-X",
+  "verdict": "PASS_DEEP_STATIC_SOURCE_CONSUMER_AUDIT__HOLD_FACTORY_REGISTRATION_AND_NATIVE",
+  "source_revision": {
+    "pr665_exact_head": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
+    "pr677_merged_into_pr665": true,
+    "pr677_merge_commit": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
+    "source_original_stage_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+  },
+  "CI_evidence": {
+    "P4_X_owner_negative_run": {
+      "run": 44273559356,
+      "artifact": 14412683558,
+      "zip_sha256": "96d34760cc8f281305fddebb177b75a1e2c1aba176171d556e25e1525e10e9d5",
+      "negative_controls": 30
+    },
+    "full_P1_P2_P3_P4_X_production_source_run": {
+      "run": 44274320806,
+      "artifact": 14414026909,
+      "zip_sha256": "6773dfa54bd1a77c908831be3edd6a93699152f5879e96f6bf3db435df431540"
+    },
+    "actual_P3_X_417_941_source_artifact": {
+      "run": 44257739203,
+      "artifact": 14406746397,
+      "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111"
+    },
+    "P1_outer_source_original": {
+      "artifact": 14372278074,
+      "zip_sha256": "584fd8eff989ab1f7f0a7582ae72b4dc2429f84b8b05ed91c1a46f89df88da5e",
+      "nested_inputs_zip_sha256": "9923c7c875dff975ec203610e58797be7abbfe6a92be2173f1fbe525f49f1172"
+    }
+  },
+  "independent_execution": {
+    "tool": "Python 3 independent static verifier on actual P3-X archived 11-layer bytes; in-memory exact P4-X seven-block cutover against final C0 SHA; no production source mutation",
+    "verifier_local_filename": "verify_issue670_p4x_full_source_consumer.py",
+    "verifier_sha256": "633edc89740275d50b0c2eff9ea90221a56a3f45900aefe89983b4a8107170a0",
+    "full_receipt_local_filename": "p4x_full_source_consumer_receipt.json",
+    "full_receipt_sha256": "d4be287d0536b35b3a054aed3b3234db4afbf8dc0fc35c770221878d53221f75",
+    "case_count": 2,
+    "verified_input_file_SHA": 22,
+    "independent_expected_negative_mutations_rejected": 40,
+    "independent_positive_source_graphs": 2,
+    "exact_second_execution_byte_identical": true,
+    "negative_families": [
+      "incorrect species charge/mobility/density",
+      "reaction omitted, H25 sign, units, source rates",
+      "missing/incorrect 12 BC factory/sidesets/electron wall name",
+      "carrier_one removed/renamed/extra transport",
+      "old explicit wall/current owner reinserted",
+      "wrong Avogadro conversion and Poisson sign/consumer",
+      "Lower-D sigma surface current misbound",
+      "wall gradient and smoothing drift",
+      "per-case exact file SHA mismatch"
+    ]
+  },
+  "source_code_exact_git_blobs": {
+    "Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "PhysicsIonWallFluxMaterial.C": "215e9c81720e6813be22a8a51405fe99639cf0ab",
+    "DDTransportMaterial.C": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+    "retire_s6_p4_duplicate_owners.py": "a3f9d93ea1095c9d00053e5104bb7326d1af8f31",
+    "prepare_s6_newonly.py": "d2091291161033a9662b0d583567f9c35d26c006"
+  },
+  "cases": {
+    "417": {
+      "source_archive_input_sha_verified": 11,
+      "post_P4_X_replayed_layer_SHA_count": 11,
+      "source_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "migrated_continuity_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "C0_pre_P4_X_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "C0_post_P4_X_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "old_C0_exact_target_block_SHA_count": 7,
+      "old_Native_ion_FVKernels_or_FVBCs": 0,
+      "old_Native_ion_FV_owners_retired": 26,
+      "old_electron_owners_retired": 10,
+      "other_layers_bytes_changed": 0,
+      "reaction_rate_progress_unique_owner_count": 8,
+      "case_specific_ionization_rate": "EI-417",
+      "signed_three_species_sources": {
+        "S_O2p_molar": {
+          "R_EI415": 1,
+          "R_H25": 1
+        },
+        "S_Om_molar": {
+          "R_EI401": 1
+        },
+        "S_Op_molar": {
+          "R_EI417": 1,
+          "R_H25": -1
+        }
+      },
+      "rate_units": "mol/(m^3 s)",
+      "canonical_P4_transport_properties_retired_from_old_C0": 6,
+      "carrier_one_source_count": 1,
+      "carrier_one_value": "1.0",
+      "legacy_density_aliases": {
+        "n_i_physical": "N_A*exp(log_O2p)",
+        "n_m_physical": "N_A*exp(log_Om)",
+        "n_op_physical": "N_A*exp(log_Op)"
+      },
+      "Poisson": "ni+nop-ne-nm -> charge_number_density -> poisson_source -> phi_source",
+      "ion_FV_BC_names": 12,
+      "ion_Physical_sidesets": 8,
+      "ion_general_Neumann_BC_count": 3,
+      "ion_dielectric_BC_count": 9,
+      "old_wall_materials_removed": 3,
+      "old_surface_current_materials_removed": 3,
+      "expected_generated_wall_materials": 3,
+      "expected_generated_surface_current_materials": 3,
+      "retained_sigma_LowerD_consumers": [
+        "sigma_surface_current",
+        "sigma_wafer_surface_current",
+        "sigma_focus_ring_surface_current"
+      ],
+      "preserved_density_diagnostic_consumers": 6,
+      "preserved_signed_wall_flux_diagnostic_consumers": 15,
+      "preserved_wall_mass_flux_diagnostic_consumers": 3,
+      "static_negative_controls_rejected": 20,
+      "static_positive_control": "PASS_SOURCE_GRAPH",
+      "cpp_Warehouse_observed": "NOT_RUN"
+    },
+    "941": {
+      "source_archive_input_sha_verified": 11,
+      "post_P4_X_replayed_layer_SHA_count": 11,
+      "source_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "migrated_continuity_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "C0_pre_P4_X_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "C0_post_P4_X_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "old_C0_exact_target_block_SHA_count": 7,
+      "old_Native_ion_FVKernels_or_FVBCs": 0,
+      "old_Native_ion_FV_owners_retired": 26,
+      "old_electron_owners_retired": 10,
+      "other_layers_bytes_changed": 0,
+      "reaction_rate_progress_unique_owner_count": 8,
+      "case_specific_ionization_rate": "EI-941",
+      "signed_three_species_sources": {
+        "S_O2p_molar": {
+          "R_EI415": 1,
+          "R_H25": 1
+        },
+        "S_Om_molar": {
+          "R_EI401": 1
+        },
+        "S_Op_molar": {
+          "R_EI941": 1,
+          "R_H25": -1
+        }
+      },
+      "rate_units": "mol/(m^3 s)",
+      "canonical_P4_transport_properties_retired_from_old_C0": 6,
+      "carrier_one_source_count": 1,
+      "carrier_one_value": "1.0",
+      "legacy_density_aliases": {
+        "n_i_physical": "N_A*exp(log_O2p)",
+        "n_m_physical": "N_A*exp(log_Om)",
+        "n_op_physical": "N_A*exp(log_Op)"
+      },
+      "Poisson": "ni+nop-ne-nm -> charge_number_density -> poisson_source -> phi_source",
+      "ion_FV_BC_names": 12,
+      "ion_Physical_sidesets": 8,
+      "ion_general_Neumann_BC_count": 3,
+      "ion_dielectric_BC_count": 9,
+      "old_wall_materials_removed": 3,
+      "old_surface_current_materials_removed": 3,
+      "expected_generated_wall_materials": 3,
+      "expected_generated_surface_current_materials": 3,
+      "retained_sigma_LowerD_consumers": [
+        "sigma_surface_current",
+        "sigma_wafer_surface_current",
+        "sigma_focus_ring_surface_current"
+      ],
+      "preserved_density_diagnostic_consumers": 6,
+      "preserved_signed_wall_flux_diagnostic_consumers": 15,
+      "preserved_wall_mass_flux_diagnostic_consumers": 3,
+      "static_negative_controls_rejected": 20,
+      "static_positive_control": "PASS_SOURCE_GRAPH",
+      "cpp_Warehouse_observed": "NOT_RUN"
+    }
+  },
+  "critical_new_findings": [
+    {
+      "id": "P4_X_ION_WALL_FACTORY_TYPE_NAME_MISMATCH",
+      "severity": "STATIC_REGISTRY_MISMATCH_PROBABLE_NATIVE_BLOCKER",
+      "action_source": "physics_app/src/physics/plasma/Chemistry.C",
+      "action_source_line": 1502,
+      "action_construction": "const auto type = \"IonWallFluxMaterial\"; auto params = _factory.getValidParams(type);",
+      "registered_class_source": "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C",
+      "registered_class_source_line": 11,
+      "registered_class": "registerMooseObject(\"PhysicsApp\", PhysicsIonWallFluxMaterial);",
+      "repo_search": "No distinct IonWallFluxMaterial factory registration found in repository code.",
+      "interpretation": "Source action factory lookup name disagrees with registered type. Runtime Factory registry / possible external alias not verified. If no external alias, wall Material construction will fail before P05 accepting 12+12.",
+      "required_action": "Confirm exact Factory registry in pinned P5-0 binary and align PlasmasAction type with registered PhysicsIonWallFluxMaterial or explicitly register intended alias; run targeted Native check-input + negative guard."
+    }
+  ],
+  "related_native_history": {
+    "earlier_run": 44264892696,
+    "earlier_case_417_and_941_exit_code": 1,
+    "first_failure": "Private EI Rate missing before generated wall owner count",
+    "protected_rate_handoff_pr": 676,
+    "merged_into_pr665": true,
+    "actual_post_P4_X_and_protected_rate_Native_check_input": "NOT_RUN"
+  },
+  "gates": {
+    "P4_X_actual_production_stage": "PASS_SOURCE_ONLY",
+    "P4_X_source_rate_density_poisson_consumers": "PASS_SOURCE_ONLY",
+    "P4_X_wall_factory": "HOLD_FACTORY_TYPE_MISMATCH",
+    "P4_X_all_35_worker_receipt_aggregation": "PARTIAL_NOT_ALL_REPINNED_AT_EXACT_HEAD",
+    "P5_0_same_head_binary": "NOT_ESTABLISHED",
+    "P5_native_12FVKernel_12FVBC_Warehouse": "NOT_RUN",
+    "D8_dynamic_consumer": "HOLD",
+    "Native_P2": "HOLD",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "preservation": "All input ZIPs, original private EI Rate data, main, PR665 production source and P05 runtime guard unchanged by this worker. Evidence on isolated task branch only."
+}
