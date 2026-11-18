@@ -1,0 +1,72 @@
+{
+  "schema": "issue672.p6_i1.retired_grounded_sheath_chain.v1",
+  "slot": "P6-I1",
+  "status": "PASS_ACTUAL_JOB_LOG_ROOT_CAUSE__ION_FVM_KEEP_HOLD",
+  "pr665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "workflow": {
+    "path": ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+    "git_blob": "230e4367e7a688f297747b7f03bb0fdfaf4e4d23",
+    "preparation_line": 113,
+    "native_check_input_line": 122,
+    "transient_execution_line": 135,
+    "events": [
+      "pull_request main path",
+      "push main path",
+      "workflow_dispatch"
+    ]
+  },
+  "run": {
+    "id": 44297212333,
+    "conclusion": "failure",
+    "head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "jobs": [
+      {
+        "id": 134777258642,
+        "name": "ion-FVM-hybrid-1ns100-5ns100",
+        "artifact": 14423912810,
+        "artifact_sha256": "41b5cdead487cd4269234a963d55c46adc84c4c49b7d7e7a5b43ca9877c3fc6d",
+        "planned_steps": 200,
+        "traceback_line": 315,
+        "error_line": 330
+      },
+      {
+        "id": 134777259026,
+        "name": "ion-FVM-hybrid-1ns100-10ns50",
+        "artifact": 14424203209,
+        "artifact_sha256": "980263b7150e3d799ca3a0a75cb10106216ce56bd7f7e5ecc2359a08d210fa49",
+        "planned_steps": 150,
+        "traceback_line": 315,
+        "error_line": 330
+      }
+    ]
+  },
+  "exact_caller_chain": [
+    {
+      "source": "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_staged_dt.py",
+      "git_blob": "6242f4ae8e8d97c673932dae71d543a8031ea5fd",
+      "trace": "main line44 -> write_case line36 -> build_staged_case line23"
+    },
+    {
+      "source": "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py",
+      "git_blob": "9f7461c6287212f52d8c55e9ef361284080dfb90",
+      "trace": "build_case line20 -> full_fem.build_case"
+    },
+    {
+      "source": "experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py",
+      "git_blob": "db90fe634a7ddc234daeab7b94dd21618bd3c893",
+      "trace": "build_case line11 -> RuntimeError('RETIRED_GROUNDED_SHEATH_BCS')"
+    }
+  ],
+  "failure_stage": "Python input generation; no finished .i, no Native --check-input, no timestep, no numerical instability claim",
+  "artifact_prepare_log": "0 bytes in each ZIP as attested by E1; traceback observed independently in Actions job log, not prepare.log",
+  "method": "Direct fetch/read both full Actions job logs; exception frames, first failure stage, job IDs and source Git blobs independently verified. Artifact digests fetched from GitHub. Did not rerun time-stepping or rehash ZIP bytes anew.",
+  "physics_contract": "Historical retired Grounded FEM electron wall not physically equivalent to new C2 adjacent-field wall; P6-I2 physics-change scope approval required before creating a new case",
+  "gates": {
+    "I1": "PASS_ROOT_CAUSE",
+    "I3": "KEEP_HOLD_APPROVAL",
+    "Native_P2": "NOT_RUN",
+    "transient": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "mutation": "evidence-only isolated branch; no workflow/Physics/experiment/main/PR665 edits or CI dispatch"
+}
