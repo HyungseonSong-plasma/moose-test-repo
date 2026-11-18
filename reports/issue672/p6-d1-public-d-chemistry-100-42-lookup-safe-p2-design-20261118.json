@@ -1,0 +1,134 @@
+{
+  "schema": "issue672.p6_d1.public_d_chemistry_lookup_authority_safe_p2_design.v1",
+  "task": "PR #684 Public D Chemistry Source failure and 100/42-row Electron Lookup authority, safe P2 migration decision",
+  "pinned_source": {
+    "pr684": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "base_pr665": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "historical": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "main": "ebcfd9e662bc40f0473d8da05da95d11b61789f8"
+  },
+  "observed_actual_native": {
+    "run_id": 44314726088,
+    "artifact_id": 14431723105,
+    "source_exact_checkout": true,
+    "same_job_binary_sha256": "256ab419c24aac9a292479a56958e72744de8deaece9f043fe15c777ac4cf9dd",
+    "source_tests": "4 passed",
+    "build": "PASS",
+    "public_B_417": "PASS",
+    "public_B_941": "PASS",
+    "public_D_417": "FAIL_PRE_P05_CHEMISTRY_NOT_ENABLED",
+    "public_D_941": "FAIL_PRE_P05_CHEMISTRY_NOT_ENABLED",
+    "FLOW_417": "FAIL_P05_DUPLICATE_NI_TIME",
+    "FLOW_941": "FAIL_P05_DUPLICATE_NI_TIME",
+    "P05_generated_only_control": "PASS",
+    "P05_legacy_duplicate_control": "EXPECTED_REJECTION_PASS",
+    "source_specific_error": "FV species kernels require [Physics]/[Plasmas]/[Transport]/[Chemistry] to generate species source functors",
+    "source_line": "DDContinuityEq.C lines 179-189",
+    "artifact_zip_sha256": "ef7ebac1d38b02a955c04e3e35a689eb3fb2168913f3dca6d69d1a0e58b6bdef"
+  },
+  "confirmed_source_root_cause": {
+    "public_D_overlay": "public_option_s6_p2.py OVERLAY lines 35-52 selects 3 FV species but has [Transport]/[DriftDiffusion]/[Continuity] only",
+    "public_D_JSON": "plasma_species_only.json has reactions=[] and equations={}, 6 species; its staged JSON adds initial_number_density and transport_coef only",
+    "cpp_guard": "DDContinuityEq.C requires chemistryEnabled() and mechanism.hasSpeciesSource(id) for each selected FV ion",
+    "cpp_chemistry_constructor": "Chemistry.C lines 1219-1224 rejects activated Chemistry when reactions empty",
+    "cpp_source_emitter": "Chemistry.C addFunctorMaterials emits one S_<id>_molar via sum signed stoichiometric coefficients times channel progress; DDContinuityEq addFVKernels consumes these in FVCoupledForce",
+    "unsafe_patch": "Do not merely add [Chemistry], invent reaction coefficients, set dont_create_kernels, use binding-only P05 bypass or treat absent FV selection as New-only success"
+  },
+  "actual_tables": {
+    "historical_checkout_existing_original": {
+      "path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "rows": 100,
+      "git_blob": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+      "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "eV_min": 1.40991,
+      "eV_max": 22.1378
+    },
+    "p2_replacement": {
+      "path": ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt",
+      "rows": 42,
+      "git_blob": "aa05aadde111e4ba435185954a64a4b7dbbf2d45",
+      "sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "eV_min": 1.658212908,
+      "eV_max": 22.3312233
+    },
+    "overwrite": "run_public_option_s6_p2.sh AND issue402-flow-native-p2-regression.yml historical P0 copy 42-row SRC into historical Issue91 DST before P2 staging; real FLOW 417/941 Scratch both SHA=42-row",
+    "interpolation": "DDTransportMaterial.C lines 204-230 piecewise linear with clamp; same pressure/temperature reduces physical μ,D ratios to table reduced coefficient ratios",
+    "comparison_fraction_p2_minus_original": [
+      {
+        "energy_eV": 2,
+        "mobility_relative": -0.043486742668318,
+        "diffusivity_relative": 0.0021002350216013
+      },
+      {
+        "energy_eV": 5,
+        "mobility_relative": -0.1131290475409163,
+        "diffusivity_relative": -0.0216842528105923
+      },
+      {
+        "energy_eV": 10,
+        "mobility_relative": -0.1942197650818364,
+        "diffusivity_relative": -0.0931562183083833
+      },
+      {
+        "energy_eV": 20,
+        "mobility_relative": -0.3225552246211981,
+        "diffusivity_relative": -0.1787372572018625
+      }
+    ],
+    "conclusion": "100-vs-42 numerical equivalence disproven at sampled energies; do not replace original historical 100-row with P2 42-row silently; original gas Functors p/T_g_fixed and energy 5/3 projection remain separate exact-consumer gates"
+  },
+  "proposed_safe_p2_plan": [
+    {
+      "step": "S0_MODE_ISOLATION_AND_AUTHORITY",
+      "action": "Keep historical Public B and 100-row original Public D as separate authority from 42-row public research/New-only test. Explicit mode manifest with original ZIP SHA, source C0, table SHAs; no file overwrite or reuse of a shared destination. Original historical 100 row remains pristine.",
+      "gate": "PASS_EXACT_BYTES_AND_DECIDED_SOURCE_AUTHORITY"
+    },
+    {
+      "step": "S1_HISTORICAL_P2_COMPATIBILITY",
+      "action": "Build dedicated historical-only P2 compatibility input retaining Native FV ion 26 owners; no implicit New-only label, no dont_create_kernels. Any narrower electron-only binding must independently prove time/energy/Poisson consumers and count 26 originals, never claim P05 12+12. An owner must explicitly approve this historical compatibility mode.",
+      "gate": "SEPARATE_HISTORICAL_NATIVE_P2_AND_OWNER_AUDIT"
+    },
+    {
+      "step": "S2_GENERATED_NEW_ONLY_CHEMISTRY",
+      "action": "For Physics-generated FV use exact validated oxygen_s6_common + oxygen_s6_417/941 mechanism with 7 species, 8 reactions (7 common+1 case), validated progress/rate source identities. Add [Transport]/[Chemistry] in overlay and require nonzero volume net source for O2p,Om,Op and one S_<id>_molar for each; no fabricated sources or zero placeholders.",
+      "gate": "CHEMISTRY_7_8_AND_SIGNED_SOURCES_PASS"
+    },
+    {
+      "step": "S3_STRICT_SINGLE_OWNER_CUTOVER",
+      "action": "Use P1/P4-X style exact-SHA scratch retirement of 14 historical FV kernels +12 historical FV BCs; keep source/energy/Poisson/wall/surface-current producer contracts. P05 must see 12 generated FV kernels plus12 generated FV BC on three selected ions; no dont_create_kernels, no partial/empty selected fvm_species, no duplicate legacy ni_time.",
+      "gate": "NATIVE_WAREHOUSE_12_PLUS_12_WITH_NEGATIVES"
+    },
+    {
+      "step": "S4_ELECTRON_TRANSPORT_DATA",
+      "action": "Stage original 100-row under unique immutable name for historical reference; stage 42-row under a different name only for explicitly approved research/New-only case. Bind table_file to the chosen content address. Confirm table_units=reduced, bounds_policy=clamp, same pressure/gas_temperature Functor numeric evaluations and identical mean energy axis e_energy_eV; no silent p/T_g_fixed versus root pressure/temperature alias substitution. Check 5/3 energy mobility/diffusivity projections via actual C++ Functor numeric probes.",
+      "gate": "TABLE_AND_5_OVER_3_REAL_NUMERIC_ORACLE"
+    },
+    {
+      "step": "S5_EXACT_HEAD_REAL_NATIVE_P2",
+      "action": "Build one binary from exact approved PR HEAD under pinned OCI. Independently stage 417 and 941 and run --check-input (source/C++/ELF SHA receipt, actual exit 0 Syntax OK), inspect actual Warehouse kernel and BC names/types/variables, deliberately reinsert one old ion owner and remove one species source; require expected nonzero fail-close. Archive real logs and preserved source SHA.",
+      "gate": "PUBLIC_D_417_941_P2_AND_P05_PASS"
+    },
+    {
+      "step": "S6_SEPARATE_APPROVAL_AND_MERGE",
+      "action": "Have Physics/Science owner approve historical 100/42 authority and compatibility vs New-only branch. Require any altered kinetic/transport contract to be separately accepted. Only merge PR684 after amended source and W6-style exact-head validate/native CI pass; explicitly maintain SCIENCE_HOLD, no automatic S6 P3/P4, or Ion-FVM 150/200 step job.",
+      "gate": "MERGE_APPROVAL_REQUIRED_BEFORE_PR665_INTEGRATION"
+    }
+  ],
+  "current_verdict": {
+    "PR684": "KEEP_DRAFT_DO_NOT_MERGE",
+    "public_D_Native_P2": "FAIL_PRE_P05",
+    "FLOW_Native_P2": "FAIL_P05_DUPLICATE",
+    "CXX_P05_GUARD": "PASS_EXPECTED_REJECTION",
+    "historical_100row_vs_42row": "NO_EQUIVALENCE",
+    "separate_scientific_authority": "REQUIRED",
+    "SCIENCE_HOLD": true
+  },
+  "preservation": {
+    "no_change_to_PR684": true,
+    "no_change_to_PR665": true,
+    "no_change_to_main": true,
+    "no_original_input_mutation": true,
+    "no_private_rate_access": true,
+    "no_automatic_science_runs": true
+  }
+}
