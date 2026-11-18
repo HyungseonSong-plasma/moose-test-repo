@@ -1266,6 +1266,14 @@
       "name": "D8_NEWONLY_WAREHOUSE_FUNCTOR",
       "status": "HOLD_NOT_OBSERVED",
       "why": "RF/Maxwell/Poisson/dynamic consumer liveness needs Native P5."
+    },
+    {
+      "name": "MISSING_PARENT_PLASMA_MESH_IN_PRE_P4X_DIAGNOSTIC",
+      "status": "CONFIRMED_INPUT_STAGING_BLOCKER",
+      "artifact_id": 14408333164,
+      "missing_path": "baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+      "impact": "Both real --check-input probes exit 1 before Warehouse owner evaluation. Separate from Maxwell child qvt.msh custody.",
+      "action": "P5-0/P5-B1/P5-C1 must stage actual parent plasma mesh with exact SHA before native acceptance. Do not invent or substitute mesh."
     }
   ],
   "gates": {
@@ -1276,11 +1284,35 @@
     "P5_A5_NEWONLY_STAGE_SHA": "PASS_44_44_FILE_COMPARISONS",
     "P5_A5_NEGATIVES": "PASS_30_30",
     "P4_X": "HOLD",
-    "P5_0_SOURCE_BINARY_PIN": "PENDING",
+    "P5_0_SOURCE_BINARY_PIN": "PENDING_ACCEPTED_CURRENT_HEAD_BINARY__DIAGNOSTIC_BINARY_EXISTS_DIFFERENT_HEAD",
     "P5_B3_B4_C3_C4_WAREHOUSE": "NOT_RUN",
-    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P2": "HOLD_EARLY_DIAGNOSTIC_FAILED_PARENT_PLASMA_MESH_FINAL_ACCEPTANCE_NOT_RUN",
     "NATIVE_P3": "NOT_RUN",
     "NATIVE_P4": "NOT_RUN",
     "SCIENCE": "HOLD"
+  },
+  "separate_pre_P4X_native_diagnostic": {
+    "run_id": 44262035027,
+    "conclusion": "CONFIRMED_MISSING_PARENT_PLASMA_MESH_STAGING;_NOT_EVIDENCE_FOR_OR_AGAINST_GENERATED_12_PLUS_12_OBJECT_IDENTITY",
+    "run_head": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f",
+    "run_artifact_id": 14408333164,
+    "artifact_zip_sha256": "5fdf86be670f6c09e0a3ea79f4303f61c8afe6cb83ae94cc9d18d5b0b2c3a6ed",
+    "binary_sha256": "7968019d100e66f8979575aa0895506d1a188c58a85b9a5d561b45f41cb1cc96",
+    "source_epoch_distinction": "An exploratory pre-P4-X diagnostic at a different run HEAD, not P5-0 final accepted PR665 exact-head binary/run",
+    "verified_case_logs": {
+      "417": {
+        "exit_code": 1,
+        "log_sha256": "91b82d79c914f1914bd97fcccde2e4dc9609b60b4b53a88e5aba5bccf9ff7778",
+        "first_error": "Unable to open /case/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+        "warehouse_reached": false
+      },
+      "941": {
+        "exit_code": 1,
+        "log_sha256": "1a7be338b5b6423933d1513ffb113d3f4618ae619eb350b9951c1651d7f0be23",
+        "first_error": "Unable to open /case/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+        "warehouse_reached": false
+      }
+    },
+    "next": "P5-0 preflight must stage/pin parent plasma mesh beyond already pinned Maxwell child qvt.msh, then check exact accepted binary/P4-X before P5-B/C."
   }
 }
