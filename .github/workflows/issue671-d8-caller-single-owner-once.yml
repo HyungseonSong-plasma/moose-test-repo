@@ -2,20 +2,20 @@ name: Issue671 D8 actual density wall current Poisson RF caller probe
 on:
   push:
     branches:
-      - issue-671-d8-caller-single-owner-native-20261118
+      - issue-671-d8-wall-face-residual-native-20261118
     paths:
       - .github/workflows/issue671-d8-caller-single-owner-once.yml
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: issue671-d8-live-caller-isolated-one-shot
+  group: issue671-d8-wall-face-residual-native-isolated
   cancel-in-progress: false
 jobs:
   exact-head-native-p05:
     if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 85
     env:
       OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
       BASE_HEAD: 05d7ce4eceb81769cb2f0146c51535fc35e74ac1
@@ -37,9 +37,9 @@ jobs:
           test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = d8c8069eb573a73338037c912e880de328d5a1fe
           test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 2f94183c590b94b39b22f85a47f795ed8b671783
           test "$(git hash-object physics_app/src/physics/plasma/DDEnergyEq.C)" = a5b21c760355c07fe6580c2658777ece5687343a
-          test "$(git hash-object physics_app/src/functormaterials/IonWallFluxMaterial.C)" = 60a0e65dcd79a35c07f0ad3b4bc0bd719d0a6add
-          test "$(git hash-object physics_app/src/materials/ESWallFluxMaterial.C)" = eb4de0033376d8841b5025799b3059e8de5d8b2e
-          test "$(git hash-object physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C)" = 9f84c16e3b5923b63e1de75c104269172a918d97
+          test "$(git hash-object physics_app/src/functormaterials/IonWallFluxMaterial.C)" = 14b3fc2f772e300e2e2c3da558bd245e7d03da1c
+          test "$(git hash-object physics_app/src/materials/ESWallFluxMaterial.C)" = 0b982bba1a7d410129546f52c992d612ef92ed14
+          test "$(git hash-object physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C)" = 6912d86647294532a0d580cc5dba62a76a3fb38f
           test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
           test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
           echo P05_SOURCE_HEAD_AND_CODE_BLOBS_PIN_PASS
@@ -319,6 +319,63 @@ jobs:
                           "pass":bool(constructor_ok),
                           "scope":"actual compiled constructor bindings; not residual/face evaluation"}
 
+                  # NUMERICAL D8: actual face evaluation and ADKernel::computeQpResidual.
+                  # Twelve-file diagnostic: source eleven layers unmodified; private rates never exported.
+                  diag_rel="experiments/Issue395_powered_chemistry_ladder/d8_wall_residual_probe.i"
+                  diag=chem/"d8_wall_residual_probe.i"
+                  diag.write_text(
+                      "[MultiApps]\n  inactive = maxwell_t6\n[]\n"
+                      "[Transfers]\n"
+                      "  inactive = 'drive_to_maxwell_t6 ne_to_maxwell_t6 mean_en_to_maxwell_t6 "
+                      "pressure_to_maxwell_t6 E_real_from_maxwell_t6 E_imag_from_maxwell_t6 "
+                      "P_abs_from_maxwell_t6'\n[]\n"
+                      "[Controls]\n  inactive = rf_drive_pid_t6\n[]\n"
+                      "[Executioner]\n  num_steps = 1\n  nl_max_its = 2\n[]\n"
+                      "[Outputs]\n  checkpoint = false\n  exodus = false\n  csv = false\n[]\n")
+                  args=["docker","run","--rm","--network","none","--entrypoint","/bin/bash",
+                        "--user","0:0","--workdir","/case",
+                        "--env","OXYGEN_RESEARCH_400=1","--env","OXYGEN_RESEARCH_FULL24=0",
+                        "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
+                        "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
+                        "--mount",f"type=bind,src={work},dst=/case",oci,"-lc",
+                        "source /environment; /workspace/physics_app/physics-opt -i "+
+                        " ".join(shlex.quote(p) for p in expected["ordered_inputs"]+[diag_rel])+
+                        " --n-threads=1"]
+                  try:
+                      p=subprocess.run(args,text=True,capture_output=True,timeout=270,check=False,env=os.environ.copy())
+                      numeric_rc=p.returncode
+                      numeric_log=p.stdout+"\n"+p.stderr
+                  except subprocess.TimeoutExpired as exc:
+                      numeric_rc=124
+                      decoder=lambda x:x.decode(errors="replace") if isinstance(x,bytes) else (x or "")
+                      numeric_log=decoder(exc.stdout)+"\n"+decoder(exc.stderr)+"\nD8_NUMERIC_TIMEOUT\n"
+                  numfile=out/f"S6-{case}_native_wall_face_residual.log"
+                  numfile.write_text(numeric_log)
+                  faces=re.findall(
+                      r"D8_WALL_FACE_VALUE kind=(number|mass) owner=(O2p_wall|Om_wall|Op_wall) "
+                      r"face_id=(\d+) (?:surface=([^\s]+) migration=([^\s]+) )?value=([^\s]+)",numeric_log)
+                  electron=re.findall(r"D8_E_WALL_FACE_VALUE owner=(\w+) face_id=(\d+) "
+                                      r"drop_V=([^\s]+) value=([^\s]+)",numeric_log)
+                  lowerd=re.findall(r"D8_LOWERD_RESIDUAL_VALUE owner=(\w+) face_id=(\d+) element_id=(\d+) "
+                                   r"qp=(\d+) current=([^\s]+) residual=([^\s]+)",numeric_log)
+                  finite=lambda x:__import__("math").isfinite(float(x))
+                  wanted={(k,sp+"_wall") for k in ("number","mass") for sp in ("O2p","Om","Op")}
+                  ion_ok=({(q[0],q[1]) for q in faces}==wanted and
+                          all(finite(v) for q in faces for v in q[3:] if v))
+                  electron_ok=(bool(electron) and all(finite(q[2]) and finite(q[3]) for q in electron))
+                  lowerd_ok=({q[0] for q in lowerd}==
+                             {"sigma_surface_current","sigma_wafer_surface_current",
+                              "sigma_focus_ring_surface_current"} and
+                             all(finite(q[4]) and finite(q[5]) for q in lowerd))
+                  receipt["case_results"][case]["D8_ACTUAL_FACE_AND_RESIDUAL"]={
+                      "scope":"S6 real eleven layers plus bounded 12th numerical diagnostic overlay; RF inactive",
+                      "diagnostic_overlay_sha256":digest(diag),
+                      "numerical_run_exit_code":numeric_rc,"numerical_log_sha256":digest(numfile),
+                      "ion_face_values":faces,"electron_face_values":electron,"lowerd_residual_values":lowerd,
+                      "ion_face_ok":bool(ion_ok),"electron_face_ok":bool(electron_ok),
+                      "lowerd_residual_ok":bool(lowerd_ok),
+                      "actual_numerical_gate_pass":bool(ion_ok and electron_ok and lowerd_ok),
+                      "original_11_layer_sha_unchanged":all(digest(chem/n)==h for n,h in expected["11_layer_sha256"].items())}
                   # One independent Native Warehouse negative on a post-stage private Scratch copy.
                   # Preserve both clean inputs, EI bytes and the unchanged production P05 guard.
                   neg=private/"417-P05-unexpected-kernel"
@@ -407,11 +464,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue671-d8-caller-owner-real-s6-417-941
+          name: issue671-d8-wall-face-residual-real-s6-417-941
           path: |
             ${{ runner.temp }}/p05-out/receipt.json
             ${{ runner.temp }}/p05-out/S6-417_native_check_input.log
             ${{ runner.temp }}/p05-out/S6-941_native_check_input.log
+            ${{ runner.temp }}/p05-out/S6-417_native_wall_face_residual.log
+            ${{ runner.temp }}/p05-out/S6-941_native_wall_face_residual.log
             ${{ runner.temp }}/p05-out/S6-417_P05_duplicate_negative.log
             ${{ runner.temp }}/p05-in/p4_receipt.json
             ${{ runner.temp }}/p05-in/physics-opt.sha256
