@@ -1,0 +1,170 @@
+{
+  "schema": "issue671.p5_b5.s6_417_late_bound_consumer_source_receipt.v1",
+  "task_id": "P5-B5",
+  "issue": 671,
+  "case": "S6-417",
+  "verdict": "SOURCE_ARTIFACT_INPUT_AND_CALLER_GRAPH_PASS__RUNTIME_HOLD_P4X_P50",
+  "source": {
+    "reviewed_pr665_exact_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "original_artifact_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "reference_repo": "HyungseonSong-plasma/moose-test-repo",
+    "production_artifact_run": 44256823392,
+    "production_artifact_id": 14405784430,
+    "production_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "p3_x_receipt": "reports/issue669/p3-x/verification_receipt.json"
+  },
+  "source_only_rehashes": {
+    "staged_input_files": "11/11 VERIFIED",
+    "p3_x_deleted_native_ion": "26/26 SOURCE STAGE",
+    "p3_x_deleted_native_electron": "10/10 SOURCE STAGE",
+    "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "parent_layer_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+    "electron_lookup_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "negative_controls": "25/25 REJECTED (16 summary-contract + 9 parent/child raw-byte mutations)",
+    "full_local_receipt_sha256": "3734d47f6b123b2eb2229d2857a5c8a10098d171aaeb019995aab33e2e143c2e",
+    "local_reproduction_script_sha256": "4fdc1e38253668d7d47b402391947f3ef8b308536fb78681d2f3141c98a8b74b"
+  },
+  "maxwell_child": {
+    "parent_object": {
+      "section": "MultiApps",
+      "name": "maxwell_t6",
+      "factory": "FullSolveMultiApp",
+      "source_block_sha256": "30683695a66ea5f357e6f57338d2b4c3c495167d5f5781d48996c937761f5473"
+    },
+    "child_file": {
+      "path": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i",
+      "sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698"
+    },
+    "includes_in_order": [
+      {
+        "path": "issue397_maxwell_steady_abs1e11.i",
+        "sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c"
+      },
+      {
+        "path": "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_overlay.i",
+        "sha256": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45"
+      }
+    ],
+    "nested_include_count": 0,
+    "file_mesh_generator_path": "../Issue18_qvt_plasma_mapping/qvt.msh",
+    "mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
+  },
+  "parent_transfer_graph": [
+    {
+      "name": "drive_to_maxwell_t6",
+      "source_block_sha256": "2a70aa7af1e1fc40a7d9a869710df8a75cb14519129783d9c1c0e88cb18002d8"
+    },
+    {
+      "name": "ne_to_maxwell_t6",
+      "source_block_sha256": "b81120f35a7d3982782f1199429b109740afc47fe64339a83e4b9ded3c1d1f15"
+    },
+    {
+      "name": "mean_en_to_maxwell_t6",
+      "source_block_sha256": "3923110fe7628df583766475ff5511081285077c78c34313751f15d895704fc8"
+    },
+    {
+      "name": "pressure_to_maxwell_t6",
+      "source_block_sha256": "f7649072180627bfc4acb0c1e3425031474be4c6d58113b6a87967c9b1e1aa01"
+    },
+    {
+      "name": "E_real_from_maxwell_t6",
+      "source_block_sha256": "23237ee6fce41c830da27a35e6d642b1142a4a80842db43b6a24cfe67cb2db8e"
+    },
+    {
+      "name": "E_imag_from_maxwell_t6",
+      "source_block_sha256": "84bf065db516a6b8db24931dbab3e001aef3bdd20050f8bde0ddb7943a63d7a3"
+    },
+    {
+      "name": "P_abs_from_maxwell_t6",
+      "source_block_sha256": "3eb03d77fe2ee54c7756a5afbd2626a8b70e43d12c9a0c8a84a6099292aba169"
+    }
+  ],
+  "rf_paths": {
+    "pid": {
+      "name": "rf_drive_pid_t6",
+      "sensor": "P_rf_raw_W_t6",
+      "receiver": "rf_drive_scale_t6",
+      "source_block_sha256": "f8c59d0d7e057580769032684bd6752519eb1ff9a596753c6a00fb6ace3901d7"
+    },
+    "heating": {
+      "name": "rf_heating_t6",
+      "variable": "log_e_energy",
+      "material_property": "q_rf_eV_mol_t6",
+      "source_block_sha256": "935798c5d6f16243c87d84eab193a6111ef19c9dff827e9381136f97c6fc9c92"
+    },
+    "preserved_aux_bridge": [
+      "log_e -> log_ne_rf_state_t6 -> electron_density_rf_state_t6",
+      "log_e_energy -> log_energy_rf_state_t6 -> mean_energy_rf_state_t6",
+      "pressure -> pressure_rf_state_t6"
+    ]
+  },
+  "density_and_wall": {
+    "existing_physical_number_density": [
+      "n_i_physical",
+      "n_m_physical",
+      "n_op_physical"
+    ],
+    "existing_source_functors": {
+      "poisson": "charge_number_density",
+      "poisson_source_sha256": "8fca600fe127ec76fe0a6b642460858b3a84cb2c43bbb13225f02a57ec04e6af",
+      "wall_materials": [
+        "ion_wall_flux",
+        "negative_ion_wall_flux",
+        "atomic_positive_ion_wall_flux"
+      ],
+      "surface_currents": [
+        "cover_surface_current",
+        "wafer_surface_current",
+        "focus_ring_surface_current"
+      ]
+    },
+    "verified_existing_density_wall_current_owner_blocks": 12,
+    "verified_source_density_wall_edges": 9,
+    "planned_generation": {
+      "ion_sources": [
+        "S_O2p_molar",
+        "S_Om_molar",
+        "S_Op_molar"
+      ],
+      "canonical_number_density": [
+        "O2p_number_density",
+        "Om_number_density",
+        "Op_number_density"
+      ],
+      "generated_warehouse_readback": "NOT_RUN"
+    },
+    "static_collision_candidates": [
+      "O2p_wall_number_flux",
+      "Om_wall_number_flux",
+      "Op_wall_number_flux",
+      "cover_net_surface_current_density",
+      "wafer_net_surface_current_density",
+      "focus_ring_net_surface_current_density"
+    ]
+  },
+  "source_code_git_blobs": {
+    "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "physics_app/src/functormaterials/IonWallFluxMaterial.C": "101586edf05ed19525072b4a43c181ba57dc3589",
+    "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C": "215e9c81720e6813be22a8a51405fe99639cf0ab"
+  },
+  "hard_gates": {
+    "p2_source_stage": "PASS",
+    "p3_x_source_stage": "PASS",
+    "p4_x_source_cutover": "HOLD",
+    "p5_0_same_exact_binary_build": "NOT_RUN",
+    "p5_b2_native_check_input": "NOT_RUN",
+    "p5_b5_cpp_late_bound_runtime": "NOT_RUN",
+    "d8_newonly_dynamic_caller": "HOLD",
+    "native_p2": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "P4-X single-owner cutover for 3 wall flux + 3 surface current public functors, plus source 5->3",
+    "P5-0 exact HEAD PhysicsApp binary SHA and Factory registry absent; no Native check-input may be claimed",
+    "Maxwell child and transfer file/endpoint existence is proven, not actual live dynamic reachability",
+    "C++ generated 12 ion FV Kernels + 12 BCs and Functor Warehouse identity remain unobserved"
+  ],
+  "mutation_scope": "One independent receipt file on isolated P5-B5 branch. No modification to PR #665, #671 issue body, input, workflow or main."
+}
