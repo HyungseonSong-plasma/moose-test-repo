@@ -1,0 +1,360 @@
+{
+  "schema": "issue671.p5_e2.s6_941.source_native_evidence_aggregation.v1",
+  "task_id": "P5-E2",
+  "issue": 671,
+  "case": "S6-941",
+  "verdict": "EVIDENCE_CUSTODY_AND_SOURCE_33_SHA_PASS__FINAL_NATIVE_P2_HOLD",
+  "evidence_class": "REAL_CI_ARTIFACT_INDEPENDENT_SHA_CRC_LOG_READBACK__NO_FINAL_P4X_NATIVE",
+  "pr665": {
+    "head_at_audit": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "state": "DRAFT_OPEN",
+    "main_mutated": false
+  },
+  "independent_recalculation": {
+    "script": "p5_e2_941_audit.py",
+    "script_sha256": "01f5281a7905d4d7453309269ba6ba2b4cd2ba1e2b5c573734803fee9609df78",
+    "detailed_local_receipt": "p5_e2_941_verification_receipt.json",
+    "detailed_local_receipt_sha256": "eacacbad47e3a33a098c26e8715d932b59528a8837690099000f650d121da9df",
+    "source_ZIPs_independently_rehashed_and_crc_checked": 3,
+    "input_file_SHA_matches": 33,
+    "case": "941",
+    "metadata_acceptance_mutants_rejected": 10,
+    "metadata_acceptance_mutants_total": 10,
+    "native_P05_negative_tests_executed_by_this_task": 0
+  },
+  "input": {
+    "artifact_stages": [
+      {
+        "stage": "P1",
+        "run_id": 44182628032,
+        "artifact_id": 14372278070,
+        "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+        "crc": "PASS"
+      },
+      {
+        "stage": "P2",
+        "run_id": 44199587771,
+        "artifact_id": 14380831538,
+        "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+        "crc": "PASS"
+      },
+      {
+        "stage": "P3X",
+        "run_id": 44257739203,
+        "artifact_id": 14406746397,
+        "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+        "crc": "PASS"
+      }
+    ],
+    "source_staging_status": "PASS_PRE_P4X_ONLY",
+    "layers_expected": 11,
+    "layers_rechecked_each_stage": {
+      "P1": 11,
+      "P2": 11,
+      "P3X": 11
+    },
+    "p1_to_p2_changed": 6,
+    "p2_to_p3x_changed": 1,
+    "p2_to_p3x_unchanged": 10,
+    "ordered_P3X_actual_11layer_sha256": [
+      {
+        "ordinal": 1,
+        "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+        "sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+      },
+      {
+        "ordinal": 2,
+        "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+        "sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+      },
+      {
+        "ordinal": 3,
+        "path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+        "sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+      },
+      {
+        "ordinal": 4,
+        "path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+        "sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+      },
+      {
+        "ordinal": 5,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+        "sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76"
+      },
+      {
+        "ordinal": 6,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+        "sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05"
+      },
+      {
+        "ordinal": 7,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-941_op_ionization_overlay.i",
+        "sha256": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa"
+      },
+      {
+        "ordinal": 8,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-941-407_o2_consumer_overlay.i",
+        "sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+      },
+      {
+        "ordinal": 9,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+        "sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+      },
+      {
+        "ordinal": 10,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-941-407-2069-H25_H25_overlay.i",
+        "sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc"
+      },
+      {
+        "ordinal": 11,
+        "path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+        "sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+      }
+    ],
+    "source_manifest_sha256": {
+      "case_manifest": "5d4a857f72f06ae9323f4e279f7fc426a1a74dd9c0ad75a530ff288732e6fde8",
+      "ordered": "0432451f9b0f20bab6f5658a815db2877a39189b1ef50d1594142a112e964ac8",
+      "p2_receipt": "a5090f9cc93843503382bf86c7995e406316725d6ddaa85e43d827f162b734b0",
+      "p3x_receipt": "308630d14828dba646fc5a7e6742c5b13a1dc9a40a76e320916e793b0263850b"
+    },
+    "C0_P3X_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "maxwell_2_includes_sha256": [
+      "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+      "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45"
+    ],
+    "Maxwell_qvt_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "S6_main_plasma_mesh_basename": "baseline_plasma_plus_unstructured_cover_plus_wafer.msh",
+    "S6_main_plasma_mesh_staged_in_current_artifact": false,
+    "S6_main_plasma_mesh_SHA256": null,
+    "retired_old_native_ion_FV_owners": 26,
+    "retired_old_native_electron_owners": 10,
+    "expected_ion_FVKernel_count": 12,
+    "expected_ion_FVBC_count": 12,
+    "actual_generated_native_FVKernel_count": null,
+    "actual_generated_native_FVBC_count": null
+  },
+  "upstream_source_contracts": {
+    "expected_12_FVBCs": [
+      {
+        "name": "O2p_wall",
+        "variable": "log_O2p",
+        "factory": "FVFunctorNeumannBC",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "functor": "O2p_wall_number_flux",
+        "factor": "-1/N_A"
+      },
+      {
+        "name": "O2p_cover_dielectric",
+        "variable": "log_O2p",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "signed_number_flux": "O2p_wall_number_flux"
+      },
+      {
+        "name": "O2p_wafer_dielectric",
+        "variable": "log_O2p",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "signed_number_flux": "O2p_wall_number_flux"
+      },
+      {
+        "name": "O2p_focus_ring_dielectric",
+        "variable": "log_O2p",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "signed_number_flux": "O2p_wall_number_flux"
+      },
+      {
+        "name": "Om_wall",
+        "variable": "log_Om",
+        "factory": "FVFunctorNeumannBC",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "functor": "Om_wall_number_flux",
+        "factor": "-1/N_A"
+      },
+      {
+        "name": "Om_cover_dielectric",
+        "variable": "log_Om",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "signed_number_flux": "Om_wall_number_flux"
+      },
+      {
+        "name": "Om_wafer_dielectric",
+        "variable": "log_Om",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "signed_number_flux": "Om_wall_number_flux"
+      },
+      {
+        "name": "Om_focus_ring_dielectric",
+        "variable": "log_Om",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "signed_number_flux": "Om_wall_number_flux"
+      },
+      {
+        "name": "Op_wall",
+        "variable": "log_Op",
+        "factory": "FVFunctorNeumannBC",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "functor": "Op_wall_number_flux",
+        "factor": "-1/N_A"
+      },
+      {
+        "name": "Op_cover_dielectric",
+        "variable": "log_Op",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "signed_number_flux": "Op_wall_number_flux"
+      },
+      {
+        "name": "Op_wafer_dielectric",
+        "variable": "log_Op",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "signed_number_flux": "Op_wall_number_flux"
+      },
+      {
+        "name": "Op_focus_ring_dielectric",
+        "variable": "log_Op",
+        "factory": "FVLogMolarDielectricFluxBC",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "signed_number_flux": "Op_wall_number_flux"
+      }
+    ],
+    "BC_input_alias_logic": "Three ion_wall BC names repeated across disjoint JSON groups become ONE normalized FVFunctorNeumannBC per ion; 3 general Neumann plus 9 dielectric BCs.",
+    "P05_Cpp_guard_verified_source_only": true,
+    "P4X_stage1_disposable_only": {
+      "status": "STATIC_PASS_NOT_INTEGRATED",
+      "after_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "runner_integrated": false,
+      "full_source_consumer_validated": false
+    }
+  },
+  "diagnostic_not_accepted_for_P5": {
+    "run_id": 44262035027,
+    "artifact_id": 14408333164,
+    "ZIP_sha256": "5fdf86be670f6c09e0a3ea79f4303f61c8afe6cb83ae94cc9d18d5b0b2c3a6ed",
+    "ZIP_CRC": "PASS",
+    "workflow_conclusion": "success_DIAGNOSTIC_COLLECTION_ONLY",
+    "probe_head": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f",
+    "different_from_integration_head": true,
+    "build_OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "reported_binary_sha256": "7968019d100e66f8979575aa0895506d1a188c58a85b9a5d561b45f41cb1cc96",
+    "binary_SHA_text_file_and_readiness_match": true,
+    "binary_executable_bytes_present_in_artifact": false,
+    "binary_independent_rehash": false,
+    "S6_941_log_path": "p5-native/S6-941_native_check_input.log",
+    "S6_941_log_sha256": "1a7be338b5b6423933d1513ffb113d3f4618ae619eb350b9951c1651d7f0be23",
+    "S6_941_native_exit": 1,
+    "syntax_ok": false,
+    "first_error": "FileMeshGenerator::generate unable to open baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+    "classification": "HARNESS_OR_CONSTRUCTION_FAIL_MISSING_S6_MAIN_PLASMA_MESH",
+    "P05_warehouse_reached": false,
+    "final_P5_0_binary": false,
+    "qualifies_as_final_P5_C2": false
+  },
+  "negative_controls": {
+    "type": "OFFLINE_EVIDENCE_PROMOTION_METADATA_NOT_NATIVE_P05",
+    "positive_synthetic_metadata_selftest": "PASS",
+    "rejected_10_of_10": [
+      "P4X_not_integrated",
+      "P5_0_binary_missing",
+      "wrong_probe_head",
+      "other_case_417",
+      "wrong_case_JSON",
+      "main_mesh_missing",
+      "nonzero_native_exit",
+      "Syntax_OK_absent",
+      "warehouse_unobserved",
+      "native_P05_negatives_unrun"
+    ],
+    "native_fail_closed_mutant_runs": 0,
+    "other_task_P5_N2_static_negatives": "EXISTS_SOURCE_ONLY_NOT_NATIVE_EXECUTION"
+  },
+  "linked_independent_receipts": {
+    "a2": {
+      "git_blob_sha": "24abb90eaa06bb824b6c4e6ee1b09144ba99a79e",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue671-p5-a2-941-input-manifest-20261118/reports/issue671/p5-a2/verification_receipt.json"
+    },
+    "c2": {
+      "git_blob_sha": "1393abc834d5857d67e624c3f6dd2a5e3956b6cd",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/a9ddbe092dfd969bbed2304cdebfe0e5e4768a09/reports/issue671/p5-c2-s6-941-prep4-native-check-input-hold.json"
+    },
+    "c4": {
+      "git_blob_sha": "5943ea75e985fbbb39effd7d2eae71505f86320f",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue671-p5-c4-941-fvbc-audit-20261118/reports/issue671/p5-c4/verification_receipt.json"
+    },
+    "c6": {
+      "git_blob_sha": "d0e1842f0191e1a19bfb536bad0bc23fd539b3b5",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/06524062998f7f74c8b4780b9dc5d7815ff66ddc/reports/issue671/p5-c6-s6-941-native-log-artifact-custody.json"
+    },
+    "a5": {
+      "git_blob_sha": "fc83165183bf4ac2c27c7b82c29a204d9db0f0d2",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/d09b800beb65931d15e8187e0909ed660647f836/reports/issue671/p5-a5-fv12-plus-bc12-expected-owner-contract.json"
+    },
+    "p4x": {
+      "git_blob_sha": "3377db957922777b42c78c375d9420453e0d146e",
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/cf51de8ed71e34f62e14e12e46ae9c30c023708f/reports/issue670/p4-x-stage1/partial_static_receipt.json"
+    }
+  },
+  "gates": {
+    "P5_E2_SOURCE_AND_LOG_PROVENANCE": "PASS",
+    "S6_941_PRE_P4X_STAGE": "PASS_33_FILE_SHA",
+    "P4_X_FINAL_RUNNER": "NOT_INTEGRATED_HOLD",
+    "S6_MAIN_PLASMA_MESH": "MISSING_FROM_P3X_STAGE",
+    "P5_0_ONE_FINAL_SHARED_BINARY": "NOT_RUN",
+    "P5_C2_FINAL_941_CHECK_INPUT": "NOT_RUN",
+    "P5_C3_941_WAREHOUSE_12_KERNEL": "NOT_VERIFIED",
+    "P5_C4_941_WAREHOUSE_12_BC": "NOT_REACHED",
+    "P5_C6_FINAL_NATIVE_LOG": "NOT_AVAILABLE",
+    "P5_N1_N8_ACTUAL_P05_NEGATIVES": "NOT_COMPLETE",
+    "D8_DYNAMIC_WAREHOUSE_CALLERS": "HOLD",
+    "NEW_ONLY_S6_NATIVE_P2": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "next_gate": "P4-X complete single-writer runner integration with final 941 files, original S6 main mesh pin (not Maxwell qvt.msh); P5-0 build one final exact-head binary; P5-C2 Native check-input exit 0 full log; C3/C4 actual Warehouse 12+12 and Native P05 negative evidence; P5-X compare both cases with same final binary.",
+  "integrity": "No private EI source rate bytes, historical inputs, PR665, main, Physics C++, workflow or production runner touched. No Native job dispatched here."
+}
