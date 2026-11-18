@@ -1,0 +1,78 @@
+{
+  "schema": "issue671.p5_c2.s6_941.native_check_input_holding_receipt.v1",
+  "task_id": "P5-C2",
+  "case": "S6-941",
+  "verdict": "HOLD_PRE_P4_DIAGNOSTIC_EXIT_1_MISSING_STAGED_MAIN_MESH",
+  "task_contract": "Independent Native --check-input at final pinned P5-0 PhysicsApp binary shared with S6-417, exit/log/Factory/P05 receipts",
+  "scope": "Readback of existing pre-P4 diagnostic, NOT an official final-head P5-C2 dispatch",
+  "latest_pr665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "source_stage": {
+    "run": 44257739203,
+    "artifact": 14406746397,
+    "archive_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "input_941_11_layer_sha_verified": "11/11",
+    "c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+    "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "electron_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "ion_native_owners_retired": 26,
+    "c0_requested_mesh": "baseline_plasma_plus_unstructured_cover_plus_wafer.msh",
+    "main_s6_plasma_mesh_in_artifact": false,
+    "separate_maxwell_qvt_mesh_in_artifact": true,
+    "source_stage_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+  },
+  "existing_diagnostic": {
+    "run": 44262035027,
+    "artifact": 14408333164,
+    "branch_head": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f",
+    "diagnostic_zip_sha256": "5fdf86be670f6c09e0a3ea79f4303f61c8afe6cb83ae94cc9d18d5b0b2c3a6ed",
+    "binary_sha256": "7968019d100e66f8979575aa0895506d1a188c58a85b9a5d561b45f41cb1cc96",
+    "build_base": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "actual_check_input_executed": true,
+    "exit_code": 1,
+    "syntax_ok": false,
+    "native_941_log_sha256": "1a7be338b5b6423933d1513ffb113d3f4618ae619eb350b9951c1651d7f0be23",
+    "first_observed_failure": "FileMeshGenerator::generate(): Unable to open /case/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+    "notes": "C0 explicitly requests baseline_plasma_plus_unstructured_cover_plus_wafer.msh, which is not staged in the source artifact. First error only, subsequent factory/warehouse errors untested.",
+    "warehouse_generated_12_FVKernels_12_FVBC": "NOT_REACHED",
+    "shared_417_941_binary_in_this_diagnostic": true,
+    "final_post_P4_binary_status": "NOT_AVAILABLE"
+  },
+  "independently_verified": {
+    "diagnostic_zip_sha256": true,
+    "diagnostic_zip_crc": true,
+    "diagnostic_binary_sha_file_match": true,
+    "native_941_log_sha256": true,
+    "newonly_941_11_layer_sha256": "11/11",
+    "newonly_941_json_sha256": true,
+    "newonly_941_overlay_sha256": true,
+    "local_full_receipt_sha256": "faf4bc51b678097c6ce748c56397263d13d71b2a22105e8b7f8160a0a1c225a9",
+    "reproducer_sha256": "45e87f2450be0e18eed30951b902e2528733ae3228d804b6cef262a33eda964e"
+  },
+  "gates": {
+    "P2_SOURCE_STAGING": "PASS",
+    "P3_X_SOURCE_STAGING": "PASS",
+    "P4_X": "NOT_INTEGRATED",
+    "P5_0_FINAL_SHARED_BUILD": "NOT_RUN",
+    "P5_C2_FINAL_NATIVE_JOB": "NOT_RUN",
+    "PRE_P4_NATIVE_DIAGNOSTIC": "EXECUTED_EXIT_1",
+    "Native_P2": "HOLD",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE_HOLD": true
+  },
+  "next_steps": [
+    "P4-X single writer completes 6 old constant coefficient, 3 old ion wall and 3 old net current producer conflicts",
+    "Pin historical actual S6 main plasma mesh and stage under C0 [Mesh] relative path; Maxwell qvt.msh is not equivalent",
+    "P5-0 builds exactly one current final-head physics-opt and publishes binary SHA, toolchain and factory identity",
+    "Dispatch independent official 941 --check-input with same final binary as 417, capture exit/log and P05 warehouse identities"
+  ],
+  "no_changes_to": [
+    "main",
+    "PR665",
+    "original S6 inputs",
+    "protected rates",
+    "CI workflows",
+    "shared issue body"
+  ]
+}
