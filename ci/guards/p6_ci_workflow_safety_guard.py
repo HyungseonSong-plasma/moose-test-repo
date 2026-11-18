@@ -143,7 +143,7 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
         )
         step_start = block.rfind("      - name:", 0, artifact_name.start())
         need(step_start >= 0, "ARTIFACT_STEP_START_" + name)
-        proof = block[step_start:artifact_name.end()+450]
+        proof = block[step_start:block.rfind("      - name: Upload first-attempt legacy artifact alias (compatibility only)")]
         need(
             "if: always()" in proof and
             "uses: actions/upload-artifact@v4" in proof and
