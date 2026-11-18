@@ -22,6 +22,8 @@ OCI = ("ghcr.io/hyungseonsong-plasma/physics-build-base@"
        "sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008")
 CASES = ("417", "941")
 EXPECTED_C0 = "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+HISTORICAL_PLASMA_MESH_SHA = "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc"
+PLASMA_MESH_NAME = "baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
 
 
 def digest(data: bytes) -> str:
@@ -36,10 +38,15 @@ def sha_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def prepare(artifact: Path, out: Path) -> dict:
+def prepare(artifact: Path, out: Path, historical_mesh: Path) -> dict:
     """Extract ONLY public source-stage inputs, rejecting symlinks and traversal."""
     if sha_file(artifact) != P3X_ARTIFACT_SHA:
         raise ValueError("P5_D8_PINNED_P3X_ARTIFACT_ZIP_SHA_MISMATCH")
+    if historical_mesh.is_symlink() or not historical_mesh.is_file():
+        raise ValueError("P5_D8_PINNED_HISTORICAL_PLASMA_MESH_MISSING")
+    mesh_bytes = historical_mesh.read_bytes()
+    if digest(mesh_bytes) != HISTORICAL_PLASMA_MESH_SHA:
+        raise ValueError("P5_D8_HISTORICAL_PLASMA_MESH_SHA_MISMATCH")
     if out.exists():
         raise ValueError("P5_D8_REFUSE_EXISTING_DISPOSABLE_SCRATCH")
     out.mkdir(parents=True)
@@ -78,6 +85,14 @@ def prepare(artifact: Path, out: Path) -> dict:
                 data = z.read(info)
                 target.write_bytes(data)
                 files += 1
+            plasma_mesh = (work / "experiments/Issue395_powered_chemistry_ladder" /
+                           PLASMA_MESH_NAME)
+            if plasma_mesh.exists() and plasma_mesh.read_bytes() != mesh_bytes:
+                raise ValueError("P5_D8_PLASMA_MESH_ARTIFACT_HISTORICAL_CONFLICT")
+            plasma_mesh.parent.mkdir(parents=True, exist_ok=True)
+            plasma_mesh.write_bytes(mesh_bytes)
+            if sha_file(plasma_mesh) != HISTORICAL_PLASMA_MESH_SHA:
+                raise ValueError("P5_D8_PLASMA_MESH_READBACK_FAILED")
             if files < 15:
                 raise ValueError("P5_D8_MISSING_CHILD_MESH_TABLE_AND_11_LAYERS_" + case)
             layer_sha = {}
@@ -109,6 +124,7 @@ def prepare(artifact: Path, out: Path) -> dict:
                 raise ValueError("P5_D8_REAL_MAXWELL_MESH_SHA_MISMATCH_" + case)
             cases[case] = {"workspace": str(work), "ordered": ordered,
                            "source_files": files, "layer_sha256": layer_sha,
+                           "plasma_mesh_sha256": sha_file(plasma_mesh),
                            "child_sha256": sha_file(child), "mesh_sha256": sha_file(mesh),
                            "json_sha256": sha_file(jpath),
                            "electron_table_sha256": sha_file(epath)}
@@ -163,6 +179,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--artifact", type=Path, required=True)
     ap.add_argument("--source", type=Path, required=True)
+    ap.add_argument("--historical-mesh", type=Path, required=True)
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--repo-head", required=True)
     ap.add_argument("--timeout", type=int, default=360)
@@ -172,7 +189,7 @@ def main() -> int:
     if args.timeout < 1 or args.repo_head != subprocess.check_output(
             ["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip():
         raise ValueError("P5_D8_ACTIVE_SOURCE_HEAD_PIN_MISMATCH")
-    cases = prepare(args.artifact, args.output / "scratch")
+    cases = prepare(args.artifact, args.output / "scratch", args.historical_mesh)
     result = {
         "schema": "issue671.p5_d8_newonly_diagnostic.v1",
         "status": "SOURCE_STAGE_ONLY_P4_NOT_COMPLETED",
