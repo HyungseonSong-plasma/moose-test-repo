@@ -1,0 +1,155 @@
+{
+  "schema": "issue671.p5_c5.s6_941.source_latebound_preflight.v1",
+  "task_id": "P5-C5",
+  "case": "941",
+  "verdict": "PASS_SOURCE_GRAPH_AND_REAL_CHILD_BYTE_PIN__HOLD_NATIVE_CPP_LATE_BOUND",
+  "scope": "Actual P3-X disposable 941 New-only staged source and C++ producer/consumer contracts; P4-X and P5-0 prerequisites not yet fulfilled; no Native execution",
+  "source": {
+    "pr665": 665,
+    "current_verified_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "pr665_draft_unmerged": true,
+    "p3x_source_ci_run": 44257739203,
+    "p3x_ci_head": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+    "head_delta": "2 commits ahead: only removed .github/workflows/issue669-p3x-pr675-premerge-once.yml; no source/.i/JSON changes",
+    "p1_input_manifest_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+  },
+  "actual_inputs": {
+    "p3x_actions_artifact_id": 14406746397,
+    "artifact_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "ZIP_CRC": "PASS",
+    "input_case": "941",
+    "ordered_11_input_file_sha": "11/11 PASS",
+    "C0_final_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "specific_EI941_overlay_sha256": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa",
+    "newonly_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+    "newonly_JSON_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "Maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "Maxwell_include_base_sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+    "Maxwell_include_overlay_sha256": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45",
+    "Maxwell_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "electron_lookup_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "old_ion_owners_retired": "26/26 source-only",
+    "old_electron_owners_retired": "10/10 source-only"
+  },
+  "objects": [
+    {
+      "section": "FunctorMaterials",
+      "object": "ei941_progress",
+      "type": "EIRateCoefMaterial",
+      "block_sha256": "37327e9f9b6215f8675af8add85b93d107962ab2b83f5bc47f14350c2815fc46",
+      "inputs": [
+        "private_rates/EI-941_O_3P.txt",
+        "e_energy_eV",
+        "n_e_physical",
+        "c_O_EI941"
+      ],
+      "output": "R_EI941"
+    },
+    {
+      "section": "FunctorMaterials",
+      "object": "ei941_o_concentration",
+      "block_sha256": "fd7c5989b817a4efa8cbcfba3af6d9fcedee15196db74dd208266599479c2e38",
+      "inputs": [
+        "rho_neutral",
+        "w_O"
+      ],
+      "output": "c_O_EI941"
+    },
+    {
+      "section": "FunctorMaterials",
+      "object": "ei941_op_source",
+      "block_sha256": "6692daa1ab319ca8a18fedb99f1d03d9c2fd41f5b9f2a3705da5dcaf8fb0f3e9",
+      "input": "R_EI941",
+      "output": "S_Op_molar_EI941"
+    },
+    {
+      "section": "FVKernels",
+      "object": "ei941_neutral_mass_sink",
+      "block_sha256": "dcb97532e73d6936da7d15e2005b63b59cba31971aa0abc63e39818ece00764f",
+      "variable": "pressure",
+      "source": "S_neutral_mass_EI941"
+    },
+    {
+      "section": "FunctorMaterials",
+      "object": "ei941_energy_source",
+      "block_sha256": "eecc90a6b7edc34cd049235443ee60768831481c7600b6317be0d2dc464abefd",
+      "input": "R_EI941",
+      "expression": "-13.62*R"
+    },
+    {
+      "section": "FunctorMaterials",
+      "object": "charge_number_density",
+      "block_sha256": "8fca600fe127ec76fe0a6b642460858b3a84cb2c43bbb13225f02a57ec04e6af",
+      "inputs": [
+        "n_i_physical",
+        "n_op_physical",
+        "n_e_physical",
+        "n_m_physical"
+      ]
+    },
+    {
+      "section": "FunctorMaterials",
+      "object": "cover_surface_current",
+      "block_sha256": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+      "inputs": [
+        "O2p_wall_number_flux",
+        "Op_wall_number_flux",
+        "Om_wall_number_flux",
+        "e_wall_number_flux"
+      ]
+    }
+  ],
+  "reactive_edges": {
+    "rate": "EI-941: e + O -> 2e + Op; R_EI941 mol/(m^3 s), S_Op_molar_EI941=+R, S_O_mass_EI941=S_neutral_mass_EI941=-0.016R, S_electron_energy_molar_EI941=-13.62R; case941 no EI-417 reaction",
+    "electron": "DDEnergyEq generated n_e_physical and e_energy_eV feed EIRateCoefMaterial and diagnostics; Physics C++ source contract only, Warehouse NOT_RUN",
+    "rf": "Parent log_e/log_e_energy/pressure -> freeze aux -> ne_to_maxwell_t6/mean_en_to_maxwell_t6/pressure_to_maxwell_t6 -> maxwell_t6 child includes issue397 + RF Maxwell overlay; child mesh ../Issue18_qvt_plasma_mapping/qvt.msh resolves; return E_real/E_imag -> q_rf_eV_mol_t6 -> rf_heating_t6(log_e_energy)",
+    "density_poisson": "Retained n_i_physical/n_m_physical/n_op_physical and generated n_e_physical -> charge_number_density -> poisson_source; consumer bound but dynamic access NOT_RUN",
+    "ion_wall": "Retained legacy PhysicsIonWallFluxMaterial 3 objects and constants produce candidate duplicate output names against Chemistry.C generated IonWallFluxMaterial 3 and DDTransportMaterial. Runtime collision not measured."
+  },
+  "cxx_exact_head_git_blobs": {
+    "EIRateCoefMaterial.C": "4c5ed15593a7585d1fe2ec34cca0bdc37a5024ee",
+    "Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "DDEnergyEq.C": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "PoissonEq.C": "c26986e824eec8c57f3c1107c3cbd64c754bf121",
+    "MaxwellPhysics.C": "62521178f182a9a8b7cbdd434a4291fce07b0d2c",
+    "IonWallFluxMaterial.C": "101586edf05ed19525072b4a43c181ba57dc3589",
+    "PhysicsIonWallFluxMaterial.C": "215e9c81720e6813be22a8a51405fe99639cf0ab",
+    "DDTransportMaterial.C": "e75687d73d8ca6fead0eff411ad7ffbb814a6909"
+  },
+  "rate_security": {
+    "private_rate_sha_attested_in_protected_CI": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+    "CI_run": 44190774410,
+    "private_raw_bytes_in_public_artifact": false,
+    "private_raw_bytes_rehashed_by_this_worker": false
+  },
+  "independent_checks": {
+    "source_only_zip_SHA": "PASS",
+    "ordered_input_files": "11/11",
+    "retired_old_ion_blocks": "26/26 absent",
+    "retired_old_electron_blocks": "10/10 absent",
+    "Maxwell_child_and_2_includes": "3/3_sha_and_path_PASS",
+    "Maxwell_mesh_and_electron_lookup": "2/2_SHA_PASS",
+    "in_memory_mutation_tests": "19/19 REJECTED BY INDEPENDENT STATIC VALIDATOR, NOT C++ NATIVE GUARD",
+    "local_detailed_json_sha256": "759eecdf7f728615ba93ecc179596a6d99e876665d63e4f3a9914467138de40e",
+    "local_replay_script_sha256": "51b97aabe4fe95b9e5873cffcee7590ce9e3d655caa8e6e9b76c7259da512441"
+  },
+  "blocked_gates": [
+    "P4-X source cutover to single canonical ion wall/transport owner and all surviving charge/density/surface current/Maxwell consumers; no P4-X receipt integrated at current PR665 HEAD",
+    "P5-0 current exact HEAD PhysicsApp P1 binary SHA and shared compiler/OCI identity not found",
+    "P5-C2 must execute actual same-binary 941 --check-input and record exit/log/artifact",
+    "Native C++ Warehouse live Functor registration and late-bound Maxwell child/Transfer/Poisson/Wall access not tested",
+    "Private EI-941 rate bytes intentionally absent from public artifact; runtime staged protected rate path must be verified"
+  ],
+  "gates": {
+    "P5_C5_STATIC": "PASS",
+    "P5_C5_DYNAMIC_RUNTIME": "HOLD",
+    "P4_X": "HOLD",
+    "P5_0_BINARY": "NOT_AVAILABLE",
+    "P5_C2_NATIVE": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "mutations": "Only this P5-C5 report in task-specific evidence branch; no existing PR665/main, issue body, inputs, Physics C++, CI, Private Rates or solver changed."
+}
