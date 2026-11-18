@@ -1,0 +1,115 @@
+{
+  "schema": "issue672.p6_d1.public_flow_exact_source_guard.v1",
+  "task": "P6-D1",
+  "issue": 672,
+  "verdict": "STATIC_GUARD_IMPLEMENTED_AND_13_TESTS_PASS__REAL_PUBLIC_FLOW_NATIVE_HOLD",
+  "created_at_utc": "2026-11-18",
+  "pinned_pr665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "scope": "Only read-only independent source-guard code and test files are written to isolated branch. No physics/production source/CI YAML/source archive modified and no Native execution.",
+  "code": {
+    "guard": "ci/guards/p6_public_flow_transport_readiness.py",
+    "guard_sha256": "0de5eda424e85d7ad61c2f2f6faa18904dbd2b19282990d9404009f66d89d2ac",
+    "guard_git_blob_sha1": "3ad061f4d2b2f29ef1f5cc73e45fb92b2076fd82",
+    "test": "ci/guards/test_p6_public_flow_transport_readiness.py",
+    "test_sha256": "81cfa06e84a63dc56fe4e89855098b315fdd4421b4cbca7aa41cd09fbdefec5e",
+    "test_git_blob_sha1": "f29421e03eefa9bcbef22670f51e892adc0f7c04",
+    "local_command": "python -m unittest discover -s /mnt/data/p6_d1_work -p 'test*.py' -q",
+    "local_tests": {
+      "run": 13,
+      "passed": 13,
+      "failed": 0,
+      "errors": 0
+    },
+    "both_git_blob_readbacks_verified": true,
+    "full_local_evidence_receipt_sha256": "5a765646417f5b28a1d88ca7d92be8da168b1145ed5e1e3db5411871480476e9"
+  },
+  "source_checks": {
+    "exact_git_blobs": {
+      "plasma_species_only.json": "c563f54b4914773f153b170fb8b5b63f2687c170",
+      "public_option_s6_p2.py": "a6414baf70590b79f4b4ee4cb16c4b9039355f40",
+      "prepare_s6_run_input.py": "60a12878a26969fdf1ae26eab47694244b601634",
+      "DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "s6_c0_physics_base_no_d1.i": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa"
+    },
+    "GitHub_source_pinned_predicates": "PASS_ALL (checked actual HEAD source text, not just README)",
+    "selected_species": [
+      "e",
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "missing_species_transport_JSON": [
+      "e",
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "manual_transport_owners": 4,
+    "manual_names": [
+      "electron_transport",
+      "O2p_species_transport_alias",
+      "Om_species_transport_alias",
+      "Op_species_transport_alias"
+    ],
+    "physics_would_generate_transport_owners": 4,
+    "manual_e_lookup": {
+      "source": "historical exact electron_transport cutover",
+      "table": "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "bounds": "clamp",
+      "pressure_functor": "p",
+      "gas_temperature_functor": "T_g_fixed",
+      "fluid_energy": true
+    },
+    "public_D_Energy_action_present": false,
+    "inherited_legacy_ion_native_time": [
+      "ni_time",
+      "nm_time",
+      "nop_time"
+    ],
+    "P1_0_417_941_actual_layer_files_sha_checked": 22,
+    "P1_0_417_941_actual_C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "P1_0_artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "independent_full_audit_script_executed_on_exact_checkout": false
+  },
+  "controlled_mutations": {
+    "baseline": "HOLD_MISSING_4_JSON_AND_4_MANUAL_PHYSICS_DOUBLE_AND_LEGACY_ION",
+    "e_only_json": "HOLD_MISSING_3_ION_JSON",
+    "all4_json_only": "HOLD_4_DUPLICATE_TRANSPORT_OWNERS_PLUS_LEGACY_ION",
+    "retire4_manual_only": "HOLD_UNPROVEN_ELECTRON_5_OVER_3_ENERGY_PROJECTION_PLUS_LEGACY_ION",
+    "add_energy_without_native_retirement": "HOLD_P05_NATIVE_ION_COLLISION",
+    "fully_consistent_source_model": "SOURCE_READY_NATIVE_NOT_RUN",
+    "name_identity_charge_schema_mutations": "REJECT",
+    "model_result_qualified": "These are local source-model predicates, NOT C++ parser or Warehouse execution."
+  },
+  "latest_native_ci": {
+    "run_repository": 44297212655,
+    "run_FLOW": 44297212567,
+    "run_IonFVM": 44297212333,
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "validation": "1566 passed, 13 skipped",
+    "public_B": "HISTORICAL_SYNTAX_PASS",
+    "public_D": "HOLD_MISSING_E_JSON",
+    "FLOW": "HOLD_MISSING_E_JSON_417_ONLY_941_NOT_RUN",
+    "ARCH": "HOLD_P05_ni_time",
+    "ion_FVM": "HOLD_RETIRED_GROUNDED_SHEATH",
+    "native_newonly_P2": "NOT_PROVEN"
+  },
+  "safe_next_contract": {
+    "root_cause_fixed_in_this_slot": false,
+    "request": "Retire/rebind exact 4 manual DDTransportMaterial owners, introduce all 4 genuinely sourced JSON coefficient records, prove fluid_energy 5/3 output and root gas before and after, retire/segregate Native 26 FV ion owners when Physics generates operators; preserve P05. Distinguish Public D/FLOW legacy replay from full New-only contract.",
+    "followup": "Require immutable per-case Scratch + SHA + 417/941 real --check-input using accepted single PhysicsApp binary before declaring CI repair.",
+    "workflow_and_arch_cleanup": "KEEP_HOLD until lane-specific physics/CI authority; no job skip or triggering long P3."
+  },
+  "gates": {
+    "P6_D1_STATIC_GUARD": "PASS_IMPLEMENTED",
+    "P6_D1_LOCAL_TESTS": "PASS_13_13",
+    "P6_D1_PINNED_GITHUB_SOURCE_READBACK": "PASS_5_5",
+    "P6_D1_PRODUCTION_CUTOVER": "HOLD",
+    "P6_D1_NATIVE_P2": "NOT_RUN",
+    "P6_F0_CI_VALIDATE": "PASS_1566",
+    "P6_D1_PUBLIC_D": "HOLD",
+    "P6_D1_FLOW": "HOLD",
+    "P4_X": "PENDING",
+    "SCIENCE": "HOLD"
+  }
+}
