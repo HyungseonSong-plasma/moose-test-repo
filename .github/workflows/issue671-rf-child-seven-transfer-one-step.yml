@@ -34,7 +34,7 @@ jobs:
           git diff --name-only "$BASE_HEAD" HEAD | sort > "$RUNNER_TEMP/actual-rf-changes.txt"
           printf '%s\n' '.github/workflows/issue671-rf-child-seven-transfer-one-step.yml' 'ci/issue671_rf_transfer_smoke.py' > "$RUNNER_TEMP/expected-rf-changes.txt"
           diff -u "$RUNNER_TEMP/expected-rf-changes.txt" "$RUNNER_TEMP/actual-rf-changes.txt"
-          test "$(git hash-object ci/issue671_rf_transfer_smoke.py)" = d5b1a964df88677499ece3c390c1b117ea021a10
+          test "$(git hash-object ci/issue671_rf_transfer_smoke.py)" = 820f494725fc75ba594505a94cc124f5237d665b
           python3 -m py_compile ci/issue671_rf_transfer_smoke.py
           test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
           echo RF_SOURCE_SHA_GUARD_PASS
