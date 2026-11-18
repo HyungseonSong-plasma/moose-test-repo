@@ -1327,6 +1327,12 @@ PlasmasAction::validParams()
       "adjacent_element evaluates the sided element gradient, face evaluates a FaceArg gradient.");
   params.addParam<MooseEnum>("state_model", MooseEnum("ideal_gas", "ideal_gas"),
                              "Canonical mixture equation of state.");
+  params.addParam<MooseEnum>(
+      "ion_fv_bc_ownership",
+      MooseEnum("generated_wall_flux original_wall_flux", "generated_wall_flux"),
+      "Use generated IonWallFluxMaterial or preserve exact archived PhysicsIonWallFluxMaterial "
+      "and surface-current Functors, generating only the 12 ion FV boundary operators. "
+      "original_wall_flux is a separately audited Public D Scratch compatibility mode.");
   // Every solved heavy-species mass fraction receives its JSON volume initial
   // condition. Derived/constraint Functors do not own an independent solver IC.
   params.addParam<std::vector<BoundaryName>>(
@@ -1392,9 +1398,11 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
 void
 PlasmasAction::act()
 {
-  // C2 is an opt-in JSON surface, with NO independent ownership-mode flag.
-  // DDContinuityEq.fvm_species is the only discretization selector. Old Native
-  // FV Kernel/BC owners must already have been removed from disposable Scratch.
+  // FV discretization is still selected solely by DDContinuityEq.fvm_species.
+  // original_wall_flux preserves archived wall/current producers and generates
+  // only BC consumers. The default generated mode is unchanged.
+  const bool original_wall_flux =
+      getParam<MooseEnum>("ion_fv_bc_ownership") == "original_wall_flux";
   bool has_ion_fv_bc = false;
   for (const auto & [group, boundary] : _data.boundaries())
     for (const auto & [name, bc] : boundary.bcs)
@@ -1402,6 +1410,10 @@ PlasmasAction::act()
           bc.type == "FVFunctorNeumannBC" || bc.type == "FVLogMolarDielectricFluxBC";
   const bool c2_requested = _data.hasIonWalls() ||
       !_data.surfaceElectronWallFlux().empty() || has_ion_fv_bc;
+  if (original_wall_flux &&
+      (!has_ion_fv_bc || _data.hasIonWalls() || !_data.surfaceElectronWallFlux().empty()))
+    mooseError("P6-D4 original_wall_flux requires only 12 ion FV BCs and no generated "
+               "ion_wall or ion_surface_current producers");
 
   if (c2_requested)
   {
@@ -1427,15 +1439,25 @@ PlasmasAction::act()
     for (const auto & [id, record] : _data.speciesRecords())
       if (record.ion_wall)
         configured.insert(id);
-    if (selected.empty() || configured != selected)
-      mooseError("C2 selected fvm_species and species.<id>.wall_* producers differ");
-    if (_data.surfaceElectronWallFlux().empty())
-      mooseError("C2 requires ion_surface_current.electron_wall_number_flux");
+    if (original_wall_flux)
+    {
+      const std::set<std::string> original_ions = {"O2p", "Om", "Op"};
+      if (selected != original_ions || !configured.empty())
+        mooseError("P6-D4 original_wall_flux requires exactly O2p Om Op with zero "
+                   "generated wall Material owners");
+    }
+    else
+    {
+      if (selected.empty() || configured != selected)
+        mooseError("C2 selected fvm_species and species.<id>.wall_* producers differ");
+      if (_data.surfaceElectronWallFlux().empty())
+        mooseError("C2 requires ion_surface_current.electron_wall_number_flux");
+    }
 
     // No duplicated wall potential, gas-temperature or block fields in JSON.
     // The same Continuity action supplies potential and block to every
     // selected ion; [Plasmas] publishes the sole temperature Functor.
-    if (!gasStateEnabled())
+    if (!original_wall_flux && !gasStateEnabled())
       mooseError("C2 wall flux requires [Plasmas] pressure and temperature");
     const auto blocks =
         continuity.front()->getParam<std::vector<SubdomainName>>("block");
@@ -1494,7 +1516,7 @@ PlasmasAction::act()
     if (count != 4 * selected.size())
       mooseError("C2 expected four ion wall BC objects per selected FV species, found ", count);
 
-    if (_current_task == "add_functor_material")
+    if (_current_task == "add_functor_material" && !original_wall_flux)
     {
       for (const auto & id : selected)
       {
