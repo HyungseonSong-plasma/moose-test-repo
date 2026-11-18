@@ -1,0 +1,148 @@
+{
+  "schema": "issue671.original_s6_parent_plasma_mesh_restoration.source_sha.v1",
+  "issue_number": 671,
+  "task": "Restore original S6 parent/main plasma mesh; both 417 and 941",
+  "status": "PASS_CANONICAL_PUBLIC_L1_MESH_BYTE_AND_POST_P4X_DISPOSABLE_SCRATCH_STAGE__HOLD_NATIVE",
+  "integration_context": {
+    "draft_pr": 665,
+    "pr_head_at_branch": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
+    "p4_x_source_stage": "MERGED_PR677",
+    "p4_x_native": "NOT_RUN",
+    "main_mutated": false
+  },
+  "mesh_provenance": {
+    "canonical_manifest": "experiments/Issue395_powered_chemistry_ladder/issue397_baseline_mesh.json",
+    "canonical_manifest_git_blob": "42e0e358d1e6b7670d4fe5fef3a6dacd4c3b27f3",
+    "canonical_role": "Issue397 axis-heavy graded coarse L1 public baseline",
+    "original_s6_417_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "original_s6_941_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+    "original_historical_s6_zip_contains_raw_parent_mesh": false,
+    "original_historical_s6_zip_contains_derived_plasma_cp_mesh_files": true,
+    "direct_historical_s6_parent_mesh_file_sha_observed": false,
+    "historic_400w_replay_invokes_canonical_sha_guarded_issue397_materializer": true,
+    "public_origin_run": 39575896519,
+    "public_origin_artifact": 12349847563,
+    "public_zip_sha256": "f07f082267e159ad87ce1cdab79c95fcd8d78cdc6ed1a6168c4fa09ae1f132a2",
+    "member_name": "results_rf_elastic_diss_ion_ei20_ei01_200w_adjacent_sheath_wall_closed_100us_dt1000ns/prep/graded_level_1.msh",
+    "member_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "member_size_bytes": 174352,
+    "staged_filename": "baseline_plasma_plus_unstructured_cover_plus_wafer.msh",
+    "file_mesh_generator_reference": "[Mesh]/main -> FileMeshGenerator(file='baseline_plasma_plus_unstructured_cover_plus_wafer.msh')",
+    "staged_relative_path": "experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh",
+    "format": "Gmsh ASCII v2.2",
+    "nodes": 1739,
+    "triangles": 3155,
+    "line_elements": 440,
+    "physical_names": 24,
+    "plasma_wafer_faces": 27,
+    "required_physical_names": [
+      "plasma",
+      "inlet",
+      "outlet",
+      "plasma_electrode",
+      "plasma_metal",
+      "plasma_right",
+      "plasma_cover",
+      "plasma_wafer",
+      "plasma_focus_ring"
+    ],
+    "is_maxwell_child_qvt_mesh": false,
+    "is_fabricated_checkpoint_cpa": false
+  },
+  "source_stages": {
+    "original_input_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p3_x_source_artifact_run": 44257739203,
+    "p3_x_source_artifact": 14406746397,
+    "p3_x_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "p3_x_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "exact_7_owner_P4X_C0_source_replay": "PASS_STATIC_IN_DISPOSABLE_SCRATCH",
+    "p4_x_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+    "source_replay_matches_merged_p4x_stage_CI_receipt": true,
+    "merged_p4x_CI_run": 44274320806,
+    "merged_p4x_CI_artifact": 14414026909,
+    "merged_p4x_zip_sha256": "6773dfa54bd1a77c908831be3edd6a93699152f5879e96f6bf3db435df431540"
+  },
+  "case_staging": {
+    "417": {
+      "layer_sha_recomputed": "11/11",
+      "other_10_input_layers_byte_identical": true,
+      "canonical_mesh_SHA": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+      "p4x_C0_SHA": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "disposable_bundle_sha256": "94702ac59c6766a57db8987a36b172583d9cabdd93f72ade7a5bc7bd0fbdac63",
+      "bundle_size_bytes": 163290,
+      "bundle_members": 23,
+      "includes_private_rate_bytes": false
+    },
+    "941": {
+      "layer_sha_recomputed": "11/11",
+      "other_10_input_layers_byte_identical": true,
+      "canonical_mesh_SHA": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+      "p4x_C0_SHA": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "disposable_bundle_sha256": "7f157614d3ecffb4358b5f04ac3a6886e1f9b2fe950c9c2488e0ca82b3843631",
+      "bundle_size_bytes": 163266,
+      "bundle_members": 23,
+      "includes_private_rate_bytes": false
+    }
+  },
+  "local_artifacts": {
+    "raw_restored_mesh": "S6_parent_mesh_restored_postP4X/baseline_plasma_plus_unstructured_cover_plus_wafer.msh",
+    "case_417_bundle": "S6_parent_mesh_restored_postP4X/S6-417_parent_mesh_restored_post_P4X_source_only.zip",
+    "case_941_bundle": "S6_parent_mesh_restored_postP4X/S6-941_parent_mesh_restored_post_P4X_source_only.zip",
+    "full_receipt": "S6_parent_mesh_restored_postP4X/S6_parent_plasma_mesh_restore_receipt.json",
+    "full_receipt_sha256": "c3e50547247005e655b8ef6b69735283ed2f91246cd6882e9086a3e8f3af0912",
+    "independent_readback": "S6_parent_mesh_restored_postP4X/S6_parent_mesh_independent_readback.json",
+    "independent_readback_sha256": "69a68f00a474a200101e9d83b2daba16053ebd691db03e478b6a6f198512f3ad",
+    "restore_script": "restore_s6_parent_mesh.py",
+    "restore_script_sha256": "335c1f7c5bf09fb07cb4dfcf3844e615aa34882079b40b1c4f01cedcd9e59361",
+    "verifier_script": "verify_s6_parent_mesh_restoration.py",
+    "verifier_script_sha256": "b3b87c928c49501bb4bc07f7c374f3884a73a4700a51ef20e818e139ac78f6f8",
+    "p4x_input_cutover_reproducer_sha256": "c8ccd4bb5603e5bc2736c262d365ae4393f7e8c11daad62cf7d3a7adff74b0fb"
+  },
+  "independent_validation": {
+    "mesh_zip_CRC": "PASS",
+    "post_P4x_417_11_layers_SHA": "PASS",
+    "post_P4x_941_11_layers_SHA": "PASS",
+    "individual_bundles_ZIP_CRC": "PASS",
+    "case_json_SHA": "PASS",
+    "canonical_mesh_sha_and_gmsh_topology": "PASS",
+    "proper_C0_FileMeshGenerator_mesh_path": "PASS",
+    "scratch_marker_in_each_case": "PASS",
+    "negative_mutations_rejected": "6/6",
+    "negative_classes": [
+      "one_byte_raw_mesh_tamper",
+      "wrong_Gmsh_version",
+      "missing_wafer_physical_name",
+      "missing_electrode_physical_name",
+      "truncated_mesh",
+      "wrong_L1_ZIP_SHA"
+    ]
+  },
+  "limitations": [
+    "Historic original S6 400W ZIP includes checkpoint components but no raw main plasma .msh; reconstructed using the official historically invoked Issue397 canonical L1 materializer output rather than asserting an unobserved historical raw 400W .msh SHA.",
+    "Only public mesh and P4-X source-staged inputs are in these disposable bundles. Native P2 --check-input has not been performed on the recovered bundles.",
+    "No checkpoint .msh-mesh.cpa.gz was guessed or generated; MOOSE may recreate a derived cache only during authorized Native check-input.",
+    "Neutral and other public transport tables, protected EI Rate bytes (per #676 strict same-job re-stage), full P5-0 source bound compiled binary and dynamic Warehouse gates are independent.",
+    "Do not relabel this source-only mesh restoration as a science or Native physics acceptance."
+  ],
+  "gates": {
+    "ORIGINAL_CANONICAL_L1_BYTES": "PASS",
+    "CASE_417_PARENT_MESH_STAGED": "PASS",
+    "CASE_941_PARENT_MESH_STAGED": "PASS",
+    "POST_P4X_SOURCE_C0_SHA": "PASS",
+    "P5_0_SINGLE_EXACT_HEAD_BINARY": "NOT_RUN",
+    "NATIVE_CHECK_INPUT_WITH_RESTORED_MESH": "NOT_RUN",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "NATIVE_P3_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "main_changed": false,
+    "pr665_changed": false,
+    "production_source_changed": false,
+    "workflows_changed": false,
+    "original_S6_archives_changed": false,
+    "private_rate_files_exported": false
+  }
+}
