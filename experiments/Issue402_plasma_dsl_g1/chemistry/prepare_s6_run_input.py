@@ -204,12 +204,15 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
                 owners[old] = canonical
             # The old total-flux class was retired upstream (#523). Its
             # surface+migration total number/mass law and all input parameters
-            # are implemented by PhysicsIonWallFluxMaterial. This is only a
+            # are implemented by the sole IonWallFluxMaterial class. This is
             # staged *type/identity* migration, never a new wall equation.
             # Validate the known old factory before installing its replacement.
-            if material_type == "PhysicsIonWallTotalFluxMaterial":
+            if material_type in {"PhysicsIonWallFluxMaterial",
+                                 "PhysicsIonWallTotalFluxMaterial"}:
+                # Only historical immutable inputs may use these factory names.
+                # Never expose either retired name to the active PhysicsApp.
                 body, converted = _WALL_TYPE.subn(
-                    "    type = PhysicsIonWallFluxMaterial", body, count=1)
+                    "    type = IonWallFluxMaterial", body, count=1)
                 if converted != 1:
                     raise ValueError("S6_WALL_RETIRED_TYPE_CUTOVER_FAILED")
             elif material_type in {
@@ -240,9 +243,7 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
             owner_records.append({
                 "source_layer": path.name, "block": m.group("name"),
                 "source_type": material_type,
-                "type": "PhysicsIonWallFluxMaterial"
-                if material_type == "PhysicsIonWallTotalFluxMaterial" else (
-                    "ESWallFluxMaterial" if species == "e" else material_type),
+                "type": "ESWallFluxMaterial" if species == "e" else "IonWallFluxMaterial",
                 "species_id": species,
                 "outputs": dict(sorted(pairs.items())),
             })
