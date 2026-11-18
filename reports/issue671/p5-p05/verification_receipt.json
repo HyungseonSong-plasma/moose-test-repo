@@ -1,0 +1,348 @@
+{
+  "schema": "issue671.p05.real_native_12_kernel_12_bc_unique_warehouse.v1",
+  "issue": 671,
+  "scope": "S6 recovery P5 real P05 Warehouse uniqueness check-input; no transient solve or science parity",
+  "verdict": "PASS_NATIVE_P05_WAREHOUSE_KERNEL_12_AND_BC_12_PER_CASE__PASS_ACTUAL_P05_DUPLICATE_REJECTION",
+  "distinct_gates": {
+    "P05_REAL_GUARD": "PASS_417_AND_941",
+    "P05_DUPLICATE_UNEXPECTED_OWNER_NEGATIVE": "PASS_417_EXIT_1_EXACT_ERROR",
+    "P4_X_7_OLD_OWNER_SOURCE": "PASS_INTEGRATED",
+    "P4_X_FULL_35_CONSUMER_PARITY": "HOLD",
+    "P5_0_OFFICIAL_FINAL_SHARED_BINARY": "NOT_ATTESTED_BY_P5_X",
+    "P5_B2_C2_FINAL_ACCEPTANCE": "HOLD_PENDING_P5_0_SINGLE_WRITER",
+    "P5_NATIVE_P2_BUILD_ONLY_PROBE": "TWO_REAL_CHECK_INPUTS_PASS",
+    "D8_LIVE_DYNAMIC_CALLERS": "HOLD_NOT_PROVED_BY_CHECK_INPUT",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "provenance": {
+    "source_repository": "HyungseonSong-plasma/moose-test-repo",
+    "current_draft_pr": 665,
+    "integrated_pr665_head_at_run": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
+    "isolated_probe_branch": "issue-671-p5-p05-real-warehouse-20261118",
+    "probe_ci_execution_commit": "1f28d5a3753bd897c0c7cd737a1f641a47133751",
+    "ci_run_id": 44278011700,
+    "ci_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44278011700",
+    "ci_job_conclusion": "success",
+    "native_artifact_id": 14415089731,
+    "native_artifact_zip_sha256": "c3d017faa6f8f7fb2533c76e9481e3bceeb74c3cbc69b61b6816d6abaa61c9ab",
+    "native_artifact_crc": "PASS_INDEPENDENT",
+    "artifact_contains": [
+      "p05-out/receipt.json",
+      "p05-out/S6-417_native_check_input.log",
+      "p05-out/S6-941_native_check_input.log",
+      "p05-out/S6-417_P05_duplicate_negative.log",
+      "p05-in/p4_receipt.json",
+      "p05-in/physics-opt.sha256"
+    ],
+    "clean_source_tree_difference": "ONLY_ONE_ISOLATED_CI_WORKFLOW_VS_PR665_HEAD; Physics C++ and production runner unchanged",
+    "cpp_guard_git_blobs": {
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py": "a3f9d93ea1095c9d00053e5104bb7326d1af8f31"
+    },
+    "build_OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "binary_sha256": "dd9a89b110fac8db1573a120f91a6e42c94023dc15437b1fc21380799b77723e",
+    "binary_sha_provenance": "In-run sha256sum and artifact physics-opt.sha256 agree; actual executable bytes not publicly uploaded/independently rehashed",
+    "shared_binary_for_both_clean_cases_and_one_mutant": true
+  },
+  "post_p4_source": {
+    "initial_pre_p4_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "final_p4_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+    "P4_source_old_ion_native_retired": 26,
+    "P3_X_old_electron_native_retired": 10,
+    "P4_seven_owner_source_edits": "6_FunctorMaterial_Blocks_REMOVED_1_CONSTANTS_REPLACED_CARRIER_ONE_PRESERVED",
+    "input_layers_per_case": 11,
+    "original_public_parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "original_neutral_db_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+    "Maxwell_mesh_distinct": "qvt.msh is separate Maxwell child geometry, not substituted for S6 parent"
+  },
+  "native_cases": {
+    "S6-417": {
+      "actual_native_exit": 0,
+      "syntax_ok": true,
+      "stage_SHA": "11_OF_11_PASS",
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "post_p4_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "original_protected_EI_rate_files": 5,
+      "EI_SHA_custody": "PASS",
+      "log_sha256": "768ad75278feb1b09b29cadb866b1c5dbc2a2db1e52276cd60ccd3e842e3eefa",
+      "P05_warehouse": "PASS_BY_EXECUTED_INTEGRITY_GUARD",
+      "expected_FVKernel": 12,
+      "expected_FVBC": 12
+    },
+    "S6-941": {
+      "actual_native_exit": 0,
+      "syntax_ok": true,
+      "stage_SHA": "11_OF_11_PASS",
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "post_p4_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "original_protected_EI_rate_files": 5,
+      "EI_SHA_custody": "PASS",
+      "log_sha256": "4a71ec3be566add4ed144888832caf03e18762de506a2d73a857af1637db91ba",
+      "P05_warehouse": "PASS_BY_EXECUTED_INTEGRITY_GUARD",
+      "expected_FVKernel": 12,
+      "expected_FVBC": 12
+    }
+  },
+  "native_negative": {
+    "case": "S6-417",
+    "target": "log_O2p",
+    "mutation": "Append extra valid FVLogMolarTimeDerivative named p05_test_unexpected_O2p_time to copied migrated_continuity.i, after source stage and protected-rate mount, using same binary",
+    "clean_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+    "mutated_overlay_sha256": "9de05578058574ea06a5c2134954ab4e4141b3b7c4cdabd579cc5f23bbd0e254",
+    "native_exit": 1,
+    "exact_error": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': p05_test_unexpected_O2p_time [FVLogMolarTimeDerivative]",
+    "native_stack_includes": [
+      "Plasma::DDContinuityEq::checkIntegrity() const",
+      "PhysicsBase::act()",
+      "ActionWarehouse::executeAllActions()"
+    ],
+    "negative_log_sha256": "3c18f447560ec6e4fc60a0f3574e3207c3457fd5631e6eec3f9d2498e086eddc",
+    "result": "PASS_ACTUAL_WAREHOUSE_FAIL_CLOSED",
+    "clean_case_source_mutated": false
+  },
+  "actual_P05_guard": {
+    "location": "physics_app/src/physics/plasma/DDContinuityEq.C#L252-L369",
+    "execution_corroboration": "Actual injected negative log stack includes DDContinuityEq::checkIntegrity, and two unmodified clean inputs returned Syntax OK",
+    "FVKernel_warehouse_families": [
+      "FVElementalKernel",
+      "FVFluxKernel"
+    ],
+    "FVBC_warehouse_families": [
+      "FVFluxBC",
+      "FVDirichletBC"
+    ],
+    "filter": "same nonlinear system/thread and variable, enforce exactly 1 by canonical name and Factory; unexpected old/extra object is error",
+    "expected_kernel_owners": [
+      {
+        "name": "O2p_time",
+        "type": "FVLogMolarTimeDerivative",
+        "variable": "log_O2p",
+        "multiplicity": 1
+      },
+      {
+        "name": "O2p_diffusion",
+        "type": "FVLogMolarDiffusion",
+        "variable": "log_O2p",
+        "multiplicity": 1
+      },
+      {
+        "name": "O2p_drift",
+        "type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_O2p",
+        "multiplicity": 1
+      },
+      {
+        "name": "O2p_source",
+        "type": "FVCoupledForce",
+        "variable": "log_O2p",
+        "multiplicity": 1
+      },
+      {
+        "name": "Om_time",
+        "type": "FVLogMolarTimeDerivative",
+        "variable": "log_Om",
+        "multiplicity": 1
+      },
+      {
+        "name": "Om_diffusion",
+        "type": "FVLogMolarDiffusion",
+        "variable": "log_Om",
+        "multiplicity": 1
+      },
+      {
+        "name": "Om_drift",
+        "type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_Om",
+        "multiplicity": 1
+      },
+      {
+        "name": "Om_source",
+        "type": "FVCoupledForce",
+        "variable": "log_Om",
+        "multiplicity": 1
+      },
+      {
+        "name": "Op_time",
+        "type": "FVLogMolarTimeDerivative",
+        "variable": "log_Op",
+        "multiplicity": 1
+      },
+      {
+        "name": "Op_diffusion",
+        "type": "FVLogMolarDiffusion",
+        "variable": "log_Op",
+        "multiplicity": 1
+      },
+      {
+        "name": "Op_drift",
+        "type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_Op",
+        "multiplicity": 1
+      },
+      {
+        "name": "Op_source",
+        "type": "FVCoupledForce",
+        "variable": "log_Op",
+        "multiplicity": 1
+      }
+    ],
+    "expected_FVBC_owners": [
+      {
+        "name": "O2p_wall",
+        "type": "FVFunctorNeumannBC",
+        "variable": "log_O2p",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "O2p_cover_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "O2p_wafer_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "O2p_focus_ring_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "Om_wall",
+        "type": "FVFunctorNeumannBC",
+        "variable": "log_Om",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "Om_cover_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "Om_wafer_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "Om_focus_ring_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "Op_wall",
+        "type": "FVFunctorNeumannBC",
+        "variable": "log_Op",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "Op_cover_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "Op_wafer_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "multiplicity": 1
+      },
+      {
+        "name": "Op_focus_ring_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "multiplicity": 1
+      }
+    ],
+    "inventory_evidence_type": "ACTUAL_EXECUTED_P05_WAREHOUSE_INTEGRITY_GUARD; the object-by-object Warehouse dump was NOT exported",
+    "explicit_native_object_dump_available": false
+  },
+  "protected_rate_security": {
+    "original_archived_6_files_SHA_and_shape_verified": true,
+    "per_case_original_5_files_SHA_verified": true,
+    "private_data_stage": "temporary /dev/shm; mode 0700 folder, 0600 individual rates",
+    "tmpfs_removed_after_native": true,
+    "raw_private_rate_bytes_in_artifact": false,
+    "raw_private_rate_bytes_in_git": false,
+    "secret_variable": "OXYGEN24_RATES_TAR_XZ_B64",
+    "source_archives_and_main_unchanged": true
+  },
+  "prior_diagnostic_closure": {
+    "first_probe_run": 44276612850,
+    "first_probe_artifact_id": 14414104313,
+    "first_probe_artifact_zip_sha256": "2699fa274189ab8cf4962456c3976aee395d0f46bd874d3b6571818fea6d63f8",
+    "first_clean_417_941_native_exits": [
+      0,
+      0
+    ],
+    "first_workflow_conclusion": "failure_only_due_to_post_check_input_tmpfs_delete_PermissionError",
+    "fixed_in_run": 44278011700,
+    "fixed_workflow_conclusion": "success",
+    "note": "Different source commit for temporary CI workflow only; Physics production C++ and P4-X runner bytes same. Different run-specific binary digest is not conflated."
+  },
+  "acceptance_caveats": [
+    "Native P05 check-integrity 12+12 proved in two separate case instances, not 48 objects in a single Warehouse.",
+    "Native explicit 24-row Warehouse dump was not uploaded; multiplicity proved by runtime guard and targeted negative that reached its stack.",
+    "Full P4-X 35-slot source/consumer/D8 science acceptance and P5-0/P5-X official integration are distinct serial gates.",
+    "Not timestep solve, numerical residual or physical equivalence; SCIENCE_HOLD."
+  ],
+  "independent_audit_script_sha256": "7cab29cc05eaffa01cdaa851a47a4ccc9375b33a4b8996ae5fa279bbdf5e6578",
+  "independent_audit_output_sha256": "890c9170f62e1dd566763ade27355aab0e36bfe647c30876ab09f4cb4c53ecfc"
+}
