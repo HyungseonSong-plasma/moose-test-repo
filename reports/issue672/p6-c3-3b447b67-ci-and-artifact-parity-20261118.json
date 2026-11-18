@@ -1,0 +1,78 @@
+{
+  "schema": "issue672.p6c3.exact_head_ci_artifact_parity.v1",
+  "date_utc": "2026-11-18",
+  "source_head": "3b447b67283dac3b1d5e592ed3db6e56754c3d0e",
+  "evidence_class": "IMMUTABLE_HISTORICAL_EXACT_HEAD_NOT_CURRENT_PR_HEAD",
+  "current_PR665_head_at_write": "NOT_USED_AS_AUTHORITY",
+  "workflow_template_blob": "24a2b278c3bd33649cb2c83be33e7abb2febd4eb",
+  "p6_c3_code_commit": "3b447b67283dac3b1d5e592ed3db6e56754c3d0e",
+  "real_ci": {
+    "id": 44352429008,
+    "status": "completed",
+    "conclusion": "failure",
+    "jobs_total": 17,
+    "jobs_pass": 15,
+    "jobs_fail": 2,
+    "validate": "PASS",
+    "pytest_pass": 1569,
+    "pytest_skip": 13,
+    "p6_c3_negatives_rejected": 21,
+    "arch_hybrid": "P05_EXPECTED_FAIL_BOTH_KEEP_HOLD",
+    "plasma_public": "NATIVE_P2_FAIL_KEEP_HOLD"
+  },
+  "artifact_compatibility": {
+    "pair_count": 4,
+    "total_members_across_one_side": 103,
+    "pairs": [
+      {
+        "job": "issue402_core_four_native_p2",
+        "count": 3,
+        "legacy": 14450250216,
+        "canonical": 14449870814,
+        "zip_crc": "PASS_BOTH",
+        "relative_member_path_sha256_map_equal": true,
+        "outer_zip_bytes_equal": false
+      },
+      {
+        "job": "plasma_native_regression",
+        "count": 90,
+        "legacy": 14448164950,
+        "canonical": 14448174937,
+        "zip_crc": "PASS_BOTH",
+        "relative_member_path_sha256_map_equal": true,
+        "outer_zip_bytes_equal": false
+      },
+      {
+        "job": "issue541_arch_dd_native_p2",
+        "count": 4,
+        "legacy": 14449391726,
+        "canonical": 14449142088,
+        "zip_crc": "PASS_BOTH",
+        "relative_member_path_sha256_map_equal": true,
+        "outer_zip_bytes_equal": false
+      },
+      {
+        "job": "issue541_arch_s6_hybrid_native_p2",
+        "count": 6,
+        "legacy": 14448867778,
+        "canonical": 14448294358,
+        "zip_crc": "PASS_BOTH",
+        "relative_member_path_sha256_map_equal": true,
+        "outer_zip_bytes_equal": false
+      }
+    ],
+    "method": "Downloaded actual GitHub Actions ZIPs; ZIP CRC verified; compared each internal relative path and sha256; ZIP envelope SHA differs so ZIP byte equivalence not claimed"
+  },
+  "independent_flow": {
+    "run_id": 44352428960,
+    "conclusion": "failure",
+    "first_failure": "P2_S6_417_CHECK_INPUT_FAILED",
+    "artifact_id": 14450470191
+  },
+  "boundary": {
+    "PR665_must_be_rechecked_before_current_acceptance": true,
+    "P5_X_current_head_claim": "NOT_ESTABLISHED_BY_THIS_OLDER_CI",
+    "P6_X_FINAL": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
