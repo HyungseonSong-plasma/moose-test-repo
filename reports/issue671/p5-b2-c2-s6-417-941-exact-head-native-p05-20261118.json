@@ -1,0 +1,134 @@
+{
+  "schema": "issue671.p5_b2_c2.exact_head_same_elf_real_native_dual_case.v1",
+  "status": "PASS_417_941_NATIVE_CHECK_INPUT_WITH_SAME_EXACT_HEAD_ELF__P05_COMPILED_GUARD_PASS_BOUNDED__P5_X_HOLD",
+  "reference": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44322715807",
+  "source": {
+    "PR665": 665,
+    "PR665_exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "source_tree": "10ab018235f047bf1abc250d3b18005b9156752a",
+    "workflow_branch_head": "b4a2fc36835565ab342818f53105d647c2fd787c",
+    "workflow_branch_changes_only": [
+      ".github/workflows/issue671-p5-b2-c2-exact-74a2b0f-native-once.yml",
+      "ci/issue671_p5_b2_c2_latest_head_native_runner.py"
+    ],
+    "source_cpp_json_input_unchanged": true
+  },
+  "prebuilt_exact_head_p5_0": {
+    "build_run": 44319316180,
+    "build_artifact_id": 14435245012,
+    "build_count": 1,
+    "reused_only": true,
+    "build_oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "artifact_zip_sha256": "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd",
+    "physics_opt_SHA256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "physics_opt_bytes": 67368,
+    "app_libraries": [
+      {
+        "name": "libphysics-opt.so.0",
+        "sha256": "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd"
+      },
+      {
+        "name": "libphysics_test-opt.so.0",
+        "sha256": "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6"
+      }
+    ]
+  },
+  "actual_input_stage": {
+    "public_P3X_run": 44257739203,
+    "public_P3X_artifact_id": 14406746397,
+    "zip_SHA256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "CRC": "PASS",
+    "S6_417_941_each_layers": 11,
+    "newonly_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P4X_C0_after_SHA256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+    "parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "private_rates_each": 5,
+    "all_six_rate_expected_SHA_and_shape": "PASS_PROTECTED_EACH_JOB",
+    "private_tmpfs_mode": "0700/0600",
+    "private_tmpfs_removed": true,
+    "raw_EI_bytes_uploaded": false
+  },
+  "native_jobs": [
+    {
+      "case": "417",
+      "job_id": 134865646461,
+      "job_conclusion": "success",
+      "native_exit_code": 0,
+      "syntax_ok": true,
+      "p05_integrity_if_syntax_ok": "REACHED",
+      "artifact_id": 14435014200,
+      "artifact_zip_sha256": "5fb73f09ad76150b9b5fa09dfcf0ba2b384b171e9bfe33098d872c89681ea89d",
+      "artifact_bytes": 2256,
+      "zip_crc": "PASS",
+      "log_sha256": "0a075c1cd4e6069db84c8749c5d3e5151fcdab114d51e51d46da272a4a0d5b4d",
+      "log_bytes": 1887,
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "protected_rate_count": 5,
+      "private_tmpfs_removed": true
+    },
+    {
+      "case": "941",
+      "job_id": 134865645762,
+      "job_conclusion": "success",
+      "native_exit_code": 0,
+      "syntax_ok": true,
+      "p05_integrity_if_syntax_ok": "REACHED",
+      "artifact_id": 14435303009,
+      "artifact_zip_sha256": "3ffb3f76ac158b21c49d4be3b6fbd3c67c7805aa06d8f1c4f6df2d15b6177cb2",
+      "artifact_bytes": 2254,
+      "zip_crc": "PASS",
+      "log_sha256": "2d4190c7aabcf270209bc8b355ae242fded9a98ea7acfbd543fb64266fb2e4f1",
+      "log_bytes": 1887,
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "protected_rate_count": 5,
+      "private_tmpfs_removed": true
+    }
+  ],
+  "p05": {
+    "compiled_guard_source_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "compiled_CPP": "physics_app/src/physics/plasma/DDContinuityEq.C::checkIntegrity()",
+    "warehouse_query": "TheWarehouse FVElementalKernel + FVFluxKernel, FVFluxBC + FVDirichletBC; selected-variable/expected object name and type uniqueness",
+    "static_real_11_layer": {
+      "fvm_species_exact": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "dont_create_kernels_parameter_in_11_layers": false,
+      "retired_ni_time_string_in_11_layers": false
+    },
+    "ion_FVKernels_expected_unique": 12,
+    "ion_FVBCs_expected_unique": 12,
+    "source_JSON_BC_declaration_occurrences_per_case": 15,
+    "unique_BC_names_per_case": 12,
+    "P05_runtime_guard_as_implied_by_syntax_OK": "PASS_COMPILED_BOUNDED",
+    "direct_instrumented_warehouse_counts": "NOT_MEASURED_NO_INSTRUMENTED_INVENTORY_IN_THIS_BINARY",
+    "native_P05_negative_mutations_with_this_same_binary": "NOT_RUN",
+    "nuance": "The successful --check-input plus selected 3 ions and no bypass exercises expected P05 uniqueness contract. No separate instrumented readout of 12/12 ObjectWarehouse counts or same-binary duplicate negative was produced."
+  },
+  "independent_proof": {
+    "source": "Real downloaded #14435014200 + #14435303009 and #14406746397",
+    "zip_full_bytes_SHA": "PASS_3_OF_3",
+    "zip_CRC": "PASS_3_OF_3",
+    "logged_exit_SHA": "PASS_2_OF_2",
+    "case_binary_and_source_sha": "PASS_2_OF_2",
+    "public_actual_11layer_fvm_spec": "PASS_2_OF_2",
+    "local_verifier": "/mnt/data/verify_p5_b2c2_74a2b0f.py",
+    "verifier_sha256": "4905d2722c65d62ed37446dfb919964406a9edde1222f87ef120427b847dc357",
+    "local_receipt": "/mnt/data/p5_b2c2_74a2b0f_independent_receipt.json",
+    "local_receipt_sha256": "a3d31cf84f7512ef42da22121e9ac6608d61ba31ef475af28c366702cd498d81"
+  },
+  "gate": {
+    "P5_0_EXACT_HEAD_SOURCE_OCI_ELF_2_LIBS": "PASS",
+    "P5_B2_417_REAL_NATIVE_P2": "PASS",
+    "P5_C2_941_REAL_NATIVE_P2": "PASS",
+    "P05_COMPILED_UNIQUENESS_GUARD": "PASS_BOUNDED",
+    "P05_WAREHOUSE_DIRECT_12_12_PROBE": "HOLD",
+    "D8_LIVE_FACE_RESIDUAL_MAXWELL_EVALUATION": "HOLD",
+    "N1_N8_EXACT_BINARY_NEGATIVE": "NOT_RUN",
+    "P5_X_FORMAL_ACCEPTANCE": "HOLD",
+    "SCIENCE": "HOLD",
+    "P3_P4": "NOT_RUN"
+  },
+  "policy": "No repeat build, no time stepping, no changes to PR665/main/C++/JSON/Rate source, no protected raw Rate artifact; one isolated CI branch and report only."
+}
