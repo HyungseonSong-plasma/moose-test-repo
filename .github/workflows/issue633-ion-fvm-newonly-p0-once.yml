@@ -1,0 +1,40 @@
+name: Issue633 Ion-FVM New-only P0 CI-only
+on:
+  push:
+    branches: [issue-633-ion-fvm-newonly-p0-ci-20261118]
+    paths: [.github/workflows/issue633-ion-fvm-newonly-p0-once.yml]
+permissions:
+  contents: read
+jobs:
+  newonly-p0:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: P0 branch and exact integration candidate identity
+        run: |
+          set -euo pipefail
+          test "$(git merge-base cd61ec396e68f274ddd36073200124b776c58205 HEAD)" = 'cd61ec396e68f274ddd36073200124b776c58205'
+          git diff --name-only cd61ec396e68f274ddd36073200124b776c58205 HEAD | sort > actual.txt
+          printf '%s\n' .github/workflows/issue633-ion-fvm-newonly-p0-once.yml > expected.txt
+          diff -u expected.txt actual.txt
+          test "$(git hash-object .github/workflows/ion-fvm-hybrid-staged-dt.yml)" = 7521d64d7009b3d144cb29e27dd202b4126910a5
+          test "$(git hash-object tests/test_issue633_newonly_run_species_schema.py)" = a4752e897e0b8877b48281d7c8f8790561a25fb8
+          echo ION_FVM_INTEGRATION_HEAD_EXACT_SOURCE_P0_PASS
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: P0 New-only contract and negative tests
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_issue633_newonly_run_species_schema.py \
+            tests/test_issue633_s6_energy_owner_cutover.py \
+            tests/test_issue633_ion_wall_single_factory.py \
+            tests/test_p1_ion_new_only_preflight.py \
+            tests/test_issue402_fem_electron_sheath_bc_retirement.py
+          echo ION_FVM_NEWONLY_S6_417_941_SOURCE_P0_PASS P1=NOT_RUN P2=NOT_RUN SCIENCE_HOLD
