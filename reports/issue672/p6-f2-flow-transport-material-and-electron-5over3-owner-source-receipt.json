@@ -1,0 +1,131 @@
+{
+  "schema": "issue672.p6_f2.flow_transport_energy_owner.v1",
+  "task_id": "P6-F2",
+  "title": "FLOW Transport Material duplicate, electron 5/3 Energy consumers and Owner graph",
+  "baseline": {
+    "pr": 665,
+    "head_sha": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "branch_status": "OPEN_DRAFT",
+    "ci_run": 44297212567,
+    "flow_artifact_id": 14424786177,
+    "zip_sha256": "5fbc73b45939389c5e9b563f54099c03ce0400bec77c017f0d02b759634cbf92",
+    "ci_417_native_log_sha256": "7e21b7c985aee6f0d61213eef6a3fe853aa6bf62430919d8270747abec648ceb",
+    "ci_417_status": "FAIL_AT_MISSING_FEM_E_TRANSPORT_JSON",
+    "ci_941_status": "NOT_STARTED_AFTER_417_FAILURE",
+    "source_only_vs_native": "Observed failure only at baseline; does not test PR684"
+  },
+  "candidate": {
+    "pr": 684,
+    "head_sha": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "base": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "merged_into_665": false,
+    "exact_head_ci": "NOT_RUN",
+    "native_p2": "NOT_RUN",
+    "source_retirement": "implemented as candidate (not native observed)",
+    "source_tests_reported_by_D1": "18/18 local, independent readback of source"
+  },
+  "source_blobs": {
+    "physics_app/src/physics/plasma/DDContinuityEq.C": "2d120416d1bfe7c5454d0a7e955dcd6d9a763abc",
+    "physics_app/src/materials/DDTransportMaterial.C": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+    "physics_app/src/physics/plasma/DDEnergyEq.C": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py": "28e34e4352bec25006aca42e9abcac9acc584cc8",
+    "experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py": "6c6dcf6516d4169e4481f305dc882862253acbe9",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py": "8a76517c7863be77d8390cd04b0b3be055f2c147"
+  },
+  "independent_archived_bytes": {
+    "417": {
+      "zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "old_e_transport_block_sha256": "a66565c4f83a6aa0152958421988b3d4b21fc50f0772250d574014badaca06ca"
+    },
+    "941": {
+      "zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+      "old_e_transport_block_sha256": "a66565c4f83a6aa0152958421988b3d4b21fc50f0772250d574014badaca06ca"
+    },
+    "p1_0_hybrid_artifact_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+  },
+  "transport_owner_mapping": {
+    "electron_original": {
+      "manual_material": "electron_transport",
+      "factory_before_registered_remap": "PhysicsElectronTransportLookupMaterial",
+      "factory_after_registered_remap": "DDTransportMaterial",
+      "lookup": "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "lookup_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "bounds_policy": "clamp",
+      "unit": "reduced",
+      "gas_state": "root pressure/temperature in integrated FLOW Hybrid, original p/T_g_fixed"
+    },
+    "electron_candidate": {
+      "generated_material": "<ContinuityAction>_e_transport_coefficients",
+      "factory": "DDTransportMaterial",
+      "json": "species.e.transport_coef=lookup",
+      "closure": "species.e.energy_transport_coef=fluid (legacy flat only)",
+      "e_mat_manual_retired": true,
+      "source_level_owner_count": 1
+    },
+    "ions_candidate": {
+      "species": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "model": "functor",
+      "external_mobility_and_diffusivity_producers": "canonicalized existing Native coefficient Functors",
+      "duplicate_suppression": "DDTransportMaterial.C external_mobility/external_diffusivity checks avoid re-publishing canonical external inputs"
+    },
+    "public_D_distinct": {
+      "manual_materials_retired": [
+        "electron_transport",
+        "O2p_species_transport_alias",
+        "Om_species_transport_alias",
+        "Op_species_transport_alias"
+      ],
+      "count": 4,
+      "not_equivalent_to_FLOW": "FLOW uses hybrid preparer rather than Public D's explicit three alias Material cutover"
+    }
+  },
+  "energy_5over3_graph": {
+    "source": "one DDTransportMaterial(e) with fluid_energy=true",
+    "particle_properties": [
+      "e_mobility",
+      "e_diffusivity",
+      "electron_mobility",
+      "electron_diffusion"
+    ],
+    "generated_energy_properties": [
+      "e_energy_mobility",
+      "e_energy_diffusivity",
+      "electron_energy_mobility",
+      "electron_energy_diffusion"
+    ],
+    "formula": "energy_mobility = (5/3)*electron_particle_mobility; energy_diffusivity = (5/3)*electron_particle_diffusivity",
+    "legacy_native_consumer": "Kernels/energy_transport -> electron_energy_mobility/electron_energy_diffusion",
+    "modern_energy_consumer": "DDEnergyEq generated FEMLogMolarDriftDiffusion(log_e_energy) -> e_energy_mobility/e_energy_diffusivity",
+    "joule_consumer": "energy_joule old -> electron_mobility/electron_diffusion; modern -> e_mobility/e_diffusivity",
+    "conflict_guard": "legacy fluid + nonfluid Energy action rejected; multiple Energy owners rejected",
+    "current_flow_mode": "prepare_hybrid_json_s6.prepare generates full Energy physics and retires matching old energy equation owner blocks"
+  },
+  "checks": {
+    "source_blobs_verified": "6/6 at PR684 HEAD",
+    "independent_source_predicates": "20/20 PASS",
+    "original_zip_crc": "2/2 PASS",
+    "original_C0_and_material_sha": "2/2 PASS",
+    "pinned_baseline_zip_sha": "PASS",
+    "real_ci_error_signature": "PASS",
+    "static_graph_fault_injections": "8/8 PASS (synthetic, not MOOSE)",
+    "independent_full_local_receipt_sha256": "197c70bec3058a314eacd06285198dafa9d3e4e48d08450bf441348763de635c",
+    "independent_local_script_sha256": "6b0d9077d01616619d3e1be0fdec4b42e7ddccae4f86652176de48b540c92615"
+  },
+  "unresolved": [
+    "PR684 must merge or be tested on exact standalone candidate HEAD before claiming maintained FLOW fix",
+    "FLOW actual S6-417 and S6-941 Native --check-input after candidate cutover not run and no material/FunctorWarehouse cardinality receipt",
+    "Original ion Native 26 kernels and FVBCs persist in FLOW Hybrid; after first transport error is resolved, P05 ni_time duplicate or unexpected owner can still reject; never bypass",
+    "Private EI rate staging/owner live path and Dynamic D8 callers are not proved by this F2 source check",
+    "FLOW lane authority/#535/#541 decision and historical vs New-only runner isolation must be kept separate",
+    "Numeric scientific 5/3 equivalence, energy residual, time-step execution not in scope"
+  ],
+  "verdict": "P6_F2_FLOW_STATIC_OWNER_AND_5OVER3_CONSUMER_GRAPH_PASS__PR684_NATIVE_UNVERIFIED__P05_ION_HOLD",
+  "native_p2": "HOLD",
+  "science": "SCIENCE_HOLD"
+}
