@@ -1,4 +1,5 @@
 # Historical Public D source-only evidence. No private rates, no native P2/science.
+# Exact original lookup block includes terminal LF; rerun receipt with byte-perfect block hash.
 name: Issue672 P6-D3 Public D transport original byte provenance once
 on:
   push:
