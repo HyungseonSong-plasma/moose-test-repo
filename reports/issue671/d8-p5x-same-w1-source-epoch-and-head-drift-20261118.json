@@ -1,0 +1,85 @@
+{
+  "schema": "issue671.d8_p5x.same_w1_actual_native_crosscheck_and_head_drift.v1",
+  "verified_at_utc_date": "2026-11-18",
+  "source_target": {
+    "pr": 665,
+    "tested_exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "tested_git_tree": "10ab018235f047bf1abc250d3b18005b9156752a",
+    "current_pr665_head_at_readback": "52067302d16074592503d0ef6b903cc344f55a08",
+    "exact_latest_head_match": false,
+    "current_head_changed_files": [
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "tests/test_issue633_newonly_run_species_schema.py"
+    ],
+    "physicsapp_and_s6_input_source_diff": "NO_CHANGES_BETWEEN_TESTED_AND_CURRENT",
+    "strict_final_head_gate": "HOLD_DUE_TO_PR_HEAD_ADVANCE"
+  },
+  "w1": {
+    "build_run_id": 44319316180,
+    "artifact_id": 14435245012,
+    "artifact_zip_sha256": "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd",
+    "build_source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "elf_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "physics_app_lib_sha256": "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd",
+    "physics_test_app_lib_sha256": "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6",
+    "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "p5x": {
+    "run_id": 44322557957,
+    "artifact_id": 14436920479,
+    "artifact_zip_sha256": "bbdfc54bd509a5a7f574c5bb9131460c78c727478aee0688c8d304d558ad97a3",
+    "clean_check_input_exit_code": {
+      "417": 0,
+      "941": 0
+    },
+    "native_negative_pass": "16_OF_16_INTENDED_REJECTIONS",
+    "binary_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "original_input_sha_restored": true
+  },
+  "d8_same_w1_real_full_s6": {
+    "run_id": 44329299178,
+    "run_conclusion": "success",
+    "workflow_commit_sha": "a5f6134410ad66784bb706b489e1087796e656a0",
+    "workflow_only_source_delta": true,
+    "artifact_id": 14438952917,
+    "artifact_zip_sha256": "d6ae0f7e845efbb5c81d6aed793463a779326ab3c07169d56327c5190eaff96c",
+    "binary_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "original_final_11_layers_unchanged": true,
+    "original_protected_rate_files_per_case": 5,
+    "protected_tmpfs_removed": true,
+    "time_s": 3e-9,
+    "cases": {
+      "417": {
+        "check_input_exit": 0,
+        "full_3ns_exit": 0,
+        "maxwell_child_P_abs_W": 209.31596771096,
+        "parent_received_P_abs_W": 209.31596771096,
+        "seven_transfers_numeric_observed": true,
+        "evolving_physical_state_observed": true,
+        "native_full_log_sha256": "2755f08588b172b3cc5cc1b2d3674c008ca8e28003cb0d5eb9c1237aa3d56a60"
+      },
+      "941": {
+        "check_input_exit": 0,
+        "full_3ns_exit": 0,
+        "maxwell_child_P_abs_W": 209.31597896021,
+        "parent_received_P_abs_W": 209.31597896021,
+        "seven_transfers_numeric_observed": true,
+        "evolving_physical_state_observed": true,
+        "native_full_log_sha256": "874d4d824612db6c43e54f5a5c3ceba4c2da581b8f8efa485db705330e156a9c"
+      }
+    }
+  },
+  "verdict": {
+    "D8_BOUNDED_FULL_S6_3NS_WITH_SAME_W1": "PASS_DIAGNOSTIC_BOTH_CASES",
+    "W1_P5X_AND_D8_SAME_BINARY_SHA": "PASS",
+    "P5X_STRICT_LATEST_PR_HEAD": "HOLD_CURRENT_PR665_HEAD_ADVANCED",
+    "P5X_FULL_WAREHOUSE_TYPED_INVENTORY": "REQUIRES_SEPARATE_EXACT_W1_FINAL_INTEGRATION",
+    "Native_science_P3_P4": "NOT_ACCEPTED",
+    "SCIENCE_HOLD": true
+  },
+  "privacy": {
+    "original_EI_rate_bytes_public": false,
+    "source_code_merged_to_PR665": false,
+    "main_modified": false
+  }
+}
