@@ -1,0 +1,508 @@
+{
+  "schema": "issue671.p5_remaining_negative_design.v1",
+  "design_only": true,
+  "not_executed": true,
+  "issue": 671,
+  "task_groups": [
+    "N1",
+    "N3",
+    "N4",
+    "N7"
+  ],
+  "cases": [
+    "S6-417",
+    "S6-941"
+  ],
+  "source_provenance": {
+    "draft_pr": 665,
+    "head_at_design": "65794d5f33449499349b97b7eaba13e1c4821688",
+    "source_unchanged_blobs": {
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "ci/p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35"
+    },
+    "original_p1_artifact": {
+      "run": 44182628032,
+      "id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "p3x_artifact": {
+      "run": 44257739203,
+      "id": 14406746397,
+      "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111"
+    },
+    "final_P4X_source": "NOT_INTEGRATED",
+    "secure_rate_handoff": "PASS_CUSTODY_PR676_MERGED__NOT_NATIVE_RUN"
+  },
+  "counts": {
+    "archetypes": {
+      "N1": 3,
+      "N3": 12,
+      "N4": 6,
+      "N7": 8
+    },
+    "total_archetypes": 29,
+    "case_expansion_count": 58,
+    "input_only_candidate_cases": 56,
+    "requires_test_seam_cases": 2
+  },
+  "positive_controls": {
+    "case_count": 2,
+    "required": "After complete P4-X+P5-0, run clean identical binary --check-input with Syntax OK exit 0 and Warehouse 12 FV Kernels +12 FV BC per case before any mutants; 8 electron BCs and 2 electron functor singleton + D8 are separate downstream controls"
+  },
+  "design": {
+    "N1": [
+      {
+        "id": "N1-01",
+        "mutation": "reinsert_exact_archived_FVKernel",
+        "section": "FVKernels",
+        "name": "ni_time",
+        "species": "O2p",
+        "variable": "log_O2p",
+        "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+        "original_block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N1-02",
+        "mutation": "reinsert_exact_archived_FVKernel",
+        "section": "FVKernels",
+        "name": "nm_time",
+        "species": "Om",
+        "variable": "log_Om",
+        "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+        "original_block_sha256": "e19423de93165f0362793d6da40032b97f1f6fc5964ad7f40d221cc721651348",
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N1-03",
+        "mutation": "reinsert_exact_archived_FVKernel",
+        "section": "FVKernels",
+        "name": "nop_time",
+        "species": "Op",
+        "variable": "log_Op",
+        "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+        "original_block_sha256": "9c2fd0318c788bce2e4a41052cfee715f93647f927ab53bb374a416a1b5ee67d",
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "core",
+        "case": "417_and_941"
+      }
+    ],
+    "N3": [
+      {
+        "id": "N3-01",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "ion_wall",
+        "species": "O2p",
+        "variable": "log_O2p",
+        "factory": "FVFunctorNeumannBC",
+        "original_block_sha256": "fa4ad1a51cbcd4b6ffa1dc8fba3438b66b27642a598bc35abca2513b9f0bacb3",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-02",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "negative_ion_wall",
+        "species": "Om",
+        "variable": "log_Om",
+        "factory": "FVFunctorNeumannBC",
+        "original_block_sha256": "cf5d56c3af0f77832f08139360753ac8c300e24cd86f6fd24158e77893fe375b",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-03",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "atomic_positive_ion_wall",
+        "species": "Op",
+        "variable": "log_Op",
+        "factory": "FVFunctorNeumannBC",
+        "original_block_sha256": "8a32490bce4f29361270661c094f8d0e45cb3555b8d9ce9127dd725ac340d67f",
+        "sidesets": [
+          "inlet",
+          "outlet",
+          "plasma_electrode",
+          "plasma_metal",
+          "plasma_right"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-04",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "ion_cover_dielectric",
+        "species": "O2p",
+        "variable": "log_O2p",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "6cf04ff67cabc68ad5852678c5c83c646495f994c5bf6c7dfc3628d637812d5b",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-05",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "negative_ion_cover_dielectric",
+        "species": "Om",
+        "variable": "log_Om",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "61acf3daa0654c6beb7220c7aaca1f3dbab944e9586a09e756aa2d419014ff02",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-06",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "atomic_positive_ion_cover_dielectric",
+        "species": "Op",
+        "variable": "log_Op",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "f44eddb6f571b5bc1b33cbe08a772bba4dcc86f129f53fe4127b715f47cfbe45",
+        "sidesets": [
+          "plasma_cover"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-07",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "ion_wafer_dielectric",
+        "species": "O2p",
+        "variable": "log_O2p",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "07256ce1face22d3fbe6b318d5e1857bf61289b2619adfea3cefec707a37b31c",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-08",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "negative_ion_wafer_dielectric",
+        "species": "Om",
+        "variable": "log_Om",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "ce57b0e42089b7266f623359eeb56cc4349cda356b9503ef37fb244e8cedbea3",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-09",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "atomic_positive_ion_wafer_dielectric",
+        "species": "Op",
+        "variable": "log_Op",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "4f6259aa4c0c1d69495581e27e229fc9b4d3e4fb3dcbd59ff09c8ff53ad2937b",
+        "sidesets": [
+          "plasma_wafer"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-10",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "ion_focus_ring_dielectric",
+        "species": "O2p",
+        "variable": "log_O2p",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "830e2cddd31b70308732cf4dab3e7d4327d38c34d0200ec50da4fcf011eee761",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-11",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "negative_ion_focus_ring_dielectric",
+        "species": "Om",
+        "variable": "log_Om",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "b96509870ac57132a0d71588709753b065ec699afe36917cf715480e5480febe",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N3-12",
+        "mutation": "reinsert_exact_archived_FVBC",
+        "section": "FVBCs",
+        "name": "atomic_positive_ion_focus_ring_dielectric",
+        "species": "Op",
+        "variable": "log_Op",
+        "factory": "PhysicsFVLogMolarDielectricFluxBC",
+        "original_block_sha256": "bd7e0cf631d41a4670e1a744af6c94bc66d57e1aace960acb183249906425e62",
+        "sidesets": [
+          "plasma_focus_ring"
+        ],
+        "expected_stage": "P0_NATIVE_OWNER_REJECT_OR_NATIVE_P05_UNEXPECTED",
+        "priority": "extended",
+        "case": "417_and_941"
+      }
+    ],
+    "N4": [
+      {
+        "id": "N4-01",
+        "mutation": "insert_unexpected_FVKernel_unique_name",
+        "section": "FVKernels",
+        "name": "n4_extra_O2p_time",
+        "species": "O2p",
+        "variable": "log_O2p",
+        "factory": "FVLogMolarTimeDerivative",
+        "expected_stage": "NATIVE_P05_UNEXPECTED_IF_REGISTRATION_SUCCEEDS",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N4-02",
+        "mutation": "insert_duplicate_canonical_name_factory",
+        "section": "FVKernels",
+        "name": "Om_diffusion",
+        "species": "Om",
+        "variable": "log_Om",
+        "factory": "FVLogMolarDiffusion",
+        "required_functor": "Om_diffusivity",
+        "expected_stage": "NATIVE_REGISTRATION_DUPLICATE_OR_P05_DUPLICATE",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N4-03",
+        "mutation": "insert_canonical_name_wrong_factory",
+        "section": "FVKernels",
+        "name": "Op_drift",
+        "species": "Op",
+        "variable": "log_Op",
+        "factory": "FVLogMolarDiffusion",
+        "required_functor": "Op_diffusivity",
+        "expected_stage": "NATIVE_REGISTRATION_COLLISION_OR_P05_TYPE_MISMATCH",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N4-04",
+        "mutation": "insert_unexpected_correct_factory_different_name",
+        "section": "FVKernels",
+        "name": "n4_extra_Op_source",
+        "species": "Op",
+        "variable": "log_Op",
+        "factory": "FVCoupledForce",
+        "required_functor": "S_Op_molar",
+        "expected_stage": "NATIVE_P05_UNEXPECTED_IF_REGISTRATION_SUCCEEDS",
+        "priority": "core",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N4-05",
+        "mutation": "delete_Op_from_fvm_species_only",
+        "target": "migrated_continuity.i:[Continuity].fvm_species",
+        "new_value": "O2p Om",
+        "expected_stage": "C2_SELECTION_WALL_OWNER_MISMATCH_PRE_P05",
+        "priority": "core",
+        "warning": "NOT genuine P05 missing-generated-kernel coverage",
+        "case": "417_and_941"
+      },
+      {
+        "id": "N4-06",
+        "mutation": "suppress_single_generated_Op_drift_in_test_only_Warehouse_fixture",
+        "target": "Physics generation test seam",
+        "expected_stage": "NATIVE_P05_MISSING_IF_APPROVED_TEST_SEAM_EXISTS",
+        "priority": "deferred",
+        "requires": "SPLIT_REQUIRED_AUDITED_TEST_ONLY_INSTRUMENTATION_NOT_INPUT_ONLY",
+        "warning": "Cannot cause selected kernel to disappear with ordinary S6 JSON/input while using immutable production action; never bypass dont_create_kernels or change P05",
+        "case": "417_and_941"
+      }
+    ],
+    "N7": [
+      {
+        "id": "N7-01",
+        "target": "species.O2p.initial_number_density",
+        "mutation": "remove_field",
+        "expected_stage": "CHEMISTRY_COMMON_FIELD_OR_CONTINUITY_INIT_REJECT",
+        "priority": "core",
+        "case": "417_and_941",
+        "artifact": "case_local_newonly_json_only"
+      },
+      {
+        "id": "N7-02",
+        "target": "species.Om.initial_number_density",
+        "mutation": "set_zero",
+        "expected_stage": "CHEMISTRY_POSITIVE_DENSITY_REJECT",
+        "priority": "core",
+        "case": "417_and_941",
+        "artifact": "case_local_newonly_json_only"
+      },
+      {
+        "id": "N7-03",
+        "target": "species.Op.initial_number_density",
+        "mutation": "set_negative_one",
+        "expected_stage": "CHEMISTRY_POSITIVE_DENSITY_REJECT",
+        "priority": "extended",
+        "case": "417_and_941",
+        "artifact": "case_local_newonly_json_only"
+      },
+      {
+        "id": "N7-04",
+        "target": "species.e.initial_number_density",
+        "mutation": "set_null",
+        "expected_stage": "CONTINUITY_SELECTED_ELECTRON_INITIAL_MISSING",
+        "priority": "core",
+        "case": "417_and_941",
+        "artifact": "case_local_newonly_json_only"
+      },
+      {
+        "id": "N7-05",
+        "target": "species.O2p.transport_coef",
+        "mutation": "remove_field",
+        "expected_stage": "CHEMISTRY_COMMON_FIELD_OR_CONTINUITY_DD_TRANSPORT_MISSING",
+        "priority": "core",
+        "case": "417_and_941",
+        "artifact": "case_local_newonly_json_only"
+      },
+      {
+        "id": "N7-06",
+        "target": "species.Om.transport_coef.type",
+        "mutation": "set_none_and_update_transport_shape",
+        "expected_stage": "CONTINUITY_SELECTED_DD_TRANSPORT_MISSING_OR_C2_WALL_MISMATCH",
+        "priority": "core",
+        "case": "417_and_941",
+        "artifact": "case_local_newonly_json_only"
+      },
+      {
+        "id": "N7-07",
+        "target": "species.Op.transport_coef.mobility",
+        "mutation": "set_minus_one",
+        "expected_stage": "CHEMISTRY_OR_P0_NEGATIVE_COEFFICIENT_REJECT",
+        "priority": "core",
+        "case": "417_and_941",
+        "artifact": "case_local_newonly_json_only"
+      },
+      {
+        "id": "N7-08",
+        "target": "species.e.transport_coef.file",
+        "mutation": "set_missing_electron_moments_txt",
+        "expected_stage": "STAGE_PIN_PATH_OR_NATIVE_LOOKUP_MISSING_SPECIFICALLY",
+        "priority": "core",
+        "warning": "Never generate a substitute table or allow this test to mask protected EI rate failures",
+        "case": "417_and_941",
+        "artifact": "case_local_newonly_json_only"
+      }
+    ]
+  },
+  "existing_source_only_test_status": {
+    "N1": "E3_SINGLE_MODEL_ONLY_DEDICATED_NOT_DONE",
+    "N2": "SOURCE_MODEL_PASS_44_OF_44_NATIVE_HOLD",
+    "N3": "E3_SINGLE_MODEL_ONLY_DEDICATED_NOT_DONE",
+    "N4": "E3_SINGLE_MODEL_ONLY_DEDICATED_NOT_DONE",
+    "N5": "SOURCE_MODEL_PASS_84_OF_84_NATIVE_HOLD",
+    "N6": "SOURCE_MODEL_PASS_42_OF_42_NATIVE_HOLD",
+    "N7": "E3_SINGLE_MODEL_ONLY_DEDICATED_NOT_DONE",
+    "N8": "SOURCE_MODEL_PASS_72_OF_72_NATIVE_HOLD",
+    "E3": "SOURCE_MODEL_PASS_16_OF_16_NATIVE_ZERO_OF_16"
+  },
+  "safe_execution_contract": {
+    "preconditions": [
+      "P4-X production runner merged and final case-specific 11-layer manifest repinned",
+      "P5-0 exact HEAD PhysicsApp built once, binary SHA and Factory registry pinned",
+      "C0 parent plasma mesh and neutral DB hashes pinned and actually present",
+      "P5-A3 PR676 protected EI original rates staged inside SAME private job as Native execution",
+      "Clean S6-417 and S6-941 --check-input exit 0, Syntax OK and expected Warehouse singleton census"
+    ],
+    "mutation_isolation": "ONE_MUTATION_PER_CASE_PER_MARKED_DISPOSABLE_SCRATCH; clone from clean SHA-pinned final stage; never edit original ZIP, source, private rate table, PR665 or main; no timed solve",
+    "preflight_rule": "Do not confuse production fixed-pin refusal with C++ guard coverage: distinguish stage JSON SHA precheck, P0 input preflight, MOOSE parse/registration, actual P05 Warehouse. Once clean stage is copied, a controlled post-stage scratch-only mutation can be attempted directly with --check-input; no guard or dont_create_kernels bypass.",
+    "negative_acceptance": "Nonzero exit plus targeted defect-specific first failure and exact run provenance; missing mesh, protected rate, OCI/Factory/JIT failures or unrelated errors are INVALID_EVIDENCE_HOLD, not mutation PASS",
+    "P05_coverage": "P05 actual Warehouse evidence is only earned if object registration reaches the query; earliest correct duplicate object-name registration rejection may prove separate registration fail-closed but never P05",
+    "restore": "For every variant verify 11 pristine .i + JSON + original support deps and scratch source SHA before injection, mutated file SHA after injection, original bytes restore or disposable directory removal SHA, no cross-case artifacts",
+    "required_receipt_fields": [
+      "test_id",
+      "case",
+      "source_head",
+      "binary_sha256",
+      "toolchain_or_OCI_digest",
+      "clean_manifest_sha256",
+      "base_file_sha256",
+      "mutation_path",
+      "mutated_sha256",
+      "source_block_sha256_if_legacy",
+      "expected_stage",
+      "expected_error_category",
+      "observed_first_error",
+      "actual_stage",
+      "exit_code",
+      "syntax_ok",
+      "warehouse_reached",
+      "log_sha256",
+      "artifact_id",
+      "restore_sha256_matches",
+      "rate_custody_receipt_id",
+      "decision"
+    ],
+    "privacy": "Secure EI raw rate bytes in tmpfs, never logs or uploads. No private-content mutations."
+  },
+  "gates": {
+    "DESIGN": "READY",
+    "DEDICATED_N1_N3_N4_N7_NATIVE": "NOT_RUN",
+    "FINAL_CLEAN_NATIVE": "HOLD",
+    "P4X": "HOLD",
+    "P5_0_BINARY": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
