@@ -92,6 +92,11 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
+      - name: Validate P6 Trigger/Artifact/P05 fail-closed invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
@@ -899,6 +904,7 @@ jobs:
     name: Issue541 CORE four native source-bound P1 P2 (no P3)
     if: >-
       github.event_name == 'pull_request' &&
+      (github.event.action != 'edited' || github.event.changes.base != null) &&
       github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -982,7 +988,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue541-core-four-native-${{ github.run_id }}
+          name: issue541-core-four-native-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
           path: experiments/Issue402_plasma_dsl_g1/evidence/core_four/**
           if-no-files-found: error
           retention-days: 30
@@ -990,6 +996,7 @@ jobs:
   plasma_native_regression:
     if: >-
       github.event_name == 'pull_request' &&
+      (github.event.action != 'edited' || github.event.changes.base != null) &&
       github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -1026,7 +1033,8 @@ jobs:
           if test -f experiments/Issue402_plasma_dsl_g1/preflight_public_option_s6.sh; then
             bash experiments/Issue402_plasma_dsl_g1/preflight_public_option_s6.sh
           else
-            echo 'Public S6 option preflight is not present on this PR head (legacy smoke scope)'
+            echo 'P6 FAIL_CLOSED: required Public S6 option preflight is missing' >&2
+            exit 1
           fi
       - name: P1 - Build PhysicsApp and verify generated and native solver operators
         shell: bash
@@ -1040,7 +1048,8 @@ jobs:
           if test -f experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh; then
             bash experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh
           else
-            echo 'Public S6 full-input gate is not present on this PR head (legacy smoke scope)'
+            echo 'P6 FAIL_CLOSED: required S6-417/941 input gate is missing' >&2
+            exit 1
           fi
       - name: Require actual native regression evidence before success
         shell: bash
@@ -1051,7 +1060,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: plasma-native-regression-${{ github.event.pull_request.head.sha }}
+          name: plasma-native-regression-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
           path: experiments/Issue402_plasma_dsl_g1/evidence/**
           if-no-files-found: error
           retention-days: 30
@@ -1221,6 +1230,7 @@ jobs:
     name: Issue541 ARCH DD JSON sheath exact-source Native P1/P2 (no P3)
     if: >-
       github.event_name == 'pull_request' &&
+      (github.event.action != 'edited' || github.event.changes.base != null) &&
       github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -1292,7 +1302,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue541-arch-dd-p1-p2-${{ github.event.pull_request.head.sha }}
+          name: issue541-arch-dd-p1-p2-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
           path: issue541_arch_p2_logs/**
           if-no-files-found: warn
           retention-days: 30
@@ -1332,6 +1342,7 @@ jobs:
     name: Issue541 ARCH S6 417+941 hybrid native P1/P2 exact-source (no P3)
     if: >-
       github.event_name == 'pull_request' &&
+      (github.event.action != 'edited' || github.event.changes.base != null) &&
       github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -1459,11 +1470,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue541-arch-s6-hybrid-p2-${{ github.event.pull_request.head.sha }}
+          name: issue541-arch-s6-hybrid-p2-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
           path: |
             issue541_arch_s6_p2_evidence/*/status.json
             issue541_arch_s6_p2_evidence/*/native_P2.log
             control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
             control/experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
