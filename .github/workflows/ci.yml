@@ -992,17 +992,6 @@ jobs:
           path: experiments/Issue402_plasma_dsl_g1/evidence/core_four/**
           if-no-files-found: error
           retention-days: 30
-
-  plasma_native_regression:
-    if: >-
-      github.event_name == 'pull_request' &&
-      (github.event.action != 'edited' || github.event.changes.base != null) &&
-      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    permissions:
-      contents: read
-    steps:
       - name: Upload first-attempt legacy artifact alias (compatibility only)
         if: ${{ always() && github.run_attempt == 1 }}
         uses: actions/upload-artifact@v4
@@ -1083,16 +1072,6 @@ jobs:
           path: experiments/Issue402_plasma_dsl_g1/evidence/**
           if-no-files-found: error
           retention-days: 30
-
-  artifact-api-probe:
-    name: Artifact CreateArtifact API probe (1 day, no Native)
-    if: github.event_name == 'pull_request' && github.event.action != 'edited'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      actions: read
-    steps:
       - name: Upload first-attempt legacy artifact alias (compatibility only)
         if: ${{ always() && github.run_attempt == 1 }}
         uses: actions/upload-artifact@v4
@@ -1343,17 +1322,6 @@ jobs:
           path: issue541_arch_p2_logs/**
           if-no-files-found: error
           retention-days: 30
-
-  issue541_arch_replay_p0:
-    name: Issue541 ARCH independent P3 source and manual replay P0 (no Native)
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
       - name: Upload first-attempt legacy artifact alias (compatibility only)
         if: ${{ always() && github.run_attempt == 1 }}
         uses: actions/upload-artifact@v4
@@ -1534,7 +1502,6 @@ jobs:
             control/experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
           if-no-files-found: error
           retention-days: 30
-
       - name: Upload first-attempt legacy artifact alias (compatibility only)
         if: ${{ always() && github.run_attempt == 1 }}
         uses: actions/upload-artifact@v4
