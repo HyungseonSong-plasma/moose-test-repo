@@ -25,6 +25,7 @@ from chemistry.prepare_s6_run_input import prepare
 from chemistry.prepare_hybrid_json_s6 import (
     SHEATH_BC_SPEC,
     migrate_exact_s6_fem_sheath,
+    prepare as prepare_hybrid_transport,
 )
 from p3_chemistry_preflight import audit
 
@@ -163,6 +164,20 @@ def check_only(historical: Path, expected_head: str, output: Path,
             # coefficients and Poisson owner remain exactly as staged.
             if not all((staged / relative).is_file() for relative in ordered):
                 raise ValueError("P2_S6_STAGED_INPUT_LAYER_MISSING")
+            # Reuse the ARCH Hybrid's exact source-bound transport cutover,
+            # which retires the old electron Material, rebinds the three ion
+            # coefficient Functors and preserves the original fluid 5/3 energy
+            # transport. The later P05 Native/Physics collision remains a
+            # separate strict gate, never suppressed by this migration.
+            hybrid_transport = prepare_hybrid_transport(
+                chemistry, ordered, case, chemistry_cutover=cutover)
+            if (hybrid_transport["removed_generated_owner_count"] != 10 or
+                    hybrid_transport["integrated_species_count"] != 7 or
+                    hybrid_transport["integrated_reaction_count"] != 8 or
+                    hybrid_transport["rebound_native_sheath_bc_count"] != 8 or
+                    not hybrid_transport["electron_transport_table_sha256"] or
+                    digest(overlay) != hybrid_transport["overlay_sha256"]):
+                raise ValueError("P6_D1_FLOW_HYBRID_TRANSPORT_CUTOVER_INCOMPLETE")
             if digest(binary) != identity["binary_sha256"]:
                 raise ValueError("P2_NATIVE_BINARY_CHANGED_AFTER_P1")
             checked = option.run_one(
@@ -175,6 +190,7 @@ def check_only(historical: Path, expected_head: str, output: Path,
                 "scratch_canonicalization": migration,
                 "scratch_fem_type_remap": type_remap,
                 "scratch_chemistry_cutover": cutover,
+                "scratch_transport_owner_cutover": hybrid_transport,
                 "scratch_sheath_bc_rebind": sheath_receipt,
                 "overlay_sha256": digest(overlay),
                 "P3": "NOT_RUN",

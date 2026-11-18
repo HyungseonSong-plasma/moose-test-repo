@@ -321,6 +321,123 @@ def reconcile_staged_D_json_initials(chemistry: Path, ordered: list[str]) -> dic
 
 
 
+
+def cutover_staged_D_transport_owners(chemistry: Path, ordered: list[str]) -> dict:
+    """Move exactly four historical DD coefficient owners to Physics/JSON.
+
+    This is a D-only disposable input edit, after exact old lookup/material
+    registration remapping.  B and the reviewed OVERLAY bytes stay immutable.
+    Reuse all original coefficient Functors and the 400-W reduced lookup table;
+    never invent a new mobility/diffusivity or an energy closure.
+    """
+    if (len(ordered) != 11 or Path(ordered[-1]).name != 'migrated_continuity.i'
+            or len({Path(item).name for item in ordered}) != 11):
+        raise ValueError('P6_D1_UNEXPECTED_STAGED_11_LAYERS')
+    if any(Path(item).name != item.split('/')[-1] or
+           not Path(item).name.endswith('.i') for item in ordered):
+        raise ValueError('P6_D1_UNSAFE_STAGED_PATH')
+    first = chemistry / Path(ordered[0]).name
+    overlay = chemistry / 'migrated_continuity.i'
+    staged_json = chemistry / 'plasma_species_only.json'
+    if (not all((chemistry / Path(item).name).is_file() for item in ordered)
+            or not staged_json.is_file() or
+            first.is_symlink() or overlay.is_symlink() or staged_json.is_symlink()):
+        raise ValueError('P6_D1_MISSING_OR_SYMLINK_INPUT')
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        'p6_d1_exact_historical_material',
+        ROOT / 'experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py')
+    if spec is None or spec.loader is None:
+        raise ValueError('P6_D1_HISTORICAL_MATERIAL_CONTRACT_MISSING')
+    donor = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(donor)
+    first_before = first.read_bytes()
+    overlay_before = overlay.read_bytes()
+    json_before = staged_json.read_bytes()
+    first_after, electron = donor.retire(
+        first_before.decode('utf-8'), 'FunctorMaterials',
+        'electron_transport', donor.SOURCE_MATERIAL['electron_transport'])
+    aliases = {
+        'O2p': ('ion_mobility', 'ion_diffusion'),
+        'Om': ('negative_ion_mobility', 'negative_ion_diffusion'),
+        'Op': ('atomic_positive_ion_mobility', 'atomic_positive_ion_diffusion'),
+    }
+    overlay_after = overlay_before.decode('utf-8')
+    removed = [electron]
+    for species, (mobility, diffusivity) in aliases.items():
+        overlay_after, item = donor.retire(
+            overlay_after, 'FunctorMaterials',
+            species + '_species_transport_alias',
+            {'type': 'DDTransportMaterial', 'model': 'functor',
+             'species_id': species, 'mobility_source': mobility,
+             'diffusivity_source': diffusivity})
+        removed.append(item)
+    if len(removed) != 4:
+        raise ValueError('P6_D1_EXPECT_EXACT_4_MATERIALS')
+    payload = json.loads(json_before)
+    species_records = payload.get('species', {})
+    if set(payload) != {'species', 'equations', 'reactions'} or (
+            set(species_records) != {'e', 'O2', 'O', 'O2p', 'Om', 'Op'} or
+            payload['equations'] != {} or payload['reactions'] != []):
+        raise ValueError('P6_D1_OPTION_ONLY_JSON_IDENTITY_DRIFT')
+    for species, charge in {'e': -1, 'O2p': 1, 'Om': -1, 'Op': 1}.items():
+        record = species_records[species]
+        if (set(record) != {'elements', 'charge_number', 'initial_number_density'}
+                or record['charge_number'] != charge or
+                not isinstance(record['initial_number_density'], (int, float)) or
+                not math.isfinite(record['initial_number_density']) or
+                record['initial_number_density'] <= 0):
+            raise ValueError('P6_D1_PRECUTOVER_INITIAL_IDENTITY_' + species)
+    # Same table, pressure, temperature and clamp policy as the retired
+    # electron_transport source; legacy flat JSON schema is explicitly
+    # supported for this historical option-only path.
+    table_rel = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
+    table_path = (chemistry / table_rel).resolve()
+    if (not table_path.is_file() or table_path.is_symlink() or
+            hashlib.sha256(table_path.read_bytes()).hexdigest() !=
+            '35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b'):
+        raise ValueError('P6_D1_HISTORICAL_ELECTRON_TABLE_SHA_MISMATCH')
+    species_records['e'].update({
+        'transport_coef': 'lookup', 'table_file': table_rel,
+        'table_units': 'reduced', 'pressure': 'p',
+        'gas_temperature': 'T_g_fixed', 'bounds_policy': 'clamp',
+        'energy_transport_coef': 'fluid',
+    })
+    for species, (mobility, diffusivity) in aliases.items():
+        species_records[species].update({
+            'transport_coef': 'functor', 'mobility': mobility,
+            'diffusivity': diffusivity,
+        })
+    json_after = (json.dumps(payload, indent=2, sort_keys=True) + '\n').encode()
+    # No persistent writes until every source, type, schema, table and owner
+    # check above has succeeded. All paths are disposable scratch, not originals.
+    first.write_text(first_after, encoding='utf-8')
+    overlay.write_text(overlay_after, encoding='utf-8')
+    staged_json.write_bytes(json_after)
+    for path, expected in ((first, first_after.encode()),
+                           (overlay, overlay_after.encode()),
+                           (staged_json, json_after)):
+        if path.read_bytes() != expected:
+            raise RuntimeError('P6_D1_POSTWRITE_READBACK_MISMATCH_' + path.name)
+    return {
+        'status': 'P6_D1_EXACT_FOUR_MATERIALS_RETIRED_TO_GENERATED_JSON_SOURCE',
+        'retired_material_count': 4, 'retired_materials': removed,
+        'transport_json_species': sorted(['e', *aliases]),
+        'original_electron_lookup_sha256': hashlib.sha256(table_path.read_bytes()).hexdigest(),
+        'energy_projection': 'species.e.energy_transport_coef=fluid; 5/3 original',
+        'file_sha256': {
+            'C0': {'before': hashlib.sha256(first_before).hexdigest(),
+                   'after': hashlib.sha256(first.read_bytes()).hexdigest()},
+            'overlay': {'before': hashlib.sha256(overlay_before).hexdigest(),
+                        'after': hashlib.sha256(overlay.read_bytes()).hexdigest()},
+            'JSON': {'before': hashlib.sha256(json_before).hexdigest(),
+                     'after': hashlib.sha256(staged_json.read_bytes()).hexdigest()},
+        },
+        'native_P05': 'NOT_RUN', 'science': 'SCIENCE_HOLD',
+    }
+
+
+
 def retire_staged_B_d1_observations(chemistry: Path, ordered: list[str]) -> dict:
     """Verify and retain all 14 historical D1 observer pairs in B scratch.
 
@@ -954,6 +1071,10 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         scratch_wall = remap_staged_wall_owners(staged / p2.CHEM, ordered)
                         scratch_mean_energy = remap_staged_mean_energy(staged / p2.CHEM, ordered)
                         scratch_sheath = remap_staged_sheath_bcs(staged / p2.CHEM, ordered, variant)
+                        scratch_transport = None
+                        if variant == "D":
+                            scratch_transport = cutover_staged_D_transport_owners(
+                                staged / p2.CHEM, ordered)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
                             binary, identity["binary_sha256"], staged, ordered,
@@ -969,6 +1090,7 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                             report["checks"][case][variant]["scratch_json_initials"] = scratch_initials
+                            report["checks"][case][variant]["scratch_transport_owner_cutover"] = scratch_transport
                     except Exception as exc:
                         report["checks"][case][variant] = {
                             "P2": "HOLD", "classification": type(exc).__name__,

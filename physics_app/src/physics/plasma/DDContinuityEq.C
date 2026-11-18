@@ -549,7 +549,17 @@ DDContinuityEq::addFunctorMaterials()
         mooseError("Multiple DDEnergyEq owners cannot select a unique electron transport closure");
       const bool fluid = energy.size() == 1 &&
           energy.front()->getParam<MooseEnum>("transport_coefficient") == "fluid";
-      params.set<bool>("fluid_energy") = fluid;
+      // Historical flat Hybrid and option-only JSON explicitly requests the
+      // same 5/3 closure with species.e.energy_transport_coef=fluid. Preserve
+      // the retired manual electron_transport Material's energy Functors when
+      // Continuity owns coefficients but no Energy Physics action owns the
+      // still-Native electron energy equation. Final typed New-only JSON
+      // forbids this legacy key and is unaffected by this compatibility path.
+      const bool legacy_fluid = mechanism.fluidElectronEnergyTransport();
+      if (legacy_fluid && !energy.empty() && !fluid)
+        mooseError("Conflicting electron transport closure: legacy JSON requests "
+                   "fluid energy, but the Energy Physics action does not");
+      params.set<bool>("fluid_energy") = fluid || legacy_fluid;
     }
     if (config->model == "constant")
     {
