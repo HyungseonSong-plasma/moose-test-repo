@@ -1,0 +1,207 @@
+{
+  "schema": "issue671.p5_a3.EI_H25_lookup_custody.source_bound.v1",
+  "task_id": "P5-A3",
+  "source_context": {
+    "pr665_head_at_execution": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "P3_X_integrated_on_PR665": true,
+    "P4_X_integrated": false,
+    "P3_X_staged_manifest_historical_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_original_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "scope": "read-only source+artifact+protected SHA receipt custody; no secret access; no Native"
+  },
+  "protected_EI_rate_custody": {
+    "protected_secret_alias": "OXYGEN24_RATES_TAR_XZ_B64",
+    "protected_workflow": ".github/workflows/issue477-s6-combined-407-2069-h25-once.yml",
+    "verification_run": 44190774410,
+    "verification_artifact": 14376451636,
+    "artifact_zip_sha256": "a382af3a6ebba656e070747814df45267e2880849fe6f492757ceda1c7058a20",
+    "receipt_sha256": "6d8cbe128b5224a11ae67541caae3f816f3b8c98f92e81a82dc4c29bd561ea84",
+    "source_receipt": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/5467dbbc53391d277d7d53525928a0bcfe1fe98f/reports/issue667/p1_b6_c6_original_private_ei_sha_secure_rehash.json",
+    "status": "PASS_PREVIOUS_SECURE_CI_SHA_6_OF_6",
+    "original_private_rate_sha256": {
+      "EI-415_O2_X.txt": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+      "EI-401_O2_X.txt": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+      "EI-417_O2_X.txt": "4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
+      "EI-941_O_3P.txt": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+      "EI-407_O2_X.txt": "2565be45b9a13204583b6714a7d1b581cf29c157c78ac502d665649e4065b359",
+      "EI-2069_O2_a1Delta.txt": "5eba74c1870e0635a3e316e143961e9f04e259675ddad00fd8653de28980644a"
+    },
+    "numeric_rows_each": 100,
+    "historical_protected_raw_file_rehash_performed_in_this_task": false,
+    "raw_bytes_in_public_artifacts": false,
+    "raw_bytes_in_this_receipt": false,
+    "unrelated_public_Boltzmann_table_not_substituted": true
+  },
+  "source_only_readback": {
+    "P2": {
+      "run": 44199587771,
+      "artifact": 14380831538,
+      "downloaded_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+    },
+    "P3_X": {
+      "run": 44257739203,
+      "artifact": 14406746397,
+      "downloaded_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111"
+    },
+    "stage_11layer_sha_recomputed": {
+      "417": "11_OF_11",
+      "941": "11_OF_11"
+    },
+    "ion_EI_private_rate_files_present_in_artifact": false,
+    "runtime_private_rate_mount_proven": false
+  },
+  "cases": {
+    "417": {
+      "expected_private_EI_rate_files": [
+        "EI-415_O2_X.txt",
+        "EI-401_O2_X.txt",
+        "EI-417_O2_X.txt",
+        "EI-407_O2_X.txt",
+        "EI-2069_O2_a1Delta.txt"
+      ],
+      "unique_rate_producers": 5,
+      "preserved_P2_to_P3X_bytes": true,
+      "generated_source_bound_runtime": "NOT_RUN",
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef"
+    },
+    "941": {
+      "expected_private_EI_rate_files": [
+        "EI-415_O2_X.txt",
+        "EI-401_O2_X.txt",
+        "EI-941_O_3P.txt",
+        "EI-407_O2_X.txt",
+        "EI-2069_O2_a1Delta.txt"
+      ],
+      "unique_rate_producers": 5,
+      "preserved_P2_to_P3X_bytes": true,
+      "generated_source_bound_runtime": "NOT_RUN",
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+    }
+  },
+  "EI_material_object_contract": {
+    "EI-415_O2_X.txt": {
+      "layer": 5,
+      "name": "ei415_progress",
+      "progress": "R_EI415",
+      "block_sha256": "aa7b0f2e016f8dc367817c52a29e20d586e4db0c6840c7f377d4cc2970d52894",
+      "factory": "EIRateCoefMaterial",
+      "rate_table_path": "private_rates/EI-415_O2_X.txt",
+      "original_private_sha256": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+      "source_block_byte_preserved_P2_to_P3X": true
+    },
+    "EI-401_O2_X.txt": {
+      "layer": 6,
+      "name": "ei401_progress",
+      "progress": "R_EI401",
+      "block_sha256": "ae89ee34938fe2c654992a3c3a5f1c91a59b2e76fe3959daf96855949d54da09",
+      "factory": "EIRateCoefMaterial",
+      "rate_table_path": "private_rates/EI-401_O2_X.txt",
+      "original_private_sha256": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+      "source_block_byte_preserved_P2_to_P3X": true
+    },
+    "EI-407_O2_X.txt": {
+      "layer": 8,
+      "name": "legacy8_407_progress",
+      "progress": "R_EI407",
+      "block_sha256": "04d8b726452d385efc61ec94c8dc0bd8c6a414f038d8eb75110ea8af4cafbb1f",
+      "factory": "EIRateCoefMaterial",
+      "rate_table_path": "private_rates/EI-407_O2_X.txt",
+      "original_private_sha256": "2565be45b9a13204583b6714a7d1b581cf29c157c78ac502d665649e4065b359",
+      "source_block_byte_preserved_P2_to_P3X": true
+    },
+    "EI-2069_O2_a1Delta.txt": {
+      "layer": 9,
+      "name": "ei2069_progress",
+      "progress": "R_EI2069",
+      "block_sha256": "6a3cdbb479560e3a7f1ea6bb1e5c06c3216d0bb671b65ec40b3f315d8a5d091d",
+      "factory": "EIRateCoefMaterial",
+      "rate_table_path": "private_rates/EI-2069_O2_a1Delta.txt",
+      "original_private_sha256": "5eba74c1870e0635a3e316e143961e9f04e259675ddad00fd8653de28980644a",
+      "source_block_byte_preserved_P2_to_P3X": true
+    },
+    "EI-417_O2_X.txt": {
+      "layer": 7,
+      "name": "legacy8_h05_ei417_progress",
+      "progress": "R_EI417",
+      "block_sha256": "a8836b06e5b80ae4c8ffe4a1cdbeb73474c129ed2192b4e981864c548539fde7",
+      "factory": "EIRateCoefMaterial",
+      "rate_table_path": "private_rates/EI-417_O2_X.txt",
+      "original_private_sha256": "4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
+      "source_block_byte_preserved_P2_to_P3X": true
+    },
+    "EI-941_O_3P.txt": {
+      "layer": 7,
+      "name": "ei941_progress",
+      "progress": "R_EI941",
+      "block_sha256": "37327e9f9b6215f8675af8add85b93d107962ab2b83f5bc47f14350c2815fc46",
+      "factory": "EIRateCoefMaterial",
+      "rate_table_path": "private_rates/EI-941_O_3P.txt",
+      "original_private_sha256": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+      "source_block_byte_preserved_P2_to_P3X": true
+    }
+  },
+  "H25_analytic_custody": {
+    "kind": "ANALYTIC_NOT_PRIVATE_EI_TABLE",
+    "case_scope": [
+      "417",
+      "941"
+    ],
+    "layer": 10,
+    "object_name": "h25_progress",
+    "factory": "ADParsedFunctorMaterial",
+    "property_name": "R_H25",
+    "functor_names": [
+      "c_Op_H25",
+      "c_O2_H25",
+      "Tg_H25_K"
+    ],
+    "expression": "1.204428152e7*(300.0/tg)^0.4*cp*c2",
+    "block_sha256": "29beacfafed4b75600e9cdf69ff6e0133762a818ee795a9a721b6197d19a6081",
+    "P2_to_P3X_byte_identical": true,
+    "physics_runtime": "NOT_RUN"
+  },
+  "electron_lookup_custody": {
+    "source_commit": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "source_path": ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt",
+    "historical_Git_blob_sha1": "aa05aadde111e4ba435185954a64a4b7dbbf2d45",
+    "original_and_both_staged_files_git_blob_identical": true,
+    "P2_and_P3X_actual_staged_bytes_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "file_size_bytes": 1770,
+    "numeric_rows": 42,
+    "staged_relative_path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "json_relative_reference": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "unit": "reduced",
+    "bounds_policy": "clamp",
+    "resolved_P3X_417_and_941_to_staged_actual_file": true,
+    "default_100row_table_used": false,
+    "runtime_lookup_resolution_by_native_moose": "NOT_RUN"
+  },
+  "negative_controls": {
+    "synthetic_mutations_designed": 10,
+    "executed_in_MOOSE": 0,
+    "classification": "DESIGN_ONLY_NOT_PASS"
+  },
+  "local_independent_receipt": {
+    "filename": "p5_a3_rate_lookup_custody_independent_receipt.json",
+    "sha256": "1ba6515d10ca64a90f376bfda727715828e14a74c3a81caf2f89a83a5ff368ba"
+  },
+  "unresolved": [
+    "P4-X integrated source/head/artifact not yet available; P5 Native P2 cannot be accepted from historical P3-X artifact",
+    "Six protected EI rate files not present in publicly downloadable source-only ZIPs; need secure on-run private_rates/ stage and check full paths+SHA within protected execution",
+    "Actual rate Material to C++ generated Chemistry/ion source Warehouse Functor caller binding not native-tested",
+    "Source-only input proof not equal to scientific equivalence; compiler, OCI and PhysicsApp binary SHA pending P5-0"
+  ],
+  "gates": {
+    "P5_A3_SECURE_CI_PRIVATE_SHA": "PASS_6_OF_6_PREVIOUS_CI",
+    "P5_A3_EI_RATE_MATERIAL_P2_P3X": "PASS_5_PER_CASE",
+    "P5_A3_H25_ANALYTIC_FORMULA": "PASS_BOTH",
+    "P5_A3_LOOKUP_GIT_BLOB_SHA256_AND_PATH": "PASS_BOTH",
+    "P5_A3_PRIVATE_RATE_NATIVE_STAGE": "HOLD",
+    "P4_X": "HOLD",
+    "P5_0_BINARY": "NOT_RUN",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
