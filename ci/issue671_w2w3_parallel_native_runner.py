@@ -108,8 +108,7 @@ def native(case: str, stage: Path, repo: Path, bundle: Path, out: Path, oci: str
                   "--mount",f"type=bind,src={bundle},dst=/w1,readonly",
                   "--mount",f"type=bind,src={work},dst=/case",
                   oci,"-lc",
-                  'source /environment; export LD_LIBRARY_PATH="/w1/lib:'+
-                  '"$LD_LIBRARY_PATH"; /w1/physics-opt --check-input -i '+
+                  'source /environment; export LD_LIBRARY_PATH="/w1/lib:$LD_LIBRARY_PATH"; /w1/physics-opt --check-input -i '+
                   " ".join(shlex.quote(p) for p in p4["ordered_inputs"])]
             try:
                 result=subprocess.run(args,text=True,capture_output=True,timeout=720,check=False,
