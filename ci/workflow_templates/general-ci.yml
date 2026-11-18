@@ -1304,7 +1304,7 @@ jobs:
         with:
           name: issue541-arch-dd-p1-p2-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
           path: issue541_arch_p2_logs/**
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
   issue541_arch_replay_p0:
