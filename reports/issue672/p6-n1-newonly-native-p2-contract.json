@@ -1,0 +1,456 @@
+{
+  "schema": "issue672.p6_n1.newonly_native_p2_contract.v1",
+  "task": "P6-N1",
+  "stage": "DESIGN_ONLY",
+  "target_repo": "HyungseonSong-plasma/moose-test-repo",
+  "baseline_pr665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "approval": {
+    "requires_p5x_final_acceptance": true,
+    "accepted": false,
+    "requires_p6_c1_c2_surface_governance": true,
+    "owner_for_new_ci_template": "P6-C3",
+    "newonly_workflow_implemented": false,
+    "run_p6_n3_only_after_n2_and_p5x": true
+  },
+  "lane": {
+    "name": "newonly-s6-native-p2",
+    "mode": "CHECK_INPUT_ONLY",
+    "isolation_from": [
+      "public-b",
+      "public-d",
+      "flow-d",
+      "arch-hybrid",
+      "ion-fvm"
+    ],
+    "allow_native_p3": false,
+    "allow_native_p4": false,
+    "allow_science_solver": false,
+    "science_hold": true
+  },
+  "trigger_contract": {
+    "proposed": "explicit trusted workflow_dispatch only after P5-X and P6-C3 approval",
+    "auto_push": false,
+    "auto_schedule": false,
+    "pull_request_target": false,
+    "permission": "contents:read",
+    "requires_protected_private_input_approval": true
+  },
+  "identity": {
+    "same_source_commit_for_cases_and_negatives": true,
+    "same_binary_sha256_for_cases_and_negatives": true,
+    "one_build_per_run": true,
+    "require_git_head_tree_oci_flags_and_factory_registry": true,
+    "require_both_app_so_sha256": true,
+    "forbid_stale_head_binary_even_if_build_inputs_equivalent": true,
+    "OCI_baseline": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "per_case": {
+    "417": {
+      "inputs_11": true,
+      "source_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "original_parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+      "private_EI_rate_input_count": 5,
+      "branch_reaction": "EI-417",
+      "exit_code_expected": 0,
+      "syntax_ok_expected": true
+    },
+    "941": {
+      "inputs_11": true,
+      "source_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "original_parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+      "private_EI_rate_input_count": 5,
+      "branch_reaction": "EI-941",
+      "exit_code_expected": 0,
+      "syntax_ok_expected": true
+    }
+  },
+  "source_custody": {
+    "electron_table_42row_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "separate_rf_maxwell_qvt_mesh_sha_required": true,
+    "transitive_include_sha_required": true,
+    "discard_originals_or_private_rate_bytes_from_artifacts": true,
+    "no_synthetic_reaction_or_lookup_fallback": true,
+    "forbid_dont_create_kernels": true,
+    "old_native_ion_FV_remain": 0,
+    "old_native_electron_BC_and_material_remain": 0,
+    "p4_old_duplicate_materials_remain": 0,
+    "carrier_one_unique_count": 1
+  },
+  "warehouse_expected_each_case": {
+    "ion_FV_kernel_count": 12,
+    "ion_FV_BC_count": 12,
+    "electron_FEM_BC_count": 8,
+    "kernel_objects": [
+      {
+        "id": "O2p",
+        "name": "O2p_time",
+        "type": "FVLogMolarTimeDerivative",
+        "variable": "log_O2p"
+      },
+      {
+        "id": "O2p",
+        "name": "O2p_diffusion",
+        "type": "FVLogMolarDiffusion",
+        "variable": "log_O2p"
+      },
+      {
+        "id": "O2p",
+        "name": "O2p_drift",
+        "type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_O2p"
+      },
+      {
+        "id": "O2p",
+        "name": "O2p_source",
+        "type": "FVCoupledForce",
+        "variable": "log_O2p"
+      },
+      {
+        "id": "Om",
+        "name": "Om_time",
+        "type": "FVLogMolarTimeDerivative",
+        "variable": "log_Om"
+      },
+      {
+        "id": "Om",
+        "name": "Om_diffusion",
+        "type": "FVLogMolarDiffusion",
+        "variable": "log_Om"
+      },
+      {
+        "id": "Om",
+        "name": "Om_drift",
+        "type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_Om"
+      },
+      {
+        "id": "Om",
+        "name": "Om_source",
+        "type": "FVCoupledForce",
+        "variable": "log_Om"
+      },
+      {
+        "id": "Op",
+        "name": "Op_time",
+        "type": "FVLogMolarTimeDerivative",
+        "variable": "log_Op"
+      },
+      {
+        "id": "Op",
+        "name": "Op_diffusion",
+        "type": "FVLogMolarDiffusion",
+        "variable": "log_Op"
+      },
+      {
+        "id": "Op",
+        "name": "Op_drift",
+        "type": "FVLogMolarElectrostaticDrift",
+        "variable": "log_Op"
+      },
+      {
+        "id": "Op",
+        "name": "Op_source",
+        "type": "FVCoupledForce",
+        "variable": "log_Op"
+      }
+    ],
+    "ion_FVBC_objects": [
+      {
+        "id": "O2p",
+        "name": "O2p_wall",
+        "type": "FVFunctorNeumannBC",
+        "variable": "log_O2p",
+        "boundary_groups": [
+          "inlet outlet",
+          "plasma_electrode plasma_metal plasma_right"
+        ]
+      },
+      {
+        "id": "O2p",
+        "name": "O2p_cover_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "boundary_groups": [
+          "plasma_cover"
+        ]
+      },
+      {
+        "id": "O2p",
+        "name": "O2p_wafer_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "boundary_groups": [
+          "plasma_wafer"
+        ]
+      },
+      {
+        "id": "O2p",
+        "name": "O2p_focus_ring_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_O2p",
+        "boundary_groups": [
+          "plasma_focus_ring"
+        ]
+      },
+      {
+        "id": "Om",
+        "name": "Om_wall",
+        "type": "FVFunctorNeumannBC",
+        "variable": "log_Om",
+        "boundary_groups": [
+          "inlet outlet",
+          "plasma_electrode plasma_metal plasma_right"
+        ]
+      },
+      {
+        "id": "Om",
+        "name": "Om_cover_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "boundary_groups": [
+          "plasma_cover"
+        ]
+      },
+      {
+        "id": "Om",
+        "name": "Om_wafer_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "boundary_groups": [
+          "plasma_wafer"
+        ]
+      },
+      {
+        "id": "Om",
+        "name": "Om_focus_ring_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Om",
+        "boundary_groups": [
+          "plasma_focus_ring"
+        ]
+      },
+      {
+        "id": "Op",
+        "name": "Op_wall",
+        "type": "FVFunctorNeumannBC",
+        "variable": "log_Op",
+        "boundary_groups": [
+          "inlet outlet",
+          "plasma_electrode plasma_metal plasma_right"
+        ]
+      },
+      {
+        "id": "Op",
+        "name": "Op_cover_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "boundary_groups": [
+          "plasma_cover"
+        ]
+      },
+      {
+        "id": "Op",
+        "name": "Op_wafer_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "boundary_groups": [
+          "plasma_wafer"
+        ]
+      },
+      {
+        "id": "Op",
+        "name": "Op_focus_ring_dielectric",
+        "type": "FVLogMolarDielectricFluxBC",
+        "variable": "log_Op",
+        "boundary_groups": [
+          "plasma_focus_ring"
+        ]
+      }
+    ],
+    "electron_FEMBC_objects": [
+      {
+        "name": "e_wall",
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e"
+      },
+      {
+        "name": "e_energy_wall",
+        "type": "FEMElectronEnergySheathBC",
+        "variable": "log_e_energy"
+      },
+      {
+        "name": "e_cover_dielectric",
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e"
+      },
+      {
+        "name": "e_energy_cover_dielectric",
+        "type": "FEMElectronEnergySheathBC",
+        "variable": "log_e_energy"
+      },
+      {
+        "name": "e_wafer_dielectric",
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e"
+      },
+      {
+        "name": "e_energy_wafer_dielectric",
+        "type": "FEMElectronEnergySheathBC",
+        "variable": "log_e_energy"
+      },
+      {
+        "name": "e_focus_ring_dielectric",
+        "type": "FEMElectronSheathBC",
+        "variable": "log_e"
+      },
+      {
+        "name": "e_energy_focus_ring_dielectric",
+        "type": "FEMElectronEnergySheathBC",
+        "variable": "log_e_energy"
+      }
+    ],
+    "ion_wall_material_count": 3,
+    "electron_density_functor_count": 1,
+    "electron_wall_flux_functor_count": 1,
+    "surface_current_provider_count": 3,
+    "lowerD_sigma_consumer_count": 3,
+    "typed_constructor_bindings_required": true,
+    "actual_cpp_warehouse_dump_required": true,
+    "reject_missing_duplicate_or_extra_owner_by_name_type_variable": true
+  },
+  "negative_controls": {
+    "cases": [
+      "417",
+      "941"
+    ],
+    "ids": [
+      "N1",
+      "N2",
+      "N3",
+      "N4",
+      "N5",
+      "N6",
+      "N7",
+      "N8"
+    ],
+    "required_actual_native_rejections": 16,
+    "expected": {
+      "N1": {
+        "expected_first_failure_class": "P05",
+        "native_expected_nonzero_exit": true,
+        "matched_expected_diagnostic_required": true,
+        "unchanged_other_files_required": true,
+        "source_restore_sha_required": true
+      },
+      "N2": {
+        "expected_first_failure_class": "P05",
+        "native_expected_nonzero_exit": true,
+        "matched_expected_diagnostic_required": true,
+        "unchanged_other_files_required": true,
+        "source_restore_sha_required": true
+      },
+      "N3": {
+        "expected_first_failure_class": "P05",
+        "native_expected_nonzero_exit": true,
+        "matched_expected_diagnostic_required": true,
+        "unchanged_other_files_required": true,
+        "source_restore_sha_required": true
+      },
+      "N4": {
+        "expected_first_failure_class": "P05",
+        "native_expected_nonzero_exit": true,
+        "matched_expected_diagnostic_required": true,
+        "unchanged_other_files_required": true,
+        "source_restore_sha_required": true
+      },
+      "N5": {
+        "expected_first_failure_class": "EARLY_REGISTRATION",
+        "native_expected_nonzero_exit": true,
+        "matched_expected_diagnostic_required": true,
+        "unchanged_other_files_required": true,
+        "source_restore_sha_required": true
+      },
+      "N6": {
+        "expected_first_failure_class": "CHEMISTRY",
+        "native_expected_nonzero_exit": true,
+        "matched_expected_diagnostic_required": true,
+        "unchanged_other_files_required": true,
+        "source_restore_sha_required": true
+      },
+      "N7": {
+        "expected_first_failure_class": "CHEMISTRY",
+        "native_expected_nonzero_exit": true,
+        "matched_expected_diagnostic_required": true,
+        "unchanged_other_files_required": true,
+        "source_restore_sha_required": true
+      },
+      "N8": {
+        "expected_first_failure_class": "CHEMISTRY",
+        "native_expected_nonzero_exit": true,
+        "matched_expected_diagnostic_required": true,
+        "unchanged_other_files_required": true,
+        "source_restore_sha_required": true
+      }
+    },
+    "require_clean_controls_both_cases": true,
+    "one_mutation_per_scratch": true,
+    "per_mutation_before_after_sha_and_restore": true,
+    "nonzero_exit_alone_not_sufficient": true,
+    "forbid_missing_mesh_or_private_data_as_expected_failure": true
+  },
+  "security": {
+    "tmpfs_private_cleanup_required": true,
+    "never_upload_private_rates_or_keys": true,
+    "report_only_sanitized_custody": true,
+    "artifact_allowlist_required": true,
+    "secret_environment_must_be_explicitly_configured_and_approved": true,
+    "fail_on_untrusted_PR_code": true
+  },
+  "verdicts": {
+    "pass": "PASS_NEWONLY_NATIVE_P2",
+    "fail": "FAIL_CLOSED",
+    "blocked": "BLOCKED_DEPENDENCY",
+    "science": "SCIENCE_HOLD",
+    "newonly_not_equal_legacy": true
+  },
+  "evidence_baselines": {
+    "normal_s6_417": {
+      "run": 44300489811,
+      "artifact": 14425706979,
+      "artifact_zip_sha256": "668815e6bcd15353586e177512cce45c32d1bb1e17d5ff0755fc4f6393105456",
+      "binary_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+      "binary_source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+      "target_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "strict_head_parity": false
+    },
+    "normal_s6_941": {
+      "run": 44300489811,
+      "artifact": 14425516960,
+      "artifact_zip_sha256": "19180959b6dbd43aa748ddc900365eb1edcda22583d14275d62fd762f7a81990",
+      "binary_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+      "binary_source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+      "target_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "strict_head_parity": false
+    },
+    "negatives": {
+      "run": 44300759948,
+      "artifact": 14426253052,
+      "artifact_zip_sha256": "a12af11831c40dc4fbc4ac0565efbb67ca2b62ba3fa5dfaa51637bd34c7d7225",
+      "binary_sha256": "47d891a09fde95ea6d12dc8ac4f85655c4001ca00ad592ddfd104459d8f0af4e",
+      "target_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "native_matched": 16,
+      "source_restored": true,
+      "private_tmpfs_cleanup": true
+    },
+    "warehouse": {
+      "run": 44297119716,
+      "artifact": 14423883385,
+      "artifact_zip_sha256": "bcaeb9b1aff9cf28e26a5bc12eded70f13488876d0bce54dbf7691d16c49732b",
+      "instrumented_head": "e68dc832e018aaa7e089d5a005d141d20974aed1",
+      "binary_sha256": "5d2f53a36c811a9561e397074dc734db05770929e6f2f1cf7e8bad04405e7a88",
+      "observed_12_plus_12_per_case": true
+    }
+  }
+}
