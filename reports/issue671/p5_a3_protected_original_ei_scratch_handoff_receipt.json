@@ -1,0 +1,108 @@
+{
+  "schema": "issue671.p5_a3.original_private_ei_rates_scratch_secure_actual_handoff.v1",
+  "status": "PASS_SIX_ORIGINAL_SHA_AND_BOTH_CASE_FIVE_RATE_TMPFS_STAGE",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "source_pr": 665,
+    "base_HEAD": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "original_input_HEAD": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_oxygen_source_HEAD": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "secure_stage_script": "ci/guards/issue671_secure_ei_rate_scratch.py",
+    "secure_stage_git_blob": "cd75238df8083f54b5b08330e46f88276ff8370a",
+    "staging_branch": "issue-671-secure-original-ei-scratch-handoff-20261118",
+    "approved_historical_secret_reference": "OXYGEN24_RATES_TAR_XZ_B64"
+  },
+  "executed_protected_ci": {
+    "run_id": 44268012244,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44268012244",
+    "run_head": "a4fe062d439ab337176c13c7e7d34507b154cfc7",
+    "conclusion": "success",
+    "artifact_id": 14410349228,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44268012244/artifacts/14410349228",
+    "artifact_zip_sha256": "dfca032c88a51946767811dd902e7c1d91ef7aba30c4a90d6a57ac078562a0b5",
+    "artifact_member": [
+      "issue671_secure_rate_handoff_receipt.json"
+    ],
+    "receipt_member_SHA256": "254859051794bb1b69c61708cfc669a10c35bc625dab979f46efe3599437f959",
+    "artifact_member_count": 1,
+    "independent_download_zip_sha_and_crc": "PASS",
+    "receipt_readback": "PASS"
+  },
+  "byte_bound_private_original_pins": {
+    "EI-415_O2_X.txt": "9108838e43298185e71679d2fff09c74c5c601ed3ebbaa3ba02548a374db8c64",
+    "EI-401_O2_X.txt": "185a102beb38d5a7a91846c69933b3f4b43e9c31dc0d57d1c5fae496206782ff",
+    "EI-417_O2_X.txt": "4e87121cad771a4ebbe272efa0b9349e527b0de782afc97b3f14556c57fc550d",
+    "EI-941_O_3P.txt": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+    "EI-407_O2_X.txt": "2565be45b9a13204583b6714a7d1b581cf29c157c78ac502d665649e4065b359",
+    "EI-2069_O2_a1Delta.txt": "5eba74c1870e0635a3e316e143961e9f04e259675ddad00fd8653de28980644a"
+  },
+  "verified_protected_execution": {
+    "six_unique_rate_tables_hash_equal": true,
+    "six_private_original_raw_SHA": "6_OF_6_PASS",
+    "two_column_monotonic_100_rows_each": true,
+    "public_source_artifact_id": 14406746397,
+    "public_source_artifact_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "stored_only_in_tmpfs": true,
+    "per_file_permission": "0600",
+    "scratch_directory_permission": "0700",
+    "temporary_secret_files_cleaned_after_handoff": true,
+    "private_values_not_in_stdout_logs_git_or_artifacts": true,
+    "source_layers_unchanged": true
+  },
+  "cases": {
+    "417": {
+      "staged_real_input_layers": 11,
+      "case_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "private_rate_files": [
+        "EI-415_O2_X.txt",
+        "EI-401_O2_X.txt",
+        "EI-417_O2_X.txt",
+        "EI-407_O2_X.txt",
+        "EI-2069_O2_a1Delta.txt"
+      ],
+      "private_rate_count": 5,
+      "sha_equal_to_original": "5_OF_5_PASS",
+      "exact_relative_directory": "experiments/Issue395_powered_chemistry_ladder/private_rates/",
+      "public_file_bytes_unchanged": true
+    },
+    "941": {
+      "staged_real_input_layers": 11,
+      "case_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "private_rate_files": [
+        "EI-415_O2_X.txt",
+        "EI-401_O2_X.txt",
+        "EI-941_O_3P.txt",
+        "EI-407_O2_X.txt",
+        "EI-2069_O2_a1Delta.txt"
+      ],
+      "private_rate_count": 5,
+      "sha_equal_to_original": "5_OF_5_PASS",
+      "exact_relative_directory": "experiments/Issue395_powered_chemistry_ladder/private_rates/",
+      "public_file_bytes_unchanged": true
+    }
+  },
+  "security_boundary": {
+    "archive_decode_in_memory": true,
+    "secret_injected_to_one_trusted_step_only": true,
+    "no_archive_tar_written_to_public_disk": true,
+    "strict_path_link_and_original_sha_guards": true,
+    "only_public_sha_receipt_uploaded": true,
+    "ephemeral_tmpfs_cleaned": true,
+    "rate_bytes_not_persisted_for_later_jobs": true,
+    "required_re_staging_for_future_native": "Must rerun this secured handoff and invoke PhysicsApp within same protected execution context; do not pass raw rate files through public artifacts."
+  },
+  "gates": {
+    "P5_A3_ORIGINAL_EI_RATE_SECURE_SCRATCH_HANDOFF": "PASS",
+    "P5_A3_FINAL_NATIVE_RATE_LOOKUP": "NOT_RUN",
+    "P4_X_SOURCE_INTEGRATED": "NO",
+    "P5_NATIVE_P2": "HOLD",
+    "D8_NEW_ONLY_CXX_DYNAMIC": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "exclusions": [
+    "No protected values, raw EI rate tables, mismatching rate digests or encoded archive in this report",
+    "No Native C++ Warehouse/physics-opt check-input in this secure source-only CI",
+    "No private historical secret uploaded to public GitHub",
+    "No PR #665 or main modified before stacked merge"
+  ]
+}
