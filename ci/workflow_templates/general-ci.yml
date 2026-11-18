@@ -2787,7 +2787,7 @@ jobs:
           receipt["one_build_bundle"]={
                   "source_head":identity["source_head"],
                   "W1_artifact_name":"p6-newonly-w1-"+os.environ["GITHUB_RUN_ID"]+"-"+os.environ["GITHUB_RUN_ATTEMPT"]+"-"+head,
-                  "W1_zip_sha256":identity["archive_sha256"],
+                  "W1_tar_archive_sha256":identity["archive_sha256"],
                   "W1_elf_sha256":identity["binary_sha256"],
                   "libphysics_opt_sha256":identity["app_libraries"]["libphysics-opt.so.0"]["sha256"],
                   "libphysics_test_opt_sha256":identity["app_libraries"]["libphysics_test-opt.so.0"]["sha256"],
