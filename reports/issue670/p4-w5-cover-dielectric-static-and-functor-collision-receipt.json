@@ -1,0 +1,138 @@
+{
+  "schema": "issue670.p4_w5.cover_dielectric_source_v1",
+  "task": "P4-W5",
+  "case_scope": [
+    "417",
+    "941"
+  ],
+  "status": "PASS_STATIC_COVER_BC_RETIREMENT_AND_JSON_CONTRACT__HOLD_WALL_FLUX_PRODUCER_UNIQUENESS_NATIVE",
+  "source_lease": {
+    "PR665_current_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "PR665_draft": true,
+    "P1_original_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P3X_CI_head": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+    "latest_head_compare": "PR665 head is 2 commits ahead of P3X CI; sole changed file removed one-shot .github/workflows/issue669-p3x-pr675-premerge-once.yml; source unchanged"
+  },
+  "artifacts": {
+    "P1_0": {
+      "run": 44182176604,
+      "id": 14372442471,
+      "sha256": "abf1baa1bd8a465de91c223182c39e57ea4da8e4a97e929ece0c270c2209427b"
+    },
+    "P3X_current": {
+      "run": 44257739203,
+      "id": 14406746397,
+      "sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+      "source_only": true
+    }
+  },
+  "cases": {
+    "417": {
+      "P1_11_files_sha": "11/11_PASS",
+      "P3X_11_files_sha": "11/11_PASS",
+      "C0_P1_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "C0_P3X_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "old_native_ion_retired": "26/26",
+      "old_electron_owners_retired": "10/10",
+      "cover_old_native_FVBC_retired": "3/3",
+      "cover_expected_generated_FVBC": "3/3_JSON_ONLY",
+      "negative_tests_rejected": "10/10"
+    },
+    "941": {
+      "P1_11_files_sha": "11/11_PASS",
+      "P3X_11_files_sha": "11/11_PASS",
+      "C0_P1_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "C0_P3X_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "old_native_ion_retired": "26/26",
+      "old_electron_owners_retired": "10/10",
+      "cover_old_native_FVBC_retired": "3/3",
+      "cover_expected_generated_FVBC": "3/3_JSON_ONLY",
+      "negative_tests_rejected": "10/10"
+    }
+  },
+  "cover_fvbc_mapping": [
+    {
+      "species": "O2p",
+      "charge": 1,
+      "variable": "log_O2p",
+      "old_bc": "ion_cover_dielectric",
+      "old_bc_block_sha256": "6cf04ff67cabc68ad5852678c5c83c646495f994c5bf6c7dfc3628d637812d5b",
+      "new_bc": "O2p_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "boundary": "plasma_cover",
+      "signed_number_flux": "O2p_wall_number_flux",
+      "legacy_wall_material": "ion_wall_flux",
+      "wall_material_block_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5"
+    },
+    {
+      "species": "Om",
+      "charge": -1,
+      "variable": "log_Om",
+      "old_bc": "negative_ion_cover_dielectric",
+      "old_bc_block_sha256": "61acf3daa0654c6beb7220c7aaca1f3dbab944e9586a09e756aa2d419014ff02",
+      "new_bc": "Om_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "boundary": "plasma_cover",
+      "signed_number_flux": "Om_wall_number_flux",
+      "legacy_wall_material": "negative_ion_wall_flux",
+      "wall_material_block_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162"
+    },
+    {
+      "species": "Op",
+      "charge": 1,
+      "variable": "log_Op",
+      "old_bc": "atomic_positive_ion_cover_dielectric",
+      "old_bc_block_sha256": "f44eddb6f571b5bc1b33cbe08a772bba4dcc86f129f53fe4127b715f47cfbe45",
+      "new_bc": "Op_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "boundary": "plasma_cover",
+      "signed_number_flux": "Op_wall_number_flux",
+      "legacy_wall_material": "atomic_positive_ion_wall_flux",
+      "wall_material_block_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+    }
+  ],
+  "source_contract": {
+    "Chemistry_C_git_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "DDContinuityEq_C_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "FVLogMolarDielectricFluxBC_C_git_blob": "08306f4545b806368a2c90bac0c83dacc5e7c9b5",
+    "PhysicsFVLogMolarDielectricFluxBC_C_git_blob": "a0ec100f03116a8ddfdf459600c8a8da1c717595",
+    "IonWallFluxMaterial_C_git_blob": "101586edf05ed19525072b4a43c181ba57dc3589",
+    "PhysicsIonWallFluxMaterial_C_git_blob": "215e9c81720e6813be22a8a51405fe99639cf0ab",
+    "flux_sign": "signed outward particle flux gamma_number, FV boundary residual=gamma_number/N_A; no additional negative sign",
+    "C2_JSON_normalizes_species_variable_and_flux": true,
+    "verified_cover_json_object_names_exactly_three_plus_two_electron": true
+  },
+  "source_only_collision_risk": {
+    "status": "STATIC_PRODUCER_NAME_COLLISION_RISK",
+    "evidence": "P3X staged C0 retains three exact legacy PhysicsIonWallFluxMaterial blocks with species_id O2p/Om/Op. Chemistry.C::PlasmasAction on New-only C2 adds one IonWallFluxMaterial per selected ion. Both classes publish species_id+'_wall_number_flux'. Both are registered PhysicsApp classes. The generated instances have NOT been observed in Native Warehouse.",
+    "possible_colliding_functors": [
+      "O2p_wall_number_flux",
+      "Om_wall_number_flux",
+      "Op_wall_number_flux"
+    ],
+    "P4_X_required": "Choose single canonical ion wall material producer across all 3 species without dropping Poisson/surface current/Lower-D consumers; verify source-only non-target diff and fail-closed negative duplicate",
+    "P5_required": "On actual 417 and 941 same-head Physics binary verify Factory, P05 Warehouse, FVBC count=12 and single Functor owner; no fake runtime pass"
+  },
+  "independent_replay": {
+    "p1_file_sha_recomputed": 22,
+    "p3x_file_sha_recomputed": 22,
+    "original_cover_blocks_verified": 6,
+    "old_wall_material_blocks_preserved": 6,
+    "negative_mutations_rejected": 20,
+    "private_rate_bytes_read": false,
+    "local_detailed_json_sha256": "cdbc2fef78035720aa03b6bd2ad8cb9ff06d0b7279f48d3d1a63c030f61375b3",
+    "local_verifier_sha256": "f27dc566446d522c08665909933bf93d7a78ba8f9de375df7256b91b74452225"
+  },
+  "gates": {
+    "P4_W5_BC_SOURCE": "PASS",
+    "P4_W5_SINGLE_FLUX_PRODUCER": "HOLD",
+    "P4_X": "NOT_RUN",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "mutation_scope": "One task-specific evidence JSON file on isolated branch; no edits to PR665, issue body, main, C++/JSON/runner/CI, original ZIP or protected rates"
+}
