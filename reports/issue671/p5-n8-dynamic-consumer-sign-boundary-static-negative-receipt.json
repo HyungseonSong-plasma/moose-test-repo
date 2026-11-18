@@ -1,0 +1,120 @@
+{
+  "schema": "issue671.p5-n8.source_negative.v1",
+  "task": "P5-N8",
+  "issue": 671,
+  "source_PR665_HEAD": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "verdict": "PASS_72_OF_72_OFFLINE_STATIC_NEGATIVES__NATIVE_P05_HOLD",
+  "scope": "Actual P3-X 417/941 source-only 11-layer, JSON, C0 and overlay copies; not executed by PhysicsApp/MOOSE",
+  "P3X_CI_run": 44257739203,
+  "source_artifact_id": 14406746397,
+  "source_artifact_SHA256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+  "artifact_crc": "PASS",
+  "case_specific_file_SHA": "22/22_PASS",
+  "P4_X_status": "STAGE1_DISPOSABLE_STATIC_PASS_ONLY__PRODUCTION_RUNNER_NOT_INTEGRATED",
+  "P5_0_status": "NOT_RUN_NO_SHARED_FINAL_NATIVE_BINARY",
+  "cases": {
+    "417": {
+      "input_file_shas": "11/11_PASS",
+      "JSON_SHA256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "C0_SHA256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "overlay_SHA256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "positive": 2,
+      "negative": 36,
+      "Native_N8": "NOT_RUN"
+    },
+    "941": {
+      "input_file_shas": "11/11_PASS",
+      "JSON_SHA256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "C0_SHA256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "overlay_SHA256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "positive": 2,
+      "negative": 36,
+      "Native_N8": "NOT_RUN"
+    }
+  },
+  "negative_mutations_per_case": [
+    "wrong_charge_O2p",
+    "wrong_charge_Om",
+    "wrong_charge_Op",
+    "missing_selected_Om",
+    "zero_Om_density",
+    "missing_Op_transport",
+    "wrong_electron_wall_functor",
+    "missing_electron_wall_source",
+    "missing_cover_group",
+    "unknown_focus_boundary",
+    "extra_general_side",
+    "duplicate_inlet_general",
+    "missing_Om_general",
+    "missing_Op_electrode",
+    "wrong_Om_cover_factory",
+    "wrong_Op_wafer_factory",
+    "missing_O2p_focus_ring",
+    "misnamed_electron_cover",
+    "wrong_O2p_general_factory",
+    "missing_negative_density_alias",
+    "wrong_na_density_scaling",
+    "wrong_poisson_negative_ion_sign",
+    "wrong_poisson_density_consumer",
+    "missing_poisson_latebound_functor",
+    "wrong_poisson_kernel_functor",
+    "wrong_cover_wall_signed_om",
+    "wrong_wafer_electron_current_sign",
+    "wrong_focus_electron_wall_source",
+    "wrong_Om_wall_density",
+    "wrong_Om_wall_charge",
+    "wrong_O2p_wall_mobility",
+    "wrong_wall_gradient",
+    "wrong_potential",
+    "wrong_fv_species",
+    "wrong_migration_smoothing",
+    "illegal_disable_kernels"
+  ],
+  "positive_controls_total": 4,
+  "negative_controls_total": 72,
+  "mutation_semantics": "Independent Python guard rejects corrupt ion sign, density/NA, wall late-bound functor identity, Poisson/surface-current sign, 8 sideset JSON grouping, factory/BC name and overlay potential/gradient/smoothing; copied inputs only",
+  "Cplusplus_source_blobs": {
+    "Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "PhysicsIonWallFluxMaterial.C": "215e9c81720e6813be22a8a51405fe99639cf0ab"
+  },
+  "verified_replay": {
+    "independent_verifier_SHA256": "0bdd851c808f9953a28f452f8ac2b1416645578c16444580ef47b8bd899ea611",
+    "full_72_case_local_JSON_SHA256": "34783c2cfb5a0fc2a879cb4c2d7037097bca6dbbbed7b7e3571ed4ec24bb1051",
+    "second_run_output": "BYTE_IDENTICAL"
+  },
+  "prior_actual_Native_diagnostic": {
+    "run_id": 44262035027,
+    "artifact_id": 14408333164,
+    "workflow_success_only_means": "DIAGNOSTIC_COLLECTION_COMPLETED",
+    "source_probe_head": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f",
+    "case_417_exit": 1,
+    "case_941_exit": 1,
+    "first_failure": "Missing original baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz in FileMeshGenerator before owner warehouse",
+    "binary_record_SHA256": "7968019d100e66f8979575aa0895506d1a188c58a85b9a5d561b45f41cb1cc96",
+    "qualifies_as_P5_0_acceptance": false
+  },
+  "important_limitations": [
+    "Source-only custom guard PASS does not establish live MOOSE P05 fail-closed execution.",
+    "Existing pre-P4-X legacy wall/current blocks are deliberately removed by P4-X; do not transplant these exact mutation targets to post-P4-X Native without adapting to generated Functor owners.",
+    "Current input is prior P3-X stage, not final P4-X-production-staged package.",
+    "Original baseline plasma mesh missing; even the separate real Native check-input diagnostic failed before the target check."
+  ],
+  "next_gates": [
+    "P4-X production runner integration",
+    "Provenance-pinned original plasma baseline mesh",
+    "P5-0 single exact-head binary and full post-P4-X input",
+    "P5-N8 real disposable isolated --check-input mutations + exit/error/log SHA collection"
+  ],
+  "gates": {
+    "P5_N8_STATIC": "PASS",
+    "P5_N8_NATIVE": "NOT_RUN",
+    "P5_0": "HOLD",
+    "P4_X": "HOLD",
+    "NATIVE_P2": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "protected": "Original ZIP, private rates, shared PR665/main, source code, workflow and production input not modified."
+}
