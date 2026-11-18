@@ -1,0 +1,136 @@
+{
+  "schema": "issue670.p4_d3.op_density_alias.source_bound_compact.v1",
+  "task_id": "P4-D3",
+  "issue": 670,
+  "dependency_issue": 668,
+  "verdict": "ALIAS_GRAPH_SOURCE_PASS__OP_WALL_FUNCTOR_DUPLICATE_PATH_HOLD",
+  "source_heads": {
+    "historical": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "hybrid_p1_and_newonly_p2_artifact": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "current_pr665_reviewed": "395eeac274125ffa632b4d75a4531996dee24fe0"
+  },
+  "artifacts": {
+    "p1_0": {
+      "id": 14372278070,
+      "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182628032",
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "p2_production": {
+      "id": 14380831538,
+      "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44199587771",
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+    }
+  },
+  "cases": {
+    "417": {
+      "layer": 1,
+      "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+    },
+    "941": {
+      "layer": 1,
+      "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "file_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca49f904e17e",
+      "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+    }
+  },
+  "objects": {
+    "old_molar_density": {
+      "section": "FunctorMaterials",
+      "name": "atomic_positive_ion_molar_density",
+      "factory_type": "ADParsedFunctorMaterial",
+      "functor_names": "log_Op",
+      "expression": "exp(u)",
+      "block_sha256": "6626024ec517e69da46e41f14db2e6ae6e8d62305fc377eb616362ad323ea092",
+      "count_each_case": 1
+    },
+    "old_physical_density": {
+      "section": "FunctorMaterials",
+      "name": "atomic_positive_ion_physical_density",
+      "factory_type": "ADParsedFunctorMaterial",
+      "property_name": "n_op_physical",
+      "functor_names": "atomic_positive_ion_molar_density",
+      "expression": "6.02214076e23*cop",
+      "block_sha256": "0046c8031e90fcbf5342d1bef8bc4ef3efc25d43cd5f44ef3cd3000fd389ab75",
+      "count_each_case": 1
+    },
+    "charge_density": {
+      "section": "FunctorMaterials",
+      "name": "charge_number_density",
+      "factory_type": "ADParsedFunctorMaterial",
+      "expression": "ni+nop-ne-nm",
+      "functor_names": "n_i_physical n_op_physical n_e_physical n_m_physical",
+      "block_sha256": "8fca600fe127ec76fe0a6b642460858b3a84cb2c43bbb13225f02a57ec04e6af"
+    },
+    "legacy_wall": {
+      "section": "FunctorMaterials",
+      "name": "atomic_positive_ion_wall_flux",
+      "factory_type": "PhysicsIonWallFluxMaterial",
+      "species_id": "Op",
+      "ion_number_density": "n_op_physical",
+      "block_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+    },
+    "nop_min": {
+      "section": "Postprocessors",
+      "name": "nop_min",
+      "functor": "n_op_physical",
+      "block_sha256": "bf12dd771b00774a49acf39537609448b16c0d9784cea7a796c79fbea3e65d6e"
+    },
+    "nop_max": {
+      "section": "Postprocessors",
+      "name": "nop_max",
+      "functor": "n_op_physical",
+      "block_sha256": "3bb03678b82a03754af16e9d99b38daf82cb38a18b1fba036f0af48b09f2e77a"
+    }
+  },
+  "new_cpp_producer": {
+    "name": "Op_number_density",
+    "factory_type": "ADParsedFunctorMaterial",
+    "variable": "log_Op",
+    "formula": "PHYSICS_CONSTANTS::N_A*exp(log_Op)",
+    "source_file": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "source_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "activation": "JSON species.Op has non-none constant transport, positive charge; parser derives ion_wall; selected fvm_species includes Op; dont_create_kernels=false",
+    "static_i_block_count": 0,
+    "generated_warehouse_verified": false
+  },
+  "extra_collision": {
+    "status": "STATIC_COLLISION_PATH_PRESENT__NATIVE_HOLD",
+    "explanation": "Legacy source-staged PhysicsIonWallFluxMaterial(species_id=Op) and C++ auto-generated IonWallFluxMaterial(species_id=Op) both publish Op_wall_number_flux, and both are potentially active in New-only 11-layer.",
+    "native_staged_owner": "[FunctorMaterials]/[atomic_positive_ion_wall_flux]",
+    "cpp_generated_owner": "PlasmasAction creates IonWallFluxMaterial named Op_wall with ion_number_density=Op_number_density",
+    "duplicate_functor": "Op_wall_number_flux",
+    "cpp_sources": {
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "physics_app/src/functormaterials/IonWallFluxMaterial.C": "101586edf05ed19525072b4a43c181ba57dc3589",
+      "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C": "215e9c81720e6813be22a8a51405fe99639cf0ab"
+    },
+    "resolution_gate": "P4-W/P4-X must retire or suppress exactly one wall-functor owner, then Native --check-input/P5 verifies actual warehouse ownership; do not delete n_op_physical aliases with active Poisson/diagnostic callers"
+  },
+  "verification": {
+    "archived_original_files": "20/20 PASS",
+    "hybrid_stage_files": "22/22 PASS",
+    "newonly_prod_stage_files": "22/22 PASS",
+    "P1_before_vs_P2_stage": "22/22 PASS",
+    "old_physical_producer_sha": "2/2 PASS",
+    "old_alias_chain_and_charge_wall_diagnostics": "8/8 PASS",
+    "all_negative_controls": "50/50 REJECTED",
+    "independent_full_receipt_sha256": "6787e1f36a3cc2496a5bd6559fbcfa9cf8fb41bcfe5ed3c9101f7cb3836ca8fb",
+    "verifier_sha256": "bfd782f102fdaccf3f82168637d63256a953261ad68c507cd2edbe3bb3f44354"
+  },
+  "unresolved": [
+    "No actual New-only Native warehouse Functor count or solver input readiness",
+    "Numeric parity of differently named n_op_physical and Op_number_density source formulas not run",
+    "Op_wall_number_flux duplicate production path requires P4-W/P4-X resolution",
+    "P4-D4 charge source/Poisson sign and P4-D5 diagnostics are separate gates"
+  ],
+  "P2": "PRODUCTION_SOURCE_STAGE_PASS",
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "mutation_scope": "one evidence file on isolated P4-D3 branch; PR #665, main and shared #670 issue body unchanged"
+}
