@@ -591,7 +591,7 @@ def test_actual_s6_native_wall_cutover_preserves_archive_and_rejects_charge_flip
         "e", "O2p", "Om", "Op"}
     assert report["P3"] == "NOT_RUN" and report["science"] == "SCIENCE_HOLD"
     assert "type = PhysicsIonWallTotalFluxMaterial" not in (staged / "layer_0.i").read_text()
-    assert "type = PhysicsIonWallFluxMaterial" in (staged / "layer_0.i").read_text()
+    assert "type = IonWallFluxMaterial" in (staged / "layer_0.i").read_text()
     assert "functor = Op_wall_number_flux" in (staged / "layer_1.i").read_text()
     assert (staged / "layer_0.i").read_bytes() != untouched["layer_0.i"]
 
