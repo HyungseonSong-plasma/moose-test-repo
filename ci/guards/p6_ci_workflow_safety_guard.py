@@ -233,12 +233,10 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "github.event.pull_request.head.repo.full_name",
         "github.event.pull_request.base.repo.full_name"
     ))
-    add("artifact_attempt_missing", mutate_canonical(
-        workflow, "issue541_arch_s6_hybrid_native_p2",
+    add("artifact_attempt_missing", mutate_canonical( "issue541_arch_s6_hybrid_native_p2",
         "github.run_attempt", "run_attempt_removed"
     ))
-    add("artifact_became_optional", mutate_canonical(
-        workflow, "issue541_arch_dd_native_p2",
+    add("artifact_became_optional", mutate_canonical( "issue541_arch_dd_native_p2",
         "if-no-files-found: error", "if-no-files-found: warn"
     ))
     add("artifact_on_success_only", edit_job(
@@ -281,8 +279,7 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
     add("weaken_p05", workflow, cpp=dd_source.replace(
         "P05 FV Native/Physics duplicate or unexpected owner", "P05_BYPASS", 1
     ))
-    add("undeclared_provenance", mutate_canonical(
-        workflow, "issue541_arch_s6_hybrid_native_p2",
+    add("undeclared_provenance", mutate_canonical( "issue541_arch_s6_hybrid_native_p2",
         "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json",
         "control/experiments/Issue402_plasma_dsl_g1/evidence/identity_omitted.json"
     ))
