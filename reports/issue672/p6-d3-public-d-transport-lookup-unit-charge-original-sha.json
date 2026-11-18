@@ -1,0 +1,140 @@
+{
+  "schema": "issue672.p6_d3.public_D.original_transport_sha.final.v1",
+  "task": "P6-D3 Public D e/O2p/Om/Op Transport Original Lookup Units Charge SHA",
+  "verdict": "ORIGINAL_SOURCE_SHA_PASS__D_TRANSPORT_JSON_MISSING_HOLD__NATIVE_NOT_RUN",
+  "source": {
+    "draft_pr": 665,
+    "exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "public_runner_git_blob": "a6414baf70590b79f4b4ee4cb16c4b9039355f40",
+    "public_runner_sha256": "278ad63e3f74bb833f3b8b2daf814bf35507c652794dfbef994409a5c36f60cd",
+    "baseline_git_blob": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+    "material_cpp_git_blob": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+    "main_or_pr665_modified": false
+  },
+  "independent_execution": {
+    "github_run": 44310028883,
+    "conclusion": "success",
+    "artifact": 14429573538,
+    "artifact_zip_sha256": "153fdc2d2592177296663f5abdf0d0c7ebcfdb94df916dc1e0ba44f0ed71a196",
+    "artifact_zip_crc": "PASS",
+    "raw_source_receipt_sha256": "50652b5cfff4c1000c7ec1f681277c629762c8ceb86fbf66dc8e2dccf67e0db4",
+    "exact_head_verified": true,
+    "original_from_git_sha_pinned": true,
+    "p3x_artifact_id": 14406746397,
+    "p3x_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "negative_source_mutants_rejected": "8/8",
+    "secure_original_EI_rates_used": false
+  },
+  "original_public_D": {
+    "base_path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+    "base_file_sha256": "e49e7b63566f16e9eaede7e97ec232338b04a8cdfc019527d73bdb519521abfd",
+    "species_json_path": "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
+    "species_json_git_blob": "c563f54b4914773f153b170fb8b5b63f2687c170",
+    "species_json_sha256": "229a054770daf4e7a0a8bec3b5c0bdf65dea4e2c8a604ab57245ac11b3c08979",
+    "d_overlay_sha256": "edf3f8e8194927e93783d136066799d60df2673af9245d6d4b990fb7d267b513",
+    "species": {
+      "e": {
+        "charge": -1,
+        "transport_json": null,
+        "actual_original_transport_material": "PhysicsElectronTransportLookupMaterial",
+        "units": "reduced"
+      },
+      "O2p": {
+        "charge": 1,
+        "transport_json": null,
+        "mobility_functor": "ion_mobility",
+        "diffusivity_functor": "ion_diffusion"
+      },
+      "Om": {
+        "charge": -1,
+        "transport_json": null,
+        "mobility_functor": "negative_ion_mobility",
+        "diffusivity_functor": "negative_ion_diffusion"
+      },
+      "Op": {
+        "charge": 1,
+        "transport_json": null,
+        "mobility_functor": "atomic_positive_ion_mobility",
+        "diffusivity_functor": "atomic_positive_ion_diffusion"
+      }
+    },
+    "origin_ion_constants": {
+      "factory": "ADGenericFunctorMaterial",
+      "owner": "[FunctorMaterials]/constants",
+      "all_3_species_mobility": 10,
+      "all_3_species_diffusivity": 0.25851999786435537,
+      "mobility_SI": "m^2/(V s)",
+      "diffusivity_SI": "m^2/s",
+      "p_fixed_lexical": "1.333223684",
+      "T_g_fixed_lexical": "300",
+      "source_of_numbers": "actual Public D C0 source, not invented fallbacks",
+      "manual_to_DDTransportMaterial_aliases": 3
+    },
+    "original_electron_lookup": {
+      "git_repo_path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "git_blob": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+      "file_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "rows": 100,
+      "columns": 3,
+      "first_axis_eV": 1.40991,
+      "last_axis_eV": 22.1378,
+      "original_functor_material_block_sha256": "a66565c4f83a6aa0152958421988b3d4b21fc50f0772250d574014badaca06ca",
+      "old_type": "PhysicsElectronTransportLookupMaterial",
+      "new_scratch_only_type": "DDTransportMaterial",
+      "table_units": "reduced",
+      "energy_coordinate_before": "mean_en_solved",
+      "energy_coordinate_after": "e_energy_eV",
+      "gas_pressure_functor": "p",
+      "gas_temperature_functor": "T_g_fixed",
+      "bounds_policy": "clamp"
+    }
+  },
+  "different_newonly_contract": {
+    "newonly_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "newonly_table_rows": 42,
+    "original_public_D_table_different_bytes_and_axis": true,
+    "newonly_417_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "newonly_941_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "schema_e": {
+      "type": "lookup",
+      "unit": "reduced",
+      "bounds_policy": "clamp"
+    },
+    "schema_ions": {
+      "type": "constant",
+      "unit": "physical",
+      "mobility": 10,
+      "diffusivity": 0.25851999786435537
+    },
+    "prohibition": "Do not silently use New-only 42-row table to fix historical Public D 100-row table."
+  },
+  "observed_native_public_D_failure": {
+    "417": {
+      "exit": 1,
+      "log_sha256": "fb16bca965a9ecf37a09f988139b0ba9277600ec512c69a1c0f79c16168e4d4c"
+    },
+    "941": {
+      "exit": 1,
+      "log_sha256": "4b954da22532424728b018d1378565363aa33174b1ded2733a9cf9585e35a9b1"
+    },
+    "previous_source_head": "65794d5f33449499349b97b7eaba13e1c4821688",
+    "prior_artifact": 14411019775,
+    "prior_artifact_zip_sha256": "2ce9ee8f92f1d80b5a596bf9071917f38912304a1cc1b0892c872cf02e20cc09",
+    "first_error": "Missing drift-diffusion transport JSON record for FEM species 'e'",
+    "additional_check": "Public D actual stage original C0 SHA, original electron block SHA and original species JSON SHA in CI status exactly equal fresh raw source hashes."
+  },
+  "gates": {
+    "P6_D3_ORIGINAL_PUBLIC_D_SHA": "PASS",
+    "P6_D3_ELECTRON_ORIGINAL_100_ROW_TABLE": "PASS",
+    "P6_D3_ION_3_TRANSPORT_CHARGE_UNITS": "PASS",
+    "P6_D3_ELECTRON_5_OVER_3_CONTRACT": "PASS_STATIC",
+    "P6_D3_DISTINCT_NEWONLY_TABLE": "PASS",
+    "P6_D3_NEGATIVES": "PASS_8_OF_8",
+    "PUBLIC_D_P2": "HOLD_MISSING_E_TRANSPORT_JSON",
+    "PUBLIC_D_D2_AUTHORITY": "PENDING",
+    "PUBLIC_D_D4_CUTOVER": "PENDING",
+    "PUBLIC_D_D5_NATIVE": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "next": "D2 historical Hybrid vs New-only authority approval -> D4 explicit e transport schema and 3-ion single owner scratch cutover preserving original Public D 100-row lookup and pressure/temp, 5/3 energy, 8 electron FEM BC; D5 case-417/941 native after authorization, no P05 bypass."
+}
