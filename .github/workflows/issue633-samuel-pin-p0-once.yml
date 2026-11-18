@@ -1,0 +1,76 @@
+name: Issue633 Samuel consumer pin 972d315 exact-candidate P0
+on:
+  push:
+    branches: [issue-633-samuel-pin-p0-once-20261118]
+    paths: [.github/workflows/issue633-samuel-pin-p0-once.yml]
+permissions:
+  contents: read
+jobs:
+  consumer-pin-provenance:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Read exact immutable consumer candidate
+        uses: actions/checkout@v4
+        with:
+          ref: 04cfccc86a86ec0aa3704160e4fb185aa3d747fc
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Read exact immutable Samuel central revision
+        uses: actions/checkout@v4
+        with:
+          repository: HyungseonSong-plasma/chatgpt-operation
+          ref: 972d3151527adb944f09f123a184cf791292ff36
+          path: central
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify source SHA pin, central Git blobs, triggers, CI Template and P05 route
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "04cfccc86a86ec0aa3704160e4fb185aa3d747fc"
+          test "$(git -C central rev-parse HEAD)" = "972d3151527adb944f09f123a184cf791292ff36"
+          python3 - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          root=Path("source")
+          control=Path("central")
+          rev="972d3151527adb944f09f123a184cf791292ff36"
+          manifest=json.loads((root/"docs/operating_system/central_skills.json").read_text())
+          catalog=json.loads((control/"skills/catalog.json").read_text())
+          assert manifest["operating_system"]["revision"]==rev
+          assert manifest["source_repository"]=="HyungseonSong-plasma/chatgpt-operation"
+          assert manifest["operating_system"]["index"]["expected_blob_sha"] == subprocess.check_output(["git","-C","central","rev-parse","HEAD:docs/operating_system/README.md"],text=True).strip()
+          assert manifest["operating_system"]["essential_rules"]["expected_blob_sha"] == subprocess.check_output(["git","-C","central","rev-parse","HEAD:docs/operating_system/ESSENTIAL_RULES.md"],text=True).strip()
+          for name in ("skill_catalog","capability_registry"):
+              path=manifest[name]["path"]
+              assert manifest[name]["expected_blob_sha"]==subprocess.check_output(["git","-C","central","rev-parse","HEAD:"+path],text=True).strip()
+          byname={x["name"]:x for x in catalog["skills"]}
+          for row in manifest["skills"]:
+              assert row["revision"]==rev
+              assert row["load_on"]==byname[row["name"]]["load_on"]
+              assert row["path"]==byname[row["name"]]["path"]
+              assert row["expected_blob_sha"]==subprocess.check_output(["git","-C","central","rev-parse","HEAD:"+row["path"]],text=True).strip()
+          assert len(manifest["skills"])==12
+          assert "GITHUB_BRANCH_FAST_FORWARD" in byname["repository-mutation"]["load_on"]
+          reg=json.loads((control/"skills/capability-registry.json").read_text())["capabilities"]
+          assert "GITHUB_BRANCH_FAST_FORWARD" in reg and "GITHUB_FILE_UPDATE" in reg
+          ci=(root/".github/workflows/ci.yml").read_bytes()
+          template=(root/"ci/workflow_templates/general-ci.yml").read_bytes()
+          assert ci==template
+          for path in (".github/workflows/refactor.yml",".github/workflows/experiment.yml"):
+              assert ("@"+rev) in (root/path).read_text()
+          assert "issue633_newonly_s6_native_p2_required" in ci.decode()
+          assert "issue541_arch_s6_hybrid_native_p2:" not in ci.decode()
+          print("SAMUEL_PIN_CENTRAL_SKILLS_REGISTRY_BLOBS_CI_TEMPLATE_SOURCE_PASS")
+          PY
+          cd source
+          python3 ci/guards/central_skill_contract_guard.py --manifest docs/operating_system/central_skills.json --catalog ../central/skills/catalog.json
+          python3 ci/guards/issue633_s6_ci_route_guard.py --self-test --check
+          python3 ci/guards/workflow_surface_guard.py --self-test
+          python3 ci/guards/workflow_surface_guard.py --check
+          python3 ci/workflow_harness.py --self-test
+          python3 ci/workflow_harness.py --check
+          echo ISSUE633_SAMUEL_CONSUMER_PIN_SOURCE_P0_PASS
