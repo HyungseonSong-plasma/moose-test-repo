@@ -4,7 +4,8 @@ name: Ion-FVM New-only S6 source P0 (no Native or science)
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    # Include the active integration stack for exact-head P0 checks before merge.
+    branches: [main, issue-633-ion23-integration-20261117]
     paths:
       - '.github/workflows/ion-fvm-hybrid-staged-dt.yml'
       - 'experiments/Issue402_plasma_dsl_g1/chemistry/**'
