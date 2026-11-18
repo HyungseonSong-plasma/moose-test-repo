@@ -1,0 +1,128 @@
+{
+  "schema": "issue671.p5_n6.source_rate_fail_closed_negative_receipt.v1",
+  "slot": "P5-N6",
+  "disposition": "INDEPENDENT_SOURCE_NEGATIVES_PASS__EXISTING_CPP_PARTIAL_CHANNEL_FAIL_CLOSED_GAP__NATIVE_HOLD",
+  "issue": 671,
+  "scope": "S6-417 and S6-941 ion Source S_O2p/S_Om/S_Op_molar and EI/H25 progress producer omission tests against actual staged 11-layer/JSON bytes",
+  "immutable_source": {
+    "reviewed_PR665_HEAD": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "original_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p3_x_CI_run": 44256823392,
+    "p3_x_artifact_id": 14405784430,
+    "p3_x_artifact_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "case_417_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "case_941_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "source_Chemistry_C_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "source_DDContinuityEq_C_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "source_EIRateCoefMaterial_C_blob": "4c5ed15593a7585d1fe2ec34cca0bdc37a5024ee",
+    "source_P1_input_preflight_blob": "c913bfbced72a9c37d0ed2214a44e5dd31657b35"
+  },
+  "verified_input": {
+    "417": {
+      "layer_SHA": "11/11",
+      "json_sha": "PASS",
+      "signed_sources": {
+        "S_O2p_molar": "+R_EI415 + R_H25",
+        "S_Om_molar": "+R_EI401",
+        "S_Op_molar": "-R_H25 + R_EI417"
+      },
+      "progress_source_owners_unique": 4
+    },
+    "941": {
+      "layer_SHA": "11/11",
+      "json_sha": "PASS",
+      "signed_sources": {
+        "S_O2p_molar": "+R_EI415 + R_H25",
+        "S_Om_molar": "+R_EI401",
+        "S_Op_molar": "-R_H25 + R_EI941"
+      },
+      "progress_source_owners_unique": 4
+    }
+  },
+  "execution": {
+    "implementation": "Independent Python in-memory mutations of actual immutable staged input JSON and section-scoped material objects. Strict golden-channel graph validator plus modeled *bounded* C++ conditions. Did not invoke compiled PhysicsApp or claim C++ runtime execution.",
+    "cases": 2,
+    "baseline_validated": 2,
+    "negative_mutations_per_case": 21,
+    "negative_mutations_total": 42,
+    "independent_contract_rejections": 42,
+    "actual_native_check_input": 0,
+    "actual_cpp_factory_negative_tests": 0
+  },
+  "counterexamples_to_examined_early_cpp_guard": [
+    {
+      "case": "417",
+      "deleted_json_reaction_and_matching_equation": "EI-415",
+      "remaining_nonzero_source": "S_O2p_molar still receives R_H25",
+      "examined_CPP_hasSpeciesSource_still_true": true
+    },
+    {
+      "case": "417",
+      "deleted_json_reaction_and_matching_equation": "H25",
+      "remaining_nonzero_source": "S_O2p_molar from R_EI415 and S_Op_molar from R_EI417",
+      "examined_CPP_hasSpeciesSource_still_true": true
+    },
+    {
+      "case": "417",
+      "deleted_json_reaction_and_matching_equation": "EI-417",
+      "remaining_nonzero_source": "S_Op_molar still receives -R_H25",
+      "examined_CPP_hasSpeciesSource_still_true": true
+    },
+    {
+      "case": "941",
+      "deleted_json_reaction_and_matching_equation": "EI-415",
+      "remaining_nonzero_source": "S_O2p_molar still receives R_H25",
+      "examined_CPP_hasSpeciesSource_still_true": true
+    },
+    {
+      "case": "941",
+      "deleted_json_reaction_and_matching_equation": "H25",
+      "remaining_nonzero_source": "S_O2p_molar from R_EI415 and S_Op_molar from R_EI941",
+      "examined_CPP_hasSpeciesSource_still_true": true
+    },
+    {
+      "case": "941",
+      "deleted_json_reaction_and_matching_equation": "EI-941",
+      "remaining_nonzero_source": "S_Op_molar still receives -R_H25",
+      "examined_CPP_hasSpeciesSource_still_true": true
+    }
+  ],
+  "cpp_guard_boundaries": {
+    "hasSpeciesSource": "Chemistry.C lines 1150-1156 returns true for any single nonzero volume reaction source",
+    "FV_kernel_ion_source_guard": "DDContinuityEq.C lines 179-190 requires each FVM ion to have at least one volume source",
+    "reaction_equation_mapping": "Chemistry.C lines 969-979 and 1103-1104 rejects an equation left unmatched",
+    "rate_required_param": "EIRateCoefMaterial.C lines 12-20 declares rate_table_file required, but was not natively instantiated in these tests",
+    "missing_single_rate_producer": "Not demonstrated Native; independent cross-file graph rejects it",
+    "exact_S6_channel_required_inventory": "No complete eight-channel closed-set guard shown in examined source. Independent verifier supplies a pinned expectation."
+  },
+  "independent_outputs": {
+    "verifier_sha256": "a070d07c6e9a432f4a8336d8e270999d040c8dce9609ae7a37e9a69c879da583",
+    "audit_json_sha256": "c4841834b6950c14623c0386fbb63b2b54026de7672ea19d9ad53278ced0a8f7",
+    "disposition_md_sha256": "9729a676cc4b176a48bc08d8778cf5ee009d7335821c15cad64656b75f4b553d",
+    "reproduction_bundle_zip_sha256": "c211bb255dc5964deb9e73f2c50eccdd530b0dbbd48c4ef6ad10aa6b0433dd93"
+  },
+  "required_handoff": [
+    "P4-X must pin the S6-417/941 exact reaction-channel inventory per case, including EI415, EI401, H25 and EI417 or EI941, independently of hasSpeciesSource nonzero checks.",
+    "Validate signed source projection and unique rate progress providers R_EI415, R_EI401, R_EI417/941, R_H25; fail closed when any one channel is missing even if another remains.",
+    "Do not read or ship protected private EI rate data into a public receipt; verify custodial SHA in protected runtime.",
+    "After P4-X merge and common P5-0 exact-head binary, run every negative mutation with read-only case scratch and collect actual --check-input exit, specific error and Warehouse evidence."
+  ],
+  "gates": {
+    "P5_N6_BOTH_CASES_SOURCE_BASELINE": "PASS",
+    "P5_N6_INDEPENDENT_NEGATIVE_ORACLE": "PASS_42_OF_42",
+    "P5_N6_EXISTING_CPP_PARTIAL_CHANNEL_GUARD": "HOLD_SIX_STATIC_COUNTEREXAMPLES",
+    "P5_N6_NATIVE_FAIL_CLOSED": "NOT_RUN",
+    "P4_X": "PENDING",
+    "P5_0_SHARED_BINARY": "NOT_RUN",
+    "P5_N6_OVERALL": "HOLD_UNTIL_STRICT_CHANNEL_GUARD_AND_NATIVE",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "originals_modified": false,
+    "pr665_modified": false,
+    "main_modified": false,
+    "no_private_EI_table_bytes_opened": true,
+    "physics_app_built": false,
+    "solver_executed": false
+  }
+}
