@@ -1,0 +1,268 @@
+name: Issue671 P5-N1 legacy ion time reinsertion fail-closed source audit
+on:
+  push:
+    branches: [issue-671-p5-n1-legacy-time-reinsertion-20261118]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  p5_n1_source_gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Exact current source HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: 395eeac274125ffa632b4d75a4531996dee24fe0
+          persist-credentials: false
+      - name: Retrieve immutable prior P3-X actual New-only stages
+        uses: actions/download-artifact@v4
+        with:
+          name: issue669-p3x-newonly-10-electron-owner-source-417-941
+          run-id: 44257739203
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: evidence
+      - name: Reinsert three exact historical FV Time blocks into six isolated copies; compare official P0 failure delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 395eeac274125ffa632b4d75a4531996dee24fe0
+          python3 - <<'PY'
+          import hashlib, json, re, sys, tempfile
+          from pathlib import Path
+          sys.path.insert(0,str(Path("ci").resolve()))
+          from p1_ion_new_only_preflight import inspect,scan_layer
+
+          HEAD="395eeac274125ffa632b4d75a4531996dee24fe0"
+          ORIGINAL_STAGE_HEAD="9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          SOURCE=Path("experiments/Issue402_plasma_dsl_g1")
+          C0=SOURCE/"native/s6_c0_physics_base_no_d1.i"
+          EXPECTED={
+            "O2p":("ni_time","log_ni","log_O2p"),
+            "Om":("nm_time","log_nm","log_Om"),
+            "Op":("nop_time","log_nop","log_Op")
+          }
+          JSON_SHA={
+            "417":"ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+            "941":"2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+          }
+          OVERLAY_SHA={
+            "417":"c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+            "941":"76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+          }
+          FACTORY="PhysicsFVLogMolarElectronTimeDerivative"
+          def sha(b):return hashlib.sha256(b).hexdigest()
+          def require(ok,reason):
+              if not ok:raise ValueError(reason)
+          def strict_json(b):
+              def no_duplicate(pairs):
+                  d={}
+                  for key,value in pairs:
+                      require(key not in d,"DUPLICATE_JSON_KEY:"+key)
+                      d[key]=value
+                  return d
+              return json.loads(b.decode("utf-8"),object_pairs_hook=no_duplicate)
+          def orig_block(raw,name,variable):
+              pat=(rb"(?m)^  \["+re.escape(name.encode())+rb"\]\r?\n"
+                   rb"(?:^(?!  \[\]).*\r?\n)*^  \[\]\r?\n")
+              found=list(re.finditer(pat,raw))
+              require(len(found)==1,"ORIGINAL_TIME_OWNER_NOT_UNIQUE:"+name+":"+str(len(found)))
+              b=found[0].group(0)
+              require(b"    type = "+FACTORY.encode() in b,"ORIGINAL_TIME_FACTORY_CHANGED:"+name)
+              require(b"    variable = "+variable.encode() in b,"ORIGINAL_TIME_VARIABLE_CHANGED:"+name)
+              require(b"    block = plasma" in b,"ORIGINAL_TIME_PLASMA_CHANGED:"+name)
+              return b
+          def insert_as_direct_child(stage_bytes,block):
+              lines=stage_bytes.splitlines(keepends=True)
+              depth=0;within=False;index=None
+              for i,line in enumerate(lines):
+                  m=re.fullmatch(rb"\s*\[([^\[\]]*)\]\s*",line.strip())
+                  if not m:continue
+                  token=m.group(1)
+                  if not within:
+                      if token==b"FVKernels" and depth==0:
+                          within=True;depth=1
+                      continue
+                  if token:
+                      depth+=1
+                  else:
+                      depth-=1
+                      if depth==0:
+                          index=i;break
+              require(index is not None,"NO_FVKERNELS_ROOT_FOR_REINSERTION")
+              require(b"[FVKernels]" in stage_bytes,"STAGE_MISSING_FVKERNELS")
+              new=b"".join(lines[:index])+block+b"".join(lines[index:])
+              require(new.count(block)==1,"REINSERTION_BYTE_COUNT_NOT_ONE")
+              require(len(new)-len(stage_bytes)==len(block),"REINSERTION_NOT_EXACT_LENGTH")
+              return new
+          def p05_source_unchanged(code):
+              for token in (
+                'const std::map<std::string, std::string> expected = {',
+                '{id + "_time", "FVLogMolarTimeDerivative"}',
+                'if (expected_type == expected.end() || kernel->type() != expected_type->second)',
+                'mooseError("P05 FV Native/Physics duplicate or unexpected owner on \'',
+                'if (matched[name] != 1)',
+                'mooseError("P05 missing or duplicate FV Kernel \'',
+                'getProblem().addFVKernel(time_type, id + "_time", time_params);',
+                'const std::string time_type = "FVLogMolarTimeDerivative";'
+              ):
+                  require(token in code,"P05_GUARD_SOURCE_MISSING:"+token)
+              return True
+          dd=Path("physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
+          p05_source_unchanged(dd)
+          c0_bytes=C0.read_bytes()
+          originals={s:orig_block(c0_bytes,n,v) for s,(n,v,canon) in EXPECTED.items()}
+          record={"schema":"issue671.p5_n1.ion_time_reinsertion_source_gate.v1",
+            "task_id":"P5-N1","review_head":HEAD,"original_p3x_stage_head":ORIGINAL_STAGE_HEAD,
+            "source_class":"SOURCE_ONLY_P0_AND_P05_CODE_CONTRACT; NOT_NATIVE",
+            "actual_Native_P05_job":"NOT_RUN","actual_binary_sha256":None,
+            "original_C0":{"path":str(C0),"file_sha256":sha(c0_bytes),
+              "historical_time_blocks":{s:{"name":EXPECTED[s][0],"variable":EXPECTED[s][1],
+                "factory":FACTORY,"block_sha256":sha(b),"byte_count":len(b)}
+                for s,b in originals.items()}},
+            "P05_source":{"path":"physics_app/src/physics/plasma/DDContinuityEq.C",
+              "generated_names":["O2p_time","Om_time","Op_time"],
+              "generated_factory":"FVLogMolarTimeDerivative",
+              "verified_source_guard":"unexpected_name_OR_wrong_factory_OR_missing_OR_duplicate",
+              "observed_cpp_warehouse":"NOT_RUN"},
+            "cases":{},"negative_controls":[],
+            "science":"SCIENCE_HOLD",
+            "unresolved":["P4-X cutover and common P5-0 PhysicsApp binary not yet available",
+              "Baseline official P0 already FAIL due to C2 current producers; this test compares incremental time reinsertion errors",
+              "Native P05 runtime exit status and exact FVKernels Warehouse observations still missing",
+              "Original 9c-based P3-X source artifact and current 395e HEAD source are separately pinned; not a current-head native run"]
+          }
+          for case in ("417","941"):
+              base=Path("evidence/cases")/case
+              folder=base/"experiments/Issue395_powered_chemistry_ladder"
+              stage=strict_json((base/"newonly_stage_receipt.json").read_bytes())
+              require(stage["source_head"]==ORIGINAL_STAGE_HEAD and str(stage["variant"])==case,
+                      "STAGE_IDENTITY_WRONG:"+case)
+              require(stage["status"]=="P2_NEWONLY_JSON_AND_LAYER11_STAGE_STATIC_PASS_RUNTIME_HOLD",
+                      "STAGE_STATUS_CHANGED:"+case)
+              require(stage["retired_native_ion_owners"]==26 and stage["remaining_native_ion_fv_owners"]==0,
+                      "STAGE_ION_OWNER_RETIREMENT_INVALID:"+case)
+              require(stage["p3_x_electron"]["removed_native_electron_owners"]==10,
+                      "STAGE_P3X_RETIREMENT_INVALID:"+case)
+              manifest=stage["layers_after_sha256"]
+              require(len(manifest)==11,"STAGE_NOT_ELEVEN_LAYERS:"+case)
+              unmutated={};manifest_rows={}
+              for ordinal,(fname,expected_hash) in enumerate(manifest.items(),1):
+                  f=folder/fname
+                  require(f.is_file() and not f.is_symlink() and f.name==fname,
+                          "STAGE_LAYER_MISSING:"+case+":"+fname)
+                  blob=f.read_bytes()
+                  require(0<len(blob)<250000 and sha(blob)==expected_hash,
+                          "STAGE_LAYER_SHA_MISMATCH:"+case+":"+fname)
+                  unmutated[fname]=blob
+                  manifest_rows[fname]={"ordinal":ordinal,"sha256":sha(blob),"size_bytes":len(blob)}
+              jsonpath=SOURCE/"chemistry"/("unified_s6_"+case+"_newonly.json")
+              template=SOURCE/("issue633_newonly_s6_"+case+"_continuity.template.i")
+              require(sha(jsonpath.read_bytes())==JSON_SHA[case] and
+                      sha((folder/"chemistry"/jsonpath.name).read_bytes())==JSON_SHA[case],
+                      "CURRENT_OR_STAGE_JSON_SHA_MISMATCH:"+case)
+              require(sha(template.read_bytes())==OVERLAY_SHA[case] and
+                      sha((folder/"migrated_continuity.i").read_bytes())==OVERLAY_SHA[case],
+                      "CURRENT_OR_STAGE_OVERLAY_SHA_MISMATCH:"+case)
+              mechanism=strict_json(jsonpath.read_bytes())
+              original_text={k:v.decode("utf-8") for k,v in unmutated.items()}
+              baseline=inspect(original_text,mechanism,"new-only")
+              require(baseline["native_fv_owner_count"]==0,
+                      "BASELINE_NATIVE_FV_ION_OWNER_PRESENT:"+case)
+              require(baseline["status"]=="FAIL" and
+                      baseline["c2_native_producer_collision_count"]>0,
+                      "P4_X_PENDING_C2_PRODUCER_BLOCK_NOT_FOUND:"+case)
+              require(all(not e.startswith("P1_NATIVE_FV_ION_OWNER_PRESENT_") for e in baseline["errors"]),
+                      "BASELINE_NATIVE_TIME_ERROR_EXISTS:"+case)
+              first=next(iter(manifest))
+              require(first in unmutated and b"[FVKernels]" in unmutated[first],
+                      "STAGE_C0_ROOT_NOT_FOUND:"+case)
+              case_out={"case":case,"baseline_11_file_sha256":manifest_rows,
+                        "baseline_newonly_json_sha256":JSON_SHA[case],
+                        "baseline_newonly_overlay_sha256":OVERLAY_SHA[case],
+                        "baseline_p0_status":baseline["status"],
+                        "baseline_p0_errors":baseline["errors"],
+                        "baseline_native_ion_fv_owner_count":baseline["native_fv_owner_count"],
+                        "mutated_layer":first,"mutations":[]}
+              for species,(name,oldvar,newvar) in EXPECTED.items():
+                  for form in ("historical_exact","rebound_to_canonical_state"):
+                      raw=originals[species]
+                      inserted=(raw if form=="historical_exact" else
+                                raw.replace(("variable = "+oldvar).encode(),
+                                            ("variable = "+newvar).encode()))
+                      require(inserted!=b"" and inserted.count(("variable = "+(oldvar if form=="historical_exact" else newvar)).encode())==1,
+                              "MUTATION_VARIABLE_REWRITE_FAILED")
+                      modified=insert_as_direct_child(unmutated[first],inserted)
+                      assert sha(modified)!=manifest[first], "mutation did not change input SHA"
+                      candidate={**unmutated,first:modified}
+                      # Isolated filesystem, never overwrite historical or staged case files.
+                      with tempfile.TemporaryDirectory(prefix="p5-n1-"+case+"-"+species+"-") as temp:
+                          scratch=Path(temp)
+                          for filename,content in candidate.items():
+                              (scratch/filename).write_bytes(content)
+                          observed={f.name:sha(f.read_bytes()) for f in scratch.iterdir()}
+                          require(len(observed)==11 and observed[first]==sha(modified),
+                                  "ISOLATED_SCRATCH_INPUT_READBACK_WRONG")
+                          require(all(observed[x]==manifest[x] for x in manifest if x!=first),
+                                  "NON_TARGET_LAYER_CHANGED")
+                          parsed=scan_layer((scratch/first).read_text())
+                          newblocks=[x for x in parsed if x["parent"]=="FVKernels" and x["name"]==name]
+                          require(len(newblocks)==1 and newblocks[0]["params"].get("type")==FACTORY and
+                                  newblocks[0]["params"].get("variable")==(oldvar if form=="historical_exact" else newvar),
+                                  "HISTORICAL_TIME_BLOCK_NOT_PARSED_CORRECTLY")
+                          p0=inspect({k:(scratch/k).read_text() for k in manifest},mechanism,"new-only")
+                      require(p0["status"]=="FAIL" and p0["native_fv_owner_count"]==1,
+                              "P0_DID_NOT_REJECT_INSERTED_TIME:"+case+":"+name+":"+form)
+                      owners=p0["native_fv_owners"]
+                      require(len(owners)==1 and owners[0]["name"]==name and
+                              owners[0]["type"]==FACTORY and owners[0]["variable"]==
+                                (oldvar if form=="historical_exact" else newvar),
+                              "P0_OWNER_NOT_EXACT_INSERTED_BLOCK:"+case+":"+name)
+                      added=[e for e in p0["errors"] if e not in baseline["errors"]]
+                      removed=[e for e in baseline["errors"] if e not in p0["errors"]]
+                      require(added==["P1_NATIVE_FV_ION_OWNER_PRESENT_1"] and not removed,
+                              "FAIL_CLOSED_DELTA_NOT_SPECIFIC_TO_REINSERTED_TIME:"+str((case,species,form,added,removed)))
+                      # Source-only projection of checkIntegrity, NOT a native P05 execution.
+                      # Historical variable is not the current Physics state; canonical
+                      # rebound is a direct mismatch to expected name and Factory.
+                      projected=("P0_FAIL_BEFORE_P05_OLD_VARIABLE" if form=="historical_exact"
+                                 else "P05_SOURCE_CONTRACT_UNEXPECTED_NAME_AND_FACTORY_IF_WAREHOUSE_REACHED")
+                      item={"case":case,"species":species,"historical_owner":name,
+                           "mutation":form,"historical_variable":oldvar,
+                           "mutated_variable":oldvar if form=="historical_exact" else newvar,
+                           "factory":FACTORY,"block_sha256":sha(inserted),
+                           "original_block_sha256":sha(raw),
+                           "original_input_layer_sha256":manifest[first],
+                           "mutated_input_layer_sha256":sha(modified),
+                           "other_ten_layers_SHA_unchanged":True,
+                           "isolated_temp_scratch_created_and_destroyed":True,
+                           "P0_exit_equivalent_status":p0["status"],
+                           "P0_incremental_errors":added,
+                           "P0_detected_native_owner":owners[0],
+                           "P05_source_projection_only":projected,
+                           "native_p05_exit_code":None,
+                           "verdict":"SOURCE_P0_REJECTED__NATIVE_P05_HOLD"}
+                      case_out["mutations"].append(item)
+                      record["negative_controls"].append(item)
+                      print("P5_N1_"+case+"_"+species+"_"+form+"=P0_FAIL_NATIVE_TIME_OWNER_DETECTED",flush=True)
+              require(len(case_out["mutations"])==6,"CASE_MUTATION_COUNT_NOT_SIX")
+              record["cases"][case]=case_out
+              print("P5_N1_"+case+"_BASELINE_SHA=11/11 INCREMENTAL_P0_TIME_REJECTIONS=6/6",flush=True)
+          require(len(record["negative_controls"])==12,"GLOBAL_MUTATION_COUNT_NOT_TWELVE")
+          record["verdict"]="SOURCE_ONLY_12_OF_12_TIME_REINSERTIONS_REJECTED_BY_P0__NATIVE_P05_NOT_RUN"
+          record["native_p2"]="NOT_RUN"
+          record["native_p3"]="NOT_RUN"
+          record["native_p4"]="NOT_RUN"
+          dest=Path("p5-n1-receipt");dest.mkdir(exist_ok=True)
+          (dest/"p5-n1-ion-time-reinsertion.json").write_text(json.dumps(record,indent=2,sort_keys=True)+"\n")
+          print("P5_N1_TOTAL=12/12_INDEPENDENT_SOURCE_P0_REJECTIONS",flush=True)
+          print("P5_N1_NATIVE_P05=NOT_RUN_P4X_AND_P5_0_HOLD",flush=True)
+          PY
+      - name: Upload source-only negative receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue671-p5-n1-time-reinsertion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: p5-n1-receipt/
+          if-no-files-found: warn
+          retention-days: 30
