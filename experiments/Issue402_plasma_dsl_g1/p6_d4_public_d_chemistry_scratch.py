@@ -121,6 +121,28 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
     after,receipt=donor.cutover_texts(before_text)
     if len(receipt["retired_owners"])!=26 or receipt["old_native_fv_kernels"]!=14 or receipt["old_native_fv_bcs"]!=12:
         raise ValueError("P6_D4_ION26_RETIRE_COUNT_NOT_EXACT")
+    # Chemistry generates ONE FE electron particle Source functor for all
+    # real EI reactions; retain historical electron-energy RHS Kernels, but
+    # retire precisely three *particle* FunctorKernel owners before P05.
+    # This is not wholesale removal of the nine electron/energy Kernels.
+    sources=load_python(CHEM/"prepare_s6_run_input.py",
+                        "p6_d4_historical_electron_particle_source_owners")
+    old_electron_particle=[]
+    for layer,owner_map in {**sources.BASE_REMOVE,**sources.VARIANT_REMOVE[case]}.items():
+        if layer not in after:
+            raise ValueError("P6_D4_ELECTRON_SOURCE_LAYER_ABSENT_"+layer)
+        for name,(variable,functor) in owner_map.items():
+            if variable!="log_e":
+                continue
+            if name=="electron_time" or functor in ("0",""):
+                raise ValueError("P6_D4_ELECTRON_PARTICLE_OWNER_UNEXPECTED")
+            old=after[layer]
+            after[layer]=sources.remove_one(old,name,variable,functor)
+            old_electron_particle.append({
+                "layer":layer,"owner":name,"variable":variable,"source_functor":functor,
+                "before_file_sha256":sha(old.encode()),"after_file_sha256":sha(after[layer].encode())})
+    if len(old_electron_particle)!=3:
+        raise ValueError("P6_D4_ELECTRON_PARTICLE_3_TO_ONE_NOT_EXACT")
     # Native source functors R_elastic_O2/O and R_ion_O2 are historical
     # producers; retain their actual numerical producer/consumer objects,
     # only canonicalize the identifier tokens as original Chemistry staging does.
@@ -155,7 +177,10 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
         "old_native_ion_owners_retired":26,
         "old_native_ion_kernels_retired":14,
         "old_native_ion_bcs_retired":12,
-        "legacy_electron_reaction_kernel_owner":"PRESERVED_PENDING_INDEPENDENT_SOURCE_CONSUMER_CENSUS",
+        "retired_exact_electron_particle_rhs_kernels":old_electron_particle,
+        "retired_electron_particle_rhs_count":len(old_electron_particle),
+        "legacy_electron_energy_rhs":"PRESERVED_EXACT_NATIVE_UNTIL_NUMERICAL_CONSUMER_REVIEW",
+        "generated_electron_particle_rhs":"CHEMISTRY_SIGNED_REAL_7SPECIES_8REACTIONS",
         "retired_ion_details":receipt["retired_owners"],
         "rate_symbol_renames":replaced,
         "file_sha256":{
