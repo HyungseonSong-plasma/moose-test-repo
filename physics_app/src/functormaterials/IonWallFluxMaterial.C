@@ -1,4 +1,5 @@
 #include "IonWallFluxMaterial.h"
+#include <iostream>
 
 #include "Physics.h"
 #include "FaceInfo.h"
@@ -204,6 +205,13 @@ IonWallFluxMaterial::IonWallFluxMaterial(
     paramError(
         "migration_gate_smoothing_width",
         "migration_gate_smoothing_width must be nonnegative.");
+  // Constructor-time real getFunctor bindings, not numerical face evaluation.
+  std::cout << "D8_ION_WALL_CTOR owner=" << name() << " species=" << species_id
+            << " density=" << getParam<MooseFunctorName>("ion_number_density")
+            << " potential=" << getParam<MooseFunctorName>("potential")
+            << " mobility=" << getParam<MooseFunctorName>("mobility")
+            << " temperature=" << getParam<MooseFunctorName>("gas_temperature")
+            << " charge=" << _charge_number << std::endl;
 
   addFunctorProperty<ADReal>(
       wallName("ion_surface_number_flux", "surface_number_flux"),
