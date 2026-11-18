@@ -90,6 +90,29 @@ jobs:
           python3 -m py_compile "$RUNNER_TEMP/p05-in/pinned_source_stager.py"
           echo P05_PUBLIC_ARTIFACT_AND_STAGER_PIN_PASS
 
+      - name: G1 preflight compile all embedded Python heredoc blocks before native execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_G1_SELFTEST'
+          import ast,os,re,subprocess
+          work='.github/workflows/issue673-g1-publicd100-9457191-3ns-pilot-once.yml'
+          raw=subprocess.check_output(['git','show',os.environ['GITHUB_SHA']+':'+work],text=True)
+          lines=raw.splitlines()
+          hits=[]
+          for i,line in enumerate(lines):
+              if line.startswith('          python3 ') and re.search(r"<<'PY'\s*$",line):
+                  end=next((k for k in range(i+1,len(lines)) if lines[k]=='          PY'),None)
+                  assert end is not None,'G1_UNCLOSED_HEREDOC'
+                  block='\n'.join(x[10:] if x.startswith('          ') else x for x in lines[i+1:end])+'\n'
+                  try:
+                      ast.parse(block,filename=f'G1_workflow_python_block_at_line_{i+1}')
+                  except SyntaxError as ex:
+                      raise SystemExit('G1_SYNTAX_SELFTEST_FAIL:'+str(ex))
+                  hits.append((i+1,end+1))
+          assert len(hits)>=4,('G1_UNEXPECTED_PYTHON_BLOCKS',hits)
+          print('G1_EMBEDDED_PYTHON_AST_ALL_PASS',len(hits))
+          PY_G1_SELFTEST
       - name: G1 stage original 11-layer and P4X then Public D original100 physics
         shell: bash
         run: |
@@ -635,9 +658,9 @@ jobs:
                               assert all(dg(chem/n)==s for n,s in expected["11_layer_sha256"].items())
                               assert dg(chem/"baseline_plasma_plus_unstructured_cover_plus_wafer.msh")==expected["parent_mesh_sha256"]
                               assert dg(chem/"chemistry"/f"unified_s6_{case}_newonly.json")==expected["JSON_sha256"]
-                               assert expected["G1_P0"]=="PASS_100ROW_461_TIMES"
-                               assert dg(chem/"chemistry"/f"public_d_s6_{case}_physics.json")==expected["PUBLIC_D_JSON_SHA"]
-                               assert dg(work/"experiments"/"Issue91_real_qvt_r3"/"r3_e0"/"electron_moments.txt")==expected["PUBLIC_D_100ROW_SHA256"]
+                              assert expected["G1_P0"]=="PASS_100ROW_461_TIMES"
+                              assert dg(chem/"chemistry"/f"public_d_s6_{case}_physics.json")==expected["PUBLIC_D_JSON_SHA"]
+                              assert dg(work/"experiments"/"Issue91_real_qvt_r3"/"r3_e0"/"electron_moments.txt")==expected["PUBLIC_D_100ROW_SHA256"]
                               r["input_files_verified"]=True
                               before={name:dg(chem/name) for name in expected["11_layer_sha256"]}
                               child=chem/"rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i"
