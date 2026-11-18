@@ -51,6 +51,7 @@ jobs:
           test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
           test ! -e physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C
           test -f physics_app/src/functormaterials/IonWallFluxMaterial.C
+          test "$(git hash-object ci/issue671_w2w3_parallel_native_runner.py)" = a1d28923b89389d63488c0726871d0ad88cdf9f1
           python3 -m py_compile ci/issue671_w2w3_parallel_native_runner.py
           echo W1_BINARY_EXACT_HEAD_MISMATCH_BUT_FULL_BUILD_SOURCE_EQUIVALENCE_PASS
       - name: Checkout immutable historical public S6 mesh and support source
