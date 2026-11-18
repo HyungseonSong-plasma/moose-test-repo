@@ -240,7 +240,66 @@ jobs:
                           "generated_inventory_observed":None,
                           "first_failure_excerpt":next((line.strip()[:300] for line in logfile.splitlines()
                                                        if "Error" in line or "Unable to" in line or "mooseError" in line),"UNKNOWN")}
-                  receipt["tmpfs_private_removed_on_exit"]=True
+                  # One independent Native Warehouse negative on a post-stage private Scratch copy.
+                  # Preserve both clean inputs, EI bytes and the unchanged production P05 guard.
+                  neg=private/"417-P05-unexpected-kernel"
+                  shutil.copytree(stage/"scratch"/"417",neg,symlinks=False)
+                  neg_chem=neg/"experiments"/"Issue395_powered_chemistry_ladder"
+                  neg_rates=neg_chem/"private_rates"
+                  assert not neg_rates.exists()
+                  neg_rates.mkdir(mode=0o700)
+                  for name in sorted(REQUIRED["417"]):
+                      target=neg_rates/name
+                      fd=os.open(target,os.O_CREAT|os.O_EXCL|os.O_WRONLY|getattr(os,"O_NOFOLLOW",0),0o600)
+                      with os.fdopen(fd,"wb") as f: f.write(original[name])
+                      assert digest(target)==EXPECTED[name]
+                  overlay=neg_chem/"migrated_continuity.i"
+                  pre_neg_sha=digest(overlay)
+                  injection=("\n[FVKernels]\n"
+                             "  [p05_test_unexpected_O2p_time]\n"
+                             "    type = FVLogMolarTimeDerivative\n"
+                             "    variable = log_O2p\n"
+                             "    block = plasma\n"
+                             "  []\n"
+                             "[]\n").encode()
+                  overlay.write_bytes(overlay.read_bytes()+injection)
+                  assert digest(overlay)!=pre_neg_sha
+                  negative_sha=digest(overlay)
+                  params=p4_receipt["417"]
+                  neg_args=["docker","run","--rm","--network","none","--entrypoint","/bin/bash",
+                            "--user","0:0","--workdir","/case",
+                            "--env","OXYGEN_RESEARCH_400=1","--env","OXYGEN_RESEARCH_FULL24=0",
+                            "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
+                            "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
+                            "--mount",f"type=bind,src={neg},dst=/case",
+                            oci,"-lc",
+                            "source /environment; /workspace/physics_app/physics-opt --check-input -i " +
+                            " ".join(shlex.quote(p) for p in params["ordered_inputs"])]
+                  try:
+                      neg_proc=subprocess.run(neg_args,text=True,capture_output=True,timeout=480,check=False,
+                                              env=os.environ.copy())
+                      neg_rc=neg_proc.returncode
+                      neg_log_text=neg_proc.stdout+"\n"+neg_proc.stderr
+                  except subprocess.TimeoutExpired:
+                      neg_rc=124
+                      neg_log_text="P05_NEGATIVE_TIMEOUT_NO_SOLVER\n"
+                  neg_log=out/"S6-417_P05_duplicate_negative.log"
+                  neg_log.write_text(neg_log_text)
+                  intended=("P05 FV Native/Physics duplicate or unexpected owner" in neg_log_text
+                            and "p05_test_unexpected_O2p_time" in neg_log_text)
+                  receipt["negative_control"]={
+                      "case":"S6-417","mutation":"extra_FVLogMolarTimeDerivative_on_log_O2p",
+                      "overlay_clean_sha256":pre_neg_sha,"overlay_mutant_sha256":negative_sha,
+                      "exit_code":neg_rc,"p05_expected_rejection":bool(neg_rc!=0 and intended),
+                      "P05_message_observed":intended,"log_sha256":digest(neg_log),
+                      "clean_input_mutated":False,"shared_binary_sha256":binary_sha}
+                  # Docker is root inside an otherwise private 0700 tmpfs. Recover root-owned
+                  # JIT/cache outputs without changing private file modes before safe deletion.
+                  subprocess.run(["sudo","chown","-R",f"{os.getuid()}:{os.getgid()}",str(private)],
+                                 check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              receipt["tmpfs_private_removed_on_exit"]=not private.exists()
+              if not receipt["tmpfs_private_removed_on_exit"]:
+                  raise AssertionError("PRIVATE_TMPFS_NOT_CLEANED")
               receipt["rate_stage_and_verified_support"]="PASS_SOURCE_AUTHENTIC_5_PER_CASE"
               if all(x["syntax_ok"] for x in receipt["case_results"].values()):
                   receipt["warehouse_actual_12_plus_12"]="P05_GUARD_PASS_ACTUAL_WAREHOUSE_ENUMERATION_NO_EXPLICIT_DUMP"
@@ -269,6 +328,7 @@ jobs:
             ${{ runner.temp }}/p05-out/receipt.json
             ${{ runner.temp }}/p05-out/S6-417_native_check_input.log
             ${{ runner.temp }}/p05-out/S6-941_native_check_input.log
+            ${{ runner.temp }}/p05-out/S6-417_P05_duplicate_negative.log
             ${{ runner.temp }}/p05-in/p4_receipt.json
             ${{ runner.temp }}/p05-in/physics-opt.sha256
           if-no-files-found: warn
