@@ -149,7 +149,7 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
             need(
                 "issue541_arch_s6_p2_evidence/*/status.json" in proof and
                 "issue541_arch_s6_p2_evidence/*/native_P2.log" in proof and
-                "native_p1_identity.json" in proof,
+                "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json" in proof,
                 "ARCH_BOTH_CASES_PROVENANCE"
             )
 
@@ -241,7 +241,8 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
     ))
     add("undeclared_provenance", edit_job(
         workflow, "issue541_arch_s6_hybrid_native_p2",
-        "native_p1_identity.json", "identity_omitted.json"
+        "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json",
+        "control/experiments/Issue402_plasma_dsl_g1/evidence/identity_omitted.json"
     ))
 
     for name, w, t, c in cases:
