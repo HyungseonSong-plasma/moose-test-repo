@@ -1,0 +1,420 @@
+name: Issue671 D8 actual density wall current Poisson RF caller probe
+on:
+  push:
+    branches:
+      - issue-671-d8-caller-single-owner-native-20261118
+    paths:
+      - .github/workflows/issue671-d8-caller-single-owner-once.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue671-d8-live-caller-isolated-one-shot
+  cancel-in-progress: false
+jobs:
+  exact-head-native-p05:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      BASE_HEAD: 05d7ce4eceb81769cb2f0146c51535fc35e74ac1
+    steps:
+      - name: Checkout exact source without writing authentication credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Refuse unexpected checkout and unreviewed modifications before secret access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$BASE_HEAD" HEAD
+          git diff --name-only "$BASE_HEAD" HEAD | sort > "$RUNNER_TEMP/actual-changes.txt"
+          printf '%s\n' '.github/workflows/issue671-d8-caller-single-owner-once.yml' 'physics_app/src/functormaterials/IonWallFluxMaterial.C' 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C' 'physics_app/src/materials/ESWallFluxMaterial.C' 'physics_app/src/physics/plasma/Chemistry.C' 'physics_app/src/physics/plasma/DDContinuityEq.C' 'physics_app/src/physics/plasma/DDEnergyEq.C' > "$RUNNER_TEMP/approved-changes.txt"
+          diff -u "$RUNNER_TEMP/approved-changes.txt" "$RUNNER_TEMP/actual-changes.txt"
+          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = d8c8069eb573a73338037c912e880de328d5a1fe
+          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 2f94183c590b94b39b22f85a47f795ed8b671783
+          test "$(git hash-object physics_app/src/physics/plasma/DDEnergyEq.C)" = a5b21c760355c07fe6580c2658777ece5687343a
+          test "$(git hash-object physics_app/src/functormaterials/IonWallFluxMaterial.C)" = 60a0e65dcd79a35c07f0ad3b4bc0bd719d0a6add
+          test "$(git hash-object physics_app/src/materials/ESWallFluxMaterial.C)" = eb4de0033376d8841b5025799b3059e8de5d8b2e
+          test "$(git hash-object physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C)" = 9f84c16e3b5923b63e1de75c104269172a918d97
+          test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
+          test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
+          echo P05_SOURCE_HEAD_AND_CODE_BLOBS_PIN_PASS
+
+      - name: Checkout immutable historical public S6 mesh and support source
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Reproduce exact SHA-pinned 400 W public parent plasma mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $SRC" | sha256sum --check -
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
+          export OXYGEN_RESEARCH_400=1
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          echo "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc  $CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" | sha256sum --check -
+          test ! -e "$CHEM/private_rates"
+          echo P05_PUBLIC_MESH_SHA_PASS
+
+      - name: Download exact verified 417 941 P3-X public source and immutable diagnostic staging helper
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p05-in"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14406746397/zip" \
+            --output "$RUNNER_TEMP/p05-in/p3x-source.zip"
+          echo "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111  $RUNNER_TEMP/p05-in/p3x-source.zip" | sha256sum --check -
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://raw.githubusercontent.com/HyungseonSong-plasma/moose-test-repo/41ab61e442a497db2388c025075237bd24cfd025/ci/issue671_p5_d8_native_probe.py" \
+            --output "$RUNNER_TEMP/p05-in/pinned_source_stager.py"
+          test "$(git hash-object "$RUNNER_TEMP/p05-in/pinned_source_stager.py")" = 8bf49b7807c9f9b3eed8e622e72062f2b5c822bc
+          python3 -m py_compile "$RUNNER_TEMP/p05-in/pinned_source_stager.py"
+          echo P05_PUBLIC_ARTIFACT_AND_STAGER_PIN_PASS
+
+      - name: Stage real eleven-layer inputs with original mesh and support; exact P4-X owner cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p05-in/staged"
+          python3 "$RUNNER_TEMP/p05-in/pinned_source_stager.py" \
+            --source "$GITHUB_WORKSPACE" --repo-head "$GITHUB_SHA" \
+            --artifact "$RUNNER_TEMP/p05-in/p3x-source.zip" \
+            --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            --historical-support-root "$GITHUB_WORKSPACE/historical" \
+            --output "$RUNNER_TEMP/p05-in/staged" --stage-only
+          python3 - "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-in/p4_receipt.json" <<'PY'
+          from pathlib import Path
+          import sys,json,hashlib
+          stage=Path(sys.argv[1]); root=Path(sys.argv[2]); out=Path(sys.argv[3])
+          sys.path.insert(0,str(root/"experiments/Issue402_plasma_dsl_g1/chemistry"))
+          from retire_s6_p4_duplicate_owners import retire_p4_duplicate_owners, C0, AFTER_SHA
+          stages=json.loads((stage/"readiness.json").read_text())["stage_cases"]
+          receipts={}
+          for case in ("417","941"):
+              folder=stage/"scratch"/case/"experiments"/"Issue395_powered_chemistry_ladder"
+              raw_ordered=stages[case]["ordered"]
+              ordered=[Path(p).name for p in raw_ordered]
+              assert len(ordered)==11 and ordered[0]==C0 and len(set(ordered))==11
+              sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+              baseline={n:sha(folder/n) for n in ordered}
+              marker=folder/".issue633_disposable_scratch"
+              assert not marker.is_symlink()
+              if marker.exists():
+                  assert marker.read_text().strip()=="issue633-scratch-only"
+              else:
+                  marker.write_text("issue633-scratch-only\n")
+              js=json.loads((folder/"chemistry"/f"unified_s6_{case}_newonly.json").read_text())
+              cut=retire_p4_duplicate_owners(folder,ordered,js,post_p3_layer_sha=baseline)
+              assert sha(folder/C0)==AFTER_SHA
+              assert all(sha(folder/n)==baseline[n] for n in ordered[1:])
+              assert cut["retired_source_materials"]==6 and cut["carrier_one_preserved"]
+              receipts[case]={"P4X":"P4X_7_OWNER_SOURCE_PASS","post_p4_C0_sha256":sha(folder/C0),
+                              "retired_old_ion_FV":26,"retired_old_electron":10,
+                              "retired_old_duplicate_materials":6,"carrier_one_preserved":True,
+                              "ordered_inputs":raw_ordered,
+                              "11_layer_sha256":{n:sha(folder/n) for n in ordered},
+                              "JSON_sha256":sha(folder/"chemistry"/f"unified_s6_{case}_newonly.json"),
+                              "parent_mesh_sha256":sha(folder/"baseline_plasma_plus_unstructured_cover_plus_wafer.msh")}
+          out.write_text(json.dumps(receipts,indent=2,sort_keys=True)+"\n")
+          print("P05_REAL_POST_P4X_STAGE_BOTH_CASES_11_LAYER_PASS")
+          PY
+
+      - name: Build one exact HEAD PhysicsApp binary in fixed OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            '
+          test -x physics_app/physics-opt
+          sha256sum physics_app/physics-opt | tee "$RUNNER_TEMP/p05-in/physics-opt.sha256"
+          echo P05_EXACT_SOURCE_SINGLE_BINARY_BUILD_PASS
+
+      - name: Protected original EI Rate handoff and both actual P05 check-inputs in same ephemeral tmpfs
+        shell: bash
+        env:
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/p05-out"
+          python3 - "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-out" "$GITHUB_SHA" "$OCI" <<'PY'
+          from pathlib import Path
+          import sys,os,json,hashlib,tempfile,shutil,subprocess,shlex,re
+          stage=Path(sys.argv[1]); repo=Path(sys.argv[2]); out=Path(sys.argv[3]); head=sys.argv[4]; oci=sys.argv[5]
+          sys.path.insert(0,str(repo/"ci"/"guards"))
+          from issue671_secure_ei_rate_scratch import read_hashed_rows, REQUIRED, EXPECTED, validate_rows
+          out.mkdir(parents=True,exist_ok=True)
+          digest=lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          binary=repo/"physics_app"/"physics-opt"
+          binary_sha=digest(binary)
+          original_case_manifest=json.loads((stage/"p4_receipt.json").read_text()) if (stage/"p4_receipt.json").is_file() else None
+          # The standalone post-P4X input receipt is external to the public stager folder.
+          p4_receipt=json.loads((stage.parent/"p4_receipt.json").read_text())
+          receipt={"schema":"issue671.p05.actual_native_warehouse_probe.v1","source_head":head,
+                   "binary_sha256":binary_sha,"OCI":oci,"case_results":{},
+                   "P4X_source_stage":"PASS_7_OWNER_CUTOVER","P5_0_final_acceptance":"NOT_CLAIMED",
+                   "Native_P3":"NOT_RUN","Native_P4":"NOT_RUN","SCIENCE_HOLD":True,
+                   "warehouse_actual_12_plus_12":"HOLD_PENDING_BOTH_CLEAN_NATIVE"}
+          status=1
+          try:
+              original_meta, original=read_hashed_rows()
+              assert set(original)==set(EXPECTED)
+              assert all(original_meta[n]["sha256_match"] and original_meta[n]["numeric_shape_pass"] for n in EXPECTED)
+              os.environ.pop("PROTECTED_ARCHIVE_B64",None)
+              with tempfile.TemporaryDirectory(prefix="p05-private-",dir="/dev/shm") as private:
+                  private=Path(private)
+                  assert private.stat().st_mode & 0o777 == 0o700
+                  for case in ("417","941"):
+                      public=stage/"scratch"/case
+                      work=private/case
+                      shutil.copytree(public,work,symlinks=False)
+                      chem=work/"experiments"/"Issue395_powered_chemistry_ladder"
+                      rate_dir=chem/"private_rates"
+                      assert not rate_dir.exists() and not rate_dir.is_symlink()
+                      rate_dir.mkdir(mode=0o700)
+                      for name in sorted(REQUIRED[case]):
+                          assert name in original and hashlib.sha256(original[name]).hexdigest()==EXPECTED[name]
+                          assert validate_rows(original[name])==100
+                          target=rate_dir/name
+                          fd=os.open(target,os.O_CREAT|os.O_EXCL|os.O_WRONLY|getattr(os,"O_NOFOLLOW",0),0o600)
+                          with os.fdopen(fd,"wb") as f: f.write(original[name])
+                          assert digest(target)==EXPECTED[name] and (target.stat().st_mode & 0o777)==0o600
+                      expected=p4_receipt[case]
+                      assert digest(chem/"baseline_plasma_plus_unstructured_cover_plus_wafer.msh")==expected["parent_mesh_sha256"]
+                      assert all(digest(chem/name)==sha for name,sha in expected["11_layer_sha256"].items())
+                      assert digest(chem/"chemistry"/f"unified_s6_{case}_newonly.json")==expected["JSON_sha256"]
+                      args=["docker","run","--rm","--network","none","--entrypoint","/bin/bash",
+                            "--user","0:0","--workdir","/case",
+                            "--env","OXYGEN_RESEARCH_400=1","--env","OXYGEN_RESEARCH_FULL24=0",
+                            "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
+                            "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
+                            "--mount",f"type=bind,src={work},dst=/case",
+                            oci,"-lc",
+                            "source /environment; " + "/workspace/physics_app/physics-opt --check-input -i " +
+                            " ".join(shlex.quote(p) for p in expected["ordered_inputs"])]
+                      try:
+                          proc=subprocess.run(args,text=True,capture_output=True,timeout=480,
+                                              check=False,env=os.environ.copy())
+                          rc=proc.returncode; logfile=proc.stdout+"\n"+proc.stderr
+                      except subprocess.TimeoutExpired:
+                          rc=124;logfile="CHECK_INPUT_TIMEOUT_NO_SOLVER\n"
+                      log=out/f"S6-{case}_native_check_input.log"
+                      log.write_text(logfile)
+                      success=rc==0 and "Syntax OK" in logfile
+                      receipt["case_results"][case]={"case":"S6-"+case,"input_layers_sha_verified":11,
+                          "post_P4X_C0_sha256":expected["post_p4_C0_sha256"],
+                          "case_JSON_sha256":expected["JSON_sha256"],
+                          "parent_mesh_sha256":expected["parent_mesh_sha256"],
+                          "protected_original_EI_rate_count":5,"protected_original_rates_sha_valid":True,
+                          "exit_code":rc,"syntax_ok":success,"log_sha256":digest(log),
+                          "P05_Warehouse_check":"GUARD_COMPLETED_IF_CHECK_INPUT_PASS" if success
+                                                else "NOT_PROVED_NATIVE_EXIT_NONZERO",
+                          "expected_kernel_owners":12,"expected_FVBC_owners":12,
+                          "native_warehouse_explicit_object_dump_present":False,
+                          "generated_inventory_observed":None,
+                          "first_failure_excerpt":next((line.strip()[:300] for line in logfile.splitlines()
+                                                       if "Error" in line or "Unable to" in line or "mooseError" in line),"UNKNOWN")}
+                      # Capture the ACTUAL TheWarehouse objects emitted after P05 passed;
+                      # do not infer object existence from the JSON expected catalogue.
+                      observed={"KERNEL":{}, "FVBC":{}}
+                      lines=re.findall(
+                          r"P05_WAREHOUSE_(KERNEL|FVBC) species=(O2p|Om|Op) "
+                          r"variable=(\w+) name=(\w+) factory=(\w+)",logfile)
+                      counts=re.findall(
+                          r"P05_WAREHOUSE_COUNTS species=(O2p|Om|Op) variable=(\w+) "
+                          r"kernels=(\d+) fv_bcs=(\d+)",logfile)
+                      for kind,species,variable,name,factory in lines:
+                          observed[kind].setdefault(species,[]).append(
+                              {"variable":variable,"name":name,"factory":factory})
+                      expected_k=lambda sp:{
+                          sp+"_time":"FVLogMolarTimeDerivative",
+                          sp+"_diffusion":"FVLogMolarDiffusion",
+                          sp+"_drift":"FVLogMolarElectrostaticDrift",
+                          sp+"_source":"FVCoupledForce"}
+                      expected_bc=lambda sp:{
+                          sp+"_wall":"FVFunctorNeumannBC",
+                          sp+"_cover_dielectric":"FVLogMolarDielectricFluxBC",
+                          sp+"_wafer_dielectric":"FVLogMolarDielectricFluxBC",
+                          sp+"_focus_ring_dielectric":"FVLogMolarDielectricFluxBC"}
+                      inventory_ok=success and len(lines)==24 and len(counts)==3
+                      for sp in ("O2p","Om","Op"):
+                          def actual(kind):
+                              return {r["name"]:r["factory"] for r in observed[kind].get(sp,[])}
+                          ks=observed["KERNEL"].get(sp,[])
+                          bs=observed["FVBC"].get(sp,[])
+                          inventory_ok &= (len(ks)==4 and len(bs)==4
+                                           and all(r["variable"]=="log_"+sp for r in ks+bs)
+                                           and actual("KERNEL")==expected_k(sp)
+                                           and actual("FVBC")==expected_bc(sp)
+                                           and counts.count((sp,"log_"+sp,"4","4"))==1)
+                      receipt["case_results"][case]["native_warehouse_explicit_object_dump_present"]=bool(inventory_ok)
+                      receipt["case_results"][case]["generated_inventory_observed"]=(
+                          {"kernels":observed["KERNEL"],"fv_bcs":observed["FVBC"],
+                           "total_kernel_objects":sum(map(len,observed["KERNEL"].values())),
+                           "total_FVBC_objects":sum(map(len,observed["FVBC"].values())),
+                           "per_species_count_receipts":counts}
+                          if inventory_ok else None)
+                      receipt["case_results"][case]["P05_Warehouse_check"]=(
+                          "PASS_OBSERVED_12_KERNEL_12_FVBC"
+                          if inventory_ok else "HOLD_NO_EXACT_WAREHOUSE_OBJECT_RECEIPT")
+                      # Actual material/kernel constructor getFunctor bindings.
+                      # Numerical residual/face evaluations remain a separate gate.
+                      ion_ctor=re.findall(
+                          r"D8_ION_WALL_CTOR owner=(\w+) species=(O2p|Om|Op) density=(\w+) "
+                          r"potential=(\w+) mobility=(\w+) temperature=(\w+) charge=([\-+\d.]+)",
+                          logfile)
+                      electron_ctor=re.findall(
+                          r"D8_E_WALL_CTOR owner=(\w+) species=(e) density=(\w+) "
+                          r"mean_energy=(\w+) potential=(\w+)",logfile)
+                      lowerd_ctor=re.findall(r"D8_LOWERD_CTOR owner=(\w+) current=(\w+)",logfile)
+                      energy_action=re.findall(r"D8_E_DENSITY_ACTION density_owner=(\w+)",logfile)
+                      c2_action=re.findall(r"D8_C2_ACTION_OWNERS ion_wall_factory=(\w+)",logfile)
+                      ion_expected={
+                          ("O2p_wall","O2p","O2p_number_density","potential","O2p_mobility","temperature","1"),
+                          ("Om_wall","Om","Om_number_density","potential","Om_mobility","temperature","-1"),
+                          ("Op_wall","Op","Op_number_density","potential","Op_mobility","temperature","1")}
+                      lowerd_expected={
+                          ("sigma_surface_current","cover_net_surface_current_density"),
+                          ("sigma_wafer_surface_current","wafer_net_surface_current_density"),
+                          ("sigma_focus_ring_surface_current","focus_ring_net_surface_current_density")}
+                      constructor_ok=(len(ion_ctor)==3 and set(ion_ctor)==ion_expected
+                          and len(electron_ctor)==1
+                          and electron_ctor[0][1:]==("e","n_e_physical","e_energy_eV","potential")
+                          and len(lowerd_ctor)==3 and set(lowerd_ctor)==lowerd_expected
+                          and len(energy_action)==1
+                          and len(c2_action)==1 and c2_action[0]=="IonWallFluxMaterial")
+                      receipt["case_results"][case]["D8_actual_ctor_bindings"]={
+                          "ion_wall":ion_ctor,"electron_wall":electron_ctor,"lowerD_current":lowerd_ctor,
+                          "electron_density_action":energy_action,"surface_current_action":c2_action,
+                          "pass":bool(constructor_ok),
+                          "scope":"actual compiled constructor bindings; not residual/face evaluation"}
+
+                  # One independent Native Warehouse negative on a post-stage private Scratch copy.
+                  # Preserve both clean inputs, EI bytes and the unchanged production P05 guard.
+                  neg=private/"417-P05-unexpected-kernel"
+                  shutil.copytree(stage/"scratch"/"417",neg,symlinks=False)
+                  neg_chem=neg/"experiments"/"Issue395_powered_chemistry_ladder"
+                  neg_rates=neg_chem/"private_rates"
+                  assert not neg_rates.exists()
+                  neg_rates.mkdir(mode=0o700)
+                  for name in sorted(REQUIRED["417"]):
+                      target=neg_rates/name
+                      fd=os.open(target,os.O_CREAT|os.O_EXCL|os.O_WRONLY|getattr(os,"O_NOFOLLOW",0),0o600)
+                      with os.fdopen(fd,"wb") as f: f.write(original[name])
+                      assert digest(target)==EXPECTED[name]
+                  overlay=neg_chem/"migrated_continuity.i"
+                  pre_neg_sha=digest(overlay)
+                  injection=("\n[FVKernels]\n"
+                             "  [p05_test_unexpected_O2p_time]\n"
+                             "    type = FVLogMolarTimeDerivative\n"
+                             "    variable = log_O2p\n"
+                             "    block = plasma\n"
+                             "  []\n"
+                             "[]\n").encode()
+                  overlay.write_bytes(overlay.read_bytes()+injection)
+                  assert digest(overlay)!=pre_neg_sha
+                  negative_sha=digest(overlay)
+                  params=p4_receipt["417"]
+                  neg_args=["docker","run","--rm","--network","none","--entrypoint","/bin/bash",
+                            "--user","0:0","--workdir","/case",
+                            "--env","OXYGEN_RESEARCH_400=1","--env","OXYGEN_RESEARCH_FULL24=0",
+                            "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
+                            "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
+                            "--mount",f"type=bind,src={neg},dst=/case",
+                            oci,"-lc",
+                            "source /environment; /workspace/physics_app/physics-opt --check-input -i " +
+                            " ".join(shlex.quote(p) for p in params["ordered_inputs"])]
+                  try:
+                      neg_proc=subprocess.run(neg_args,text=True,capture_output=True,timeout=480,check=False,
+                                              env=os.environ.copy())
+                      neg_rc=neg_proc.returncode
+                      neg_log_text=neg_proc.stdout+"\n"+neg_proc.stderr
+                  except subprocess.TimeoutExpired:
+                      neg_rc=124
+                      neg_log_text="P05_NEGATIVE_TIMEOUT_NO_SOLVER\n"
+                  neg_log=out/"S6-417_P05_duplicate_negative.log"
+                  neg_log.write_text(neg_log_text)
+                  intended=("P05 FV Native/Physics duplicate or unexpected owner" in neg_log_text
+                            and "p05_test_unexpected_O2p_time" in neg_log_text)
+                  receipt["negative_control"]={
+                      "case":"S6-417","mutation":"extra_FVLogMolarTimeDerivative_on_log_O2p",
+                      "overlay_clean_sha256":pre_neg_sha,"overlay_mutant_sha256":negative_sha,
+                      "exit_code":neg_rc,"p05_expected_rejection":bool(neg_rc!=0 and intended),
+                      "P05_message_observed":intended,"log_sha256":digest(neg_log),
+                      "clean_input_mutated":False,"shared_binary_sha256":binary_sha}
+                  # Docker is root inside an otherwise private 0700 tmpfs. Recover root-owned
+                  # JIT/cache outputs without changing private file modes before safe deletion.
+                  subprocess.run(["sudo","chown","-R",f"{os.getuid()}:{os.getgid()}",str(private)],
+                                 check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+              receipt["tmpfs_private_removed_on_exit"]=not private.exists()
+              if not receipt["tmpfs_private_removed_on_exit"]:
+                  raise AssertionError("PRIVATE_TMPFS_NOT_CLEANED")
+              receipt["rate_stage_and_verified_support"]="PASS_SOURCE_AUTHENTIC_5_PER_CASE"
+              if (len(receipt["case_results"])==2 and
+                  all(x["syntax_ok"] and x["native_warehouse_explicit_object_dump_present"]
+                      and x["D8_actual_ctor_bindings"]["pass"]
+                      for x in receipt["case_results"].values()) and
+                  receipt.get("negative_control",{}).get("p05_expected_rejection") and
+                  receipt["tmpfs_private_removed_on_exit"]):
+                  receipt["warehouse_actual_12_plus_12"]="PASS_D8_NATIVE_CONSTRUCTOR_BINDINGS_AND_WAREHOUSE_12_PLUS_12_EACH_CASE"
+                  status=0
+              else:
+                  receipt["warehouse_actual_12_plus_12"]="HOLD_NATIVE_REJECTED_BEFORE_FULL_ACCEPTANCE"
+          except Exception as exc:
+              os.environ.pop("PROTECTED_ARCHIVE_B64",None)
+              receipt["guard_or_harness_failure_class"]=type(exc).__name__
+              receipt["warehouse_actual_12_plus_12"]="HOLD_HARNESS_OR_PRIVATE_STAGE"
+          finally:
+              os.environ.pop("PROTECTED_ARCHIVE_B64",None)
+              (out/"receipt.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
+              print("P05_NATIVE_417_941_RESULT",receipt["warehouse_actual_12_plus_12"])
+              for k,v in sorted(receipt["case_results"].items()):
+                  print("P05_CASE",k,"EXIT",v["exit_code"],"SYNTAX_OK",v["syntax_ok"],"LOG_SHA",v["log_sha256"])
+          sys.exit(status)
+          PY
+
+      - name: Upload ONLY sanitized Native logs and SHA/guard receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue671-d8-caller-owner-real-s6-417-941
+          path: |
+            ${{ runner.temp }}/p05-out/receipt.json
+            ${{ runner.temp }}/p05-out/S6-417_native_check_input.log
+            ${{ runner.temp }}/p05-out/S6-941_native_check_input.log
+            ${{ runner.temp }}/p05-out/S6-417_P05_duplicate_negative.log
+            ${{ runner.temp }}/p05-in/p4_receipt.json
+            ${{ runner.temp }}/p05-in/physics-opt.sha256
+            physics_app/physics-opt
+          if-no-files-found: warn
+          retention-days: 14
