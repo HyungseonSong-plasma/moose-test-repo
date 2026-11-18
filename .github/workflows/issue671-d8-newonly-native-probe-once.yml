@@ -1,4 +1,5 @@
 name: Issue671 P5 D8 real New-only check-input diagnostic HOLD (no solver)
+# Retry with original SHA-pinned neutral database and public elastic tables staged
 on:
   push:
     branches:
@@ -82,6 +83,7 @@ jobs:
             --source "$GITHUB_WORKSPACE" --repo-head "$GITHUB_SHA" \
             --artifact "$RUNNER_TEMP/p5inputs/p3x-source.zip" \
             --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            --historical-support-root "$GITHUB_WORKSPACE/historical" \
             --output "$RUNNER_TEMP/p5-stage-only" --stage-only
       - name: Build exact HEAD PhysicsApp executable in immutable OCI
         shell: bash
@@ -109,6 +111,7 @@ jobs:
             --source "$GITHUB_WORKSPACE" --repo-head "$GITHUB_SHA" \
             --artifact "$RUNNER_TEMP/p5inputs/p3x-source.zip" \
             --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            --historical-support-root "$GITHUB_WORKSPACE/historical" \
             --output "$RUNNER_TEMP/p5-native" --timeout 480
           python3 - "$RUNNER_TEMP/p5-native/readiness.json" <<'PY'
           import json,sys
