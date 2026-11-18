@@ -100,20 +100,23 @@
     "electron_moments_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
   },
   "independent_new_public_bundle": {
-    "sha256": "4670edd0d7bb03778520fa9b483222271adec07e0274e4362ab41951ddc52323",
-    "entries": 18,
+    "sha256": "2115b3e0aa7936baf4380e87058be28bd54866213a95409f756b5e62759832f8",
+    "entries": 19,
     "public_only": true,
     "private_rate_bytes": false,
     "source_only": true,
     "not_native_ready": true,
-    "origin": "/mnt/data/p5_a1_s6_417_PUBLIC_MESH_PRE_P4X_NOT_NATIVE_READY.zip"
+    "origin": "/mnt/data/p5_a1_s6_417_PUBLIC_MESH_PRE_P4X_NOT_NATIVE_READY.zip (complete version includes exact Chemistry JSON)",
+    "size_bytes": 155144
   },
   "aggregate_local_validation": {
-    "summary_receipt_SHA256": "a416d31d8e5e336a9ca27a42fddcade129c3f9fbefe8890d455ee2b444a0279f",
-    "verifier_SHA256": "bec4202a01b5cb52ef4909d57b7e26d04a581dec05524be78d7bd7895e7bfc58",
+    "summary_receipt_SHA256": "af40ed4097bb2c766c54f91414c0912cd8d9abbaf0b95fdd5ed5126a1abc23fb",
+    "verifier_SHA256": "9382d878d6626eee41f20c5dc236929022f4e45c28a6ea8c9784269e080c5073",
     "total_both_case_file_sha_checks": 88,
     "ZIP_CRC": "ALL_4_PASS",
-    "mesh_case_bundle_independent_byte_readback": "PASS"
+    "mesh_case_bundle_independent_byte_readback": "PASS",
+    "original_preliminary_bundle_sha_replaced": true,
+    "critical_member_check": "PASS: 11 .i + JSON + 3 Maxwell source/include + QVT mesh + electron table + parent plasma raw mesh + safety manifest = 19 members"
   },
   "still_missing": [
     "P4-X full Production Runner integration and final 11-layer re-stage at exact PR HEAD",
