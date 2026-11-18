@@ -49,8 +49,7 @@ jobs:
           required={"physics_app/Makefile","physics_app/dependencies.lock","physics_app/src/main.C",
                     "physics_app/src/physics/plasma/DDContinuityEq.C",
                     "physics_app/src/physics/plasma/Chemistry.C",
-                    "physics_app/src/functormaterials/IonWallFluxMaterial.C",
-                    "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C"}
+                    "physics_app/src/functormaterials/IonWallFluxMaterial.C"}
           assert 115<=len(selected)<=160 and required<=set(selected)
           assert set(exact)<=set(selected)
           files={}
