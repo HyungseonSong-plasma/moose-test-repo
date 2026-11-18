@@ -1,0 +1,42 @@
+{
+  "schema": "issue669.p3x.outstanding_worker_slot.v1",
+  "source_pr": 665,
+  "source_pr_head_before_p3x": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "p1_0_archived_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "p3x_CI_run": 44255749142,
+  "p3x_artifact_id": 14405638218,
+  "p3x_artifact_zip_sha256": "1c68a9622357cd13990521dad85504adf49c70916f2424c3511b600e2583e159",
+  "p3x_stage_head": "95d0cd11edfd666f0e33838d5114d9a273c8b05a",
+  "evidence_scope": "ACTUAL_SOURCE_ONLY_ARTIFACT_BYTE_READBACK__NOT_NATIVE_CXX_WAREHOUSE",
+  "Native_P2": "NOT_RUN",
+  "Native_P3": "NOT_RUN",
+  "Native_P4": "NOT_RUN",
+  "SCIENCE": "SCIENCE_HOLD",
+  "task_id": "P3-N3",
+  "status": "PASS_NEUTRAL_OUTLET_PRESSURE_ROOT_SINGLE_OWNER_SOURCE_BOUND",
+  "local_independent_detailed_receipt_sha256": "152209b071c39758ea620c942da5f456e9bf7901fae79bd818f70693559a2898",
+  "independent_task_proof": {
+    "cases": [
+      "417",
+      "941"
+    ],
+    "pressure_Variable_each": {
+      "name": "pressure",
+      "type": "INSFVPressureVariable",
+      "initial_condition": "absent",
+      "old_block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e"
+    },
+    "neutral_outlet_p_each": {
+      "type": "INSFVOutletPressureBC",
+      "variable": "pressure",
+      "boundary": "outlet",
+      "function": "${Physics/Plasmas/pressure}",
+      "block_sha256": "473158d972e44badb6ce8b6111c061fce0ff6f4d429a6fb368a3c2f297d9da8d"
+    },
+    "Physics_root_pressure_Pa": 1.333223684,
+    "Physics_root_temperature_K": 300,
+    "legacy_p_fixed_and_T_g_fixed_tokens_remaining": 0,
+    "negative_controls_rejected": 2,
+    "neutral_pressure_runtime_liveness": "HOLD_NATIVE"
+  }
+}
