@@ -1,4 +1,4 @@
-name: Issue671 D8 full S6-417 941 real plasma RF 1ns bounded
+name: Issue671 D8 full S6-417 941 real plasma RF two 1ns steps bounded
 on:
   push:
     branches:
@@ -153,7 +153,7 @@ jobs:
           sha256sum physics_app/physics-opt | tee "$RUNNER_TEMP/p05-in/physics-opt.sha256"
           echo P05_EXACT_SOURCE_SINGLE_BINARY_BUILD_PASS
 
-      - name: Actual S6-417 and 941 complete 11-layer protected EI 1-ns RF parent child evaluation
+      - name: Actual S6-417 and 941 complete 11-layer protected EI two-step evolving RF parent child
         shell: bash
         env:
           PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
@@ -175,12 +175,13 @@ jobs:
           assert all(orig_meta[n]["sha256_match"] and orig_meta[n]["numeric_shape_pass"] for n in EXPECTED)
           os.environ.pop("PROTECTED_ARCHIVE_B64",None)
           binary=repo/"physics_app"/"physics-opt"
-          receipt={"schema":"issue671.d8.full_s6_real_plasma_rf_1step.v1",
+          receipt={"schema":"issue671.d8.full_s6_real_plasma_rf_2step.v1",
                    "source_HEAD":head,"OCI":oci,"binary_sha256":dg(binary),
                    "all_11_layer_files_original_post_p4x":True,
                    "rf_enabled":True,"original_TimeSequenceStepper":True,
                    "diagnostic_output_only_additions":True,
-                   "bounded_max_physical_steps":1,"first_time_step_expected_s":1e-9,
+                   "bounded_max_physical_steps":2,"first_time_step_expected_s":1e-9,
+                   "bounded_final_time_expected_s":2e-9,
                    "full_S6_100us":"NOT_RUN","P3_P4_science":"SCIENCE_HOLD",
                    "cases":{},"protected_scratch_removed_on_exit":False}
           out.mkdir(parents=True,exist_ok=True)
@@ -261,7 +262,7 @@ jobs:
               argv=["/workspace/physics_app/physics-opt"]
               if check: argv+=["--check-input"]
               argv+=["-i",*ordered,str(chemroot/extra),
-                      "Executioner/num_steps=1",
+                      "Executioner/num_steps=2",
                       "Outputs/csv=true","Outputs/exodus=false","Outputs/checkpoint=false",
                       "Outputs/file_base=rf_full_plasma",
                       "MultiApps/maxwell_t6/input_files=rf_full_d8_child.i",
@@ -286,7 +287,7 @@ jobs:
                   try:
                       for case in ("417","941"):
                           r={"case":case,"input_files_verified":False,"protected_EI_count":0,
-                             "native_check_input_rc":None,"full_1ns_rc":None,
+                             "native_check_input_rc":None,"full_2ns_rc":None,
                              "maxwell_child_numeric_observed":False,
                              "seven_transfers_numeric_observed":False,
                              "full_S6_original_11_layers_unchanged":False}
@@ -329,7 +330,7 @@ jobs:
                               (out/f"{case}_check_excerpt.txt").write_text(limit_log(log))
                               if rc==0 and "Syntax OK" in log:
                                   rc,log=run_native(work,expected["ordered_inputs"],"rf_full_d8_observers.i")
-                                  r["full_1ns_rc"]=rc
+                                  r["full_2ns_rc"]=rc
                                   r["native_full_log_sha256"]=hashlib.sha256(log.encode()).hexdigest()
                                   r["maxwell_solver_message_seen"]=("Solve Converged!" in log and "maxwell" in log.lower())
                                   (out/f"{case}_native_excerpt.txt").write_text(limit_log(log))
@@ -340,8 +341,22 @@ jobs:
                                       except (ValueError,UnicodeError,KeyError):
                                           continue
                                       if parsed:
-                                          csvs.append({"relative_file":str(f.relative_to(work)),
-                                                       "sha256":dg(f),"values":parsed})
+                                          # Public evidence contains RF and physical-state diagnostics
+                                          # only. Full rate/chemistry CSV fields remain in private tmpfs.
+                                          allowed={"time","P_abs","P_abs_maxwell_t6",
+                                                   "P_rf_raw_W_t6","P_rf_scaled_W_t6",
+                                                   "S_rf_eV_mol_s_t6","rf_drive_scale_t6",
+                                                   "rf_drive_scale_child",
+                                                   "rf_full_parent_E_real_l2","rf_full_parent_E_imag_l2",
+                                                   "rf_full_parent_ne_mean","rf_full_parent_en_mean",
+                                                   "rf_full_parent_pressure_mean",
+                                                   "rf_full_child_ne_mean","rf_full_child_en_mean",
+                                                   "rf_full_child_pressure_mean",
+                                                   "ne_max","ne_min","mean_energy_max","mean_energy_min"}
+                                          filtered={k:v for k,v in parsed.items() if k in allowed}
+                                          if filtered:
+                                              csvs.append({"relative_file":str(f.relative_to(work)),
+                                                           "sha256":dg(f),"values":filtered})
                                   r["csv_observed"]=csvs
                                   parents=[x for x in csvs if "P_abs_maxwell_t6" in x["values"]]
                                   children=[x for x in csvs if "P_abs" in x["values"]
@@ -374,7 +389,25 @@ jobs:
                                               and abs(a-b)<=max(1e-9,0.20*abs(a)))
                                           forward.append(bool(ok))
                                       r["three_physical_state_transfers_within_20pct"]=forward
-                                      r["seven_transfers_numeric_observed"]=bool(ppass and fpass and all(forward))
+                                      r["parent_observation_time_s"]=pv.get("time")
+                                      r["child_received_drive_scale"]=cv.get("rf_drive_scale_child")
+                                      original_default={"density":1.0e15,"mean_energy":4.0,"pressure":1.333223684}
+                                      thresholds={"density":1e7,"mean_energy":1e-8,"pressure":1e-10}
+                                      r["child_state_differs_from_initial_default"]={
+                                          n:abs(r["rf_forward_state_child_avg"][n]-original_default[n])>thresholds[n]
+                                          for n in original_default}
+                                      r["parent_state_differs_from_initial_default"]={
+                                          n:abs(r["rf_forward_state_parent_avg"][n]-original_default[n])>thresholds[n]
+                                          for n in original_default}
+                                      r["drive_differs_from_initial_default"]=abs(
+                                          cv.get("rf_drive_scale_child",4.7406324819559)-4.7406324819559)>1e-8
+                                      r["two_ns_time_observed"]=abs(pv.get("time",-1)-2e-9)<1e-13
+                                      r["actual_evolving_physical_state_observed"]=any(
+                                          r["child_state_differs_from_initial_default"].values())
+                                      r["seven_transfers_numeric_observed"]=bool(
+                                          ppass and fpass and all(forward) and r["two_ns_time_observed"]
+                                          and r["drive_differs_from_initial_default"]
+                                          and r["actual_evolving_physical_state_observed"])
                               else:
                                   r["first_blocker"]="P2_CONSTRUCTION_FAILED"
                               r["full_S6_original_11_layers_unchanged"]=all(
@@ -400,7 +433,7 @@ jobs:
               receipt["RF_FULL_S6_CASES_PASS"]=bool(
                   receipt["protected_scratch_removed_on_exit"] and
                   len(receipt["cases"])==2 and
-                  all(r["full_1ns_rc"]==0 and r["seven_transfers_numeric_observed"]
+                  all(r["full_2ns_rc"]==0 and r["seven_transfers_numeric_observed"]
                       and r["full_S6_original_11_layers_unchanged"]
                       for r in receipt["cases"].values()))
               (out/"rf_full_s6_receipt.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
@@ -408,7 +441,7 @@ jobs:
                     "PASS_BOUNDED_INITIAL_ACTUAL_PLASMA" if receipt["RF_FULL_S6_CASES_PASS"]
                     else "HOLD_WITH_CASE_SPECIFIC_CAUSE")
               for case,r in receipt["cases"].items():
-                  print("RF_CASE",case,"P2",r["native_check_input_rc"],"P3_BOUND_1NS",r["full_1ns_rc"],
+                  print("RF_CASE",case,"P2",r["native_check_input_rc"],"P3_BOUND_2NS",r["full_2ns_rc"],
                         "P_ABS",r.get("maxwell_child_P_abs_W"),"ACTUAL_TRANSFER",r["seven_transfers_numeric_observed"],
                         "CAUSE",r.get("first_blocker","NONE"))
               sys.exit(0 if receipt["RF_FULL_S6_CASES_PASS"] else 1)
