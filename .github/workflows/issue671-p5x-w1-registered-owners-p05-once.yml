@@ -253,7 +253,11 @@ jobs:
             close(fd);
           }
           P5XCPP
-          g++ -std=c++17 -O2 -fPIC -shared -o "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so" "$RUNNER_TEMP/p05-in/p5x_owner_tracer.cc" -ldl
+          # Compile against the pinned runtime OCI glibc/libstdc++; ubuntu-24.04 host-built .so is ABI-incompatible.
+          # This builds the independent observer ONLY. W1 physics-opt and both app libraries are byte-preserved.
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --mount "type=bind,src=$RUNNER_TEMP/p05-in,dst=/probe" \
+            "$OCI" -lc 'set -euo pipefail; source /environment; g++ -std=c++17 -O2 -fPIC -shared -o /probe/libp5x_owner_tracer.so /probe/p5x_owner_tracer.cc -ldl'
           test -s "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so"
           nm -D "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so" | grep -Fq '_ZN13FEProblemBase11addFVKernel'
           nm -D "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so" | grep -Fq '_ZN13FEProblemBase7addFVBC'
