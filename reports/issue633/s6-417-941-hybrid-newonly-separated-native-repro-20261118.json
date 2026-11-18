@@ -1,0 +1,123 @@
+{
+  "schema": "issue633.s6_hybrid_newonly_route_separation.v1",
+  "as_of_date_utc": "2026-11-18",
+  "authoritative_source": {
+    "integration_pr": 665,
+    "head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "source_merges": false,
+    "protected_rate_files_included": false
+  },
+  "verified_artifacts": {
+    "arch_hybrid": {
+      "run": 44330849818,
+      "artifact": 14438713435,
+      "zip_sha256": "1dbf045701c744d4d3e92856a94803ad5e2fd69ecdf86088ab0ef00d7e3be186",
+      "job": 134894513305
+    },
+    "public_B_D": {
+      "run": 44330849818,
+      "artifact": 14440525398,
+      "zip_sha256": "453ff7e80e7afd2cf87c989cf554720ef29feddc8d5b9b8ee62478c0a520a0ad",
+      "job": 134894512904
+    },
+    "flow_D_base": {
+      "run": 44330850055,
+      "artifact": 14440340727,
+      "zip_sha256": "c83454189c779b3de059b88d2642aec83ccaa3904173870ef74aee4c8ffac14b",
+      "job": 134894513612
+    },
+    "newonly_417": {
+      "run": 44331086356,
+      "artifact": 14439357010,
+      "zip_sha256": "18e472c3dab7222ab65543a678967bcb753c6a8369148163b76d8be870d6ba58",
+      "case": "417"
+    },
+    "newonly_941": {
+      "run": 44331086356,
+      "artifact": 14440390452,
+      "zip_sha256": "39bc794938d23a7218ef3bb4e938a23917ab9ddb4a7a39ce7e228693f1111dda",
+      "case": "941"
+    }
+  },
+  "separated_lanes": {
+    "HISTORICAL_PUBLIC_B": {
+      "required_layers": 10,
+      "case_results": {
+        "417": "PASS_SYNTAX_OK",
+        "941": "PASS_SYNTAX_OK"
+      },
+      "scope": "HISTORICAL_COMPAT_INPUT_ONLY",
+      "scientific_equivalence": false
+    },
+    "HISTORICAL_PUBLIC_D": {
+      "required_layers": 11,
+      "case_results": {
+        "417": "FAIL_MISSING_FEM_E_TRANSPORT_JSON",
+        "941": "FAIL_MISSING_FEM_E_TRANSPORT_JSON"
+      },
+      "scope": "HISTORICAL_TRANSPORT_CUTOVER_HOLD"
+    },
+    "HISTORICAL_FLOW_D_BASE": {
+      "case_results": {
+        "417": "FAIL_MISSING_FEM_E_TRANSPORT_JSON",
+        "941": "NOT_RUN_EARLY_STOP"
+      },
+      "scope": "HISTORICAL_FLOW_TRANSPORT_HOLD"
+    },
+    "HISTORICAL_ARCH_HYBRID": {
+      "required_layers": 11,
+      "case_results": {
+        "417": "FAIL_EXPECTED_P05_NI_TIME",
+        "941": "FAIL_EXPECTED_P05_NI_TIME"
+      },
+      "scope": "KEEP_HOLD_HISTORICAL_COMPAT_DIAGNOSTIC",
+      "p05_bypass": false
+    },
+    "PRODUCTION_NEWONLY": {
+      "required_layers": 11,
+      "case_results": {
+        "417": "PASS_NATIVE_CHECK_INPUT",
+        "941": "PASS_NATIVE_CHECK_INPUT"
+      },
+      "scope": "P2_ONLY_NO_P3_P4",
+      "protected_rates": "EPHEMERAL_5_PER_CASE",
+      "science": "SCIENCE_HOLD"
+    }
+  },
+  "arch_native_receipts": {
+    "417": {
+      "exit_code": 1,
+      "log_sha256": "88569b990e1817c89be5fa55e07b18a024d28e1d2efa2ce774b708638ff2e2f5",
+      "binary_sha256": "e3e4e0102dffd83b15214c3625ff9df7bca9e9c05453879d4ab4082134468fd1"
+    },
+    "941": {
+      "exit_code": 1,
+      "log_sha256": "2c98dd08644d2930904e29a50d52a1f8af7e0d578de92ba130fc85fb51b206bf",
+      "binary_sha256": "e3e4e0102dffd83b15214c3625ff9df7bca9e9c05453879d4ab4082134468fd1"
+    }
+  },
+  "newonly_native_receipts": {
+    "417": {
+      "exit_code": 0,
+      "syntax_ok": true,
+      "log_sha256": "ede9eb23971c19da61b60b551904b5de62256975f370fa7655fbc5e3e311b307"
+    },
+    "941": {
+      "exit_code": 0,
+      "syntax_ok": true,
+      "log_sha256": "423b2b7ab98ff7c60736f92b82e90bf61a090da610da315757e8868473c88d13"
+    }
+  },
+  "strict_contract": {
+    "hybrid_failure_never_counts_as_newonly_success": true,
+    "historical_hybrid_failure_retained_as_failure_in_original_job": true,
+    "no_continue_on_error_or_auto_ci_skip": true,
+    "no_P05_waiver": true,
+    "no_implicit_BC_or_transport_substitution": true,
+    "newonly_native_success_requires_actual_417_941_clean_exit_and_SHA": true,
+    "global_CI_routing_update": "NOT_APPLIED__SEPARATE_REVIEW_GATE_REQUIRED",
+    "P3_P4": "NOT_RUN",
+    "SCIENCE_HOLD": true
+  },
+  "verdict": "PASS_INDEPENDENT_FAILURE_REPRO_AND_EVIDENCE_ROUTE_CLASSIFICATION__COMMON_CI_NOT_YET_CHANGED"
+}
