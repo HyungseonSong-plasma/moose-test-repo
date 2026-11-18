@@ -1,0 +1,145 @@
+name: Issue671 PhysicsApp source-only physics-opt bundle
+on:
+  push:
+    branches: [issue-671-physics-opt-source-only-bundle-20261118]
+    paths: [.github/workflows/issue671-physics-opt-source-bundle-once.yml]
+permissions:
+  contents: read
+jobs:
+  source-bundle:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact pinned application code
+        env:
+          SOURCE_HEAD: 05d7ce4eceb81769cb2f0146c51535fc35e74ac1
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$SOURCE_HEAD" HEAD
+          git diff --name-only "$SOURCE_HEAD" HEAD | sort > "$RUNNER_TEMP/actual"
+          echo .github/workflows/issue671-physics-opt-source-bundle-once.yml > "$RUNNER_TEMP/expected"
+          diff -u "$RUNNER_TEMP/actual" "$RUNNER_TEMP/expected"
+          git diff --exit-code "$SOURCE_HEAD" HEAD -- physics_app ci/physics-build-base
+          test "$(git hash-object physics_app/Makefile)" = 07cc31f9274d598a3363cd3c7a8d5d589707294f
+          test "$(git hash-object physics_app/dependencies.lock)" = 0aae0ffb5699fcd5c17e8ebe9ea4f2effde9ff47
+      - name: Build isolated source-only ZIP from pinned tracked files
+        env:
+          SOURCE_HEAD: 05d7ce4eceb81769cb2f0146c51535fc35e74ac1
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bundle"
+          python3 - "$RUNNER_TEMP/bundle" <<'PY'
+          import pathlib,os,hashlib,json,subprocess,sys,zipfile
+          out=pathlib.Path(sys.argv[1])
+          archive=out/"physics-opt-source-only.zip"
+          image="ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+          source=os.environ["SOURCE_HEAD"]
+          filenames=[os.fsdecode(n) for n in subprocess.check_output(["git","ls-files","-z"]).split(b"\0") if n]
+          exact={"physics_app/Makefile","physics_app/dependencies.lock","physics_app/LICENSE",
+                 "ci/physics-build-base/Dockerfile","ci/physics-build-base/Makefile"}
+          prefixes=("physics_app/src/","physics_app/include/","physics_app/test/src/","physics_app/test/include/")
+          selected=sorted(p for p in filenames if p in exact or p.startswith(prefixes))
+          required={"physics_app/Makefile","physics_app/dependencies.lock","physics_app/src/main.C",
+                    "physics_app/src/physics/plasma/DDContinuityEq.C",
+                    "physics_app/src/physics/plasma/Chemistry.C",
+                    "physics_app/src/functormaterials/IonWallFluxMaterial.C",
+                    "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C"}
+          assert 115<=len(selected)<=160 and required<=set(selected)
+          assert set(exact)<=set(selected)
+          files={}
+          for p in selected:
+              f=pathlib.Path(p)
+              assert f.is_file() and not f.is_symlink()
+              files[p]=f.read_bytes()
+          assert image in files["physics_app/dependencies.lock"].decode()
+          script='''#!/usr/bin/env bash
+          set -euo pipefail
+          ROOT="$(cd "$(dirname "$0")" && pwd)"
+          OCI="ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+          command -v docker >/dev/null || { echo "Docker required" >&2; exit 2; }
+          docker pull "$OCI"
+          docker run --rm --platform linux/amd64 --network none --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$ROOT:/workspace" "$OCI" -lc '
+            set -euo pipefail
+            source /environment
+            export MOOSE_DIR=/opt/physics_vendor/moose
+            export CRANE_DIR=/opt/physics_vendor/crane
+            export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+            export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+            export METHOD=opt
+            make -C physics_app -j2 app_non_unity_dirs="%/utils"
+          '
+          test -x "$ROOT/physics_app/physics-opt"
+          sha256sum "$ROOT/physics_app/physics-opt"
+          '''
+          files["build_physics_opt.sh"]="\n".join(line[10:] if line.startswith("          ") else line for line in script.splitlines()).encode()+b"\n"
+          readme=f"""# PhysicsApp source-only bundle (MOOSE physics-opt)
+
+Exact source commit from Draft PR #665: {source}
+
+Contents: physics_app/src + physics_app/include (full project application implementation),
+physics_app/test C++ registration (if needed by app build), Makefile, dependencies.lock,
+original LICENSE and the CI image recipe. Also includes build_physics_opt.sh,
+this README and a SHA256 SOURCE_MANIFEST.json.
+
+Requires Docker and access to the exact Linux/amd64 OCI image:
+{image}
+
+Build (no solver execution):
+  bash build_physics_opt.sh
+
+Output: physics_app/physics-opt and its shared libraries under physics_app/lib.
+MOOSE Framework, CRANE, SQUIRREL, ZAPDOS and compilers are provided separately
+by the immutable OCI image. Their exact revisions are in physics_app/dependencies.lock.
+If image is unavailable, fetch vendor sources at pinned revisions and configure them
+using ci/physics-build-base/Dockerfile. This ZIP is not a standalone MOOSE framework.
+
+Experimental test inputs, meshes, private EI rate tables, logs, executables,
+ELF/shared-library binaries and time-stepping scripts are NOT included.
+No Native P2/P3/P4, D8 liveness, or scientific equivalence has been evaluated
+by packaging the source.
+"""
+          files["README_BUILD.md"]=readme.encode()
+          digest=lambda data:hashlib.sha256(data).hexdigest()
+          manifest={"schema":"physics-opt.source-only-build-bundle.v1",
+                    "upstream_repository":"HyungseonSong-plasma/moose-test-repo",
+                    "pr":665,"source_head":source,
+                    "exact_oci_image":image,"app_file_count":len(selected),
+                    "upstream_file_bytes":sum(len(files[p]) for p in selected),
+                    "source_entries":[{"path":p,"sha256":digest(files[p]),"bytes":len(files[p])} for p in sorted(files)],
+                    "external_vendor_included":False,"binary_included":False}
+          files["SOURCE_MANIFEST.json"]=(json.dumps(manifest,indent=2)+"\n").encode()
+          root="physics-opt-source-only/"
+          with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for p,data in sorted(files.items()):
+                  info=zipfile.ZipInfo(root+p,date_time=(2026,11,18,0,0,0))
+                  info.compress_type=zipfile.ZIP_DEFLATED
+                  info.external_attr=(0o100755 if p=="build_physics_opt.sh" else 0o100644)<<16
+                  z.writestr(info,data,compress_type=zipfile.ZIP_DEFLATED,compresslevel=9)
+          with zipfile.ZipFile(archive) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(files)
+              for p,data in files.items():
+                  assert z.read(root+p)==data
+          receipt={"archive_sha256":digest(archive.read_bytes()),
+                   "source_head":source,"app_file_count":len(selected),
+                   "archive_entries":len(files),"archive_size":archive.stat().st_size,
+                   "zip_crc":"PASS","executables_included":False}
+          (out/"archive_receipt.json").write_text(json.dumps(receipt,indent=2)+"\n")
+          print(json.dumps(receipt,indent=2))
+          PY
+      - name: Upload only buildable PhysicsApp source ZIP and receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue671-physics-opt-source-only-05d7ce4
+          path: |
+            ${{ runner.temp }}/bundle/physics-opt-source-only.zip
+            ${{ runner.temp }}/bundle/archive_receipt.json
+          if-no-files-found: error
+          retention-days: 14
