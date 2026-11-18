@@ -1,0 +1,287 @@
+{
+  "schema": "issue671.p5_final_evidence_ledger_gate_index.v1",
+  "as_of": "2026-11-18",
+  "scope": "Source/Artifact receipts inventory + unfilled P5-X final Native P2 acceptance form",
+  "status": "WORKING_DRAFT_NOT_FINAL_NATIVE_ACCEPTANCE",
+  "source": {
+    "integration_pr": 665,
+    "observed_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+    "observed_state": "OPEN_DRAFT_NOT_MERGED_TO_MAIN",
+    "initial_input_source_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "main_reference": "ebcfd9e662bc40f0473d8da05da95d11b61789f8"
+  },
+  "receipt_roles": [
+    {
+      "id": "P1-0",
+      "run_id": 44182628032,
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "evidence_level": "source_baseline",
+      "case_scope": [
+        "417",
+        "941"
+      ],
+      "status": "PASS_SOURCE"
+    },
+    {
+      "id": "P2",
+      "run_id": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "evidence_level": "source_retirement",
+      "case_scope": [
+        "417",
+        "941"
+      ],
+      "status": "PASS_SOURCE_ION26_REMOVED"
+    },
+    {
+      "id": "P3-X",
+      "run_id": 44256823392,
+      "artifact_id": 14405784430,
+      "zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+      "evidence_level": "source_cutover",
+      "case_scope": [
+        "417",
+        "941"
+      ],
+      "status": "PASS_SOURCE_ION26_ELECTRON10_REMOVED"
+    },
+    {
+      "id": "P4-X",
+      "run_id": 44274320806,
+      "artifact_id": 14414026909,
+      "zip_sha256": "6773dfa54bd1a77c908831be3edd6a93699152f5879e96f6bf3db435df431540",
+      "evidence_level": "source_owner_cutover",
+      "case_scope": [
+        "417",
+        "941"
+      ],
+      "status": "PASS_SOURCE_7_EDITS_FULL_CONSUMER_GATE_HOLD"
+    },
+    {
+      "id": "P5-A3_SECURE_RATES",
+      "run_id": 44268361259,
+      "artifact_id": 14411626010,
+      "zip_sha256": "195210cc96c80a096103c855e31804e2a0fd52ed9f31a64cde23f9dc773f6127",
+      "evidence_level": "sha_count_only_protected",
+      "case_scope": [
+        "417",
+        "941"
+      ],
+      "status": "PASS_SECURE_STAGE_5_PER_CASE_EPHEMERAL",
+      "public_rate_bytes_included": false
+    },
+    {
+      "id": "PARENT_MESH_ORIGIN",
+      "run_id": 39575896519,
+      "artifact_id": 12349847563,
+      "zip_sha256": "f07f082267e159ad87ce1cdab79c95fcd8d78cdc6ed1a6168c4fa09ae1f132a2",
+      "evidence_level": "source_geometry",
+      "case_scope": [
+        "417",
+        "941"
+      ],
+      "status": "PASS_PARENT_SOURCE_MESH_PIN"
+    },
+    {
+      "id": "P5-0_PREVIOUS_HEAD_SINGLE_BUILD",
+      "run_id": 44279232578,
+      "artifact_id": 14416831615,
+      "zip_sha256": "b97c997ac0c665628c1b3eace3bd577496bbf4333f7fbff74dbe12700aa575c8",
+      "evidence_level": "actual_binary_bytes_and_libs_previous_head",
+      "source_head": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
+      "physics_opt_sha256": "bb55d25bbd8505d83c3f29ab1cb6478845d94f627548014c230375926cf335b0",
+      "case_scope": [],
+      "status": "PASS_PREVIOUS_HEAD_ONLY_HOLD_FINAL_05D7_HEAD"
+    },
+    {
+      "id": "P05_LIVE_PROBE_DRAFT_678",
+      "run_id": 44280359966,
+      "artifact_id": 14417221187,
+      "zip_sha256": "edd8569834038cce51f7a1e13130c48bc76e4de4b6fac62d40cb5bce1323401b",
+      "evidence_level": "actual_native_probe_not_merged",
+      "source_head": "9e9b4f5ddb99bcbbf8c31746d7331587c9885a3f",
+      "binary_sha256": "65dcb77a7483e9a3861e8c1bfbe2413daec739e38240efa57d0a501dd1a36765",
+      "case_scope": [
+        "417",
+        "941"
+      ],
+      "status": "PASS_PROBE_LIVE_12_KERNEL_12_FVBC_PER_CASE_NOT_FINAL"
+    },
+    {
+      "id": "ION_WALL_SINGLE_CLASS_P1",
+      "run_id": 44281956063,
+      "artifact_id": 14417278324,
+      "zip_sha256": "89a5d7ce57793d3bbbac8433c4618ae77b03577e34109c9b70d4ccc76cc1a655",
+      "evidence_level": "source_and_ci_build",
+      "code_git_blob": "c965e1c2de9d1ba8eec6f3180c9eaeb5ca324fde",
+      "case_scope": [],
+      "status": "PASS_SINGLE_FACTORY_SOURCE_BUILD_NOT_FINAL_NATIVE"
+    }
+  ],
+  "physical_pins": {
+    "parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "maxwell_child_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "maxwell_child_wrapper_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "neutral_transport_db_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+    "electron_42_row_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "case_json_sha256": {
+      "417": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "941": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+    }
+  },
+  "superseded_or_bounded_assertions": [
+    {
+      "previous": "IonWallFluxMaterial factory unregistered",
+      "disposition": "RETRACTED",
+      "resolution": "New IonWallFluxMaterial registered and old PhysicsIonWallFluxMaterial implementation deleted in merged PR679"
+    },
+    {
+      "previous": "P5-0 cannot build due Docker absence",
+      "disposition": "RETRACTED_AS_GLOBAL",
+      "resolution": "GitHub Actions one-build binary+libs proven on prior HEAD, not current HEAD"
+    },
+    {
+      "previous": "missing public parent mesh/neutral DB/private EI rate means impossible",
+      "disposition": "BOUNDED_TO_EARLIER_PROBE",
+      "resolution": "Original mesh source and neutral DB recovered; private rate secure tmpfs staging proven; final current-head Native still unverified"
+    },
+    {
+      "previous": "separate PR678 P05 12+12 success",
+      "disposition": "VALID_AS_PROBE_ONLY",
+      "resolution": "Do not promote as final PR665 exact-head pass"
+    },
+    {
+      "previous": "P5-N6 42/42 fail-closed",
+      "disposition": "INDEPENDENT_SOURCE_ORACLE_ONLY",
+      "resolution": "Native N6 including partially missing EI/H25 channel still required"
+    }
+  ],
+  "final_required_fields": {
+    "exact_final_head_sha": null,
+    "exact_git_tree_sha": null,
+    "build_OCI_digest": null,
+    "compiler_moose_method_flags": null,
+    "actual_physics_opt_sha256": null,
+    "libphysics_opt_sha256": null,
+    "libphysics_test_opt_sha256": null,
+    "binary_bundle_zip_sha256": null,
+    "binary_bundle_artifact_id": null,
+    "secure_rates_same_native_run_receipt": null,
+    "parent_mesh_and_maxwell_mesh_stage_verified": false,
+    "source_417_11_layers_verified_on_final_head": false,
+    "source_941_11_layers_verified_on_final_head": false,
+    "native_417": {
+      "job_id": null,
+      "exit_code": null,
+      "syntax_ok": null,
+      "log_sha256": null,
+      "ion_kernel_count": null,
+      "ion_fvbc_count": null,
+      "electron_bc_count": null,
+      "canonical_electron_functors_unique": null,
+      "d8_dynamic_callers": null
+    },
+    "native_941": {
+      "job_id": null,
+      "exit_code": null,
+      "syntax_ok": null,
+      "log_sha256": null,
+      "ion_kernel_count": null,
+      "ion_fvbc_count": null,
+      "electron_bc_count": null,
+      "canonical_electron_functors_unique": null,
+      "d8_dynamic_callers": null
+    },
+    "native_negative_matrix": {
+      "required_groups": [
+        "N1",
+        "N2",
+        "N3",
+        "N4",
+        "N5",
+        "N6",
+        "N7",
+        "N8"
+      ],
+      "required_case_count": 2,
+      "qualifying_actual_negative_count": 0,
+      "required_minimum_count": 16,
+      "all_original_sha_restored": false
+    },
+    "same_final_head_binary_oci_across_417_941_and_negatives": false,
+    "final_P5_native_P2_accepted": false,
+    "science_P3_P4_equivalence_accepted": false
+  },
+  "final_gates": [
+    {
+      "key": "SOURCE_FINAL_BYTES",
+      "status": "PASS_SOURCE_EPOCH_ONLY",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "SECURE_RATE_STAGE",
+      "status": "PASS_HISTORICAL_SECURE_HANDOFF_REEXECUTE_FINAL_JOB",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "P5_0_FINAL_SINGLE_BINARY",
+      "status": "HOLD",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "S6_417_NATIVE_P2",
+      "status": "HOLD",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "S6_941_NATIVE_P2",
+      "status": "HOLD",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "LIVE_P05_12_12_AND_ELECTRON_OWNER",
+      "status": "PASS_PROBE_ONLY_HOLD_FINAL",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "D8_DYNAMIC_CALLERS",
+      "status": "HOLD",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "N1_N8_NATIVE_NEGATIVES_AND_RESTORE",
+      "status": "HOLD",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "SAME_HEAD_BINARY_OCI_E4",
+      "status": "HOLD",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "P5_X_NATIVE_P2_FINAL",
+      "status": "HOLD",
+      "mandatory_for_native": true
+    },
+    {
+      "key": "SCIENCE_P3_P4",
+      "status": "SCIENCE_HOLD",
+      "mandatory_for_native": false
+    }
+  ],
+  "acceptance_rule": "PASS_NATIVE_P2 only after every mandatory final gate is PASS at identical latest HEAD, actual pinned binary/libs, secure rate within same Native jobs, both clean Syntax OK exit0, observed 12 FV Kernels+12 FVBC and electron owner counts, D8 liveness, N1-N8 2-case actual fail-closed with exact error and restore; science is separately gated.",
+  "artifacts": {
+    "ledger": "reports/issue671/p5-source-artifact-evidence-ledger.md",
+    "final_form": "reports/issue671/p5-final-acceptance-form.md",
+    "machine_index": "reports/issue671/p5-evidence-gate-index.json"
+  },
+  "policy": {
+    "task_isolated_branch": "issue-671-final-evidence-ledger-20261118",
+    "source_main_not_mutated": true,
+    "source_pr665_not_mutated": true,
+    "originals_not_modified": true,
+    "private_EI_rate_bytes_not_included": true
+  }
+}
