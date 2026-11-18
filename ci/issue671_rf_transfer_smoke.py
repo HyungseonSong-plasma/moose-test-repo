@@ -118,9 +118,9 @@ def stage(artifact, mesh, output):
                 "    file = 'baseline_plasma_plus_unstructured_cover_plus_wafer.msh'",
                 "  []", "[]",
                 "[Variables]", "  [rf_probe_u]", "    family = LAGRANGE",
-                "    order = FIRST", "    block = plasma", "  []", "[]",
+                "    order = FIRST", "  []", "[]",
                 "[Kernels]", "  [rf_probe_time]", "    type = TimeDerivative",
-                "    variable = rf_probe_u", "    block = plasma", "  []", "[]",
+                "    variable = rf_probe_u", "  []", "[]",
                 "[AuxVariables]",
             ]
             for variable, value in SRC_STATE.items():
