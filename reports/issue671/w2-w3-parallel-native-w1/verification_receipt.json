@@ -1,0 +1,59 @@
+{
+  "schema": "issue671.w2_w3_parallel_native_w1_actual_receipt.v1",
+  "checked_utc": "2026-11-18",
+  "PR665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "w1_build_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+  "w1_exact_head_match": false,
+  "w1_build_input_parity": "PASS_GITHUB_COMPARE_ONLY_test_issue633_s6_scratch_ion_retirement.py_CHANGED",
+  "w1_binary_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+  "w1_artifact_id": 14422701532,
+  "w1_binary_plus_two_app_libraries": "ACTUAL_BYTES_SHA_VERIFIED_READ_ONLY_BOTH_JOBS",
+  "parallel_ci_run": 44300489811,
+  "parallel_ci_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44300489811",
+  "parallel_ci_branch_commit": "ff0d6b4c9424f0eeefcd71bb757b3c0533b27e42",
+  "parent_P3X_source_artifact_id": 14406746397,
+  "P4X_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+  "canonical_parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+  "cases": {
+    "417": {
+      "artifact_id": 14425706979,
+      "artifact_zip_sha256": "668815e6bcd15353586e177512cce45c32d1bb1e17d5ff0755fc4f6393105456",
+      "exit_code": 0,
+      "syntax_ok": true,
+      "source_files_verified": 11,
+      "JSON_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "log_sha256": "e154a21a53c935bfb39e58dfd7f6ae81b5cd313450295bc6a2825e5848757071",
+      "protected_original_rate_files": 5,
+      "protected_cleanup": true
+    },
+    "941": {
+      "artifact_id": 14425516960,
+      "artifact_zip_sha256": "19180959b6dbd43aa748ddc900365eb1edcda22583d14275d62fd762f7a81990",
+      "exit_code": 0,
+      "syntax_ok": true,
+      "source_files_verified": 11,
+      "JSON_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "log_sha256": "c06952f0c600df4ef02a1d6a7580937ae75ae856e69b0e30e78fe004a0a50516",
+      "protected_original_rate_files": 5,
+      "protected_cleanup": true
+    }
+  },
+  "original_six_protected_EI_rate_SHA_and_shape": "PASS_WITHIN_PROTECTED_ACTIONS",
+  "original_private_bytes_in_public_artifacts": false,
+  "negative_history": {
+    "run": 44299788524,
+    "result": "FAIL_HARNESS_BASH_QUOTING_CORRECTED",
+    "fixed_in_success_run": 44300489811
+  },
+  "acceptance": {
+    "W2_W3_PARALLEL_NATIVE_CHECK_INPUT": "PASS",
+    "W1_EXACT_HEAD": "MISMATCH_BUT_BUILD_EQUIVALENT",
+    "P05_CHECK_INTEGRITY_REACHED_IF_SYNTAX_OK": "YES",
+    "ACTUAL_24_ROW_NATIVE_WAREHOUSE_DUMP": "NOT_EXPORTED_IN_THIS_RUN",
+    "D8_DYNAMIC_CALLER_LIVENESS": "HOLD_NOT_MEASURED",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "P5_X_OFFICIAL_FINAL": "HOLD_SEPARATE_SCOPE",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
