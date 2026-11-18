@@ -1,0 +1,193 @@
+{
+  "schema": "issue671.p5_n2.real_417_941_diffusion_drift_negative_source_fixture.v1",
+  "task_id": "P5-N2",
+  "issue": 671,
+  "scope": "S6 recovery, not science Native P3/P4. Negative Native diffusion/drift reintroduction design; in-memory fixture proof only",
+  "verdict": "PASS_REAL_INPUT_SHA_AND_44_SOURCE_ONLY_NEGATIVE_FIXTURES__HOLD_NATIVE_P05_EXECUTION",
+  "source_pin": {
+    "original_P1_0_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "current_PR665_head_at_receipt": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "PR665_draft_unmerged": true,
+    "P2_and_P3_X_source_integrated_into_PR665": true,
+    "P4_X_source_integrated": false,
+    "P1_0_real_final_zip_sha256": "9923c7c875dff975ec203610e58797be7abbfe6a92be2173f1fbe525f49f1172",
+    "P3_X_exact_head_source_CI_run": 44257739203,
+    "P3_X_real_artifact_id": 14406746397,
+    "P3_X_actual_CI_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "P3_X_artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44257739203/artifacts/14406746397",
+    "P3_X_artifact_stage_is_source_only": true
+  },
+  "archive_and_source_byte_checks": {
+    "original_layer_count_each": 11,
+    "P1_0_source_sha_matches_22_of_22": 22,
+    "P3X_stage_sha_matches_22_of_22": 22,
+    "original_diffusion_drift_block_sha_12_of_12": 12,
+    "remaining_explicit_legacy_diffusion_drift_on_both_newonly_stages": 0,
+    "ZIP_CRC": "PASS_P1_AND_P3_X",
+    "protected_non_target_inputs_mutated": false,
+    "case_results": {
+      "417": {
+        "before_C0": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "after_P3X_C0": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "P1_source_11_sha": "11/11_PASS",
+        "P3X_newonly_11_sha": "11/11_PASS",
+        "original_6_block_sha": "6/6_PASS",
+        "retired_6_on_stage": "0_PRESENT",
+        "variants": 22,
+        "rejected_by_source_contract": 22,
+        "native_expected_rejections": "22_P05_MODEL_ONLY",
+        "native_actual_rejections": null
+      },
+      "941": {
+        "before_C0": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "after_P3X_C0": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "P1_source_11_sha": "11/11_PASS",
+        "P3X_newonly_11_sha": "11/11_PASS",
+        "original_6_block_sha": "6/6_PASS",
+        "retired_6_on_stage": "0_PRESENT",
+        "variants": 22,
+        "rejected_by_source_contract": 22,
+        "native_expected_rejections": "22_P05_MODEL_ONLY",
+        "native_actual_rejections": null
+      }
+    },
+    "original_diffusion_drift_6_unique_blocks": [
+      {
+        "species": "O2p",
+        "original_object_name": "ni_diffusion",
+        "original_variable": "log_O2p",
+        "original_factory": "PhysicsFVLogMolarElectronDiffusion",
+        "source_layer": 1,
+        "old_block_sha256": "756532a19a6accda73f9283536e082da97be32170416abcfb61d3427bc910f4c",
+        "generated_expected_name": "O2p_diffusion",
+        "generated_expected_factory": "FVLogMolarDiffusion"
+      },
+      {
+        "species": "O2p",
+        "original_object_name": "ni_drift",
+        "original_variable": "log_O2p",
+        "original_factory": "PhysicsFVLogMolarElectrostaticDrift",
+        "source_layer": 1,
+        "old_block_sha256": "d4f7b0af5fc56ee562355fe4fd36729e6cd360a6af6c7ca50e6148b3c752a3fd",
+        "generated_expected_name": "O2p_drift",
+        "generated_expected_factory": "FVLogMolarElectrostaticDrift"
+      },
+      {
+        "species": "Om",
+        "original_object_name": "nm_diffusion",
+        "original_variable": "log_Om",
+        "original_factory": "PhysicsFVLogMolarElectronDiffusion",
+        "source_layer": 1,
+        "old_block_sha256": "9e2ad0a3216ef24687857ce96127933348cfdc78fcea4e76538437cbeca884ee",
+        "generated_expected_name": "Om_diffusion",
+        "generated_expected_factory": "FVLogMolarDiffusion"
+      },
+      {
+        "species": "Om",
+        "original_object_name": "nm_drift",
+        "original_variable": "log_Om",
+        "original_factory": "PhysicsFVLogMolarElectrostaticDrift",
+        "source_layer": 1,
+        "old_block_sha256": "0f10ee33a80f436e67410ce7c15aa6e82042ab6516bb2585ff6e39c53f7650b9",
+        "generated_expected_name": "Om_drift",
+        "generated_expected_factory": "FVLogMolarElectrostaticDrift"
+      },
+      {
+        "species": "Op",
+        "original_object_name": "nop_diffusion",
+        "original_variable": "log_Op",
+        "original_factory": "PhysicsFVLogMolarElectronDiffusion",
+        "source_layer": 1,
+        "old_block_sha256": "8d32aa74ca81921bb14bf83944726aaa7fa46b9ea62c27943099ebc240738708",
+        "generated_expected_name": "Op_diffusion",
+        "generated_expected_factory": "FVLogMolarDiffusion"
+      },
+      {
+        "species": "Op",
+        "original_object_name": "nop_drift",
+        "original_variable": "log_Op",
+        "original_factory": "PhysicsFVLogMolarElectrostaticDrift",
+        "source_layer": 1,
+        "old_block_sha256": "f6d86fe0188e7341e4ff986a03af71024daa04a132833948a2055439167ceeec",
+        "generated_expected_name": "Op_drift",
+        "generated_expected_factory": "FVLogMolarElectrostaticDrift"
+      }
+    ]
+  },
+  "current_CPlusPlus_P05_contract": {
+    "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "pinned_pr_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "checkIntegrity_lines": "252-334",
+    "addFVKernels_lines": "419-486",
+    "guard_effect": "after generated FV KERNEL registration, query BOTH FVElementalKernel and FVFluxKernel families, nonlinear system 0 thread 0, require generated time/diffusion/drift/source exact name+factory+variable once and reject any extra Native or duplicate",
+    "expected_ion_FV_kernel_count": 12,
+    "expected_generated_diffusion_drift": [
+      {
+        "species": "O2p",
+        "diffusion": "O2p_diffusion",
+        "drift": "O2p_drift",
+        "variable": "log_O2p"
+      },
+      {
+        "species": "Om",
+        "diffusion": "Om_diffusion",
+        "drift": "Om_drift",
+        "variable": "log_Om"
+      },
+      {
+        "species": "Op",
+        "diffusion": "Op_diffusion",
+        "drift": "Op_drift",
+        "variable": "log_Op"
+      }
+    ],
+    "expected_generated_factory_diffusion": "FVLogMolarDiffusion",
+    "expected_generated_factory_drift": "FVLogMolarElectrostaticDrift",
+    "static_bound_Warehouse_cardinality_proven": false
+  },
+  "independent_source_negative_reproduction": {
+    "input_files": [
+      "issue667_pr665_final_11layer_inputs.zip",
+      "issue669_p3x_current_head_source_artifact.zip"
+    ],
+    "script": "p5_n2_verify.py",
+    "script_sha256": "4fd562497933bdb66126af950f78d6d892f67ba8a0f1a4742f964c6a4d2cdeba",
+    "full_local_results_json": "p5_n2_independent_source_receipt.json",
+    "full_local_results_sha256": "7a1c3c6276300a228839bf95ad19a60850fd6f128c362a95f0e872500b4503f0",
+    "case_count": 2,
+    "per_case_22_variants": [
+      "6 single old diffusion/drift reinsertion",
+      "3 same-species diffusion+drift pairs",
+      "1 simultaneous six-old-owner reinsertion",
+      "6 old factory with generated canonical name",
+      "6 exact generated name+factory collisions"
+    ],
+    "mutations_total": 44,
+    "static_source_contract_rejected": 44,
+    "P05_model_contract_expected_rejected": 44,
+    "actual_compiled_MOOSE_P05_tests_executed": 0,
+    "original_inputs_written_or_modified": false,
+    "all_mutations_in_memory": true,
+    "control_restoration": "Each injected text removes exactly injected bytes to recover SHA-identical original staged C0",
+    "limitations": "Static Python P05 model emulates C++ exact-owner matching; 44/44 does NOT prove the actual compiled MOOSE checkIntegrity or Warehouse behavior"
+  },
+  "gates": {
+    "P4_X": "PENDING",
+    "P5_0_shared_binary_build": "NOT_RUN",
+    "P5_B2_C2_native_check_input": "NOT_RUN",
+    "Native_P05_old_diffusion_drift_reinsertion": "NOT_RUN",
+    "P5_N2_native_runtime": "HOLD",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD",
+    "next_requirement": "After P4-X source integration and P5-0 exact-head binary SHA: execute clean read-only native --check-input then independently mutated disposable Scratch cases with each of 6 legacy diffusion/drift blocks and paired/renamed collisions, require expected P05 error (not any unrelated parse failure), collect exit codes/full native logs, confirm original Scratch restoration and SHA"
+  },
+  "protection": {
+    "main_mutated": false,
+    "PR665_mutated": false,
+    "production_inputs_mutated": false,
+    "private_rate_bytes_published": false
+  }
+}
