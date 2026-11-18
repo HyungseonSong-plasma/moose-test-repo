@@ -1,0 +1,178 @@
+{
+  "schema": "issue670.p4_x.stage1.source_only_partial.v1",
+  "task_id": "P4-X",
+  "phase": "STAGE1",
+  "issue": 670,
+  "source_epoch": {
+    "integration_pr": 665,
+    "integration_head_at_branch": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "historical_input_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P3_X_pr": 675,
+    "P3_X_merged": true,
+    "source_ci_run": 44257739203,
+    "source_artifact": 14406746397,
+    "source_artifact_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "exact_baseline_C0_file_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "cases": [
+      "S6-417",
+      "S6-941"
+    ]
+  },
+  "scope": "Only an exact-byte, fail-closed source stage on disposable replicated P3-X 11-layer input; no integration into prepare_s6_run_input.py --newonly, no repo source modification, and no Native Science acceptance.",
+  "action": {
+    "c0_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "replacement": {
+      "object": "[FunctorMaterials]/constants",
+      "original_sha256": "f9c4beb247c2f1e7ba286aaf21919c07cc16a659cbf0d01987116506ad72bb73",
+      "before_functor_names": [
+        "O2p_mobility",
+        "O2p_diffusivity",
+        "Om_mobility",
+        "Om_diffusivity",
+        "Op_mobility",
+        "Op_diffusivity",
+        "carrier_one"
+      ],
+      "after_functor_names": [
+        "carrier_one"
+      ],
+      "after_parameters": {
+        "type": "ADGenericFunctorMaterial",
+        "prop_names": "'carrier_one'",
+        "prop_values": "'1.0'",
+        "block": "plasma"
+      },
+      "expected_generated_coefficients": "3 species * 2 transport outputs via DDTransportMaterial(type=constant), not instantiated in this static test"
+    },
+    "exact_removed_blocks": [
+      [
+        "FunctorMaterials",
+        "ion_wall_flux",
+        "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5"
+      ],
+      [
+        "FunctorMaterials",
+        "negative_ion_wall_flux",
+        "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162"
+      ],
+      [
+        "FunctorMaterials",
+        "atomic_positive_ion_wall_flux",
+        "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+      ],
+      [
+        "FunctorMaterials",
+        "cover_surface_current",
+        "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f"
+      ],
+      [
+        "FunctorMaterials",
+        "wafer_surface_current",
+        "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2"
+      ],
+      [
+        "FunctorMaterials",
+        "focus_ring_surface_current",
+        "b7f8870d2c6b4431fc0dff3fa90e158b64edfa5e7f0f1f68371ffc570fe442a2"
+      ]
+    ],
+    "targeted_old_blocks": 7,
+    "exact_removed_blocks_count": 6,
+    "new_generated_names_expected": [
+      "O2p_wall",
+      "Om_wall",
+      "Op_wall",
+      "cover_surface_current",
+      "wafer_surface_current",
+      "focus_ring_surface_current"
+    ],
+    "native_created_and_checked": false
+  },
+  "independent_execution": {
+    "checker": "Custom SHA-pinned stdlib-only local replay, dry-run followed by --apply in disposable temp copies of both CI Artifact cases.",
+    "raw_code_file": "retire_s6_p4_stage1_owners.py",
+    "raw_code_sha256": "c8ccd4bb5603e5bc2736c262d365ae4393f7e8c11daad62cf7d3a7adff74b0fb",
+    "independent_replay_file": "replay_verify.py",
+    "replay_code_sha256": "2127d8965bbd27f1b4be8430195531ca31697f2e2ce5009d8401cdadf78774bc",
+    "complete_local_json_file": "P4-X_stage1_417_941_verified_receipt.json",
+    "complete_local_json_sha256": "421c31992e0ae7cb9b174fe80e5887f4eba4a00ef03b8c2ed03640e972163955",
+    "source_zip_sha_recomputed": true,
+    "results": {
+      "S6-417": {
+        "input_files": "11/11",
+        "C0_before_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "C0_after_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+        "modified_files": 1,
+        "unchanged_files": "10/10",
+        "target_blocks_verified": "7/7",
+        "non_target_C0_bytes_preserved": true
+      },
+      "S6-941": {
+        "input_files": "11/11",
+        "C0_before_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "C0_after_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+        "modified_files": 1,
+        "unchanged_files": "10/10",
+        "target_blocks_verified": "7/7",
+        "non_target_C0_bytes_preserved": true
+      }
+    },
+    "negative_tests": {
+      "rejected": "14/14",
+      "labels": [
+        "marker_missing",
+        "marker_wrong",
+        "C0_tamper",
+        "Om_sign",
+        "wall_duplicate",
+        "current_sign",
+        "wall_missing",
+        "carrier_changed",
+        "non_target_layer_tamper",
+        "wrong_JSON_mobility",
+        "wrong_overlay",
+        "missing_JSON",
+        "C0_symlink",
+        "JSON_symlink"
+      ],
+      "no_writes_on_reject": true
+    },
+    "preserved": [
+      "carrier_one=1.0",
+      "Native density aliases n_i_physical, n_m_physical, n_op_physical",
+      "charge_number_density and Poisson source/consumer objects",
+      "Lower-D sigma_s/sigma_wafer/sigma_focus_ring and diagnostic Postprocessors",
+      "Original archived 10-layer ZIPs, no private EI rates",
+      "RF/neutral/pressure/Maxwell and 10 non-target staged .i layers"
+    ]
+  },
+  "new_diagnostic": {
+    "workflow_run": 44262035027,
+    "workflow_conclusion": "SUCCESS_DIAGNOSTIC_JOB_NOT_NATIVE_PASS",
+    "artifact": 14408333164,
+    "artifact_zip_sha256": "5fdf86be670f6c09e0a3ea79f4303f61c8afe6cb83ae94cc9d18d5b0b2c3a6ed",
+    "cases_both": {
+      "check_input_exit_code": 1,
+      "first_failure": "Unable to open file baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz"
+    },
+    "observation": "Real pre-P4 --check-input probe rejected before Warehouse due to absent main plasma mesh file, despite historical Maxwell child QVT mesh being staged. Stage1 did not fix or run this native probe."
+  },
+  "gates": {
+    "P4_X_STAGE1_DISPOSABLE_STATIC": "PASS",
+    "P4_X_STAGE1_PRODUCTION_RUNNER": "NOT_INTEGRATED",
+    "P4_X_ALL_35_RECEIPTS": "PENDING_REPIN",
+    "P4_X_SOURCE_5_TO_3": "PENDING",
+    "P4_X_DENSITY_POISSON_CONSUMERS": "PENDING",
+    "P4_X_SINGLE_OWNER_WAREHOUSE": "HOLD",
+    "P5_NATIVE_P2": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "handoff": [
+    "Integrate exact-block stage into guarded production --newonly pipeline only after P4-X owner and pin coordination; repeat both-case full CI and negative controls.",
+    "Reconcile source 5-to-3 and ion density/Poisson/Current aliases before claiming full P4-X.",
+    "Resolve absent plasma main mesh required by --check-input and verify Physics material/BC Warehouse.",
+    "Do not change private Rate raw bytes or bypass Native P05 duplicate/Factory checks."
+  ]
+}
