@@ -1,5 +1,5 @@
 {
-  "schema": "issue672.p6_0.parallel_receipt_index.v1",
+  "schema": "issue672.p6_0.parallel_receipt_index.v2",
   "work_id": "P6-0",
   "decision": "SOURCE_AND_RECEIPT_INDEX_PASS_BOUNDED__P6_X_HOLD",
   "updated_as_of": "2026-11-18",
@@ -14,18 +14,18 @@
   },
   "coverage": {
     "planned": 24,
-    "independent": 12,
-    "indirect": 3,
-    "hold": 9,
+    "independent": 17,
+    "indirect": 0,
+    "hold": 7,
     "counts_are_receipt_coverage_not_jobs_executed": true
   },
   "slots": [
     {
       "id": "P6-B1",
       "lane": "B",
-      "evidence_class": "INDIRECT",
-      "result": "E1 historical Public B 417/941 pass; needs separate B1 signoff",
-      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/c54ad7fccf6357ceded8d2af28dfebc54d55e31f/reports/issue672/p6-e1-ci-artifact-binary-source-custody-20261118.json"
+      "evidence_class": "INDEPENDENT_HISTORICAL_NATIVE",
+      "result": "Direct historical/current job log readback: both Public B 417/941 10-layer P2 exit0; historical D P2 PASS, current D FAIL; New-only not inferred",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/28920362d985f0b08d16f9325a6b857834ccf90b/reports/issue672/p6-b1-public-history-native-p2-receipt.json"
     },
     {
       "id": "P6-D1",
@@ -51,9 +51,9 @@
     {
       "id": "P6-D4",
       "lane": "D",
-      "evidence_class": "HOLD",
-      "result": "No independent 417/941 4 manual transport owner retirement final",
-      "reference_url": null
+      "evidence_class": "INDEPENDENT_SOURCE_DECISION_HOLD_NATIVE",
+      "result": "PR684 four manual Transport owners cutover source checks 10/10; 100-row original vs CI prepared 42-row electron table byte identity split; Native P2 NOT_RUN, separate authority",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/c3bf3713c68d78b56ec5679cdc620b533b12216c/reports/issue672/p6-d4-public-four-transport-owner-decision.json"
     },
     {
       "id": "P6-D5",
@@ -79,9 +79,9 @@
     {
       "id": "P6-F3",
       "lane": "F",
-      "evidence_class": "HOLD",
-      "result": "FLOW ion Native26+Physics24 ownership decision not settled",
-      "reference_url": null
+      "evidence_class": "INDEPENDENT_OWNER_DECISION_KEEP_HOLD",
+      "result": "FLOW Hybrid historical 26 Native owners preserved, Physics 24 generated conflict; KEEP_HOLD historical and conditional separate New-only 26->0; F4 Native NOT_RUN",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/49b3e1dc6ca04f5808cd5e447be5dd13f43e57e2/reports/issue672/p6-f3-flow-26native-vs-24generated-owner-decision.json"
     },
     {
       "id": "P6-F4",
@@ -114,9 +114,9 @@
     {
       "id": "P6-I1",
       "lane": "I",
-      "evidence_class": "INDIRECT",
-      "result": "Ion-FVM two matrix Python prepare failures RETIRED_GROUNDED_SHEATH_BCS; standalone missing",
-      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212333"
+      "evidence_class": "INDEPENDENT_ROOT_CAUSE",
+      "result": "Two matrix Actions job log backtraces independently confirm Python RETIRED_GROUNDED_SHEATH_BCS before input/Native/timesteps, KEEP_HOLD",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/dce2d02306377b3c4b056b10cb7e3a0b70ad6f1c/reports/issue672/p6-i1-retired-grounded-sheath-caller-chain.json"
     },
     {
       "id": "P6-I2",
@@ -163,9 +163,9 @@
     {
       "id": "P6-C2",
       "lane": "C",
-      "evidence_class": "INDIRECT",
-      "result": "D2 authority + trigger/P05 audit covers much of C2 but standalone signoff absent",
-      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/a02d2438005e8165321ec9f5bd807c41b8a51f7c/reports/issue672/p6-approval-auto-p3-p4-p05-risk-audit-20261118.md"
+      "evidence_class": "INDEPENDENT_POLICY_AUDIT",
+      "result": "12/12 source policy predicates: automatic 100us and 150/200 steps trigger risks, P05 conditional coverage, #535/#541 approval; C3 single-writer HOLD",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/0b89891cb7915e5c94c4ca6fad559b66aa78abca/reports/issue672/p6-c2-approval-autostart-p05-risk-gates.json"
     },
     {
       "id": "P6-C3",
@@ -292,8 +292,38 @@
     "P6_N2": "NOT_IMPLEMENTED",
     "P6_N3": "NOT_RUN",
     "SCIENCE": "HOLD",
-    "main_merge": "NOT_AUTHORIZED"
+    "main_merge": "NOT_AUTHORIZED",
+    "P6_D4": "PASS_DECISION__NATIVE_HOLD",
+    "P6_F3": "PASS_KEEP_HOLD_DECISION__F4_HOLD",
+    "P6_I1": "PASS_FAILURE_STAGE",
+    "P6_C2": "PASS_POLICY_AUDIT__C3_HOLD",
+    "P6_B1": "PASS_HISTORICAL_BASELINE"
   },
   "important_limitation": "GitHub readback of live HEAD, source blobs, worker receipts and run/artifact metadata only. Not a new full rehash of all 11 ZIPs; P6-E1 separately attests physical artifact SHA and CRC. Historical H3 job success is not modern ARCH success. E1 branch divergence forbids merging entire receipt branch.",
-  "changes": "Evidence-only isolated P6-0 branch: one Markdown and one JSON; no PR665/main, protected source, C++/JSON/workflow, CI dispatch or solver."
+  "changes": "Evidence-only isolated P6-0 branch: one Markdown and one JSON; no PR665/main, protected source, C++/JSON/workflow, CI dispatch or solver.",
+  "wave1_five_receipts": {
+    "slots": [
+      "P6-B1",
+      "P6-I1",
+      "P6-C2",
+      "P6-D4",
+      "P6-F3"
+    ],
+    "independent_receipts_verified": 5,
+    "based_on_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "source_checks": {
+      "C2": "12/12",
+      "D4": "10/10",
+      "F3": "6/6"
+    },
+    "per_slot_git_commit": {
+      "P6-B1": "28920362d985f0b08d16f9325a6b857834ccf90b",
+      "P6-I1": "dce2d02306377b3c4b056b10cb7e3a0b70ad6f1c",
+      "P6-C2": "0b89891cb7915e5c94c4ca6fad559b66aa78abca",
+      "P6-D4": "c3bf3713c68d78b56ec5679cdc620b533b12216c",
+      "P6-F3": "49b3e1dc6ca04f5808cd5e447be5dd13f43e57e2"
+    },
+    "runtime": "no new Native P2, P3, P4 dispatched",
+    "science": "HOLD"
+  }
 }
