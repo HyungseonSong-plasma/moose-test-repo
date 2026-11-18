@@ -1,0 +1,360 @@
+name: Issue672 Ion-FVM grounded canonical fixture P0 then P2-only
+on:
+  push:
+    branches:
+      - issue-672-p6-i3-fvm-grounded-fixture-v2-20261118
+    paths:
+      - .github/workflows/issue672-p6-i3-fvm-grounded-canonical-fixture-once.yml
+permissions:
+  contents: read
+concurrency:
+  group: issue672-p6-i3-grounded-fvm-canonical-one-shot
+  cancel-in-progress: false
+jobs:
+  p0-then-native-p2-only:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      SOURCE_HEAD: 52067302d16074592503d0ef6b903cc344f55a08
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout task-isolated workflow branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact HEAD, approved one-file workflow delta, untouched legacy matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$SOURCE_HEAD" HEAD
+          git diff --name-only "$SOURCE_HEAD" HEAD | sort > "$RUNNER_TEMP/actual-paths"
+          echo '.github/workflows/issue672-p6-i3-fvm-grounded-canonical-fixture-once.yml' > "$RUNNER_TEMP/expected-paths"
+          diff -u "$RUNNER_TEMP/expected-paths" "$RUNNER_TEMP/actual-paths"
+          git checkout --detach "$SOURCE_HEAD"
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test "$(git hash-object experiments/fem_fvm_plasma_discriminator/prepare_cases.py)" = 69ec14c58b502a953c9024c46d332494cad61e6c
+          test "$(git hash-object .github/workflows/ion-fvm-hybrid-staged-dt.yml)" = 76d11f6bf5431f9750aa100c8a382006f706741f
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo FVM_ONLY_EXACT_SOURCE_AND_LEGACY_MATRIX_UNCHANGED
+      - name: P0 static and negative tests; prepare fresh FV-only fixture without touching source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/issue672-fvm-grounded"
+          python3 - "$RUNNER_TEMP/issue672-fvm-grounded" <<'PY'
+          from pathlib import Path
+          import hashlib, importlib.util, json, re, shutil, sys
+          
+          repo=Path.cwd()
+          out=Path(sys.argv[1])
+          stage=out/"scratch"/"experiments"/"fem_fvm_plasma_discriminator"
+          stage.mkdir(parents=True,exist_ok=False)
+          def sha(p):
+              return hashlib.sha256(p.read_bytes()).hexdigest()
+          def gitblob(p):
+              import subprocess
+              return subprocess.check_output(["git","hash-object",str(p)],text=True).strip()
+          pins={
+          "experiments/fem_fvm_plasma_discriminator/prepare_cases.py":"69ec14c58b502a953c9024c46d332494cad61e6c",
+          "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C":"5982e19834b956498f52d81eb6a81620e7440b20",
+          "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C":"0ec3766b00e16cdd24a5e29f355689920bb3178a",
+          "physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h":"2976abd12c31e7da3642e07d253eb85f2316a297",
+          "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh":"28ff31220904ff81f426d0c2ed8dd18a7fd40b9e",
+          "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt":"bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+          }
+          for rel,expected in pins.items():
+              assert gitblob(repo/rel)==expected,("SOURCE_GIT_BLOB_SHA_CHANGED",rel)
+          spec=importlib.util.spec_from_file_location("isolated_fvm_only_source",repo/"experiments/fem_fvm_plasma_discriminator/prepare_cases.py")
+          base=importlib.util.module_from_spec(spec);spec.loader.exec_module(base)
+          try:
+              base.fem()
+              raise AssertionError("RETIRED_FEM_GENERATOR_DID_NOT_REJECT")
+          except RuntimeError as e:
+              assert "RETIRED_GROUNDED_SHEATH_BCS" in str(e)
+          deck=base.fvm()
+          retired=("PhysicsFEMLogMolarElectronGroundedSheathBC",
+                   "PhysicsFEMLogMolarElectronGroundedSheathEnergyBC",
+                   "FEMElectronSheathBC","FEMElectronEnergySheathBC")
+          def section(text,kind):
+              matches=list(re.finditer(r"(?ms)^\["+re.escape(kind)+r"\]\s*\n(.*?)^\[\]\s*$",text))
+              assert len(matches)==1,("ROOT_SECTION_NOT_EXACTLY_ONE",kind,len(matches))
+              return matches[0].group(1)
+          def children(text):
+              return re.findall(r"(?m)^  \[([A-Za-z0-9_]+)\]\s*$",text)
+          def block(parent,name):
+              matches=list(re.finditer(r"(?ms)^  \["+re.escape(name)+r"\]\s*\n(.*?)^  \[\]\s*$",parent))
+              assert len(matches)==1,("BLOCK_NOT_EXACTLY_ONE",name,len(matches))
+              return matches[0].group(1)
+          def require(c,code):
+              if not c:raise AssertionError(code)
+          def p0_check(text):
+              require(all(t not in text for t in retired),"RETIRED_FEM_OR_C2_BC_PRESENT")
+              require("[Physics]" not in text,"PHYSICS_AUTO_OWNERS_NOT_ALLOWED")
+              for s in ("Mesh","Variables","FunctorMaterials","FVKernels","FVBCs","Executioner"):
+                  section(text,s)
+              var=section(text,"Variables")
+              require(sorted(children(var))==sorted(("log_ne","log_ni","log_e_energy","potential")),"FVM_VARIABLE_SET_CHANGED")
+              for name in ("log_ne","log_ni","log_e_energy","potential"):
+                  require("type = MooseVariableFVReal" in block(var,name),"FVM_VARIABLE_FAMILY_CHANGED")
+              ker=section(text,"FVKernels")
+              require(len(children(ker))==12,"FVM_KERNEL_COUNT_NOT_12")
+              kernel_contract={
+                 "ne_time":("PhysicsFVLogMolarElectronTimeDerivative","log_ne"),
+                 "ne_diffusion":("PhysicsFVLogMolarElectronDiffusion","log_ne"),
+                 "ne_drift":("PhysicsFVLogMolarElectrostaticDrift","log_ne"),
+                 "ni_time":("PhysicsFVLogMolarElectronTimeDerivative","log_ni"),
+                 "ni_diffusion":("PhysicsFVLogMolarElectronDiffusion","log_ni"),
+                 "ni_drift":("PhysicsFVLogMolarElectrostaticDrift","log_ni"),
+                 "energy_time":("PhysicsFVLogMolarElectronTimeDerivative","log_e_energy"),
+                 "energy_diffusion":("PhysicsFVLogMolarElectronDiffusion","log_e_energy"),
+                 "energy_drift":("PhysicsFVLogMolarElectrostaticDrift","log_e_energy"),
+                 "energy_joule":("PhysicsFVElectronEnergyJouleHeating","log_e_energy"),
+                 "phi_diffusion":("FVDiffusion","potential"),
+                 "phi_source":("FVCoupledForce","potential"),
+              }
+              for name,(factory,variable) in kernel_contract.items():
+                  obj=block(ker,name)
+                  require("type = "+factory in obj,"FVM_KERNEL_FACTORY_CHANGED_"+name)
+                  require("variable = "+variable in obj,"FVM_KERNEL_VARIABLE_CHANGED_"+name)
+              require("charge_number = 1" in block(ker,"ni_drift"),"ION_CHARGE_SIGN_CHANGED")
+              require("charge_number = -1" in block(ker,"ne_drift"),"ELECTRON_CHARGE_SIGN_CHANGED")
+              bc=section(text,"FVBCs")
+              require(sorted(children(bc))==sorted(("electron_sheath","electron_energy_sheath","ion_wall","grounded_potential")),"FV_GROUNDED_BC_CENSUS_CHANGED")
+              expected={
+                 "electron_sheath":("PhysicsFVElectronGroundedSheathCollectionBC","log_ne",base.EWALL),
+                 "electron_energy_sheath":("PhysicsFVElectronGroundedSheathEnergyBC","log_e_energy",base.EWALL),
+                 "ion_wall":("FVFunctorNeumannBC","log_ni",base.GROUND),
+                 "grounded_potential":("FVDirichletBC","potential",base.GROUND),
+              }
+              for name,(typ,var,boundary) in expected.items():
+                  s=block(bc,name)
+                  require("type = "+typ in s,"BC_FACTORY_CHANGED_"+name)
+                  require("variable = "+var in s,"BC_VARIABLE_CHANGED_"+name)
+                  require("boundary = '"+boundary+"'" in s,"BC_SIDESETS_CHANGED_"+name)
+              require("mean_electron_energy = mean_en_solved" in block(bc,"electron_sheath"),"PARTICLE_MEAN_ENERGY_LINK_LOST")
+              require("mean_electron_energy = mean_en_solved" in block(bc,"electron_energy_sheath"),"ENERGY_MEAN_ENERGY_LINK_LOST")
+              require("molar_energy_state = true" in block(bc,"electron_energy_sheath"),"ENERGY_STATE_FORM_CHANGED")
+              require("log_molar_state = true" in block(bc,"electron_sheath"),"PARTICLE_STATE_FORM_CHANGED")
+              require("functor = ion_wall_number_flux" in block(bc,"ion_wall"),"ION_WALL_FLUX_LOST")
+              require("factor = "+f"{-base.INV_NA:.17g}" in block(bc,"ion_wall"),"ION_WALL_SIGN_OR_AVOGADRO_CHANGED")
+              require("value = 0.0" in block(bc,"grounded_potential"),"GROUND_POTENTIAL_CHANGED")
+              require("file = '../Issue91_real_qvt_r3/r3_e0/qvt.msh'" in section(text,"Mesh"),"MESH_REFERENCE_CHANGED")
+              require("table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'" in text,"LOOKUP_REFERENCE_CHANGED")
+              require("type = Transient" in section(text,"Executioner"),"EXECUTIONER_MODEL_CHANGED")
+              return True
+          assert p0_check(deck)
+          oldpart="factor = "+f"{-base.INV_NA:.17g}"
+          mutants={
+          "RETIRED_FEM_FACTORY":("PhysicsFVElectronGroundedSheathCollectionBC","PhysicsFEMLogMolarElectronGroundedSheathBC"),
+          "C2_AUTO_SUBSTITUTION":("PhysicsFVElectronGroundedSheathCollectionBC","FEMElectronSheathBC"),
+          "WRONG_PARTICLE_VARIABLE":("variable = log_ne\n    mean_electron_energy","variable = log_ni\n    mean_electron_energy"),
+          "WRONG_ENERGY_VARIABLE":("variable = log_e_energy\n    electron_density","variable = log_ne\n    electron_density"),
+          "WRONG_ENERGY_FACTORY":("PhysicsFVElectronGroundedSheathEnergyBC","PhysicsFVElectronGroundedSheathCollectionBC"),
+          "WRONG_ION_FLUX_SIGN":(oldpart,"factor = "+f"{base.INV_NA:.17g}"),
+          "MISSING_ION_FLUX":("functor = ion_wall_number_flux","functor = missing_wall_flux"),
+          "WRONG_ELECTRON_WALL":("boundary = '"+base.EWALL+"'","boundary = 'inlet'"),
+          "MISSING_PARTICLE_BC":("  [electron_sheath]","  [electron_sheath_missing]"),
+          "MISSING_ION_BC":("  [ion_wall]","  [ion_wall_missing]"),
+          "MISSING_POTENTIAL_BC":("  [grounded_potential]","  [grounded_potential_missing]"),
+          "DUPLICATE_BC_NAME":("  [electron_energy_sheath]","  [electron_sheath]"),
+          "MISSING_ROOT_MESH":("[Mesh]","[OldMesh]")
+          }
+          for label,(before,after) in mutants.items():
+              require(deck.count(before)>=1,"MUTATION_ANCHOR_MISSING_"+label)
+              bad=deck.replace(before,after,1)
+              require(bad!=deck,"MUTATION_NOOP_"+label)
+              try:p0_check(bad)
+              except AssertionError:pass
+              else:raise AssertionError("P0_MUTATION_FALSE_GREEN_"+label)
+          for s,token in [("particle","registerMooseObject(\"PhysicsApp\", PhysicsFVElectronGroundedSheathCollectionBC);"),
+                          ("energy","registerMooseObject(\"PhysicsApp\", PhysicsFVElectronGroundedSheathEnergyBC);")]:
+              path=repo/("physics_app/src/fvbcs/PhysicsFVElectronGroundedSheath"+("CollectionBC" if s=="particle" else "EnergyBC")+".C")
+              require(path.read_text().count(token)==1,"ACTIVE_FV_FACTORY_REGISTRATION_LOST_"+s)
+          oldFEM=(repo/"physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C").read_text()
+          require("registerMooseObject(\"PhysicsApp\", PhysicsFEMLogMolarElectronGroundedSheathBC);" not in oldFEM,"RETIRED_FEM_FACTORY_REAPPEARED")
+          require("registerMooseObject(\"PhysicsApp\", PhysicsFEMLogMolarElectronGroundedSheathEnergyBC);" not in oldFEM,"RETIRED_FEM_ENERGY_FACTORY_REAPPEARED")
+          deck_path=stage/"fvm_grounded_only_p2.i"
+          # Fixture-only, provenance-explicit class/Functor mapping.
+          # The historic 29d1acc6 PhysicsElectronMeanEnergyMaterial log-molar branch
+          # and current ElectronEnergyMaterial both compute exp(log_energy-log_density).
+          # Old output mean_en_solved -> current canonical e_energy_eV.
+          legacy_generator_deck_sha256=hashlib.sha256(deck.encode()).hexdigest()
+          adapted=deck
+          for before,after in (
+            ("type = PhysicsElectronMeanEnergyMaterial","type = ElectronEnergyMaterial"),
+            ("type = DDMaterial","type = DDTransportMaterial"),
+          ):
+              require(adapted.count(before)==1,"OWNER_CUTOVER_ANCHOR_NOT_UNIQUE_"+before)
+              adapted=adapted.replace(before,after,1)
+          require(adapted.count("mean_en_solved")==4,"MEAN_ENERGY_CONSUMER_COUNT_NOT_FOUR")
+          adapted=adapted.replace("mean_en_solved","e_energy_eV")
+          require("PhysicsElectronMeanEnergyMaterial" not in adapted,"RETIRED_MEAN_FACTORY_REMAINS")
+          require("type = DDMaterial" not in adapted,"RETIRED_DD_FACTORY_REMAINS")
+          require("mean_en_solved" not in adapted,"RETIRED_MEAN_FUNCTOR_REMAINS")
+          fm=section(adapted,"FunctorMaterials")
+          mean=block(fm,"mean_energy")
+          require("type = ElectronEnergyMaterial" in mean,"CANONICAL_MEAN_OWNER_MISSING")
+          require("electron_energy_density = log_e_energy" in mean,"ENERGY_STATE_CHANGED")
+          require("electron_density = log_ne" in mean,"DENSITY_STATE_CHANGED")
+          require("state_form = log_molar_eV" in mean,"ENERGY_FORM_CHANGED")
+          dd=block(fm,"electron_transport")
+          require("type = DDTransportMaterial" in dd,"CANONICAL_DD_OWNER_MISSING")
+          require("model = lookup" in dd,"DD_MODEL_CHANGED")
+          for obj in ("electron_sheath","electron_energy_sheath"):
+              require("mean_electron_energy = e_energy_eV" in block(section(adapted,"FVBCs"),obj),"MEAN_ENERGY_CONSUMER_CHANGED_"+obj)
+          current_energy=repo/"physics_app/src/materials/ElectronEnergyMaterial.C"
+          current_dd=repo/"physics_app/src/materials/DDTransportMaterial.C"
+          require(gitblob(current_energy)=="4aebfa85282ab5e808309d68223099ded20276e7","CURRENT_MEAN_CPP_SHA_CHANGED")
+          require(gitblob(current_dd)=="e75687d73d8ca6fead0eff411ad7ffbb814a6909","CURRENT_DD_CPP_SHA_CHANGED")
+          require("exp(energy_state - density_state)" in current_energy.read_text(),"LOG_MOLAR_FORMULA_CHANGED")
+          require('getFunctorByName<ADReal>("e_energy_eV")' in current_dd.read_text(),"DD_MEAN_ENERGY_LINK_CHANGED")
+          deck_path.write_text(adapted)
+          for name in ("qvt.msh","electron_moments.txt"):
+              src=repo/"experiments"/"Issue91_real_qvt_r3"/"r3_e0"/name
+              dst=out/"scratch"/"experiments"/"Issue91_real_qvt_r3"/"r3_e0"/name
+              dst.parent.mkdir(parents=True,exist_ok=True)
+              shutil.copy2(src,dst)
+              assert sha(dst)==sha(src)
+          p0_receipt={
+          "schema":"issue672.p6_i3.fvm_grounded_p0.v1",
+          "source_head":"52067302d16074592503d0ef6b903cc344f55a08",
+          "status":"PASS_P0_FVM_GROUNDED_ONLY",
+          "source_blob_sha":pins,
+          "generated_deck_sha256":sha(deck_path),
+          "legacy_generator_deck_sha256":legacy_generator_deck_sha256,
+          "fixture_only_owner_map":{"PhysicsElectronMeanEnergyMaterial":"ElectronEnergyMaterial","DDMaterial":"DDTransportMaterial","mean_en_solved":"e_energy_eV"},
+          "energy_law":"exp(log_e_energy-log_ne) [eV], source-preserving log_molar_eV branch",
+          "mesh_sha256":sha(out/"scratch"/"experiments"/"Issue91_real_qvt_r3"/"r3_e0"/"qvt.msh"),
+          "electron_lookup_sha256":sha(out/"scratch"/"experiments"/"Issue91_real_qvt_r3"/"r3_e0"/"electron_moments.txt"),
+          "fv_kernels":12,"fv_bcs":4,
+          "grounded_fv_electron_bcs":2,"retired_fem_factory_registered":False,
+          "retired_fem_generator_first_failure":"RETIRED_GROUNDED_SHEATH_BCS",
+          "negative_mutations_rejected":len(mutants),"negative_cases":list(mutants),
+          "preexisting_legacy_matrix":"KEEP_HOLD_UNMODIFIED",
+          "simulation_steps_executed":0,"p2_native":"NOT_RUN_AT_P0",
+          "science":"SCIENCE_HOLD"
+          }
+          (out/"out").mkdir(parents=True,exist_ok=True)
+          (out/"out"/"p0_receipt.json").write_text(json.dumps(p0_receipt,indent=2,sort_keys=True)+"\n")
+          print("ION_FVM_GROUNDED_P0_PASS",p0_receipt["negative_mutations_rejected"],"source",p0_receipt["source_head"],"fixture_sha256",p0_receipt["generated_deck_sha256"])
+          PY
+          test -s "$RUNNER_TEMP/issue672-fvm-grounded/out/p0_receipt.json"
+      - name: P1 compile exact source PhysicsApp once in pinned OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e physics_app/physics-opt
+          docker pull --platform linux/amd64 "$OCI"
+          docker run --rm --network none --platform linux/amd64 --entrypoint /bin/bash --user 0:0 \
+            -w /workspace -v "$GITHUB_WORKSPACE:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            '
+          test -x physics_app/physics-opt
+          sha256sum physics_app/physics-opt | tee "$RUNNER_TEMP/issue672-fvm-grounded/out/physics-opt.sha256"
+          echo FVM_ONLY_EXACT_SOURCE_P1_BUILD_PASS
+      - name: Approved-scope Native P2-only clean control and expected negatives; no time steps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/issue672-fvm-grounded" "$OCI" <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,shlex,shutil,subprocess,sys
+          root=Path(sys.argv[1])
+          repo=Path.cwd()
+          oci=sys.argv[2]
+          p0=json.loads((root/"out"/"p0_receipt.json").read_text())
+          assert p0["status"]=="PASS_P0_FVM_GROUNDED_ONLY"
+          source=root/"scratch"
+          work_rel="experiments/fem_fvm_plasma_discriminator/fvm_grounded_only_p2.i"
+          def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+          def hash_tree(folder):
+              return {p.relative_to(folder).as_posix():sha(p) for p in sorted(folder.rglob("*")) if p.is_file()}
+          basehash=hash_tree(source)
+          assert basehash[work_rel]==p0["generated_deck_sha256"]
+          binary=repo/"physics_app"/"physics-opt"
+          assert binary.is_file() and os.access(binary,os.X_OK)
+          def native(folder):
+              cmd=["docker","run","--rm","--network","none","--platform","linux/amd64",
+                   "--entrypoint","/bin/bash","--user","0:0",
+                   "--workdir","/case/experiments/fem_fvm_plasma_discriminator",
+                   "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
+                   "--mount",f"type=bind,src={folder},dst=/case",
+                   oci,"-lc",
+                   "set -euo pipefail; source /environment; /workspace/physics_app/physics-opt --check-input -i fvm_grounded_only_p2.i"]
+              try:
+                  p=subprocess.run(cmd,text=True,capture_output=True,timeout=360,check=False)
+                  return p.returncode,(p.stdout or "")+"\n"+(p.stderr or "")
+              except subprocess.TimeoutExpired:
+                  return 124,"NATIVE_P2_CHECK_INPUT_TIMEOUT"
+          out=root/"out";out.mkdir(exist_ok=True)
+          report={"schema":"issue672.p6_i3.fvm_grounded_native_p2_only.v1",
+                  "source_head":p0["source_head"],"oci":oci,"binary_sha256":sha(binary),
+                  "status":"HOLD","P0":"PASS","P2":"NOT_RUN","science":"SCIENCE_HOLD",
+                  "solver_timestep_runs":0,"legacy_matrix":"KEEP_HOLD_UNMODIFIED",
+                  "original_scratch_sha_before":basehash,"native_cases":{}}
+          try:
+              normal=root/"p2-clean"
+              shutil.copytree(source,normal)
+              assert hash_tree(normal)==basehash
+              rc,log=native(normal)
+              (out/"clean_check_input.log").write_text(log)
+              report["native_cases"]["clean"]={"exit_code":rc,"syntax_ok":"Syntax OK" in log,"log_sha256":hashlib.sha256(log.encode()).hexdigest(),
+                  "first_error_excerpt":next((x[:250] for x in log.splitlines() if "Error" in x or "ERROR" in x),"")}
+              assert rc==0 and "Syntax OK" in log,"CLEAN_FVM_GROUNDED_P2_FAILED"
+              report["P2"]="PASS_NATIVE_CHECK_INPUT"
+              negative_cases=[
+                  ("RETIRED_FEM_FACTORY","PhysicsFVElectronGroundedSheathCollectionBC","PhysicsFEMLogMolarElectronGroundedSheathBC"),
+                  ("UNDEFINED_PARTICLE_VARIABLE","variable = log_ne\n    mean_electron_energy","variable = log_absent\n    mean_electron_energy")
+              ]
+              for name,before,after in negative_cases:
+                  work=root/("p2-negative-"+name.lower())
+                  shutil.copytree(source,work)
+                  target=work/work_rel
+                  raw=target.read_text()
+                  assert raw.count(before)==1,("NEGATIVE_ANCHOR_NOT_UNIQUE",name)
+                  target.write_text(raw.replace(before,after,1))
+                  diffs=[key for key,v in hash_tree(work).items() if basehash[key]!=v]
+                  assert diffs==[work_rel],("NEGATIVE_MODIFIED_MORE_THAN_INPUT",name,diffs)
+                  rc,log=native(work)
+                  (out/("negative_"+name.lower()+".log")).write_text(log)
+                  expected="PhysicsFEMLogMolarElectronGroundedSheathBC" if name=="RETIRED_FEM_FACTORY" else "log_absent"
+                  matched=rc!=0 and expected in log
+                  report["native_cases"][name]={
+                    "exit_code":rc,"changed_file":work_rel,"before_sha256":basehash[work_rel],
+                    "after_sha256":sha(target),"expected_token":expected,
+                    "matched_expected":matched,
+                    "log_sha256":hashlib.sha256(log.encode()).hexdigest(),
+                    "first_error_excerpt":next((x[:250] for x in log.splitlines() if expected in x or "Error" in x or "ERROR" in x),"")
+                  }
+                  assert matched,("NEGATIVE_DID_NOT_REJECT_AS_EXPECTED",name,rc)
+              assert hash_tree(source)==basehash,"ORIGINAL_SOURCE_SCRATCH_CHANGED"
+              assert hash_tree(normal)==basehash,"NORMAL_SCRATCH_CHANGED"
+              report["source_restoration"]="PASS_EXACT_FILE_SHA"
+              report["status"]="PASS_FVM_ONLY_GROUNDED_NATIVE_P2_AND_2_NEGATIVES"
+          except Exception as e:
+              report["status"]="HOLD_NATIVE_P2_OR_EVIDENCE"
+              report["hold_type"]=type(e).__name__
+              report["hold_code"]=str(e)[:250]
+          finally:
+              (out/"p2_receipt.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+              print("ION_FVM_GROUNDED_NATIVE_P2",report["status"],"binary",report["binary_sha256"],"science",report["science"])
+          sys.exit(0 if report["status"]=="PASS_FVM_ONLY_GROUNDED_NATIVE_P2_AND_2_NEGATIVES" else 1)
+          PY
+      - name: Upload P0 and P2 receipts, sanitized input check logs and binary SHA only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue672-fvm-grounded-isolated-p0-p2-only
+          path: ${{ runner.temp }}/issue672-fvm-grounded/out/**
+          if-no-files-found: warn
+          retention-days: 14
