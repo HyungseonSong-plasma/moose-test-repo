@@ -34,3 +34,15 @@
 - `SCIENCE_HOLD`, `Native P3/P4=NOT_RUN`, PR #665 OPEN/DRAFT, main unmerged, PR #684 unmerged. No private EI rates in artifacts.
 
 This receipt is on an isolated evidence branch so it does not change the integration HEAD or trigger another expensive Native run.
+
+## P6-X exact-HEAD integrated CI terminal audit — P6X-CI-3B447-TERMINAL
+
+- [Repository CI #44352429008](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44352429008), `pull_request` attempt 1, exact head `3b447b67283dac3b1d5e592ed3db6e56754c3d0e`: **COMPLETED / FAILURE**, **15/17 jobs SUCCESS, two failures**.
+- `validate`: SUCCESS, **1,569 pytest passed / 13 skipped**, source-only **21/21** intentional guard mutations rejected. C3 Workflow/template bytes and artifact guards accepted for this exact source.
+- `plasma_native_regression`: P0 PASS, P1 source-bound build PASS; historical Public B 417/941 P2 `exit0/Syntax OK`. Public D 417/941 P2 `exit1` on **`Missing drift-diffusion transport JSON record for FEM species 'e'`**. **PUBLIC_D=KEEP_HOLD**, this is not physics/science FAIL.
+- `issue541_arch_s6_hybrid_native_p2`: 417 and 941 both real Native `DDContinuityEq::checkIntegrity()` P05 collision on `log_O2p`: `ni_time [PhysicsFVLogMolarElectronTimeDerivative]`; both `exit1`. **ARCH_HYBRID=KEEP_HOLD**, not waived, not false-green.
+- [Independent FLOW #44352428960](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44352428960): **COMPLETED / FAILURE** at `P2_S6_417_CHECK_INPUT_FAILED` after successful source and fixture checks; **FLOW_HYBRID=KEEP_HOLD**. Do not claim a 941 positive from a runner that stopped at 417.
+- Actual first-attempt Artifact names were uploaded for CORE Four, Plasma Regression, ARCH DD, ARCH S6 Hybrid: **4 canonical + 4 legacy ZIPs**. All **103/103 inner members** match by independently recomputed SHA-256, all **8 CRC checks PASS**. ZIP archive digests themselves differ and do not replace member-byte identity. Canonical names encode `44352429008-1-3b447b...`; legacy names remain for attempt 1 only.
+- Final scope: **`P6_C3_CODE_AND_ARTIFACT=PASS`, `P6_X_FULL_CI=HOLD_NATIVE_LANES`, `P7_FINAL=HOLD`**. The strict P5-X exact-head binary receipt is pinned to `52067302...`, so it does not independently constitute `3b447b...` exact-HEAD executable acceptance despite unchanged Physics source blobs. `SCIENCE_HOLD`, Native P3/P4 `NOT_RUN`; main and #665 unmerged.
+
+**Follow-up ownership:** P6-X single Writer may only promote latest exact-head Native ownership after the independent Public D 100-row/new Physics contract (and FLOW/ARCH separate authority) is met, or record an explicitly authorized lane disposition that does not hide real CI failure. P7 incorporates both the passing C3 evidence and negative results; it does not equate failure with a completed release gate.
