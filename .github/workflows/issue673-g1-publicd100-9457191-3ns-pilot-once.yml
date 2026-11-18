@@ -149,7 +149,9 @@ jobs:
               assert "scheme = implicit-euler" in c0text
               print("G1_PUBLIC_D_ORIGINAL100_TIME_CONTRACT_PASS",case,len(times),len(steps))
               assert sha(folder/C0)==AFTER_SHA
-              assert all(sha(folder/n)==baseline[n] for n in ordered[1:])
+              assert all(sha(folder/n)==baseline[n] for n in ordered[1:-1])
+              assert sha(folder/ordered[-1])==public["overlay_sha256"]
+              assert sum(sha(folder/n)!=baseline[n] for n in ordered)==2
               assert cut["retired_source_materials"]==6 and cut["carrier_one_preserved"]
               receipts[case]={"P4X":"P4X_7_OWNER_SOURCE_PASS","post_p4_C0_sha256":sha(folder/C0),
                                "G1_P0":"PASS_100ROW_461_TIMES","PUBLIC_D_100ROW_SHA256":ORIGINAL_TABLE_SHA256,
