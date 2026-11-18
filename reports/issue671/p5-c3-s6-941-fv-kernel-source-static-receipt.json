@@ -1,0 +1,222 @@
+{
+  "schema": "issue671.p5-c3.941.static-source-warehouse-expectation.v1",
+  "task_id": "P5-C3",
+  "case": "941",
+  "current_pr665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "scope": "941 expected 12 generated ion FVKernels; source and actual input bytes only, NOT MOOSE Warehouse runtime acceptance",
+  "prior_artifacts": {
+    "P1": {
+      "ci": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44182628032",
+      "id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "P2": {
+      "ci": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44201394393",
+      "id": 14381456912,
+      "zip_sha256": "5497c80badab09d7d3266a4c81e2a5d2272a1c9cc216e94e192c8ec1ecd78e95"
+    },
+    "P3X": {
+      "ci": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44257739203",
+      "id": 14406746397,
+      "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+      "ci_head": "3bc1438fc5e25890536d3456c372ef1e600a3f04"
+    }
+  },
+  "source_git_blobs": {
+    "DDContinuityEq_C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "Chemistry_C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "preflight_py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35"
+  },
+  "current_941_p3x_staged_11_layers": [
+    {
+      "ordinal": 1,
+      "name": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+    },
+    {
+      "ordinal": 2,
+      "name": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+      "sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+    },
+    {
+      "ordinal": 3,
+      "name": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+      "sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+    },
+    {
+      "ordinal": 4,
+      "name": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+      "sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+    },
+    {
+      "ordinal": 5,
+      "name": "issue477_S2-415_generation_overlay.i",
+      "sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76"
+    },
+    {
+      "ordinal": 6,
+      "name": "issue477_S3-415-401_extra_overlay.i",
+      "sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05"
+    },
+    {
+      "ordinal": 7,
+      "name": "issue477_S4-401-941_op_ionization_overlay.i",
+      "sha256": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa"
+    },
+    {
+      "ordinal": 8,
+      "name": "issue477_S5-941-407_o2_consumer_overlay.i",
+      "sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+    },
+    {
+      "ordinal": 9,
+      "name": "issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+      "sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+    },
+    {
+      "ordinal": 10,
+      "name": "issue477_S6-941-407-2069-H25_H25_overlay.i",
+      "sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc"
+    },
+    {
+      "ordinal": 11,
+      "name": "migrated_continuity.i",
+      "sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+    }
+  ],
+  "mechanism_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+  "expected_generated_kernel_inventory": [
+    {
+      "name": "O2p_time",
+      "factory": "FVLogMolarTimeDerivative",
+      "variable": "log_O2p",
+      "charge": 1,
+      "coefficient": null,
+      "mobility": null,
+      "source_functor": null
+    },
+    {
+      "name": "O2p_diffusion",
+      "factory": "FVLogMolarDiffusion",
+      "variable": "log_O2p",
+      "charge": 1,
+      "coefficient": "O2p_diffusivity",
+      "mobility": null,
+      "source_functor": null
+    },
+    {
+      "name": "O2p_drift",
+      "factory": "FVLogMolarElectrostaticDrift",
+      "variable": "log_O2p",
+      "charge": 1,
+      "coefficient": null,
+      "mobility": "O2p_mobility",
+      "source_functor": null
+    },
+    {
+      "name": "O2p_source",
+      "factory": "FVCoupledForce",
+      "variable": "log_O2p",
+      "charge": 1,
+      "coefficient": null,
+      "mobility": null,
+      "source_functor": "S_O2p_molar"
+    },
+    {
+      "name": "Om_time",
+      "factory": "FVLogMolarTimeDerivative",
+      "variable": "log_Om",
+      "charge": -1,
+      "coefficient": null,
+      "mobility": null,
+      "source_functor": null
+    },
+    {
+      "name": "Om_diffusion",
+      "factory": "FVLogMolarDiffusion",
+      "variable": "log_Om",
+      "charge": -1,
+      "coefficient": "Om_diffusivity",
+      "mobility": null,
+      "source_functor": null
+    },
+    {
+      "name": "Om_drift",
+      "factory": "FVLogMolarElectrostaticDrift",
+      "variable": "log_Om",
+      "charge": -1,
+      "coefficient": null,
+      "mobility": "Om_mobility",
+      "source_functor": null
+    },
+    {
+      "name": "Om_source",
+      "factory": "FVCoupledForce",
+      "variable": "log_Om",
+      "charge": -1,
+      "coefficient": null,
+      "mobility": null,
+      "source_functor": "S_Om_molar"
+    },
+    {
+      "name": "Op_time",
+      "factory": "FVLogMolarTimeDerivative",
+      "variable": "log_Op",
+      "charge": 1,
+      "coefficient": null,
+      "mobility": null,
+      "source_functor": null
+    },
+    {
+      "name": "Op_diffusion",
+      "factory": "FVLogMolarDiffusion",
+      "variable": "log_Op",
+      "charge": 1,
+      "coefficient": "Op_diffusivity",
+      "mobility": null,
+      "source_functor": null
+    },
+    {
+      "name": "Op_drift",
+      "factory": "FVLogMolarElectrostaticDrift",
+      "variable": "log_Op",
+      "charge": 1,
+      "coefficient": null,
+      "mobility": "Op_mobility",
+      "source_functor": null
+    },
+    {
+      "name": "Op_source",
+      "factory": "FVCoupledForce",
+      "variable": "log_Op",
+      "charge": 1,
+      "coefficient": null,
+      "mobility": null,
+      "source_functor": "S_Op_molar"
+    }
+  ],
+  "checks": {
+    "source_stage_input_sha": "P1/P2/P3X 941 11/11 each = 33/33",
+    "zip_crc": "3/3 PASS",
+    "old_native_ion_owners": "26/26 removed source-only",
+    "old_native_ion_FV_kernels": "14 original -> 0 explicit in staged 941",
+    "explicit_new_generated_12_kernel_declarations": "0 (correct: created in Physics C++, not explicit .i)",
+    "expected_12_kernel_names_factories_variables": "12/12 unique static source contract",
+    "static_fault_injection_tests": "70/70 rejected offline (NOT Native P05)",
+    "current_p4_x_source_cutover": "HOLD (original three wall materials, three surface current materials and six old transport coefficient aliases still retained)"
+  },
+  "local_full_independent_receipt_sha256": "97926a07388d947530adda73e5f637fabcd5d68b9484308867590d8f457b18aa",
+  "local_independent_script_sha256": "8826a99e4fe2dd27336a31b92483710cbce3f69680bd0c216156cc4291b414f9",
+  "gates": {
+    "P4_X": "NOT_INTEGRATED",
+    "P5_0_physics_binary_sha256": "NOT_AVAILABLE",
+    "P5_C2_native_check_input": "NOT_RUN",
+    "P05_real_warehouse_12_owner_cardinality": "NOT_RUN",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "verdict": "P5_C3_941_EXPECTED_12_STATIC_SOURCE_PASS__NATIVE_WAREHOUSE_OWNER_HOLD",
+  "required_next": "After P4-X unique source/consumer cutover, repin final 941 11-layer + JSON to exact current head; build common P5-0 binary and run real S6-941 --check-input P05 Warehouse inventory, verify exactly 12 generated kernels and zero Native ion FV kernels. Do not run solver timesteps."
+}
