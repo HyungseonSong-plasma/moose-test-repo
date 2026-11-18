@@ -1,0 +1,100 @@
+{
+  "schema": "issue669.p3_n3.postmerge_pressure_outlet_static_readback.v1",
+  "task_id": "P3-N3",
+  "status": "PASS_CURRENT_PR665_SOURCE_AND_INTEGRATED_CI_BYTES__HOLD_NATIVE_WAREHOUSE",
+  "latest_pr665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "merged_p3x_pr": 675,
+  "source_artifact": {
+    "ci_run_id": 44256823392,
+    "head": "556f104d62cce635dcf7b59bf6966400b0b1fa18",
+    "artifact_id": 14405784430,
+    "zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6"
+  },
+  "prior_source_artifact": {
+    "ci_run_id": 44255749142,
+    "head": "95d0cd11edfd666f0e33838d5114d9a273c8b05a",
+    "artifact_id": 14405638218,
+    "zip_sha256": "1c68a9622357cd13990521dad85504adf49c70916f2424c3511b600e2583e159"
+  },
+  "artifact_cross_diff": {
+    "files_old": 179,
+    "files_new": 179,
+    "identical_paths": 179,
+    "byte_identical_files": 178,
+    "changed_only": "p2_newonly_integration_receipt.json",
+    "physical_input_files_changed": 0,
+    "both_case_11_layer_bytes_identical": true
+  },
+  "latest_source_code": {
+    "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py": "b17feb16c70ff28c090b6687a46044cff826072e",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e",
+    "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_941_continuity.template.i": "4daa6f080f3d7bbd35c9839110cbb955b8914fee"
+  },
+  "source_code_blob_integration_head_and_ci_equal_for_all_six": true,
+  "cases": {
+    "417": {
+      "input_layers_sha_recomputed": 11,
+      "pressure_owner_count": 1,
+      "pressure_section": "Variables",
+      "pressure_type": "INSFVPressureVariable",
+      "pressure_block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+      "neutral_outlet_owner_count": 1,
+      "neutral_outlet_section": "FVBCs",
+      "neutral_outlet_type": "INSFVOutletPressureBC",
+      "neutral_outlet_variable": "pressure",
+      "neutral_outlet_boundary": "outlet",
+      "neutral_outlet_function": "${Physics/Plasmas/pressure}",
+      "neutral_outlet_block_sha256": "473158d972e44badb6ce8b6111c061fce0ff6f4d429a6fb368a3c2f297d9da8d",
+      "root_pressure_Pa": 1.333223684,
+      "root_temperature_K": 300,
+      "root_pressure_IC_cpp_contract": "PlasmasAction/ add_ics_physics FVConstantIC pressure = root pressure; no direct .i IC",
+      "gas_alias_p_fixed_T_g_fixed_count": 0,
+      "p2_before_C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "p3x_after_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "p2_to_p3x_non_target_change_count": 0,
+      "source_mutants_rejected": 16
+    },
+    "941": {
+      "input_layers_sha_recomputed": 11,
+      "pressure_owner_count": 1,
+      "pressure_section": "Variables",
+      "pressure_type": "INSFVPressureVariable",
+      "pressure_block_sha256": "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e",
+      "neutral_outlet_owner_count": 1,
+      "neutral_outlet_section": "FVBCs",
+      "neutral_outlet_type": "INSFVOutletPressureBC",
+      "neutral_outlet_variable": "pressure",
+      "neutral_outlet_boundary": "outlet",
+      "neutral_outlet_function": "${Physics/Plasmas/pressure}",
+      "neutral_outlet_block_sha256": "473158d972e44badb6ce8b6111c061fce0ff6f4d429a6fb368a3c2f297d9da8d",
+      "root_pressure_Pa": 1.333223684,
+      "root_temperature_K": 300,
+      "root_pressure_IC_cpp_contract": "PlasmasAction/ add_ics_physics FVConstantIC pressure = root pressure; no direct .i IC",
+      "gas_alias_p_fixed_T_g_fixed_count": 0,
+      "p2_before_C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "p3x_after_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "p2_to_p3x_non_target_change_count": 0,
+      "source_mutants_rejected": 16
+    }
+  },
+  "verification": {
+    "negative_mutations_total": 32,
+    "negative_mutations_rejected": 32,
+    "independent_local_script_sha256": "2167c634342b4a2ad5915ef1d6eaaf129f86a21b93dbde75a77a9ce6d4fa49ad",
+    "independent_local_full_receipt_sha256": "510af8db9045c849d3b1d23b0e8331efd55a7f9e673e2950fd5fe92fa689ffbc",
+    "prior_branch_n3_receipt": "reports/issue669/p3-n3-neutral-outlet-root-pressure-source.json"
+  },
+  "unresolved": [
+    "Actual Native C++ Warehouse single pressure FVVariable, generated pressure FVConstantIC, and outlet BC liveness unverified",
+    "Root pressure value is an input parameter, not a duplicate constant pressure Functor; pressure remains solved",
+    "No Native P2/P3/P4 or science equivalence execution"
+  ],
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "mutations": "evidence-only supplemental file on task-owned branch; no PR #665/main/production source changes"
+}
