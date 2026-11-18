@@ -69,9 +69,9 @@ jobs:
         with:
           name: issue672-pr684-18-cases
           path: |
-            \${{ runner.temp }}/independent-18.json
-            \${{ runner.temp }}/upstream-results.xml
-            \${{ runner.temp }}/upstream-pytest.log
+            ${{ runner.temp }}/independent-18.json
+            ${{ runner.temp }}/upstream-results.xml
+            ${{ runner.temp }}/upstream-pytest.log
           if-no-files-found: warn
           retention-days: 14
 
@@ -139,7 +139,7 @@ jobs:
         with:
           name: issue672-pr684-build-p1
           path: |
-            \${{ runner.temp }}/physics-opt.sha256
-            \${{ runner.temp }}/p1-receipt.json
+            ${{ runner.temp }}/physics-opt.sha256
+            ${{ runner.temp }}/p1-receipt.json
           if-no-files-found: warn
           retention-days: 14
