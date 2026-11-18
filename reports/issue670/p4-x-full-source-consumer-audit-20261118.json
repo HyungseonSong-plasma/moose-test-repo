@@ -2,7 +2,7 @@
   "schema": "issue670.p4_x.full_source_consumer_graph_audit.v1",
   "issue": 670,
   "task_id": "P4-X",
-  "verdict": "PASS_DEEP_STATIC_SOURCE_CONSUMER_AUDIT__HOLD_FACTORY_REGISTRATION_AND_NATIVE",
+  "verdict": "PASS_DEEP_STATIC_SOURCE_CONSUMER_AUDIT__FACTORY_REGISTERED_BOTH_CLASSES__NATIVE_HOLD",
   "source_revision": {
     "pr665_exact_head": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
     "pr677_merged_into_pr665": true,
@@ -179,21 +179,7 @@
       "cpp_Warehouse_observed": "NOT_RUN"
     }
   },
-  "critical_new_findings": [
-    {
-      "id": "P4_X_ION_WALL_FACTORY_TYPE_NAME_MISMATCH",
-      "severity": "STATIC_REGISTRY_MISMATCH_PROBABLE_NATIVE_BLOCKER",
-      "action_source": "physics_app/src/physics/plasma/Chemistry.C",
-      "action_source_line": 1502,
-      "action_construction": "const auto type = \"IonWallFluxMaterial\"; auto params = _factory.getValidParams(type);",
-      "registered_class_source": "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C",
-      "registered_class_source_line": 11,
-      "registered_class": "registerMooseObject(\"PhysicsApp\", PhysicsIonWallFluxMaterial);",
-      "repo_search": "No distinct IonWallFluxMaterial factory registration found in repository code.",
-      "interpretation": "Source action factory lookup name disagrees with registered type. Runtime Factory registry / possible external alias not verified. If no external alias, wall Material construction will fail before P05 accepting 12+12.",
-      "required_action": "Confirm exact Factory registry in pinned P5-0 binary and align PlasmasAction type with registered PhysicsIonWallFluxMaterial or explicitly register intended alias; run targeted Native check-input + negative guard."
-    }
-  ],
+  "critical_new_findings": [],
   "related_native_history": {
     "earlier_run": 44264892696,
     "earlier_case_417_and_941_exit_code": 1,
@@ -205,7 +191,7 @@
   "gates": {
     "P4_X_actual_production_stage": "PASS_SOURCE_ONLY",
     "P4_X_source_rate_density_poisson_consumers": "PASS_SOURCE_ONLY",
-    "P4_X_wall_factory": "HOLD_FACTORY_TYPE_MISMATCH",
+    "P4_X_wall_factory": "PASS_SOURCE_FACTORY_REGISTRATION__RUNTIME_NOT_RUN",
     "P4_X_all_35_worker_receipt_aggregation": "PARTIAL_NOT_ALL_REPINNED_AT_EXACT_HEAD",
     "P5_0_same_head_binary": "NOT_ESTABLISHED",
     "P5_native_12FVKernel_12FVBC_Warehouse": "NOT_RUN",
@@ -215,5 +201,40 @@
     "Native_P4": "NOT_RUN",
     "SCIENCE": "SCIENCE_HOLD"
   },
-  "preservation": "All input ZIPs, original private EI Rate data, main, PR665 production source and P05 runtime guard unchanged by this worker. Evidence on isolated task branch only."
+  "preservation": "All input ZIPs, original private EI Rate data, main, PR665 production source and P05 runtime guard unchanged by this worker. Evidence on isolated task branch only.",
+  "retracted_findings": [
+    {
+      "id": "P4_X_ION_WALL_FACTORY_TYPE_NAME_MISMATCH",
+      "severity": "STATIC_REGISTRY_MISMATCH_PROBABLE_NATIVE_BLOCKER",
+      "action_source": "physics_app/src/physics/plasma/Chemistry.C",
+      "action_source_line": 1502,
+      "action_construction": "const auto type = \"IonWallFluxMaterial\"; auto params = _factory.getValidParams(type);",
+      "registered_class_source": "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C",
+      "registered_class_source_line": 11,
+      "registered_class": "registerMooseObject(\"PhysicsApp\", PhysicsIonWallFluxMaterial);",
+      "repo_search": "No distinct IonWallFluxMaterial factory registration found in repository code.",
+      "interpretation": "Source action factory lookup name disagrees with registered type. Runtime Factory registry / possible external alias not verified. If no external alias, wall Material construction will fail before P05 accepting 12+12.",
+      "required_action": "Confirm exact Factory registry in pinned P5-0 binary and align PlasmasAction type with registered PhysicsIonWallFluxMaterial or explicitly register intended alias; run targeted Native check-input + negative guard.",
+      "disposition": "RETRACTED_FALSE_POSITIVE",
+      "reason": "Repository path search overlooked registered physics_app/src/functormaterials/IonWallFluxMaterial.C; both IonWallFluxMaterial and PhysicsIonWallFluxMaterial are registered under distinct names."
+    }
+  ],
+  "exact_factory_registration_correction": {
+    "new_class": "IonWallFluxMaterial",
+    "new_source_file": "physics_app/src/functormaterials/IonWallFluxMaterial.C",
+    "new_source_git_blob": "101586edf05ed19525072b4a43c181ba57dc3589",
+    "new_registration": "registerMooseObject(\"PhysicsApp\", IonWallFluxMaterial);",
+    "old_class": "PhysicsIonWallFluxMaterial",
+    "old_source_file": "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C",
+    "old_source_git_blob": "215e9c81720e6813be22a8a51405fe99639cf0ab",
+    "old_registration": "registerMooseObject(\"PhysicsApp\", PhysicsIonWallFluxMaterial);",
+    "action_requested_name": "const auto type = \"IonWallFluxMaterial\";",
+    "factory_name_contract": "PASS_STATIC_EXISTING_REGISTRATION",
+    "legacy_class_policy": "Retained and registered as a separate class; old public smoke inputs and archived native uses continue to reference PhysicsIonWallFluxMaterial. Removal was NOT part of PR663/677 scope.",
+    "pr663": "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/663",
+    "pr663_unity_compile_history": "Both classes coexisted; initial Unity helper symbol clash was fixed by namespace IonWallC2Detail in new C++ class.",
+    "runtime_status": "NOT_RUN after P4-X; static Factory registration does not by itself prove Native P2."
+  },
+  "corrected_at": "2026-11-18",
+  "corrects_false_positive": "Earlier audit incorrectly declared IonWallFluxMaterial unregistered; code path existed but search result missed it."
 }
