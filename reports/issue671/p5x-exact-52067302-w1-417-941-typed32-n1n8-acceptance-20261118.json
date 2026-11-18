@@ -1,0 +1,158 @@
+{
+  "schema": "issue671.p5_x.exact_52067302_w1_417_941_p2_warehouse_n1n8.acceptance.v1",
+  "as_of": "2026-11-18",
+  "scope": "P5-X requested exact source HEAD single W1 Native P2, typed Warehouse and 16 independent negatives; no P3/P4/time stepping beyond --check-input",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "PR": 665,
+    "exact_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "tree": "2720fa5272a5fa98001e8e444331397723fe7ccb",
+    "state": "OPEN_DRAFT",
+    "strict_same_source_head": true
+  },
+  "build": {
+    "run_id": 44345886330,
+    "job_id": 134948028757,
+    "run_conclusion": "success",
+    "workflow_branch": "issue-671-p5x-exact-52067302-w1-build-20261118",
+    "workflow_commit": "5a75b85ae9a0d5e92140ec97ae710919ac46524b",
+    "artifact_id": 14446611291,
+    "artifact_sha256": "6d24d997075c76983b5d99fc28c3cfc0f9fae1a57ccc00c63af4d8697c83d676",
+    "tar_sha256": "e42e29529121e7312062fdbe39a6cb50881b6424fb7197b10a36be97a6bbca64",
+    "app_elf_sha256": "912b212c3c1849165ab3da13d758f5b3e101f5b6cb7e1e3f3820259f6080f7eb",
+    "app_lib_sha256": {
+      "libphysics-opt.so.0": "61f66ec66843f1d51bd79ef7542197410bebf92487f2cff70e9e08f9e958da82",
+      "libphysics_test-opt.so.0": "e9ad1adeb8fcba312cf836520927a3de3fc5ad986d35d50f6cfe5d114e825f0f"
+    },
+    "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "build_count": 1,
+    "source_head_equals_pr665": true,
+    "zip_crc": "PASS",
+    "inner_tar_all_members_sha": "PASS",
+    "build_log_sha256": "e51257100dbdd3541258d54fa1a06ccd3f0222c1c066f656e01d84198d8fe332",
+    "toolchain_sha256": "069772ddb3e8df032f756ae6e78329deb4125790fd612f90797933c8c55158c1",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44345886330/artifacts/14446611291"
+  },
+  "native": {
+    "run_id": 44347074110,
+    "job_id": 134952233626,
+    "run_conclusion": "success",
+    "workflow_branch": "issue-671-p5x-exact-52067302-typed-native-p05-20261118",
+    "workflow_commit": "cd62ee6446e3d1947d87e7c0de7354de5e40560b",
+    "artifact_id": 14446522947,
+    "artifact_sha256": "69273ea8c28b050240ced8e5a891686350a2588ecc283da09ecf216521a9dca2",
+    "native_receipt_sha256": "7291a18045a873277be9b5cc4068383ca3eee3652caaf75b14a2efc335fd0677",
+    "original_w1_identity_verified": "PASS",
+    "same_w1_binary_as_build": true,
+    "original_P05_not_disabled": true,
+    "protector_tmpfs_cleaned": true,
+    "protected_rate_raw_in_artifact": false,
+    "cases": {
+      "417": {
+        "check_input_exit": 0,
+        "syntax_ok": true,
+        "typed_registration_actual": {
+          "FVKernel": 12,
+          "FVBC": 12,
+          "electron_FE_BC": 8
+        },
+        "typed_registered_total": 32,
+        "all_registration_events": 77,
+        "old_native_ion_owner_retired": 26,
+        "old_electron_owner_retired": 10,
+        "private_original_rates_per_case": 5,
+        "negative_success": 8,
+        "negative_classification": {
+          "N1": "P05",
+          "N2": "P05",
+          "N3": "P05",
+          "N4": "P05",
+          "N5": "EARLY_REGISTRATION",
+          "N6": "CHEMISTRY",
+          "N7": "CHEMISTRY",
+          "N8": "CHEMISTRY"
+        },
+        "initial_input_layers": 11,
+        "public_source_sha_restored": true,
+        "case_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+        "parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+        "clean_log_sha256_job_generated": "f1e3d8cf2c79be34e66b6c8fa72f476c752bd20c2d9c643f2f459bda8d4af065"
+      },
+      "941": {
+        "check_input_exit": 0,
+        "syntax_ok": true,
+        "typed_registration_actual": {
+          "FVKernel": 12,
+          "FVBC": 12,
+          "electron_FE_BC": 8
+        },
+        "typed_registered_total": 32,
+        "all_registration_events": 77,
+        "old_native_ion_owner_retired": 26,
+        "old_electron_owner_retired": 10,
+        "private_original_rates_per_case": 5,
+        "negative_success": 8,
+        "negative_classification": {
+          "N1": "P05",
+          "N2": "P05",
+          "N3": "P05",
+          "N4": "P05",
+          "N5": "EARLY_REGISTRATION",
+          "N6": "CHEMISTRY",
+          "N7": "CHEMISTRY",
+          "N8": "CHEMISTRY"
+        },
+        "initial_input_layers": 11,
+        "public_source_sha_restored": true,
+        "case_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+        "parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+        "clean_log_sha256_job_generated": "b926536957d1156eba1b6b70edc10fd575bdb06bbd31027dc13729eb6e00f752"
+      }
+    },
+    "all_tests_passed": 16,
+    "total_tests": 16,
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "scientific_100us": "NOT_RUN",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44347074110/artifacts/14446522947"
+  },
+  "independent_audit": {
+    "mode": "download actual two original GitHub artifact ZIPs, CRC test, W1 identity/inner TAR/raw 3 ELF SHA, P4 source and 11 layers, real typed events/count evidence, native clean exit, 16 negative classified errors and restorative SHA",
+    "checks_total": 174,
+    "checks_passed": 174,
+    "status": "PASS",
+    "script_sha256": "8070a8d005795a3ee045591ebdccb0bacd8bb04f5e5c312a701b00a7569c878a",
+    "json_sha256": "5555b6c5b36490033dacf4bccc39f748ac72660e47d5bcacd06056d8ed1e18dc"
+  },
+  "evidence_boundaries": {
+    "external_tracer": "FEProblemBase post-successful-add typed registration, original unchanged W1 ELF",
+    "postconstruction_raw_TheWarehouse_memory_dump": false,
+    "runtime_variable_sideset_parameter_capture": false,
+    "raw_registration_logs_in_public_artifact": false,
+    "full_raw_native_stdout_in_public_artifact": false,
+    "off_job_recompute_of_job_generated_trace_log_sha": false,
+    "prior_D8_3ns_new_binary": "NOT_RUN_NEW_520_W1",
+    "raw_original_ei_rate_uploaded": false
+  },
+  "gates": {
+    "P5_X_EXACT_HEAD_SINGLE_W1": "PASS",
+    "P5_X_SOURCE_BINARY_ARTIFACT_CUSTODY": "PASS",
+    "P5_X_BOTH_NATIVE_P2_CHECK_INPUT": "PASS",
+    "P5_X_ACTUAL_TYPED_REGISTRATION_12K_12BC_8EBC": "PASS_BOTH_CASES",
+    "P5_X_NATIVE_NEGATIVES": "PASS_16_OF_16_EXPECTED_REJECTIONS",
+    "P5_X_SCOPED_NATIVE_P2_ACCEPTANCE": "PASS_EXACT_HEAD",
+    "P5_X_FULL_DYNAMIC_D8_EXACT_NEW_W1": "KEEP_HOLD_NOT_RETESTED",
+    "SCIENCE_100US": "HOLD_NOT_RUN",
+    "P3_P4": "NOT_RUN",
+    "P05_GUARD": "UNCHANGED",
+    "HISTORICAL_HYBRID": "KEEP_HOLD"
+  },
+  "safety": {
+    "main_untouched": true,
+    "PR665_untouched": true,
+    "Physics_app_unchanged": true,
+    "protected_private_rates_not_exported": true,
+    "original_inputs_restored": true,
+    "science_run_not_started": true
+  }
+}
