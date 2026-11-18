@@ -251,9 +251,10 @@
     "historical_ARCH_H3": {
       "run": 43883076025,
       "attempt": 2,
-      "target_job": "success",
       "whole_workflow": "failure",
-      "source_head": "5d15c4054a00aa9fa8a778a87bb21690a3a5469b"
+      "source_head": "5d15c4054a00aa9fa8a778a87bb21690a3a5469b",
+      "target_job_id": 134820962860,
+      "target_job_conclusion": "success"
     },
     "W1_binary": {
       "run": 44293156216,
