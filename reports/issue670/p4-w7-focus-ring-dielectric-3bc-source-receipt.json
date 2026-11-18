@@ -1,0 +1,167 @@
+{
+  "schema": "issue670.p4_w7.s6_417_941.focus_ring_3bc.source.v1",
+  "task_id": "P4-W7",
+  "issue": 670,
+  "status": "PASS_EXACT_FOCUS_RING_3_BC_SOURCE_STAGE__HOLD_WALL_FUNCTOR_OWNERSHIP_AND_NATIVE_WAREHOUSE",
+  "scope": "Both S6-417/S6-941 focus-ring dielectric FVBCs O2p, Om, Op only; source-stage evidence, not Native P2/P4 acceptance",
+  "source_pin": {
+    "pr665_latest_refreshed_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "original_p1_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "historical_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "latest_p3_x_merge_in_pr665": true,
+    "source_only_run_id": 44257739203,
+    "source_only_run_head": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+    "original_artifact_ids": {
+      "417": 13677089020,
+      "941": 13677375813
+    },
+    "p1_hybrid_artifact_id": 14372278070,
+    "p3_x_stage_artifact_id": 14406746397,
+    "zip_sha256": {
+      "historical417": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "historical941": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "p1": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "p3_x": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111"
+    }
+  },
+  "verified_cases": {
+    "417": {
+      "historical_file_sha256": 10,
+      "p1_file_sha256": 11,
+      "p3_x_file_sha256": 11,
+      "old_ion_block_sha256": 26,
+      "old_electron_block_sha256": 10,
+      "old_focus_ring_bc_removed": 3,
+      "newonly_focus_ring_json_bc_expected": 3,
+      "other_non_target_byte_changes": 0,
+      "pre_runtime_FV_block_count": 37,
+      "p3_x_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "negative_mutations_rejected": 18
+    },
+    "941": {
+      "historical_file_sha256": 10,
+      "p1_file_sha256": 11,
+      "p3_x_file_sha256": 11,
+      "old_ion_block_sha256": 26,
+      "old_electron_block_sha256": 10,
+      "old_focus_ring_bc_removed": 3,
+      "newonly_focus_ring_json_bc_expected": 3,
+      "other_non_target_byte_changes": 0,
+      "pre_runtime_FV_block_count": 37,
+      "p3_x_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "negative_mutations_rejected": 18
+    }
+  },
+  "focus_ring_map": {
+    "O2p": {
+      "old_name": "ion_focus_ring_dielectric",
+      "old_hybrid_block_sha256": "830e2cddd31b70308732cf4dab3e7d4327d38c34d0200ec50da4fcf011eee761",
+      "historical_block_sha256": "631a00ce5ab55ee49db5f725026db753f4755f323103cb993c76ff13cfb87ee0",
+      "variable": "log_O2p",
+      "signed_number_flux": "O2p_wall_number_flux",
+      "charge": 1,
+      "retained_old_wall_material": "ion_wall_flux",
+      "old_material_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5"
+    },
+    "Om": {
+      "old_name": "negative_ion_focus_ring_dielectric",
+      "old_hybrid_block_sha256": "b96509870ac57132a0d71588709753b065ec699afe36917cf715480e5480febe",
+      "historical_block_sha256": "004670d3538c602ebb475380b1c459c88d58a654c65e6dee360ae84a84908ea4",
+      "variable": "log_Om",
+      "signed_number_flux": "Om_wall_number_flux",
+      "charge": -1,
+      "retained_old_wall_material": "negative_ion_wall_flux",
+      "old_material_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162"
+    },
+    "Op": {
+      "old_name": "atomic_positive_ion_focus_ring_dielectric",
+      "old_hybrid_block_sha256": "bd7e0cf631d41a4670e1a744af6c94bc66d57e1aace960acb183249906425e62",
+      "historical_block_sha256": "26ae8b339e02da2d6932009b216cdb186dd380e16493f9fe136af1bc544ad3c0",
+      "variable": "log_Op",
+      "signed_number_flux": "Op_wall_number_flux",
+      "charge": 1,
+      "retained_old_wall_material": "atomic_positive_ion_wall_flux",
+      "old_material_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+    }
+  },
+  "typed_newonly_contract": {
+    "boundary": "plasma_focus_ring",
+    "species": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "factory": "FVLogMolarDielectricFluxBC",
+    "newonly_names": [
+      "O2p_focus_ring_dielectric",
+      "Om_focus_ring_dielectric",
+      "Op_focus_ring_dielectric"
+    ],
+    "exact_one_by_species": true,
+    "json_each_bc_only_parameter": "type",
+    "variable_derived_from_species": "log_<species>",
+    "signed_number_flux_derived": "<species>_wall_number_flux",
+    "residual": "Gamma_signed / N_A",
+    "signed_flux_convention": "positive outward of plasma",
+    "separate_general_fv_neumann_factor": "-1/N_A is NOT applied to dielectric BC",
+    "selected_sideset_excluded_from_ion_drift": true
+  },
+  "latest_head_source_blobs_independently_read_back": {
+    "Chemistry_C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "DDContinuityEq_C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "FVLogMolarDielectricFluxBC_C": "08306f4545b806368a2c90bac0c83dacc5e7c9b5",
+    "IonWallFluxMaterial_C": "101586edf05ed19525072b4a43c181ba57dc3589",
+    "json417": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "json941": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "match_original_contract": true
+  },
+  "verification": {
+    "method": "Downloaded historical 2 ZIPs + P1 ZIP + P3X ZIP; SHA256 rehash, archive/manifest all 64 input file SHAs, 72 source-removal block SHAs, independent exact raw-byte reconstruction of 26 ion+10 electron removed blocks per case, typed JSON parsing and in-memory mutations",
+    "negative_mutations_rejected_total": 36,
+    "local_script_filename": "verify_issue670_p4_w7.py",
+    "local_script_sha256": "98819d9cfdaba2ce5d6ec3e7c380edcf3bc45222c5f0da8b10b2cea994f1531a",
+    "full_local_receipt_filename": "issue670_p4_w7_focus_ring_source_receipt.json",
+    "full_local_receipt_sha256": "00128ceeb8d773de9f41665eb33bbf5fe2e20ccd6ffa20302d649e0af199389b"
+  },
+  "blocking_findings": {
+    "retained_legacy_flux_materials": [
+      "ion_wall_flux",
+      "negative_ion_wall_flux",
+      "atomic_positive_ion_wall_flux"
+    ],
+    "legacy_factory": "PhysicsIonWallFluxMaterial",
+    "new_generated_factory": "IonWallFluxMaterial",
+    "shared_output_names": [
+      "O2p_wall_number_flux",
+      "Om_wall_number_flux",
+      "Op_wall_number_flux"
+    ],
+    "new_ion_wall_material_path": "Chemistry.C:1497-1520",
+    "risk": "STATIC_DUPLICATE_PRODUCER_IF_LEGACY_AND_GENERATED_WALL_FUNCTORS_COEXIST; NOT YET INSTANTIATED",
+    "surface_current_consumer": "focus_ring_surface_current -> focus_ring_net_surface_current_density -> sigma_focus_ring_surface_current",
+    "P4_W1_W2_W3_WALL_OWNER": "HOLD_UNRETIRED_LEGACY_OWNER",
+    "P4_C3_FOCUS_CURRENT": "HOLD_UNVERIFIED_RUNTIME",
+    "new_bc_cpp_warehouse": "NOT_RUN"
+  },
+  "gates": {
+    "P4_W7_STATIC": "PASS",
+    "P3_X_SOURCE_STAGE": "PASS",
+    "P4_WALL_MATERIAL_SINGLE_OWNER": "HOLD",
+    "P4_X": "NOT_RUN",
+    "P5_NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "main_modified": false,
+    "pr665_modified": false,
+    "originals_modified": false,
+    "private_EI_rate_raw_bytes_published": false,
+    "tests_mutated_only_memory": true
+  }
+}
