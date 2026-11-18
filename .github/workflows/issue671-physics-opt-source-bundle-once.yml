@@ -80,31 +80,31 @@ jobs:
           '''
           files["build_physics_opt.sh"]="\n".join(line[10:] if line.startswith("          ") else line for line in script.splitlines()).encode()+b"\n"
           readme=f"""# PhysicsApp source-only bundle (MOOSE physics-opt)
-
-Exact source commit from Draft PR #665: {source}
-
-Contents: physics_app/src + physics_app/include (full project application implementation),
-physics_app/test C++ registration (if needed by app build), Makefile, dependencies.lock,
-original LICENSE and the CI image recipe. Also includes build_physics_opt.sh,
-this README and a SHA256 SOURCE_MANIFEST.json.
-
-Requires Docker and access to the exact Linux/amd64 OCI image:
-{image}
-
-Build (no solver execution):
-  bash build_physics_opt.sh
-
-Output: physics_app/physics-opt and its shared libraries under physics_app/lib.
-MOOSE Framework, CRANE, SQUIRREL, ZAPDOS and compilers are provided separately
-by the immutable OCI image. Their exact revisions are in physics_app/dependencies.lock.
-If image is unavailable, fetch vendor sources at pinned revisions and configure them
-using ci/physics-build-base/Dockerfile. This ZIP is not a standalone MOOSE framework.
-
-Experimental test inputs, meshes, private EI rate tables, logs, executables,
-ELF/shared-library binaries and time-stepping scripts are NOT included.
-No Native P2/P3/P4, D8 liveness, or scientific equivalence has been evaluated
-by packaging the source.
-"""
+          
+          Exact source commit from Draft PR #665: {source}
+          
+          Contents: physics_app/src + physics_app/include (full project application implementation),
+          physics_app/test C++ registration (if needed by app build), Makefile, dependencies.lock,
+          original LICENSE and the CI image recipe. Also includes build_physics_opt.sh,
+          this README and a SHA256 SOURCE_MANIFEST.json.
+          
+          Requires Docker and access to the exact Linux/amd64 OCI image:
+          {image}
+          
+          Build (no solver execution):
+            bash build_physics_opt.sh
+          
+          Output: physics_app/physics-opt and its shared libraries under physics_app/lib.
+          MOOSE Framework, CRANE, SQUIRREL, ZAPDOS and compilers are provided separately
+          by the immutable OCI image. Their exact revisions are in physics_app/dependencies.lock.
+          If image is unavailable, fetch vendor sources at pinned revisions and configure them
+          using ci/physics-build-base/Dockerfile. This ZIP is not a standalone MOOSE framework.
+          
+          Experimental test inputs, meshes, private EI rate tables, logs, executables,
+          ELF/shared-library binaries and time-stepping scripts are NOT included.
+          No Native P2/P3/P4, D8 liveness, or scientific equivalence has been evaluated
+          by packaging the source.
+          """
           files["README_BUILD.md"]=readme.encode()
           digest=lambda data:hashlib.sha256(data).hexdigest()
           manifest={"schema":"physics-opt.source-only-build-bundle.v1",
