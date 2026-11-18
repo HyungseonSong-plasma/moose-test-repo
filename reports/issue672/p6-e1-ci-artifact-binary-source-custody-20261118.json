@@ -1,0 +1,326 @@
+{
+  "schema": "issue672.p6_e1.crosslane_independent_ci_artifact_binary_source_custody.v1",
+  "issue": 672,
+  "slot": "P6-E1",
+  "scope": "Public B/D, FLOW D, ARCH Hybrid and ARCH DD, Ion-FVM two matrix; historical #578 compared to latest PR665; read-only audit",
+  "verdict": "PASS_INDEPENDENT_11_ARTIFACT_SHA_CRC_AND_5_SOURCE_BLOB_AND_W1_ELF_CUSTODY__HOLD_JOB_ELF_AND_P6_X",
+  "source_pins": {
+    "current_PR665_source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "current_PR665_draft_unmerged": true,
+    "historical_PR578_head": "1efdd922096df10239cff8adc132e8f3811c1a63",
+    "main_at_audit": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "public_parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "build_base_OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "run_matrix": {
+    "LATEST": {
+      "REPOSITORY_CI": {
+        "id": 44297212655,
+        "conclusion": "failure",
+        "validate": "PASS_1566_PASSED_13_SKIPPED",
+        "public_runtime_smoke": "PASS",
+        "public_plasma_native_regression": "FAIL",
+        "arch_dd_native": "PASS",
+        "arch_S6_hybrid_native": "FAIL"
+      },
+      "FLOW": {
+        "id": 44297212567,
+        "conclusion": "failure"
+      },
+      "ION_FVM": {
+        "id": 44297212333,
+        "conclusion": "failure",
+        "matrix_jobs": [
+          "FAIL_1ns100_5ns100",
+          "FAIL_1ns100_10ns50"
+        ]
+      }
+    },
+    "HISTORICAL_PR578": {
+      "REPOSITORY_CI": {
+        "id": 43977539196,
+        "conclusion": "success",
+        "native_PUBLIC_B_D": "PASS_417_941",
+        "native_ARCH_hybrid": "PASS_417_941"
+      },
+      "FLOW": {
+        "id": 43972605750,
+        "conclusion": "success",
+        "native_P2": "PASS_417_941"
+      }
+    }
+  },
+  "artifacts": [
+    {
+      "lane": "PUBLIC_SOURCE",
+      "artifact_id": 14424876187,
+      "run_id": 44297212655,
+      "actual_downloaded_zip_sha256": "c442b88184287c76eb81ea0c1072b4b811aefaec737c457f550f80becc1089b6",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 619,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212655/artifacts/14424876187"
+    },
+    {
+      "lane": "PUBLIC_NATIVE",
+      "artifact_id": 14425191296,
+      "run_id": 44297212655,
+      "actual_downloaded_zip_sha256": "5571de71f340112f4c7526afd370ad3482f80f4f75af77c7bb8580d4e881e7af",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 90,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212655/artifacts/14425191296"
+    },
+    {
+      "lane": "FLOW_NATIVE",
+      "artifact_id": 14424786177,
+      "run_id": 44297212567,
+      "actual_downloaded_zip_sha256": "5fbc73b45939389c5e9b563f54099c03ce0400bec77c017f0d02b759634cbf92",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 7,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212567/artifacts/14424786177"
+    },
+    {
+      "lane": "ARCH_HYBRID",
+      "artifact_id": 14424707119,
+      "run_id": 44297212655,
+      "actual_downloaded_zip_sha256": "79d942499ca863aff4aa2bba82af42eab51776b495b1d1fe7f2a72a194dc6f0e",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 6,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212655/artifacts/14424707119"
+    },
+    {
+      "lane": "ARCH_DD",
+      "artifact_id": 14425335323,
+      "run_id": 44297212655,
+      "actual_downloaded_zip_sha256": "c7fc0c7df92663505c901a02b65ca824edfc18dc78a16c9efbfba136571bf83a",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 4,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212655/artifacts/14425335323"
+    },
+    {
+      "lane": "ION_FVM_5NS",
+      "artifact_id": 14423912810,
+      "run_id": 44297212333,
+      "actual_downloaded_zip_sha256": "41b5cdead487cd4269234a963d55c46adc84c4c49b7d7e7a5b43ca9877c3fc6d",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 2,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212333/artifacts/14423912810"
+    },
+    {
+      "lane": "ION_FVM_10NS",
+      "artifact_id": 14424203209,
+      "run_id": 44297212333,
+      "actual_downloaded_zip_sha256": "980263b7150e3d799ca3a0a75cb10106216ce56bd7f7e5ecc2359a08d210fa49",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 2,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212333/artifacts/14424203209"
+    },
+    {
+      "lane": "W1_BINARY",
+      "artifact_id": 14422701532,
+      "run_id": 44293156216,
+      "actual_downloaded_zip_sha256": "ce50a51f2ab565b5dc6aced272adcf12f1075f7593417c603ce05274c8291c18",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 5,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44293156216/artifacts/14422701532"
+    },
+    {
+      "lane": "HIST_PUBLIC",
+      "artifact_id": 14281776411,
+      "run_id": 43977539196,
+      "actual_downloaded_zip_sha256": "9cf25eff1305674f3e4d36282efb5de1080a14eccbf9590257f6725e0c9b7688",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 88,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43977539196/artifacts/14281776411"
+    },
+    {
+      "lane": "HIST_FLOW",
+      "artifact_id": 14278659981,
+      "run_id": 43972605750,
+      "actual_downloaded_zip_sha256": "7ef72120391c6bfeeb6e8f81e38e13c0a7ea086e22c57495a6dc949fbde97def",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 8,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43972605750/artifacts/14278659981"
+    },
+    {
+      "lane": "HIST_ARCH",
+      "artifact_id": 14282791149,
+      "run_id": 43977539196,
+      "actual_downloaded_zip_sha256": "ed7a1e72a98cd192f3b755740de9d637decf830b347cc1d496fd8bc6c8f1e9e7",
+      "GitHub_artifact_sha256_match": true,
+      "ZIP_CRC": "PASS",
+      "member_count": 6,
+      "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43977539196/artifacts/14282791149"
+    }
+  ],
+  "selected_current_native_logs": {
+    "public_B_417": {
+      "exit": 0,
+      "P2": "PASS",
+      "layers": 10,
+      "sha256": "5d15650049a3596983fce8eda430d7ee07e9a5cac040b1421f6f59ccdb6beb90"
+    },
+    "public_B_941": {
+      "exit": 0,
+      "P2": "PASS",
+      "layers": 10,
+      "sha256": "340f0074385a33439586ae9be282cb8695fc400a32d059e587819d2946cf31de"
+    },
+    "public_D_417": {
+      "exit": 1,
+      "P2": "HOLD",
+      "layers": 11,
+      "sha256": "95ebfb7986b590dd6233dfd239dd09390250a5396acc82a45b1fd3e366b6f252"
+    },
+    "public_D_941": {
+      "exit": 1,
+      "P2": "HOLD",
+      "layers": 11,
+      "sha256": "9821016607bfb695fc58593e3436531d5c310e669dd59009f529a5d1874d0263"
+    },
+    "flow_D_417": {
+      "exit": 1,
+      "P2": "HOLD",
+      "sha256": "7e21b7c985aee6f0d61213eef6a3fe853aa6bf62430919d8270747abec648ceb"
+    },
+    "flow_D_941": {
+      "exit": null,
+      "P2": "NOT_EXECUTED_AFTER_417_FAILURE",
+      "sha256": null
+    },
+    "arch_hybrid_417": {
+      "exit": 1,
+      "P2": "HOLD",
+      "sha256": "c5a6246887b4e1b1f17f010240a66a2234afd34908559f8a408e10c6f373a56c"
+    },
+    "arch_hybrid_941": {
+      "exit": 1,
+      "P2": "HOLD",
+      "sha256": "3cdc19cfe5af492616b4d00cf8b9481f3bad1fbc03fbcef297f499c4f7d8692f"
+    },
+    "arch_dd_valid": {
+      "exit": 0,
+      "P2": "PASS",
+      "sha256": "bbafef10c22b9323fa5589564990f57fbf57f9a632381d5e765dc5a3b25b4a1b"
+    },
+    "arch_dd_missing_IC": {
+      "expected_error": true,
+      "sha256": "3638cc59bfd1c7f4075c69e1dc88b5b57370811ef56f9bfcfce58b8664612ac9"
+    },
+    "ion_FVM_5ns": {
+      "solver_exit": null,
+      "prepare_log_bytes": 0,
+      "prepare_error_from_GitHub_Job_log": "RETIRED_GROUNDED_SHEATH_BCS"
+    },
+    "ion_FVM_10ns": {
+      "solver_exit": null,
+      "prepare_log_bytes": 0,
+      "prepare_error_from_GitHub_Job_log": "RETIRED_GROUNDED_SHEATH_BCS"
+    }
+  },
+  "first_failures": {
+    "public_D": "DDContinuityEq FEM species e transport_coef missing in plasma_species_only.json; 417+941 actual Native exit1",
+    "flow_D": "D-base S6-417 missing e transport_coef; driver fails before S6-941; EI10/EI16 reduction control paths PASS separately",
+    "arch_hybrid": "P05 rejects legacy ni_time on log_O2p coexisting with generated Physics FV Kernel, both 417+941 exit1",
+    "ion_fvm": "prepare_full_fem_contour_mesh.py build_case() intentionally raises RETIRED_GROUNDED_SHEATH_BCS; Native P2 and timesteps never entered",
+    "arch_dd": "Positive --check-input Syntax OK; negative missing species.e.initial_number_density expected rejection, no science P3"
+  },
+  "source_SHA_and_provenance": {
+    "public_source_zip_contains_5_current_exact_Git_blobs_crosschecked": "PASS_5_OF_5",
+    "git_blob_sha1_extracted_from_actual_public_zip_and_compared_to_exact_head": {
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py": "d2091291161033a9662b0d583567f9c35d26c006",
+      "experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py": "96c8ca548392a1ad08334b87b082dd1595893070",
+      "experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py": "db90fe634a7ddc234daeab7b94dd21618bd3c893",
+      "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_staged_dt.py": "6242f4ae8e8d97c673932dae71d543a8031ea5fd",
+      "tests/test_issue633_s6_scratch_ion_retirement.py": "5df7a81bb647919e079efe275004cb4982f70844"
+    },
+    "latest_GitHub_source_blob_readback": {
+      "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py": "a6414baf70590b79f4b4ee4cb16c4b9039355f40",
+      "ci/guards/issue541_arch_s6_native_p2_only.py": "533dfa16395c041c610130f90d0489300fdd548f",
+      ".github/workflows/issue402-flow-native-p2-regression.yml": "3f2360f7ae71ed9081dfa55aeba5119f5c44a9b0",
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml": "230e4367e7a688f297747b7f03bb0fdfaf4e4d23",
+      ".github/workflows/ci.yml": "c8cbd38369108229af7cf2395893a4539f05e024",
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330"
+    },
+    "old_vs_new": {
+      "public_and_flow_runners_unchanged_Git_blobs": true,
+      "ARCH_hybrid_guard_unchanged_Git_blob": true,
+      "full_FEM_contour_generator_unchanged_Git_blob": true,
+      "DDContinuityEq_OLD": "fe8ef78ce68c3506b88e55b15ab951f66eca60da",
+      "DDContinuityEq_NEW": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "Chemistry_OLD": "3bcdbdff219796bb3eb95993fef114c15c82ca61",
+      "Chemistry_NEW": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "interpretation": "script unchanged but common C++ Owner and JSON transport contracts changed; historical pass cannot promote"
+    }
+  },
+  "binary_custody": {
+    "current_Job_specific_CI_recorded_only": {
+      "Public": "ee94b2f59cbf22c58fd5c340544b825367de57323158d4c64b4f0501a24d5695",
+      "FLOW": "119b5e0c69c0f1bc817e04a76465c499355e459b6159268ea6f6ff15280d04cb",
+      "ARCH_HYBRID": "2c13a37789cfb626a02fe03ca4d374bbac8be5eac8c7985c7ee2560d64ef95c3",
+      "ARCH_DD": "b3cf207ea789b95068dabe64cd3ee8786b5739b9ae5ae0cb5c55da2e778216bc",
+      "ION_FVM": null
+    },
+    "historical_Job_specific_CI_recorded_only": {
+      "Public": "f21b25b51bcb18b373a90f7716e2b9b3b75d0a325dc2df5d901eed70844388bc",
+      "FLOW": "b0ffb809e9242b4f27422eac4fc5cc8699193b3fa6ade81a096b9f9f0bd5e506",
+      "ARCH_HYBRID": "1ba6db2154a8c5af5f1f4c20812f46edcda5ee3d210296a8fa96814e9a1814fb"
+    },
+    "current_and_historical_job_specific_raw_executable_uploaded": false,
+    "W1_raw_actual_bytes_rehashed": {
+      "source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+      "physics_opt": {
+        "bytes": 67368,
+        "sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc"
+      },
+      "libphysics_opt": {
+        "bytes": 4869600,
+        "sha256": "3274751989604b06e7e7e677435b16c874388a4f7b8735b059eafc605fbb7e51"
+      },
+      "libphysics_test": {
+        "bytes": 105984,
+        "sha256": "86aa0d4ebe18d731e7e052f5ad62594b1a3b48074f848693b0958f728b61ba80"
+      }
+    },
+    "W1_NOT_IDENTICAL_TO_CURRENT_JOB_BINARIES": true
+  },
+  "local_independent_full_evidence": {
+    "verification_script": "p6_e1_crosslane_independent_custody.py",
+    "JSON_file": "p6_e1_public_flow_arch_ion_fvm_independent_custody.json",
+    "JSON_sha256": "8f88f3ed2b6ea97fa60d3ff976f287c8ebbe90a9b535e2ba0825d37247e96e88",
+    "Markdown_file": "p6_e1_public_flow_arch_ion_fvm_independent_custody.md",
+    "Markdown_sha256": "ea86c1495e352fdb270976f070121eff35607b4ce9caecc426376062731eb7e6",
+    "independent_actual_public_artifact_ZIPs_rehashed": "11/11",
+    "independent_source_blob_rehashed": "5/5",
+    "W1_ELF_and_two_app_libs_rehashed": "3/3"
+  },
+  "gates": {
+    "P6_E1": "PASS_ARTIFACT_AND_SOURCE_CUSTODY",
+    "job_specific_binary_raw_sha": "HOLD_NOT_UPLOADED",
+    "historical_Public_B": "PASS_PROVENANCE",
+    "latest_Public_D": "HOLD",
+    "latest_FLOW": "HOLD",
+    "latest_ARCH_Hybrid": "KEEP_HOLD",
+    "latest_ARCH_DD": "PASS_ONLY_DD_P1_P2",
+    "latest_Ion_FVM": "KEEP_HOLD",
+    "P6_X": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "no_private_rates_touched": true,
+    "main_modified": false,
+    "PR665_modified": false,
+    "no_native_timestep_started_by_E1": true,
+    "no_workflow_or_P05_bypass": true
+  }
+}
