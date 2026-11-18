@@ -1,0 +1,40 @@
+{
+  "schema": "issue669.p3x.outstanding_worker_slot.v1",
+  "source_pr": 665,
+  "source_pr_head_before_p3x": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "p1_0_archived_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "p3x_CI_run": 44255749142,
+  "p3x_artifact_id": 14405638218,
+  "p3x_artifact_zip_sha256": "1c68a9622357cd13990521dad85504adf49c70916f2424c3511b600e2583e159",
+  "p3x_stage_head": "95d0cd11edfd666f0e33838d5114d9a273c8b05a",
+  "evidence_scope": "ACTUAL_SOURCE_ONLY_ARTIFACT_BYTE_READBACK__NOT_NATIVE_CXX_WAREHOUSE",
+  "Native_P2": "NOT_RUN",
+  "Native_P3": "NOT_RUN",
+  "Native_P4": "NOT_RUN",
+  "SCIENCE": "SCIENCE_HOLD",
+  "task_id": "P3-T5",
+  "status": "PASS_941_NEWONLY_E_LOOKUP_IC_OVERLAY_SOURCE_ONLY",
+  "local_independent_detailed_receipt_sha256": "f3469a924c034670d91a0c3bcf3ea1fc645b7424b50cac047af58701048385b2",
+  "independent_task_proof": {
+    "case": "941",
+    "case_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+    "electron_initial_number_density_m3": 1000000000000001.6,
+    "electron_temperature_eV": 2.6666666666666665,
+    "transport_coef": {
+      "type": "lookup",
+      "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "unit": "reduced",
+      "bounds_policy": "clamp"
+    },
+    "reaction_EI_941": true,
+    "reaction_EI_417": false,
+    "reaction_count": 8,
+    "Physics_Continuity_sections": 1,
+    "Physics_Energy_sections": 1,
+    "electron_original_source_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "prepared_rows": 42,
+    "not_default_100_row": true,
+    "negative_controls_rejected": 2
+  }
+}
