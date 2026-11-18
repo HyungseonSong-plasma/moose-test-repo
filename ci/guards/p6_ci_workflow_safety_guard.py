@@ -210,6 +210,15 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
     def add(name: str, candidate: str, *, cpp: str | None = None) -> None:
         cases.append((name, candidate, candidate, dd_source if cpp is None else cpp))
 
+    def mutate_canonical(name: str, old: str, new: str) -> str:
+        """Mutate only the run/attempt/HEAD upload, preserving the legacy alias."""
+        job = job_block(workflow, name)
+        delim = "      - name: Upload first-attempt legacy artifact alias (compatibility only)"
+        need(job.count(delim) == 1, "CANONICAL_MUTATION_SCOPE_" + name)
+        before, after = job.split(delim, 1)
+        need(before.count(old) == 1, "CANONICAL_MUTATION_TARGET_" + name)
+        return workflow.replace(job, before.replace(old, new, 1) + delim + after, 1)
+
     cases.append(("template_drift", workflow, template + "\n# drift\n", dd_source))
     add("push_nonmain", workflow.replace("branches: [main]", "branches: [testing]", 1))
     add("unapproved_workflow_dispatch", workflow.replace(
@@ -224,11 +233,11 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "github.event.pull_request.head.repo.full_name",
         "github.event.pull_request.base.repo.full_name"
     ))
-    add("artifact_attempt_missing", edit_job(
+    add("artifact_attempt_missing", mutate_canonical(
         workflow, "issue541_arch_s6_hybrid_native_p2",
         "github.run_attempt", "run_attempt_removed"
     ))
-    add("artifact_became_optional", edit_job(
+    add("artifact_became_optional", mutate_canonical(
         workflow, "issue541_arch_dd_native_p2",
         "if-no-files-found: error", "if-no-files-found: warn"
     ))
@@ -272,7 +281,7 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
     add("weaken_p05", workflow, cpp=dd_source.replace(
         "P05 FV Native/Physics duplicate or unexpected owner", "P05_BYPASS", 1
     ))
-    add("undeclared_provenance", edit_job(
+    add("undeclared_provenance", mutate_canonical(
         workflow, "issue541_arch_s6_hybrid_native_p2",
         "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json",
         "control/experiments/Issue402_plasma_dsl_g1/evidence/identity_omitted.json"
