@@ -27,9 +27,11 @@ TRANSFER_NAMES = (
     "pressure_to_maxwell_t6", "E_real_from_maxwell_t6",
     "E_imag_from_maxwell_t6", "P_abs_from_maxwell_t6",
 )
-SRC_STATE = {"electron_density_rf_state_t6": 1.0e15,
-             "mean_energy_rf_state_t6": 4.0,
-             "pressure_rf_state_t6": 1.3322}
+# Deliberately different from child defaults (1e15, 4.0, 1.3322).
+# Equality to the default cannot prove that any Transfer actually executed.
+SRC_STATE = {"electron_density_rf_state_t6": 1.5e15,
+             "mean_energy_rf_state_t6": 6.0,
+             "pressure_rf_state_t6": 1.65}
 
 
 def sha(path):
@@ -217,8 +219,11 @@ def evaluate(output):
                 "child_received_ne":abs(c["ne_received_t6"]-SRC_STATE["electron_density_rf_state_t6"]) <= SRC_STATE["electron_density_rf_state_t6"]*1e-5,
                 "child_received_mean_energy":abs(c["mean_en_received_t6"]-SRC_STATE["mean_energy_rf_state_t6"])<=1e-5,
                 "child_received_pressure":abs(c["pressure_received_t6"]-SRC_STATE["pressure_rf_state_t6"])<=1e-5,
+                "ne_distinct_from_native_child_default":abs(c["ne_received_t6"]-1.0e15)>1.0e14,
+                "mean_en_distinct_from_native_child_default":abs(c["mean_en_received_t6"]-4.0)>0.5,
+                "pressure_distinct_from_native_child_default":abs(c["pressure_received_t6"]-1.3322)>0.1,
                 "child_received_drive":abs(c["rf_drive_scale_child"]-1.0)<=1e-7,
-                "single_parent_step":p.get("time", -1)>0 and p.get("time",1)>-1,
+                "single_parent_step":abs(p.get("time",-1)-1.0e-9)<1.0e-18,
             }
             entries["checks"]=checks
             entries["child_power_W"]=c["P_abs"]
