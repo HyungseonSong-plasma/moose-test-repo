@@ -14,31 +14,31 @@
 
 ## 24 parallel slots — evidence coverage
 
-**12 independent receipts / 3 indirect coverage / 9 no independently closed slot.** `PASS` in this table never means full New-only Native or science acceptance.
+**17 independent task receipts / 0 indirect coverage / 7 without independent receipt.** `PASS` in this table never means full New-only Native or science acceptance.
 
 | Slot | Classification | Evidence / limitation |
 |---|---|---|
-| B1 | Indirect | E1 ledger covers historical Public B 417/941 10-layer P2; separate B1 sign-off absent |
+| B1 | Independent / direct Native logs | Historical and current Public B 417/941 10-layer P2 exit0; D historical PASS/current FAIL; New-only not inferred |
 | D1 | Independent / candidate | PR #684 Public D/FLOW transport cutover code + 18-case CI; **not merged** into #665, Native P2 pending |
 | D2 | Independent / audit | #535/#541 approval and auto-P3/P4/P05 risk audit; separate cutover authority unresolved |
 | D3 | Independent / SHA | Public D original 100-row table, three ion coefficients, 8/8 negatives; Native D still fails |
-| D4 | HOLD | No independent dual-case 4-transport-owner cutover acceptance |
+| D4 | Independent / candidate decision; Native HOLD | PR684 e+3 ion manual Material retirement source 10/10; 100-row original vs CI-staged 42-row table approval/byte provenance remains HOLD |
 | D5 | HOLD | Public D 417/941 actual Native fails missing e transport JSON |
 | F1 | Independent / audit | FLOW 417 missing transport JSON; 941 **NOT_RUN** after early abort |
 | F2 | Independent / graph | e 5/3 Energy and ion transport Owner graph static PASS; P05/Native after fix not run |
-| F3 | HOLD | Native 26 vs Physics 24 FLOW cutover / authority not resolved |
+| F3 | Independent / owner-mode decision; Native HOLD | Historical FLOW KEEP_HOLD with 26 Native; New-only 24 Physics generated only on separate approved 26→0 cutover; actual repaired FLOW P05 NOT_RUN |
 | F4 | HOLD | New FLOW dual-case Native P2 not executed |
 | H1 | Independent / proposal | Historical ARCH retain, modern Hybrid KEEP_HOLD; historical compatible P2 scope separate |
 | H2 | Independent / negative | Actual latest-head ARCH 417/941 fail closed at Native ni_time P05; 36/36 static controls |
 | H3 | Independent / historical Native | Pinned historical #43883076025 attempt 2 target job succeeds, 417/941 exit 0; workflow overall remains failure; **not current-head ARCH PASS** |
-| I1 | Indirect | Current-head Ion-FVM two matrix failures at Python RETIRED_GROUNDED_SHEATH_BCS, before Native; no standalone I1 receipt |
+| I1 | Independent / exact two-job logs | Both Ion-FVM matrix traceback chains end at retired FEM Grounded Sheath Python guard; before Native/timestep; KEEP_HOLD |
 | I2 | Independent / physics | C2 adjacent-field wall and old Grounded Sheath are not physically equivalent; separate approval needed |
 | I3 | HOLD | Explicit P0/P2-only scope approval missing; do not auto-trigger 1ns/5ns/10ns |
 | N1 | Independent / design | Exact new-only P2 CI acceptance schema G0-G6; N2/N3 not implemented/executed |
 | N2 | HOLD | Wait P5-X formal source/ELF/libs/OCI identity and C3 single writer |
 | N3 | HOLD | No exact-current-head CI replay with one shared binary and both case Native evidence |
 | C1 | Independent / audit | ci.yml/template exact byte parity PASS; costly metadata edited PR trigger and fail-closed artifact policy gap |
-| C2 | Indirect | D2 audit covers approval/auto-run/P05 risks; standalone C2 final sign-off missing |
+| C2 | Independent / exact-policy audit | 12/12 source predicates PASS; #535/#541 authority, auto-P3/150/200-step, partial-FVM/P05 and metadata-only expensive job risks; C3 HOLD |
 | C3 | HOLD | Only central C3/P6-X may change CI/template; not executed |
 | E1 | Independent / custody | 11/11 historical/latest ZIP SHA+CRC independently attested, ELF + two libs checked; E1 **branch diverged from source HEAD** and must not be wholesale merged |
 | E2 | HOLD | Rolling PASS/KEEP_HOLD and P7 handoff not yet fully accepted |
@@ -74,3 +74,21 @@
 5. **Close:** rerun current exact-head CI, independently hash all relevant artifacts, issue P6-X PASS/KEEP_HOLD per lane and P7 handoff. `SCIENCE_HOLD`, main merge, Native P3/P4 and historical deletion remain separate approvals.
 
 **Provenance caveat:** P6-0 directly re-read source HEAD/tree, main, CI/template/runner/JSON blobs, referenced receipts and GitHub run/artifact metadata. The E1 11-ZIP byte/CRC and several Native log validations are separately committed worker attestations; P6-0 did not re-download all ZIPs or re-run physics-opt. Evidence-only isolated branch, no workflow/source/input/issue-body mutation.
+
+## Wave 1 receipt closure — B1/I1/C2 + D4/F3
+
+Five independent slots have now been readback-verified and bound to this P6-0 common HEAD. These are **task receipt closures**, not five new Native jobs or full P6-X acceptance.
+
+| Slot | Immutable independent receipt | Current gate |
+|---|---|---|
+| B1 | [Historical/current Public B real Job log receipt](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/28920362d985f0b08d16f9325a6b857834ccf90b/reports/issue672/p6-b1-public-history-native-p2-receipt.json) | Public B old/current two-case P2 PASS; distinct D/current New-only HOLD |
+| I1 | [Ion-FVM two-job direct traceback receipt](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/dce2d02306377b3c4b056b10cb7e3a0b70ad6f1c/reports/issue672/p6-i1-retired-grounded-sheath-caller-chain.json) | Python input generation RETIRED_GROUNDED_SHEATH_BCS; KEEP_HOLD |
+| C2 | [Exact source 12/12 approval and cost/P05 audit](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/0b89891cb7915e5c94c4ca6fad559b66aa78abca/reports/issue672/p6-c2-approval-autostart-p05-risk-gates.json) | C3 Workflow owner remediation HOLD |
+| D4 | [Public D four Transport owner source decision](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/c3bf3713c68d78b56ec5679cdc620b533b12216c/reports/issue672/p6-d4-public-four-transport-owner-decision.json) | Candidate 10/10 static PASS, Native D5 and original-vs-runtime Electron Lookup authority HOLD |
+| F3 | [FLOW legacy 26 vs Physics 24 owner decision](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/49b3e1dc6ca04f5808cd5e447be5dd13f43e57e2/reports/issue672/p6-f3-flow-26native-vs-24generated-owner-decision.json) | Historical FLOW KEEP_HOLD, separate New-only cutover conditional; F4 Native NOT_RUN |
+
+**Critical D4 lookup split:** original repository Public D electron_moments.txt is **100 rows / SHA256 `994f6b1d...`**, but canonical 400W preparation copies a **42-row / SHA256 `35534a52...`** source into the same relative runtime path. PR684 explicitly pins the latter. They are not the same bytes or an automatic scientific replacement. The actual CI table staging/provenance must be tied to the selected historical authority before acceptance.
+
+**Critical F3 mode split:** PR684 FLOW transport-owner repair does not retire 14 Native ion FV kernels + 12 Native FV BCs per case; DDContinuityEq still generates 12+12 for selected ion species. FLOW's actual repaired P05 outcome is **NOT_RUN**, not a demonstrated `ni_time` failure; that failure was separately observed in ARCH. The historical FLOW job remains KEEP_HOLD on the modern HEAD, while dedicated New-only must have a separately approved exact 26→0 cleanup and 12+12 Warehouse.
+
+No new Native work or science run was dispatched for these receipts; `SCIENCE_HOLD` and the current `P6-X=HOLD` are unchanged.
