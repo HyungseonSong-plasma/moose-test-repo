@@ -412,9 +412,26 @@ jobs:
                   if not tracefile.is_file():
                       diag=re.search(r"P5X_INTERPOSER_UNRESOLVED[^\n]{0,150}",log)
                       reason=("_"+diag.group(0) if diag else "")
-                      if "cannot be preloaded" in log: reason+="_LD_PRELOAD_CANNOT_LOAD"
-                      if "symbol lookup error" in log: reason+="_SYMBOL_LOOKUP_ERROR"
-                      if "Segmentation fault" in log: reason+="_PROCESS_SEGFAULT"
+                      markers={"preload_cannot_load":"cannot be preloaded",
+                               "undefined_symbol":"undefined symbol",
+                               "dlsym_error":"P5X_INTERPOSER_UNRESOLVED",
+                               "segfault":"Segmentation fault",
+                               "aborted":"Aborted",
+                               "permission_denied":"Permission denied",
+                               "mpi_abort":"MPI_ABORT",
+                               "syntax_ok":"Syntax OK",
+                               "native_error":"*** ERROR ***",
+                               "terminated":"terminate called",
+                               "libstdcpp":"std::"}
+                      receipt["observer_failure_categories"]={k:(v in log) for k,v in markers.items()}
+                      receipt["observer_failure_stdout_stderr_sha256"]=hashlib.sha256(log.encode()).hexdigest()
+                      receipt["observer_failure_stdout_stderr_len"]=len(log)
+                      import re as _re
+                      whitelisted=[_re.sub(r"/dev/shm/[^ \\n]+","[PRIVATE_SCRATCH]",line[:230])
+                          for line in log.splitlines()
+                          if any(k in line for k in ("P5X_INTERPOSER_","ld.so:","undefined symbol",
+                              "terminate called","Segmentation fault","cannot be preloaded","std::"))]
+                      receipt["observer_failure_safe_excerpt"]=whitelisted[-8:]
                       raise RuntimeError("OWNER_INTERPOSER_NOT_INVOKED_"+case+"_rc_"+str(rc)+reason)
                   from collections import Counter
                   events=[line.split("\t") for line in tracefile.read_text().splitlines()]
