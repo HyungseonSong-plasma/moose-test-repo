@@ -55,7 +55,7 @@ jobs:
           cd historical
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
           echo "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387  $DST" | sha256sum --check -
-          test "$(wc -l < "$DST")" = 100
+          python3 -c "from pathlib import Path; p=Path('experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'); assert len(p.read_bytes().splitlines()) == 100"
           export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
           export OXYGEN_RESEARCH_400=1
           CHEM=experiments/Issue395_powered_chemistry_ladder
