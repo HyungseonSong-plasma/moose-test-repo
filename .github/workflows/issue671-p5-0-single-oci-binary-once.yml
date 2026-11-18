@@ -159,7 +159,7 @@ jobs:
               "runtime_bundle_cli_smoke": "PENDING",
               "reusable_binary_runtime": "OCI_VENDOR_AND_APP_SHARED_LIBRARIES",
           })
-          (evidence / "p5_0_binary_identity.json").write_text(json.dumps(base_receipt, indent=2, sort_keys=True)+"\\n")
+          (evidence / "p5_0_binary_identity.json").write_text(json.dumps(base_receipt, indent=2, sort_keys=True)+"\n")
           print("P5_0_DEDICATED_APP_LIBRARIES_PACKAGED", list(libs))
           PY
           docker run --rm --network none --entrypoint /bin/bash \
@@ -167,7 +167,7 @@ jobs:
             -v "$PWD/evidence/runtime-bundle:/bundle:ro" "$OCI" -lc '
               set -euo pipefail
               source /environment
-              export LD_LIBRARY_PATH="/bundle/lib:\${LD_LIBRARY_PATH:-}"
+              export LD_LIBRARY_PATH="/bundle/lib:${LD_LIBRARY_PATH:-}"
               /bundle/bin/physics-opt --version
             ' 2>&1 | tee evidence/p5_0_cli_smoke.log
           python3 - <<'PY'
@@ -177,7 +177,7 @@ jobs:
           d["runtime_bundle_cli_smoke"]="PASS_ISOLATED_VENDOR_OCI_VERSION_ONLY"
           with pathlib.Path("evidence/p5_0_cli_smoke.log").open("rb") as f:
               d["runtime_bundle_cli_smoke_log_sha256"]=hashlib.file_digest(f,"sha256").hexdigest()
-          p.write_text(json.dumps(d, indent=2, sort_keys=True)+"\\n")
+          p.write_text(json.dumps(d, indent=2, sort_keys=True)+"\n")
           PY
           tar -C evidence/runtime-bundle -czf evidence/p5_0_runtime_bundle.tar.gz .
           sha256sum evidence/p5_0_runtime_bundle.tar.gz | tee evidence/p5_0_runtime_bundle.tar.gz.sha256
