@@ -1,0 +1,208 @@
+{
+  "schema": "issue670.p4-w2.om-wall-flux.source-bound.v1",
+  "task_id": "P4-W2",
+  "issue_number": 670,
+  "scope": "S6 recovery package P4, Om wall-flux Material only; not Native science P4.",
+  "source_pin": {
+    "current_PR665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "PR675_P3X": "MERGED_INTO_PR665",
+    "P3X_ci_run": 44257739203,
+    "P3X_artifact_id": 14406746397,
+    "P3X_artifact_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "P3X_artifact_original_source_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P1_run": 44182628032,
+    "P1_artifact_id": 14372278070,
+    "P1_artifact_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "P2_run": 44199587771,
+    "P2_artifact_id": 14380831538,
+    "P2_artifact_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "original_archive_artifacts": {
+      "S6_417": 13677089020,
+      "S6_941": 13677375813
+    },
+    "original_zip_sha256": {
+      "S6_417": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "S6_941": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177"
+    },
+    "important": "P3X CI artifact pin precedes post-merge PR665 head; current relevant C++ and JSON source contracts read from the exact newest PR665 HEAD. No Native rerun claimed."
+  },
+  "target": {
+    "source_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    "layer_ordinal": 1,
+    "section": "FunctorMaterials",
+    "object_name": "negative_ion_wall_flux",
+    "original_C0_sha256": "346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d",
+    "P1_C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "P2_C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+    "P3X_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "original_factory": "PhysicsIonWallTotalFluxMaterial",
+    "original_block_sha256": "cffe5c4538f640c44b1a8d23124ebabbebc50ac2481b36fcc4a655c62e45f98d",
+    "final_factory": "PhysicsIonWallFluxMaterial",
+    "final_block_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162",
+    "parameters": {
+      "type": "PhysicsIonWallFluxMaterial",
+      "species_id": "Om",
+      "ion_number_density": "n_m_physical",
+      "potential": "potential",
+      "mobility": "Om_mobility",
+      "gas_temperature": "temperature",
+      "charge_number": "-1",
+      "molar_mass": "0.016",
+      "sticking": "1.0",
+      "ion_temperature_eV": "0.0",
+      "migration_gate_smoothing_width": "1.0e-3",
+      "use_element_gradient_for_potential": "true",
+      "block": "plasma"
+    },
+    "source_count": "1 per case over 11 files",
+    "same_P1_P2_P3X_material_block_bytes": true
+  },
+  "case_verification": {
+    "S6-417": {
+      "original_archive_files_sha": "10/10",
+      "P3X_final_layer_files_sha": "11/11",
+      "P3X_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "P3X_material_block_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162",
+      "native_ion_removed": 26,
+      "native_ion_remaining": 0,
+      "legacy_name_references_in_11_inputs": 0,
+      "Om_wall_number_flux_references_in_11_inputs": 6,
+      "Om_wall_mass_flux_references_in_11_inputs": 1
+    },
+    "S6-941": {
+      "original_archive_files_sha": "10/10",
+      "P3X_final_layer_files_sha": "11/11",
+      "P3X_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "P3X_material_block_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162",
+      "native_ion_removed": 26,
+      "native_ion_remaining": 0,
+      "legacy_name_references_in_11_inputs": 0,
+      "Om_wall_number_flux_references_in_11_inputs": 6,
+      "Om_wall_mass_flux_references_in_11_inputs": 1
+    }
+  },
+  "newonly_JSON": {
+    "files": {
+      "S6_417": "unified_s6_417_newonly.json",
+      "S6_941": "unified_s6_941_newonly.json"
+    },
+    "sha256": {
+      "S6_417": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "S6_941": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+    },
+    "species": "Om",
+    "charge_number": -1,
+    "molar_mass_kg_per_mol": 0.016,
+    "sticking_coefficient": 1,
+    "transport": {
+      "type": "constant",
+      "file": "none",
+      "unit": "physical",
+      "mobility": 10,
+      "diffusivity": 0.25851999786435537
+    },
+    "general_BC": {
+      "logical_name": "Om_wall",
+      "type": "FVFunctorNeumannBC",
+      "variable": "log_Om",
+      "functor": "Om_wall_number_flux",
+      "factor": "-1/N_A",
+      "group_names": [
+        "inlet outlet",
+        "plasma_electrode plasma_metal plasma_right"
+      ],
+      "sideset_count": 5,
+      "logical_owner_count": 1
+    },
+    "dielectric_BCs": [
+      "Om_cover_dielectric",
+      "Om_wafer_dielectric",
+      "Om_focus_ring_dielectric"
+    ],
+    "dielectric_type": "FVLogMolarDielectricFluxBC",
+    "dielectric_flux": "Om_wall_number_flux"
+  },
+  "producer_consumer_edges": [
+    {
+      "from": "[FunctorMaterials]/negative_ion_wall_flux",
+      "factory": "PhysicsIonWallFluxMaterial",
+      "species_id": "Om",
+      "to": [
+        "Om_wall_number_flux",
+        "Om_wall_mass_flux"
+      ],
+      "status": "EXPLICIT_PROVIDER_SOURCE_STATIC"
+    },
+    {
+      "from": "New-only Continuity fvm_species=Om, Chemistry.C add_functor_material",
+      "factory": "IonWallFluxMaterial",
+      "object_name": "Om_wall",
+      "species_id": "Om",
+      "to": [
+        "Om_wall_number_flux",
+        "Om_wall_mass_flux"
+      ],
+      "status": "PHYSICS_GENERATOR_STATIC_CONTRACT_UNINSTANTIATED"
+    },
+    {
+      "from": "Om_wall_number_flux",
+      "to": "Om_wall (five physical sidesets), three Om dielectric BCs, surface-current and diagnostic consumers",
+      "status": "JSON_DECLARED_AND_LITERAL_11_LAYER_STATIC"
+    },
+    {
+      "from": "Om_wall_mass_flux",
+      "to": "stageb4_Om_wall_mass_rate and other dynamic consumers requiring follow-up",
+      "status": "ONE_LITERAL_11_LAYER_CONSUMER"
+    },
+    {
+      "from": "n_m_physical",
+      "to": "explicit negative_ion_wall_flux",
+      "expression": "6.02214076e23*exp(log_Om)",
+      "status": "LITERAL_STAGE"
+    },
+    {
+      "from": "Om_number_density",
+      "to": "generated IonWallFluxMaterial",
+      "expression": "N_A*exp(log_Om)",
+      "status": "STATIC_CXX_GENERATION_CONTRACT"
+    }
+  ],
+  "CXX_provenance": {
+    "manual_factory_git_blob": "215e9c81720e6813be22a8a51405fe99639cf0ab",
+    "generated_factory_git_blob": "101586edf05ed19525072b4a43c181ba57dc3589",
+    "both_Factories_registered": true,
+    "both_use_species_id_to_generate_canonical_functors": true,
+    "Chemistry_C_git_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "DDContinuityEq_C_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "both_wall_laws_use_signed_outward_gate": true,
+    "surface_mass_flux_formula": "number_flux * molar_mass / N_A",
+    "wall_gradient": "adjacent_element",
+    "migration_smoothing_width": 0.001
+  },
+  "verification": {
+    "status": "SOURCE_STATIC_PASS_UNIQUE_FUNCTOR_OWNER_HOLD",
+    "negative_controls_rejected": "19/19",
+    "negative_controls_note": "17 JSON/parameter/SHA mutation predicates and two mutations of real staged .i block bytes; all local static assertions, not Native tests",
+    "full_independent_local_receipt": "P4-W2_Om_wall_flux_independent_receipt.json",
+    "full_independent_local_receipt_sha256": "a5c54ad3bd363f391b93803e787877ad1e45229fd9780df4d498704e9783f501",
+    "full_independent_local_receipt_bytes": 49309
+  },
+  "gates": {
+    "P4_W2_WALL_SOURCE_BYTE_SIGN_MASS": "PASS",
+    "P4_W2_NEWONLY_CANONICAL_FUNCTOR_SINGLE_OWNER": "HOLD_STATIC_DOUBLE_PROVIDER",
+    "P4_W2_FACTORY_REGISTRATION": "PASS_BOTH_REGISTERED",
+    "P4_W2_LEGACY_NAME_REFERENCE_IN_11_FILES": "PASS_ZERO",
+    "P4_X": "PENDING",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "unresolved": [
+    "P4-X must reconcile/remove one of the explicit and generated Om wall providers, preserving Om_wall_number_flux and Om_wall_mass_flux consumer names, wall current and diagnostics",
+    "Native MOOSE Warehouse single-provider and face-sided Flux runtime not tested",
+    "External dynamic consumer reachability not verified; zero legacy names in 11 staged .i files does not prove caller-zero",
+    "Do not remove n_m_physical, RF/neutral/Poisson, ion sources, or protected private rate bytes as a side-effect"
+  ],
+  "preservation": "Only separate source-bound evidence branch and Issue comment; no modification to PR #665, main, original 10-layer ZIPs, New-only source, Physics C++, workflows, Native P2/P3/P4."
+}
