@@ -366,6 +366,30 @@ DDContinuityEq::checkIntegrity() const
         mooseError("P05 partial or duplicate FV BC owner '", name,
                    "' [", type, "] on ", variable,
                    "; observed ", matched_bcs[name], ", expected exactly one.");
+    // Source-bound diagnostic evidence: report ACTUAL Warehouse objects only after
+    // P05's exact name/type/single-owner checks have succeeded. No rate values,
+    // physical fields, or solver state are emitted. This is not a science verdict.
+    if (chemistryData().hasIonWalls())
+    {
+      for (const auto * kernel : kernels)
+      {
+        const auto & params = kernel->parameters();
+        if (params.isParamValid("variable") &&
+            params.get<NonlinearVariableName>("variable") == variable)
+          mooseInfo("P05_WAREHOUSE_KERNEL species=", id, " variable=", variable,
+                    " name=", kernel->name(), " factory=", kernel->type());
+      }
+      for (const auto * bc : bcs)
+      {
+        const auto & params = bc->parameters();
+        if (params.isParamValid("variable") &&
+            params.get<NonlinearVariableName>("variable") == variable)
+          mooseInfo("P05_WAREHOUSE_FVBC species=", id, " variable=", variable,
+                    " name=", bc->name(), " factory=", bc->type());
+      }
+      mooseInfo("P05_WAREHOUSE_COUNTS species=", id, " variable=", variable,
+                " kernels=", matched.size(), " fv_bcs=", matched_bcs.size());
+    }
   }
 }
 
