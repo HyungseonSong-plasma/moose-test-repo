@@ -1,0 +1,210 @@
+{
+  "schema": "issue670.P4_V3.source_rate_density.negative_summary.v1",
+  "task": "P4-V3",
+  "issue": 670,
+  "checked_source_pr": 665,
+  "checked_pr_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "verdict": "PASS_INDEPENDENT_STATIC_MUTATION_MATRIX__HOLD_NATIVE",
+  "independent_local_full_receipt_sha256": "e57930974b22985cff0687c74ac9b8824bc07ac5fc00051e8f6c66f8d45655b0",
+  "independent_local_verifier_sha256": "619a970da1f2054836e856b08f8268dea34c0300120ded13219085f6dddf5513",
+  "source_artifacts": [
+    {
+      "stage": "P1_0_actual_Hybrid",
+      "run_id": 44182628032,
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "common_manifest_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    },
+    {
+      "stage": "P3_X_source_only_production_runner",
+      "run_id": 44256823392,
+      "artifact_id": 14405784430,
+      "zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+      "stage_receipt_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    }
+  ],
+  "exact_source_code_pins_at_current_PR665_head": {
+    "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "ci/p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json": "9568e2cae6640a755f9403c4f58e077c801b998c",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py": "b17feb16c70ff28c090b6687a46044cff826072e"
+  },
+  "cases": {
+    "417": {
+      "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "c0_layer_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "old_specific": {
+        "name": "legacy8_h05_ei417_op",
+        "section": "FVKernels",
+        "sha256": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7",
+        "rate_functor": "S_Op_molar_EI417"
+      },
+      "signed_source_map": {
+        "O2p": {
+          "EI-415": 1,
+          "H25": 1
+        },
+        "Om": {
+          "EI-401": 1
+        },
+        "Op": {
+          "EI-417": 1,
+          "H25": -1
+        }
+      },
+      "positive_controls": 2,
+      "negative_controls": 49,
+      "complete_file_sha_verified": {
+        "P1_Hybrid": "11_of_11",
+        "P3_X": "11_of_11"
+      },
+      "original_FV_source_blocks": [
+        {
+          "name": "ei415_o2p_source",
+          "section": "FVKernels",
+          "sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+          "rate_functor": "S_O2p_molar_EI415"
+        },
+        {
+          "name": "ei401_negative_ion_source",
+          "section": "FVKernels",
+          "sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
+          "rate_functor": "S_Om_molar_EI401"
+        },
+        {
+          "name": "h25_atomic_positive_ion",
+          "section": "FVKernels",
+          "sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01",
+          "rate_functor": "S_Op_molar_H25"
+        },
+        {
+          "name": "h25_molecular_positive_ion",
+          "section": "FVKernels",
+          "sha256": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4",
+          "rate_functor": "S_O2p_molar_H25"
+        },
+        {
+          "name": "legacy8_h05_ei417_op",
+          "section": "FVKernels",
+          "sha256": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7",
+          "rate_functor": "S_Op_molar_EI417"
+        }
+      ]
+    },
+    "941": {
+      "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "c0_layer_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "old_specific": {
+        "name": "ei941_atomic_positive_ion_source",
+        "section": "FVKernels",
+        "sha256": "06c9444eda41eb5cc47e28485db5f8e95dba64a52e93131ca2fcc1378367f433",
+        "rate_functor": "S_Op_molar_EI941"
+      },
+      "signed_source_map": {
+        "O2p": {
+          "EI-415": 1,
+          "H25": 1
+        },
+        "Om": {
+          "EI-401": 1
+        },
+        "Op": {
+          "EI-941": 1,
+          "H25": -1
+        }
+      },
+      "positive_controls": 2,
+      "negative_controls": 49,
+      "complete_file_sha_verified": {
+        "P1_Hybrid": "11_of_11",
+        "P3_X": "11_of_11"
+      },
+      "original_FV_source_blocks": [
+        {
+          "name": "ei415_o2p_source",
+          "section": "FVKernels",
+          "sha256": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+          "rate_functor": "S_O2p_molar_EI415"
+        },
+        {
+          "name": "ei401_negative_ion_source",
+          "section": "FVKernels",
+          "sha256": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
+          "rate_functor": "S_Om_molar_EI401"
+        },
+        {
+          "name": "h25_atomic_positive_ion",
+          "section": "FVKernels",
+          "sha256": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01",
+          "rate_functor": "S_Op_molar_H25"
+        },
+        {
+          "name": "h25_molecular_positive_ion",
+          "section": "FVKernels",
+          "sha256": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4",
+          "rate_functor": "S_O2p_molar_H25"
+        },
+        {
+          "name": "ei941_atomic_positive_ion_source",
+          "section": "FVKernels",
+          "sha256": "06c9444eda41eb5cc47e28485db5f8e95dba64a52e93131ca2fcc1378367f433",
+          "rate_functor": "S_Op_molar_EI941"
+        }
+      ]
+    }
+  },
+  "test_scope": {
+    "actual_files": "Both case 11-layer P1 and P3-X source inputs independently ZIP CRC/file+block SHA verified from archived ZIPs; case-specific JSON byte SHA independently checked against stage receipt",
+    "mutations": "Local offline copies of actual 11-layer inputs and case-specific New-only JSON. All 98 mutations rejected for targeted category; four positive controls accepted. Not the production P0/Native parser.",
+    "negative_families": [
+      "original Native FV Source reintroduced, one at a time and all 5",
+      "unexpected explicit FV Source with generated canonical name",
+      "one of three generated species selections omitted",
+      "one of three source contribution families removed from JSON reactions",
+      "ion charge number sign flipped O2p/Om/Op",
+      "rate unit mol/(m^3 s) replaced with particles/(m^3 s)",
+      "case EI-417/EI-941 confusion",
+      "H25 Op-consumption coefficient/sign change",
+      "reaction stoichiometry versus equation mismatch",
+      "reaction archive provenance loss",
+      "duplicate H25 id",
+      "density initial number zero/invalid",
+      "ion transport disabled",
+      "density molar state mismatch",
+      "Avogadro factor omitted from number density",
+      "n_i_physical/n_m_physical/n_op_physical alias output altered",
+      "Poisson negative ion sign and density inputs swapped",
+      "dont_create_kernels bypass"
+    ],
+    "synthetic_generated_owner_assertion": "Code contract only: DDContinuityEq constructs one FVCoupledForce <species>_source from S_<species>_molar for each fvm selected species; runtime warehouse count NOT verified",
+    "retired_native_fv_source_counts": {
+      "417": 5,
+      "941": 5
+    },
+    "expected_generated_source_count_each_case": 3,
+    "reactions_units": "mol/(m^3 s)",
+    "density_alias_relation": "n_i_physical/n_m_physical/n_op_physical = 6.02214076e23*exp(log_O2p/log_Om/log_Op) [1/m3] respectively",
+    "original_FV_source_block_SHA_originally_verified": 10,
+    "negative_test_total": 98,
+    "positive_control_total": 4
+  },
+  "gates": {
+    "P4_V3_SOURCE_NEGATIVE": "PASS",
+    "P4_X": "NOT_RUN",
+    "P5_NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "New-only rate functor duplicate/late-binding semantics and actual generated 3 Source kernel count require P4-X/P5; no runtime check-input performed.",
+    "Source archive was run on earlier source SHA; current latest PR665 source blob identity for C++/JSON verified unchanged, not a claim of fresh current-HEAD full CI.",
+    "Existing independent P4-T1/T2/T3 transport canonical Functor collisions are outside V3 and remain gated.",
+    "Private EI Rate original raw bytes not accessed. Existing Source SHA proof reused only within documented source-bounded scope."
+  ],
+  "safety": "No changes to PR #665, main, raw 10-layer inputs, New-only JSON, shared CI/P0/PhysicsApp or any private rates. Commit independent evidence only."
+}
