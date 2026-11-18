@@ -1,0 +1,100 @@
+name: Issue671 P5 D8 real New-only check-input diagnostic HOLD (no solver)
+on:
+  push:
+    branches:
+      - issue-671-p5-d8-newonly-native-diagnostic-20261118
+    paths:
+      - .github/workflows/issue671-d8-newonly-native-probe-once.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-head-native-input-diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact source and original immutable input ancestry
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pin exact source and compile diagnostic harness syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git cat-file -e 9c15a4f0e2cf8042cb0d4b2f18af31511021d168^{commit}
+          git merge-base --is-ancestor 395eeac274125ffa632b4d75a4531996dee24fe0 HEAD
+          python3 -m py_compile ci/issue671_p5_d8_native_probe.py
+      - name: Download pinned full real two-case P3-X source-stage public artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p5inputs"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14406746397/zip" \
+            --output "$RUNNER_TEMP/p5inputs/p3x-source.zip"
+          echo "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111  $RUNNER_TEMP/p5inputs/p3x-source.zip" | sha256sum --check -
+      - name: Fail-closed preflight of the 11 real inputs and Maxwell child before any Native build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p5-stage-only"
+          python3 ci/issue671_p5_d8_native_probe.py \
+            --source "$GITHUB_WORKSPACE" --repo-head "$GITHUB_SHA" \
+            --artifact "$RUNNER_TEMP/p5inputs/p3x-source.zip" \
+            --output "$RUNNER_TEMP/p5-stage-only" --stage-only
+      - name: Build exact HEAD PhysicsApp executable in immutable OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            '
+          test -x physics_app/physics-opt
+          sha256sum physics_app/physics-opt | tee "$RUNNER_TEMP/p5inputs/physics-opt.sha256"
+      - name: Probe both actual New-only inputs with --check-input ONLY (P5 remains HOLD)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p5-native"
+          python3 ci/issue671_p5_d8_native_probe.py \
+            --source "$GITHUB_WORKSPACE" --repo-head "$GITHUB_SHA" \
+            --artifact "$RUNNER_TEMP/p5inputs/p3x-source.zip" \
+            --output "$RUNNER_TEMP/p5-native" --timeout 480
+          python3 - "$RUNNER_TEMP/p5-native/readiness.json" <<'PY'
+          import json,sys
+          x=json.load(open(sys.argv[1]))
+          assert x["status"] == "DIAGNOSTIC_EXECUTED_P4_NOT_INTEGRATED_P5_HOLD"
+          assert len(x["cases"]) == 2
+          assert x["P5_NATIVE_P2"] == "HOLD"
+          assert x["science"] == "SCIENCE_HOLD"
+          print(json.dumps({c:{"exit_code":v["exit_code"],"probe":v["native_probe"]}
+                            for c,v in x["cases"].items()}))
+          PY
+      - name: Upload only Native diagnostic logs, source/binary SHA and HOLD receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue671-d8-newonly-p3x-pre-p4-native-diagnostic
+          path: |
+            ${{ runner.temp }}/p5-native/readiness.json
+            ${{ runner.temp }}/p5-native/S6-417_native_check_input.log
+            ${{ runner.temp }}/p5-native/S6-941_native_check_input.log
+            ${{ runner.temp }}/p5inputs/physics-opt.sha256
+          if-no-files-found: warn
+          retention-days: 21
