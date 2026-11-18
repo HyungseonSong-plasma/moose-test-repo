@@ -305,6 +305,7 @@ DDContinuityEq::checkIntegrity() const
   std::vector<FVBoundaryCondition *> bcs = flux_bcs;
   bcs.insert(bcs.end(), dirichlet_bcs.begin(), dirichlet_bcs.end());
 
+  std::ostringstream warehouse_audit;
   for (const auto & id : _fvm_species)
   {
     const NonlinearVariableName variable = continuityStateName(id);
@@ -366,9 +367,8 @@ DDContinuityEq::checkIntegrity() const
         mooseError("P05 partial or duplicate FV BC owner '", name,
                    "' [", type, "] on ", variable,
                    "; observed ", matched_bcs[name], ", expected exactly one.");
-    // Source-bound diagnostic evidence: report ACTUAL Warehouse objects only after
-    // P05's exact name/type/single-owner checks have succeeded. No rate values,
-    // physical fields, or solver state are emitted. This is not a science verdict.
+    // Source-bound diagnostic evidence: collect actual Warehouse names/types
+    // after P05. MOOSE Info coalesces repeated emissions from one call site.
     if (chemistryData().hasIonWalls())
     {
       for (const auto * kernel : kernels)
@@ -376,21 +376,23 @@ DDContinuityEq::checkIntegrity() const
         const auto & params = kernel->parameters();
         if (params.isParamValid("variable") &&
             params.get<NonlinearVariableName>("variable") == variable)
-          mooseInfo("P05_WAREHOUSE_KERNEL species=", id, " variable=", variable,
-                    " name=", kernel->name(), " factory=", kernel->type());
+          warehouse_audit << "P05_WAREHOUSE_KERNEL species=" << id << " variable=" << variable
+                          << " name=" << kernel->name() << " factory=" << kernel->type() << "\n";
       }
       for (const auto * bc : bcs)
       {
         const auto & params = bc->parameters();
         if (params.isParamValid("variable") &&
             params.get<NonlinearVariableName>("variable") == variable)
-          mooseInfo("P05_WAREHOUSE_FVBC species=", id, " variable=", variable,
-                    " name=", bc->name(), " factory=", bc->type());
+          warehouse_audit << "P05_WAREHOUSE_FVBC species=" << id << " variable=" << variable
+                          << " name=" << bc->name() << " factory=" << bc->type() << "\n";
       }
-      mooseInfo("P05_WAREHOUSE_COUNTS species=", id, " variable=", variable,
-                " kernels=", matched.size(), " fv_bcs=", matched_bcs.size());
+      warehouse_audit << "P05_WAREHOUSE_COUNTS species=" << id << " variable=" << variable
+                      << " kernels=" << matched.size() << " fv_bcs=" << matched_bcs.size() << "\n";
     }
   }
+  if (!warehouse_audit.str().empty())
+    mooseInfo(warehouse_audit.str());
 }
 
 void
