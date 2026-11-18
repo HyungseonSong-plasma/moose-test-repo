@@ -322,7 +322,8 @@ def reconcile_staged_D_json_initials(chemistry: Path, ordered: list[str]) -> dic
 
 
 
-def cutover_staged_D_transport_owners(chemistry: Path, ordered: list[str]) -> dict:
+def cutover_staged_D_transport_owners(chemistry: Path, ordered: list[str],
+                                      table_authority: str = 'prepared42') -> dict:
     """Move exactly four historical DD coefficient owners to Physics/JSON.
 
     This is a D-only disposable input edit, after exact old lookup/material
@@ -393,10 +394,28 @@ def cutover_staged_D_transport_owners(chemistry: Path, ordered: list[str]) -> di
     # supported for this historical option-only path.
     table_rel = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
     table_path = (chemistry / table_rel).resolve()
-    if (not table_path.is_file() or table_path.is_symlink() or
-            hashlib.sha256(table_path.read_bytes()).hexdigest() !=
-            '35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b'):
-        raise ValueError('P6_D1_HISTORICAL_ELECTRON_TABLE_SHA_MISMATCH')
+    # The original100 and prepared42 pathways have DISTINCT exact SHA contracts.
+    authorities = {
+        'prepared42': ('35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b',
+                       42, (1.658212908, 22.3312233)),
+        'original100': ('994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387',
+                        100, (1.40991, 22.1378)),
+    }
+    if table_authority not in authorities:
+        raise ValueError('P6_D1_UNKNOWN_TABLE_AUTHORITY')
+    expected_sha, expected_rows, (lo, hi) = authorities[table_authority]
+    if not table_path.is_file() or table_path.is_symlink():
+        raise ValueError('P6_D1_AUTHORITY_LOOKUP_NOT_REGULAR')
+    table_bytes = table_path.read_bytes()
+    if hashlib.sha256(table_bytes).hexdigest() != expected_sha:
+        raise ValueError('P6_D1_'+table_authority.upper()+'_ELECTRON_TABLE_SHA_MISMATCH')
+    rows = [tuple(map(float, ln.split())) for ln in table_bytes.decode().splitlines()
+            if ln.strip() and not ln.lstrip().startswith('#')]
+    if (len(rows) != expected_rows or any(len(row) != 3 or
+          not all(math.isfinite(v) for v in row) for row in rows) or
+          any(rows[i][0] >= rows[i+1][0] for i in range(len(rows)-1)) or
+          (rows[0][0], rows[-1][0]) != (lo, hi)):
+        raise ValueError('P6_D1_'+table_authority.upper()+'_GRID_IDENTITY_MISMATCH')
     species_records['e'].update({
         'transport_coef': 'lookup', 'table_file': table_rel,
         'table_units': 'reduced', 'pressure': 'p',
@@ -424,6 +443,9 @@ def cutover_staged_D_transport_owners(chemistry: Path, ordered: list[str]) -> di
         'retired_material_count': 4, 'retired_materials': removed,
         'transport_json_species': sorted(['e', *aliases]),
         'original_electron_lookup_sha256': hashlib.sha256(table_path.read_bytes()).hexdigest(),
+        'table_authority': table_authority,
+        'table_authority_rows': expected_rows,
+        'table_authority_source_sha256': expected_sha,
         'energy_projection': 'species.e.energy_transport_coef=fluid; 5/3 original',
         'file_sha256': {
             'C0': {'before': hashlib.sha256(first_before).hexdigest(),
@@ -999,8 +1021,13 @@ def persist_report(evidence: Path, report: dict) -> None:
 
 def execute(historical: Path, binary: Path, expected_head: str,
             evidence: Path, timeout_seconds: int = 1200,
-            experimental_generated_chemistry: bool = False) -> dict:
+            experimental_generated_chemistry: bool = False,
+            table_authority: str = 'prepared42') -> dict:
     validate_overlay()
+    if table_authority not in ('prepared42', 'original100'):
+        raise ValueError('P6_D2_UNKNOWN_LOOKUP_AUTHORITY')
+    if table_authority == 'original100' and not experimental_generated_chemistry:
+        raise ValueError('P6_D2_ORIGINAL100_REQUIRES_EXPLICIT_D4_CHEMISTRY')
     gate_file = evidence / "option_s6_environment.json"
     if not gate_file.is_file():
         raise ValueError("Independent public P0/environment gate evidence missing")
@@ -1020,7 +1047,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
               "original_immutable_candidate_sha": p2.PINNED_CANDIDATE,
               "public_deck_manifest_sha256": sha_file(
                   ROOT / p2.DECKS / "manifest.json"),
-              "option_overlay_sha256": OVERLAY_SHA256,
+              "D2_lookup_authority": table_authority,
+               "option_overlay_sha256": OVERLAY_SHA256,
               "checks": {}}
     if public.get("P0") != "PASS":
         raise ValueError("Public reference P0 is not PASS")
@@ -1075,7 +1103,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         scratch_transport = None
                         if variant == "D":
                             scratch_transport = cutover_staged_D_transport_owners(
-                                staged / p2.CHEM, ordered)
+                                staged / p2.CHEM, ordered,
+                                table_authority=table_authority)
                             if experimental_generated_chemistry:
                                 bridge_spec = importlib.util.spec_from_file_location(
                                     'p6_d4_disposable_generated_chemistry',
@@ -1084,7 +1113,9 @@ def execute(historical: Path, binary: Path, expected_head: str,
                                     raise ValueError('P6_D4_CHEMISTRY_BRIDGE_NOT_INSTALLED')
                                 bridge = importlib.util.module_from_spec(bridge_spec)
                                 bridge_spec.loader.exec_module(bridge)
-                                scratch_chemistry = bridge.apply(staged / p2.CHEM, ordered, case)
+                                scratch_chemistry = bridge.apply(
+                                    staged / p2.CHEM, ordered, case,
+                                    table_authority=table_authority)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
                             binary, identity["binary_sha256"], staged, ordered,
@@ -1136,11 +1167,16 @@ def main() -> int:
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--d4-experimental-generated-chemistry", action="store_true",
                         help="Explicit isolated-P2-only genuine 7+8 Chemistry and ion26 Scratch pilot; not historical D or science")
+    parser.add_argument("--d4-electron-table-authority",
+                        choices=("prepared42", "original100"),
+                        default="prepared42",
+                        help="Explicit exact-SHA D2 data authority, no 42-row guard bypass.")
     args = parser.parse_args()
     try:
         result = execute(args.historical.resolve(), args.binary.resolve(),
                          args.expected_head, args.evidence.resolve(),
-                         experimental_generated_chemistry=args.d4_experimental_generated_chemistry)
+                         experimental_generated_chemistry=args.d4_experimental_generated_chemistry,
+                         table_authority=args.d4_electron_table_authority)
         exit_code = 0 if (result["P2"] == "PASS" and result.get("cleanup") == "PASS" and result["status"] == "PASS") else 3
     except Exception as exc:
         result = {"gate": "Issue402 S6 option-only public P2",
