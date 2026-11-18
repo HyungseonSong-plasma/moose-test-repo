@@ -44,7 +44,8 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
     if case not in ("417","941") or len(ordered)!=11 or Path(ordered[-1]).name!="migrated_continuity.i":
         raise ValueError("P6_D4_CASE_OR_11_LAYER_MISMATCH")
     names=[Path(p).name for p in ordered]
-    if len(set(names))!=11 or any(p!=n for p,n in zip(ordered,names)):
+    if len(set(names))!=11 or any(Path(p).name!=p.split("/")[-1] or not p.endswith(".i")
+                                   for p in ordered):
         raise ValueError("P6_D4_UNSAFE_OR_DUPLICATE_LAYER")
     if not chem.is_dir() or any(not(chem/n).is_file() or (chem/n).is_symlink() for n in names):
         raise ValueError("P6_D4_LAYER_NOT_STAGED_OR_SYMLINK")
