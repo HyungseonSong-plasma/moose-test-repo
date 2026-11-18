@@ -8,7 +8,9 @@
 #include "Attributes.h"
 #include "FVKernel.h"
 #include "FVBoundaryCondition.h"
+#include "IntegratedBCBase.h"
 
+#include <cstdlib>
 #include <cctype>
 #include <cmath>
 #include <iomanip>
@@ -367,6 +369,62 @@ DDContinuityEq::checkIntegrity() const
                    "' [", type, "] on ", variable,
                    "; observed ", matched_bcs[name], ", expected exactly one.");
   }
+
+  // P6-D4 isolated diagnostic only: observe the REAL P05 Warehouse after all
+  // existing uniqueness guards. No creator, factory or residual is changed.
+  // The gate is opt-in and the source remains on a disposable branch.
+  if (const auto * marker = std::getenv("ISSUE672_D4_WAREHOUSE_DIAGNOSTIC");
+      marker && std::string(marker) == "1")
+  {
+    unsigned int fv_kernel_count = 0;
+    unsigned int fv_bc_count = 0;
+    unsigned int fe_bc_count = 0;
+    for (const auto * kernel : kernels)
+    {
+      const auto & parameters = kernel->parameters();
+      if (!parameters.isParamValid("variable"))
+        continue;
+      const auto variable = parameters.get<NonlinearVariableName>("variable");
+      for (const auto & id : _fvm_species)
+        if (variable == continuityStateName(id))
+        {
+          ++fv_kernel_count;
+          mooseInfo("P6_D4_TYPED FV_KERNEL name=", kernel->name(), " type=", kernel->type(),
+                    " variable=", variable);
+        }
+    }
+    for (const auto * bc : bcs)
+    {
+      const auto & parameters = bc->parameters();
+      if (!parameters.isParamValid("variable"))
+        continue;
+      const auto variable = parameters.get<NonlinearVariableName>("variable");
+      for (const auto & id : _fvm_species)
+        if (variable == continuityStateName(id))
+        {
+          ++fv_bc_count;
+          mooseInfo("P6_D4_TYPED FV_BC name=", bc->name(), " type=", bc->type(),
+                    " variable=", variable);
+        }
+    }
+    const auto & integrated =
+        getProblem().getNonlinearSystemBase(0).getIntegratedBCWarehouse().getObjects();
+    for (const auto & bc : integrated)
+    {
+      if (bc->type() != "FEMElectronSheathBC" &&
+          bc->type() != "FEMElectronEnergySheathBC")
+        continue;
+      const auto & parameters = bc->parameters();
+      if (!parameters.isParamValid("variable"))
+        continue;
+      const auto variable = parameters.get<NonlinearVariableName>("variable");
+      ++fe_bc_count;
+      mooseInfo("P6_D4_TYPED FEM_BC name=", bc->name(), " type=", bc->type(),
+                " variable=", variable);
+    }
+    mooseInfo("P6_D4_TYPED_TOTAL FV_KERNEL=", fv_kernel_count, " FV_BC=", fv_bc_count,
+              " FEM_BC=", fe_bc_count);
+  }
 }
 
 void
@@ -560,6 +618,11 @@ DDContinuityEq::addFunctorMaterials()
         mooseError("Conflicting electron transport closure: legacy JSON requests "
                    "fluid energy, but the Energy Physics action does not");
       params.set<bool>("fluid_energy") = fluid || legacy_fluid;
+      if (const auto * diagnostic = std::getenv("ISSUE672_D4_WAREHOUSE_DIAGNOSTIC");
+          diagnostic && std::string(diagnostic) == "1")
+        mooseInfo("P6_D4_ENERGY_TRANSPORT consumer=e_energy_mobility/e_energy_diffusivity",
+                  " source=e_mobility/e_diffusivity fluid_energy=", (fluid || legacy_fluid),
+                  " scale=5/3");
     }
     if (config->model == "constant")
     {
