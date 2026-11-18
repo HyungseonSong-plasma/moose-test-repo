@@ -1,0 +1,148 @@
+name: Issue671 D8 real Maxwell child seven Transfer bounded one-step
+on:
+  push:
+    branches:
+      - issue-671-rf-transfer-real-child-one-step-20261118
+    paths:
+      - .github/workflows/issue671-rf-child-seven-transfer-one-step.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue671-rf-live-child-seven-transfer-isolated
+  cancel-in-progress: false
+jobs:
+  exact-head-native-p05:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      BASE_HEAD: 74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f
+    steps:
+      - name: Checkout exact source without writing authentication credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Source tree and public-only diagnostic preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$BASE_HEAD" HEAD
+          git diff --name-only "$BASE_HEAD" HEAD | sort > "$RUNNER_TEMP/actual-rf-changes.txt"
+          printf '%s\n' '.github/workflows/issue671-rf-child-seven-transfer-one-step.yml' 'ci/issue671_rf_transfer_smoke.py' > "$RUNNER_TEMP/expected-rf-changes.txt"
+          diff -u "$RUNNER_TEMP/expected-rf-changes.txt" "$RUNNER_TEMP/actual-rf-changes.txt"
+          test "$(git hash-object ci/issue671_rf_transfer_smoke.py)" = 7ac3ed59500e40789d2f962cbaaee67a3e0aa5ea
+          python3 -m py_compile ci/issue671_rf_transfer_smoke.py
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          echo RF_SOURCE_SHA_GUARD_PASS
+      - name: Checkout immutable historical public S6 mesh and support source
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Reproduce exact SHA-pinned 400 W public parent plasma mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $SRC" | sha256sum --check -
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
+          export OXYGEN_RESEARCH_400=1
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          echo "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc  $CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" | sha256sum --check -
+          test ! -e "$CHEM/private_rates"
+          echo P05_PUBLIC_MESH_SHA_PASS
+
+      - name: Download real public S6 Maxwell child and stage exact seven Transfer declarations
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rf-input"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14406746397/zip" \
+            --output "$RUNNER_TEMP/rf-input/p3x-public.zip"
+          echo "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111  $RUNNER_TEMP/rf-input/p3x-public.zip" | sha256sum --check -
+          python3 ci/issue671_rf_transfer_smoke.py stage \
+            --artifact "$RUNNER_TEMP/rf-input/p3x-public.zip" \
+            --mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            --output "$RUNNER_TEMP/rf-smoke"
+          echo RF_REAL_CHILD_AND_SEVEN_TRANSFER_SHA_PASS
+      - name: Build exact PR665-derived PhysicsApp once in pinned OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            '
+          test -x physics_app/physics-opt
+          sha256sum physics_app/physics-opt | tee "$RUNNER_TEMP/rf-smoke/binary.sha256"
+      - name: Run two bounded real Maxwell child one-step Transfer cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          for case in 417 941; do
+            work="$RUNNER_TEMP/rf-smoke/$case"
+            log="$RUNNER_TEMP/rf-smoke/S6-$(printf '%s' "$case")_rf_native.log"
+            set +e
+            docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+              --workdir /case/experiments/Issue395_powered_chemistry_ladder \
+              -v "$GITHUB_WORKSPACE:/workspace:ro" -v "$work:/case" \
+              "$OCI" -lc '
+                set -uo pipefail
+                source /environment
+                timeout -k 10s 240s /workspace/physics_app/physics-opt \
+                  -i rf_transfer_parent_smoke.i
+              ' > "$log" 2>&1
+            rc=$?
+            set -e
+            printf '{"exit_code":%d}\n' "$rc" > "$RUNNER_TEMP/rf-smoke/S6-$(printf '%s' "$case")_rf_exit.json"
+            echo "RF_CASE_$(printf '%s' "$case")_BOUNDED_EXIT=$rc"
+            sha256sum "$log"
+          done
+      - name: Evaluate 4 forward and 3 backward Transfer numeric evidence fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/issue671_rf_transfer_smoke.py evaluate --output "$RUNNER_TEMP/rf-smoke"
+      - name: Preserve public-only Native logs and actual built executable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue671-rf-real-child-seven-transfer-bounded
+          path: |
+            ${{ runner.temp }}/rf-smoke/stage_receipt.json
+            ${{ runner.temp }}/rf-smoke/rf_transfer_receipt.json
+            ${{ runner.temp }}/rf-smoke/binary.sha256
+            ${{ runner.temp }}/rf-smoke/S6-417_rf_native.log
+            ${{ runner.temp }}/rf-smoke/S6-941_rf_native.log
+            ${{ runner.temp }}/rf-smoke/S6-417_rf_exit.json
+            ${{ runner.temp }}/rf-smoke/S6-941_rf_exit.json
+            ${{ runner.temp }}/rf-smoke/417/experiments/Issue395_powered_chemistry_ladder/*.csv
+            ${{ runner.temp }}/rf-smoke/941/experiments/Issue395_powered_chemistry_ladder/*.csv
+            physics_app/physics-opt
+          if-no-files-found: warn
+          retention-days: 14
