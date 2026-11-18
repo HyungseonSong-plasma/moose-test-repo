@@ -1,0 +1,205 @@
+{
+  "schema": "issue670.p4_v1.s6_417.source_handoff_receipt.v1",
+  "task_id": "P4-V1",
+  "case": "S6-417",
+  "verdict": "PASS_REPRODUCIBLE_SOURCE_GRAPH_WITH_12_STATIC_DUPLICATE_PRODUCER_CANDIDATES_HOLD",
+  "scope": "417-only exact original/P1/P3-X final11 source-bound ion Source/Density/Poisson/Wall/Current owner graph. No Native P2 or runtime warehouse claims.",
+  "source_context": {
+    "pr665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "artifacts_pinned_old_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p3_x_ci_run_id": 44257739203,
+    "p3_x_artifact_id": 14406746397,
+    "p3_x_artifact_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "original_10_layer_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "p1_0_11_layer_zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620",
+    "actual_staged_file_sha256": {
+      "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+      "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+      "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+      "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+      "issue477_S4-401-417_op_ionization_overlay.i": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a",
+      "issue477_S5-417-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+      "issue477_S6-417-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+      "issue477_S6-417-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+      "migrated_continuity.i": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+    },
+    "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+    "cpp_git_blobs": {
+      "DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "ci/p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35"
+    }
+  },
+  "native_ion_retirement": {
+    "checked_11_file_sha": "11/11",
+    "original_native_kernel_count": 14,
+    "original_native_bc_count": 12,
+    "removed_26_block_sha_verified": "26/26",
+    "remaining_native_ion_fv_objects": 0,
+    "exact_removed_block_sha256": {
+      "ni_time": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+      "ni_diffusion": "756532a19a6accda73f9283536e082da97be32170416abcfb61d3427bc910f4c",
+      "ni_drift": "d4f7b0af5fc56ee562355fe4fd36729e6cd360a6af6c7ca50e6148b3c752a3fd",
+      "nm_time": "e19423de93165f0362793d6da40032b97f1f6fc5964ad7f40d221cc721651348",
+      "nm_diffusion": "9e2ad0a3216ef24687857ce96127933348cfdc78fcea4e76538437cbeca884ee",
+      "nm_drift": "0f10ee33a80f436e67410ce7c15aa6e82042ab6516bb2585ff6e39c53f7650b9",
+      "nop_time": "9c2fd0318c788bce2e4a41052cfee715f93647f927ab53bb374a416a1b5ee67d",
+      "nop_diffusion": "8d32aa74ca81921bb14bf83944726aaa7fa46b9ea62c27943099ebc240738708",
+      "nop_drift": "f6d86fe0188e7341e4ff986a03af71024daa04a132833948a2055439167ceeec",
+      "ion_wall": "fa4ad1a51cbcd4b6ffa1dc8fba3438b66b27642a598bc35abca2513b9f0bacb3",
+      "negative_ion_wall": "cf5d56c3af0f77832f08139360753ac8c300e24cd86f6fd24158e77893fe375b",
+      "atomic_positive_ion_wall": "8a32490bce4f29361270661c094f8d0e45cb3555b8d9ce9127dd725ac340d67f",
+      "ion_cover_dielectric": "6cf04ff67cabc68ad5852678c5c83c646495f994c5bf6c7dfc3628d637812d5b",
+      "negative_ion_cover_dielectric": "61acf3daa0654c6beb7220c7aaca1f3dbab944e9586a09e756aa2d419014ff02",
+      "atomic_positive_ion_cover_dielectric": "f44eddb6f571b5bc1b33cbe08a772bba4dcc86f129f53fe4127b715f47cfbe45",
+      "ion_wafer_dielectric": "07256ce1face22d3fbe6b318d5e1857bf61289b2619adfea3cefec707a37b31c",
+      "negative_ion_wafer_dielectric": "ce57b0e42089b7266f623359eeb56cc4349cda356b9503ef37fb244e8cedbea3",
+      "atomic_positive_ion_wafer_dielectric": "4f6259aa4c0c1d69495581e27e229fc9b4d3e4fb3dcbd59ff09c8ff53ad2937b",
+      "ion_focus_ring_dielectric": "830e2cddd31b70308732cf4dab3e7d4327d38c34d0200ec50da4fcf011eee761",
+      "negative_ion_focus_ring_dielectric": "b96509870ac57132a0d71588709753b065ec699afe36917cf715480e5480febe",
+      "atomic_positive_ion_focus_ring_dielectric": "bd7e0cf631d41a4670e1a744af6c94bc66d57e1aace960acb183249906425e62",
+      "ei415_o2p_source": "de25b687e0742aa0f9e550877c5d27a264fa8f41c763a2ac2de494a0ab626691",
+      "ei401_negative_ion_source": "f8ffa802c50d6bbd8dbcf61f59e8339c0682ce37930a5ec1119667eb4161fccc",
+      "legacy8_h05_ei417_op": "23df97dbc343471d6f9d0e8cfb4ca5613e4c21ef66691584375da151e59831c7",
+      "h25_atomic_positive_ion": "b51e19c67cb621aa5932966508fb8c5996eede1109fe988c0505e4779b6f6b01",
+      "h25_molecular_positive_ion": "59c88c67c6eea4f9986bb8d9888364026c891be0dc34c56381aa705c40e42db4"
+    }
+  },
+  "source_5_to_3": {
+    "old_source_objects": [
+      "ei415_o2p_source",
+      "ei401_negative_ion_source",
+      "legacy8_h05_ei417_op",
+      "h25_atomic_positive_ion",
+      "h25_molecular_positive_ion"
+    ],
+    "expected_generated_objects": [
+      "O2p_source",
+      "Om_source",
+      "Op_source"
+    ],
+    "expected_generated_rate_functors": [
+      "S_O2p_molar",
+      "S_Om_molar",
+      "S_Op_molar"
+    ],
+    "expected_signed_stoichiometric_edges": {
+      "O2p": {
+        "EI-415": 1,
+        "H25": 1
+      },
+      "Om": {
+        "EI-401": 1
+      },
+      "Op": {
+        "EI-417": 1,
+        "H25": -1
+      }
+    },
+    "generator_implemented_in": "DDContinuityEq.C::addFVKernels / Chemistry.C",
+    "generated_runtime_status": "NOT_RUN",
+    "historical_raw_private_EI_rate_bytes_included": false
+  },
+  "density_poisson": {
+    "legacy_explicit_aliases": [
+      "n_i_physical",
+      "n_m_physical",
+      "n_op_physical"
+    ],
+    "legacy_alias_count_each": 1,
+    "legacy_expression": "6.02214076e23*exp(log_c)",
+    "charge_number_density_block_sha": "8fca600fe127ec76fe0a6b642460858b3a84cb2c43bbb13225f02a57ec04e6af",
+    "charge_number_expression": "ni+nop-ne-nm",
+    "poisson_source_block_sha": "95259beac613226b1bb0a52743d09d5136a37500c0504e531d0f470aff4ba5f6",
+    "poisson_kernel_block_sha": "062570461eafeed5d4f1721a35592ac727eb8e9d794c4b72355f4c2bcee13725",
+    "postprocessors_count": 136,
+    "legacy_density_extrema_refs_verified": 6,
+    "generated_phys_number_density_expected": [
+      "O2p_number_density",
+      "Om_number_density",
+      "Op_number_density"
+    ]
+  },
+  "wall_current": {
+    "ion_BC_expected_unique": 12,
+    "ion_BC_by_type": {
+      "FVFunctorNeumannBC": 3,
+      "FVLogMolarDielectricFluxBC": 9
+    },
+    "generic_BC_shared_groups": [
+      "inlet outlet",
+      "plasma_electrode plasma_metal plasma_right"
+    ],
+    "dielectric_BC_groups": [
+      "plasma_cover",
+      "plasma_wafer",
+      "plasma_focus_ring"
+    ],
+    "legacy_explicit_wall_material_block_sha256": {
+      "O2p": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5",
+      "Om": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162",
+      "Op": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+    },
+    "surface_current_block_sha256": {
+      "cover": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+      "wafer": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+      "focus_ring": "b7f8870d2c6b4431fc0dff3fa90e158b64edfa5e7f0f1f68371ffc570fe442a2"
+    },
+    "current_signed_expression": "1.602176634e-19*(gi+gop-gm-ge)",
+    "electron_wall_functor_expected": "e_wall_number_flux",
+    "runtime_current_owner_status": "NOT_RUN"
+  },
+  "owner_conflicts_static": {
+    "legacy_constants_material_sha": "f9c4beb247c2f1e7ba286aaf21919c07cc16a659cbf0d01987116506ad72bb73",
+    "coefficient_functors_expected_from_JSON_but_explicit_in_constants": [
+      "O2p_mobility",
+      "O2p_diffusivity",
+      "Om_mobility",
+      "Om_diffusivity",
+      "Op_mobility",
+      "Op_diffusivity"
+    ],
+    "wall_material_species_explicit_alongside_generated": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "surface_current_properties_explicit_alongside_generated": [
+      "cover_net_surface_current_density",
+      "wafer_net_surface_current_density",
+      "focus_ring_net_surface_current_density"
+    ],
+    "total_static_duplicate_candidates": 12,
+    "interpretation": "Static source contract collision, NOT claim of successfully instantiated duplicate Warehouse objects. P0/Native runtime not executed in this task."
+  },
+  "negative_controls": {
+    "independent_contract_mutations_rejected": 16,
+    "sha_tamper_rejected": 1,
+    "total_rejected": 17,
+    "probe_engine": "independent Python source-byte semantic validator, not repository P0 or Native solver"
+  },
+  "independent_local_files": {
+    "full_detailed_report_sha256": "db59c1462775cf394642372e710ccfed155d7f3552de68ca98d56ff26fee7411",
+    "reproducer_python_sha256": "2f49129a8e9b8cf61964cef3da162d98ddbd191f230a96307c521f26b3224612"
+  },
+  "gates": {
+    "source_file_block_sha": "PASS",
+    "native_ion_retired_26": "PASS",
+    "source_5_to_3_stoichiometry": "PASS_STATIC_EXPECTED_ONLY",
+    "density_poisson_and_current": "PASS_STATIC_SOURCE_ONLY",
+    "static_single_owner": "HOLD",
+    "P4_X": "PENDING",
+    "native_P2": "NOT_RUN",
+    "native_P3_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "unresolved": [
+    "P4-X only: remove or disambiguate 6 redundant canonical ion coefficient producers, 3 old ion-wall Materials, 3 old net-surface-current owners while preserving carrier_one and Lower-D/Poisson/diagnostic callers",
+    "Verify exact after-cutover Scratch file SHA and all source/consumer liveness; no modification here",
+    "Actual Physics 12 FV Kernels +12 BCs and three source functors not instantiated by this source-only check",
+    "Native P2/P3/P4 and semantic parity not verified"
+  ]
+}
