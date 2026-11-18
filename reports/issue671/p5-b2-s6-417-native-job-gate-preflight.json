@@ -1,0 +1,64 @@
+{
+  "schema": "issue671.p5_b2.s6_417.gated_native_job.v1",
+  "task_id": "P5-B2",
+  "case": "417",
+  "status": "PASS_SOURCE_PIN__HOLD_NATIVE_JOB_NOT_DISPATCHED",
+  "source": {
+    "PR665_CURRENT_HEAD": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "PR665_DRAFT": true,
+    "P2_SOURCE_ONLY": "PASS_MERGED",
+    "P3_X_SOURCE_ONLY": "PASS_MERGED",
+    "P4_X": "NOT_INTEGRATED_OR_VERIFIED_AT_HEAD",
+    "P5_0": "NO_SOURCE_BOUND_BINARY_SHA_OR_P1_IDENTITY_RECEIPT"
+  },
+  "baseline_artifact": {
+    "P3X_CI_run": 44257739203,
+    "artifact_id": 14406746397,
+    "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "CI_head": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+    "role": "P3X source-only input baseline, not final P4X or Native acceptance",
+    "real_417_input_file_sha_matches": "11/11",
+    "C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+    "NewOnly_JSON_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "Maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "Maxwell_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "electron_lookup_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "stage_native_ion_owners": "0_after_26_retired",
+    "stage_old_electron_owners": "0_after_10_retired"
+  },
+  "blocker": {
+    "P4_X": "Retained C0 has three PhysicsIonWallFluxMaterial objects and [FunctorMaterials]/constants with six ion mobility/diffusivity properties. New-only Physics also produces corresponding canonical names. P4-X must define one producer and preserve Poisson/wall/current/dynamic consumers. This is a static duplicate producer RISK, not a measured Native error.",
+    "P5_0": "No exact-final-head P1 build, OCI/toolchain provenance, actual physics-opt binary SHA or reusable 417/941 binary identity receipt.",
+    "prerequisite_policy": "Issue #671: B/C real Native job only after P3-X/P4-X integration + P5-0 barrier success."
+  },
+  "Native_B2": {
+    "dispatched": false,
+    "run_id": null,
+    "exit_code": null,
+    "log_sha256": null,
+    "binary_sha256": null,
+    "final_P4X_417_input_sha256": null,
+    "expected_command": "physics_app/physics-opt --check-input -i <full_final_417_11_layer_inputs>",
+    "generated_ion_12_FVKernels_12_FVBCs": "NOT_RUN",
+    "generated_electron_8_FEM_BCs": "NOT_RUN",
+    "dynamic_D8_Warehouse": "HOLD",
+    "verdict": "HOLD_NOT_RUN"
+  },
+  "proof": {
+    "verification_method": "Independent full GitHub Actions artifact ZIP SHA rehash and 417 11-file+JSON+mesh+child+lookup byte hash readback; source-only, no solver invocation",
+    "local_detailed_receipt_sha256": "0d0132eb0788df75b5a85413243dc6d4aed41c4677cba3cec422b93d58a4907a",
+    "local_verifier_sha256": "6db3ba76bc04ed0281de82e4b1373bdb8a450b4dd1f4610eff2327ff99ef04f1"
+  },
+  "gates": {
+    "P5_B2_SOURCE_PRECHECK": "PASS",
+    "P5_B2_NATIVE_JOB": "HOLD_NOT_RUN",
+    "P4_X": "HOLD",
+    "P5_0": "HOLD",
+    "P5_P2_FULL": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "mutation_scope": "Isolated evidence branch only. No workflow dispatch, no physics-opt execution, no shared input/PR665/main mutation."
+}
