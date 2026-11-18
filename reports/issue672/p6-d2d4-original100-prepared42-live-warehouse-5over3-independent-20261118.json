@@ -1,0 +1,190 @@
+{
+  "schema": "issue672.p6_d2d4.100_vs_42_real_native_p05_typed_inventory.v1",
+  "issue": 672,
+  "date_utc": "2026-11-18",
+  "status": "D2_ORIGINAL100_INDEPENDENT_P0_P2_PASS__D4_NATIVE_EIGHT_INPUTS_PASS__WAREHOUSE_12_0_8_HOLD_12_BC_MISSING__ENERGY_5OVER3_PRODUCER_CONSUMER_PASS_SOURCE_AND_BINDING",
+  "provenance": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "parent_pr665_snapshot_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "parent_pr665_state": "OPEN_DRAFT",
+    "independent_D4_pilot_source_head": "ed8a48f26aeccb1f84c7103beda1039fdceceab1",
+    "workflow_wrapper_commit": "946383b95666dbfbd20283c812a3eff618d9debe",
+    "workflow_path": ".github/workflows/issue672-d2d4-original100-prepared42-p2-typed-once.yml",
+    "workflow_branch": "issue-672-d2d4-public-d-original100-authority-p2-20261118",
+    "unmerged_pr684_head": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "original_D4_pilot_source_head": "070b7fe96de5ee64012813841f0b4091051de806",
+    "source_model": "disposable P2-only experimental cutover; NOT merged into PR665, PR684 or main",
+    "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "native_workflow_run": 44345306552,
+    "native_job_id": 134945965371,
+    "native_workflow_conclusion": "success",
+    "artifact_id": 14446601392,
+    "artifact_zip_sha256": "26edb9af70e6e4a7217bc1634b15327a60ae959ce8391fadd6a29e560bce6327",
+    "artifact_zip_crc": "PASS",
+    "native_binary_newly_built_same_run": true,
+    "native_ELF_sha256": "c4a33d9fa31d3a930bcd605bee2837054379d30b5ed19102c4d7a51a79c01842",
+    "native_build_log_sha256": "6d771c04deddaa6047f09c21e241c85279225c80575b939fd536df836811a69a"
+  },
+  "D2_table_authority": {
+    "original100": {
+      "mode_id": "HISTORICAL_ORIGINAL_100ROW_COMPATIBILITY",
+      "path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "gitblob": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+      "raw_SHA256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "rows": 100,
+      "energy_eV": [
+        1.40991,
+        22.1378
+      ]
+    },
+    "prepared42": {
+      "mode_id": "EXISTING_PUBLIC_RESEARCH_PREPARED_42ROW",
+      "original_source": ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt",
+      "gitblob": "aa05aadde111e4ba435185954a64a4b7dbbf2d45",
+      "raw_SHA256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "rows": 42,
+      "energy_eV": [
+        1.658212908,
+        22.3312233
+      ]
+    },
+    "guard": "Each mode verifies its own exact source SHA, numerical row count and monotonic energy endpoints. prepared42 guard is retained; original100 is a distinct explicitly selected mode, not an exception or SHA bypass.",
+    "source_paths_immutable": true,
+    "source_data_numerical_equivalence": false
+  },
+  "D4_real_native_P2": {
+    "source_head": "ed8a48f26aeccb1f84c7103beda1039fdceceab1",
+    "single_ELF": "c4a33d9fa31d3a930bcd605bee2837054379d30b5ed19102c4d7a51a79c01842",
+    "all_modes": [
+      "lookup42_417_B",
+      "lookup42_417_D",
+      "lookup42_941_B",
+      "lookup42_941_D",
+      "lookup100_417_B",
+      "lookup100_417_D",
+      "lookup100_941_B",
+      "lookup100_941_D"
+    ],
+    "native_exit0_Syntax_OK": "8/8",
+    "public_D_original100_native_exit0_Syntax_OK": "2/2",
+    "public_D_prepared42_native_exit0_Syntax_OK": "2/2",
+    "B_controls": "4/4 EXIT0_SYNTAX_OK",
+    "all_check_input_only": true,
+    "solver_timesteps": 0,
+    "independent_log_SHA_check": "8/8 PASS",
+    "case_D_logs": {
+      "lookup42_417": "ce0797fcf9fbe4dd21c445aab829371aeab9a9fea9fc48ec4162a429f0437292",
+      "lookup42_941": "6d457492a855c91fe0b2d21cf9749780e1104ed825820414956d974d25489afa",
+      "lookup100_417": "d0498e4b91771a6027f6814e204babc108bc98fe76070d5ed3fc387b2477199a",
+      "lookup100_941": "6d457492a855c91fe0b2d21cf9749780e1104ed825820414956d974d25489afa"
+    }
+  },
+  "P05_warehouse_live": {
+    "source": "Read-only opt-in MOOSE TheWarehouse FVFlux/FVElemental/FVFluxBC/FVDirichletBC and nonlinear FE IntegratedBCWarehouse, after existing P05 guards, aggregated into one message to prevent MOOSE per-call-site log deduplication.",
+    "per_D_case_each_mode": {
+      "FV_Kernels": 12,
+      "FV_BCs": 0,
+      "FEM_BCs": 8
+    },
+    "FV_kernel_names_and_factories": {
+      "time": "FVLogMolarTimeDerivative",
+      "diffusion": "FVLogMolarDiffusion",
+      "drift": "FVLogMolarElectrostaticDrift",
+      "source": "FVCoupledForce",
+      "species": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "variable_rule": "log_<species>",
+      "exactly_one_name_factory_variable": "12/12 PASS per D case"
+    },
+    "FEM_BC_names": [
+      "electron_cover_dielectric",
+      "electron_energy_cover",
+      "electron_energy_focus_ring",
+      "electron_energy_sheath",
+      "electron_energy_wafer",
+      "electron_focus_ring_dielectric",
+      "electron_sheath",
+      "electron_wafer_dielectric"
+    ],
+    "FEM_BC_species": "4 FEMElectronSheathBC for log_e + 4 FEMElectronEnergySheathBC for log_energy",
+    "exactly_one_name_factory_variable": "8/8 PASS per D case",
+    "actual_ion_FV_BCs": 0,
+    "expected_ion_FV_BCs": 12,
+    "reason_for_missing": "D4 real 7-species/8-reaction Chemistry JSON has no drift_diffusion_boundaries catalog. No ion FV wall/Dielectric BCs are generated. P05 permits empty catalogs when chemistryData().hasIonWalls() is false. A Syntax OK is not evidence of 12 ion BCs.",
+    "incompatible_shortcut": "Do not silently copy New-only C2 wall/Dielectric catalog into Public D or change physical wall/energy laws without explicit model and source approval.",
+    "gate": "KEEP_HOLD_12_FV_BC_MISSING"
+  },
+  "energy_five_over_three": {
+    "source_cpp_DDTransportMaterial_gitblob": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+    "native_input_C0_noD1_gitblob": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+    "source_producer": "DDContinuityEq::addFunctorMaterials selects fluid_energy=fluid||legacy_fluid for species e",
+    "actual_live_native_info": "P6_D4_ENERGY_TRANSPORT consumer=e_energy_mobility/e_energy_diffusivity source=e_mobility/e_diffusivity fluid_energy=1 scale=5/3",
+    "actual_Public_D_native_FEM_energy_consumer": "energy_transport; variable=log_energy; mobility=electron_energy_mobility; diffusion=electron_energy_diffusion",
+    "same_material_legacy_alias": "DDTransportMaterial.C creates electron_energy_mobility and electron_energy_diffusion = (5.0/3.0)*particle coefficient",
+    "P0_contract": "PASS_SOURCE_TYPED_LINK",
+    "Native_P2_binding": "PASS_NO_UNRESOLVED_COEFFICIENTS",
+    "actual_post_solver_coefficient_and_energy_residual_numerical_parity": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "Chemistry": {
+    "source": "Actual validated seven species and eight reactions, with distinct EI-417/EI-941 branch",
+    "FV_species": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "electron_FEM_species": [
+      "e"
+    ],
+    "ion_legacy_retire_before_P2": "14 FV Kernel +12 FV BC=26, source-receipt PASS",
+    "manual_transport_retire": "4 e/O2p/Om/Op source-receipt PASS",
+    "electron_particle_RHS_retire": "3 source-receipt PASS",
+    "signed_ion_source_functors": [
+      "S_O2p_molar",
+      "S_Om_molar",
+      "S_Op_molar"
+    ],
+    "source_sign_policy": "nu_s,k * R_k; FVCoupledForce consumes one signed molar source per ion",
+    "no_synthetic_reactions": true,
+    "private_rate_raw_data_published": false
+  },
+  "independent_readback": {
+    "local_script": "/mnt/data/issue672_d2d4/verify_dual_authority_native_receipt_v2.py",
+    "local_script_sha256": "2545198af78f13da61eba2418d41cf389e1f0d7defcb5a4f546af5bbdc473dce",
+    "local_json": "/mnt/data/issue672_d2d4/independent_native_receipt_v2.json",
+    "local_json_sha256": "10587071ca2d296f2266ce7e27258686f46573ba0a5df35a3da3e62c14d098fc",
+    "checks": "ZIP CRC+actual SHA256, exact binary source job identity, 8 individual B/D log SHA and exit+Syntax OK, 4 D typed object name/factory/variable inventories (12+0+8), energy fluid owner readback."
+  },
+  "gates": {
+    "D2_100ROW_AUTHORITY": "PASS",
+    "D2_42ROW_AUTHORITY": "PASS",
+    "D4_100ROW_PUBLIC_D_NATIVE_P2": "PASS_417_941",
+    "D4_42ROW_PUBLIC_D_NATIVE_P2": "PASS_417_941",
+    "D4_TYPED_12_FV_KERNELS": "PASS_ALL_FOUR_D_CASES",
+    "D4_TYPED_8_ELECTRON_FEM_BCS": "PASS_ALL_FOUR_D_CASES",
+    "D4_TYPED_12_ION_FV_BCS": "FAIL_ZERO_OF_TWELVE",
+    "D4_OVERALL_12_12_8": "KEEP_HOLD",
+    "D4_ENERGY_5_OVER_3_PRODUCER_AND_CONSUMER": "PASS_SOURCE_AND_NATIVE_BINDING",
+    "D4_ENERGY_NUMERICAL_PARITY": "NOT_RUN",
+    "D5_FULL_PUBLIC_D_ACCEPTANCE": "HOLD",
+    "PR684_MERGE": "HOLD",
+    "P6_X": "HOLD_PUBLIC_D_BC",
+    "P7": "NOT_ACCEPTED",
+    "Native_P3_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "next_approval_required": "Explicitly approve Public D wall/Dielectric physics BC catalog and single-source signed ion wall flux contract, compare to original wall current/Poisson/8 FEM BC; implement only on disposable input after authorization. Re-run exact-head 100/42 P0, fresh P1, P2 typed 12+12+8, P05 negatives + restoration; separate numerical Energy 5/3 science review.",
+  "safety": {
+    "main_modified": false,
+    "pr665_modified": false,
+    "pr684_modified": false,
+    "historical_100_and_prepared_42_source_unchanged": true,
+    "no_workflow_bypass": true,
+    "no_dont_create_kernels": true,
+    "no_time_steps": true,
+    "isolated_read_only_p05_diagnostics_only": true
+  }
+}
