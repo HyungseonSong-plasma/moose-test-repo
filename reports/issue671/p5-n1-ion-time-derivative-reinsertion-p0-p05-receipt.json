@@ -1,0 +1,303 @@
+{
+  "schema": "issue671.p5_n1.legacy_ion_time_reinsertion_receipt.v1",
+  "task_id": "P5-N1",
+  "issue": 671,
+  "parent_issue": 633,
+  "dependency_issues": [
+    668,
+    669,
+    670
+  ],
+  "case_scope": [
+    "S6-417",
+    "S6-941"
+  ],
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "date_utc": "2026-11-18",
+  "verdict": "SOURCE_P0_12_OF_12_HISTORICAL_TIME_REINSERTIONS_FAIL_CLOSED__NATIVE_P05_HOLD",
+  "current_review_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "historical_p2p3_stage_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "scope_boundary": "Actually ran official project P0 preflight on 12 independent mutated copies of 417/941 New-only 11-layer input source; only inspected P05 C++ guard source. No PhysicsApp native binary or P05 Warehouse was executed.",
+  "historical_C0_source": {
+    "path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+    "git_blob_sha1": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+    "object_section": "FVKernels",
+    "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+    "named_old_owners": [
+      {
+        "species": "O2p",
+        "object_name": "ni_time",
+        "old_solver_variable": "log_ni",
+        "canonical_solver_variable": "log_O2p"
+      },
+      {
+        "species": "Om",
+        "object_name": "nm_time",
+        "old_solver_variable": "log_nm",
+        "canonical_solver_variable": "log_Om"
+      },
+      {
+        "species": "Op",
+        "object_name": "nop_time",
+        "old_solver_variable": "log_nop",
+        "canonical_solver_variable": "log_Op"
+      }
+    ],
+    "original_file_and_exact_block_SHA256_locator": "GitHub Artifact 14409626344 -> p5-n1-receipt/p5-n1-ion-time-reinsertion.json -> original_C0"
+  },
+  "current_expected_Physics_P05_source": {
+    "cpp_path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "git_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "generated_factory": "FVLogMolarTimeDerivative",
+    "expected_generated_objects": [
+      {
+        "name": "O2p_time",
+        "variable": "log_O2p"
+      },
+      {
+        "name": "Om_time",
+        "variable": "log_Om"
+      },
+      {
+        "name": "Op_time",
+        "variable": "log_Op"
+      }
+    ],
+    "required_kernels_per_ion": [
+      "<species>_time",
+      "<species>_diffusion",
+      "<species>_drift",
+      "<species>_source"
+    ],
+    "enforced_cpp_guard_if_executed": "unexpected name OR incorrect factory for same canonical nonlinear variable -> mooseError; missing or duplicated exact expected name -> mooseError",
+    "runtime_invocation": "NOT_RUN",
+    "source_contract_inspection": "PASS"
+  },
+  "independent_verification": {
+    "successful_run_id": 44263856625,
+    "successful_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44263856625",
+    "successful_job_id": 134663455331,
+    "workflow_commit": "983d3c5b0d211bad02d26309b3af18b252b4a07a",
+    "artifact_id": 14409626344,
+    "artifact_name": "issue671-p5-n1-time-reinsertion-44263856625-1",
+    "artifact_digest": "sha256:bd9b62a3b4473c1f9bd1278415a5001defe4a365cef1f51b49e216d152f2fa0c",
+    "independent_raw_receipt_path": "p5-n1-receipt/p5-n1-ion-time-reinsertion.json",
+    "source_head_checkout": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "source_p3x_artifact_run_id": 44257739203,
+    "source_p3x_artifact_id": 14406746397,
+    "source_p3x_artifact_zip_digest": "sha256:592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "method": "Rehash all 22 original staged .i bytes; independently extract exact three old time blocks from immutable C0; reinsert each old block unchanged or rebound to canonical log variable in temporary independent copy; read mutated bytes back; run actual repo P0 inspect; demand exactly one additional native-ion-owner error; no non-target files changed.",
+    "P0_source_negative_count": 12,
+    "P0_source_negative_rejections": 12,
+    "native_P05_negative_count": 0,
+    "native_P05_negative_rejections": null,
+    "baseline_P0_already_fails_due_to_P4X": true
+  },
+  "cases": {
+    "417": {
+      "status": "SOURCE_ONLY_OFFICIAL_P0_FAIL_CLOSED_6_OF_6__NATIVE_P05_NOT_RUN",
+      "stage_input_origin": "P3-X source-only disposable New-only Scratch from #44257739203, source pin 9c15a4f...",
+      "stage_file_sha256_verified": "11/11",
+      "stage_file_sha256_evidence_locator": "GitHub Artifact 14409626344 -> p5-n1-receipt/p5-n1-ion-time-reinsertion.json -> cases.417.baseline_11_file_sha256",
+      "case_newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "case_layer11_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "baseline_native_ion_fv_owner_count": 0,
+      "baseline_official_P0_status": "FAIL",
+      "baseline_fail_reason": "Retained P4-X C2 wall/current providers, NOT old ion Native FV Kernels; baseline FAIL was not misreported as new mutant's result",
+      "expected_p0_new_error_exact": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+      "old_time_mutations_per_case": 6,
+      "official_P0_mutants_rejected": 6,
+      "mutations": [
+        {
+          "species": "O2p",
+          "object_name": "ni_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_ni",
+          "form": "historical_exact",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "expected_first_guard": "P0 rejects old Native ion owner, old state may not resolve in New-only"
+        },
+        {
+          "species": "O2p",
+          "object_name": "ni_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_O2p",
+          "form": "rebound_to_canonical_state",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "P05_source_contract": "If actual Warehouse is reached with this object, P05 rejects unexpected old name/factory for canonical variable"
+        },
+        {
+          "species": "Om",
+          "object_name": "nm_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_nm",
+          "form": "historical_exact",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "expected_first_guard": "P0 rejects old Native ion owner, old state may not resolve in New-only"
+        },
+        {
+          "species": "Om",
+          "object_name": "nm_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_Om",
+          "form": "rebound_to_canonical_state",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "P05_source_contract": "If actual Warehouse is reached with this object, P05 rejects unexpected old name/factory for canonical variable"
+        },
+        {
+          "species": "Op",
+          "object_name": "nop_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_nop",
+          "form": "historical_exact",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "expected_first_guard": "P0 rejects old Native ion owner, old state may not resolve in New-only"
+        },
+        {
+          "species": "Op",
+          "object_name": "nop_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_Op",
+          "form": "rebound_to_canonical_state",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "P05_source_contract": "If actual Warehouse is reached with this object, P05 rejects unexpected old name/factory for canonical variable"
+        }
+      ],
+      "observed_failure_semantics": "Each individual mutation caused the ONLY incremental P0 error P1_NATIVE_FV_ION_OWNER_PRESENT_1; every other P0 error remained identical to the unmodified baseline",
+      "input_isolation": "Independent temporary Scratch for each mutation, deleted before job completion",
+      "non_target_10_layer_sha256_unchanged": true,
+      "exact_changed_input_file_sha256_locator": "GitHub Artifact 14409626344 -> negative_controls[case=417].mutated_input_layer_sha256",
+      "exact_reinserted_owner_block_sha256_locator": "GitHub Artifact 14409626344 -> negative_controls[case=417].block_sha256",
+      "native_exit_code": null,
+      "binary_sha256": null,
+      "P05_Warehouse_inventory": null
+    },
+    "941": {
+      "status": "SOURCE_ONLY_OFFICIAL_P0_FAIL_CLOSED_6_OF_6__NATIVE_P05_NOT_RUN",
+      "stage_input_origin": "P3-X source-only disposable New-only Scratch from #44257739203, source pin 9c15a4f...",
+      "stage_file_sha256_verified": "11/11",
+      "stage_file_sha256_evidence_locator": "GitHub Artifact 14409626344 -> p5-n1-receipt/p5-n1-ion-time-reinsertion.json -> cases.941.baseline_11_file_sha256",
+      "case_newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "case_layer11_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "baseline_native_ion_fv_owner_count": 0,
+      "baseline_official_P0_status": "FAIL",
+      "baseline_fail_reason": "Retained P4-X C2 wall/current providers, NOT old ion Native FV Kernels; baseline FAIL was not misreported as new mutant's result",
+      "expected_p0_new_error_exact": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+      "old_time_mutations_per_case": 6,
+      "official_P0_mutants_rejected": 6,
+      "mutations": [
+        {
+          "species": "O2p",
+          "object_name": "ni_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_ni",
+          "form": "historical_exact",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "expected_first_guard": "P0 rejects old Native ion owner, old state may not resolve in New-only"
+        },
+        {
+          "species": "O2p",
+          "object_name": "ni_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_O2p",
+          "form": "rebound_to_canonical_state",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "P05_source_contract": "If actual Warehouse is reached with this object, P05 rejects unexpected old name/factory for canonical variable"
+        },
+        {
+          "species": "Om",
+          "object_name": "nm_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_nm",
+          "form": "historical_exact",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "expected_first_guard": "P0 rejects old Native ion owner, old state may not resolve in New-only"
+        },
+        {
+          "species": "Om",
+          "object_name": "nm_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_Om",
+          "form": "rebound_to_canonical_state",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "P05_source_contract": "If actual Warehouse is reached with this object, P05 rejects unexpected old name/factory for canonical variable"
+        },
+        {
+          "species": "Op",
+          "object_name": "nop_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_nop",
+          "form": "historical_exact",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "expected_first_guard": "P0 rejects old Native ion owner, old state may not resolve in New-only"
+        },
+        {
+          "species": "Op",
+          "object_name": "nop_time",
+          "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+          "variable": "log_Op",
+          "form": "rebound_to_canonical_state",
+          "actual_official_p0": "FAIL",
+          "new_error": "P1_NATIVE_FV_ION_OWNER_PRESENT_1",
+          "P05_runtime": "NOT_RUN",
+          "P05_source_contract": "If actual Warehouse is reached with this object, P05 rejects unexpected old name/factory for canonical variable"
+        }
+      ],
+      "observed_failure_semantics": "Each individual mutation caused the ONLY incremental P0 error P1_NATIVE_FV_ION_OWNER_PRESENT_1; every other P0 error remained identical to the unmodified baseline",
+      "input_isolation": "Independent temporary Scratch for each mutation, deleted before job completion",
+      "non_target_10_layer_sha256_unchanged": true,
+      "exact_changed_input_file_sha256_locator": "GitHub Artifact 14409626344 -> negative_controls[case=941].mutated_input_layer_sha256",
+      "exact_reinserted_owner_block_sha256_locator": "GitHub Artifact 14409626344 -> negative_controls[case=941].block_sha256",
+      "native_exit_code": null,
+      "binary_sha256": null,
+      "P05_Warehouse_inventory": null
+    }
+  },
+  "prerequisites": {
+    "P4X_final_single_writer_source_cutover": "NOT_INTEGRATED_OR_NOT_VERIFIED",
+    "P5_0_shared_exact_head_PhysicsApp_binary_SHA256": "NOT_AVAILABLE",
+    "P5_B2_and_C2_real_check_input_exit0": "NOT_VERIFIED",
+    "pristine_final_baseline_P0_PASS": "NOT_AVAILABLE",
+    "Native_test_scheduling_state": "BLOCKED_BY_PREREQUISITES"
+  },
+  "required_followup": {
+    "after_P4X_and_P5_0": "Using same final exact-head PhysicsApp binary, run each old-Time insertion and canonical rebound separately in case-specific disposable Scratch, collect --check-input actual nonzero exit, full P05 diagnostic, input file SHA, unchanged original input SHA, immutable binary SHA, job id",
+    "P05_acceptance_criterion": "P05 specifically rejects old/duplicated FV Kernel owner for log_O2p, log_Om and log_Op; failures due to already-broken baseline P0, missing external resources or missing factory are not equivalent to proven P05 rejection"
+  },
+  "guardrails": {
+    "modified_shared_source": false,
+    "modified_PR665": false,
+    "modified_main": false,
+    "modified_original_10layer_or_ZIP": false,
+    "read_private_EI_raw_bytes": false,
+    "scratch_mutations": "12 isolated ephemeral temporary directories, discarded",
+    "one_shot_workflow": "REMOVED_AFTER_CI_SUCCESS",
+    "receipt_branch_only": true,
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
