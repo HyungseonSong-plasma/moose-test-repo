@@ -1,0 +1,133 @@
+# P5-0 build-only disposable workflow. No secrets, no Native --check-input, no timestep.
+# Source is frozen to PR #665 commit, the workflow is launched from a distinct branch.
+name: Issue671 P5-0 exact-source common Physics binary once
+on:
+  push:
+    branches:
+      - issue-671-p5-0-single-oci-binary-once-20261118
+    paths:
+      - .github/workflows/issue671-p5-0-single-oci-binary-once.yml
+permissions:
+  contents: read
+concurrency:
+  group: issue671-p5-0-one-common-physics-binary
+  cancel-in-progress: false
+jobs:
+  build-executable-once:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      SOURCE_HEAD: '3bf1777ee4c1f15ee5aa6493745b415ad5e67c81'
+      OCI: 'ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008'
+    steps:
+      - name: Checkout PR #665 exact frozen source (never temporary workflow commit)
+        uses: actions/checkout@v4
+        with:
+          ref: 3bf1777ee4c1f15ee5aa6493745b415ad5e67c81
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify exact source and immutable vendor OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/issue-671-p5-0-single-oci-binary-once-20261118"
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no -- physics_app ci/physics-build-base)"
+          test ! -e physics_app/physics-opt
+          grep -Fqx "PHYSICS_BUILD_BASE=$OCI" physics_app/dependencies.lock
+          test "$(git show HEAD:physics_app/dependencies.lock | sha256sum | cut -d' ' -f1)" = "$(sha256sum physics_app/dependencies.lock | cut -d' ' -f1)"
+          docker pull "$OCI"
+          for pair in 'moose MOOSE' 'crane CRANE' 'squirrel SQUIRREL' 'zapdos ZAPDOS'; do
+            read -r key envname <<< "$pair"
+            expected="$(sed -n "s/^$envname=//p" physics_app/dependencies.lock)"
+            actual="$(docker image inspect "$OCI" --format "{{ index .Config.Labels \"io.physics.$key.sha\" }}")"
+            test -n "$expected"
+            test "$expected" = "$actual"
+          done
+          mkdir -p evidence
+          docker run --rm --entrypoint /bin/bash "$OCI" -lc '
+            set -euo pipefail
+            source /environment
+            test -f /opt/physics_vendor/moose/framework/Makefile
+            command -v g++
+            g++ --version | head -1
+            command -v make
+            printf "METHOD=opt\n"
+          ' > evidence/toolchain.txt
+          echo "P5_0_EXACT_PR665_HEAD_AND_IMMUTABLE_OCI_VENDOR_PASS"
+      - name: Build the one exact-source PhysicsApp physics-opt binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e physics_app/physics-opt
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            ' 2>&1 | tee evidence/native_p1_build.log
+          test -x physics_app/physics-opt
+          test -s physics_app/physics-opt
+          echo "P5_0_SINGLE_BUILD_COMPLETED"
+      - name: Persist exact-head binary bytes and SHA256 identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import subprocess
+          root = pathlib.Path.cwd()
+          exe = root / "physics_app/physics-opt"
+          evidence = root / "evidence"
+          def sha(path):
+              with path.open("rb") as stream:
+                  return hashlib.file_digest(stream, "sha256").hexdigest()
+          def git(*args):
+              return subprocess.check_output(["git", *args], text=True).strip()
+          pinned = "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81"
+          assert git("rev-parse", "HEAD") == pinned
+          assert exe.is_file() and exe.stat().st_size > 0
+          receipt = {
+              "schema": "issue671.p5_0.one_common_binary_source_bound.v1",
+              "P1": "PASS_SOURCE_BOUND_BINARY",
+              "source_head": pinned,
+              "source_tree_sha": git("rev-parse", "HEAD^{tree}"),
+              "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+              "build_command": "make -C physics_app -j2 app_non_unity_dirs='%/utils'",
+              "binary_path": "physics_app/physics-opt",
+              "binary_sha256": sha(exe),
+              "binary_size_bytes": exe.stat().st_size,
+              "native_p1_build_log_sha256": sha(evidence / "native_p1_build.log"),
+              "toolchain_log_sha256": sha(evidence / "toolchain.txt"),
+              "one_binary_for_417_941_negative_jobs": True,
+              "native_p2": "NOT_RUN",
+              "native_p3": "NOT_RUN",
+              "native_p4": "NOT_RUN",
+              "p4_x_full_acceptance": "HOLD",
+              "science": "SCIENCE_HOLD",
+              "protected_private_rates_in_artifact": False,
+          }
+          (evidence / "p5_0_binary_identity.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+          print("P5_0_SINGLE_BINARY_PASS", receipt["binary_sha256"], receipt["binary_size_bytes"])
+          PY
+      - name: Upload the actual single binary with full build and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue671-p5-0-common-binary-3bf1777ee4c1
+          path: |
+            physics_app/physics-opt
+            evidence/native_p1_build.log
+            evidence/toolchain.txt
+            evidence/p5_0_binary_identity.json
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
