@@ -1,0 +1,136 @@
+{
+  "schema": "issue672.p6_f4.flow_hybrid_417_941_native_expected_p05_collision_handoff.v1",
+  "date_utc": "2026-11-18",
+  "work_item": "P6-F4",
+  "target_issue": 672,
+  "target_package": "P6-X",
+  "evidence_class": "evidence_classification_and_P6_X_handoff_not_new_native_execution",
+  "operator_verdict": {
+    "F4_B_EVIDENCE_REVIEW": "PASS",
+    "P6_F4_P05_COLLISION": "PASS_EXPECTED_REJECTION_417_941",
+    "FLOW_HYBRID": "KEEP_HOLD",
+    "FLOW_HYBRID_NATIVE_P2": "NOT_ACCEPTED",
+    "NEW_ONLY_26_TO_0": "REFER_TO_P5_X_SEPARATE_CLAIM",
+    "P5_X_EVIDENCE_INTEGRATED": "PASS",
+    "P5_X_STRICT_FINAL": "HOLD_EXACT_CURRENT_HEAD",
+    "PR684_MERGE": "HOLD",
+    "P6_X_FINAL": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD",
+    "NATIVE_P3_P4": "NOT_RUN"
+  },
+  "identity": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "main_at_receipt": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "pr665": {
+      "number": 665,
+      "head_at_receipt": "52067302d16074592503d0ef6b903cc344f55a08",
+      "state": "OPEN_DRAFT_UNMERGED"
+    },
+    "pr684": {
+      "number": 684,
+      "head_at_receipt": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+      "state": "OPEN_DRAFT_UNMERGED",
+      "merged": false
+    },
+    "executed_flow_candidate_source_sha": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "integration_pr665_differs_from_executed_candidate": true,
+    "f4_b_completed_does_not_authorize_pr684_merge": true
+  },
+  "primary_native_evidence": {
+    "github_run": 44314726088,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44314726088",
+    "artifact_id": 14431723105,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44314726088/artifacts/14431723105",
+    "artifact_zip_sha256": "ef7ebac1d38b02a955c04e3e35a689eb3fb2168913f3dca6d69d1a0e58b6bdef",
+    "artifact_crc": "PASS_IN_PRIOR_INDEPENDENT_REVIEW",
+    "actual_source_sha": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "physics_opt_elf_sha256_in_job": "256ab419c24aac9a292479a56958e72744de8deaece9f043fe15c777ac4cf9dd",
+    "raw_elf_uploaded": false,
+    "off_job_elf_bytes_rehash_claim": false,
+    "overall_ci_conclusion": "SUCCESS_EVIDENCE_COLLECTION_ONLY",
+    "runs": {
+      "417": {
+        "independently_executed": true,
+        "native_check_input_exit": 1,
+        "reached_p05": true,
+        "expected_rejection": true,
+        "first_error_location": "migrated_continuity.i:19.9",
+        "first_error": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+        "full_log_sha256": "6c63786101580549c123ff77aacfea2418ad5f71757a6539968930f4de29d217"
+      },
+      "941": {
+        "independently_executed": true,
+        "native_check_input_exit": 1,
+        "reached_p05": true,
+        "expected_rejection": true,
+        "first_error_location": "migrated_continuity.i:19.9",
+        "first_error": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+        "full_log_sha256": "5c785d6554c5e691207572e869c634a498a8d79c1df2358293e0849bfc918c7a"
+      }
+    },
+    "notes": [
+      "A distinct earlier current FLOW CI #44330850055 fails after case 417 and does not establish independent 941 P05 rejection. The two-case evidence above is from PR684 run #44314726088.",
+      "Generated-only positive control passed; deliberate legacy_ni_time reinsertion was rejected by P05 using the same in-job binary. These controls demonstrate guard enforcement rather than FLOW Hybrid P2 acceptance."
+    ]
+  },
+  "conflict_mechanism": {
+    "archived_per_case": {
+      "native_fv_kernels": 14,
+      "native_fv_bcs": 12,
+      "native_total": 26
+    },
+    "physics_generated_per_case": {
+      "fv_kernels": 12,
+      "fv_bcs": 12,
+      "generated_total": 24
+    },
+    "old_native_plus_generated_on_same_variables": "P05_REJECTS_DUPLICATE_OR_UNEXPECTED_OWNER",
+    "change_in_chemistry_sources": "old 5 individual reaction sources consolidate to 3 ion species aggregate sources; never interpret count delta as missing requirements",
+    "do_not_bypass": [
+      "P05",
+      "dont_create_kernels",
+      "workflow_skip",
+      "silent_hybrid_to_new_only_switch"
+    ],
+    "historical_flow_compatibility": "KEEP_HOLD; requires separate explicit owner/mode, provenance and Native/Physics authorization for any new compatibility runner"
+  },
+  "separate_newonly_reference": {
+    "owner_issue": 671,
+    "target": "P5-X",
+    "change": "only in disposable staged New-only 417/941 inputs: retire old native ion 14 FV kernels and 12 FV BC (26 -> 0); Physics generates 12 FV kernels and 12 FV BC; preserve 8 electron FEM BC and non-target consumers",
+    "source_w1_sha": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "current_pr665_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "w1_elf_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "w1_native_typed_evidence_run": 44340416703,
+    "w1_native_typed_evidence_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44340416703",
+    "w1_results": {
+      "S6_417": "P2_EXIT0_12FV_KERNEL_12FVBC_8FEMBC_8OF8_NEGATIVE",
+      "S6_941": "P2_EXIT0_12FV_KERNEL_12FVBC_8FEMBC_8OF8_NEGATIVE"
+    },
+    "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/46fc58b6251016b48c12829681493fb435a363c4/reports/issue671/p5x-520673-final-gate-decision-20261118.md",
+    "current_head_exact_elf": "NOT_RUN",
+    "strict_p5x_acceptance": "HOLD_EXACT_CURRENT_HEAD",
+    "boundary": "New-only evidence does not turn historical FLOW_HYBRID into PASS and does not authorize science parity or PR684 merge"
+  },
+  "upstream_references": [
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/672#issuecomment-6980822691",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/1cebc5a83c2dff3bd1ca3a78cc9c05725095e09a/reports/issue672/p6-f3-p05-ni-time-hybrid-vs-newonly-design-addendum.json",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/672#issuecomment-6980533572",
+    "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/671#issuecomment-6984612845"
+  ],
+  "p6x_intake": {
+    "intended_status_change": "ingest F4 evidence and classify FLOW_HYBRID=KEEP_HOLD; do not classify CI green as P2 pass",
+    "current_canonical_issue_body": "not_modified_by_F4_independent_worker; P6-X/C3 single-writer owns #672 body and shared workflow",
+    "needs_p6x_single_writer_intake": true,
+    "unresolved": "PR684 must remain unmerged; P5-X exact latest HEAD, unrelated Public/ARCH/Ion-FVM, and CI parity retain own gates",
+    "prohibited_actions": [
+      "merge PR684",
+      "merge PR665",
+      "change main",
+      "rewrite historical input",
+      "relax P05",
+      "auto-launch Native P3/P4 or long-run science"
+    ]
+  },
+  "mutations_scope": "Evidence-only isolated branch and report file. No production source, workflows, PR665, PR684, main, or issue body changed."
+}
