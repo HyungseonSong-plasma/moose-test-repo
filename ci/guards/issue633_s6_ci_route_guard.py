@@ -50,6 +50,19 @@ def check(ci, template, manual, runner, surface):
     for item in ("status.json","S6-417-native-P2.log","S6-941-native-P2.log",
                  "p4_receipt.json","current-head-physics-opt.sha256"):
         assert item in artifact[1], "REQUIRED_EVIDENCE_MISSING:"+item
+    newonly_canonical, sep, newonly_alias = required.partition(
+        "      - name: Upload New-only first-attempt legacy artifact alias (compatibility only)"
+    )
+    assert sep, "NEWONLY_FIRST_ATTEMPT_LEGACY_ALIAS_MISSING"
+    assert "issue633-newonly-s6-417-941-required-native-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}" in newonly_canonical, "NEWONLY_ARTIFACT_ATTEMPT_IDENTITY"
+    assert "issue633-newonly-s6-417-941-required-native-${{ github.event.pull_request.head.sha }}" in newonly_alias, "NEWONLY_OLD_ARTIFACT_CONSUMER"
+    assert "if: ${{ always() && github.run_attempt == 1 }}" in newonly_alias, "NEWONLY_ALIAS_RETRY_OVERWRITE"
+    def payload(text: str) -> str:
+        assert text.count("          path:") == 1, "ARTIFACT_PAYLOAD_STRUCTURE"
+        return text.split("          path:", 1)[1].split("          if-no-files-found:", 1)[0]
+    canon = newonly_canonical.split("      - name: Upload REQUIRED New-only dual-case sanitized Native receipts", 1)[1]
+    assert payload(canon) == payload(newonly_alias), "NEWONLY_LEGACY_ARTIFACT_PAYLOAD_DRIFT"
+    assert "if-no-files-found: error" in newonly_alias, "NEWONLY_LEGACY_MISSING_ARTIFACT_MUST_FAIL"
     assert "\non:\n  workflow_dispatch:\npermissions:\n" in manual, "HYBRID_NOT_MANUAL_ONLY"
     assert re.search(r"(?m)^  (push|pull_request|schedule|workflow_call):",manual) is None, "HYBRID_AUTOMATIC_TRIGGER"
     assert "issue541_arch_s6_native_p2_only.py" in manual, "HYBRID_ACTUAL_RUNNER_GONE"
@@ -59,6 +72,16 @@ def check(ci, template, manual, runner, surface):
     assert "ARCH_HYBRID_P05_FAILURE_REPRO_BOTH_CASES_KEEP_HOLD" in manual, "HYBRID_HOLD_RECEIPT_GONE"
     assert "continue-on-error:" not in manual and "if-no-files-found: error" in manual, "HYBRID_ARTIFACT_FALSE_GREEN"
     assert "dont_create_kernels" not in manual, "HYBRID_P05_BYPASS"
+    arch, sep, rest = manual.partition("\n  historical_public_BD_p2:")
+    assert sep, "HISTORICAL_MANUAL_ARCH_BOUNDARY"
+    assert "issue541-arch-s6-hybrid-p2-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}" in arch, "HISTORICAL_ARCH_CANONICAL_ATTEMPT_ARTIFACT"
+    assert "issue541-arch-s6-hybrid-p2-${{ github.sha }}" in arch, "HISTORICAL_ARCH_LEGACY_ARTIFACT"
+    assert "if: ${{ always() && github.run_attempt == 1 }}" in arch, "HISTORICAL_ARCH_ALIAS_FIRST_ATTEMPT"
+    canon, sep, legacy = arch.partition("      - name: Upload first-attempt legacy artifact alias (compatibility only)")
+    assert sep, "HISTORICAL_ARCH_LEGACY_ALIAS_STEP_MISSING"
+    first = canon.split("      - name: Always upload both S6 P2 diagnostics, no raw scratch or protected archive", 1)[1]
+    assert payload(first) == payload(legacy), "HISTORICAL_ARCH_ARTIFACT_BYTES_DRIFT"
+    assert arch.count("if-no-files-found: error") == 2, "HISTORICAL_ARCH_BOTH_ARTIFACTS_REQUIRED"
     assert "\n  historical_public_BD_p2:\n" in manual, "PUBLIC_BD_COMPAT_RUNNER_MISSING"
     assert "HISTORICAL_PUBLIC_B_PASS_D_TRANSPORT_KEEP_HOLD_BOTH_CASES" in manual, "PUBLIC_COMPAT_RESULT_GONE"
     assert 'b["P2"]=="PASS"' in manual and 'd["P2"]=="HOLD"' in manual, "PUBLIC_BD_NEGATIVE_CONTRACT_REMOVED"
@@ -97,7 +120,27 @@ def selftest(ci,tmpl,man,run,surface):
     must_reject("TRIGGER_SURFACE_DISABLED",ci,tmpl,man,run,surface.replace('"issue541-arch-s6-hybrid-p2-compat.yml": {"workflow_dispatch"},',''))
     artifact="S6-941-native-P2.log"
     must_reject("REQUIRED_941_ARTIFACT_REMOVED",ci.replace(artifact,"deleted"),tmpl.replace(artifact,"deleted"),man,run,surface)
-    print("ISSUE633_ROUTE_MUTATION_SELF_TEST_PASS 14")
+    must_reject("NEWONLY_CANONICAL_HEAD_MISSING",
+                ci.replace("issue633-newonly-s6-417-941-required-native-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}",
+                           "issue633-newonly-s6-417-941-required-native-old"),
+                tmpl.replace("issue633-newonly-s6-417-941-required-native-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}",
+                             "issue633-newonly-s6-417-941-required-native-old"),
+                man,run,surface)
+    must_reject("NEWONLY_ALIAS_RETRY_NOT_PINNED",
+                ci.replace("Upload New-only first-attempt legacy artifact alias (compatibility only)\n        if: ${{ always() && github.run_attempt == 1 }}",
+                           "Upload New-only first-attempt legacy artifact alias (compatibility only)\n        if: always()"),
+                tmpl.replace("Upload New-only first-attempt legacy artifact alias (compatibility only)\n        if: ${{ always() && github.run_attempt == 1 }}",
+                             "Upload New-only first-attempt legacy artifact alias (compatibility only)\n        if: always()"),
+                man,run,surface)
+    must_reject("ARCH_CANONICAL_PROVENANCE_MISSING",
+                ci,tmpl,
+                man.replace("issue541-arch-s6-hybrid-p2-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}",
+                            "issue541-arch-s6-hybrid-p2-unknown"),
+                run,surface)
+    must_reject("ARCH_LEGACY_ALIAS_DRIFT",
+                ci,tmpl,man.replace("issue541-arch-s6-hybrid-p2-${{ github.sha }}",
+                                   "issue541-arch-s6-hybrid-legacy-lost"),run,surface)
+    print("ISSUE633_ROUTE_MUTATION_SELF_TEST_PASS 18")
 
 def main():
     parser=argparse.ArgumentParser()
