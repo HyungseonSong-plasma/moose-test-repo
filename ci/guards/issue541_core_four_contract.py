@@ -64,6 +64,84 @@ ORIGINALS = (
 "issue402-species-live-ic-inlet-native-once.yml",
 )
 
+# Cross-package read-only proof linking CORE Wave1-D original ownership with
+# Wave1-C A1/A2 backup, independent legacy branch cutover and explicit HOLD.
+# The old branch and its P3 consumers must not be treated as disposable.
+GROUP_A = ROOT / "ci/baselines/issue541_group_a_retirement.json"
+
+def check_wave1c_core_bridge(core: dict, ga: dict) -> None:
+    assert ga["schema"] == "issue541.workflow_surface.group_a_evidence.v1"
+    assert ga["science"] == "SCIENCE_HOLD" and ga["p3"] == "NOT_RUN"
+    owners = {row["id"]: row for row in ga["workflows"]}
+    assert set(owners) == {"A1", "A2", "A3", "A4"}, "GROUP_A_OWNER_SET_INVALID"
+    first = core["workflows"][0]
+    a1, a2 = owners["A1"], owners["A2"]
+    assert a1["path"] == first["path"], "A1_CORE_GROUP_A_PATH_MISMATCH"
+    assert a1["original_blob"] == first["original_blob"], "A1_CORE_GROUP_A_BLOB_MISMATCH"
+    assert a1["decision"] == a2["decision"] == "KEEP_HOLD", "FALSE_RETIREMENT"
+    assert first["retirement"] == "KEEP_HOLD", "CORE_A1_RETIREMENT_NOT_AUTHORIZED"
+    assert first["caller_observation"] == "HISTORICAL_PUSH_BRANCH_STILL_EXISTS"
+    assert first["branch_present_at_2026_11_15"] is True
+    assert a2["path"] == ".github/workflows/issue402-legacy-symbol-audit-once.yml"
+    assert a2["original_blob"] == "1931f0b9909507979826812f346d3353f12e333b"
+    assert "UNPROVEN" in a1["caller_state"] and "UNPROVEN" in a2["caller_state"]
+    for row in (a1, a2):
+        closure = row["wave1_c_closure"]
+        assert closure["original_sha"] == row["original_blob"], "ORIGINAL_RECOVERY_BLOB_MISMATCH"
+        assert closure["prereq_draft_pr"] == 588, "LEGACY_BRANCH_CUTOVER_MISSING"
+        assert closure["prereq_state"] == "OPEN_DRAFT_NOT_MERGED", "UNAPPROVED_CUTOVER_PROMOTION"
+        assert closure["historical_branch"] == "issue-402-dd-plasma-boundary-action"
+        assert closure["branch_must_not_be_deleted"] is True
+        assert closure["branch_shared_with_p3"] is True
+        assert closure["caller_zero_proven"] is False, "CALLER_ZERO_FABRICATED"
+        assert closure["final_deletion_authorized"] is False, "PREMATURE_DELETE_APPROVAL"
+        assert closure["untouched_p3_dd_blob"] == "068ef7f78b84b45dbf8c678522ada049d4a42b7a"
+        assert closure["untouched_p3_s6_blob"] == "485439a723584ca5bbc8632a86c53574b0b1eb9a"
+        assert closure["science"] == "SCIENCE_HOLD" and closure["p3"] == "NOT_RUN"
+    original = first["original_success"]
+    backup = a1["wave1_c_closure"]["artifact_backup"]
+    assert backup["github_artifact_id"] == original["artifact_id"], "ORIGINAL_ARTIFACT_ID_MISMATCH"
+    assert backup["sha256"] == original["zip_sha256"], "ORIGINAL_ARCHIVE_HASH_MISMATCH"
+    assert backup["bytes"] == original["zip_bytes"], "ORIGINAL_ARCHIVE_BYTES_MISMATCH"
+    assert backup["independent_zip_readback"] == "EXACT_BINARY_AND_HASH_PASS"
+    assert backup["worm"] == "NOT_PROVEN", "UNSUPPORTED_IMMUTABILITY_CLAIM"
+    assert a2["wave1_c_closure"]["artifact_backup"] is None, "INVENTED_A2_ARTIFACT"
+
+def self_test_wave1c_core_bridge(core: dict, ga: dict) -> None:
+    check_wave1c_core_bridge(core, ga)
+    cases = (
+        ("A1_FALSE_RETIREMENT", "A1", ("decision", "RETIRED_VERIFIED")),
+        ("A2_FALSE_RETIREMENT", "A2", ("decision", "RETIRED_VERIFIED")),
+        ("A1_BLOB_TAMPER", "A1", ("original_blob", "0" * 40)),
+        ("A2_BLOB_TAMPER", "A2", ("original_blob", "0" * 40)),
+        ("A1_CALLER_ZERO", "A1", ("caller_state", "CALLER_ZERO_PROVEN")),
+        ("A2_CALLER_ZERO", "A2", ("caller_state", "CALLER_ZERO_PROVEN")),
+    )
+    for label, key, (field, value) in cases:
+        bad = copy.deepcopy(ga)
+        next(r for r in bad["workflows"] if r["id"] == key)[field] = value
+        try:
+            check_wave1c_core_bridge(core, bad)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError("WAVE1C_CORE_BRIDGE_MUTATION_NOT_REJECTED:" + label)
+    for label, field, value in (
+        ("A1_BACKUP_SHA", "sha256", "0" * 64),
+        ("A1_UNSUPPORTED_WORM", "worm", "PROVEN"),
+        ("A1_ORIGINAL_ARTIFACT_ID", "github_artifact_id", 0),
+    ):
+        bad = copy.deepcopy(ga)
+        next(r for r in bad["workflows"] if r["id"] == "A1")["wave1_c_closure"]["artifact_backup"][field] = value
+        try:
+            check_wave1c_core_bridge(core, bad)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError("WAVE1C_CORE_BRIDGE_MUTATION_NOT_REJECTED:" + label)
+    print("ISSUE541_CORE_WAVE1C_BRIDGE_NEGATIVE_TESTS=PASS count=9")
+
+
 def check(manifest: dict, ci: str, native: str) -> None:
     assert manifest["schema"] == "issue541.core_four.retirement_contract.v1"
     assert manifest["science"] == "SCIENCE_HOLD"
@@ -266,10 +344,14 @@ def main():
     m = json.loads(MANIFEST.read_text())
     ci = CI.read_text()
     native = (ROOT / m["replacement"]["native_runner"]).read_text()
+    group_a = json.loads(GROUP_A.read_text())
+    check_wave1c_core_bridge(m, group_a)
     if args.self_test:
         self_test(m, ci, native)
+        self_test_wave1c_core_bridge(m, group_a)
     if args.check:
         check(m, ci, native)
+        print("ISSUE541_CORE_WAVE1C_BRIDGE=PASS; KEEP_HOLD; NO_CALLER_ZERO")
         import os
         observed_head = os.environ.get("EXPECTED_HEAD")
         evidence_head = m["replacement"]["source_verified_head"]
