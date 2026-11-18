@@ -104,7 +104,7 @@ def audit_raw_wall_sources(raw_layers:dict[str,bytes])->tuple[dict,dict]:
             fail("WALL_GAS_TEMPERATURE_UNPROVED_"+id)
         if p.get("use_element_gradient_for_potential")!="true":
             fail("WALL_E_FIELD_GRADIENT_CHANGED_"+id)
-        allowed=set(required)|{"gas_temperature","sticking",
+        allowed=set(required)|{"mobility","gas_temperature","sticking",
             "ion_temperature_eV","migration_gate_smoothing_width",
             "use_element_gradient_for_potential"}
         if set(p)-allowed:
