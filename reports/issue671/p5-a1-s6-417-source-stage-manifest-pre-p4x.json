@@ -1,0 +1,135 @@
+{
+  "schema": "issue671.p5_a1.case417.precursor_source_manifest.v1",
+  "task_id": "P5-A1",
+  "case": "417",
+  "pr665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "stage_original_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "p3x_stage_ci_head": "3bc1438fc5e25890536d3456c372ef1e600a3f04",
+  "stage_is_final_p4x": false,
+  "evidence_artifacts": [
+    {
+      "gate": "P1-0",
+      "run": 44182628032,
+      "artifact": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    {
+      "gate": "P2",
+      "run": 44201394393,
+      "artifact": 14381456912,
+      "zip_sha256": "5497c80badab09d7d3266a4c81e2a5d2272a1c9cc216e94e192c8ec1ecd78e95"
+    },
+    {
+      "gate": "P3-X",
+      "run": 44257739203,
+      "artifact": 14406746397,
+      "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111"
+    }
+  ],
+  "ordered_417_11_layers": [
+    {
+      "ordinal": 1,
+      "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+    },
+    {
+      "ordinal": 2,
+      "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+      "sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+    },
+    {
+      "ordinal": 3,
+      "path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+      "sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+    },
+    {
+      "ordinal": 4,
+      "path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+      "sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+    },
+    {
+      "ordinal": 5,
+      "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+      "sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76"
+    },
+    {
+      "ordinal": 6,
+      "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+      "sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05"
+    },
+    {
+      "ordinal": 7,
+      "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
+      "sha256": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a"
+    },
+    {
+      "ordinal": 8,
+      "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-417-407_o2_consumer_overlay.i",
+      "sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+    },
+    {
+      "ordinal": 9,
+      "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+      "sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+    },
+    {
+      "ordinal": 10,
+      "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+      "sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc"
+    },
+    {
+      "ordinal": 11,
+      "path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+      "sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+    }
+  ],
+  "asset_sha256": {
+    "chemistry/unified_s6_417_newonly.json": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "issue397_maxwell_steady_abs1e11.i": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+    "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_overlay.i": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45",
+    "../Issue18_qvt_plasma_mapping/qvt.msh": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
+  },
+  "verified_checks": {
+    "P1_P2_P3X_11layer_SHA": "33/33 PASS",
+    "P2_to_P3X_only_C0_changed": true,
+    "P2_native_ion_26_to_0": "PASS_SOURCE_ONLY",
+    "P3X_old_electron_10_to_0": "PASS_SOURCE_ONLY",
+    "asset_byte_identity_P2_P3X": "6/6 PASS",
+    "Maxwell_child_transitive_include_order": [
+      "issue397_maxwell_steady_abs1e11.i",
+      "rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_overlay.i"
+    ],
+    "historical_electron_lookup_rows": 42,
+    "json_and_layer11_binding": "PASS_SOURCE_ONLY"
+  },
+  "current_head_source_git_blobs": {
+    "prepare_s6_newonly.py": "b17feb16c70ff28c090b6687a46044cff826072e",
+    "prepare_s6_run_input.py": "999a7aa65bdc7011df6f64dd923570f464af1d39",
+    "unified_s6_417_newonly.json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "issue633_newonly_s6_417_continuity.template.i": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e",
+    "DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "p1_ion_new_only_preflight.py": "c913bfbced72a9c37d0ed2214a44e5dd31657b35"
+  },
+  "P4X_missing_owner_cutover": [
+    "3 retained ion wall materials may duplicate C++ generated wall properties",
+    "3 retained surface-current materials may duplicate C++ generated current properties",
+    "6 retained constant transport aliases may duplicate generated DDTransportMaterial coefficients",
+    "Current source-only evidence cannot prove active runtime Warehouse/Functor callers"
+  ],
+  "local_independent_full_manifest_sha256": "d37e4e5deb48cc0eb4f7cfeb6fb4646814e8bb6660342a9763de02e609195347",
+  "local_verifier_sha256": "00b0108a2f13fb69c529d4bdd29ca15d3154757e8439056af4a8624db2fe0867",
+  "runtime": {
+    "physics_binary_sha256": null,
+    "check_input": "NOT_RUN",
+    "P0": "NOT_RUN",
+    "P1": "NOT_RUN",
+    "P2": "NOT_RUN",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "verdict": "P5_A1_417_P2_P3X_PRECURSOR_SOURCE_PIN_PASS__P4X_FINAL_INPUT_HOLD"
+}
