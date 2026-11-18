@@ -1,0 +1,78 @@
+{
+  "schema": "issue671.d8_rf_real_maxwell_child_seven_transfers.v1",
+  "date": "2026-11-18",
+  "source": {
+    "pr665_exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "diagnostic_pr": 682,
+    "diagnostic_tested_head": "7c37ca51a72e5e9c540ff59d7c2a4a46774a0155",
+    "full_s6_original_staged_inputs_used": false,
+    "private_ei_rate_staged": false,
+    "source_stage_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "parent_public_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "maxwell_qvt_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "production_multiapp_transfer_block_sha256": "a1718ca491cf27624f2e732ab0875fc19e1bea2bddf1e5e4710bcd9d7b915895"
+  },
+  "execution": {
+    "run": 44304244747,
+    "artifact": 14428450104,
+    "archive_sha256": "80461f67e18428d4a50f78017a3b59a9227e4651d52473c24ec3e13ae1f4f3fe",
+    "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "binary_sha256": "de56ef848acd9948ea30ae5639fa719deb595f988fb923359d61fd3fac1f82a4",
+    "parent_diagnostic_steps": 1,
+    "full_s6_100us": false,
+    "maxwell_child_steady_solve": true
+  },
+  "edges": {
+    "parent_to_child": [
+      "drive_to_maxwell_t6",
+      "ne_to_maxwell_t6",
+      "mean_en_to_maxwell_t6",
+      "pressure_to_maxwell_t6"
+    ],
+    "child_to_parent": [
+      "E_real_from_maxwell_t6",
+      "E_imag_from_maxwell_t6",
+      "P_abs_from_maxwell_t6"
+    ],
+    "forward_values_distinct_from_child_defaults": true,
+    "parent_electron_density_m3": 1500000000000000,
+    "parent_mean_energy_eV": 6,
+    "parent_pressure_Pa": 1.65,
+    "parent_drive_scale": 1
+  },
+  "cases": {
+    "417": {
+      "native_exit_code": 0,
+      "all_12_numeric_assertions": true,
+      "child_P_abs_W": 48.194624866912,
+      "parent_received_P_abs_W": 48.194624866912,
+      "parent_E_real_L2": 1.0438550124363,
+      "parent_E_imag_L2": 20.861421756436,
+      "native_log_sha256": "ab323f290c07a43d9e1494285e35c86e24f555d7673ac1f649ce34b6dd9a8933"
+    },
+    "941": {
+      "native_exit_code": 0,
+      "all_12_numeric_assertions": true,
+      "child_P_abs_W": 48.194624866912,
+      "parent_received_P_abs_W": 48.194624866912,
+      "parent_E_real_L2": 1.0438550124363,
+      "parent_E_imag_L2": 20.861421756436,
+      "native_log_sha256": "7172395af6eb52afa564a84bb66dbd6657dc71df0d8f9f273b5326a7da8e9800"
+    }
+  },
+  "verdict": {
+    "real_maxwell_child_execution": "PASS_BOTH_CASES",
+    "seven_transfer_registration": "PASS_BOTH_CASES",
+    "seven_transfer_numeric_effect": "PASS_REDUCED_PARENT_BOTH_CASES",
+    "full_s6_dynamic_rf": "HOLD_NOT_RUN",
+    "native_scientific_P3_P4": "NOT_RUN",
+    "SCIENCE_HOLD": true
+  },
+  "limitations": [
+    "Both 417 and 941 use identical purpose-built reduced parent RF input; original case-specific 11-layer continuum/chemistry was not run.",
+    "One parent 1 ns step invokes the original steady Maxwell child; child time=1 is a steady solve counter and not physical one-second plasma evolution.",
+    "The additional child postprocessors and csv outputs are diagnostic only; seven Transfer declarations are copied from source.",
+    "No conclusions about time-dependent S6 power controller, 100us state, numerical parity, full D8 residual/face/Poisson or scientific solution."
+  ]
+}
