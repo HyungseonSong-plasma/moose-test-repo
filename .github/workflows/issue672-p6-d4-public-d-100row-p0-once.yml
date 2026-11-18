@@ -1,0 +1,64 @@
+# Temporary P0-only source contract proof; remove after verified run.
+name: Issue672 Public D 100row New Physics P0 source-only once
+on:
+  push:
+    branches: [issue-672-p6-d4-public-d-100row-newphysics-20261118]
+    paths: [.github/workflows/issue672-p6-d4-public-d-100row-p0-once.yml]
+permissions:
+  contents: read
+jobs:
+  p6-d4-newphysics-p0:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact Git source, chemistry and original lookup SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git hash-object experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt)" = bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a
+          python3 -m py_compile experiments/Issue402_plasma_dsl_g1/chemistry/prepare_public_d_newphysics_100row.py tests/test_issue672_p6_d4_public_d_100row_newphysics.py
+          mkdir -p p6_d4_p0_evidence
+          git rev-parse HEAD | tee p6_d4_p0_evidence/source.txt
+      - name: Execute both 417/941 100row and signed Chemistry source contract regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet 'pytest>=8,<9'
+          python3 -m pytest -q tests/test_issue672_p6_d4_public_d_100row_newphysics.py 2>&1 | tee p6_d4_p0_evidence/pytest.log
+      - name: Independently pin all source and result hashes
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,hashlib,json,os
+          e=pathlib.Path("p6_d4_p0_evidence")
+          files=[
+          "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_public_d_newphysics_100row.py",
+          "tests/test_issue672_p6_d4_public_d_100row_newphysics.py",
+          "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+          "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+          "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+          ]
+          sha=lambda p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+          info={"source_sha":os.environ["GITHUB_SHA"],"mode":"PUBLIC_D_GENERATED_PHYSICS_ONLY",
+          "no_historical_compat":True,"P3":"NOT_RUN","P4":"NOT_RUN","science":"SCIENCE_HOLD",
+          "files":{p:sha(p) for p in files},"logs":{p.name:sha(p) for p in e.glob("*.log")}}
+          (e/"receipt.json").write_text(json.dumps(info,indent=2,sort_keys=True)+"\n")
+          print("PUBLIC_D_NEW_PHYSICS_ORIGINAL_100ROW_HASH_PASS",info["files"][files[2]])
+          PY
+      - name: Upload bounded P0 proof (no EI rate/raw inputs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue672-public-d-100row-p0-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: p6_d4_p0_evidence/**
+          if-no-files-found: error
+          retention-days: 30
