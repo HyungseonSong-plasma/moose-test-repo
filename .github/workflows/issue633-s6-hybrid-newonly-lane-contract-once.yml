@@ -1,0 +1,40 @@
+name: Issue633 S6 historical Hybrid vs New-only fail-closed evidence P0
+on:
+  push:
+    branches: [issue-633-s6-hybrid-newonly-evidence-isolation-20261118]
+    paths:
+      - .github/workflows/issue633-s6-hybrid-newonly-lane-contract-once.yml
+      - ci/guards/issue633_s6_lane_evidence_contract.py
+      - reports/issue633/s6-417-941-hybrid-newonly-separated-native-repro-20261118.json
+permissions:
+  contents: read
+jobs:
+  lane-separation-evidence-p0:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Read-only checkout without stored credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Validate exact source epoch and no historical CI bypass
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          BASE=52067302d16074592503d0ef6b903cc344f55a08
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(git diff --name-only "$BASE" HEAD | grep -Ev '^(ci/guards/issue633_s6_lane_evidence_contract.py|reports/issue633/s6-417-941-hybrid-newonly-separated-native-repro-20261118.json|.github/workflows/issue633-s6-hybrid-newonly-lane-contract-once.yml)$' | wc -l)" -eq 0
+          python3 -m py_compile ci/guards/issue633_s6_lane_evidence_contract.py
+          python3 ci/guards/issue633_s6_lane_evidence_contract.py --self-test --check
+          echo ISSUE633_P0_HYBRID_AND_NEWONLY_ROUTES_SEPARATED_AS_EVIDENCE_PASS
+      - name: Preserve machine-verifiable source-only receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue633-s6-hybrid-newonly-separated-evidence-no-private
+          path: reports/issue633/s6-417-941-hybrid-newonly-separated-native-repro-20261118.json
+          if-no-files-found: error
+          retention-days: 14
