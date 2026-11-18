@@ -1,0 +1,133 @@
+{
+  "schema": "issue671.P5_A1_A2.mesh_recovered_source_staging.v1",
+  "issue": 671,
+  "task": "P5-A1",
+  "case": "417",
+  "status": "PASS_PUBLIC_BASELINE_MESH_BYTES_AND_P3X_11_LAYER_STAGED__HOLD_FINAL_P4X_NATIVE",
+  "source_pr665_HEAD": "65794d5f33449499349b97b7eaba13e1c4821688",
+  "original_s6_staging_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "mesh": {
+    "artifact_id": 12349847563,
+    "artifact_zip_sha256": "f07f082267e159ad87ce1cdab79c95fcd8d78cdc6ed1a6168c4fa09ae1f132a2",
+    "artifact_run": 39575896519,
+    "sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "original_pre2x_sha256": "91299b6fc16136dfc9c4426148113b07ddfd7e95839da7abf5f14c36a4eac9cf",
+    "bytes": 174352,
+    "nodes": 1739,
+    "triangles": 3155,
+    "wafer_faces": 27,
+    "physical_groups": 24,
+    "geometry_sidesets": "plasma inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring",
+    "staged_relpath": "experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh",
+    "source_materializer": "experiments/Issue395_powered_chemistry_ladder/issue397_materialize_l1_baseline.py",
+    "contract_blob": "42e0e358d1e6b7670d4fe5fef3a6dacd4c3b27f3",
+    "provenance_limit": "Extracted public 200W canonical L1 artifact verified against exact hash used by historical 400W materializer; original S6 archive did not contain 400W raw mesh, so original S6 mesh byte identity is not directly attested."
+  },
+  "stage": {
+    "original_independent_worker_file": "reports/issue671/p5-a1-s6-417-source-stage-manifest-pre-p4x.json",
+    "original_independent_worker_branch": "issue-671-p5-a1-417-20261118",
+    "original_worker_blob": "2b9e0faa0e6cff1dd51c6d0417e293c2f9a4c456",
+    "p1_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "p2_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "p3x_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "independent_per_case_P1_P2_P3X_sha_checks": 33,
+    "additional_P3X_rehash_checks": 11,
+    "all_per_case_sha_checks": 44,
+    "C0_P3X_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "overlay11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+    "JSON_SHA256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "ordered_P3X_11_layer_SHA": [
+      {
+        "ordinal": 1,
+        "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+        "sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+      },
+      {
+        "ordinal": 2,
+        "path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+        "sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+      },
+      {
+        "ordinal": 3,
+        "path": "experiments/Issue395_powered_chemistry_ladder/o2_elastic_400w_100us_dt1000ns_overlay.i",
+        "sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+      },
+      {
+        "ordinal": 4,
+        "path": "experiments/Issue395_powered_chemistry_ladder/o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+        "sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+      },
+      {
+        "ordinal": 5,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S2-415_generation_overlay.i",
+        "sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76"
+      },
+      {
+        "ordinal": 6,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S3-415-401_extra_overlay.i",
+        "sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05"
+      },
+      {
+        "ordinal": 7,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S4-401-417_op_ionization_overlay.i",
+        "sha256": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a"
+      },
+      {
+        "ordinal": 8,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S5-417-407_o2_consumer_overlay.i",
+        "sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+      },
+      {
+        "ordinal": 9,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+        "sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+      },
+      {
+        "ordinal": 10,
+        "path": "experiments/Issue395_powered_chemistry_ladder/issue477_S6-417-407-2069-H25_H25_overlay.i",
+        "sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc"
+      },
+      {
+        "ordinal": 11,
+        "path": "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+        "sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+      }
+    ],
+    "newonly_ion_native_retired": 26,
+    "newonly_electron_native_retired": 10,
+    "Maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "Maxwell_qvt_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "electron_moments_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
+  },
+  "independent_new_public_bundle": {
+    "sha256": "4670edd0d7bb03778520fa9b483222271adec07e0274e4362ab41951ddc52323",
+    "entries": 18,
+    "public_only": true,
+    "private_rate_bytes": false,
+    "source_only": true,
+    "not_native_ready": true,
+    "origin": "/mnt/data/p5_a1_s6_417_PUBLIC_MESH_PRE_P4X_NOT_NATIVE_READY.zip"
+  },
+  "aggregate_local_validation": {
+    "summary_receipt_SHA256": "a416d31d8e5e336a9ca27a42fddcade129c3f9fbefe8890d455ee2b444a0279f",
+    "verifier_SHA256": "bec4202a01b5cb52ef4909d57b7e26d04a581dec05524be78d7bd7895e7bfc58",
+    "total_both_case_file_sha_checks": 88,
+    "ZIP_CRC": "ALL_4_PASS",
+    "mesh_case_bundle_independent_byte_readback": "PASS"
+  },
+  "still_missing": [
+    "P4-X full Production Runner integration and final 11-layer re-stage at exact PR HEAD",
+    "Protected EI rates through #676/#671 P5-A3 controlled materializer (not copied)",
+    "Other public elastic/transport tables in native preparation",
+    "P5-0 shared exact-head PhysicsApp binary + two Native P2 check-input exit=0 and runtime Warehouse"
+  ],
+  "gates": {
+    "P5_A1_A2_PUBLIC_MESH_AND_PRE_P4X_LAYER": "PASS",
+    "P5_A1_A2_FINAL_POST_P4X": "HOLD",
+    "P5_0": "NOT_RUN",
+    "NATIVE_P2": "NOT_RUN",
+    "D8": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": "No changes to PR665/main/previous A1/A2 owner branches/archived originals/physics production runner/private EI raw tables."
+}
