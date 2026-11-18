@@ -1,0 +1,170 @@
+{
+  "schema": "issue672.p6_i2.grounded_vs_c2_physics_contract.v1",
+  "task_id": "P6-I2",
+  "source": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "integration_pr": 665,
+    "head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "draft": true,
+    "date_utc": "2026-11-18",
+    "lane": "Ion-FVM hybrid staged dt (5ns/10ns)"
+  },
+  "status": "PASS_READONLY_PHYSICS_CONTRACT_ANALYSIS__HOLD_PHYSICS_SUBSTITUTION_APPROVAL",
+  "disposition": {
+    "historical_fem_grounded_sheath": "RETIRED_UNREGISTERED_NO_AUTOMATIC_REPLACEMENT",
+    "historical_fv_grounded_sheath": "SEPARATE_ACTIVE_LEGACY_PHYSICS_CONTRACT",
+    "new_C2_S6": "SUPPORTED_DIFFERENT_MODEL_WITH_OWN_SOURCE_ONLY_AND_NATIVE_GATES",
+    "physical_equivalence": "NOT_ESTABLISHED__ANALYTIC_ENERGY_LAW_DIFFERS_AT_ZERO_DROP",
+    "P6_I3": "HOLD_EXPLICIT_SCOPE_APPROVAL",
+    "native_solver_timestep": "NOT_RUN",
+    "science": "HOLD"
+  },
+  "failure": {
+    "workflow": ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+    "git_blob": "230e4367e7a688f297747b7f03bb0fdfaf4e4d23",
+    "latest_run": 44297212333,
+    "conclusion": "failure",
+    "matrix": [
+      "ion_fvm_hybrid_staged_1ns100_5ns100",
+      "ion_fvm_hybrid_staged_1ns100_10ns50"
+    ],
+    "path": [
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_staged_dt.py",
+      "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py::build_case",
+      "experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py::build_case"
+    ],
+    "blobs": {
+      "staged": "6242f4ae8e8d97c673932dae71d543a8031ea5fd",
+      "hybrid": "9f7461c6287212f52d8c55e9ef361284080dfb90",
+      "terminal_guard": "db90fe634a7ddc234daeab7b94dd21618bd3c893",
+      "retired_FEM_discriminator": "69ec14c58b502a953c9024c46d332494cad61e6c"
+    },
+    "signature": "RETIRED_GROUNDED_SHEATH_BCS",
+    "stage": "Python input generation fails before real Native --check-input and before 1ns/5ns/10ns timestep",
+    "guard_intent": "Fail closed when historical FEM electron grounded sheath laws are not registered; cannot silently substitute adjacent-field laws."
+  },
+  "contracts": {
+    "grounded_conductor_FV": {
+      "particle_owner": "PhysicsFVElectronGroundedSheathCollectionBC",
+      "energy_owner": "PhysicsFVElectronGroundedSheathEnergyBC",
+      "helper": "physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h",
+      "blobs": {
+        "particle": "5982e19834b956498f52d81eb6a81620e7440b20",
+        "energy": "0ec3766b00e16cdd24a5e29f355689920bb3178a",
+        "helper": "2976abd12c31e7da3642e07d253eb85f2316a297"
+      },
+      "branch": "Classical electron-repelling, unresolved grounded conductor: phi_wall=0, phi_s>=-1e-10V",
+      "potential_drop": "DeltaPhi=phi_plasma_side - phi_wall=phi_s, negative beyond tolerance rejected",
+      "electron_flux": "Gamma_e=0.25*n_e*sqrt(8*e*T_e/(pi*m_e))*exp(-DeltaPhi/T_e), T_e=(2/3)*epsilon_mean",
+      "electron_energy": "(Gamma_e/N_A)*(2*T_e+DeltaPhi) eV mol/(m^2 s) in molar-state mode",
+      "boundary_potential": "Prescribed grounded conducting wall, not a dynamic dielectric surface-charge interface",
+      "SEE": "Separate ion-induced SEE source; no electron-induced/floating/inverse-sheath claim"
+    },
+    "C2_newonly": {
+      "ion_material": "IonWallFluxMaterial",
+      "particle_dielectric": "FVLogMolarDielectricFluxBC",
+      "electron_wall_material": "ESWallFluxMaterial",
+      "electron_particle_BC": "FEMElectronSheathBC",
+      "electron_energy_BC": "FEMElectronEnergySheathBC",
+      "blobs": {
+        "ion": "c965e1c2de9d1ba8eec6f3180c9eaeb5ca324fde",
+        "ion_BC": "08306f4545b806368a2c90bac0c83dacc5e7c9b5",
+        "electron_material": "7f0981608dad18e896b36af8fc8248211da381c6",
+        "electron_particle_BC": "78d8489f8e98ecdfb134c4b5620fd66544a8ca52",
+        "electron_energy_BC": "2ca0f695d8d801b28ebdaec8a32c3847a8a00a58",
+        "action": "045de080e3d836d75495b1749d75d5d3deea2330"
+      },
+      "electron_drop": "DeltaPhi_adj=smoothPositive(E_n*d_perp), E=-grad(phi) using plasma-side FaceArg/adjacent element; not guaranteed phi_s-0",
+      "electron_particle": "Gamma_e=s*n_e*vbar/4*exp(-DeltaPhi_adj/T_e); negative E_n*d_perp is smoothly clamped rather than rejected as out-of-branch",
+      "electron_energy": "(Gamma_e/N_A)*(5/2*T_e) eV mol/(m^2 s), no explicit DeltaPhi energy addend",
+      "ion_wall": "Gamma_i=sticking*n_i*v_thermal_i/4+n_i*mu_i*positive_part(z_i*E_n), charges {O2p:+1,Om:-1,Op:+1}",
+      "general_FV_BC": "FVFunctorNeumannBC with -1/N_A factor, five grouped inlet/outlet/electrode/metal/right sidesets per ion; FV library sign must be checked at residual level",
+      "dielectric_FV_BC": "FVLogMolarDielectricFluxBC, signed_number_flux=species_wall_number_flux, computeQpResidual=Gamma_i/N_A outward positive",
+      "walls": "three dielectric groups plasma_cover/plasma_wafer/plasma_focus_ring, three species each; 3 general BC+9 dielectric=12 ion BC objects total",
+      "surface_current": "j=e*(Gamma_O2p+Gamma_Op-Gamma_Om-Gamma_e) on each dielectric, used to drive lower-D sigma_s and surface charge Poisson BC",
+      "SEE": "Not auto-generated in C2 net surface current expression; dielectric material-specific SEE requires independent declared owner/provenance and separate acceptance.",
+      "electrostatic": "dielectric sigma_s / interface Poisson coupling is not same as conductor phi_wall=0 Dirichlet boundary",
+      "s6_json_git_blobs": {
+        "S6_417": "4a05649b42b798f566d5e455ef46be347ea2a461",
+        "S6_941": "9568e2cae6640a755f9403c4f58e077c801b998c"
+      }
+    }
+  },
+  "analytic_non_equivalence": {
+    "zero_drop": "At identical n_e, T_e and sticking=1: grounded Gamma_e=C2 Gamma_e when both drops vanish, BUT grounded energy per collected electron=2 T_e, C2 energy per collected electron=2.5 T_e, 25% higher C2.",
+    "general": "Even electron particle Gamma can differ because phi_s-phi_wall need not equal E_n*d_perp; nonuniform potential/FE gradient, dielectric charging, mesh change matter.",
+    "negative_drop": "Grounded collector rejects phi_s<-1e-10V; C2 electron material clamps negative adjacent field drop. Not identical validity branches.",
+    "rate_source_and_ownership": "Source-only S6 C2 Wall and legacy IonWall objects are a different migration from historical FEM grounded sheath; correct SHA/name remap cannot prove scientific equivalence."
+  },
+  "prior_governance": {
+    "grounded_branch": "#214 W3 selected sheath-unresolved grounded conducting-wall model, #215 W4 current closure, #217 W4.5 same-population primary energy",
+    "W5": "#216 W5 closed NOT PLANNED (2026-09-18), so previous bounded W4/W4.5 evidence is not general unconditional production approval",
+    "dielectric": "#3 separately defines dielectric current to sigma_s to Poisson, controls ion/electron/SEE/charge; does not authorize changing grounded sheath physics",
+    "retirement": "docs/development/2026-11-13_issue402_fem_electron_sheath_bc_retirement.md",
+    "authorization": "#672 P6-I2 is read-only contract analysis. P6-I3 only after explicit scope approval: bounded no-timestep P0/P2 or KEEP_HOLD. No automatic 1ns/5ns/10ns matrix execution; no main merge or scientific PASS."
+  },
+  "approval_matrix": [
+    {
+      "action": "Document lineage, analytic comparison, source SHA and dry-run test design",
+      "allowed_now": true,
+      "approval": "No new physics approval",
+      "mode": "READ_ONLY"
+    },
+    {
+      "action": "Keep historical retired FEM generator fail-closed and preserve historical run/CI evidence",
+      "allowed_now": true,
+      "approval": "No model change; any workflow policy change requires workflow owner governance",
+      "mode": "KEEP_HOLD"
+    },
+    {
+      "action": "Replace historical FEM grounded electron sheath by current C2 adjacent-field law",
+      "allowed_now": false,
+      "approval": "Explicit independent model-change approval + new experiment identifier; original scientific parity cannot be asserted",
+      "mode": "NEW_PHYSICS_PROPOSAL"
+    },
+    {
+      "action": "Dispatch replacement no-timestep Native --check-input/P0-P2 for a newly characterized fixture",
+      "allowed_now": false,
+      "approval": "Separate explicit P6-I3 execution approval, exact head/binary/mesh/Factory/negative tests",
+      "mode": "CONTROLLED_NATIVE"
+    },
+    {
+      "action": "Dispatch 1ns/5ns/10ns integration or P3/P4 scientific replay",
+      "allowed_now": false,
+      "approval": "Separate computational/physics/science scope approval with current/charge/Gauss/energy diagnostics and rollback",
+      "mode": "SCIENCE_HOLD"
+    },
+    {
+      "action": "Historical exact-physics replay with archived branch/binary instead of new BC",
+      "allowed_now": false,
+      "approval": "Provenance-preserving separate compatibility-runner approval; never relabel results as new HEAD",
+      "mode": "HISTORICAL_REPLAY"
+    }
+  ],
+  "verification_design": {
+    "P0": [
+      "Check both producer equations, zero- and positive-drop tests; zero-drop 2Te vs 2.5Te energy discriminator",
+      "Test negative potential: Grounded fail-closed vs C2 adjacent-field clamp",
+      "Check plasma-side FaceArg/normal direction and FE adjacent element vs FV face gradient",
+      "Ion O2p/Om/Op charge-sign and thermal/migration plus bias reversals",
+      "Compare FVFunctorNeumannBC -1/N_A to dielectric FVFluxBC +1/N_A with independent one-face weak-residual sign/orientation",
+      "Surface current j=e*(O2p+Op-Om-e), each unique input and no SEE double count",
+      "Single owner under C2: 12 generated ion FV BC, 8 generated electron FEM BC; no historical duplication"
+    ],
+    "P2_non_timestep_after_approval": [
+      "Exact HEAD physics-opt build and SHA, new fixture not historical code repackaging",
+      "Real --check-input for characterized boundaries with correct mesh sidesets and Source/Consumer Warehouse",
+      "Expected FAIL for retired FEM classes, ambiguous/double Wall, wrong charge, missing sigma_s and malformed electrostatic boundary",
+      "No timestep or merged science claim"
+    ],
+    "P3_separately_authorized": [
+      "Ion-only, electron-only, combined charge ledgers; net current to sigma_s and Gauss closure",
+      "Electron energy and particle loss measured and compared with chosen model's analytic formula",
+      "SEE-off then explicitly sourced dielectric SEE-on separately",
+      "Mesh/gradient sensitivity and 1ns/5ns/10ns run only under specific explicit authorization"
+    ]
+  },
+  "recommended_default": "KEEP_HOLD existing Ion-FVM historical experimental lane; do not patch/skip fail-closed generator or replace by C2 automatically. If current physics objective needs new comparison, establish independent C2-physics-controlled experiment and seek explicit approval for P6-I3 bounded P0/P2. Maintain SCIENCE_HOLD.",
+  "safety": "Task-isolated report only. No workflow, live input/JSON, C++, CI controls, PR665, main, archived source, private rates or solver changed."
+}
