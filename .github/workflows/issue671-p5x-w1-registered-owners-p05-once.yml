@@ -279,7 +279,18 @@ jobs:
             --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/workspace,readonly" \
             --mount "type=bind,src=$RUNNER_TEMP/p05-in/observer-preflight,dst=/probe" \
             "$OCI" -lc 'set -euo pipefail; source /environment; P5X_REGISTER_LOG=/probe/preload-ready.log LD_PRELOAD=/workspace/physics_app/p5x_owner_tracer.so /workspace/physics_app/physics-opt --version >/probe/version.txt'
-          test -f "$RUNNER_TEMP/p05-in/observer-preflight/preload-ready.log"
+          # Public-only diagnostic: record exact preload marker bytes before failing closed.
+          python3 - "$RUNNER_TEMP/p05-in/observer-preflight/preload-ready.log" <<'PY'
+          import sys,pathlib,hashlib
+          p=pathlib.Path(sys.argv[1])
+          if not p.is_file():
+              print("P5X_PRELOAD_PREFLIGHT_MISSING_FILE")
+              raise SystemExit(87)
+          data=p.read_bytes()
+          print("P5X_PRELOAD_PREFLIGHT_BYTES",len(data),"SHA256",hashlib.sha256(data).hexdigest(),
+                "HEX",data[:80].hex())
+          assert data==b"P5X_PRELOAD_READY\\n", "PRELOAD_MARKER_CONTENT_INVALID"
+          PY
           grep -Fxq P5X_PRELOAD_READY "$RUNNER_TEMP/p05-in/observer-preflight/preload-ready.log"
           echo P5X_PRELOAD_ELF_LOADER_PASS_NO_PRIVATE_RATE
       - name: Protected original EI Rate, clean controls, and N1-N8 actual Native mutants
