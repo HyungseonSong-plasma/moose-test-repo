@@ -1,0 +1,299 @@
+{
+  "schema": "issue671.p5_b4.s6_417_FVBC_12_source_readiness.v1",
+  "task_id": "P5-B4",
+  "issue": 671,
+  "parent_issue": 633,
+  "dependency_issues": [
+    669,
+    670
+  ],
+  "case": "S6-417",
+  "date_utc": "2026-11-18",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "verdict": "STATIC_12_FVBC_EXPECTATION_AND_31_MUTATIONS_PASS__NATIVE_WAREHOUSE_P05_HOLD",
+  "immutable_current_review_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "original_P3_X_stage_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_scope": "Current HEAD source C++/JSON/11th overlay independently rehashed against older exact P3-X 417 staged 11-layer inputs; no PhysicsApp binary was launched.",
+  "confirmed_static": {
+    "stage_417_actual_11layer_file_sha256": "11/11 independent byte readback",
+    "detailed_per_file_sha256_locator": "GitHub Actions Artifact 14408397612 -> p5-b4-receipt/p5-b4-417-fvbc-p05-readiness.json -> files[*].file_sha256",
+    "stage_origin": "P2 26 ion old owner retirement + P3-X 10 electron old owner retirement, source-only",
+    "active_old_native_FVBC_count": 0,
+    "canonical_source_expected_ion_BC_count": 12,
+    "generic_neumann_count": 3,
+    "dielectric_count": 9,
+    "unique_mesh_sidesets": 8,
+    "selected_ions": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "canonical_solver_variables": [
+      "log_O2p",
+      "log_Om",
+      "log_Op"
+    ],
+    "electron_BC_and_energy_family": "P3-X shared input; not certified by B4 native",
+    "current_official_P0_status": "FAIL_EXPECTED_DUE_TO_P4X_C2_SURVIVING_NATIVE_FUNCTOR_PRODUCERS",
+    "collisions_from_official_P0": "See Artifact -> P0_surviving_C2_producer_collisions and P0_three_surface_current_collisions",
+    "full_native_check_input_pass": false
+  },
+  "staged_input_source": {
+    "upstream_p3x_run_id": 44257739203,
+    "upstream_p3x_artifact_id": 14406746397,
+    "upstream_p3x_artifact_digest": "sha256:592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "newonly_JSON": {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "git_blob_sha1": "4a05649b42b798f566d5e455ef46be347ea2a461"
+    },
+    "overlay": {
+      "path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+      "sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "git_blob_sha1": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e"
+    }
+  },
+  "current_Cxx": {
+    "chemistry": {
+      "path": "physics_app/src/physics/plasma/Chemistry.C",
+      "git_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330"
+    },
+    "continuity": {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "git_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+    },
+    "generator": "PlasmasAction::act when _current_task == add_bc: _problem->addFVBC(bc.type, name, params)",
+    "Neumann_factor": "-1.0 / 6.02214076e23 encoded with std::setprecision(std::numeric_limits<Real>::max_digits10) as MooseFunctorName string",
+    "dielectric_signed_flux": "<species>_wall_number_flux without second N_A factor",
+    "operator_ownership": "ChemistryData normalizes duplicate BC names across disjoint sidesets into one logical object",
+    "C2_count_guard": "count == 4 * selected.size() = 12",
+    "P05_warehouse_guard": "DDContinuityEq checks every expected JSON FV BC name+factory+variable and enforces matched_bcs[name] == 1",
+    "proven_source_contract": true,
+    "runtime_guard_executed": false
+  },
+  "expected_generated_12_FVBC_objects": [
+    {
+      "name": "O2p_wall",
+      "factory": "FVFunctorNeumannBC",
+      "variable": "log_O2p",
+      "boundary": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "O2p_wall_number_flux",
+      "factor": "-1/N_A",
+      "factor_numeric": -1.6605390671738466e-24,
+      "signed_number_flux": null,
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "O2p_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_O2p",
+      "boundary": [
+        "plasma_cover"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "O2p_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "O2p_wafer_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_O2p",
+      "boundary": [
+        "plasma_wafer"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "O2p_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "O2p_focus_ring_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_O2p",
+      "boundary": [
+        "plasma_focus_ring"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "O2p_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "Om_wall",
+      "factory": "FVFunctorNeumannBC",
+      "variable": "log_Om",
+      "boundary": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "Om_wall_number_flux",
+      "factor": "-1/N_A",
+      "factor_numeric": -1.6605390671738466e-24,
+      "signed_number_flux": null,
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "Om_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Om",
+      "boundary": [
+        "plasma_cover"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "Om_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "Om_wafer_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Om",
+      "boundary": [
+        "plasma_wafer"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "Om_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "Om_focus_ring_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Om",
+      "boundary": [
+        "plasma_focus_ring"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "Om_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "Op_wall",
+      "factory": "FVFunctorNeumannBC",
+      "variable": "log_Op",
+      "boundary": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "Op_wall_number_flux",
+      "factor": "-1/N_A",
+      "factor_numeric": -1.6605390671738466e-24,
+      "signed_number_flux": null,
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "Op_cover_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Op",
+      "boundary": [
+        "plasma_cover"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "Op_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "Op_wafer_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Op",
+      "boundary": [
+        "plasma_wafer"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "Op_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    },
+    {
+      "name": "Op_focus_ring_dielectric",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "variable": "log_Op",
+      "boundary": [
+        "plasma_focus_ring"
+      ],
+      "functor": null,
+      "factor": null,
+      "signed_number_flux": "Op_wall_number_flux",
+      "scope": "PREDICTED_FROM_CURRENT_JSON_CPP_NOT_INSTANTIATED",
+      "warehouse_count": null
+    }
+  ],
+  "independent_verification": {
+    "success_run_id": 44262644756,
+    "success_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44262644756",
+    "success_job_id": 134659455993,
+    "conclusion": "SUCCESS",
+    "run_commit": "3510464afc6ff3f3c85a8addd2bc55c05ac51b04",
+    "artifact_id": 14408397612,
+    "artifact_name": "issue671-p5-b4-417-readback-44262644756-1",
+    "artifact_digest": "sha256:acf5f80ed73fa9e93f5137e98fa0991887f60c9bbf44c82b87196fae4c9af14c",
+    "detailed_artifact_receipt_path": "p5-b4-receipt/p5-b4-417-fvbc-p05-readiness.json",
+    "source_readback": "11/11 stage file SHA + JSON + overlay + C++ P05 invariant guards",
+    "static_adversarial_negative_controls": 31,
+    "static_adversarial_rejected": 31,
+    "negative_classes": "3 species × (general missing, dielectric 3 missing, general wrong factory, charge sign) =18; unknown/duplicate sideset/wrong factory/extra factor/dielectric signed override=5; selection/binding bypass=2; C++ source guards=6",
+    "first_attempt": {
+      "run_id": 44262499128,
+      "result": "FAILED_TEST_HARNESS_STATIC_STRING_ASSERTION_ONLY",
+      "actual_staged_input_disagreement": "NOT_FOUND",
+      "corrected_before_pass": true
+    },
+    "native_run_attempted": false,
+    "binary_sha256": null,
+    "actual_factory_registry": null,
+    "Native_P2_exit_code": null,
+    "actual_FVBC_warehouse_inventory": null
+  },
+  "P4X_pending": {
+    "required": "P4-X single-writer source and staged-input cutover must remove three legacy surface current producers and other clashing wall Functors before P0 Native input can pass",
+    "official_P0_failed_as_expected": true,
+    "P4X_final_source_integration_receipt": "NOT_VERIFIED",
+    "cannot_advance_to_native_until_clear": true
+  },
+  "P5_0_and_B2_pending": {
+    "common_binary_SHA256": "NOT_AVAILABLE",
+    "common_P5_0_recipe_build_receipt": "NOT_VERIFIED",
+    "s6_417_B2_check_input_job_exit": "NOT_RUN",
+    "actual_P05_generated_12_FVBC_name_factory_count": "NOT_RUN",
+    "required_native_evidence": "same final integrated HEAD+binary SHA+S6-417 disposable Scratch path, Native --check-input exit=0, FVBC Warehouse count 12 with exact factory name per object, P05 fail-closed proof"
+  },
+  "next_gate": "After P4-X final exact-head source cutover, P5-0 shared binary and P5-B2 Native 417 --check-input; replay B4 expected model against the same binary Warehouse and P05. Never substitute this source-only receipt for Native P2 PASS.",
+  "guardrails": {
+    "shared_PR665_source_modified": false,
+    "main_modified": false,
+    "original_10layer_ZIP_modified": false,
+    "user_private_rate_raw_bytes_read": false,
+    "one_shot_CI_workflow": "REMOVED_AFTER_SUCCESS",
+    "branch_diff": "Only this task-specific receipt JSON against pinned source HEAD",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
