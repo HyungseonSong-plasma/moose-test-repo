@@ -1,0 +1,213 @@
+{
+  "schema": "issue672.p6_c3_exact_head_ci_validation_receipt.v1",
+  "task": "P6-C3",
+  "case": "Current PR #665 HEAD rebased P6-C3 same-exact-HEAD Repository CI",
+  "verdict": "P6_C3_CI_VALIDATE_AND_GUARDS_PASS__REPOSITORY_CI_FAIL_EXPECTED_PUBLIC_D_ARCH_P05__MERGE_HOLD",
+  "source": {
+    "original_draft_665_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "reapplied_tested_source_sha": "6920d6b025200815b721fc8b08eebbf10e735253",
+    "validation_pr_number": 687,
+    "validation_pr_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/687",
+    "validation_pr_state": "OPEN_DRAFT_DO_NOT_MERGE",
+    "branch": "issue-672-p6-c3-rebase-5206730-ci-20261118",
+    "before_after_diff": {
+      "ahead_by": 4,
+      "behind_by": 0,
+      "files": [
+        ".github/workflows/ci.yml",
+        "ci/workflow_templates/general-ci.yml",
+        "ci/guards/p6_ci_workflow_safety_guard.py",
+        "tests/test_issue672_p6_ci_workflow_safety.py"
+      ]
+    },
+    "same_head_ci": "All four workflows triggered from this exact 6920d6b source SHA; no source update between PR opening and run completion",
+    "reapplied_file_git_blobs": {
+      ".github/workflows/ci.yml": "8313e539c2e7cfa7cb25973ad62fbce1524db19d",
+      "ci/workflow_templates/general-ci.yml": "8313e539c2e7cfa7cb25973ad62fbce1524db19d",
+      "ci/guards/p6_ci_workflow_safety_guard.py": "32ab854dda95040b2f00b050e6815e1d7351e536",
+      "tests/test_issue672_p6_ci_workflow_safety.py": "4a2425f8b8694be067e820163ca369dc8461c9e3",
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+    }
+  },
+  "repository_ci": {
+    "run_id": 44339607332,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44339607332",
+    "head_sha": "6920d6b025200815b721fc8b08eebbf10e735253",
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "job_totals": {
+      "total": 17,
+      "success": 15,
+      "failure": 2
+    },
+    "validate": {
+      "job_id": 134925631453,
+      "conclusion": "success",
+      "pytest_passed": 1569,
+      "pytest_skipped": 13,
+      "guard": "P6_CI_TRIGGER_ARTIFACT_P05_FAIL_CLOSED_SOURCE_PASS",
+      "negative_mutations": "17/17 REJECTED",
+      "workflow_harness_selftest": "PASS",
+      "workflow_harness_check": "PASS",
+      "workflow_surface_selftest": "PASS",
+      "workflow_surface_check": "PASS",
+      "ci_generated_template_parity": "PASS"
+    },
+    "native_jobs": {
+      "CORE_FOUR": {
+        "job_id": 134925631755,
+        "conclusion": "success",
+        "Native_P2": "PASS",
+        "P3": "NOT_RUN"
+      },
+      "ARCH_DD": {
+        "job_id": 134925631692,
+        "conclusion": "success",
+        "positive": "Syntax OK",
+        "negative": "missing required electron initial_number_density rejected",
+        "P3": "NOT_RUN"
+      },
+      "PUBLIC_NATIVE": {
+        "job_id": 134925631814,
+        "conclusion": "failure",
+        "S6-417-B": {
+          "exit_code": 0,
+          "Native_P2": "PASS",
+          "layers": 10
+        },
+        "S6-941-B": {
+          "exit_code": 0,
+          "Native_P2": "PASS",
+          "layers": 10
+        },
+        "S6-417-D": {
+          "exit_code": 1,
+          "Native_P2": "HOLD",
+          "layers": 11,
+          "first_error": "Missing drift-diffusion transport JSON record for FEM species 'e'"
+        },
+        "S6-941-D": {
+          "exit_code": 1,
+          "Native_P2": "HOLD",
+          "layers": 11,
+          "first_error": "Missing drift-diffusion transport JSON record for FEM species 'e'"
+        },
+        "P3": "NOT_RUN"
+      },
+      "ARCH_S6_HYBRID": {
+        "job_id": 134925631728,
+        "conclusion": "failure",
+        "S6-417": {
+          "Native_P2": "HOLD",
+          "first_error": "P05 FV Native/Physics duplicate or unexpected owner on log_O2p: ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+          "native_log_sha256": "833fa049e0541b1210e6e2db476c979bf2600aa6d6e43946567915855d7f8ecc"
+        },
+        "S6-941": {
+          "Native_P2": "HOLD",
+          "first_error": "P05 FV Native/Physics duplicate or unexpected owner on log_O2p: ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+          "native_log_sha256": "0a613f78cb165854802437e0987fb7344151b7fabe5fe83f83f8ecd77184fe52"
+        },
+        "P3": "NOT_RUN",
+        "science": "SCIENCE_HOLD"
+      }
+    }
+  },
+  "other_workflows": {
+    "FLOW": {
+      "run_id": 44339607362,
+      "run_conclusion": "failure",
+      "job_id": 134925653948,
+      "S6-417": {
+        "Native_P2": "HOLD",
+        "first_error": "Missing drift-diffusion transport JSON record for FEM species 'e'",
+        "native_log_sha256": "0f78e9dd6b5ea8724ada610418d41fa307fc6565aae3f65857dfaae0731c4137"
+      },
+      "S6-941": {
+        "Native_P2": "NOT_RUN",
+        "reason": "417 fail-fast"
+      }
+    },
+    "ION_FVM_NEWONLY_SOURCE_P0": {
+      "run_id": 44339607577,
+      "run_conclusion": "success",
+      "cases": [
+        "417",
+        "941"
+      ],
+      "scope": "source-only; no Native or P3"
+    },
+    "SOL_RUNTIME_INTEGRATION": {
+      "run_id": 44339607521,
+      "run_conclusion": "success"
+    }
+  },
+  "artifacts": {
+    "public_native": {
+      "id": 14442029739,
+      "zip_sha256": "5f475479f574b4703795cf8f0714af42f12036380a9a41ecf6a441717ca2b6b9",
+      "zip_bytes": 83008,
+      "members": 90,
+      "zip_crc": "PASS",
+      "name": "plasma-native-regression-44339607332-1-6920d6b025200815b721fc8b08eebbf10e735253"
+    },
+    "flow_native": {
+      "id": 14443108007,
+      "zip_sha256": "78278858caf9dad6c09cfce56917c9cada64010e924f039457ae624b572071f5",
+      "zip_bytes": 9886,
+      "members": 7,
+      "zip_crc": "PASS",
+      "name": "issue402-flow-native-p2-44339607362-1"
+    },
+    "arch_hybrid": {
+      "id": 14444280609,
+      "zip_sha256": "540ac5263ae174d26e99c4d96fbbf620db68e45945b5482fe456f830c0cad0e2",
+      "zip_bytes": 9906,
+      "members": 6,
+      "zip_crc": "PASS",
+      "name": "issue541-arch-s6-hybrid-p2-44339607332-1-6920d6b025200815b721fc8b08eebbf10e735253"
+    },
+    "arch_dd": {
+      "id": 14444250495,
+      "zip_sha256": "aa760dca2c38d8ef83b56dea1ed287240c1429e967d6f1efc0c98c4154d3b2c0",
+      "zip_bytes": 2086,
+      "members": 4,
+      "zip_crc": "PASS",
+      "name": "issue541-arch-dd-p1-p2-44339607332-1-6920d6b025200815b721fc8b08eebbf10e735253"
+    },
+    "core_native": {
+      "id": 14443741270,
+      "zip_sha256": "b887ca3192a2041276395527e9db0545eff61b393c9cfcfdad8acff28cc26aeb",
+      "zip_bytes": 2664,
+      "members": 3,
+      "zip_crc": "PASS",
+      "name": "issue541-core-four-native-44339607332-1-6920d6b025200815b721fc8b08eebbf10e735253"
+    }
+  },
+  "artifact_name_contract": {
+    "four_native_jobs_include": [
+      "github.run_id",
+      "github.run_attempt",
+      "github.event.pull_request.head.sha"
+    ],
+    "actual_upload_readback": "4/4 actual new artifact naming and bytes verified at source exact SHA",
+    "historical_CORE_artifact_baseline": "ci/guards/issue541_core_four_contract.py pins old exact name for old run; unchanged",
+    "off_platform_dynamic_consumers": "UNKNOWN_NOT_ZERO",
+    "merge_approval": "HOLD pending compatibility owner review"
+  },
+  "policy": {
+    "P05": "FATAL_FAIL_CLOSED_NOT_SUPPRESSED",
+    "manual_ARCH_P3_P4": "NOT_RUN",
+    "new_Ion_FVM_source_P0": "SUCCESS_SOURCE_ONLY",
+    "original_historical_Hybrid": "RETAINED_SEPARATELY",
+    "private_EI": "NO_PRIVATE_RAW_FILES_UPLOADED_IN_ARTIFACT_Paths_OF_CHANGED_JOBS",
+    "baseline_main_and_pr665": "UNCHANGED",
+    "SCIENCE": "SCIENCE_HOLD",
+    "P6_C3_source_test": "PASS",
+    "P6_X_integration": "HOLD"
+  },
+  "receipt_storage": {
+    "this_report_branch": "issue-672-p6-c3-6920d6-ci-readback-20261118",
+    "caveat": "This evidence receipt is committed after the tested SHA to an independent branch; do not treat receipt branch HEAD as newly CI validated."
+  }
+}
