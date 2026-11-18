@@ -296,7 +296,7 @@
       "evidence_urls": [
         "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/6b545d7f1eeba83890184f991ce6d4786d1ea099/reports/issue672/p6-e2-lane-pass-keep-hold-p7-handoff-20261118.md",
         "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330849818",
-        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/4ffe1d03854cb2e2415f3345affdedd7b1000e28/reports/issue672/p6-d5-public-d-original100-vs-prepared42-417-941-real-native-receipt.json"
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/4ffe1d03854cb2e2415f3345affdedd7b1000e28/reports/issue672/p6-d5-public-d-original100-vs-prepared42-417-941-native-20261118.json"
       ],
       "required_next": null
     },
