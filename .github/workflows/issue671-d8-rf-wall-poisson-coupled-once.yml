@@ -1,0 +1,579 @@
+name: Issue671 D8 real coupled RF+Wall+Poisson numeric 417 941 3ns
+on:
+  push:
+    branches:
+      - issue-671-d8-rf-wall-poisson-coupled-20261118
+    paths:
+      - .github/workflows/issue671-d8-rf-wall-poisson-coupled-once.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue671-d8-coupled-rf-wall-poisson-74a-w1-once
+  cancel-in-progress: false
+jobs:
+  exact-head-full-s6-rf:
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      BASE_HEAD: 74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f
+    steps:
+      - name: Checkout exact source without writing authentication credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fail closed for exact PR665 base and one approved workflow before private EI access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$BASE_HEAD" HEAD
+          git diff --name-only "$BASE_HEAD" HEAD | sort > "$RUNNER_TEMP/rf-actual-changes.txt"
+          printf '%s\n' '.github/workflows/issue671-d8-rf-wall-poisson-coupled-once.yml' > "$RUNNER_TEMP/rf-allowed-changes.txt"
+          diff -u "$RUNNER_TEMP/rf-allowed-changes.txt" "$RUNNER_TEMP/rf-actual-changes.txt"
+          git checkout --detach "$BASE_HEAD"
+          test "$(git rev-parse HEAD)" = "$BASE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no -- physics_app ci/physics-build-base)"
+          echo P5X_D8_EXACT_PR665_DETACH_SOURCE_PIN_PASS
+          test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
+          test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          echo RF_FULL_S6_SOURCE_AND_SECURITY_GUARD_PASS
+      - name: Checkout immutable historical public S6 mesh and support source
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Reproduce exact SHA-pinned 400 W public parent plasma mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $SRC" | sha256sum --check -
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
+          export OXYGEN_RESEARCH_400=1
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          echo "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc  $CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" | sha256sum --check -
+          test ! -e "$CHEM/private_rates"
+          echo P05_PUBLIC_MESH_SHA_PASS
+
+      - name: Download exact verified 417 941 P3-X public source and immutable diagnostic staging helper
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p05-in"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14406746397/zip" \
+            --output "$RUNNER_TEMP/p05-in/p3x-source.zip"
+          echo "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111  $RUNNER_TEMP/p05-in/p3x-source.zip" | sha256sum --check -
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://raw.githubusercontent.com/HyungseonSong-plasma/moose-test-repo/41ab61e442a497db2388c025075237bd24cfd025/ci/issue671_p5_d8_native_probe.py" \
+            --output "$RUNNER_TEMP/p05-in/pinned_source_stager.py"
+          test "$(git hash-object "$RUNNER_TEMP/p05-in/pinned_source_stager.py")" = 8bf49b7807c9f9b3eed8e622e72062f2b5c822bc
+          python3 -m py_compile "$RUNNER_TEMP/p05-in/pinned_source_stager.py"
+          echo P05_PUBLIC_ARTIFACT_AND_STAGER_PIN_PASS
+
+      - name: Stage real eleven-layer inputs with original mesh and support; exact P4-X owner cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p05-in/staged"
+          python3 "$RUNNER_TEMP/p05-in/pinned_source_stager.py" \
+            --source "$GITHUB_WORKSPACE" --repo-head "$BASE_HEAD" \
+            --artifact "$RUNNER_TEMP/p05-in/p3x-source.zip" \
+            --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            --historical-support-root "$GITHUB_WORKSPACE/historical" \
+            --output "$RUNNER_TEMP/p05-in/staged" --stage-only
+          python3 - "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-in/p4_receipt.json" <<'PY'
+          from pathlib import Path
+          import sys,json,hashlib
+          stage=Path(sys.argv[1]); root=Path(sys.argv[2]); out=Path(sys.argv[3])
+          sys.path.insert(0,str(root/"experiments/Issue402_plasma_dsl_g1/chemistry"))
+          from retire_s6_p4_duplicate_owners import retire_p4_duplicate_owners, C0, AFTER_SHA
+          stages=json.loads((stage/"readiness.json").read_text())["stage_cases"]
+          receipts={}
+          for case in ("417","941"):
+              folder=stage/"scratch"/case/"experiments"/"Issue395_powered_chemistry_ladder"
+              raw_ordered=stages[case]["ordered"]
+              ordered=[Path(p).name for p in raw_ordered]
+              assert len(ordered)==11 and ordered[0]==C0 and len(set(ordered))==11
+              sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+              baseline={n:sha(folder/n) for n in ordered}
+              marker=folder/".issue633_disposable_scratch"
+              assert not marker.is_symlink()
+              if marker.exists():
+                  assert marker.read_text().strip()=="issue633-scratch-only"
+              else:
+                  marker.write_text("issue633-scratch-only\n")
+              js=json.loads((folder/"chemistry"/f"unified_s6_{case}_newonly.json").read_text())
+              cut=retire_p4_duplicate_owners(folder,ordered,js,post_p3_layer_sha=baseline)
+              assert sha(folder/C0)==AFTER_SHA
+              assert all(sha(folder/n)==baseline[n] for n in ordered[1:])
+              assert cut["retired_source_materials"]==6 and cut["carrier_one_preserved"]
+              receipts[case]={"P4X":"P4X_7_OWNER_SOURCE_PASS","post_p4_C0_sha256":sha(folder/C0),
+                              "retired_old_ion_FV":26,"retired_old_electron":10,
+                              "retired_old_duplicate_materials":6,"carrier_one_preserved":True,
+                              "ordered_inputs":raw_ordered,
+                              "11_layer_sha256":{n:sha(folder/n) for n in ordered},
+                              "JSON_sha256":sha(folder/"chemistry"/f"unified_s6_{case}_newonly.json"),
+                              "parent_mesh_sha256":sha(folder/"baseline_plasma_plus_unstructured_cover_plus_wafer.msh")}
+          out.write_text(json.dumps(receipts,indent=2,sort_keys=True)+"\n")
+          print("P05_REAL_POST_P4X_STAGE_BOTH_CASES_11_LAYER_PASS")
+          PY
+
+      - name: Download immutable exact-head W1 bundle and pin one ELF plus both app libraries
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test "$(git rev-parse HEAD)" = "$BASE_HEAD"
+          test ! -e physics_app/physics-opt
+          mkdir -p "$RUNNER_TEMP/p05-in/w1"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14435245012/zip" \
+            --output "$RUNNER_TEMP/p05-in/w1.zip"
+          echo "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd  $RUNNER_TEMP/p05-in/w1.zip" | sha256sum -c -
+          unzip -p "$RUNNER_TEMP/p05-in/w1.zip" identity.json > "$RUNNER_TEMP/p05-in/w1_identity.json"
+          unzip -p "$RUNNER_TEMP/p05-in/w1.zip" physics-opt-and-app-libs.tar.gz > "$RUNNER_TEMP/p05-in/w1-binary.tar.gz"
+          echo "12f198cd17101b23b67a61a2fe95247af9c4c860d36b04ebf16b8dc91d4dadeb  $RUNNER_TEMP/p05-in/w1-binary.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/p05-in/w1-binary.tar.gz" -C "$RUNNER_TEMP/p05-in/w1"
+          test "$(find "$RUNNER_TEMP/p05-in/w1" -type f | wc -l)" = 3
+          echo "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa  $RUNNER_TEMP/p05-in/w1/physics-opt" | sha256sum -c -
+          echo "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd  $RUNNER_TEMP/p05-in/w1/lib/libphysics-opt.so.0" | sha256sum -c -
+          echo "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6  $RUNNER_TEMP/p05-in/w1/lib/libphysics_test-opt.so.0" | sha256sum -c -
+          python3 - "$RUNNER_TEMP/p05-in/w1_identity.json" "$BASE_HEAD" <<'PY'
+          import json,sys
+          j=json.load(open(sys.argv[1]))
+          assert j["source_head"]==sys.argv[2]
+          assert j["source_tree"]=="10ab018235f047bf1abc250d3b18005b9156752a"
+          assert j["binary_sha256"]=="1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa"
+          assert j["oci"]=="ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+          assert j["app_libraries"]["libphysics-opt.so.0"]["sha256"]=="b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd"
+          assert j["app_libraries"]["libphysics_test-opt.so.0"]["sha256"]=="bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6"
+          assert j["build_count"]==1 and j["native_check_input"]=="NOT_RUN"
+          print("P5X_W1_EXACT_SOURCE_OCI_ELF_LIBS_ARTIFACT_SHA_PASS")
+          PY
+          docker pull "$OCI"
+          mkdir -p physics_app/lib physics_app/test/lib
+          cp "$RUNNER_TEMP/p05-in/w1/physics-opt" physics_app/physics-opt
+          cp "$RUNNER_TEMP/p05-in/w1/lib/libphysics-opt.so.0" physics_app/lib/libphysics-opt.so.0
+          cp "$RUNNER_TEMP/p05-in/w1/lib/libphysics_test-opt.so.0" physics_app/test/lib/libphysics_test-opt.so.0
+          chmod 0755 physics_app/physics-opt
+          echo "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa  physics_app/physics-opt" | sha256sum -c -
+          echo "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd  physics_app/lib/libphysics-opt.so.0" | sha256sum -c -
+          echo "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6  physics_app/test/lib/libphysics_test-opt.so.0" | sha256sum -c -
+          printf '%s  %s\n' 1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa physics_app/physics-opt > "$RUNNER_TEMP/p05-in/physics-opt.sha256"
+          echo P5X_REUSED_EXACT_HEAD_ONE_BINARY_FOR_BOTH_CASES_AND_ALL_NEGATIVES
+
+      - name: Actual S6-417 and 941 complete 11-layer protected EI three-step RF state freshness
+        shell: bash
+        env:
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/full-rf-evidence"
+          python3 - "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-in/p4_receipt.json" "$RUNNER_TEMP/full-rf-evidence" "$BASE_HEAD" "$OCI" <<'PY'
+          from pathlib import Path
+          import os,sys,re,json,hashlib,tempfile,subprocess,shlex,shutil,csv,math
+          staged=Path(sys.argv[1]); repo=Path(sys.argv[2]); pre=Path(sys.argv[3])
+          out=Path(sys.argv[4]); head=sys.argv[5]; oci=sys.argv[6]
+          sys.path.insert(0,str(repo/"ci"/"guards"))
+          from issue671_secure_ei_rate_scratch import read_hashed_rows,REQUIRED,EXPECTED,validate_rows
+          meta=json.loads(pre.read_text())
+          dg=lambda p:hashlib.sha256(Path(p).read_bytes()).hexdigest()
+          orig_meta, original=read_hashed_rows()
+          assert set(original)==set(EXPECTED)
+          assert all(orig_meta[n]["sha256_match"] and orig_meta[n]["numeric_shape_pass"] for n in EXPECTED)
+          os.environ.pop("PROTECTED_ARCHIVE_B64",None)
+          binary=repo/"physics_app"/"physics-opt"
+          receipt={"schema":"issue671.d8.full_s6_real_plasma_rf_3step.v1",
+                   "source_HEAD":head,"OCI":oci,"binary_sha256":dg(binary),
+                   "all_11_layer_files_original_post_p4x":True,
+                   "rf_enabled":True,"original_TimeSequenceStepper":True,
+                   "d8_wall_current_poisson_postprocessors_required":8,
+                   "diagnostic_output_only_additions":True,
+                   "d8_residual_direct_symbol_trace":"NOT_IMPLEMENTED__NUMERIC_FUNCTOR_PP_SAME_COUPLED_RUN",
+                   "bounded_max_physical_steps":3,"first_time_step_expected_s":1e-9,
+                   "bounded_final_time_expected_s":3e-9,
+                   "full_S6_100us":"NOT_RUN","P3_P4_science":"SCIENCE_HOLD",
+                   "cases":{},"protected_scratch_removed_on_exit":False}
+          out.mkdir(parents=True,exist_ok=True)
+          private_path=None
+          chemroot=Path("experiments/Issue395_powered_chemistry_ladder")
+          names=("rf_full_parent_E_real_l2","rf_full_parent_E_imag_l2",
+                 "rf_full_parent_ne_mean","rf_full_parent_en_mean","rf_full_parent_pressure_mean")
+          parent_observer="""
+          # Purely diagnostic; does not modify the original eleven input layers.
+          [Postprocessors]
+            [rf_full_parent_E_real_l2]
+              type = ElementL2Norm
+              variable = E_real_rf_t6
+              block = plasma
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_full_parent_E_imag_l2]
+              type = ElementL2Norm
+              variable = E_imag_rf_t6
+              block = plasma
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_full_parent_ne_mean]
+              type = ElementAverageValue
+              variable = electron_density_rf_state_t6
+              block = plasma
+              execute_on = 'INITIAL TIMESTEP_BEGIN TIMESTEP_END'
+            []
+            [rf_full_parent_en_mean]
+              type = ElementAverageValue
+              variable = mean_energy_rf_state_t6
+              block = plasma
+              execute_on = 'INITIAL TIMESTEP_BEGIN TIMESTEP_END'
+            []
+            [rf_full_parent_pressure_mean]
+              type = ElementAverageValue
+              variable = pressure_rf_state_t6
+              block = plasma
+              execute_on = 'INITIAL TIMESTEP_BEGIN TIMESTEP_END'
+            []
+            [rf_d8_cover_O2p_number]
+              type = ADSideIntegralFunctorPostprocessor
+              boundary = plasma_cover
+              functor = O2p_wall_number_flux
+              functor_argument = face
+              restrict_to_functors_domain = true
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_d8_cover_Om_number]
+              type = ADSideIntegralFunctorPostprocessor
+              boundary = plasma_cover
+              functor = Om_wall_number_flux
+              functor_argument = face
+              restrict_to_functors_domain = true
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_d8_cover_Op_number]
+              type = ADSideIntegralFunctorPostprocessor
+              boundary = plasma_cover
+              functor = Op_wall_number_flux
+              functor_argument = face
+              restrict_to_functors_domain = true
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_d8_cover_electron_number]
+              type = ADSideIntegralFunctorPostprocessor
+              boundary = plasma_cover
+              functor = e_wall_number_flux
+              functor_argument = face
+              restrict_to_functors_domain = true
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_d8_cover_current]
+              type = ADSideIntegralFunctorPostprocessor
+              boundary = plasma_cover
+              functor = cover_net_surface_current_density
+              functor_argument = face
+              restrict_to_functors_domain = true
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_d8_wafer_current]
+              type = ADSideIntegralFunctorPostprocessor
+              boundary = plasma_wafer
+              functor = wafer_net_surface_current_density
+              functor_argument = face
+              restrict_to_functors_domain = true
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_d8_focus_current]
+              type = ADSideIntegralFunctorPostprocessor
+              boundary = plasma_focus_ring
+              functor = focus_ring_net_surface_current_density
+              functor_argument = face
+              restrict_to_functors_domain = true
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_d8_poisson_source]
+              type = ADElementIntegralFunctorPostprocessor
+              block = plasma
+              functor = poisson_source
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+          []
+          """
+          child_observer="""
+          # Append-only observer on exact original full S6 Maxwell child.
+          [Postprocessors]
+            [rf_full_child_ne_mean]
+              type = ElementAverageValue
+              variable = electron_density_state_t6
+              block = plasma
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_full_child_en_mean]
+              type = ElementAverageValue
+              variable = mean_energy_state_t6
+              block = plasma
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+            [rf_full_child_pressure_mean]
+              type = ElementAverageValue
+              variable = pressure_state_t6
+              block = plasma
+              execute_on = 'INITIAL TIMESTEP_END'
+            []
+          []
+          """
+          def read_final_csv(p):
+              with open(p,newline="") as f:
+                  records=list(csv.DictReader(f))
+              if not records: return {}
+              return {k:float(v) for k,v in records[-1].items()
+                      if v is not None and v.strip() and math.isfinite(float(v))}
+          def limit_log(raw):
+              # Never upload raw protected-rate files or full solver output.
+              clean=re.sub(r"/dev/shm/[^ '\n\"]+","[PROTECTED_SCRATCH]",raw)
+              rx=re.compile(r"Time Step|Solve Converged|Solve failed|^.*ERROR|^.*Error|maxwell|MultiApp|transfer|Converged|DIVERGED|P_abs|Nonlinear|^.*Exception",re.I)
+              return "\n".join(line[:350] for line in clean.splitlines() if rx.search(line))[-18000:]
+          def run_native(work,ordered,extra,check=False):
+              argv=["/workspace/physics_app/physics-opt"]
+              if check: argv+=["--check-input"]
+              argv+=["-i",*ordered,str(chemroot/extra),
+                      "Executioner/num_steps=3",
+                      "Outputs/csv=true","Outputs/exodus=false","Outputs/checkpoint=false",
+                      "Outputs/file_base=rf_full_plasma",
+                      "MultiApps/maxwell_t6/input_files=rf_full_d8_child.i",
+                      "MultiApps/maxwell_t6/cli_args=Outputs/exodus=false;Outputs/csv=true"]
+              command="source /environment; exec "+ " ".join(shlex.quote(x) for x in argv)
+              args=["docker","run","--rm","--network","none","--entrypoint","/bin/bash",
+                    "--user","0:0","--workdir","/case",
+                    "--env","OXYGEN_RESEARCH_400=1","--env","OXYGEN_RESEARCH_FULL24=0",
+                    "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
+                    "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
+                    "--mount",f"type=bind,src={work},dst=/case",
+                    oci,"-lc","timeout -k 10s 320s /bin/bash -lc "+shlex.quote(command)]
+              try:
+                  p=subprocess.run(args,text=True,capture_output=True,timeout=380,env=os.environ.copy())
+                  return p.returncode,(p.stdout or "")+"\n"+(p.stderr or "")
+              except subprocess.TimeoutExpired:
+                  return 124,"RF_FULL_S6_BOUNDED_TIMEOUT"
+          try:
+              with tempfile.TemporaryDirectory(prefix="full-s6-rf-private-",dir="/dev/shm") as tmp:
+                  private_path=Path(tmp)
+                  assert private_path.stat().st_mode&0o777 == 0o700
+                  try:
+                      for case in ("417","941"):
+                          r={"case":case,"input_files_verified":False,"protected_EI_count":0,
+                             "native_check_input_rc":None,"full_3ns_rc":None,
+                             "maxwell_child_numeric_observed":False,
+                             "seven_transfers_numeric_observed":False,
+                             "full_S6_original_11_layers_unchanged":False}
+                          receipt["cases"][case]=r
+                          try:
+                              source=staged/"scratch"/case
+                              work=private_path/case
+                              shutil.copytree(source,work,symlinks=False)
+                              chem=work/chemroot
+                              rate_dir=chem/"private_rates"
+                              assert not rate_dir.exists() and not rate_dir.is_symlink()
+                              rate_dir.mkdir(mode=0o700)
+                              for name in sorted(REQUIRED[case]):
+                                  assert validate_rows(original[name])==100
+                                  assert hashlib.sha256(original[name]).hexdigest()==EXPECTED[name]
+                                  target=rate_dir/name
+                                  fd=os.open(target,os.O_CREAT|os.O_EXCL|os.O_WRONLY|getattr(os,"O_NOFOLLOW",0),0o600)
+                                  with os.fdopen(fd,"wb") as f: f.write(original[name])
+                                  assert dg(target)==EXPECTED[name] and target.stat().st_mode&0o777==0o600
+                              r["protected_EI_count"]=len(REQUIRED[case])
+                              expected=meta[case]
+                              assert len(expected["ordered_inputs"])==11
+                              assert all(dg(chem/n)==s for n,s in expected["11_layer_sha256"].items())
+                              assert dg(chem/"baseline_plasma_plus_unstructured_cover_plus_wafer.msh")==expected["parent_mesh_sha256"]
+                              assert dg(chem/"chemistry"/f"unified_s6_{case}_newonly.json")==expected["JSON_sha256"]
+                              r["input_files_verified"]=True
+                              before={name:dg(chem/name) for name in expected["11_layer_sha256"]}
+                              child=chem/"rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i"
+                              r["exact_child_source_sha256"]=dg(child)
+                              # Original child is unchanged; wrapper contributes only observation PPs.
+                              (chem/"rf_full_d8_child.i").write_text(
+                                  "!include rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_child.i\n"+
+                                  child_observer)
+                              (chem/"rf_full_d8_observers.i").write_text(parent_observer)
+                              r["child_observer_sha256"]=dg(chem/"rf_full_d8_child.i")
+                              r["parent_observer_sha256"]=dg(chem/"rf_full_d8_observers.i")
+                              rc,log=run_native(work,expected["ordered_inputs"],"rf_full_d8_observers.i",True)
+                              r["native_check_input_rc"]=rc
+                              r["check_input_log_sha256"]=hashlib.sha256(log.encode()).hexdigest()
+                              (out/f"{case}_check_excerpt.txt").write_text(limit_log(log))
+                              if rc==0 and "Syntax OK" in log:
+                                  rc,log=run_native(work,expected["ordered_inputs"],"rf_full_d8_observers.i")
+                                  r["full_3ns_rc"]=rc
+                                  r["native_full_log_sha256"]=hashlib.sha256(log.encode()).hexdigest()
+                                  r["maxwell_solver_message_seen"]=("Solve Converged!" in log and "maxwell" in log.lower())
+                                  (out/f"{case}_native_excerpt.txt").write_text(limit_log(log))
+                                  csvs=[]
+                                  for f in sorted(work.rglob("*.csv")):
+                                      try:
+                                          parsed=read_final_csv(f)
+                                      except (ValueError,UnicodeError,KeyError):
+                                          continue
+                                      if parsed:
+                                          # Public evidence contains RF and physical-state diagnostics
+                                          # only. Full rate/chemistry CSV fields remain in private tmpfs.
+                                          allowed={"time","P_abs","P_abs_maxwell_t6",
+                                                   "P_rf_raw_W_t6","P_rf_scaled_W_t6",
+                                                   "S_rf_eV_mol_s_t6","rf_drive_scale_t6",
+                                                   "rf_drive_scale_child",
+                                                   "rf_full_parent_E_real_l2","rf_full_parent_E_imag_l2",
+                                                   "rf_full_parent_ne_mean","rf_full_parent_en_mean",
+                                                   "rf_full_parent_pressure_mean",
+                                                   "rf_full_child_ne_mean","rf_full_child_en_mean",
+                                                   "rf_full_child_pressure_mean",
+                                                   "ne_max","ne_min","mean_energy_max","mean_energy_min"}
+                                          filtered={k:v for k,v in parsed.items() if k in allowed or k.startswith("rf_d8_")}
+                                          if filtered:
+                                              csvs.append({"relative_file":str(f.relative_to(work)),
+                                                           "sha256":dg(f),"values":filtered})
+                                  r["csv_observed"]=csvs
+                                  d8_required=["rf_d8_cover_O2p_number","rf_d8_cover_Om_number","rf_d8_cover_Op_number","rf_d8_cover_electron_number","rf_d8_cover_current","rf_d8_wafer_current","rf_d8_focus_current","rf_d8_poisson_source"]
+                                  d8_parent=[row for row in csvs if "P_abs_maxwell_t6" in row["values"]]
+                                  r["d8_coupled_postprocessors"]={name:d8_parent[0]["values"].get(name)
+                                      for name in d8_required} if len(d8_parent)==1 else {}
+                                  r["d8_coupled_functor_numeric_pass"]=bool(
+                                      len(r["d8_coupled_postprocessors"])==len(d8_required) and
+                                      all(isinstance(v,(int,float)) and math.isfinite(v)
+                                          for v in r["d8_coupled_postprocessors"].values()))
+                                  r["d8_wall_number_count"]=sum(key.endswith("_number")
+                                      for key in r["d8_coupled_postprocessors"])
+                                  r["d8_surface_current_count"]=sum(key.endswith("_current")
+                                      for key in r["d8_coupled_postprocessors"])
+                                  r["d8_poisson_source_numeric"]=r["d8_coupled_postprocessors"].get(
+                                      "rf_d8_poisson_source")
+                                  parents=[x for x in csvs if "P_abs_maxwell_t6" in x["values"]]
+                                  children=[x for x in csvs if "P_abs" in x["values"]
+                                            and "rf_full_child_ne_mean" in x["values"]]
+                                  if len(parents)==1 and len(children)==1:
+                                      pv=parents[0]["values"];cv=children[0]["values"]
+                                      power=cv["P_abs"];received=pv["P_abs_maxwell_t6"]
+                                      r["maxwell_child_P_abs_W"]=power
+                                      r["parent_received_P_abs_W"]=received
+                                      r["parent_field_L2"]=[pv.get("rf_full_parent_E_real_l2"),
+                                                            pv.get("rf_full_parent_E_imag_l2")]
+                                      r["rf_forward_state_parent_avg"]={
+                                          "density":pv.get("rf_full_parent_ne_mean"),
+                                          "mean_energy":pv.get("rf_full_parent_en_mean"),
+                                          "pressure":pv.get("rf_full_parent_pressure_mean")}
+                                      r["rf_forward_state_child_avg"]={
+                                          "density":cv.get("rf_full_child_ne_mean"),
+                                          "mean_energy":cv.get("rf_full_child_en_mean"),
+                                          "pressure":cv.get("rf_full_child_pressure_mean")}
+                                      ppass=rc==0 and power>0 and abs(power-received)<=max(1e-8,1e-6*abs(power))
+                                      fpass=all(v is not None and v>0 for v in r["parent_field_L2"])
+                                      r["maxwell_child_numeric_observed"]=bool(ppass)
+                                      r["reverse_E_real_imag_P_abs_observed"]=bool(ppass and fpass)
+                                      forward=[]
+                                      for n in ("density","mean_energy","pressure"):
+                                          a=r["rf_forward_state_parent_avg"][n]
+                                          b=r["rf_forward_state_child_avg"][n]
+                                          ok=(a is not None and b is not None and math.isfinite(a)
+                                              and math.isfinite(b) and a>0 and b>0
+                                              and abs(a-b)<=max(1e-9,0.20*abs(a)))
+                                          forward.append(bool(ok))
+                                      r["three_physical_state_transfers_within_20pct"]=forward
+                                      r["parent_observation_time_s"]=pv.get("time")
+                                      r["child_received_drive_scale"]=cv.get("rf_drive_scale_child")
+                                      original_default={"density":1.0e15,"mean_energy":4.0,"pressure":1.333223684}
+                                      thresholds={"density":1e7,"mean_energy":1e-8,"pressure":1e-10}
+                                      r["child_state_differs_from_initial_default"]={
+                                          n:abs(r["rf_forward_state_child_avg"][n]-original_default[n])>thresholds[n]
+                                          for n in original_default}
+                                      r["parent_state_differs_from_initial_default"]={
+                                          n:abs(r["rf_forward_state_parent_avg"][n]-original_default[n])>thresholds[n]
+                                          for n in original_default}
+                                      r["drive_differs_from_initial_default"]=abs(
+                                          cv.get("rf_drive_scale_child",4.7406324819559)-4.7406324819559)>1e-8
+                                      r["three_ns_time_observed"]=abs(pv.get("time",-1)-3e-9)<1e-13
+                                      r["actual_evolving_physical_state_observed"]=any(
+                                          r["child_state_differs_from_initial_default"].values())
+                                      r["seven_transfers_numeric_observed"]=bool(
+                                          ppass and fpass and all(forward) and r["three_ns_time_observed"]
+                                          and r["drive_differs_from_initial_default"]
+                                          and r["actual_evolving_physical_state_observed"])
+                              else:
+                                  r["first_blocker"]="P2_CONSTRUCTION_FAILED"
+                              r["full_S6_original_11_layers_unchanged"]=all(
+                                  dg(chem/n)==s for n,s in before.items())
+                          except Exception as e:
+                              r["harness_error_class"]=type(e).__name__
+                              r["first_blocker"]=re.sub(r"/dev/shm/[^ ]+","[PROTECTED_SCRATCH]",str(e))[:240]
+                          finally:
+                              (out/f"{case}_receipt.json").write_text(json.dumps(r,indent=2,sort_keys=True)+"\n")
+                  finally:
+                      # Root-owned files under private tmpfs: guarded final ownership repair before
+                      # TemporaryDirectory deletion. Historical and repo mounts are NEVER changed.
+                      fix=["docker","run","--rm","--network","none","--entrypoint","/bin/sh",
+                           "--user","0:0","--mount",f"type=bind,src={private_path},dst=/private",
+                           oci,"-c",f"chown -R {os.getuid()}:{os.getgid()} /private"]
+                      own=subprocess.run(fix,capture_output=True,timeout=45)
+                      if own.returncode!=0:
+                          raise RuntimeError("RF_PRIVATE_SCRATCH_OWNERSHIP_REPAIR_FAILED")
+              receipt["protected_scratch_removed_on_exit"]=not private_path.exists()
+          except Exception as e:
+              receipt["harness_error"]=type(e).__name__+":"+str(e)[:180]
+          finally:
+              receipt["RF_FULL_S6_CASES_PASS"]=bool(
+                  receipt["protected_scratch_removed_on_exit"] and
+                  len(receipt["cases"])==2 and
+                  all(r["full_3ns_rc"]==0 and r["seven_transfers_numeric_observed"] and r.get("d8_coupled_functor_numeric_pass",False)
+                      and r["full_S6_original_11_layers_unchanged"]
+                      for r in receipt["cases"].values()))
+              (out/"rf_full_s6_receipt.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
+              print("RF_AND_D8_FULL_S6_REAL_NATIVE_VERDICT",
+                    "PASS_BOTH_S6_COUPLED_RF_WALL_CURRENT_POISSON_3NS" if receipt["RF_FULL_S6_CASES_PASS"]
+                    else "HOLD_WITH_CASE_SPECIFIC_CAUSE")
+              for case,r in receipt["cases"].items():
+                  print("RF_CASE",case,"P2",r["native_check_input_rc"],"P3_BOUND_3NS",r["full_3ns_rc"],
+                        "P_ABS",r.get("maxwell_child_P_abs_W"),"ACTUAL_TRANSFER",r["seven_transfers_numeric_observed"],
+                        "CAUSE",r.get("first_blocker","NONE"))
+              sys.exit(0 if receipt["RF_FULL_S6_CASES_PASS"] else 1)
+          PY
+
+      - name: Archive only sanitized numeric output, SHA receipts and actual binary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue671-d8-exact-W1-S6-417-941-rf-wall-poisson-3ns
+          path: |
+            ${{ runner.temp }}/p05-in/p4_receipt.json
+            ${{ runner.temp }}/p05-in/physics-opt.sha256
+            ${{ runner.temp }}/full-rf-evidence/rf_full_s6_receipt.json
+            ${{ runner.temp }}/full-rf-evidence/417_receipt.json
+            ${{ runner.temp }}/full-rf-evidence/941_receipt.json
+            ${{ runner.temp }}/full-rf-evidence/417_check_excerpt.txt
+            ${{ runner.temp }}/full-rf-evidence/941_check_excerpt.txt
+            ${{ runner.temp }}/full-rf-evidence/417_native_excerpt.txt
+            ${{ runner.temp }}/full-rf-evidence/941_native_excerpt.txt
+            physics_app/physics-opt
+            ${{ runner.temp }}/p05-in/w1_identity.json
+          if-no-files-found: warn
+          retention-days: 14
