@@ -1,0 +1,154 @@
+{
+  "schema": "issue672.p6_d5.public_d_two_lookup_identity_real_native.p2.v1",
+  "task": "P6-D5",
+  "verdict": "PASS_EXACT_SOURCE_NATIVE_DIAGNOSTIC__KEEP_HOLD_PUBLIC_D_P2__NO_P05_LIVE",
+  "source": {
+    "PR665_parent": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "PR684_candidate": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "historical": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "candidate_parent_unchanged": true,
+    "original_source_unchanged": true
+  },
+  "CI": {
+    "id": 44323024938,
+    "conclusion": "SUCCESS_EVIDENCE_COLLECTION_NOT_NATIVE_P2",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44323024938",
+    "p1_binary_sha256": "d018db739ec49dc68a2b52bc4f8ef3eb64ede530f2faaa57a9df208724a907b7",
+    "binary_source_bound_to": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "build_log_sha256": "6d771c04deddaa6047f09c21e241c85279225c80575b939fd536df836811a69a",
+    "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "binary_built_once_per_job": true,
+    "binary_raw_bytes_uploaded": false,
+    "one_elf_used_for_all_native": true,
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN",
+    "timestep_count": 0
+  },
+  "artifact": {
+    "id": 14435932769,
+    "name": "issue672-p6-d5-public-dual-lookup-native-3e48a0651ac5",
+    "zip_sha256": "7ce51507ec1b02dbe64de4a71e464b4d2f98174b5921c47ecd68224bc8bfe7af",
+    "size_bytes": 47249,
+    "crc": "PASS",
+    "members": 21,
+    "source_bound_runner_receipt_sha256": "259e0b42bbb75bbe63fdc5d1ec6d126399d775bc32d218027852db62517906c3",
+    "locally_independent_full_receipt_sha256": "c99e0cca0c82374faf475daa8c401f49ce3e6a618f68dcbb0568624ae707cd49",
+    "private_rates_in_artifact": false
+  },
+  "table42": {
+    "name": "prepared_400W_CI_lookup",
+    "rows": 42,
+    "sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "identity": "NOT_SAME_AS_ORIGINAL",
+    "Public_B": {
+      "417": {
+        "exit": 0,
+        "syntax_ok": true,
+        "log_sha256": "7ee753f2a3f5bf3c938d8b552b1e61ac6bac48abe651b044db6977391509a1e1"
+      },
+      "941": {
+        "exit": 0,
+        "syntax_ok": true,
+        "log_sha256": "762eaf1dc585a2871a7a9979aba6dd8bf223ac7d2c58f46b49969e6b91faf2c7"
+      }
+    },
+    "Public_D": {
+      "417": {
+        "exit": 1,
+        "syntax_ok": false,
+        "P05": "NOT_REACHED",
+        "first_error": "FV species kernels require [Physics]/[Plasmas]/[Transport]/[Chemistry] to generate species source functors",
+        "log_sha256": "aab35825d65b7a28822fbb279df6929e3121f8d11112b513261fc9276fc6729b"
+      },
+      "941": {
+        "exit": 1,
+        "syntax_ok": false,
+        "P05": "NOT_REACHED",
+        "first_error": "FV species kernels require [Physics]/[Plasmas]/[Transport]/[Chemistry] to generate species source functors",
+        "log_sha256": "ca8866738e91da701f07e7e3896ee2f2f59fc9898781589ce6b0c7e6a2211d0e"
+      }
+    },
+    "Public_D_transport_owner_cutover": {
+      "each_case_manual_materials_retired": 4,
+      "names": [
+        "electron_transport",
+        "O2p_species_transport_alias",
+        "Om_species_transport_alias",
+        "Op_species_transport_alias"
+      ],
+      "C0_after_sha256": "e6faa7f4efd958cfa244b0e709362f0962f363e77fef73ad95481dc73eaaed33",
+      "overlay_after_sha256": "f643c6b75357cdb05da55f0e2055f9fc61ff9dcc4ff23f3a61e6963ec833c60b",
+      "JSON_after_sha256": "fd091b85a12b2099e6c15e5e815924bfb0d83eae12de78a916da87878a0b56d6",
+      "energy_projection": "5/3 original",
+      "P05": "NOT_RUN"
+    },
+    "driver_exit": 3,
+    "report_sha256": "a50eb9b0fa0d1ed17e22bc9fded34c8667352e90f56b88bf7ad8b8a357e28dc6",
+    "cleanup": "PASS"
+  },
+  "table100": {
+    "name": "original_Public_D_repo_lookup",
+    "rows": 100,
+    "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "identity": "NOT_SAME_AS_PREPARED",
+    "Public_B": {
+      "417": {
+        "exit": 0,
+        "syntax_ok": true,
+        "log_sha256": "7c71e6c3610a20dfe1a352eb81ca11e614c50062ae8d2a7d9d9e667f5ef0a486"
+      },
+      "941": {
+        "exit": 0,
+        "syntax_ok": true,
+        "log_sha256": "880e77477e5963cff3177fceac3763889a18c1edd739d726c0cff3c816c08d60"
+      }
+    },
+    "Public_D": {
+      "417": {
+        "native_started": false,
+        "P05": "NOT_RUN",
+        "classification": "ValueError",
+        "error": "P6_D1_HISTORICAL_ELECTRON_TABLE_SHA_MISMATCH",
+        "log_file_created": false
+      },
+      "941": {
+        "native_started": false,
+        "P05": "NOT_RUN",
+        "classification": "ValueError",
+        "error": "P6_D1_HISTORICAL_ELECTRON_TABLE_SHA_MISMATCH",
+        "log_file_created": false
+      }
+    },
+    "driver_exit": 3,
+    "report_sha256": "055b02c0a309fe2c8ca001fc8119d26074d6808888c28d494d1aa42efd2502a7",
+    "cleanup": "PASS"
+  },
+  "mesh": {
+    "sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "original_source": "Issue397/400W"
+  },
+  "counts": {
+    "B10layer_native_pass": 4,
+    "D42row_native_fail": 2,
+    "D100row_pre_native_reject": 2,
+    "D_native_pass": 0
+  },
+  "root_cause": [
+    "PR684 Public D only supports SHA-pinned prepared 42row; original 100row fails closed at its D source preflight. Missing authority to change without scientific sign-off.",
+    "For 42row accepted source path, e and three ions are generated from JSON after four manual source owners retire, but Physics FV species demands [Transport][Chemistry] Source Functors and D does not produce these; P05 not reached."
+  ],
+  "acceptance_gates": {
+    "P6_D5_REAL_RUN_AND_RECEIPT": "PASS",
+    "PUBLIC_B_HISTORICAL_CONTROL": "PASS_4_OF_4",
+    "PUBLIC_D_417_941_NATIVE": "KEEP_HOLD_NO_P05",
+    "PUBLIC_D_TABLE_ORIGINAL_AUTHORITY": "KEEP_HOLD_100ROW_VS_42ROW",
+    "PR684_MERGE": "HOLD_DO_NOT_MERGE",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "next": [
+    "D2 explicit original 100row versus prepared 42row provenance scientific authority; do not silently replace.",
+    "D4 preserve e 5/3, ion 3 signed transport, eight FEM BC and Chemistry FV species source requirements without P05 bypass.",
+    "D5 repeat exact chosen source 417/941 --check-input, require real P05 12+12 Warehouse and strict signed owner census, log/ELF/Artifact independent SHA.",
+    "P6-X and P7 remain HOLD."
+  ]
+}
