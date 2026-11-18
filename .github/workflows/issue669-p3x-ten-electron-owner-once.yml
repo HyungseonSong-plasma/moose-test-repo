@@ -5,7 +5,7 @@ on:
     branches:
       - issue-669-p3-x-electron-source-cutover-20261118
     paths:
-      - .github/workflows/issue668-p2-newonly-staging-once.yml
+      - .github/workflows/issue669-p3x-ten-electron-owner-once.yml
 permissions:
   contents: read
   actions: read
