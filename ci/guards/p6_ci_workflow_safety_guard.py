@@ -23,6 +23,12 @@ NATIVE = {
     "issue541_arch_dd_native_p2": "issue541-arch-dd-p1-p2-",
     "issue541_arch_s6_hybrid_native_p2": "issue541-arch-s6-hybrid-p2-",
 }
+LEGACY_ARTIFACT_NAMES = {
+    "issue402_core_four_native_p2": "issue541-core-four-native-${{ github.run_id }}",
+    "plasma_native_regression": "plasma-native-regression-${{ github.event.pull_request.head.sha }}",
+    "issue541_arch_dd_native_p2": "issue541-arch-dd-p1-p2-${{ github.event.pull_request.head.sha }}",
+    "issue541_arch_s6_hybrid_native_p2": "issue541-arch-s6-hybrid-p2-${{ github.event.pull_request.head.sha }}",
+}
 PR_GUARD = (
     "github.event_name == 'pull_request' &&\n"
     "      (github.event.action != 'edited' || "
@@ -145,6 +151,33 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
             "retention-days: 30" in proof,
             "ARTIFACT_FAIL_CLOSED_" + name
         )
+        # Preserve old artifact name only on attempt 1; no overwriting on reruns.
+        legacy_marker = "          name: " + LEGACY_ARTIFACT_NAMES[name] + "\n"
+        need(block.count(legacy_marker) == 1, "LEGACY_ALIAS_IDENTITY_" + name)
+        legacy_pos = block.index(legacy_marker)
+        legacy_start = block.rfind("      - name:", 0, legacy_pos)
+        need(legacy_start >= 0 and legacy_start > step_start,
+             "LEGACY_ALIAS_ORDER_" + name)
+        canonical_step = block[step_start:legacy_start]
+        legacy_step = block[legacy_start:].split("\n      - name:", 1)[0]
+        need(
+            "Upload first-attempt legacy artifact alias (compatibility only)"
+            in legacy_step and
+            "if: ${{ always() && github.run_attempt == 1 }}" in legacy_step and
+            "uses: actions/upload-artifact@v4" in legacy_step and
+            "if-no-files-found: error" in legacy_step and
+            "retention-days: 30" in legacy_step,
+            "LEGACY_ALIAS_FAIL_CLOSED_" + name
+        )
+        def payload(step: str) -> str:
+            need(step.count("          path:") == 1 and
+                 step.count("          if-no-files-found:") == 1,
+                 "ARTIFACT_PATH_STRUCTURE_" + name)
+            return step.split("          path:", 1)[1].split(
+                "          if-no-files-found:", 1)[0]
+        need(payload(canonical_step) == payload(legacy_step),
+             "LEGACY_ALIAS_SAME_BOUNDED_PROOF_" + name)
+
         if name == "issue541_arch_s6_hybrid_native_p2":
             need(
                 "issue541_arch_s6_p2_evidence/*/status.json" in proof and
@@ -243,6 +276,35 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         workflow, "issue541_arch_s6_hybrid_native_p2",
         "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json",
         "control/experiments/Issue402_plasma_dsl_g1/evidence/identity_omitted.json"
+    ))
+
+    def mutate_legacy(name: str, old: str, new: str) -> str:
+        """Change only the legacy alias step, never canonical receipt."""
+        job = job_block(workflow, name)
+        suffix = "      - name: Upload first-attempt legacy artifact alias (compatibility only)"
+        need(job.count(suffix) == 1, "LEGACY_MUTATION_SCOPE_" + name)
+        before, after = job.split(suffix, 1)
+        need(after.count(old) == 1, "LEGACY_MUTATION_TARGET_" + name)
+        return workflow.replace(job, before + suffix + after.replace(old, new, 1), 1)
+
+    add("legacy_name_drift", mutate_legacy(
+        "issue402_core_four_native_p2",
+        "issue541-core-four-native-${{ github.run_id }}",
+        "issue541-core-four-native-silent-rename"
+    ))
+    add("legacy_alias_unconditional_on_rerun", mutate_legacy(
+        "issue541_arch_s6_hybrid_native_p2",
+        "if: ${{ always() && github.run_attempt == 1 }}",
+        "if: always()"
+    ))
+    add("legacy_alias_evidence_optional", mutate_legacy(
+        "issue541_arch_dd_native_p2",
+        "if-no-files-found: error", "if-no-files-found: warn"
+    ))
+    add("legacy_alias_proof_path_drift", mutate_legacy(
+        "plasma_native_regression",
+        "          path: experiments/Issue402_plasma_dsl_g1/evidence/**",
+        "          path: experiments/Issue402_plasma_dsl_g1/chemistry/**"
     ))
 
     for name, w, t, c in cases:
