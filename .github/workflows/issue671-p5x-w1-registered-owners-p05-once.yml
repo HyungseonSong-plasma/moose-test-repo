@@ -2,7 +2,7 @@ name: Issue671 P5-X exact W1 417 941 typed registrations P05 and N1-N8
 on:
   push:
     branches:
-      - issue-671-p5x-w1-registration-p05-observer-20261118
+      - issue-671-p5x-warehouse-harness-glibc-custody-20261118
     paths:
       - .github/workflows/issue671-p5x-w1-registered-owners-p05-once.yml
 permissions:
@@ -278,20 +278,8 @@ jobs:
           docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
             --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/workspace,readonly" \
             --mount "type=bind,src=$RUNNER_TEMP/p05-in/observer-preflight,dst=/probe" \
-            "$OCI" -lc 'set -euo pipefail; source /environment; P5X_REGISTER_LOG=/probe/preload-ready.log LD_PRELOAD=/workspace/physics_app/p5x_owner_tracer.so /workspace/physics_app/physics-opt --version >/probe/version.txt'
-          # Public-only diagnostic: record exact preload marker bytes before failing closed.
-          python3 - "$RUNNER_TEMP/p05-in/observer-preflight/preload-ready.log" <<'PY'
-          import sys,pathlib,hashlib
-          p=pathlib.Path(sys.argv[1])
-          if not p.is_file():
-              print("P5X_PRELOAD_PREFLIGHT_MISSING_FILE")
-              raise SystemExit(87)
-          data=p.read_bytes()
-          print("P5X_PRELOAD_PREFLIGHT_BYTES",len(data),"SHA256",hashlib.sha256(data).hexdigest(),
-                "HEX",data[:80].hex())
-          assert data.strip()==b"P5X_PRELOAD_READY", "PRELOAD_MARKER_CONTENT_INVALID"
-          PY
-          grep -Fxq P5X_PRELOAD_READY "$RUNNER_TEMP/p05-in/observer-preflight/preload-ready.log"
+            "$OCI" -lc 'set -euo pipefail; source /environment; P5X_REGISTER_LOG=/probe/preload-ready.log LD_PRELOAD=/workspace/physics_app/p5x_owner_tracer.so /workspace/physics_app/physics-opt --version >/probe/version.txt; test -s /probe/version.txt; grep -Fxq P5X_PRELOAD_READY /probe/preload-ready.log'
+          # Trace marker remains root-owned 0600: validation happens in-container, not via host.
           echo P5X_PRELOAD_ELF_LOADER_PASS_NO_PRIVATE_RATE
       - name: Protected original EI Rate, clean controls, and N1-N8 actual Native mutants
         shell: bash
@@ -446,6 +434,16 @@ jobs:
                   rc,log=native(work,expected_case["ordered_inputs"],receipt["binary_sha256"],trace=True)
                   valid=(rc==0 and "Syntax OK" in log)
                   tracefile=work/"p5x_registrations.log"
+                  if tracefile.is_symlink():
+                      raise RuntimeError("P5X_TRACE_SYMLINK_DENIED")
+                  if tracefile.is_file():
+                      # OCI root creates the trace as 0600. Transfer ownership of this log only.
+                      ownership=subprocess.run(["sudo","chown",f"{os.getuid()}:{os.getgid()}",str(tracefile)],
+                                               capture_output=True,check=False)
+                      if ownership.returncode!=0:
+                          raise RuntimeError("P5X_TRACE_LOG_CHOWN_FAILED")
+                      if (tracefile.stat().st_mode & 0o777)!=0o600:
+                          raise RuntimeError("P5X_TRACE_PERMISSIONS_NOT_0600")
                   if not tracefile.is_file():
                       diag=re.search(r"P5X_INTERPOSER_UNRESOLVED[^\n]{0,150}",log)
                       reason=("_"+diag.group(0) if diag else "")
