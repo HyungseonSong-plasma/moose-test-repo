@@ -1,0 +1,77 @@
+{
+  "schema": "issue672.p6_h2.arch_p05_owner_static_and_observed.v1",
+  "task": "P6-H2",
+  "issue": 672,
+  "verdict": "OBSERVED_CURRENT_HEAD_P05_FAIL_BOTH_CASES__SOURCE_COUNTEREXAMPLES_36_OF_36_PASS",
+  "reviewed_current_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "artifacts": {
+    "p1": {
+      "id": 14372278070,
+      "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+    },
+    "p3x": {
+      "id": 14405784430,
+      "sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6"
+    },
+    "current_arch": {
+      "id": 14424707119,
+      "sha256": "79d942499ca863aff4aa2bba82af42eab51776b495b1d1fe7f2a72a194dc6f0e",
+      "run": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212655",
+      "job_id": 134777261605
+    }
+  },
+  "actual_native_failure": {
+    "case_417": {
+      "P0": "PASS",
+      "P1": "PASS_SOURCE_BOUND_BINARY",
+      "P2": "HOLD",
+      "exit_code": 1,
+      "native_log_sha256": "c5a6246887b4e1b1f17f010240a66a2234afd34908559f8a408e10c6f373a56c"
+    },
+    "case_941": {
+      "P0": "PASS",
+      "P1": "PASS_SOURCE_BOUND_BINARY",
+      "P2": "HOLD",
+      "exit_code": 1,
+      "native_log_sha256": "3cdc19cfe5af492616b4d00cf8b9481f3bad1fbc03fbcef297f499c4f7d8692f"
+    },
+    "error": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': ni_time [PhysicsFVLogMolarElectronTimeDerivative]"
+  },
+  "archive_native_object": {
+    "name": "ni_time",
+    "section": "FVKernels",
+    "factory": "PhysicsFVLogMolarElectronTimeDerivative",
+    "variable": "log_O2p",
+    "raw_block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+    "both_cases": true
+  },
+  "newonly_diff": {
+    "per_case_native_ion_FVKernels": 14,
+    "per_case_native_ion_FVBCs": 12,
+    "p3x_remaining_native_ion_owners": 0,
+    "expected_generated_newonly_FVKernels": 12,
+    "expected_generated_newonly_FVBCs": 12
+  },
+  "source_guard": {
+    "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "checks": "P05 warehouse FVElementalKernel/FVFluxKernel all selected variable kernels exact name+type, rejects old Native ni_time; no P05 bypass",
+    "observed_executed_in_current_native_run": true
+  },
+  "verification": {
+    "historical_11layer_files": "22/22 SHA PASS",
+    "newonly_11layer_files": "22/22 SHA PASS",
+    "original_ion_blocks": "52/52 exact SHA PASS",
+    "source_predicate_negative_mutants": "36/36 REJECTED",
+    "actual_native_p05_failure_count": "2/2",
+    "full_json_sha256": "fa19a83e2ae516b65c4e8694ebee96d87c836de125f233eeb91449e4b7c262eb",
+    "reproduction_python_sha256": "b925a916a511bb32cec9cbc659ab8dcc8506317d906a1af9c44c8c6045ea7844"
+  },
+  "limitations": [
+    "Native fail observed at current-head ARCH lane; no actual mutated Native solver invocation was required for 36 static counterexamples",
+    "H3 is distinct pinned historical P2-only run and cannot certify current-head Hybrid or New-only",
+    "P3/P4 NOT_RUN; SCIENCE_HOLD"
+  ],
+  "next": "P6-H3 approved exact historical source rerun of existing P2-only workflow job 133353818041, no P3, no P05 suppression"
+}
