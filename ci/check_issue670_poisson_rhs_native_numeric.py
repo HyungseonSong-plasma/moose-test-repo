@@ -79,11 +79,6 @@ def make_input(case: str, densities: dict[str, Decimal]) -> str:
     prop_names = 'log_O2p log_Op log_ne log_Om'
     prop_values = '{log_values}'
   []
-  [permittivity]
-    type = ADGenericFunctorMaterial
-    prop_names = 'relative_permittivity'
-    prop_values = '1.0'
-  []
   [electron_molar_density]
     type = ADParsedFunctorMaterial
     property_name = electron_molar_density
@@ -160,6 +155,16 @@ def make_input(case: str, densities: dict[str, Decimal]) -> str:
     functor_names = 'charge_number_density'
     functor_symbols = 'nq'
     expression = '1.8095128179727827e-08*nq'
+  []
+[]
+
+# ADMatDiffusion requests an AD material property (not a Functor).
+# Match archived S6 C0's [Materials]/eps_plasma type exactly.
+[Materials]
+  [eps_plasma]
+    type = ADGenericConstantMaterial
+    prop_names = 'relative_permittivity'
+    prop_values = '1.0'
   []
 []
 
