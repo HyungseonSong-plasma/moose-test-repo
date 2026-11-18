@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cmath>
 #include <type_traits>
+#include <set>
 
 registerMooseObject("PhysicsApp", IonWallFluxMaterial);
 
@@ -308,7 +309,19 @@ IonWallFluxMaterial::IonWallFluxMaterial(
           const ADReal migration =
               n_i * _mobility(r, state) * outward_drift_field;
 
-          return surface + migration;
+          const ADReal total = surface + migration;
+          // D8 diagnostic: actual boundary FaceArg evaluation, not a constructor binding.
+          if (r.fi)
+          {
+            static thread_local std::set<std::string> reported;
+            if (reported.insert(name()).second)
+              std::cout << "D8_WALL_FACE_VALUE kind=number owner=" << name()
+                        << " face_id=" << r.fi->id()
+                        << " surface=" << MetaPhysicL::raw_value(surface)
+                        << " migration=" << MetaPhysicL::raw_value(migration)
+                        << " value=" << MetaPhysicL::raw_value(total) << std::endl;
+          }
+          return total;
         }
       });
 
@@ -407,8 +420,17 @@ IonWallFluxMaterial::IonWallFluxMaterial(
           const ADReal migration =
               n_i * _mobility(r, state) * outward_drift_field;
 
-          return (surface + migration) *
-                 _molar_mass / PHYSICS_CONSTANTS::N_A;
+          const ADReal total = (surface + migration) *
+                               _molar_mass / PHYSICS_CONSTANTS::N_A;
+          if (r.fi)
+          {
+            static thread_local std::set<std::string> reported;
+            if (reported.insert(name()).second)
+              std::cout << "D8_WALL_FACE_VALUE kind=mass owner=" << name()
+                        << " face_id=" << r.fi->id()
+                        << " value=" << MetaPhysicL::raw_value(total) << std::endl;
+          }
+          return total;
         }
       });
 }
