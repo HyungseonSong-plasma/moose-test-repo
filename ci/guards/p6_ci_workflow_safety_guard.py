@@ -21,13 +21,11 @@ NATIVE = {
     "issue402_core_four_native_p2": "issue541-core-four-native-",
     "plasma_native_regression": "plasma-native-regression-",
     "issue541_arch_dd_native_p2": "issue541-arch-dd-p1-p2-",
-    "issue541_arch_s6_hybrid_native_p2": "issue541-arch-s6-hybrid-p2-",
 }
 LEGACY_ARTIFACT_NAMES = {
     "issue402_core_four_native_p2": "issue541-core-four-native-${{ github.run_id }}",
     "plasma_native_regression": "plasma-native-regression-${{ github.event.pull_request.head.sha }}",
     "issue541_arch_dd_native_p2": "issue541-arch-dd-p1-p2-${{ github.event.pull_request.head.sha }}",
-    "issue541_arch_s6_hybrid_native_p2": "issue541-arch-s6-hybrid-p2-${{ github.event.pull_request.head.sha }}",
 }
 PR_GUARD = (
     "github.event_name == 'pull_request' &&\n"
@@ -114,21 +112,11 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
         if name == "plasma_native_regression":
             need(
                 "P6 FAIL_CLOSED: required Public S6 option preflight is missing"
-                in block and
-                "P6 FAIL_CLOSED: required S6-417/941 input gate is missing"
-                in block and block.count("            exit 1") >= 2,
-                "NO_OPTIONAL_S6_GATE"
+                in block and "            exit 1" in block,
+                "REQUIRED_PUBLIC_P0_PREFLIGHT"
             )
-        if name == "issue541_arch_s6_hybrid_native_p2":
-            need(
-                'test "$first" -eq 0' in block and
-                'test "$second" -eq 0' in block and
-                '--case 417' in block and '--case 941' in block and
-                "ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD"
-                in block,
-                "TWO_CASES_P2_AND_P05_FAIL_CLOSED"
-            )
-            need("migrated_continuity.i" not in block, "NO_S6_HYBRID_EDIT")
+            need("P2 - Public S6-417 and S6-941 four-way Native input checks" not in block,
+                 "HISTORICAL_PUBLIC_P2_MUST_BE_MANUAL")
 
         artifact_name = re.search(
             r"(?m)^          name: (" + re.escape(artifact_prefix) +
@@ -178,13 +166,26 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
         need(payload(canonical_step) == payload(legacy_step),
              "LEGACY_ALIAS_SAME_BOUNDED_PROOF_" + name)
 
-        if name == "issue541_arch_s6_hybrid_native_p2":
-            need(
-                "issue541_arch_s6_p2_evidence/*/status.json" in proof and
-                "issue541_arch_s6_p2_evidence/*/native_P2.log" in proof and
-                "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json" in proof,
-                "ARCH_BOTH_CASES_PROVENANCE"
-            )
+    # The Issue633 gate verifies both actual Native cases, protected Scratch,
+    # exact HEAD, historical manual KEEP_HOLD, and the new artifact contract.
+    import runpy
+    guard = runpy.run_path(str(ROOT / "ci/guards/issue633_s6_ci_route_guard.py"))
+    try:
+        guard["check"](
+            workflow, template,
+            (ROOT / ".github/workflows/issue541-arch-s6-hybrid-p2-compat.yml").read_text(),
+            (ROOT / "ci/issue633_required_newonly_s6_native_p2.py").read_text(),
+            (ROOT / "ci/guards/workflow_surface_guard.py").read_text(),
+        )
+    except (AssertionError, ValueError) as exc:
+        raise ValueError("P6_NEWONLY_HYBRID_ROUTE_" + str(exc)) from exc
+    need("python3 ci/guards/issue633_s6_ci_route_guard.py --check --self-test"
+         in validate_job, "NEWONLY_ROUTE_GUARD_NOT_WIRED")
+    need("\n  issue541_arch_s6_hybrid_native_p2:" not in workflow,
+         "OLD_ARCH_AUTOMATIC_JOB_STILL_PRESENT")
+    new_job = job_block(workflow, "issue633_newonly_s6_native_p2_required")
+    for banned in BANNED_NATIVE:
+        need(banned not in new_job, "NEWONLY_BYPASS_" + banned.replace(" ", "_"))
 
     for message in P05_MESSAGES:
         need(message in dd_source, "P05_SOURCE_GUARD_" +
@@ -229,11 +230,11 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "github.event.action != 'edited'"
     ))
     add("removed_internal_pr_scope", edit_job(
-        workflow, "issue541_arch_s6_hybrid_native_p2",
+        workflow, "issue633_newonly_s6_native_p2_required",
         "github.event.pull_request.head.repo.full_name",
         "github.event.pull_request.base.repo.full_name"
     ))
-    add("artifact_attempt_missing", mutate_canonical( "issue541_arch_s6_hybrid_native_p2",
+    add("artifact_attempt_missing", mutate_canonical( "plasma_native_regression",
         "github.run_attempt", "run_attempt_removed"
     ))
     add("artifact_became_optional", mutate_canonical( "issue541_arch_dd_native_p2",
@@ -244,22 +245,21 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "if: always()", "if: success()"
     ))
     add("weakened_native_check", edit_job(
-        workflow, "issue541_arch_s6_hybrid_native_p2",
-        'test "$second" -eq 0', 'echo "ignore 941 exit"'
+        workflow, "issue633_newonly_s6_native_p2_required",
+        "ISSUE633_NEWONLY_S6_417_941_BOTH_REQUIRED_P2_PASS", "FALSE_TWO_CASE_P2_SUCCESS"
     ))
     add("skipped_second_case", edit_job(
-        workflow, "issue541_arch_s6_hybrid_native_p2",
-        "--case 941", "--case 417"
+        workflow, "issue633_newonly_s6_native_p2_required",
+        "P2 REQUIRED actual protected S6-417 AND 941 Native --check-input using SAME ELF", "P2 REQUIRED actual protected S6-417 ONLY Native --check-input using SAME ELF"
     ))
     add("p05_bypass", edit_job(
-        workflow, "issue541_arch_s6_hybrid_native_p2",
-        "echo ISSUE541_ARCH_S6_HISTORICAL_400W_PUBLIC_MESH_P0_PASS",
-        "echo ISSUE541_ARCH_S6_HISTORICAL_400W_PUBLIC_MESH_P0_PASS\n"
-        "          dont_create_kernels = true"
+        workflow, "issue633_newonly_s6_native_p2_required",
+        "echo ISSUE633_NEWONLY_S6_417_941_BOTH_REQUIRED_P2_PASS",
+        "dont_create_kernels = true"
     ))
     add("p3_auto_launch", edit_job(
-        workflow, "issue541_arch_s6_hybrid_native_p2",
-        "echo ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD",
+        workflow, "issue633_newonly_s6_native_p2_required",
+        "echo ISSUE633_NEWONLY_S6_417_941_BOTH_REQUIRED_P2_PASS",
         "run_chemistry_s6_p3_once.py --authorize-p3"
     ))
     add("continue_on_error", edit_job(
@@ -272,16 +272,16 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check",
         "echo P6_VALIDATOR_REMOVED", 1))
     add("missing_source_gate", edit_job(
-        workflow, "plasma_native_regression",
-        "P6 FAIL_CLOSED: required S6-417/941 input gate is missing",
-        "optional S6 input gate"
+        workflow, "issue633_newonly_s6_native_p2_required",
+        '--expected-head "$EXPECTED_HEAD"',
+        '--expected-head "$WRONG_HEAD"'
     ))
     add("weaken_p05", workflow, cpp=dd_source.replace(
         "P05 FV Native/Physics duplicate or unexpected owner", "P05_BYPASS", 1
     ))
-    add("undeclared_provenance", mutate_canonical( "issue541_arch_s6_hybrid_native_p2",
-        "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json",
-        "control/experiments/Issue402_plasma_dsl_g1/evidence/identity_omitted.json"
+    add("undeclared_provenance", mutate_canonical( "plasma_native_regression",
+        "          path: experiments/Issue402_plasma_dsl_g1/evidence/**",
+        "          path: experiments/Issue402_plasma_dsl_g1/chemistry/**"
     ))
 
     def mutate_legacy(name: str, old: str, new: str) -> str:
@@ -299,7 +299,7 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "issue541-core-four-native-silent-rename"
     ))
     add("legacy_alias_unconditional_on_rerun", mutate_legacy(
-        "issue541_arch_s6_hybrid_native_p2",
+        "plasma_native_regression",
         "if: ${{ always() && github.run_attempt == 1 }}",
         "if: always()"
     ))
