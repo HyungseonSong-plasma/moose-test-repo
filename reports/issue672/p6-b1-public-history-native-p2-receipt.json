@@ -1,0 +1,84 @@
+{
+  "schema": "issue672.p6_b1.independent_native_history.v1",
+  "slot": "P6-B1",
+  "verdict": "PASS_B_10LAYER_HISTORY_AND_CURRENT_P2__NEWONLY_SEPARATE",
+  "source": {
+    "pr665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "historical_pr578_head": "1efdd922096df10239cff8adc132e8f3811c1a63"
+  },
+  "historical": {
+    "run": 43977539196,
+    "job": 133685288044,
+    "job_result": "success",
+    "artifact_id": 14281776411,
+    "zip_sha256": "9cf25eff1305674f3e4d36282efb5de1080a14eccbf9590257f6725e0c9b7688",
+    "cases": {
+      "417": {
+        "B": {
+          "layers": 10,
+          "exit": 0,
+          "sha256": "5f41420f8493fe5ab4690c86b12a7dafa953c031b2d48605881ca9ed643e636e"
+        },
+        "D": {
+          "layers": 11,
+          "exit": 0,
+          "sha256": "bb045ebef7ca1cea5df6390a64bc2d41f0874a478054b8728f10c4e3eaee9aa6"
+        }
+      },
+      "941": {
+        "B": {
+          "layers": 10,
+          "exit": 0,
+          "sha256": "d282d1c6bf022a243974d9933a88fa8b72c6865e78f7c1a3e8bc12f737f78038"
+        },
+        "D": {
+          "layers": 11,
+          "exit": 0,
+          "sha256": "954ac18ee190d0b610d2c35cc81a3f4de66a383d1e7c7689b8634425a7bd8511"
+        }
+      }
+    }
+  },
+  "current": {
+    "run": 44297212655,
+    "job": 134777261860,
+    "job_result": "failure",
+    "artifact_id": 14425191296,
+    "zip_sha256": "5571de71f340112f4c7526afd370ad3482f80f4f75af77c7bb8580d4e881e7af",
+    "cases": {
+      "417": {
+        "B": {
+          "layers": 10,
+          "exit": 0,
+          "sha256": "5d15650049a3596983fce8eda430d7ee07e9a5cac040b1421f6f59ccdb6beb90"
+        },
+        "D": {
+          "layers": 11,
+          "exit": 1,
+          "sha256": "95ebfb7986b590dd6233dfd239dd09390250a5396acc82a45b1fd3e366b6f252"
+        }
+      },
+      "941": {
+        "B": {
+          "layers": 10,
+          "exit": 0,
+          "sha256": "340f0074385a33439586ae9be282cb8695fc400a32d059e587819d2946cf31de"
+        },
+        "D": {
+          "layers": 11,
+          "exit": 1,
+          "sha256": "9821016607bfb695fc58593e3436531d5c310e669dd59009f529a5d1874d0263"
+        }
+      }
+    }
+  },
+  "method": "Independently fetched both GitHub Actions job logs, parsed emitted whole-job JSON and compared both source pins, case names, 10/11 layer counts, exit, individual log SHA; fetched Actions artifact digest metadata. Independent ZIP rehash not repeated; P6-E1 separately attested SHA/CRC.",
+  "classification": "Public B P2 417+941 source-bounded syntax-only PASS at both heads. Original #578 D P2 historical PASS, current Public D P2 fail; do not call B or D new-only. No P3/P4 scientific approval.",
+  "gates": {
+    "P6_B1": "PASS_INDEPENDENT",
+    "CURRENT_D": "HOLD",
+    "NEWONLY": "NOT_PROVEN_BY_B1",
+    "SCIENCE": "HOLD"
+  },
+  "mutations": "report-only isolated branch; source/CI/PR665/main unchanged"
+}
