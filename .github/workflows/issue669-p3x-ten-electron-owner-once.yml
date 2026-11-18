@@ -1,5 +1,5 @@
 name: Issue669 P3-X exact electron ten-owner source-only cutover
-# CI retry after pressure SHA full 64-hex correction
+# CI final P3-X: exact 10 electron owners, 30 receipts, 28 mutant controls
 # Retry after independent verifier section/name identity correction
 on:
   push:
