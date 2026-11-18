@@ -1,0 +1,145 @@
+name: Issue672 PR684 independent exact-source 18-case cutover and P1
+on:
+  push:
+    branches:
+      - issue-672-pr684-independent-exact-ci-20261118
+    paths:
+      - .github/workflows/issue672-pr684-independent-exact-ci-once.yml
+permissions:
+  contents: read
+concurrency:
+  group: issue672-pr684-exact-source-independent-ci
+  cancel-in-progress: false
+jobs:
+  source-18-and-negatives:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PR684_PIN: 3e48a0651ac53ec32e34b4b31e44098ffad80e1c
+    steps:
+      - name: Checkout isolated diagnostic ref
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Guard diagnostic delta and checkout exact PR684 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$PR684_PIN" HEAD
+          git diff --name-only "$PR684_PIN" HEAD | sort > "$RUNNER_TEMP/observed.txt"
+          printf '%s\n' '.github/workflows/issue672-pr684-independent-exact-ci-once.yml' 'ci/guards/issue672_pr684_independent_18.py' | sort > "$RUNNER_TEMP/expected.txt"
+          diff -u "$RUNNER_TEMP/expected.txt" "$RUNNER_TEMP/observed.txt"
+          cp ci/guards/issue672_pr684_independent_18.py "$RUNNER_TEMP/independent_18.py"
+          git checkout --detach "$PR684_PIN"
+          test "$(git rev-parse HEAD)" = "$PR684_PIN"
+          git diff --quiet
+          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 2d120416d1bfe7c5454d0a7e955dcd6d9a763abc
+          test "$(git hash-object experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py)" = 28e34e4352bec25006aca42e9abcac9acc584cc8
+          test "$(git hash-object experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py)" = 6c6dcf6516d4169e4481f305dc882862253acbe9
+          test "$(git hash-object tests/test_issue672_p6_d1_transport_owner_cutover.py)" = 041a37f4162192f9cf4ae7d59f59382f9c439c82
+          echo EXACT_PR684_SHA_GUARD_PASS
+      - name: Execute original PR684 test module
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q tests/test_issue672_p6_d1_transport_owner_cutover.py \
+            --junitxml="$RUNNER_TEMP/upstream-results.xml" \
+            | tee "$RUNNER_TEMP/upstream-pytest.log"
+      - name: Execute 18 independent exact-source checks with 14 negative inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile "$RUNNER_TEMP/independent_18.py"
+          python3 "$RUNNER_TEMP/independent_18.py" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/independent-18.json"
+          python3 - "$RUNNER_TEMP/independent-18.json" <<'PY'
+          import json,sys
+          r=json.load(open(sys.argv[1]))
+          assert r["status"]=="PASS_18_OF_18"
+          assert r["passed"]==18 and len(r["checks"])==18
+          assert sum(x["status"]=="PASS" and x["id"].startswith("N") for x in r["checks"])==14
+          assert len({x["id"] for x in r["checks"]})==18
+          print("PR684_INDEPENDENT_18_WITH_14_EXPECTED_NEGATIVES_PASS")
+          PY
+      - name: Upload independent test receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue672-pr684-18-cases
+          path: |
+            \${{ runner.temp }}/independent-18.json
+            \${{ runner.temp }}/upstream-results.xml
+            \${{ runner.temp }}/upstream-pytest.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  exact-source-physicsapp-p1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      PR684_PIN: 3e48a0651ac53ec32e34b4b31e44098ffad80e1c
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout isolated diagnostic ref
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify unchanged C++ identity at exact PR684 HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --name-only "$PR684_PIN" HEAD | sort > "$RUNNER_TEMP/observed.txt"
+          printf '%s\n' '.github/workflows/issue672-pr684-independent-exact-ci-once.yml' 'ci/guards/issue672_pr684_independent_18.py' | sort > "$RUNNER_TEMP/expected.txt"
+          diff -u "$RUNNER_TEMP/expected.txt" "$RUNNER_TEMP/observed.txt"
+          git checkout --detach "$PR684_PIN"
+          test "$(git rev-parse HEAD)" = "$PR684_PIN"
+          git diff --quiet
+          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 2d120416d1bfe7c5454d0a7e955dcd6d9a763abc
+          echo PR684_BUILD_SOURCE_PIN_PASS
+      - name: Build one PhysicsApp with pinned MOOSE OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            '
+          test -x physics_app/physics-opt
+          sha256sum physics_app/physics-opt > "$RUNNER_TEMP/physics-opt.sha256"
+          cat "$RUNNER_TEMP/physics-opt.sha256"
+          echo PR684_EXACT_P1_BUILD_PASS
+      - name: Persist source-bound build receipt
+        if: always()
+        shell: bash
+        run: |
+          python3 - "$RUNNER_TEMP" "$PR684_PIN" "$OCI" <<'PY'
+          from pathlib import Path
+          import hashlib,json,sys
+          temp,head,oci=Path(sys.argv[1]),sys.argv[2],sys.argv[3]
+          f=temp/"physics-opt.sha256"
+          receipt={"schema":"issue672.pr684.exact_p1.v1","head":head,"oci":oci,
+                   "binary_sha256":f.read_text().split()[0] if f.is_file() else None,
+                   "Native_P2":"NOT_RUN","SCIENCE_HOLD":True}
+          (temp/"p1-receipt.json").write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+          PY
+      - name: Upload source-bound build receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue672-pr684-build-p1
+          path: |
+            \${{ runner.temp }}/physics-opt.sha256
+            \${{ runner.temp }}/p1-receipt.json
+          if-no-files-found: warn
+          retention-days: 14
