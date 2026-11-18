@@ -1,0 +1,103 @@
+{
+  "schema": "issue671.P5_B6.s6_417.native_log_artifact.source_bound.v1",
+  "task": "P5-B6",
+  "issue": 671,
+  "case": "417",
+  "decision": "PASS_LOG_ARTIFACT_EVIDENCE_CUSTODY__HOLD_NATIVE_CHECK_INPUT_EXIT_1_MISSING_BASELINE_MESH",
+  "source_pr": 665,
+  "source_pr_head_checked": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "source_pr_status": "OPEN_DRAFT",
+  "source_provenance": {
+    "Native_probe_specific_branch_head": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f",
+    "Native_probe_wf_only_commit_file": ".github/workflows/issue671-d8-newonly-native-probe-once.yml",
+    "stage_run_source_head": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+    "actual_staged_receipt_original_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "pr665_Chemistry_C_gitblob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "pr665_DDContinuityEq_C_gitblob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "probe_and_pr665_relevant_source_gitblobs_equal": true,
+    "no_common_P5_0_final_physics_binary_acceptance": true
+  },
+  "native_probe": {
+    "run_id": 44262035027,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44262035027",
+    "workflow_conclusion": "success",
+    "meaning": "Diagnostic job succeeded in collecting expected failed Native --check-input; it did not obtain Syntax OK.",
+    "artifact_id": 14408333164,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44262035027/artifacts/14408333164",
+    "zip_sha256": "5fdf86be670f6c09e0a3ea79f4303f61c8afe6cb83ae94cc9d18d5b0b2c3a6ed",
+    "size_bytes": 4644,
+    "zip_crc": "PASS",
+    "readiness_json_sha256": "60cd7c56e6e696a390d60bf116217bfe547f854d3d3a926edc39ac2dcb2853bb",
+    "source_binary_sha256_declared": "7968019d100e66f8979575aa0895506d1a188c58a85b9a5d561b45f41cb1cc96",
+    "binary_sha256_status": "READBACK_OF_CI_SHA256SUM_FILE_AND_READINESS_MATCH; NATIVE_BINARY_BYTES_NOT_UPLOADED_SO_NO_INDEPENDENT_REHASH",
+    "build_oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "S6_417": {
+    "log_path_inside_artifact": "p5-native/S6-417_native_check_input.log",
+    "log_sha256": "91b82d79c914f1914bd97fcccde2e4dc9609b60b4b53a88e5aba5bccf9ff7778",
+    "log_size_bytes": 3358,
+    "native_exit_code": 1,
+    "syntax_ok": false,
+    "error": "FileMeshGenerator::generate(): Unable to open file \"/case/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz\"",
+    "failure_category": "MISSING_PARENT_C0_MESH_DEPENDENCY_BEFORE_FV_OWNER_WAREHOUSE_CAN_BE_ASSESSED",
+    "native_staged_input_files_rehashed": 11,
+    "input_layer_sha256_by_basename": {
+      "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+      "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+      "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+      "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+      "issue477_S4-401-417_op_ionization_overlay.i": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a",
+      "issue477_S5-417-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+      "issue477_S6-417-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+      "issue477_S6-417-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+      "migrated_continuity.i": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+    },
+    "json_path_inside_staging": "cases/417/experiments/Issue395_powered_chemistry_ladder/chemistry/unified_s6_417_newonly.json",
+    "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "included_maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "included_qvt_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "included_electron_moments_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "C0_mesh_declaration": "[Mesh]/[main]/FileMeshGenerator file='baseline_plasma_plus_unstructured_cover_plus_wafer.msh'",
+    "C0_declared_raw_baseline_mesh_present_in_stage_zip": false,
+    "C0_expected_cached_mesh_name_present_in_stage_zip": false,
+    "qvt_msh_present_but_is_different_maxwell_child_geometry": true,
+    "MPI_ABORT_in_log": true
+  },
+  "actual_staged_inputs": {
+    "run_id": 44257739203,
+    "artifact_id": 14406746397,
+    "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "zip_crc": "PASS",
+    "rehashed_11_inputs": "PASS",
+    "rehashed_11th_layer": "PASS",
+    "stage_status": "P3_X_P2_SOURCE_ONLY_P4_NOT_INTEGRATED"
+  },
+  "independent_offline_verifier": {
+    "path": "local /mnt/data/verify_issue671_p5_b6_417_native_log.py",
+    "sha256": "95f216d68a6e8388ffed899e009bb1421a37130c3dd3db5e93a14ff477bbf9dd",
+    "full_json_receipt_sha256": "8abd539f658833289d6e29027871fe7fe704a6057b77929980c174c988fb8880",
+    "fault_mutations_rejected": 8,
+    "negative_tests": "tampered_log_byte, tampered_binary_record, false_native_exit_zero, false_Syntax_OK, wrong_case_label, wrong_source_head, wrong_manifest_log_sha, false_P4_merged",
+    "repro_execution": "python verify_issue671_p5_b6_417_native_log.py --native <artifact14408333164> --stage <artifact14406746397> --output <receipt.json>",
+    "note": "Verifier checks CI-recorded binary SHA identity but binary itself was not included in downloaded evidence; cannot independently hash executable bytes."
+  },
+  "gates": {
+    "P5_B6_EVIDENCE_CUSTODY": "PASS",
+    "S6_417_NATIVE_P2": "FAIL_EXIT_1",
+    "P4_X": "NOT_INTEGRATED_IN_PROBE",
+    "P5_0_SHARED_SOURCE_BINARY": "NOT_ESTABLISHED",
+    "NATIVE_FV_12_PLUS_12": "NOT_REACHED",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "actions_required": [
+    "Stage exact approved original baseline C0 mesh bytes and its expected derived mesh/cache dependency, or re-run approved original geometry preparation with pinned inputs and output SHA; never substitute qvt.msh.",
+    "Finish P4-X duplicate ion coefficients/wall flux/surface current owner handoff; freeze full final PR665 source/head and actual New-only 11-layer.",
+    "Perform one shared P5-0 PhysicsApp build and 417 Native check-input, capture exit status/Syntax OK and final hash-bound full log/artifacts. Diagnose next failure if any."
+  ],
+  "no_workflow_or_source_skip": true,
+  "source_files_or_rate_values_mutated": false
+}
