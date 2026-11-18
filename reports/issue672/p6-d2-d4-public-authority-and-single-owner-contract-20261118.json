@@ -1,0 +1,227 @@
+{
+  "schema": "issue672.p6_d2_d4.public_d_authority_single_owner_contract.v1",
+  "decision": "D2_AUTHORITY_SPLIT_FROZEN__D4_SINGLE_OWNER_ACCEPTANCE_CONTRACT_FROZEN__PR684_NATIVE_HOLD",
+  "date": "2026-11-18",
+  "authority": {
+    "parent_pr665": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "pr684_unmerged": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "historical_checkout": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "historical_compat_source_pr578": "1efdd922096df10239cff8adc132e8f3811c1a63",
+    "SCIENCE": "SCIENCE_HOLD",
+    "PR684_merge": "HOLD",
+    "main_merge": "NOT_AUTHORIZED",
+    "governance": "P6-D2 public data and P6-D4 input-owner contract, not physics P3/P4 approval"
+  },
+  "modes": {
+    "historical_100": {
+      "mode_id": "HISTORICAL_ORIGINAL_100ROW_COMPATIBILITY",
+      "lookup_path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "rows": 100,
+      "input_owner": "original Git blob bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+      "runtime": "historical #578 compatible PhysicsApp; 400W parent mesh original, 417 B/D +941 B/D, P2 only",
+      "Native_P2": {
+        "run": 44324197618,
+        "artifact": 14436442632,
+        "result": "PASS_B_D_417_941_4_OF_4",
+        "ELF_sha256": "617b8316d7519c560964c3df8bc4ee2c9f50ca16b9d7448889860e43ce144a07"
+      },
+      "charge_source": "original e=-1 O2p=+1 Om=-1 Op=+1; original wall/Poisson and transport owners preserved",
+      "disposition": "PASS_PINNED_HISTORICAL_P2_ONLY__NOT_MODERN_GENERATED_FV",
+      "required_preservation": "Never overwrite 100row path with 42row and call it original. Never transplant old P2 success to newer PR684 or New-only."
+    },
+    "public_prepared_42": {
+      "mode_id": "EXISTING_PUBLIC_RESEARCH_PREPARED_42ROW",
+      "table_origin": ".github/oxygen25_eedf/initial_mixture_23xsec_transport.txt",
+      "sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "rows": 42,
+      "assessment": "Existing prepared research path is an independently operational/scientific-use candidate, not a bytewise/numerical substitute for historical 100row.",
+      "legacy_42_copy_behavior": "Existing Public/FLOW 400W workflows copy the 42row source into the historical relative electron_moments.txt pathname; future approved replay must stage it in a separately SHA-bound physical path, not falsely label it original.",
+      "current_PR684": {
+        "Native_P2": {
+          "run": 44323024938,
+          "artifact": 14435932769,
+          "source_sha": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+          "case417": "EXIT1_PRE_P05_MISSING_CHEMISTRY",
+          "case941": "EXIT1_PRE_P05_MISSING_CHEMISTRY"
+        },
+        "four_manual_transport_retirements": "PASS_SOURCE_BOTH_CASES",
+        "missing": "[Physics]/[Plasmas]/[Transport]/[Chemistry] and nonzero S_O2p/S_Om/S_Op source",
+        "disposition": "KEEP_HOLD_NATIVE"
+      },
+      "not_equivalent_to_100row": true,
+      "require_numerical_consumer_parity_before_cutover": true
+    },
+    "newonly_42": {
+      "mode_id": "DEDICATED_GENERATED_NEWONLY_42ROW",
+      "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "metadata": "417 & 941 have separate final 11-layer and 7-species/8-reaction mechanisms; e lookup reduced/clamp, ions constant/physical",
+      "same_elf_native": {
+        "run": 44322557957,
+        "artifact": 14436920479,
+        "ELF_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+        "case417": "EXIT0_SYNTAX_OK",
+        "case941": "EXIT0_SYNTAX_OK",
+        "N1_N8": "16_OF_16_EXPECTED_REJECTIONS"
+      },
+      "disposition": "P2_AND_NEGATIVE_EVIDENCE_PASS__FORMAL_P5_X_HOLD_WAREHOUSE_D8",
+      "not_authorized_to_rebrand_public_D": true
+    }
+  },
+  "physical_caution": {
+    "original_100_vs_prepared_42": "DIFFERENT_DATA_AND_CLAMP_RANGE",
+    "eV_5": {
+      "mobility_percent_diff": -11.31,
+      "diffusivity_percent_diff": -2.17
+    },
+    "eV_10": {
+      "mobility_percent_diff": -19.42,
+      "diffusivity_percent_diff": -9.32
+    },
+    "eV_20": {
+      "mobility_percent_diff": -32.26,
+      "diffusivity_percent_diff": -17.87
+    },
+    "source": "P6-D1 numerical source counterexamples; preserve individual interpolation and source provenance; these values are diagnostic estimates, not 100row=42row equality"
+  },
+  "D4": {
+    "scope": "Only disposable Public D staged 417 and 941 11-layer and separately accepted New-only, never rewrite archived 10layer/11layer, private EI raw, parent main or PR665",
+    "allowed_modes": [
+      "HISTORICAL_ORIGINAL_100ROW_COMPATIBILITY",
+      "EXISTING_PUBLIC_RESEARCH_PREPARED_42ROW",
+      "DEDICATED_GENERATED_NEWONLY_42ROW"
+    ],
+    "one_owner_rule": "Exactly one generator for each e/O2p/Om/Op transport coefficient and each ion continuity source/time/drift/diffusion/BC at final Warehouse, no retired duplicate",
+    "material_retire_count": 4,
+    "retired_transport_names": [
+      "electron_transport",
+      "O2p_species_transport_alias",
+      "Om_species_transport_alias",
+      "Op_species_transport_alias"
+    ],
+    "retain": {
+      "electron_transport": "table reduced/clamp and actual pressure/gas-temperature functors, no implicit 100/42 interchange; C++ uses e_energy_eV",
+      "electron_energy": "5/3 * electron particle mobility and diffusion with exact same evaluation arguments, numerical two-table diagnostics required",
+      "ion_transport": {
+        "O2p": {
+          "charge": 1,
+          "mu": "ion_mobility",
+          "diffusion": "ion_diffusion",
+          "unit": "physical"
+        },
+        "Om": {
+          "charge": -1,
+          "mu": "negative_ion_mobility",
+          "diffusion": "negative_ion_diffusion",
+          "unit": "physical"
+        },
+        "Op": {
+          "charge": 1,
+          "mu": "atomic_positive_ion_mobility",
+          "diffusion": "atomic_positive_ion_diffusion",
+          "unit": "physical"
+        }
+      },
+      "ion_coefficients": {
+        "mobility": 10,
+        "mobility_SI": "m^2/(V s)",
+        "diffusivity": 0.25851999786435537,
+        "diffusivity_SI": "m^2/s"
+      },
+      "electron_FEM_BC": 8,
+      "sources": "signed real rates, signed wall currents, Poisson charge ni+nop-ne-nm, neutral gas state, RF, 7 Maxwell Transfers, parent plasma mesh and material boundaries"
+    },
+    "generated_FV_requirements": {
+      "selected_FV": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "selected_FEM": [
+        "e"
+      ],
+      "active_Chemistry": "[Physics]/[Plasmas]/[Transport]/[Chemistry] MUST BE PRESENT AND NONEMPTY",
+      "source_functors": [
+        "S_O2p_molar",
+        "S_Om_molar",
+        "S_Op_molar"
+      ],
+      "reaction_mechanism": {
+        "species": [
+          "e",
+          "O2",
+          "O",
+          "O2p",
+          "Om",
+          "Op",
+          "O2a"
+        ],
+        "count": 7,
+        "common": [
+          "EI-02",
+          "EI-17",
+          "EI-415",
+          "EI-401",
+          "EI-407",
+          "EI-2069",
+          "H25"
+        ],
+        "case417": "EI-417",
+        "case941": "EI-941",
+        "total": 8,
+        "require_distinct_private_rate_provenance": true
+      },
+      "retire_all_legacy_ion_FV": "14 Native ion FVKernel + 12 Native ion FVBC => zero in new generated-only input (26->0)",
+      "generated_Warehouse_each_case": {
+        "FV_Kernel": 12,
+        "FV_BC": 12,
+        "electron_FEM_BC": 8
+      },
+      "no_dummy": "No synthetic zero, fake progress, or invented reaction to appease hasSpeciesSource",
+      "no_bypass": [
+        "dont_create_kernels",
+        "skip job",
+        "disable P05",
+        "suppress Chemistry source",
+        "bind only partial FVM list"
+      ],
+      "P05": "Actual live Warehouse typed object/name/variable uniqueness, signed source/charge and 16 N1-N8 dual-case negative checks required"
+    },
+    "current_candidate_PR684": {
+      "four_transport_retire_source": "PASS",
+      "source_json": "plasma_species_only.json",
+      "source_json_reactions": 0,
+      "source_overlay_Chemistry_enabled": false,
+      "expected_Native": "FAIL_PRE_P05_REQUIRE_CHEMISTRY",
+      "actual_run": 44323024938,
+      "status": "HOLD_NOT_MERGE"
+    },
+    "acceptance_sequence": [
+      "D2 mode-specific immutable table/file source SHA separate paths and authorization",
+      "D4 4 transport retire SHA + exact e 5/3/ion charge & coefficient proof",
+      "D4 real Chemistry source generation exactly selected O2p Om Op with 7species/8reactions; legacy ion 26->0 only if this generated mode is approved",
+      "D4 8 electron FEM BC, Poisson/wall/surface current/RF source/consumer semantic preservation and negative counterexamples",
+      "D5 exact approved mode same-source same-ELF 417/941 Native --check-input/P05 12+12+8 Warehouse and Restore",
+      "P5-X and P6-X formal acceptance, then P7. No P3/P4 science"
+    ]
+  },
+  "newly_frozen_scope": {
+    "D2": "PASS_MODE_AUTHORITY_SPLIT_AND_SCIENCE_BOUNDARY",
+    "D4": "PASS_ARCHITECTURAL_SINGLE_OWNER_CONTRACT_ONLY",
+    "D4_REAL_CODE_INTEGRATION": "NOT_IMPLEMENTED",
+    "D5_NEW_NATIVE_AFTER_REPAIR": "NOT_RUN",
+    "PR684_MERGE": "KEEP_HOLD",
+    "P5_X_FINAL": "HOLD_WAREHOUSE_D8",
+    "P6_X": "HOLD",
+    "P7_FINAL": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "references": {
+    "historical_100row_pass": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/672#issuecomment-6981820692",
+    "D5_native_42row_failure": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/672#issuecomment-6981577934",
+    "D1_Chemistry_root": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/672#issuecomment-6980861332",
+    "newonly_latest_same_elf": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/672#issuecomment-6981681850",
+    "P7_handoff": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/673#issuecomment-6981593230"
+  }
+}
