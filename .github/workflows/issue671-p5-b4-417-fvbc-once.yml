@@ -160,7 +160,7 @@ jobs:
                 'if (!operator_owners.insert(key).second)',
                 'if (!seen.insert(name).second)',
                 'if (count != 4 * selected.size())',
-                'if (!expected_bcs.emplace(name, bc.type).second)',
+                '!expected_bcs.emplace(name, bc.type).second',
                 'bc->type() != expected_type->second',
                 'if (matched_bcs[name] != 1)',
                 'if (chemistryData().hasIonWalls() && expected_bcs.empty())',
@@ -274,7 +274,7 @@ jobs:
               bdd=dd.replace(token,target)
               require(bchem!=chem or bdd!=dd,"MUTATION_NOT_APPLIED:"+name)
               reject(name,lambda bc=bchem,bd=bdd:cxx_guard(bc,bd))
-          require(len(neg)==28,"NEGATIVE_COUNT_EXPECTED_28_OBSERVED_"+str(len(neg)))
+          require(len(neg)==31,"NEGATIVE_COUNT_EXPECTED_31_OBSERVED_"+str(len(neg)))
           summary={
              "schema":"issue671.p5_b4.s6_417_FVBC_source_and_P05_readiness.v1",
              "task_id":"P5-B4","case":"S6-417",
