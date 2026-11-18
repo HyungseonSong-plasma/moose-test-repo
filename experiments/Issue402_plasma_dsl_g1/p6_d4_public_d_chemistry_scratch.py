@@ -101,6 +101,14 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
     doc["species"]["O2a"]=mech["species"]["O2a"]
     doc["equations"]=mech["equations"]
     doc["reactions"]=mech["reactions"]
+    # Fail closed on 12 *original* BC raw SHA and original ion wall/current
+    # Materials BEFORE the known old ion 26 owners are removed from Scratch.
+    wall_bridge=load_python(PILOT/"p6_d4_original_ion_bc12.py",
+                            "p6_d4_exact_archived_ion_wall_bc12")
+    boundary_groups, original_wall_receipts=wall_bridge.audit_raw_wall_sources(raw)
+    if set(doc)-{"species","equations","reactions"}:
+        raise ValueError("P6_D4_BC12_UNEXPECTED_JSON_SOURCE_KEYS")
+    doc["drift_diffusion_boundaries"]=boundary_groups
     ovl=raw["migrated_continuity.i"].decode("utf-8")
     if (ovl.count("    files = plasma_species_only.json")==0 or
         ovl.count("      [DriftDiffusion]")!=1 or "[Chemistry]" in ovl):
@@ -109,7 +117,7 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
         raise ValueError("P6_D4_MULTIPLE_PHYSICS_FILE_OWNERS")
     after_overlay=ovl.replace(
         "    files = plasma_species_only.json",
-        f"    files = public_D_{case}_chemistry.json",1).replace(
+        f"    files = public_D_{case}_chemistry.json\n    ion_fv_bc_ownership = original_wall_flux",1).replace(
         "      [DriftDiffusion]",
         "      [Chemistry]\n        block = plasma\n      []\n      [DriftDiffusion]",1)
     if after_overlay.count("[Chemistry]")!=1:
@@ -177,6 +185,11 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
         "old_native_ion_owners_retired":26,
         "old_native_ion_kernels_retired":14,
         "old_native_ion_bcs_retired":12,
+        "generated_ion_fv_bcs_exact_original_law":12,
+        "wall_flux_ownership":"ARCHIVED_THREE_ION_WALL_MATERIALS_PRESERVED",
+        "surface_current_ownership":"ARCHIVED_THREE_SIGNED_CURRENT_MATERIALS_PRESERVED",
+        "original_wall_bc_contract":original_wall_receipts,
+        "generated_ion_bc_groups":boundary_groups,
         "retired_exact_electron_particle_rhs_kernels":old_electron_particle,
         "retired_electron_particle_rhs_count":len(old_electron_particle),
         "legacy_electron_energy_rhs":"PRESERVED_EXACT_NATIVE_UNTIL_NUMERICAL_CONSUMER_REVIEW",
@@ -188,7 +201,7 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
             for p,data in changes.items()
         },
         "native_p2":"NOT_RUN","P05":"NOT_RUN",
-        "generated_walls_12plus12":"NOT_OBSERVED",
+        "generated_walls_12plus12":"SOURCE_BOUND_12_BC_DECLARED__NATIVE_P05_PENDING",
         "electron_8_BC":"PRESERVED_SOURCE_ONLY_NOT_WAREHOUSE",
         "P3":"NOT_RUN","P4":"NOT_RUN","science":"SCIENCE_HOLD"
     }
