@@ -1,0 +1,114 @@
+{
+  "schema": "issue670.p4-c4.lowerd-sigma.source-only.receipt.v1",
+  "task_id": "P4-C4",
+  "head_sha": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "scope": "Lower-D surface charge sigma_s / sigma_wafer / sigma_focus_ring preserved consumer and source graph in S6-417/941 after P1/P2/P3-X source-only staging",
+  "evidence": {
+    "P1": {
+      "ci_run": 44182628032,
+      "artifact": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "P2": {
+      "ci_run": 44199587771,
+      "artifact": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+    },
+    "P3X": {
+      "ci_run": 44257739203,
+      "artifact": 14406746397,
+      "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111"
+    },
+    "P3X_first": {
+      "ci_run": 44256823392,
+      "artifact": 14405784430,
+      "zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+      "all_179_member_contents_match_latest_artifact": true
+    }
+  },
+  "tests": {
+    "input_sha256_P1_P2_P3X": "66/66",
+    "target_sha256_unchanged_by_P1_P2_P3X": "18/18 per case",
+    "target_count_per_case": 18,
+    "case_count": 2,
+    "one_each_section_name": true,
+    "offline_fail_closed_mutations_417": "84/84",
+    "offline_fail_closed_mutations_941": "84/84",
+    "native_solver": "NOT_RUN"
+  },
+  "case_c0_file_sha256_same_417_941": {
+    "P1": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+    "P2": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+    "P3X": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+  },
+  "paths": {
+    "cover": {
+      "lowerd_block": "cover_surface",
+      "mesh_generator": "cover_surface_block",
+      "sigma": "sigma_s",
+      "time": "sigma_time",
+      "current_kernel": "sigma_surface_current",
+      "current_property": "cover_net_surface_current_density",
+      "poisson_bc": "cover_surface_charge_poisson",
+      "boundary": "plasma_cover"
+    },
+    "wafer": {
+      "lowerd_block": "wafer_surface",
+      "mesh_generator": "wafer_surface_block",
+      "sigma": "sigma_wafer",
+      "time": "sigma_wafer_time",
+      "current_kernel": "sigma_wafer_surface_current",
+      "current_property": "wafer_net_surface_current_density",
+      "poisson_bc": "wafer_surface_charge_poisson",
+      "boundary": "plasma_wafer"
+    },
+    "focus_ring": {
+      "lowerd_block": "focus_ring_surface",
+      "mesh_generator": "focus_ring_surface_block",
+      "sigma": "sigma_focus_ring",
+      "time": "sigma_focus_ring_time",
+      "current_kernel": "sigma_focus_ring_surface_current",
+      "current_property": "focus_ring_net_surface_current_density",
+      "poisson_bc": "focus_ring_surface_charge_poisson",
+      "boundary": "plasma_focus_ring"
+    }
+  },
+  "target_block_sha256_identical_both_cases": {
+    "Mesh/cover_surface_block": "46a1f59913968ef388dca17d98d33458d7557ca5ae9dbacf9307192f4dcb36e5",
+    "Variables/sigma_s": "071af0ede3a7d4a105629cc585401709e062a48f2b708d1d98676c87630ce048",
+    "FunctorMaterials/cover_surface_current": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+    "Kernels/sigma_time": "7e06815cedce5737eaf55979b43b9a1615e198e06a0cd835ea1635e1e90d1643",
+    "Kernels/sigma_surface_current": "974e11b136ae11dc234af36a4fe27359116b54a53f8c3bae3ecaa545acc49fb5",
+    "BCs/cover_surface_charge_poisson": "4f0ea3837be3f796459c18167825715d885cc7d90145ae37a3eadda63e134574",
+    "Mesh/wafer_surface_block": "98e7af515fc48dd937d86f5570faa325da6d225297b384628ba494c7698e36b3",
+    "Variables/sigma_wafer": "1d8b7d104a82513a50157376e28c7b8a56c4e423121c58b9ec8bc4d3362bb5a7",
+    "FunctorMaterials/wafer_surface_current": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+    "Kernels/sigma_wafer_time": "d8276ebb49e396b894d4dc1e3dbd644436b9aaac87c85bc141f0e0049755d46e",
+    "Kernels/sigma_wafer_surface_current": "574479001966e2977ff6086325241a41e637952312cc2457e22d91f0a363835f",
+    "BCs/wafer_surface_charge_poisson": "890d205cacae47948f6d850e7ab70a42a5db346570c98735a0cf7e31b7bc258b",
+    "Mesh/focus_ring_surface_block": "a17551a92162049f2c72a48e066fae54b381824b40f5583386b571007a30e7ab",
+    "Variables/sigma_focus_ring": "8f3c29f6dc68f42aa3ef7fc33330957005b144321534e91d04fedd8a7c6d9e6b",
+    "FunctorMaterials/focus_ring_surface_current": "b7f8870d2c6b4431fc0dff3fa90e158b64edfa5e7f0f1f68371ffc570fe442a2",
+    "Kernels/sigma_focus_ring_time": "fc54841f5b697f8ad5810b67f609505a4af1122a98b3c7441b644a2b9e60d8af",
+    "Kernels/sigma_focus_ring_surface_current": "cfc0a9a018a39451890da56837c77b98f3f850f724f634244cf95ad0411e3470",
+    "BCs/focus_ring_surface_charge_poisson": "62e32c8363e7c2feab8cdfc6f337940214b4c44d1120cf7d23b3d7e225d03fa3"
+  },
+  "cpp_contract": {
+    "PhysicsLowerDSurfaceCurrent.C_blob": "df2847333530b5e7f4a49251bf292ed1d4138e86",
+    "PhysicsADSurfaceChargePoissonBC.C_blob": "aed1216bb62b8580871d069fd67bd6d9f4cff07d",
+    "Chemistry.C_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "lowerd_sign": "ADTimeDerivative +test*d(sigma)/dt; PhysicsLowerDSurfaceCurrent -test*j; resulting d(sigma)/dt=j",
+    "poisson_sign": "-test*sigma/eps_0",
+    "signed_surface_current": "1.602176634e-19*(gi+gop-gm-ge) A/m^2"
+  },
+  "important_hold": {
+    "same_name_generated_current_collision": "New-only C2 Chemistry.C generates cover/wafer/focus_ring_net_surface_current_density while P3-X .i still contains manual FunctorMaterials/cover_surface_current etc; thus 3 static prospective duplicate properties per case",
+    "next": "P4-X must reconcile those 3 manual producers with generated Chemistry current, preserve Lower-D sigma kernel/variables/Poisson objects unchanged and verify active face-side bindings",
+    "runtime_face_info_and_orientation": "HOLD",
+    "runtime_unique_current_warehouse": "HOLD",
+    "newonly_native_p2": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "independent_detailed_local_report_sha256": "4d5b86c2eecb0f2df5c0e98aa401f6e72ea83827d0e8dd9b3ed0bab2b45e0048",
+  "verdict": "P4-C4_SOURCE_LOWERD_SIGMA_CONSUMER_PRESERVED_PASS__P4-X_CURRENT_PRODUCER_SINGLE_OWNER_HOLD__NATIVE_RUNTIME_HOLD"
+}
