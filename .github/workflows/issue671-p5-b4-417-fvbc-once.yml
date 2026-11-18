@@ -1,0 +1,323 @@
+name: Issue671 P5-B4 S6-417 FV BC 12 and P05 source-bound gate
+on:
+  push:
+    branches: [issue-671-p5-b4-417-fvbc-native-gate-20261118]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  p5_b4_static_gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out immutable integrated PR665 source
+        uses: actions/checkout@v4
+        with:
+          ref: 395eeac274125ffa632b4d75a4531996dee24fe0
+          persist-credentials: false
+      - name: Download immutable P3-X disposable 417 stage evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: issue669-p3x-newonly-10-electron-owner-source-417-941
+          run-id: 44257739203
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: evidence
+      - name: Validate actual 417 11-layer, expected 12 BCs, C++ guards and adversarial controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 395eeac274125ffa632b4d75a4531996dee24fe0
+          python3 - <<'PY'
+          import copy,hashlib,json,math,re,sys
+          from pathlib import Path
+          sys.path.insert(0,str(Path("ci").resolve()))
+          from p1_ion_new_only_preflight import inspect as official_p0
+
+          CASE="417"
+          CURRENT="395eeac274125ffa632b4d75a4531996dee24fe0"
+          P2P3_PIN="9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          PILOT=Path("experiments/Issue402_plasma_dsl_g1")
+          SRC_JSON=PILOT/"chemistry/unified_s6_417_newonly.json"
+          SRC_OVERLAY=PILOT/"issue633_newonly_s6_417_continuity.template.i"
+          JSON_SHA="ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef"
+          OVERLAY_SHA="c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+          NA=6.02214076e23
+          SPECIES=("O2p","Om","Op")
+          Q={"O2p":1,"Om":-1,"Op":1}
+          GENERAL={"inlet","outlet","plasma_electrode","plasma_metal","plasma_right"}
+          DIELECTRIC={"cover":"plasma_cover","wafer":"plasma_wafer","focus_ring":"plasma_focus_ring"}
+          GROUPS={"inlet outlet","plasma_electrode plasma_metal plasma_right",*DIELECTRIC.values()}
+          EXPECTED={s+"_wall" for s in SPECIES}|{s+"_"+loc+"_dielectric" for s in SPECIES for loc in DIELECTRIC}
+          def sha(raw):return hashlib.sha256(raw).hexdigest()
+          def require(cond,why):
+              if not cond:raise ValueError(why)
+          def uniq_pairs(pairs):
+              d={}
+              for k,v in pairs:
+                  require(k not in d,"DUPLICATE_JSON_KEY:"+k)
+                  d[k]=v
+              return d
+          def jload(raw):return json.loads(raw.decode("utf-8"),object_pairs_hook=uniq_pairs)
+          def scan(data,filename,ordinal):
+              objects=[];stack=[];offset=0
+              data.decode("utf-8")
+              for ln,line in enumerate(data.splitlines(keepends=True),1):
+                  match=re.fullmatch(rb"\[([^\[\]]*)\]",line.strip())
+                  if match:
+                      name=match.group(1).decode()
+                      if name:stack.append((name,offset,ln))
+                      elif stack:
+                          name,start,first=stack.pop()
+                          if len(stack)==1 and stack[0][0] in ("FVBCs","FVKernels","FunctorMaterials"):
+                              raw=data[start:offset+len(line)]
+                              params={}
+                              for t in raw.decode().splitlines()[1:-1]:
+                                  kv=re.fullmatch(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*",t)
+                                  if kv:
+                                      require(kv.group(1) not in params,"DUPLICATE_OBJECT_PARAM:"+name)
+                                      params[kv.group(1)]=kv.group(2).strip().strip("'\"")
+                              objects.append({"section":stack[0][0],"name":name,"filename":filename,
+                                "ordinal":ordinal,"line_start":first,"line_end":ln,
+                                "block_sha256":sha(raw),"params":params})
+                  offset+=len(line)
+              require(not stack,"UNBALANCED_INPUT:"+filename)
+              require(not re.search(rb"(?m)^\s*!include\b",data),"UNRESOLVED_INCLUDE:"+filename)
+              return objects
+          def source_model(j,overlay):
+              require({*SPECIES,"e"}<=set(j.get("species",{})),"MISSING_JSON_SPECIES")
+              for s in SPECIES:
+                  require(j["species"][s].get("charge_number")==Q[s],"WRONG_CHARGE:"+s)
+                  require(isinstance(j["species"][s].get("transport_coef"),dict),"MISSING_TRANSPORT:"+s)
+              require(j.get("ion_surface_current")=={"electron_wall_number_flux":"e_wall_number_flux"},
+                      "ELECTRON_CURRENT_HANDOFF_CHANGED")
+              require(set(j.get("drift_diffusion_boundaries",{}))==GROUPS,
+                      "INVALID_BOUNDARY_CATALOGUE_GROUPS")
+              require("boundaries_to_avoid" not in j and
+                      "migration_smoothing_width" not in j,"FORBIDDEN_BOUNDARY_OVERRIDE")
+              require(overlay.count("fvm_species = 'O2p Om Op'")==1 and
+                      overlay.count("fem_species = e")==2,"SPECIES_SELECTOR_INVALID")
+              require(overlay.count("files = 'chemistry/unified_s6_417_newonly.json'")==1,
+                      "JSON_BINDING_INVALID")
+              require("dont_create_kernels" not in overlay,"BINDING_ONLY_BYPASS_FORBIDDEN")
+              all_sides=set();logical={}
+              for group,items in j["drift_diffusion_boundaries"].items():
+                  sides=group.split()
+                  require(len(sides)==len(set(sides)),"DUPLICATE_SIDES_WITHIN_GROUP")
+                  require(not all_sides.intersection(sides),"SAME_PHYSICAL_SIDE_REDECLARED:"+group)
+                  all_sides.update(sides)
+                  require(isinstance(items,dict) and items,"EMPTY_GROUP:"+group)
+                  for name,record in items.items():
+                      require(isinstance(record,dict) and set(record)=={"type"},
+                              "BC_EXTRA_OR_MISSING_ARGS:"+name)
+                      if name.startswith("e_"):
+                          continue
+                      matches=[s for s in SPECIES if name.startswith(s+"_")]
+                      require(len(matches)==1,"UNKNOWN_ION_BC:"+name)
+                      s=matches[0]
+                      suffix=name[len(s)+1:]
+                      expected_kind="FVFunctorNeumannBC" if suffix=="wall" else "FVLogMolarDielectricFluxBC"
+                      require(record["type"]==expected_kind,"WRONG_FACTORY:"+name)
+                      if suffix=="wall":
+                          require(set(sides).issubset(GENERAL),"GENERAL_BOUNDARY_UNEXPECTED:"+name)
+                      else:
+                          label=suffix.removesuffix("_dielectric")
+                          require(suffix.endswith("_dielectric") and label in DIELECTRIC
+                                  and set(sides)=={DIELECTRIC[label]},
+                                  "DIELECTRIC_BOUNDARY_WRONG:"+name)
+                      old=logical.get(name)
+                      if old:
+                          require(old["type"]==record["type"] and not set(sides).intersection(old["sides"]),
+                                  "DUPLICATE_BC_CONFLICT:"+name)
+                          old["sides"].update(sides)
+                      else:
+                          logical[name]={"name":name,"type":expected_kind,
+                                         "variable":"log_"+s,"sides":set(sides),
+                                         "functor":s+"_wall_number_flux"}
+              require(set(logical)==EXPECTED and len(logical)==12,"MISSING_OR_EXTRA_LOGICAL_ION_BC")
+              require(all_sides==GENERAL|set(DIELECTRIC.values()),"PHYSICAL_SIDES_INCOMPLETE")
+              for name,o in logical.items():
+                  expected_sides=GENERAL if name.endswith("_wall") else {
+                      DIELECTRIC[name.split("_",1)[1].removesuffix("_dielectric")]}
+                  require(o["sides"]==expected_sides,"WRONG_MERGED_SIDES:"+name)
+                  o["boundary"]=sorted(o.pop("sides"))
+                  if name.endswith("_wall"):
+                      o["factor"]=-1.0/NA
+                      o["factor_unit"]="mol/particle"
+                      o["signed_number_flux"]=None
+                  else:
+                      o["factor"]=None
+                      o["signed_number_flux"]=o["functor"]
+              require(len([x for x in logical.values() if x["type"]=="FVFunctorNeumannBC"])==3,
+                      "GENERAL_BC_COUNT_NOT_THREE")
+              require(len([x for x in logical.values() if x["type"]=="FVLogMolarDielectricFluxBC"])==9,
+                      "DIELECTRIC_BC_COUNT_NOT_NINE")
+              return dict(sorted(logical.items()))
+          def cxx_guard(s,t):
+              checks=[
+                'bc["factor"] = -1.0 / 6.02214076e23;',
+                'bc["signed_number_flux"] = species_id + "_wall_number_flux";',
+                'constexpr double minus_inv_avogadro = -1.6605390671738466e-24;',
+                'if (!operator_owners.insert(key).second)',
+                'if (!seen.insert(name).second)',
+                'if (count != 4 * selected.size())',
+                'if (!expected_bcs.emplace(name, bc.type).second)',
+                'bc->type() != expected_type->second',
+                'if (matched_bcs[name] != 1)',
+                'if (chemistryData().hasIonWalls() && expected_bcs.empty())',
+                '_problem->addFVBC(bc.type, name, params);',
+                'factor_value << std::setprecision(std::numeric_limits<Real>::max_digits10)',
+              ]
+              for x in checks:
+                  require(x in s or x in t,"CXX_GUARD_MISSING:"+x)
+              return checks
+
+          chem=Path("physics_app/src/physics/plasma/Chemistry.C").read_text()
+          dd=Path("physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
+          cxx_tokens=cxx_guard(chem,dd)
+          base=Path("evidence/cases/417")
+          folder=base/"experiments/Issue395_powered_chemistry_ladder"
+          stage=jload((base/"newonly_stage_receipt.json").read_bytes())
+          require(stage["source_head"]==P2P3_PIN and str(stage["variant"])=="417",
+                  "UPSTREAM_STAGE_PIN_INVALID")
+          require(stage["status"]=="P2_NEWONLY_JSON_AND_LAYER11_STAGE_STATIC_PASS_RUNTIME_HOLD",
+                  "UPSTREAM_STAGE_NOT_ACCEPTED")
+          require(stage["retired_native_ion_owners"]==26 and
+                  stage["remaining_native_ion_fv_owners"]==0,
+                  "ION_RETIREMENT_INCOMPLETE")
+          require(stage["p3_x_electron"]["removed_native_electron_owners"]==10,
+                  "P3X_ELECTRON_RETIREMENT_INCOMPLETE")
+          manifest=stage["layers_after_sha256"]
+          require(len(manifest)==11 and "migrated_continuity.i" in manifest,"WRONG_STAGE_LAYER_COUNT")
+          layers={};files=[];all_objs=[]
+          for idx,(filename,checksum) in enumerate(manifest.items(),1):
+              file=folder/filename
+              require(file.name==filename and file.is_file() and not file.is_symlink(),
+                      "STAGED_FILE_MISSING:"+filename)
+              data=file.read_bytes()
+              require(0<len(data)<250000 and sha(data)==checksum,
+                      "STAGED_FILE_SHA_MISMATCH:"+filename)
+              layers[filename]=data.decode()
+              files.append({"ordinal":idx,"filename":filename,"file_sha256":sha(data),"size_bytes":len(data)})
+              all_objs.extend(scan(data,filename,idx))
+          require(sha(SRC_JSON.read_bytes())==JSON_SHA and
+                  sha((folder/"chemistry"/SRC_JSON.name).read_bytes())==JSON_SHA,
+                  "NEWONLY_JSON_SHA_DIFFER")
+          require(sha(SRC_OVERLAY.read_bytes())==OVERLAY_SHA and
+                  sha((folder/"migrated_continuity.i").read_bytes())==OVERLAY_SHA,
+                  "NEWONLY_OVERLAY_SHA_DIFFER")
+          json_source=jload(SRC_JSON.read_bytes())
+          model=source_model(json_source,SRC_OVERLAY.read_text())
+          ion_fv=[o for o in all_objs if o["section"]=="FVBCs" and
+                  o["params"].get("variable") in {
+                    "log_ni","log_nm","log_nop","log_O2p","log_Om","log_Op"}]
+          require(not ion_fv,"OLD_NATIVE_ION_FVBC_STILL_PRESENT")
+          official=official_p0(layers,json_source,"new-only")
+          # Crucial: do not call the P05 gate PASS when the actual final P0 preflight
+          # detects unretired surface-current/ion-wall providers.
+          require(official["status"]=="FAIL" and
+                  len(official.get("c2_native_producer_collisions",[]))>0,
+                  "EXPECTED_UPSTREAM_P4X_COLLISION_NOT_DETECTED")
+          current_collisions=[x for x in official["c2_native_producer_collisions"]
+                              if x["name"] in ("cover_surface_current",
+                                               "wafer_surface_current",
+                                               "focus_ring_surface_current")]
+          require(len(current_collisions)==3,"EXPECTED_THREE_SURFACE_CURRENT_COLLISIONS")
+          neg={}
+          def reject(label,fn):
+              try:fn()
+              except (ValueError,KeyError,TypeError) as ex:neg[label]={"result":"REJECTED","reason":str(ex)}
+              else:raise RuntimeError("NEGATIVE_FALSE_PASS:"+label)
+          def mutate(label,fn):
+              bad=copy.deepcopy(json_source)
+              fn(bad)
+              reject(label,lambda:source_model(bad,SRC_OVERLAY.read_text()))
+          for s in SPECIES:
+              mutate("missing_general_"+s,
+                     lambda j,s=s: j["drift_diffusion_boundaries"]["inlet outlet"].pop(s+"_wall"))
+              for side in DIELECTRIC:
+                  mutate("missing_"+s+"_"+side,
+                         lambda j,s=s,side=side: j["drift_diffusion_boundaries"]["plasma_"+side].pop(
+                             s+"_"+side+"_dielectric"))
+              mutate("wrong_general_type_"+s,
+                     lambda j,s=s: j["drift_diffusion_boundaries"]["inlet outlet"][s+"_wall"].update(
+                       type="FVLogMolarDielectricFluxBC"))
+              mutate("charge_sign_"+s,
+                     lambda j,s=s: j["species"][s].__setitem__("charge_number",-Q[s]))
+          mutate("extra_BC_wrong_species",
+                 lambda j:j["drift_diffusion_boundaries"]["plasma_wafer"].update(
+                  {"X_wafer_dielectric":{"type":"FVLogMolarDielectricFluxBC"}}))
+          mutate("overlap_mesh_sidesets",
+                 lambda j:j["drift_diffusion_boundaries"].__setitem__(
+                   "plasma_wafer plasma_cover",{"O2p_wafer_dielectric":{"type":"FVLogMolarDielectricFluxBC"}}))
+          mutate("wrong_dielectric_type",
+                 lambda j:j["drift_diffusion_boundaries"]["plasma_wafer"]["Om_wafer_dielectric"].update(
+                   type="FVFunctorNeumannBC"))
+          mutate("neumann_extra_factor_in_json",
+                 lambda j:j["drift_diffusion_boundaries"]["inlet outlet"]["O2p_wall"].__setitem__(
+                   "factor",-1/NA))
+          mutate("dielectric_duplicate_signed_flux_in_json",
+                 lambda j:j["drift_diffusion_boundaries"]["plasma_wafer"]["Op_wafer_dielectric"].__setitem__(
+                   "signed_number_flux","wrong"))
+          reject("wrong_fvm_species",lambda:source_model(json_source,SRC_OVERLAY.read_text().replace(
+                 "fvm_species = 'O2p Om Op'","fvm_species = 'O2p Om'")))
+          reject("binding_only_bypass",lambda:source_model(json_source,SRC_OVERLAY.read_text()+
+                 "\ndont_create_kernels = true"))
+          for name,token,target in [
+              ("negative_NA_sign",'bc["factor"] = -1.0 / 6.02214076e23;',
+                                   'bc["factor"] = +1.0 / 6.02214076e23;'),
+              ("lost_P05_BC_count",'if (matched_bcs[name] != 1)','if (false)'),
+              ("lost_P05_factory_guard",'bc->type() != expected_type->second','false'),
+              ("lost_C2_four_per_ion",'if (count != 4 * selected.size())','if (false)'),
+              ("lost_operator_overlap_guard",'if (!operator_owners.insert(key).second)','if (false)'),
+              ("lost_BC_creation",'_problem->addFVBC(bc.type, name, params);','')]:
+              bchem=chem.replace(token,target)
+              bdd=dd.replace(token,target)
+              require(bchem!=chem or bdd!=dd,"MUTATION_NOT_APPLIED:"+name)
+              reject(name,lambda bc=bchem,bd=bdd:cxx_guard(bc,bd))
+          require(len(neg)==28,"NEGATIVE_COUNT_EXPECTED_28_OBSERVED_"+str(len(neg)))
+          summary={
+             "schema":"issue671.p5_b4.s6_417_FVBC_source_and_P05_readiness.v1",
+             "task_id":"P5-B4","case":"S6-417",
+             "review_source_head":CURRENT,"stage_origin_head":P2P3_PIN,
+             "verdict":"P5_B4_STATIC_EXPECTED_12_FVBC_AND_NEGATIVES_PASS__NATIVE_P2_HOLD",
+             "upstream_run_id":44257739203,"upstream_artifact_id":14406746397,
+             "files":files,"file_sha_verified":len(files),
+             "source_json_sha256":JSON_SHA,"source_overlay_sha256":OVERLAY_SHA,
+             "expected_generated_FVBC_model":model,"expected_generated_count":len(model),
+             "expected_neumann_count":3,"expected_dielectric_count":9,
+             "original_Native_FVBC_remaining":len(ion_fv),
+             "P05_static_Cxx_guard_tokens":cxx_tokens,
+             "P0_status":official["status"],
+             "P0_errors":official.get("errors",[]),
+             "P0_surviving_C2_producer_collisions":official["c2_native_producer_collisions"],
+             "P0_three_surface_current_collisions":current_collisions,
+             "adversarial_negative_controls":neg,"negative_count":len(neg),
+             "native_binary_sha256":None,"native_check_input_exit_code":None,
+             "generated_FVBC_warehouse_count":None,"P05_native_verdict":"NOT_RUN",
+             "hold_reasons":[
+                "P4-X single-writer cutover not integrated: official P0 FAIL from overlapping explicit surface-current/ion-wall producers",
+                "P5-0 exact HEAD PhysicsApp binary digest not available; B2 Native 417 check-input receipt not established",
+                "No actual Factory/BC Warehouse instantiation or P05 Native duplicate/missing query",
+                "P3-X source-only stage pinned to earlier 9c source; current 395e source was independently read, not native run"
+             ],
+             "science":"SCIENCE_HOLD","native_P2":"NOT_RUN"
+          }
+          out=Path("p5-b4-receipt")
+          out.mkdir(exist_ok=True)
+          (out/"p5-b4-417-fvbc-p05-readiness.json").write_text(
+              json.dumps(summary,sort_keys=True,indent=2)+"\n")
+          print("P5_B4_417_STAGED_SHA=11/11",flush=True)
+          print("P5_B4_417_EXPECTED_BC=12 GENERAL=3 DIELECTRIC=9",flush=True)
+          print("P5_B4_417_NATIVE_FV_BC_RESIDUAL=0",flush=True)
+          print("P5_B4_417_OFFICIAL_P0=FAIL_EXPECTED_C2_PRODUCERS",flush=True)
+          print("P5_B4_417_ADVERSARIAL="+str(len(neg))+"/"+str(len(neg))+"_REJECTED",flush=True)
+          print("P5_B4_FINAL=STATIC_SOURCE_PASS__P4X_P5_0_NATIVE_P2_HOLD",flush=True)
+          PY
+      - name: Upload isolated readback receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue671-p5-b4-417-readback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: p5-b4-receipt/
+          if-no-files-found: warn
+          retention-days: 30
