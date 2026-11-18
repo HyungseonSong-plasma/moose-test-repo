@@ -15,6 +15,8 @@ ENTRYPOINTS = {
     "issue541-arch-dd-p3-replay.yml": {"workflow_dispatch"},
     # Registered on main by PR #645: both S6 cases are now REQUIRED manual-only.
     "issue541-arch-s6-p3-p4-replay.yml": {"workflow_dispatch"},
+    # #633: legacy Hybrid P2 compatibility is intentionally manual-only.
+    "issue541-arch-s6-hybrid-p2-compat.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
