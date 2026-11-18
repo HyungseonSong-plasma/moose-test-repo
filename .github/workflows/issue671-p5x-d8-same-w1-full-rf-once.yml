@@ -34,6 +34,10 @@ jobs:
           git diff --name-only "$BASE_HEAD" HEAD | sort > "$RUNNER_TEMP/rf-actual-changes.txt"
           printf '%s\n' '.github/workflows/issue671-p5x-d8-same-w1-full-rf-once.yml' > "$RUNNER_TEMP/rf-allowed-changes.txt"
           diff -u "$RUNNER_TEMP/rf-allowed-changes.txt" "$RUNNER_TEMP/rf-actual-changes.txt"
+          git checkout --detach "$BASE_HEAD"
+          test "$(git rev-parse HEAD)" = "$BASE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no -- physics_app ci/physics-build-base)"
+          echo P5X_D8_EXACT_PR665_DETACH_SOURCE_PIN_PASS
           test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
           test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
           test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
