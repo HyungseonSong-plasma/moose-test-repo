@@ -1,0 +1,90 @@
+{
+  "schema": "issue673.p7.pr_cleanup_safe_manifest.20261118.v1",
+  "date_utc": "2026-11-18",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "integrator_pr": 665,
+    "integrator_head": "9457191f4c0693ae886586edd961965867ccd5c0",
+    "main_head": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "integrator_open_draft": true
+  },
+  "exact_ci": {
+    "run_id": 44366325757,
+    "result": "PASS_20_OF_20",
+    "artifact_build": 14458195502,
+    "artifact_newonly": 14458752206,
+    "artifact_public_d_100row": 14459116868,
+    "independent_checks": "385/385"
+  },
+  "cleanup_done": {
+    "merged_feature_PRs": [
+      {
+        "number": 689,
+        "merge_commit": "d7a9690ff95c93df8f06b507d5e3224efb2b9087"
+      },
+      {
+        "number": 690,
+        "merge_commit": "9457191f4c0693ae886586edd961965867ccd5c0"
+      }
+    ],
+    "closed_not_merged_validation_only": [
+      {
+        "number": 687,
+        "head": "6920d6b025200815b721fc8b08eebbf10e735253",
+        "reason": "SUPERSEDED_MAIN_RELATIVE_VALIDATION_ONLY",
+        "unique_evidence_in_situ": true,
+        "branch_retained": "issue-672-p6-c3-rebase-5206730-ci-20261118",
+        "comment_id": 6989287964
+      },
+      {
+        "number": 688,
+        "head": "20f89959567a472180032683b38af5c920089825",
+        "reason": "SUPERSEDED_ARTIFACT_ALIAS_C3_VALIDATION_ONLY",
+        "unique_receipt_original_blob": "7e2abd93bb45c99189342775b82da6752bd207d4",
+        "unique_receipt_archived_path": "reports/issue672/p6-x-three-integration-conditions-disposition-20261118.json",
+        "branch_retained": "issue-672-p6-c3-artifact-compat-20261118",
+        "comment_id": 6989301146
+      }
+    ]
+  },
+  "pr_open_total_after_cleanup": 66,
+  "protected_open_pr": {
+    "659": "ION_PREFLIGHT_DONOR_DONT_CLOSE_UNTIL_FILE_AUDIT",
+    "661": "ION_FV_DONOR_DONT_CLOSE_UNTIL_FILE_AUDIT",
+    "663": "ION_C2_DONOR_DONT_CLOSE_UNTIL_FILE_AUDIT",
+    "664": "OLD_CI_ONLY_CANDIDATE_REVIEW_DONOR_BLOBS_FIRST",
+    "665": "INTEGRATOR_PROTECTED_DRAFT_MAIN_MERGE_NOT_AUTHORIZED",
+    "678": "OLD_P05_WAREHOUSE_INSTRUMENTATION_CPP_DIFF_REVIEW",
+    "681": "D8_LOWERD_WALL_CURRENT_CONSTRUCTOR_DIAGNOSTIC_CPP_DIFF_REVIEW",
+    "682": "D8_RF_CHILD_SEVEN_TRANSFER_DIAGNOSTIC_UNIQUE_REVIEW",
+    "683": "P4_POISSON_NUMERIC_NATIVE_TEST_UNIQUE_REVIEW_BEFORE_ANY_CLOSE",
+    "684": "P6_D1_OLD_PUBLIC_D_FLOW_TRANSPORT_DIFFERENCES_REQUIRE_INDEPENDENT_OWNER_REVIEW",
+    "685": "D8_RF_DIAGNOSTIC_UNIQUE_OLD_ELF_NOT_LATEST_DYNAMIC_ACCEPTANCE"
+  },
+  "branch_policy": {
+    "deleted": [],
+    "do_not_delete": [
+      "main",
+      "issue-633-ion23-integration-20261117",
+      "issue-673-p7-exact-9457191-duallane-ci-intake-20261118",
+      "issue-672-p6-c3-rebase-5206730-ci-20261118",
+      "issue-672-p6-c3-artifact-compat-20261118"
+    ],
+    "other_branch_deletion": "NOT_AUTHORIZED_BEFORE_RECEIPT_DEPENDENCY_AUDIT"
+  },
+  "historical_lanes": {
+    "public_b": "PASS_HISTORICAL_CONTROL",
+    "public_d_legacy": "KEEP_HOLD",
+    "flow_hybrid": "KEEP_HOLD_STANDALONE_FAILURE_44366325812",
+    "arch_hybrid": "KEEP_HOLD_P05_NI_TIME",
+    "ion_fvm_legacy": "KEEP_HOLD_PRE_NATIVE"
+  },
+  "remaining_gates": {
+    "p6_exact_current_native": "PASS",
+    "p7_p2_evidence": "PASS",
+    "d8_exact_latest_945_3ns": "HOLD_NOT_RUN",
+    "p7_final": "HOLD",
+    "science_100us": "HOLD_NOT_RUN",
+    "main_merge": "NOT_AUTHORIZED"
+  }
+}
