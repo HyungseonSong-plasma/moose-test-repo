@@ -91,6 +91,11 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
     assert retirement["exact_pin_verified"] is True
     assert len(retirement["retired_owners"]) == 26
     assert report["remaining_native_ion_fv_owners"] == 0
+    ecut = report["p3_x_electron"]
+    assert ecut["removed_native_electron_owners"] == 10
+    assert ecut["remaining_native_electron_FEM_BCs"] == 0
+    assert ecut["remaining_native_electron_FunctorMaterials_for_generated_properties"] == 0
+    assert len(ecut["retired_owner_receipts"]) == 10
     from importlib.util import module_from_spec, spec_from_file_location
     script = ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_ion_fv_owners.py"
     spec = spec_from_file_location("ion26_verify", script)
@@ -115,6 +120,11 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
                 (o["section"], o["name"]): o
                 for o in retirement["retired_owners"] if o["file"] == name
             }
+            if name == Path(manifest["layers"][0]["file_path"]).name:
+                for o in ecut["retired_owner_receipts"]:
+                    key = (o["section"], o["name"])
+                    assert key not in retired_by_section_name, key
+                    retired_by_section_name[key] = o
             selected = [x for x in all_objects if identity(x) in retired_by_section_name]
             assert len(selected) == len(retired_by_section_name)
             converted = original_text
@@ -125,6 +135,8 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
             for match in selected:
                 obj = retired_by_section_name[identity(match)]
                 assert sha(match.group().encode()) == obj["old_block_sha256"]
+    assert len([o for o in ecut["retired_owner_receipts"] if o["section"] == "BCs"]) == 8
+    assert len([o for o in ecut["retired_owner_receipts"] if o["section"] == "FunctorMaterials"]) == 2
     all_files = [folder / Path(entry["file_path"]).name for entry in manifest["layers"]]
     changed = [p.name for p in all_files if sha(p.read_bytes()) != sha(actual_orig[p.name])]
     assert len(changed) == 6, changed
@@ -136,8 +148,10 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
     assert sha(staged_e.read_bytes()) == report["electron_moments_sha256"]
     assert staged_e.samefile((staged_json.parent / "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt").resolve())
     assert report["native_p2"] == "NOT_RUN"
+    assert ecut["non_target_byte_preservation"] == "PASS_EXACT_DELETION_ONLY"
     return {"case": case, "old_native_ion_owners": 26, "after_native_ion_owners": 0,
-            "retired_block_sha_matched": 26, "changed_staged_layers": sorted(changed),
+            "old_native_electron_owners_retired": 10,
+            "retired_block_sha_matched": 36, "changed_staged_layers": sorted(changed),
             "json_sha256": report["json_sha256"],
             "overlay_sha256": report["newonly_overlay_sha256"],
             "electron_moments_sha256": report["electron_moments_sha256"]}
@@ -203,14 +217,15 @@ def main() -> int:
                 badfolder, negroot, case, args.moments, tweak, badmanifest))
     receipt = {
         "schema": "issue668.p2_production_runner_newonly_source_stage.v1",
-        "status": "PASS_417_941_SOURCE_ONLY_PRODUCTION_RUNNER_JSON_LAYER11",
+        "status": "PASS_417_941_P2_PLUS_P3X_10_ELECTRON_OWNER_SOURCE_ONLY",
         "source_pr": 665, "source_pr_head": HEAD,
         "runner": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py --newonly",
         "p1_0_artifact_sha256": BASE_ARTIFACT_SHA,
         "p2_maxwell_artifact_sha256": MAXWELL_ARTIFACT_SHA,
         "cases": rows, "negative_tests": neg,
         "negative_rejected": sum(map(len, neg.values())),
-        "scope": "P2 source-only static stage, excludes dynamic/liveness/MOOSE runtime",
+        "p3_x_electron_source_only": "PASS_EXACT_TEN_OLD_BC_FUNCTOR_OWNERS_RETIRED_PER_CASE",
+        "scope": "P2+P3-X source-only static stage, excludes dynamic/liveness/MOOSE runtime",
         "d8_historical_and_physical_child_stage": "PASS_BOUNDED",
         "d8_newonly_dynamic_warehouse": "HOLD",
         "physics_generated_24": "NOT_RUN",
