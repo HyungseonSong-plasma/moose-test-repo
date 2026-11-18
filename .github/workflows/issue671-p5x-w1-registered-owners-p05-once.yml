@@ -242,6 +242,16 @@ jobs:
             fn(this, type, name, params);
             record("FEBoundaryCondition", name, type);
           }
+          // Linker/load diagnostic, independent of registration interception.
+          __attribute__((constructor)) static void p5x_preload_ready() {
+            const char *p = std::getenv("P5X_REGISTER_LOG");
+            if (!p || !*p) return;
+            const int fd = open(p, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC | O_NOFOLLOW, 0600);
+            if (fd < 0) return;
+            constexpr char marker[] = "P5X_PRELOAD_READY\\n";
+            (void)write(fd, marker, sizeof(marker) - 1);
+            close(fd);
+          }
           P5XCPP
           g++ -std=c++17 -O2 -fPIC -shared -o "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so" "$RUNNER_TEMP/p05-in/p5x_owner_tracer.cc" -ldl
           test -s "$RUNNER_TEMP/p05-in/libp5x_owner_tracer.so"
@@ -256,6 +266,18 @@ jobs:
           test "$(git rev-parse HEAD)" = "$BASE_HEAD"
           echo P5X_AUDIT_ONLY_SHARED_OBJECT_COMPILATION_PASS
 
+      - name: Public-only observer loader preflight before protected rates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p05-in/observer-preflight"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/workspace,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/p05-in/observer-preflight,dst=/probe" \
+            "$OCI" -lc 'set -euo pipefail; source /environment; P5X_REGISTER_LOG=/probe/preload-ready.log LD_PRELOAD=/workspace/physics_app/p5x_owner_tracer.so /workspace/physics_app/physics-opt --version >/probe/version.txt'
+          test -f "$RUNNER_TEMP/p05-in/observer-preflight/preload-ready.log"
+          grep -Fxq P5X_PRELOAD_READY "$RUNNER_TEMP/p05-in/observer-preflight/preload-ready.log"
+          echo P5X_PRELOAD_ELF_LOADER_PASS_NO_PRIVATE_RATE
       - name: Protected original EI Rate, clean controls, and N1-N8 actual Native mutants
         shell: bash
         env:
@@ -430,11 +452,16 @@ jobs:
                       whitelisted=[_re.sub(r"/dev/shm/[^ \\n]+","[PRIVATE_SCRATCH]",line[:230])
                           for line in log.splitlines()
                           if any(k in line for k in ("P5X_INTERPOSER_","ld.so:","undefined symbol",
-                              "terminate called","Segmentation fault","cannot be preloaded","std::"))]
+                              "terminate called","Segmentation fault","cannot be preloaded","std::",
+                              "docker:","Error response from daemon","bash:","not found",
+                              "No such file or directory","OCI runtime","mount failed"))]
                       receipt["observer_failure_safe_excerpt"]=whitelisted[-8:]
                       raise RuntimeError("OWNER_INTERPOSER_NOT_INVOKED_"+case+"_rc_"+str(rc)+reason)
                   from collections import Counter
-                  events=[line.split("\t") for line in tracefile.read_text().splitlines()]
+                  raw_trace=tracefile.read_text().splitlines()
+                  assert "P5X_PRELOAD_READY" in raw_trace, "P5X_PRELOAD_MARKER_MISSING"
+                  events=[line.split("\\t") for line in raw_trace if line.startswith("P5X_REGISTER\\t")]
+                  if not events: raise RuntimeError("P5X_OWNER_HOOK_NOT_INVOKED_"+case)
                   assert all(len(e)==4 and e[0]=="P5X_REGISTER" for e in events)
                   counts=Counter((e[1],e[2],e[3]) for e in events)
                   ion_species=("O2p","Om","Op")
