@@ -14,7 +14,7 @@ from retire_s6_ion_fv_owners import BLOCK, ROOT, CutoverError, parsed_parameters
 
 C0 = ("rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_"
       "100us_dt1000ns__C0_chemistry_off.i")
-PRESSURE_BLOCK_SHA = "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5e"
+PRESSURE_BLOCK_SHA = "f4fd7839ce47fa2728b2ffe7bc12c7790fb47e1ed8a050def68f5c77a5a2ed5e"
 
 # Exact *original* source blocks, including closing [] and line ending. These
 # are the same bytes before and after P2's independent 26-ion cutover.
