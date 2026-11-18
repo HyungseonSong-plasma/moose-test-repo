@@ -1,0 +1,122 @@
+{
+  "schema": "issue673.p7.issue672_p6.exact945_duallane_ci_intake.v1",
+  "date_utc": "2026-11-18",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source": {
+    "pr": 665,
+    "sha": "9457191f4c0693ae886586edd961965867ccd5c0",
+    "tree": "5444cfcba2d1cddd15322c4dc7f67cf23690b840",
+    "state": "DRAFT_OPEN_UNMERGED",
+    "merge_to_main": false
+  },
+  "merged_prs": [
+    689,
+    690
+  ],
+  "run": {
+    "id": 44366325757,
+    "attempt": 1,
+    "event": "pull_request",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": {
+      "total": 20,
+      "success": 20
+    }
+  },
+  "shared_w1": {
+    "artifact_id": 14458195502,
+    "zip_sha256": "d0b83a2cde6bea28546399236494392e3317cda7eeedeb5a71aa30f975ed7bef",
+    "gzip_tar_sha256": "9622a3a37f2c144f622faec63e829fa7ef74dc2bebd5ed7fa7eec342bc3472eb",
+    "source_head": "9457191f4c0693ae886586edd961965867ccd5c0",
+    "build_count": 1,
+    "physics_opt_sha256": "b327aea7f496809779dd233336d8c62d15ab021accdb13e552efe1a750c72e18",
+    "app_libraries_sha256": {
+      "libphysics-opt.so.0": "59f09eb9d88b42d5932bad848a7b3ff33faebfb843b3790247d868aea28abbee",
+      "libphysics_test-opt.so.0": "31abf727e4a40d7e2d91a6ba45d26f9d7b682cde198cf4d43188609c53e33db8"
+    }
+  },
+  "lanes": {
+    "newonly": {
+      "artifact_id": 14458752206,
+      "zip_sha256": "dc942451567f7ef6a9495f389f31876726e1c32d7bc5db19e78004c876a6506b",
+      "cases": [
+        "417",
+        "941"
+      ],
+      "check_input": "PASS_2_OF_2",
+      "typed_registrations_each": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "electron_FEM_BC": 8
+      },
+      "native_negative": "PASS_16_OF_16",
+      "first_failure_distribution_total": {
+        "P05": 8,
+        "EARLY_REGISTRATION": 2,
+        "CHEMISTRY": 6
+      },
+      "private_tmpfs_cleanup": true,
+      "original_scratch_restored": true
+    },
+    "public_d_original100": {
+      "artifact_id": 14459116868,
+      "zip_sha256": "0c27a8f55be78877b67f36d6cc09b8f657bb9fee95a0d590ef92658f90fe8ab5",
+      "cases": [
+        "417",
+        "941"
+      ],
+      "table_rows": 100,
+      "table_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "historical_42row_equivalence": false,
+      "check_input": "PASS_2_OF_2",
+      "typed_registrations_each": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "electron_FEM_BC": 8
+      },
+      "native_negative": "PASS_16_OF_16",
+      "first_failure_distribution_total": {
+        "P05": 8,
+        "EARLY_REGISTRATION": 2,
+        "CHEMISTRY": 6
+      },
+      "private_tmpfs_cleanup": true,
+      "original_scratch_restored": true,
+      "standalone_historical_public_d_compat_runner_created": false
+    },
+    "historical_public_b": "PASS_AS_OLD_10_LAYER_CONTROL",
+    "historical_public_d": "KEEP_HOLD_EXPECTED_LEGACY_REJECTION",
+    "flow_hybrid": "KEEP_HOLD_SEPARATE_FLOW_RUN_44366325812_FAILURE",
+    "arch_hybrid": "KEEP_HOLD_EXPECTED_P05_NI_TIME",
+    "old_ion_fvm": "KEEP_HOLD_PRE_NATIVE"
+  },
+  "independent_original_artifact_byte_audit": {
+    "checks_passed": 385,
+    "checks_total": 385,
+    "result": "PASS",
+    "script_sha256": "e82c0b8e1403e08f8f21dd7da9c238595e70a0171a46b0b498bec379088c1c4c",
+    "report_sha256": "69f3905dd97781668269a60ce6eda62f7c4aeab03da53e33b8c077811e60ef5f",
+    "zip_crc_pass": 3,
+    "actual_tar_three_elf_byte_hashes_pass": true,
+    "shared_w1_identity_JSON_byte_identical_in_all_three_artifacts": true
+  },
+  "scope_and_holds": {
+    "P6_C3_FINAL_EXACT_HEAD": "PASS_SCOPED_P2_CI",
+    "P6_NEWONLY_417_941": "PASS_BOTH",
+    "P6_PUBLIC_D_ORIGINAL100_417_941": "PASS_BOTH",
+    "P7_P2_CI_EVIDENCE": "PASS",
+    "D8_RF_WALL_POISSON_EXACT_945": "HOLD_NOT_RUN_ON_CURRENT_ELF",
+    "P7_FINAL": "HOLD",
+    "science_100us": "HOLD_NOT_RUN",
+    "historical_hybrid": "KEEP_HOLD",
+    "main_merge": "NOT_AUTHORIZED"
+  },
+  "limitations": [
+    "External tracer records successful post-add typed names, not direct in-memory TheWarehouse traversal.",
+    "Sanitized native logs hashed but raw full stdout not independently reproduced.",
+    "Public D original 100row and New-only 42row have separate scratch source despite identical mechanism JSON SHA.",
+    "D8 3ns result from old 520 source ELF is not exact 945 current ELF proof.",
+    "No P3/P4 long science or source semantic parity claimed."
+  ]
+}
