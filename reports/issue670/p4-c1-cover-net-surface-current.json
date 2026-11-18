@@ -1,0 +1,325 @@
+{
+  "schema": "issue670.p4_c1.cover_surface_current.boundary_static_provenance.v1",
+  "task_id": "P4-C1",
+  "mode": "READ_ONLY_INDEPENDENT_EVIDENCE_ONLY",
+  "source_epoch": {
+    "pr": 665,
+    "head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "p1_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p1_artifact_id": 14372278070,
+    "p1_artifact_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "p3x_ci_run": 44256823392,
+    "p3x_artifact_id": 14405784430,
+    "p3x_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "p3x_CI_scope": "P2 26 ion retirement + P3-X 8 electron BC and 2 electron Functor material retirement; source-only"
+  },
+  "cases": {
+    "417": {
+      "layer_1_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "P1_C0_SHA256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "post_P3X_C0_SHA256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "explicit_cover_source": {
+        "section": "FunctorMaterials",
+        "object": "cover_surface_current",
+        "type": "ADParsedFunctorMaterial",
+        "property_name": "cover_net_surface_current_density",
+        "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "functor_names": [
+          "O2p_wall_number_flux",
+          "Op_wall_number_flux",
+          "Om_wall_number_flux",
+          "e_wall_number_flux"
+        ],
+        "block": "plasma",
+        "raw_block_SHA256": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+        "present_exact_in_P1": true,
+        "preserved_exact_in_P3X": true
+      },
+      "retained_ion_wall_materials": [
+        {
+          "object": "ion_wall_flux",
+          "type": "PhysicsIonWallFluxMaterial",
+          "species": "O2p",
+          "expected_functor": "O2p_wall_number_flux",
+          "block_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5"
+        },
+        {
+          "object": "atomic_positive_ion_wall_flux",
+          "type": "PhysicsIonWallFluxMaterial",
+          "species": "Op",
+          "expected_functor": "Op_wall_number_flux",
+          "block_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+        },
+        {
+          "object": "negative_ion_wall_flux",
+          "type": "PhysicsIonWallFluxMaterial",
+          "species": "Om",
+          "expected_functor": "Om_wall_number_flux",
+          "block_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162"
+        }
+      ],
+      "cover_consumers": [
+        {
+          "section": "Kernels",
+          "name": "sigma_surface_current",
+          "type": "PhysicsLowerDSurfaceCurrent",
+          "variable": "sigma_s",
+          "surface_current_density": "cover_net_surface_current_density",
+          "block": "cover_surface",
+          "raw_block_sha256": "974e11b136ae11dc234af36a4fe27359116b54a53f8c3bae3ecaa545acc49fb5"
+        },
+        {
+          "section": "BCs",
+          "name": "cover_surface_charge_poisson",
+          "type": "PhysicsADSurfaceChargePoissonBC",
+          "variable": "potential",
+          "boundary": "plasma_cover",
+          "surface_charge": "sigma_s",
+          "raw_block_sha256": "4f0ea3837be3f796459c18167825715d885cc7d90145ae37a3eadda63e134574"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_net_surface_current",
+          "type": "ADSideIntegralFunctorPostprocessor",
+          "boundary": "plasma_cover",
+          "functor": "cover_net_surface_current_density",
+          "raw_block_sha256": "00d4e6ae5c416e06de754b3c50bad9067a2f558e76ad5bd119542f4a3d55b5d1"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_electron_primary_flux",
+          "boundary": "plasma_cover",
+          "functor": "e_wall_number_flux",
+          "raw_block_sha256": "edf0b2907160e46f8eac5f3cb5d083a0875b6ec8bb7af4d779cfabffab3dd1e1"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_O2p_flux",
+          "boundary": "plasma_cover",
+          "functor": "O2p_wall_number_flux",
+          "raw_block_sha256": "7537b9a2ce13e06e441291a0c3aaf43bdd05e8cd715a426e19e8791b1dfb06f5"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_Op_flux",
+          "boundary": "plasma_cover",
+          "functor": "Op_wall_number_flux",
+          "raw_block_sha256": "493ab612cc5e71150c0d3ebaf244186acbcf81f3d20047d185b55797791c8793"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_Om_flux",
+          "boundary": "plasma_cover",
+          "functor": "Om_wall_number_flux",
+          "raw_block_sha256": "05d1893d6aad0a0b0a90f2a2310fa9ae19e01c22cf38c1ad6225bc08c37055cc"
+        }
+      ],
+      "P3X_explicit_electron_wall_flux_material_count": 0,
+      "explicit_cover_current_property_producer_count": 1,
+      "generated_cover_current_candidate_count": 1,
+      "source_stage_file_sha_checked": "11_OF_11"
+    },
+    "941": {
+      "layer_1_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "P1_C0_SHA256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "post_P3X_C0_SHA256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "explicit_cover_source": {
+        "section": "FunctorMaterials",
+        "object": "cover_surface_current",
+        "type": "ADParsedFunctorMaterial",
+        "property_name": "cover_net_surface_current_density",
+        "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "functor_names": [
+          "O2p_wall_number_flux",
+          "Op_wall_number_flux",
+          "Om_wall_number_flux",
+          "e_wall_number_flux"
+        ],
+        "block": "plasma",
+        "raw_block_SHA256": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+        "present_exact_in_P1": true,
+        "preserved_exact_in_P3X": true
+      },
+      "retained_ion_wall_materials": [
+        {
+          "object": "ion_wall_flux",
+          "type": "PhysicsIonWallFluxMaterial",
+          "species": "O2p",
+          "expected_functor": "O2p_wall_number_flux",
+          "block_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5"
+        },
+        {
+          "object": "atomic_positive_ion_wall_flux",
+          "type": "PhysicsIonWallFluxMaterial",
+          "species": "Op",
+          "expected_functor": "Op_wall_number_flux",
+          "block_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+        },
+        {
+          "object": "negative_ion_wall_flux",
+          "type": "PhysicsIonWallFluxMaterial",
+          "species": "Om",
+          "expected_functor": "Om_wall_number_flux",
+          "block_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162"
+        }
+      ],
+      "cover_consumers": [
+        {
+          "section": "Kernels",
+          "name": "sigma_surface_current",
+          "type": "PhysicsLowerDSurfaceCurrent",
+          "variable": "sigma_s",
+          "surface_current_density": "cover_net_surface_current_density",
+          "block": "cover_surface",
+          "raw_block_sha256": "974e11b136ae11dc234af36a4fe27359116b54a53f8c3bae3ecaa545acc49fb5"
+        },
+        {
+          "section": "BCs",
+          "name": "cover_surface_charge_poisson",
+          "type": "PhysicsADSurfaceChargePoissonBC",
+          "variable": "potential",
+          "boundary": "plasma_cover",
+          "surface_charge": "sigma_s",
+          "raw_block_sha256": "4f0ea3837be3f796459c18167825715d885cc7d90145ae37a3eadda63e134574"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_net_surface_current",
+          "type": "ADSideIntegralFunctorPostprocessor",
+          "boundary": "plasma_cover",
+          "functor": "cover_net_surface_current_density",
+          "raw_block_sha256": "00d4e6ae5c416e06de754b3c50bad9067a2f558e76ad5bd119542f4a3d55b5d1"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_electron_primary_flux",
+          "boundary": "plasma_cover",
+          "functor": "e_wall_number_flux",
+          "raw_block_sha256": "edf0b2907160e46f8eac5f3cb5d083a0875b6ec8bb7af4d779cfabffab3dd1e1"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_O2p_flux",
+          "boundary": "plasma_cover",
+          "functor": "O2p_wall_number_flux",
+          "raw_block_sha256": "7537b9a2ce13e06e441291a0c3aaf43bdd05e8cd715a426e19e8791b1dfb06f5"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_Op_flux",
+          "boundary": "plasma_cover",
+          "functor": "Op_wall_number_flux",
+          "raw_block_sha256": "493ab612cc5e71150c0d3ebaf244186acbcf81f3d20047d185b55797791c8793"
+        },
+        {
+          "section": "Postprocessors",
+          "name": "cover_Om_flux",
+          "boundary": "plasma_cover",
+          "functor": "Om_wall_number_flux",
+          "raw_block_sha256": "05d1893d6aad0a0b0a90f2a2310fa9ae19e01c22cf38c1ad6225bc08c37055cc"
+        }
+      ],
+      "P3X_explicit_electron_wall_flux_material_count": 0,
+      "explicit_cover_current_property_producer_count": 1,
+      "generated_cover_current_candidate_count": 1,
+      "source_stage_file_sha_checked": "11_OF_11"
+    }
+  },
+  "charge_sign_contract": {
+    "expression": "e*(Gamma_O2p+Gamma_Op-Gamma_Om-Gamma_e)",
+    "e_C": "1.602176634e-19",
+    "units": "A/m2 assuming number-flux units 1/(m2 s)",
+    "verified_case_417": true,
+    "verified_case_941": true
+  },
+  "current_cpp_generation": {
+    "source_path": "physics_app/src/physics/plasma/Chemistry.C",
+    "blob_git_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "section": "PlasmasAction::act() add_functor_material",
+    "lines": "1398-1405,1523-1555",
+    "trigger": "New-only JSON has ion_surface_current.electron_wall_number_flux=e_wall_number_flux and ion FV wall declarations; fvm_species=O2p Om Op",
+    "generated_current_name": "cover_surface_current",
+    "generated_current_type": "ADParsedFunctorMaterial",
+    "generated_property_name": "cover_net_surface_current_density",
+    "generated_functor_names": [
+      "O2p_wall_number_flux",
+      "Op_wall_number_flux",
+      "Om_wall_number_flux",
+      "e_wall_number_flux"
+    ],
+    "generated_expression": "1.602176634e-19*(gi+gop-gm-ge)",
+    "collision_with_explicit_input_name": true,
+    "collision_with_explicit_output_name": true,
+    "registered_native_runtime": "NOT_RUN"
+  },
+  "electron_wall_cpp_generation": {
+    "path": "physics_app/src/physics/plasma/DDEnergyEq.C",
+    "git_blob_sha1": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "lines": "240-308",
+    "generated_class": "ESWallFluxMaterial",
+    "species_id": "e",
+    "expected_output": "e_wall_number_flux",
+    "existing_explicit_material_retired_by_P3X": true,
+    "late_bound_live": "HOLD"
+  },
+  "ion_wall_cpp_risk": {
+    "path": "physics_app/src/physics/plasma/Chemistry.C",
+    "lines": "1497-1519",
+    "attempted_factory_type": "IonWallFluxMaterial",
+    "attempted_generated_ids": [
+      "O2p_wall",
+      "Om_wall",
+      "Op_wall"
+    ],
+    "expected_generated_functors": [
+      "O2p_wall_number_flux",
+      "Om_wall_number_flux",
+      "Op_wall_number_flux"
+    ],
+    "existing_explicit_materials_in_stage": 3,
+    "source_file_factory_registration": "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C registers PhysicsIonWallFluxMaterial",
+    "factory_alias_registration_verified": false,
+    "verdict": "HOLD_FUTURE_GENERATED_FUNCTOR_CONFLICT_AND_FACTORY_NAME_REVIEW"
+  },
+  "negative_controls": {
+    "status": "PASS_16_OF_16_IN_MEMORY",
+    "scope": "8 mutation checks per case: charge sign O-/electron, missing Op, missing/duplicate current owner, rewired Lower-D, rewired cover diagnostic, wrong cover boundary; source-only tests not C++ execution"
+  },
+  "primary_finding": {
+    "status": "P4_C1_SINGLE_OWNER_HOLD_STATIC_GENERATOR_COLLISION",
+    "explanation": "One existing [FunctorMaterials]/cover_surface_current produces cover_net_surface_current_density; PlasmasAction::act() independently requests a second object of same exact MOOSE name/output under selected C2 New-only JSON. Equal signs/formula do not prevent duplicate object/functor registration. Production P4-X must be single writer, preserve Lower-D sigma_s and Postprocessor consumers and retire original only in disposable stage with exact byte receipts."
+  },
+  "handoff": [
+    "At P4-X single writer, fail closed or remove old cover_surface_current only from disposable staged C0, never edit history",
+    "Before any removal, validate exact old object SHA and preserve all Lower-D sigma_s, Poisson BC and cover PP names/blocks; test missing/duplicate legacy producer and wrong charge signs",
+    "Also inspect wafer/focus_ring surface-current owners and three legacy ion wall materials for overlapping generated canonical outputs",
+    "Recheck IonWallFluxMaterial C++ factory registration and any aliases; Native input/warehouse proof required for created output singleton",
+    "Bind full source to same post-P3X HEAD and Native --check-input; do not claim Native P2/P3/P4 or science approval"
+  ],
+  "local_full_raw_evidence": {
+    "path": "p4_c1_cover_current_independent_receipt.json",
+    "sha256": "34917ea20cc2bb0fd1e863d6efd5cd9375cb3ccac3f8c7aa0f6e4a01b69d2c82",
+    "bytes": 29631
+  },
+  "gates": {
+    "P4_C1_ARTIFACT_SHA": "PASS",
+    "P4_C1_CASES_11_LAYER_SHA": "PASS_22_OF_22",
+    "P4_C1_EXISTING_BLOCKS_AND_SIGNS": "PASS_BOTH",
+    "P4_C1_LOWERD_AND_PP_STATIC_CONSUMERS": "PASS_BOTH",
+    "P4_C1_CURRENT_SINGLE_OWNER": "HOLD_CONFIRMED_STATIC_COLLISION",
+    "P4_C1_ELECTRON_FUNCTOR_GENERATION": "SOURCE_CONTRACT_PASS_RUNTIME_HOLD",
+    "P4_C1_ION_WALL_SINGLE_OWNER": "HOLD_RISK",
+    "P4_X": "HOLD",
+    "NATIVE_P2": "NOT_RUN",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "unmodified": [
+    "main",
+    "PR #665",
+    "PR #675",
+    "source Native original",
+    "P2/P3-X staged artifact"
+  ]
+}
