@@ -1,0 +1,167 @@
+{
+  "schema": "issue672.p6_i3.ionfvm_grounded_sheath_p0_p2_only_policy.v1",
+  "task_id": "P6-I3",
+  "issue": 672,
+  "decision_date_utc": "2026-11-18",
+  "status": "PASS_READONLY_POLICY_DECISION__P0_ALLOWED__P2_SEPARATE_APPROVAL_REQUIRED__ORIGINAL_MATRIX_KEEP_HOLD",
+  "source_identity": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "pr665_number": 665,
+    "pr665_exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "pr665_status": "OPEN_DRAFT",
+    "main_unmodified": true,
+    "source_blobs": {
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml": "230e4367e7a688f297747b7f03bb0fdfaf4e4d23",
+      "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_staged_dt.py": "6242f4ae8e8d97c673932dae71d543a8031ea5fd",
+      "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py": "9f7461c6287212f52d8c55e9ef361284080dfb90",
+      "experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py": "db90fe634a7ddc234daeab7b94dd21618bd3c893",
+      "experiments/fem_fvm_plasma_discriminator/prepare_cases.py": "69ec14c58b502a953c9024c46d332494cad61e6c",
+      "docs/development/2026-11-13_issue402_fem_electron_sheath_bc_retirement.md": "2121a645a36fbb69fc8fe00551257c57882c5778",
+      "tests/test_issue402_fem_electron_sheath_bc_retirement.py": "eec23cb4f81ff0e140f0b3ff28acd78285a9fc52",
+      "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C": "5982e19834b956498f52d81eb6a81620e7440b20",
+      "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C": "0ec3766b00e16cdd24a5e29f355689920bb3178a",
+      "physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h": "2976abd12c31e7da3642e07d253eb85f2316a297"
+    }
+  },
+  "readback_evidence": {
+    "P6_I1": {
+      "source_branch": "issue-672-p6-i1-ionfvm-retired-chain-20261118",
+      "receipt_path": "reports/issue672/p6-i1-retired-grounded-sheath-caller-chain.json",
+      "git_blob_sha": "0d35edd6da5ba05e722439dc4605c6cfeb8a9f3b",
+      "status": "PASS_ACTUAL_JOB_LOG_ROOT_CAUSE"
+    },
+    "P6_I2": {
+      "source_branch": "issue-672-p6-i2-grounded-c2-physics-contract-20261118",
+      "receipt_path": "reports/issue672/p6-i2-c2-wall-dielectric-vs-grounded-sheath-physics-contract.json",
+      "git_blob_sha": "371d113bb99f03cc6e0d5928987d7d53a945258b",
+      "status": "PASS_READONLY_PHYSICS_CONTRACT_ANALYSIS__HOLD_PHYSICS_SUBSTITUTION_APPROVAL"
+    },
+    "validate": {
+      "workflow_run": 44297212655,
+      "job_id": 134777261452,
+      "job_conclusion": "success",
+      "python_pytest": "1566 passed / 13 skipped",
+      "test_coverage": "pytest -q including tests/test_issue402_fem_electron_sheath_bc_retirement.py",
+      "scope": "P0 suite only; not Ion-FVM solver pass"
+    },
+    "latest_IonFVM": {
+      "workflow_run": 44297212333,
+      "exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "conclusion": "failure",
+      "matrix": [
+        {
+          "case": "ion_fvm_hybrid_staged_1ns100_5ns100",
+          "job_id": 134777258642,
+          "planned_steps": 200,
+          "artifact_id": 14423912810,
+          "artifact_zip_sha256": "41b5cdead487cd4269234a963d55c46adc84c4c49b7d7e7a5b43ca9877c3fc6d",
+          "actual_stage": "Python generator RuntimeError before --check-input"
+        },
+        {
+          "case": "ion_fvm_hybrid_staged_1ns100_10ns50",
+          "job_id": 134777259026,
+          "planned_steps": 150,
+          "artifact_id": 14424203209,
+          "artifact_zip_sha256": "980263b7150e3d799ca3a0a75cb10106216ce56bd7f7e5ecc2359a08d210fa49",
+          "actual_stage": "Python generator RuntimeError before --check-input"
+        }
+      ],
+      "log_signature": "RETIRED_GROUNDED_SHEATH_BCS",
+      "traceback": "prepare_ion_fvm_hybrid_staged_dt.py:44 -> :36 -> :23 -> prepare_ion_fvm_hybrid_contour.py:20 -> prepare_full_fem_contour_mesh.py:11",
+      "native_check_input_reached": false,
+      "transient_reached": false,
+      "compiled_physics_app": true
+    }
+  },
+  "retirement_nuance": {
+    "retired_FEM_classes": [
+      "PhysicsFEMLogMolarElectronGroundedSheathBC",
+      "PhysicsFEMLogMolarElectronGroundedSheathEnergyBC"
+    ],
+    "retired_FEM_registration": "UNREGISTERED_SOURCE_DELETED",
+    "fem_generator_error": "RETIRED_GROUNDED_SHEATH_BCS",
+    "still_registered_distinct_FV_classes": [
+      "PhysicsFVElectronGroundedSheathCollectionBC",
+      "PhysicsFVElectronGroundedSheathEnergyBC"
+    ],
+    "warning": "Retirement of FEM grounded law does not retire distinct FV grounded collector; FVM-only candidate must not be relabelled as old FEM/FVM hybrid continuation."
+  },
+  "allowed_execution_lanes": {
+    "P0_SOURCE_ONLY": {
+      "decision": "ALLOWED_NOW",
+      "scope": "Read-only source and retired-owner registration checks, generator expected-failure guards, physics analytical non-equivalence/unit/sign/owner inspection.",
+      "minimal_commands": [
+        "python -m pytest -q tests/test_issue402_fem_electron_sheath_bc_retirement.py",
+        "read-only inspect: two retired FEM generator functions must raise RETIRED_GROUNDED_SHEATH_BCS before any deck output"
+      ],
+      "requirements": [
+        "Pinned exact HEAD/source blobs",
+        "No solver, no production input mutation, no workflow automatic time-stepping",
+        "No silent replacement, no removal of fail-closed exception"
+      ],
+      "status": "EXISTING_REPO_VALIDATE_P0_PASS__FOCUSED_SEPARATE_RUN_NOT_EXECUTED_IN_I3"
+    },
+    "P2_FVM_GROUNDED_ONLY": {
+      "decision": "CONDITIONALLY_ADMISSIBLE_NOT_AUTHORIZED_TO_EXECUTE",
+      "candidate_source": "experiments/fem_fvm_plasma_discriminator/prepare_cases.py::fvm()",
+      "scope": "New isolated FVM-only fixture using existing registered FV Grounded Collection and Energy BCs, no old retired FEM generator or mixed contour hybrid.",
+      "requirements": [
+        "Explicit owner approval for P6-I3 bounded Native P2 fixture and runtime",
+        "Independent source-bound Scratch, immutable input/mesh/auxiliary Functor SHA, exact HEAD and OCI/binary SHA",
+        "Explicit actual FV particle/energy/ion wall owners and correct sidesets, potential/energy flux law; no inferred FEM science parity",
+        "Real physics-opt --check-input with exit/status and targeted fail-closed negatives",
+        "Output receipt P2_ONLY, no step advance, no P3/P4 or production acceptance"
+      ],
+      "status": "NOT_RUN"
+    },
+    "P2_HISTORICAL_COMPAT": {
+      "decision": "CONDITIONALLY_ADMISSIBLE_NOT_AUTHORIZED_TO_EXECUTE",
+      "scope": "Separate provenance-preserving frozen historical HEAD + corresponding legacy Factory/binary to replay archived Hybrid P2 only.",
+      "requirements": [
+        "Named source/artifact and runtime identity, immutability/append-only provenance, explicit compatibility-runner approval",
+        "Do not feed retired FEM deck to current production binary; never promote frozen P2 to latest HEAD or C2"
+      ],
+      "status": "NOT_RUN"
+    },
+    "P2_NEW_C2": {
+      "decision": "BLOCKED_PENDING_NEW_PHYSICS_MODEL_APPROVAL",
+      "scope": "Separate newly characterized C2 adjacent-field electron / ion wall+dielectric model, new experiment identity and exact input/mesh/consumer contracts.",
+      "requirements": [
+        "Explicit physics-model change approval beyond P6-I3 execution approval",
+        "Revalidate particle flux, 2Te+DeltaPhi vs 2.5Te energy and sign/face, all charged species/SEE/charge conservation",
+        "Independent P0, source-bound P1 and controlled native --check-input P2; 12 ion FVBC plus electron FEM BC owners and surface current must not collide"
+      ],
+      "status": "SCIENCE_HOLD"
+    }
+  },
+  "KEEP_HOLD_triggers": [
+    "Original hybrid matrix calls retired full-FEM grounded sheath generator and intentionally fails before input generation.",
+    "No explicit physics-model recharacterization/approval for C2 substitution; zero-drop energy differs: Grounded=2Te vs C2=2.5Te (25% increase).",
+    "No isolated P2-only fixture approval with exact source/binary/mesh/Factory/BC-owner provenance.",
+    "An attempted P2 still invokes retired FEM generator, writes to historical source/outputs, or silently patches out fail-closed exception.",
+    "Any auto 1ns/5ns/10ns timestep, P3/P4, 150/200-step matrix or science comparison is triggered without a separately scoped science approval.",
+    "Any attempt to skip jobs, weaken P05, set dont_create_kernels, reinterpret historical FAIL as PASS, or equate unrelated FV and C2 physical laws.",
+    "Native check-input missing, first failure occurs during Python preparation, or Science/energy/charge parity claims exceed the evidence."
+  ],
+  "operational_decision": {
+    "existing_workflow": ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+    "current_workflow_policy": "KEEP_HOLD_UNMODIFIED; no dispatch; PR/push 150/200-step trigger is recognized risk, later owner-approved protection/retirement change required, not a green-by-skip.",
+    "P0": "ALLOWED_EXISTING_FAIL_CLOSED",
+    "P2": "NOT_RUN_NO_EXECUTION_APPROVAL",
+    "P3": "PROHIBITED_WITHOUT_NEW_APPROVAL",
+    "P4": "PROHIBITED_WITHOUT_NEW_APPROVAL",
+    "SCIENCE": "SCIENCE_HOLD",
+    "approval_status": "P6-I3 decision request defines gates but is not explicit approval for new physics or solver dispatch.",
+    "next_action": "If user elects a bounded P2, choose FV grounded-only or historical isolated compatibility with exact fixture SHA/owner scope; independently obtain required approval before executing."
+  },
+  "safety": {
+    "workflow_unchanged": true,
+    "physics_cpp_unchanged": true,
+    "main_unchanged": true,
+    "pr665_unchanged": true,
+    "old_archives_unchanged": true,
+    "no_IonFVM_CI_dispatched": true,
+    "no_solver_time_steps": true,
+    "private_rates_exposed": false
+  }
+}
