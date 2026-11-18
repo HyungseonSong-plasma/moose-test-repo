@@ -1,0 +1,159 @@
+{
+  "schema": "issue671.p5-e1.417.full_custody.gated.v1",
+  "task_id": "P5-E1",
+  "case": "S6-417",
+  "issue": 671,
+  "verdict": "PASS_INDEPENDENT_INPUT_AND_FAILED_PROBE_CUSTODY__HOLD_FINAL_NATIVE_P2",
+  "source": {
+    "PR665_latest_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "PR665_draft_unmerged": true,
+    "P2_P3_X_source_only_merged": true,
+    "P4_X_final": "NOT_INTEGRATED",
+    "P5_0_shared_build": "NOT_RUN",
+    "source_11layer_original_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P3_X_stage_probe_expected_commit": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+    "native_diagnostic_probe_commit": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f"
+  },
+  "input": {
+    "CI_run": 44257739203,
+    "artifact_id": 14406746397,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44257739203/artifacts/14406746397",
+    "downloaded_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "zip_crc": "PASS",
+    "case_i_file_sha_matches": "11_OF_11_AGAINST_STAGE_AND_PROBE",
+    "file_sha256_by_name": {
+      "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+      "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+      "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+      "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+      "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+      "issue477_S4-401-417_op_ionization_overlay.i": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a",
+      "issue477_S5-417-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+      "issue477_S6-417-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+      "issue477_S6-417-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+      "migrated_continuity.i": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+    },
+    "C0_file_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "Maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "Maxwell_qvt_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "electron_moments_42row_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "old_native_ion_owner_retired": 26,
+    "old_electron_BC_and_functor_owner_retired": 10,
+    "old_ion_FV_owners_remaining_in_source": 0,
+    "non_target_object_bytes_preserved_prior_B1": 336,
+    "stage_not_post_P4_X": true
+  },
+  "native_job": {
+    "run_id": 44262035027,
+    "artifact_id": 14408333164,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44262035027/artifacts/14408333164",
+    "workflow_conclusion": "SUCCESS_AS_DIAGNOSTIC_COLLECTION_ONLY",
+    "zip_sha256": "5fdf86be670f6c09e0a3ea79f4303f61c8afe6cb83ae94cc9d18d5b0b2c3a6ed",
+    "zip_crc": "PASS",
+    "log_path": "p5-native/S6-417_native_check_input.log",
+    "log_bytes": 3358,
+    "log_sha256": "91b82d79c914f1914bd97fcccde2e4dc9609b60b4b53a88e5aba5bccf9ff7778",
+    "exit_code": 1,
+    "syntax_ok": false,
+    "first_error": "FileMeshGenerator::generate() missing original main baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+    "actual_C0_declared_mesh": "baseline_plasma_plus_unstructured_cover_plus_wafer.msh",
+    "original_main_mesh_raw_in_stage": false,
+    "expected_cache_mesh_in_stage": false,
+    "maxwell_qvt_msh_is_not_same_geometry": true,
+    "native_FV_warehouse_reached": false,
+    "qualifies_as_final_P5_B2": false
+  },
+  "binary": {
+    "CI_reported_physics_opt_sha256": "7968019d100e66f8979575aa0895506d1a188c58a85b9a5d561b45f41cb1cc96",
+    "CI_recorded_sha_file_equals_readiness": true,
+    "build_OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "actual_physics_opt_executable_uploaded": false,
+    "independent_executable_bytes_sha256": null,
+    "P5_0_final_shared_PR665_binary_sha256": null
+  },
+  "owner_census": {
+    "expected_ion_FVKernels": 12,
+    "expected_ion_FVBCs": 12,
+    "expected_electron_FEM_BCs": 8,
+    "actual_ion_FVKernels_in_native_Warehouse": null,
+    "actual_ion_FVBCs_in_native_Warehouse": null,
+    "actual_P05_status": "NOT_REACHED",
+    "DDContinuityEq_cpp_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "unresolved_legacy_wall_materials": [
+      "ion_wall_flux",
+      "negative_ion_wall_flux",
+      "atomic_positive_ion_wall_flux"
+    ],
+    "unresolved_legacy_surface_current": [
+      "cover_surface_current",
+      "wafer_surface_current",
+      "focus_ring_surface_current"
+    ],
+    "six_P4_X_collisions_source_bound_only": true
+  },
+  "negative": {
+    "P5_N2_prior_source_only_mutations_rejected": 44,
+    "P5_N2_actual_native_P05_negative_jobs": 0,
+    "E1_offline_provenance_byte_tamper_injected": 15,
+    "E1_offline_provenance_byte_tamper_rejected": 15,
+    "E1_actual_compiled_P05_mutation_tests": 0
+  },
+  "independent_reproduction": {
+    "two_downloaded_actual_ZIPs_rehashed": true,
+    "source_11_layer_sha_recomputed": 11,
+    "additional_json_maxwell_child_qvt_mesh_electron_table_sha_recomputed": 4,
+    "native_log_rehashed": true,
+    "CI_binary_SHA_record_crosschecked_but_binary_bytes_not_available": true,
+    "script_name": "p5_e1_417_independent_audit.py",
+    "script_sha256": "9e6746a5e19ef80ceaf4b83fd2bebf7dea46375e9536918ac7593d9065480b39",
+    "complete_local_receipt_name": "p5_e1_417_independent_full_receipt.json",
+    "complete_local_receipt_sha256": "52e4d6b3adc7ae7e0ecfa8d7fb32d7ee9857f8d30b605924f37deb02db147255"
+  },
+  "referenced_receipts": {
+    "B1": {
+      "commit": "f05e213c33c9b5d2c8a7a35e8a3f813fefd7e44a",
+      "blob": "6421cfc00efcd52ffa1b2e5fb2a62fd2e2d02ff4"
+    },
+    "B3": {
+      "commit": "98fa1b4e4998e1c6c2ed29c332c304e0bc174a25",
+      "blob": "773fdfbfa89571fe053200eb5dde1ec2a02a8881"
+    },
+    "B6": {
+      "commit": "40d5aa52baef1ee1eced3612e95ba3b04ce7448b",
+      "blob": "0945d48dfce225f1a62171d65f9f7d2fbd5e1eea"
+    },
+    "N2": {
+      "commit": "952fae05516a528f10b40424cf39c196f6dca751",
+      "blob": "5c7fb3a347e1017f3ef0720bec488a2bef2dad57"
+    }
+  },
+  "gates": {
+    "E1_independent_input_log_provenance": "PASS",
+    "E1_final_native_full_receipt": "HOLD_INCOMPLETE",
+    "P4_X_single_owner_integration": "NOT_INTEGRATED",
+    "main_plasma_mesh": "MISSING_FROM_STAGED_INPUT",
+    "P5_0_exact_HEAD_shared_binary": "NOT_RUN",
+    "P5_B2_final_S6_417_check_input": "NOT_RUN",
+    "old_pre_P4_native_probe": "EXECUTED_EXIT_1",
+    "P05_native_12_12": "NOT_REACHED",
+    "native_P2": "HOLD",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "next_required": [
+    "Stage SHA-pinned original main S6 mesh at expected relative path, not the Maxwell qvt mesh",
+    "P4-X single-writer retire duplicate ion wall/current/transport providers and integrate into PR665 at new frozen head",
+    "P5-0 build one common exact-head PhysicsApp binary with independently verifiable executable SHA",
+    "P5-B2 actual 417 check-input exit/log/owner Warehouse and P05 compiled negatives before E1 final PASS"
+  ],
+  "protected": {
+    "main_modified": false,
+    "PR665_modified": false,
+    "archive_modified": false,
+    "private_rate_bytes_published": false,
+    "solver_invoked_by_E1": false
+  }
+}
