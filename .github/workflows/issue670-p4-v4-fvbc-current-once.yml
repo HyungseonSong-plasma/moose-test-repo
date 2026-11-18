@@ -1,0 +1,354 @@
+name: Issue670 P4-V4 BC Wall Current adversarial source-stage audit
+on:
+  push:
+    branches: [issue-670-p4-v4-fvbc-wall-current-20261118]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 395eeac274125ffa632b4d75a4531996dee24fe0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: issue669-p3x-newonly-10-electron-owner-source-417-941
+          run-id: 44257739203
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: evidence
+      - name: Independently inspect actual 417/941 stage bytes and execute adverse controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 395eeac274125ffa632b4d75a4531996dee24fe0
+          python3 - <<'PY'
+          import copy,hashlib,json,math,re,sys
+          from pathlib import Path
+          sys.path.insert(0,str(Path("ci").resolve()))
+          from p1_ion_new_only_preflight import inspect as official_preflight
+          HEAD="395eeac274125ffa632b4d75a4531996dee24fe0"
+          STAGE_HEAD="9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          ROOT=Path("experiments/Issue402_plasma_dsl_g1")
+          JHASH={"417":"ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+                 "941":"2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"}
+          OHASH={"417":"c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+                 "941":"76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"}
+          IONS=("O2p","Om","Op")
+          CHARGE={"O2p":1,"Om":-1,"Op":1}
+          ELECTRON="e_wall_number_flux"
+          GENERAL={"inlet","outlet","plasma_electrode","plasma_metal","plasma_right"}
+          DIELECTRIC={"cover":"plasma_cover","wafer":"plasma_wafer","focus_ring":"plasma_focus_ring"}
+          ALL_SIDES=GENERAL|set(DIELECTRIC.values())
+          SOURCE_CURRENT_NAMES={s+"_surface_current" for s in DIELECTRIC}
+          SURFACE_CURRENT_PROPERTIES={s+"_net_surface_current_density" for s in DIELECTRIC}
+          EPS="1.602176634e-19"
+          N_A=6.02214076e23
+          EXPECT_EXPR=EPS+"*(gi+gop-gm-ge)"
+          EXPECT_FLUXES="O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux"
+          CXX=Path("physics_app/src/physics/plasma/Chemistry.C").read_text()
+          def sha(raw):return hashlib.sha256(raw).hexdigest()
+          def check(x,label):
+              if not x:raise ValueError(label)
+          def no_duplicate(pairs):
+              obj={}
+              for k,v in pairs:
+                  check(k not in obj,"DUPLICATE_JSON_KEY:"+k)
+                  obj[k]=v
+              return obj
+          def loads(raw):return json.loads(raw.decode("utf-8"),object_pairs_hook=no_duplicate)
+          def parse(data,name,layer):
+              data.decode("utf-8")
+              objects=[];stack=[];offset=0
+              for ln,line in enumerate(data.splitlines(keepends=True),1):
+                  m=re.fullmatch(rb"\[([^\[\]]*)\]",line.strip())
+                  if m:
+                      symbol=m.group(1).decode()
+                      if symbol:stack.append((symbol,offset,ln))
+                      elif stack:
+                          key,start,first=stack.pop()
+                          if len(stack)==1 and stack[0][0] in ("FVKernels","FVBCs","FunctorMaterials","Materials","Kernels","Postprocessors","BCs"):
+                              raw=data[start:offset+len(line)]
+                              params={}
+                              for t in raw.decode().splitlines()[1:-1]:
+                                  kv=re.fullmatch(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*",t)
+                                  if kv:
+                                      check(kv.group(1) not in params,"DUPLICATE_INPUT_PARAMETER:"+key)
+                                      params[kv.group(1)]=kv.group(2).strip().strip("'\"")
+                              objects.append(dict(section=stack[0][0],name=key,filename=name,
+                                    layer=layer,line_start=first,line_end=ln,
+                                    block_sha256=sha(raw),params=params))
+                  offset+=len(line)
+              check(not stack,"UNBALANCED_SOURCE_BLOCK:"+name)
+              check(not re.search(rb"(?m)^\s*!include\b",data),"UNRESOLVED_INCLUDE:"+name)
+              return objects
+          def one(obs,section,name):
+              hits=[v for v in obs if v["section"]==section and v["name"]==name]
+              check(len(hits)==1,"OBJECT_COUNT:"+section+":"+name+":"+str(len(hits)))
+              return hits[0]
+          def verify_cpp(cxx):
+              needles=[
+                'bc["factor"] = -1.0 / 6.02214076e23;',
+                'constexpr double minus_inv_avogadro = -1.6605390671738466e-24;',
+                'std::abs(entry.factor / minus_inv_avogadro - 1.0) > 1.0e-12',
+                'bc["signed_number_flux"] = species_id + "_wall_number_flux";',
+                'bc["functor"] = species_id + "_wall_number_flux";',
+                'if (!operator_owners.insert(key).second)',
+                'if (!seen.insert(name).second)',
+                'if (count != 4 * selected.size())',
+                'std::set<std::string> declared_sides;',
+                'if (owner->second.first != bc)',
+                'for (const auto & id : {"O2p", "Op", "Om"})',
+                'functors.push_back(_data.surfaceElectronWallFlux());',
+                'current_expression += "-ge";',
+                '"1.602176634e-19*(" + current_expression + ")";',
+                '_problem->addFunctorMaterial(type, std::string(side) + "_surface_current", params);',
+                'params.set<MooseFunctorName>("functor") = bc.functor;',
+                'params.set<MooseFunctorName>("factor") = factor_value.str();',
+                'params.set<MooseFunctorName>("signed_number_flux") = bc.signed_number_flux;'
+              ]
+              for needle in needles:
+                  check(needle in cxx,"CHANGED_CXX_CONTRACT:"+needle)
+              return len(needles)
+          def validate(j,overlay):
+              check(set(j.get("species",{}))>=set(IONS)|{"e"},"MISSING_SELECTED_SPECIES")
+              for ident,q in CHARGE.items():
+                  check(j["species"][ident]["charge_number"]==q,"WRONG_ION_CHARGE:"+ident)
+              check(j.get("ion_surface_current")=={"electron_wall_number_flux":ELECTRON},
+                    "WALL_CURRENT_ELECTRON_PROVIDER_MISMATCH")
+              check("boundaries_to_avoid" not in j and
+                    "migration_smoothing_width" not in j,"DUPLICATED_JSON_BOUNDARY_OR_SMOOTHING")
+              groups=j.get("drift_diffusion_boundaries")
+              check(isinstance(groups,dict),"NO_TYPED_BOUNDARY_CATALOG")
+              check(set(groups)=={"inlet outlet","plasma_electrode plasma_metal plasma_right",
+                                  *DIELECTRIC.values()},"WRONG_BOUNDARY_GROUPS")
+              present_sides=set();merged={};electron_bcs=set()
+              for group,record in groups.items():
+                  check(isinstance(record,dict) and bool(record),"EMPTY_BOUNDARY_GROUP")
+                  sides=group.split()
+                  check(len(sides)==len(set(sides)) and not present_sides.intersection(sides),
+                        "REUSED_PHYSICAL_SIDESET:"+group)
+                  present_sides.update(sides)
+                  for name,spec in record.items():
+                      check(isinstance(spec,dict) and set(spec)=={"type"},
+                            "EXTRA_OR_MISSING_JSON_BC_PARAMETER:"+name)
+                      kind=spec["type"]
+                      if name.startswith("e_"):
+                          check(kind in ("FEMElectronSheathBC","FEMElectronEnergySheathBC"),
+                                "WRONG_ELECTRON_BC_TYPE:"+name)
+                          check((name.startswith("e_energy_"))==(kind=="FEMElectronEnergySheathBC"),
+                                "WRONG_ELECTRON_ENERGY_FAMILY:"+name)
+                          electron_bcs.add(name)
+                          continue
+                      chosen=[ion for ion in IONS if name.startswith(ion+"_")]
+                      check(len(chosen)==1,"UNKNOWN_ION_WALL_BC:"+name)
+                      ion=chosen[0];tail=name[len(ion)+1:]
+                      expected_type="FVFunctorNeumannBC" if tail=="wall" else "FVLogMolarDielectricFluxBC"
+                      check(kind==expected_type,"WRONG_ION_BC_FACTORY:"+name)
+                      if tail=="wall":
+                          check(set(sides).issubset(GENERAL),"NEUMANN_WRONG_SIDES:"+name)
+                      else:
+                          check(tail.endswith("_dielectric"),"ION_DIELECTRIC_NAME:"+name)
+                          suffix=tail[:-len("_dielectric")]
+                          check(suffix in DIELECTRIC and sides==[DIELECTRIC[suffix]],
+                                "DIELECTRIC_WRONG_SIDES:"+name)
+                      entry=merged.setdefault(name,{"kind":kind,"species":ion,"sides":set()})
+                      check(entry["kind"]==kind and not entry["sides"].intersection(sides),
+                            "DUPLICATE_ION_BC_OWNER:"+name)
+                      entry["sides"].update(sides)
+              check(present_sides==ALL_SIDES,"MISSING_OR_EXTRA_SIDES")
+              names={ion+"_wall" for ion in IONS}|{
+                ion+"_"+region+"_dielectric" for ion in IONS for region in DIELECTRIC}
+              check(set(merged)==names and len(merged)==12,"WRONG_12_ION_BC_CATALOGUE")
+              for name,data in merged.items():
+                  check(data["sides"]==(GENERAL if name.endswith("_wall") else
+                        {DIELECTRIC[name.split("_",1)[1].removesuffix("_dielectric")]}),
+                        "MISSING_MERGED_ION_BOUNDARY:"+name)
+              expected_e={"e_wall","e_energy_wall"}|{
+                "e_"+region+"_dielectric" for region in DIELECTRIC}|{
+                "e_energy_"+region+"_dielectric" for region in DIELECTRIC}
+              check(electron_bcs==expected_e,"WRONG_EIGHT_ELECTRON_BCS")
+              check(overlay.count("fvm_species = 'O2p Om Op'")==1 and
+                    overlay.count("fem_species = e")==2,"FVM_FEM_SELECTOR_MISMATCH")
+              check(overlay.count("files = 'chemistry/unified_s6_")==1,"NEWONLY_OVERLAY_BINDING")
+              check("dont_create_kernels" not in overlay,"DISABLED_GENERATED_OWNERS")
+              check(math.isclose(-1/N_A,-1.6605390671738466e-24,rel_tol=1e-15),
+                    "AVOGADRO_INCORRECT")
+              return {"ion_BC":{name:{"type":data["kind"],"sides":sorted(data["sides"]),
+                               "variable":"log_"+data["species"],
+                               "functor":data["species"]+"_wall_number_flux",
+                               "factor":"-1/N_A" if data["kind"]=="FVFunctorNeumannBC" else None,
+                               "signed_number_flux":data["species"]+"_wall_number_flux"
+                                 if data["kind"]=="FVLogMolarDielectricFluxBC" else None}
+                                for name,data in merged.items()},
+                      "ion_BC_count":len(merged),"electron_BC_count":len(electron_bcs),
+                      "unique_sideset_count":len(present_sides)}
+          def check_current(x,side):
+              p=x["params"]
+              check(p.get("type")=="ADParsedFunctorMaterial","WRONG_SURFACE_CURRENT_FACTORY:"+side)
+              check(p.get("property_name")==side+"_net_surface_current_density",
+                    "WRONG_SURFACE_CURRENT_OUTPUT:"+side)
+              check(p.get("functor_names")==EXPECT_FLUXES,"WRONG_SURFACE_CURRENT_FUNCTORS:"+side)
+              check(p.get("functor_symbols")=="gi gop gm ge","WRONG_CURRENT_SYMBOLS:"+side)
+              check(p.get("expression")==EXPECT_EXPR,"WRONG_SURFACE_CURRENT_SIGN_OR_SCALE:"+side)
+              check(p.get("block")=="plasma","SURFACE_CURRENT_BLOCK:"+side)
+          def stage_check(objs):
+              row={}
+              for side,variable in (("cover","sigma_s"),("wafer","sigma_wafer"),
+                                    ("focus_ring","sigma_focus_ring")):
+                  prod=one(objs,"FunctorMaterials",side+"_surface_current")
+                  check_current(prod,side)
+                  consumer=one(objs,"Kernels","sigma_surface_current" if side=="cover" else "sigma_"+side+"_surface_current")
+                  pc=consumer["params"]
+                  check(pc.get("surface_current_density")==side+"_net_surface_current_density" and
+                        pc.get("variable")==variable and
+                        pc.get("type")=="PhysicsLowerDSurfaceCurrent",
+                        "WRONG_LOWER_D_CONSUMER:"+side)
+                  pp=one(objs,"Postprocessors",side+"_net_surface_current")
+                  check(pp["params"].get("functor")==side+"_net_surface_current_density" and
+                        pp["params"].get("boundary")==DIELECTRIC[side],"WRONG_CURRENT_DIAGNOSTIC:"+side)
+                  current_matches=[o for o in objs if o["params"].get("property_name")==
+                                   side+"_net_surface_current_density"]
+                  check(len(current_matches)==1,"SURFACE_CURRENT_MULTIPLE_PROPERTY_OWNER:"+side)
+                  row[side]={"legacy_producer":prod,"sigma_consumer":consumer,"diagnostic":pp,
+                             "current_property_owner_count":len(current_matches)}
+              return row
+          checks=verify_cpp(CXX)
+          results={};jmodels={};overlays={}
+          for case in ("417","941"):
+              base=Path("evidence/cases")/case
+              folder=base/"experiments/Issue395_powered_chemistry_ladder"
+              receipt=loads((base/"newonly_stage_receipt.json").read_bytes())
+              check(receipt["source_head"]==STAGE_HEAD and str(receipt["variant"])==case,
+                    "SOURCE_HEAD_MISMATCH:"+case)
+              check(receipt["status"]=="P2_NEWONLY_JSON_AND_LAYER11_STAGE_STATIC_PASS_RUNTIME_HOLD",
+                    "STAGE_NOT_APPROVED:"+case)
+              check(receipt["retired_native_ion_owners"]==26 and
+                    receipt["remaining_native_ion_fv_owners"]==0,
+                    "NATIVE_ION_FV_RETIREMENT_NOT_COMPLETE:"+case)
+              check(receipt["p3_x_electron"]["removed_native_electron_owners"]==10,
+                    "P3_ELECTRON_RETIREMENT_NOT_COMPLETE:"+case)
+              files=[];objs=[];layers={}
+              for idx,(name,expected) in enumerate(receipt["layers_after_sha256"].items(),1):
+                  f=folder/name
+                  check(name==f.name and f.is_file() and not f.is_symlink(),"MISSING_STAGE_FILE:"+name)
+                  b=f.read_bytes()
+                  check(0<len(b)<250000 and sha(b)==expected,"FILE_SHA_MISMATCH:"+case+name)
+                  files.append({"ordinal":idx,"filename":name,"sha256":sha(b),"bytes":len(b)})
+                  layers[name]=b.decode()
+                  objs.extend(parse(b,name,idx))
+              check(len(files)==11,"WRONG_LAYER_COUNT:"+case)
+              jsonfile=ROOT/"chemistry"/("unified_s6_"+case+"_newonly.json")
+              overlay=ROOT/("issue633_newonly_s6_"+case+"_continuity.template.i")
+              check(sha(jsonfile.read_bytes())==JHASH[case] and
+                    sha((folder/"chemistry"/jsonfile.name).read_bytes())==JHASH[case],
+                    "SOURCE_OR_STAGE_JSON_SHA_MISMATCH:"+case)
+              check(sha(overlay.read_bytes())==OHASH[case] and
+                    sha((folder/"migrated_continuity.i").read_bytes())==OHASH[case],
+                    "SOURCE_OR_STAGE_OVERLAY_SHA_MISMATCH:"+case)
+              j=loads(jsonfile.read_bytes());ov=overlay.read_text()
+              bcs=validate(j,ov)
+              owner=stage_check(objs)
+              legacy_fv=[o for o in objs if o["section"] in ("FVKernels","FVBCs") and
+                         o["params"].get("variable") in ("log_ni","log_nm","log_nop",
+                          "log_O2p","log_Om","log_Op")]
+              check(not legacy_fv,"OLD_NATIVE_ION_FV_OWNERS_REMAIN:"+case)
+              official=official_preflight(layers,j,"new-only")
+              official_producers={o["name"] for o in official.get("c2_native_producer_collisions",[])}
+              check(official["status"]=="FAIL" and
+                    SOURCE_CURRENT_NAMES.issubset(official_producers),
+                    "OFFICIAL_P0_DID_NOT_BLOCK_SURVIVING_SURFACE_CURRENT:"+case)
+              results[case]={"source_stage":"P3-X source-only, 9c pin",
+                "status":"BC_WALL_CURRENT_SOURCE_STATIC_PASS__P4X_PRODUCER_COLLISION_HOLD",
+                "source_files":files,"source_file_SHA_checks":11,"newonly_json_sha256":JHASH[case],
+                "newonly_overlay_sha256":OHASH[case],"proposed_generated_BCs":bcs,
+                "current_and_downstream":owner,
+                "legacy_ion_FV_operator_count":len(legacy_fv),
+                "official_preflight_status":official["status"],
+                "official_preflight_errors":official.get("errors",[]),
+                "official_preflight_producer_collisions":official.get("c2_native_producer_collisions",[]),
+                "new_current_generator_identity":[side+"_surface_current" for side in DIELECTRIC],
+                "actual_current_Warehouse":"NOT_RUN"}
+              jmodels[case]=j;overlays[case]=ov
+              print(f"P4_V4_{case}_FILES=11/11 ION_BCS=12 ELECTRON_BCS=8 OLD_CURRENT=3 OFFICIAL_P0=FAIL_EXPECTED",flush=True)
+          negatives={}
+          def reject(label,f):
+              try:f()
+              except (ValueError,KeyError,TypeError) as e:
+                  negatives[label]={"result":"REJECTED","reason":str(e)}
+              else:raise RuntimeError("NEGATIVE_FALSE_PASS:"+label)
+          for case in ("417","941"):
+              j=jmodels[case];ov=overlays[case]
+              def mutation(label,edit):
+                  altered=copy.deepcopy(j);s=edit(altered)
+                  reject(case+"_"+label,lambda:validate(altered,ov if s is None else s))
+              mutation("missing_wafer_ion_BC",lambda d:d["drift_diffusion_boundaries"]["plasma_wafer"].pop("Om_wafer_dielectric"))
+              mutation("wrong_ion_factory",lambda d:d["drift_diffusion_boundaries"]["plasma_cover"]["Op_cover_dielectric"].update(type="FVFunctorNeumannBC"))
+              mutation("duplicate_physical_sideset",lambda d:d["drift_diffusion_boundaries"].__setitem__("plasma_cover inlet",{"O2p_wall":{"type":"FVFunctorNeumannBC"}}))
+              mutation("missing_general_group",lambda d:d["drift_diffusion_boundaries"].pop("inlet outlet"))
+              mutation("new_unexpected_BC",lambda d:d["drift_diffusion_boundaries"]["plasma_wafer"].update({"O2p_fake_dielectric":{"type":"FVLogMolarDielectricFluxBC"}}))
+              mutation("wrong_electron_BC_factory",lambda d:d["drift_diffusion_boundaries"]["plasma_wafer"]["e_energy_wafer_dielectric"].update(type="FEMElectronSheathBC"))
+              mutation("missing_electron_BC",lambda d:d["drift_diffusion_boundaries"]["plasma_cover"].pop("e_cover_dielectric"))
+              mutation("explicit_duplicate_factor",lambda d:d["drift_diffusion_boundaries"]["inlet outlet"]["O2p_wall"].update(factor=-1/N_A))
+              mutation("positive_Neumann_factor",lambda d:d["drift_diffusion_boundaries"]["inlet outlet"]["Om_wall"].update(factor=1/N_A))
+              mutation("extra_dielectric_signed_flux",lambda d:d["drift_diffusion_boundaries"]["plasma_cover"]["Om_cover_dielectric"].update(signed_number_flux="wrong"))
+              mutation("wrong_negative_ion_charge_sign",lambda d:d["species"]["Om"].__setitem__("charge_number",1))
+              mutation("wrong_electron_wall_current_provider",lambda d:d["ion_surface_current"].__setitem__("electron_wall_number_flux","electron_wall_number_flux"))
+              mutation("missing_electron_current_provider",lambda d:d.pop("ion_surface_current"))
+              mutation("repeated_BC_on_extra_group",lambda d:d["drift_diffusion_boundaries"].__setitem__("new_side",{"O2p_wall":{"type":"FVFunctorNeumannBC"}}))
+              reject(case+"_wrong_FVM_species",lambda:validate(j,ov.replace("fvm_species = 'O2p Om Op'","fvm_species = 'O2p Op'")))
+              reject(case+"_manual_binding_only",lambda:validate(j,ov+"\ndont_create_kernels = true"))
+              original=results[case]["current_and_downstream"]
+              current=original["wafer"]["legacy_producer"]
+              bad=copy.deepcopy(current);bad["params"]["expression"]=EPS+"*(gi+gop+gm-ge)"
+              reject(case+"_incorrect_Om_surface_sign",lambda:check_current(bad,"wafer"))
+              bad=copy.deepcopy(current);bad["params"]["expression"]=EPS+"*(gi+gop-gm+ge)"
+              reject(case+"_incorrect_electron_surface_sign",lambda:check_current(bad,"wafer"))
+              bad=copy.deepcopy(current);bad["params"]["functor_names"]="O2p_wall_number_flux Op_wall_number_flux wrong_e_flux e_wall_number_flux"
+              reject(case+"_wrong_surface_flux_source",lambda:check_current(bad,"wafer"))
+              reject(case+"_duplicate_surface_current_producer",lambda:one([current,copy.deepcopy(current)],"FunctorMaterials","wafer_surface_current"))
+              bad=copy.deepcopy(original["wafer"]["sigma_consumer"])
+              bad["params"]["surface_current_density"]="wrong_current"
+              reject(case+"_lower_D_consumer_disconnect",lambda:check(bad["params"]["surface_current_density"]=="wafer_net_surface_current_density","CONSUMER_DISCONNECTED"))
+              reject(case+"_mutated_layer_sha",lambda:check(sha(b"mutated") == results[case]["source_files"][0]["sha256"],"LAYER_SHA_TAMPERED"))
+          # The same policy is independently confirmed to be fail-closed in current C++ source.
+          reject("CXX_missing_minus_NA_conversion",lambda:verify_cpp(CXX.replace('bc["factor"] = -1.0 / 6.02214076e23;','bc["factor"] = 1.0;')))
+          reject("CXX_wrong_surface_electron_sign",lambda:verify_cpp(CXX.replace('current_expression += "-ge";','current_expression += "+ge";')))
+          reject("CXX_missing_operator_uniqueness",lambda:verify_cpp(CXX.replace('if (!operator_owners.insert(key).second)','if (false)')))
+          reject("CXX_wrong_signed_dielectric_flux",lambda:verify_cpp(CXX.replace('bc["signed_number_flux"] = species_id + "_wall_number_flux";','bc["signed_number_flux"] = "wrong";')))
+          reject("CXX_missing_current_generator",lambda:verify_cpp(CXX.replace('_problem->addFunctorMaterial(type, std::string(side) + "_surface_current", params);','')))
+          check(len(negatives)==2*22+5,"NEGATIVE_COUNT_INVALID:"+str(len(negatives)))
+          report={"schema":"issue670.p4_v4.fvbc_wall_current_negative.v1","task_id":"P4-V4",
+             "review_head":HEAD,"stage_origin_head":STAGE_HEAD,
+             "stage_upstream_run_id":44257739203,"stage_upstream_artifact":14406746397,
+             "status":"SOURCE_INPUT_PASS__ADVERSARIAL_REJECTION_PASS__P4X_WALL_CURRENT_COLLISION_HOLD",
+             "cases":results,"cxx_static_checks_count":checks,
+             "negative_controls":negatives,"negative_total":len(negatives),
+             "negative_each_case":22,"negative_cpp":5,
+             "factor_contract":{"Cxx_molar_neumann":"-1.0/6.02214076e23",
+                "value":-1/N_A,"dielectric":"signed_number_flux, no extra -1/N_A",
+                "energy_flux":"electron FEM boundary e_wall_number_flux"},
+             "surface_current_contract":{"current_density":"1.602176634e-19*(gi+gop-gm-ge)",
+                "sources":EXPECT_FLUXES,"legacy_3_producers_retained":True,
+                "new_Cxx_3_generated_predicted":True},
+             "scope":"actual two 11-layer source-only Scratch and Python mirror of C++ typed BC rules, official Python P0 preflight, C++ source invariant mutations; NOT native execution",
+             "unresolved":["P4-X must retire/rebind three stale surface current producers and any generated ion wall material collisions",
+               "Actual C++ ChemistryData typed boundary parser and Physics Wall Current Material Warehouse not executed",
+               "Signed flux numeric parity, dynamic 12 FVBC ownership, Native P2/P3/P4 not run"],
+             "native_p2":"NOT_RUN","native_p3":"NOT_RUN","native_p4":"NOT_RUN","science":"SCIENCE_HOLD"}
+          out=Path("p4v4-receipt");out.mkdir(exist_ok=True)
+          (out/"p4-v4-adversarial-readback.json").write_text(json.dumps(report,sort_keys=True,indent=2)+"\n")
+          print(f"P4_V4_NEGATIVES={len(negatives)}/{len(negatives)}_REJECTED",flush=True)
+          print("P4_V4_FINAL=SOURCE_STATIC_PASS_ADVERSARIAL_PASS__P4X_OWNER_HOLD",flush=True)
+          PY
+      - name: Upload P4-V4 bounded readback
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue670-p4-v4-negative-${{ github.run_id }}-${{ github.run_attempt }}
+          path: p4v4-receipt/
+          if-no-files-found: warn
+          retention-days: 30
