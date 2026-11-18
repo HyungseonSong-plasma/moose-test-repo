@@ -121,10 +121,10 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
             )
         if name == "issue541_arch_s6_hybrid_native_p2":
             need(
-                'test "$first" -eq 0' in block and
-                'test "$second" -eq 0' in block and
+                'test "$first" -eq 3' in block and
+                'test "$second" -eq 3' in block and
                 '--case 417' in block and '--case 941' in block and
-                "ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD"
+                "P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD"
                 in block,
                 "TWO_CASES_P2_AND_P05_FAIL_CLOSED"
             )
@@ -186,6 +186,33 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
                 "ARCH_BOTH_CASES_PROVENANCE"
             )
 
+
+    one_build=job_block(workflow,"p6_newonly_s6_build")
+    one_native=job_block(workflow,"p6_newonly_s6_native_p2")
+    need("github.event.pull_request.head.sha" in one_build and
+         "build_count" in one_build and "physics-opt-and-app-libs.tar.gz" in one_build and
+         "if-no-files-found: error" in one_build,
+         "REQUIRED_NEWONLY_EXACT_HEAD_SINGLE_BUILD")
+    need("needs: p6_newonly_s6_build" in one_native and
+         "actions/download-artifact@v4" in one_native and
+         "P6_NEWONLY_EXACT_HEAD_ONE_W1_THREE_BINARY_BYTES_VERIFIED" in one_native and
+         "PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}" in one_native and
+         "PASS_16_INTENDED_NATIVE_REJECTIONS" in one_native and
+         "assert len(expected_kernels)==12 and len(expected_bc)==12 and len(expected_e)==8" in one_native and
+         "if-no-files-found: error" in one_native,
+         "REQUIRED_NEWONLY_NATIVE_TYPED_32_N1_N8_16")
+    need("P6_PUBLIC_B_PASS_D_KEEP_HOLD_EVIDENCE_NOT_NATIVE_D_PASS" in
+         job_block(workflow,"plasma_native_regression"),
+         "PUBLIC_D_MUST_KEEP_HOLD")
+    need("P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD" in
+         job_block(workflow,"issue541_arch_s6_hybrid_native_p2"),
+         "ARCH_HYBRID_MUST_KEEP_HOLD")
+    for name,source in (("build",one_build),("native",one_native)):
+        for bypass in BANNED_NATIVE:
+            need(bypass not in source,"NEWONLY_BYPASS_"+name)
+        need("num_steps = 150" not in source and "num_steps = 200" not in source,
+             "NEWONLY_AUTO_P3_P4_"+name)
+
     for message in P05_MESSAGES:
         need(message in dd_source, "P05_SOURCE_GUARD_" +
              message.split()[1].upper())
@@ -245,7 +272,7 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
     ))
     add("weakened_native_check", edit_job(
         workflow, "issue541_arch_s6_hybrid_native_p2",
-        'test "$second" -eq 0', 'echo "ignore 941 exit"'
+        'test "$second" -eq 3', 'echo "ignore 941 exit"'
     ))
     add("skipped_second_case", edit_job(
         workflow, "issue541_arch_s6_hybrid_native_p2",
@@ -312,6 +339,17 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "          path: experiments/Issue402_plasma_dsl_g1/evidence/**",
         "          path: experiments/Issue402_plasma_dsl_g1/chemistry/**"
     ))
+
+    add("missing_mandatory_newonly_build",workflow.replace(
+        "  p6_newonly_s6_build:","  disabled_p6_newonly_s6_build:",1))
+    add("missing_mandatory_newonly_native",workflow.replace(
+        "  p6_newonly_s6_native_p2:","  disabled_p6_newonly_s6_native_p2:",1))
+    add("missing_mandatory_newonly_artifact",edit_job(
+        workflow,"p6_newonly_s6_build","if-no-files-found: error","if-no-files-found: warn"))
+    add("historical_false_positive_label",edit_job(
+        workflow,"issue541_arch_s6_hybrid_native_p2",
+        "P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD",
+        "ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD"))
 
     for name, w, t, c in cases:
         try:
