@@ -1,4 +1,4 @@
-name: Issue541 ARCH S6 historical Hybrid P2 compatibility diagnostic
+name: Issue633 Historical S6 Public B-D and ARCH Hybrid P2 compatibility
 # Manual-only, intentionally observes P05 failure; never production New-only success.
 on:
   workflow_dispatch:
@@ -156,5 +156,79 @@ jobs:
             issue541_arch_s6_p2_evidence/*/native_P2.log
             control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
             control/experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
+          if-no-files-found: error
+          retention-days: 30
+
+  historical_public_BD_p2:
+    name: Historical Public B 10-layer PASS / D 11-layer transport KEEP_HOLD
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      EXPECTED_HEAD: ${{ github.sha }}
+    steps:
+      - name: Checkout exact historical Public compatibility source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Pin compatibility source and prohibit protected rates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          test ! -e physics_app/physics-opt
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          echo PUBLIC_BD_HISTORICAL_SOURCE_PIN_PASS
+      - name: Install historical public S6 compatibility numerical dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Prepare pinned public P2 Python dependencies
+        run: python3 -m pip install --disable-pip-version-check --quiet 'numpy>=1.26,<3' 'scipy>=1.14,<2'
+      - name: Build historical Public P1 same source solver
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+          test -x physics_app/physics-opt
+      - name: Reproduce BOTH historical Public B PASS and D transport HOLD with actual --check-input
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          bash experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh
+          public_exit=$?
+          set -e
+          test "$public_exit" -ne 0
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("experiments/Issue402_plasma_dsl_g1/evidence")
+          j=json.loads((root/"issue402_option_s6_p2_status.json").read_text())
+          assert j["P2"]=="HOLD" and j["P3"]=="NOT_RUN"
+          assert set(j["checks"])=={"417","941"}
+          for case in ("417","941"):
+              checks=j["checks"][case]
+              b,d=checks["B"],checks["D"]
+              assert b["P2"]=="PASS" and b["exit_code"]==0 and b["layers"]==10
+              assert d["P2"]=="HOLD" and d["exit_code"]!=0 and d["layers"]==11
+              log=(root/f"S6_{case}_D_P2.log").read_text(errors="replace")
+              assert "Missing drift-diffusion transport JSON record for FEM species 'e'" in log
+          print("HISTORICAL_PUBLIC_B_PASS_D_TRANSPORT_KEEP_HOLD_BOTH_CASES")
+          PY
+      - name: Archive historical Public B-D P2 positive and negative diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue633-historical-public-BD-compat-${{ github.sha }}
+          path: |
+            experiments/Issue402_plasma_dsl_g1/evidence/issue402_option_s6_p2_status.json
+            experiments/Issue402_plasma_dsl_g1/evidence/S6_417_B_P2.log
+            experiments/Issue402_plasma_dsl_g1/evidence/S6_417_D_P2.log
+            experiments/Issue402_plasma_dsl_g1/evidence/S6_941_B_P2.log
+            experiments/Issue402_plasma_dsl_g1/evidence/S6_941_D_P2.log
           if-no-files-found: error
           retention-days: 30
