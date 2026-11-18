@@ -1,0 +1,273 @@
+{
+  "schema": "issue670.p4_d1.o2p_physical_density_alias.source_bound.v1",
+  "task_id": "P4-D1",
+  "status": "PASS_STATIC_LEGACY_ALIAS_AND_CANONICAL_FORMULA__HOLD_RUNTIME_SINGLE_OWNER",
+  "source": {
+    "pr": 665,
+    "review_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "archival_scratch_source_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p2_real_source_only_ci": {
+      "run": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+    },
+    "p3x_real_source_only_ci": {
+      "run": 44256823392,
+      "artifact_id": 14405784430,
+      "zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+      "artifact_head": "556f104d62cce635dcf7b59bf6966400b0b1fa18"
+    },
+    "p3x_exact_head_ci": {
+      "run": 44257739203,
+      "status": "SUCCESS"
+    },
+    "code_path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "code_git_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "json417_git_blob_sha1": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "json941_git_blob_sha1": "9568e2cae6640a755f9403c4f58e077c801b998c"
+  },
+  "verification": "Downloaded P2 and P3-X real ZIP bytes, independently recomputed outer SHA256 and ZIP CRC, per-case actual 11/11 .i file byte SHA256 against each stage manifest, parsed MOOSE [FunctorMaterials]/[Kernels]/[Postprocessors] hierarchy, extracted exact raw object blocks including closing markers and newlines, checked all nine object SHA per case P2→P3-X invariant; verified source C++ Git blob and JSON.",
+  "cases": {
+    "417": {
+      "source_p2_11_files_verified": 11,
+      "source_p3x_11_files_verified": 11,
+      "p2_to_p3x_changed_files": [
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i"
+      ],
+      "unchanged_non_C0_files": 10,
+      "old_explicit_n_i_physical_owners": 1,
+      "old_alias_consumers": {
+        "poisson_charge": 1,
+        "wall_material": 1,
+        "postprocessors": 2
+      },
+      "explicit_O2p_number_density_owners": 0,
+      "p2_C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "p3x_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "p3x_11layer_input_file_sha256": {
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+        "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+        "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+        "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+        "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+        "issue477_S4-401-417_op_ionization_overlay.i": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a",
+        "issue477_S5-417-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+        "issue477_S6-417-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+        "issue477_S6-417-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+        "migrated_continuity.i": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+      }
+    },
+    "941": {
+      "source_p2_11_files_verified": 11,
+      "source_p3x_11_files_verified": 11,
+      "p2_to_p3x_changed_files": [
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i"
+      ],
+      "unchanged_non_C0_files": 10,
+      "old_explicit_n_i_physical_owners": 1,
+      "old_alias_consumers": {
+        "poisson_charge": 1,
+        "wall_material": 1,
+        "postprocessors": 2
+      },
+      "explicit_O2p_number_density_owners": 0,
+      "p2_C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "p3x_C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "p3x_11layer_input_file_sha256": {
+        "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+        "o2_elastic_400w_100us_dt1000ns_overlay.i": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+        "o_elastic_ei17_400w_100us_dt1000ns_overlay.i": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+        "issue477_S2-415_generation_overlay.i": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76",
+        "issue477_S3-415-401_extra_overlay.i": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05",
+        "issue477_S4-401-941_op_ionization_overlay.i": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa",
+        "issue477_S5-941-407_o2_consumer_overlay.i": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+        "issue477_S6-941-407-2069-H25_EI2069_overlay.i": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+        "issue477_S6-941-407-2069-H25_H25_overlay.i": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc",
+        "migrated_continuity.i": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+      }
+    }
+  },
+  "shared_C0_block_sha256_per_case": [
+    {
+      "path": "FunctorMaterials/ion_molar_density",
+      "property_name": "ion_molar_density",
+      "functor_names": "log_O2p",
+      "expression": "exp(u)",
+      "bytes": 201,
+      "sha256": "286526a716966a09a98e593130fde8a22018aa1e380d9f10c9fef19af7610504"
+    },
+    {
+      "path": "FunctorMaterials/ion_physical_density",
+      "property_name": "n_i_physical",
+      "functor_names": "ion_molar_density",
+      "expression": "6.02214076e23*ci",
+      "bytes": 220,
+      "sha256": "3905f6ad33c6d6ba7d9d577e96a1bd7107bc0ba02b82603cd557e9f3d7c0a1a6"
+    },
+    {
+      "path": "FunctorMaterials/charge_number_density",
+      "functor_names": "n_i_physical n_op_physical n_e_physical n_m_physical",
+      "expression": "ni+nop-ne-nm",
+      "bytes": 271,
+      "sha256": "8fca600fe127ec76fe0a6b642460858b3a84cb2c43bbb13225f02a57ec04e6af"
+    },
+    {
+      "path": "FunctorMaterials/charge_density",
+      "property_name": "charge_density_C_m3",
+      "functor_names": "charge_number_density",
+      "bytes": 227,
+      "sha256": "463d17536ee97f21d001c698cb06bfd36ba9d16a5aadb7781b8445783f84a5c7"
+    },
+    {
+      "path": "FunctorMaterials/poisson_source",
+      "property_name": "poisson_source",
+      "functor_names": "charge_number_density",
+      "bytes": 229,
+      "sha256": "95259beac613226b1bb0a52743d09d5136a37500c0504e531d0f470aff4ba5f6"
+    },
+    {
+      "path": "FunctorMaterials/ion_wall_flux",
+      "type": "PhysicsIonWallFluxMaterial",
+      "ion_number_density": "n_i_physical",
+      "bytes": 410,
+      "sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5"
+    },
+    {
+      "path": "Kernels/phi_source",
+      "functor": "poisson_source",
+      "bytes": 144,
+      "sha256": "062570461eafeed5d4f1721a35592ac727eb8e9d794c4b72355f4c2bcee13725"
+    },
+    {
+      "path": "Postprocessors/ni_min",
+      "functor": "n_i_physical",
+      "bytes": 163,
+      "sha256": "91b30eb8da655138b8fe742a24cb3b456f1483b9ea6d8e67031452e515e07083"
+    },
+    {
+      "path": "Postprocessors/ni_max",
+      "functor": "n_i_physical",
+      "bytes": 163,
+      "sha256": "5c93ade5856c1460c234e17bd2cf430b8024290090dde20481c9576d46cd9ed5"
+    }
+  ],
+  "old_alias": {
+    "owner": {
+      "section": "FunctorMaterials",
+      "object_name": "ion_physical_density",
+      "property_name": "n_i_physical",
+      "producer_chain": [
+        "log_O2p",
+        "ion_molar_density=exp(log_O2p)",
+        "n_i_physical=6.02214076e23*ion_molar_density"
+      ],
+      "material_count_per_case": 1,
+      "units": "particles/m^3"
+    },
+    "consumers": [
+      {
+        "section": "FunctorMaterials",
+        "object_name": "charge_number_density",
+        "functor": "n_i_physical",
+        "edge": "n_i_physical -> charge_number_density -> poisson_source -> Kernels/phi_source"
+      },
+      {
+        "section": "FunctorMaterials",
+        "object_name": "ion_wall_flux",
+        "parameter": "ion_number_density",
+        "functor": "n_i_physical",
+        "edge": "n_i_physical -> PhysicsIonWallFluxMaterial (legacy wall owner)"
+      },
+      {
+        "section": "Postprocessors",
+        "object_name": "ni_min",
+        "functor": "n_i_physical"
+      },
+      {
+        "section": "Postprocessors",
+        "object_name": "ni_max",
+        "functor": "n_i_physical"
+      }
+    ]
+  },
+  "new_density": {
+    "source": "DDContinuityEq::addFunctorMaterials()",
+    "guard": "mechanism.hasIonWalls() && !dont_create_kernels && selected _fvm_species contains O2p && mechanism.species(O2p).ion_wall",
+    "CXX_model": "ADParsedFunctorMaterial",
+    "generated_property_name": "O2p_number_density",
+    "generated_object_name": "<Continuity Action name>_O2p_number_density",
+    "generated_functor_names": [
+      "log_O2p"
+    ],
+    "expression": "6.02214076e23*exp(log_O2p)",
+    "units": "particles/m^3",
+    "O2p_JSON_common": {
+      "charge_number": 1,
+      "molar_mass": 0.032,
+      "temperature_eV": null,
+      "sticking_coefficient": 1,
+      "transport_coef": {
+        "type": "constant",
+        "unit": "physical",
+        "mobility": 10,
+        "diffusivity": 0.25851999786435537
+      }
+    },
+    "explicit_i_producers_per_case": 0,
+    "source_contract_expected_generated_count": 1,
+    "actual_runtime_warehouse_generated_count": "NOT_RUN"
+  },
+  "math_compatibility": {
+    "same_solver_state": "log_O2p",
+    "same_avogadro_constant": "6.02214076e23",
+    "same_exponential": "exp(log_O2p)",
+    "same_physical_dimension": "number_density [m^-3]",
+    "algebraic_equality": "n_i_physical = N_A*exp(log_O2p) = O2p_number_density",
+    "explicit_rename_or_direct_functor_alias": false,
+    "exact_float_or_scientific_equivalence_not_claimed": true
+  },
+  "negative_controls": {
+    "synthetic_static": 14,
+    "rejected": 14,
+    "classes": [
+      "wrong old density property",
+      "wrong molar state",
+      "reversed exp sign",
+      "wrong Avogadro",
+      "wrong old molar input",
+      "wrong charge source input",
+      "wrong Poisson sign",
+      "wrong wall consumer",
+      "wrong ni_min consumer",
+      "wrong ni_max consumer",
+      "canonical generated name wrong",
+      "canonical formula wrong",
+      "duplicate canonical generated owner",
+      "missing canonical owner"
+    ],
+    "native_mutation_tests_run": 0
+  },
+  "audit_local": {
+    "script": "p4_d1_verify.py",
+    "script_sha256": "7c5574d89b8ef76ec7b6e37615f8978d9611d06e3e3812b8fb39ee0f6579214d",
+    "receipt": "p4-d1-independent-audit.json",
+    "receipt_sha256": "289264e1fb08f1e51e08d724de3910c9d035a248268f5a6a066d1ce514b3be45"
+  },
+  "unresolved": [
+    "Legacy n_i_physical and generated O2p_number_density are separate property names and separate production expressions: algebraically same, not same physical Functor owner. Poisson and diagnostic consumers still use legacy n_i_physical.",
+    "Existing [FunctorMaterials]/ion_wall_flux consumes n_i_physical and remains in source; new Physics ion wall material is expected to consume O2p_number_density. Check potential double wall-flux producer or inconsistent consumer in P4-W1/P4-X.",
+    "Actual DDContinuityEq-generated O2p_number_density and live FunctorWarehouse creation/alias uniqueness NOT_RUN; P5 Native --check-input and semantic equivalence must be separately established.",
+    "Numerical roundoff and extreme logarithmic states are not proven bitwise identical."
+  ],
+  "P4_X": "HOLD_RUNTIME_HANDOFF",
+  "P5_NATIVE_P2": "NOT_RUN",
+  "Native_P3": "NOT_RUN",
+  "Native_P4": "NOT_RUN",
+  "SCIENCE": "SCIENCE_HOLD",
+  "private_rates_exposed": false,
+  "mutation_scope": "isolated evidence branch only, no PR665 source files or main edits, no Native solve"
+}
