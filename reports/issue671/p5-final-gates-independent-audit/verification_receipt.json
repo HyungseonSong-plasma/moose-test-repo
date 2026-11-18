@@ -1,0 +1,127 @@
+{
+  "schema": "issue671.p5_0_p5_x_p4_x_d8.independent_gate_audit.v1",
+  "task": "Check P5-0, P5-X, P4-X full Consumer, D8 dynamic real execution",
+  "date_utc": "2026-11-18",
+  "source": {
+    "draft_pr": 665,
+    "pr_head": "3bf1777ee4c1f15ee5aa6493745b415ad5e67c81",
+    "source_main_unchanged": true,
+    "pr_state": "OPEN_DRAFT",
+    "source_only_P4X_merge_677": true
+  },
+  "independent_actual_zip_checks": {
+    "P5_0_artefact": {
+      "run": 44277958545,
+      "artifact": 14416461003,
+      "sha256_zip": "435efb6b8640b7661107b4c6699e341078424441458e9f3813f6fc62ec6f7d73",
+      "zip_CRC": "PASS",
+      "executable_elf_size": 67368,
+      "executable_sha256": "7e0ccd790abca820a644fa5584a111caba29618d4e8fd8dc451827918e34f293",
+      "executable_bytes_independently_extracted_and_rehashed": true,
+      "one_time_build_P1": "PASS",
+      "dynamic_linked_lib_count": 94,
+      "app_shared_libs_not_in_zip": [
+        "libphysics_test-opt.so.0",
+        "libphysics-opt.so.0"
+      ],
+      "reusable_with_exact_companion_app_libs": "NOT_PROVED"
+    },
+    "P05_native_artifact": {
+      "run": 44278011700,
+      "artifact": 14415089731,
+      "sha256_zip": "c3d017faa6f8f7fb2533c76e9481e3bceeb74c3cbc69b61b6816d6abaa61c9ab",
+      "zip_CRC": "PASS",
+      "binary_sha256": "dd9a89b110fac8db1573a120f91a6e42c94023dc15437b1fc21380799b77723e",
+      "cases": {
+        "417": {
+          "native_exit": 0,
+          "syntax_ok": true,
+          "log_sha256": "768ad75278feb1b09b29cadb866b1c5dbc2a2db1e52276cd60ccd3e842e3eefa"
+        },
+        "941": {
+          "native_exit": 0,
+          "syntax_ok": true,
+          "log_sha256": "4a71ec3be566add4ed144888832caf03e18762de506a2d73a857af1637db91ba"
+        }
+      },
+      "actual_P05_negative": {
+        "case": "417",
+        "exit_code": 1,
+        "exact_error": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': p05_test_unexpected_O2p_time [FVLogMolarTimeDerivative]",
+        "log_sha256": "3c18f447560ec6e4fc60a0f3574e3207c3457fd5631e6eec3f9d2498e086eddc"
+      },
+      "P05_guards_executed": true,
+      "explicit_Warehouse_inventory_dump_available": false
+    },
+    "binary_same_between_P50_and_P05": false
+  },
+  "P4_X": {
+    "production_P4X_7_legacy_producer_cutover_merged": true,
+    "old_ion_FV_retired_each_case": 26,
+    "old_electron_owner_retired_each_case": 10,
+    "old_duplicate_materials_removed_each_case": 6,
+    "carrier_one_preserved": true,
+    "C0_after_p4_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+    "static_full_source_consumer_audit": {
+      "status": "PASS_STATIC",
+      "source": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/e00dd90d0a92fc0377ec6bbe08a852aee42d1cb4/reports/issue670/p4-x-full-source-consumer-audit-20261118.json",
+      "actual_input_layer_sha_checks": 22,
+      "mutated_source_negatives_rejected": 40,
+      "consumer_types": [
+        "8 rate progress producers",
+        "3 signed ion Source aggregation",
+        "3 density aliases and Poisson",
+        "3 ion-wall flux",
+        "12 generated FV BCs",
+        "3 net surface current",
+        "3 Lower-D sigma current kernels",
+        "24 source diagnostics"
+      ]
+    },
+    "all_35_individual_slots_current_exact_head": "PARTIAL_NOT_ALL_REPINNED",
+    "dynamic_consumer_evaluation": "NOT_EXECUTED",
+    "full_P4_X_acceptance": "HOLD"
+  },
+  "P5_0": {
+    "real_exact_HEAD_one_build_P1": "PASS",
+    "archived_self_contained_reusable_binary_bundle": "HOLD_MISSING_APP_SHARED_LIBRARIES_IN_ARTIFACT",
+    "identical_archived_binary_consumed_by_both_P2_cases_and_negatives": "NOT_PROVED",
+    "official_final_common_binary": "HOLD"
+  },
+  "P5_X": {
+    "native_check_input_both_real_cases": "PASS",
+    "actual_P05_single_owner_12_FVKernel_plus_12_FVBC_each_case": "PASS_GUARD_AND_ONE_NEGATIVE",
+    "explicit_24_row_warehouse_dump_each_case": "NOT_AVAILABLE",
+    "P05_all_N1_N8_actual_native_negative_cases": "INCOMPLETE_1_P05_MUTANT_EXECUTED",
+    "same_P5_0_stored_exact_binary_sha_triple": "FAIL_NOT_SAME_BINARY",
+    "all_35_P4_X_source_consumer_at_final_head": "PARTIAL",
+    "D8_live_consumers": "NOT_RUN",
+    "official_final_P5_X": "HOLD",
+    "main_merge": "NOT_AUTHORIZED"
+  },
+  "D8": {
+    "static_original_Maxwell_child_include_mesh_stage": "PASS",
+    "native_check_input_registration": "PASS_417_941",
+    "actual_NewOnly_late_bound_functor_evaluation": "NOT_RUN",
+    "actual_Maxwell_RF_pressure_Poisson_wall_LowerD_dynamic_consumers": "NOT_RUN",
+    "requires": "Controlled explicitly authorized real Native runtime evaluation with trace/values and per-case support SHA; check-input alone is not dynamic evidence",
+    "verdict": "HOLD"
+  },
+  "next_serial_gates": [
+    "P5-0 publish matching physics-opt plus libphysics-opt.so.0 and libphysics_test-opt.so.0 with all ELF dependency digests and runtime OCI; do not consider standalone executable a portable bundle",
+    "Execute 417+941 and negative tests using that EXACT archived binary + matching app libs; pin read-after SHA and native logs",
+    "P4-X integration owner repin remaining 35 individual Source/Consumer receipts at current PR HEAD; verify rate-to-source, density/Poisson, wall/current/LowerD, and D8 runtime consumers",
+    "Run controlled D8 dynamic evaluation on actual case (not merely --check-input), capture live functor/transfer/RF/Poisson/LowerD caller evidence; science equivalence remains HOLD",
+    "P5-X single writer integrate full native negative N1-N8 receipts, Warehouse enum evidence where required, job and SHA identity before official P5 acceptance"
+  ],
+  "safety": {
+    "raw_protected_EI_bytes_in_public_report": false,
+    "original_S6_inputs_unchanged": true,
+    "main_unchanged": true,
+    "PR665_unchanged": true,
+    "Native_P3_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "independent_local_byte_audit_sha256": "3be43f9093bb39b1a648dc4a215aded5e1021359619c6647bf4247f676f97bfb",
+  "verdict": "P5_0_P1_PASS__P05_NATIVE_417_941_PASS__P4X_STATIC_PASS__P5_X_P4X_FULL_D8_DYNAMIC_HOLD"
+}
