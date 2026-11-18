@@ -1,0 +1,169 @@
+{
+  "schema": "issue671.arch_ni_time.p05.26_to_24.independent.v1",
+  "issue": 671,
+  "task": "ARCH_ni_time_NATIVE26_PHYSICS24_P05",
+  "status": "PASS_STATIC_BYTE_RECONSTRUCTION_AND_REAL_P05_N1_N4__HOLD_EXACT_ARCH_NI_TIME_NATIVE",
+  "source_pin": {
+    "pr665_exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "native_N1_N8_ci_run": 44300759948,
+    "native_N1_N8_artifact_id": 14426253052,
+    "native_N1_N8_zip_sha256": "a12af11831c40dc4fbc4ac0565efbb67ca2b62ba3fa5dfaa51637bd34c7d7225",
+    "native_source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "native_binary_sha256": "47d891a09fde95ea6d12dc8ac4f85655c4001ca00ad592ddfd104459d8f0af4e",
+    "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "cpp_DDContinuityEq_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "cpp_PlasmaInterface_blob": "dec06fd0430ccc3cee41c7885313799ba02b2c32",
+    "P1_hybrid_artifact_id": 14372278070,
+    "P1_hybrid_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "P3X_artifact_id": 14406746397,
+    "P3X_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "W2W3_positive_ci_run": 44300489811,
+    "W2W3_zip_sha256_417": "668815e6bcd15353586e177512cce45c32d1bb1e17d5ff0755fc4f6393105456",
+    "W2W3_zip_sha256_941": "19180959b6dbd43aa748ddc900365eb1edcda22583d14275d62fd762f7a81990"
+  },
+  "scope": "Both original S6 417/941 (historic, hybrid, P3-X/P4-X), P05 12 generated FV kernel + 12 generated FV BC exact owner rules; 16 real Native negatives source-bound to PR665 head",
+  "cases": {
+    "417": {
+      "original_10_inputs": "10/10 SHA PASS",
+      "P1_hybrid_11_inputs": "11/11 SHA PASS",
+      "P1_native_ion_kernel_count": 14,
+      "P1_native_ion_bc_count": 12,
+      "P1_native_ion_total": 26,
+      "P1_ni_time_object": "ni_time",
+      "P1_ni_time_type": "PhysicsFVLogMolarElectronTimeDerivative",
+      "P1_ni_time_variable": "log_O2p",
+      "P1_ni_time_block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+      "historical_ni_time_variable": "log_ni",
+      "P3X_newonly_11_inputs": "11/11 SHA PASS",
+      "post_P3X_old_ion_native_count": 0,
+      "post_P4X_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "P4X_post_C0_reconstructed_from_P3X_bytes": true,
+      "P4X_old_wall_and_current_material_owners_removed": 6,
+      "physics_generated_kernel_contract_count": 12,
+      "physics_generated_bc_contract_count": 12,
+      "physics_generated_total_contract": 24,
+      "arch_canonical_ni_time_static_P05": "REJECT_UNEXPECTED_NAME_ON_LOG_O2P",
+      "arch_unmodified_log_ni_static_P05": "NOT_OBSERVED_DIFFERENT_VARIABLE__P0_REQUIRED",
+      "native_clean_check_input": "EXIT_0_SYNTAX_OK",
+      "native_N1_extra_time_first_failure": "P05",
+      "native_N4_extra_source_first_failure": "P05",
+      "native_N1_N8_expected_failures": "8/8",
+      "native_P05_first_failures": "4/8",
+      "native_exact_arch_ni_time_reinjection": "NOT_RUN"
+    },
+    "941": {
+      "original_10_inputs": "10/10 SHA PASS",
+      "P1_hybrid_11_inputs": "11/11 SHA PASS",
+      "P1_native_ion_kernel_count": 14,
+      "P1_native_ion_bc_count": 12,
+      "P1_native_ion_total": 26,
+      "P1_ni_time_object": "ni_time",
+      "P1_ni_time_type": "PhysicsFVLogMolarElectronTimeDerivative",
+      "P1_ni_time_variable": "log_O2p",
+      "P1_ni_time_block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38",
+      "historical_ni_time_variable": "log_ni",
+      "P3X_newonly_11_inputs": "11/11 SHA PASS",
+      "post_P3X_old_ion_native_count": 0,
+      "post_P4X_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "P4X_post_C0_reconstructed_from_P3X_bytes": true,
+      "P4X_old_wall_and_current_material_owners_removed": 6,
+      "physics_generated_kernel_contract_count": 12,
+      "physics_generated_bc_contract_count": 12,
+      "physics_generated_total_contract": 24,
+      "arch_canonical_ni_time_static_P05": "REJECT_UNEXPECTED_NAME_ON_LOG_O2P",
+      "arch_unmodified_log_ni_static_P05": "NOT_OBSERVED_DIFFERENT_VARIABLE__P0_REQUIRED",
+      "native_clean_check_input": "EXIT_0_SYNTAX_OK",
+      "native_N1_extra_time_first_failure": "P05",
+      "native_N4_extra_source_first_failure": "P05",
+      "native_N1_N8_expected_failures": "8/8",
+      "native_P05_first_failures": "4/8",
+      "native_exact_arch_ni_time_reinjection": "NOT_RUN"
+    }
+  },
+  "real_native_evidence": {
+    "total_mutations": 16,
+    "first_failure_P05": 8,
+    "first_failure_EARLY_REGISTRATION": 2,
+    "first_failure_CHEMISTRY": 6,
+    "N1_417_941": "P05_REJECTS_EXTRA_FV_TIME",
+    "N4_417_941": "P05_REJECTS_EXTRA_FV_SOURCE",
+    "clean_417_941": "EXIT_0_SYNTAX_OK",
+    "individual_raw_negative_logs": "NOT_IN_ARTIFACT_ONLY_SHA_AND_JOB_LOG",
+    "private_rates_in_artifact": false,
+    "protected_tmpfs_cleanup": true
+  },
+  "positive_W2W3": {
+    "run_id": 44300489811,
+    "outcome": "BOTH_SYNTAX_OK_EXIT0",
+    "w1_shared_binary_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+    "w1_build_source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+    "run_target_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "exact_head_match": false,
+    "source_build_inputs_equivalent_claimed": true
+  },
+  "P05_predicate": {
+    "read_from": "physics_app/src/physics/plasma/DDContinuityEq.C:252-368",
+    "kernel_warehouse_families": [
+      "FVElementalKernel",
+      "FVFluxKernel"
+    ],
+    "BC_warehouse_families": [
+      "FVFluxBC",
+      "FVDirichletBC"
+    ],
+    "selects_only": [
+      "log_O2p",
+      "log_Om",
+      "log_Op"
+    ],
+    "requires_one_each_per_species": [
+      "<species>_time",
+      "<species>_diffusion",
+      "<species>_drift",
+      "<species>_source"
+    ],
+    "actual_generated_BC_expected_names_derived_from_JSON": true,
+    "early_return_if_dont_create_kernels": true
+  },
+  "critical_split": {
+    "canonicalized_ARCH_P1_ni_time": "variable=log_O2p, type/name mismatches expected O2p_time; P05 rejects by name/type",
+    "unmodified_original_ARCH_ni_time": "variable=log_ni; not scanned by canonical-var P05 predicate; preflight legacy-owner guard or missing-variable parser must reject; native exact legacy mutation not executed",
+    "P0_guard": "ci/p1_ion_new_only_preflight.py has LEGACY_S6_VARIABLES O2p=log_ni,Om=log_nm,Op=log_nop; new-only fails on any retained Native FV operator",
+    "correction": "Do not claim the original unmodified log_ni object was Native P05 rejected based on N1 proxy mutation."
+  },
+  "independent_reproducer": {
+    "script_name": "verify_arch_ni_time_p05_26to24.py",
+    "script_sha256": "7205d7f745768df3fa6ac298a070d7496a3900f9cd6325a01f9ca02aa4a9fb36",
+    "full_receipt_name": "arch_ni_time_p05_26to24_independent_receipt.json",
+    "full_receipt_sha256": "eaf3024a5ade4d8d0d1fc9758dee28a814f116b6a11dcb94c5a7c5e8172ad1dc"
+  },
+  "gates": {
+    "SOURCE_ARCH_26_TO_NEW24": "PASS",
+    "CANONICAL_ARCH_NI_TIME_P05_STATIC": "PASS",
+    "REAL_NATIVE_N1_N4": "PASS_BOTH_CASES",
+    "EXACT_OLD_NI_TIME_NATIVE": "NOT_RUN",
+    "OLD_LOG_NI_ALIAS_P05_ALONE": "NOT_COVERED",
+    "REAL_NATIVE_POSITIVE_CHECK_INPUT_417_941": "PASS",
+    "EXACT_HEAD_SHARED_W1_BINARY": "NOT_PROVED",
+    "PER_OBJECT_WAREHOUSE_INVENTORY_DUMP": "NOT_PROVIDED",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "limitations": [
+    "Real N1/N4 mutations are analogous owner collisions and are not byte-identical original ni_time reinjection",
+    "P05 alone does not scan unchanged historical log_ni: P0/old variable removal necessary",
+    "Positive W2/W3 reused a different source HEAD W1 binary; cannot count as exact-head rebuilt P1",
+    "Runtime output did not export individual 24 object list; clean P05 success implies 12+12 via enforced C++ contracts but is not an independently captured Warehouse object dump",
+    "Private rate protected bytes were never exported or inspected from artifacts"
+  ],
+  "safety": {
+    "main_modified": false,
+    "pr665_modified": false,
+    "workflow_modified": false,
+    "physics_cpp_modified": false,
+    "original_archives_modified": false,
+    "no_new_native_CI_dispatched": true,
+    "private_rate_raw_data_exposed": false
+  }
+}
