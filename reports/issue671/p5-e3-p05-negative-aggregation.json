@@ -1,0 +1,261 @@
+{
+  "schema": "issue671.p5_e3.p05_negative_source_aggregation.v1",
+  "task": "P5-E3",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "verdict": "PASS_16_SOURCE_RULE_MODEL_AND_EXACT_RESTORE__NATIVE_P05_HOLD",
+  "source": {
+    "pr": 665,
+    "head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "p2_merged": true,
+    "p3_x_merged": true,
+    "p4_x_integrated": false,
+    "source_artifact_ci_run": 44257739203,
+    "artifact_id": 14406746397,
+    "zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "p1_original_artifact_id": 14372278070,
+    "p1_original_artifact_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+  },
+  "case_inputs": {
+    "417": {
+      "file_shas_verified": 11,
+      "c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef"
+    },
+    "941": {
+      "file_shas_verified": 11,
+      "c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+    }
+  },
+  "negative_cases": {
+    "417": {
+      "N1": {
+        "mutation": "Reinsert historical FVKernels/ni_time",
+        "expected": "P05 old FV owner unexpected",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "d6cddc5d98a3f4df9d676c8d99663150c46f48667cb5c09583b2fbe304455701",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N2": {
+        "mutation": "Reinsert historical FVKernels/ni_diffusion",
+        "expected": "P05 old FV owner unexpected",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "65a948fc3ff44971c82fd6c4c7c45bd41c8610005b77592625692070a9a629b5",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N3": {
+        "mutation": "Reinsert historical FVBCs/ion_wall",
+        "expected": "P05 old FV BC unexpected",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "61a161d85e17a0c6f7a90b6ad0efc23c0e8851e36b03dcf985b6dc0a99a4c3ef",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N4": {
+        "mutation": "Insert O2p_time name with wrong factory",
+        "expected": "P05 canonical kernel wrong factory",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "2be1fc8121374dd69d78cee48d4bc5a283afd0107a4b0fc20c25424c4fdd99b7",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N5": {
+        "mutation": "Insert explicit O2p_wall with canonical factory",
+        "expected": "P05 duplicate generated BC name",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "5c5582fb14d112eb802a6b78ab26ef71a87c7a471f6e3e7cefeaea8d85d83aa5",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N6": {
+        "mutation": "Delete EI-415 reaction + equations entry",
+        "expected": "Pinned reaction branch preflight reject; source/Rate reachability guard",
+        "modified_target": "unified_s6_417_newonly.json",
+        "mutated_sha256": "79d8ec8ba01c026fd67026e872f871228f1436ab6d620712d16698126705e208",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N7": {
+        "mutation": "Delete species.O2p.initial_number_density",
+        "expected": "Pinned JSON SHA or initial-density validation reject",
+        "modified_target": "unified_s6_417_newonly.json",
+        "mutated_sha256": "6ab3c4b91ce0b83d2a3a7246e58479ea3e793940a24c1b73e04ed35b10078969",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N8": {
+        "mutation": "Flip species.Om.charge_number from -1 to +1",
+        "expected": "C2 charge sign contract reject",
+        "modified_target": "unified_s6_417_newonly.json",
+        "mutated_sha256": "eced5c64a66aa79381d7d68ca2e832e2e33adc08020f638dfa140a54c9ed6a40",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      }
+    },
+    "941": {
+      "N1": {
+        "mutation": "Reinsert historical FVKernels/ni_time",
+        "expected": "P05 old FV owner unexpected",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "d6cddc5d98a3f4df9d676c8d99663150c46f48667cb5c09583b2fbe304455701",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N2": {
+        "mutation": "Reinsert historical FVKernels/ni_diffusion",
+        "expected": "P05 old FV owner unexpected",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "65a948fc3ff44971c82fd6c4c7c45bd41c8610005b77592625692070a9a629b5",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N3": {
+        "mutation": "Reinsert historical FVBCs/ion_wall",
+        "expected": "P05 old FV BC unexpected",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "61a161d85e17a0c6f7a90b6ad0efc23c0e8851e36b03dcf985b6dc0a99a4c3ef",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N4": {
+        "mutation": "Insert O2p_time name with wrong factory",
+        "expected": "P05 canonical kernel wrong factory",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "2be1fc8121374dd69d78cee48d4bc5a283afd0107a4b0fc20c25424c4fdd99b7",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N5": {
+        "mutation": "Insert explicit O2p_wall with canonical factory",
+        "expected": "P05 duplicate generated BC name",
+        "modified_target": "C0_stage_layer_1",
+        "mutated_sha256": "5c5582fb14d112eb802a6b78ab26ef71a87c7a471f6e3e7cefeaea8d85d83aa5",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N6": {
+        "mutation": "Delete EI-415 reaction + equations entry",
+        "expected": "Pinned reaction branch preflight reject; source/Rate reachability guard",
+        "modified_target": "unified_s6_941_newonly.json",
+        "mutated_sha256": "31045dc5f0ef3508ee6ef56a79a6cd7344d3be0656dabcaaaa2dda6df0497e70",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N7": {
+        "mutation": "Delete species.O2p.initial_number_density",
+        "expected": "Pinned JSON SHA or initial-density validation reject",
+        "modified_target": "unified_s6_941_newonly.json",
+        "mutated_sha256": "47640233acb81d9c0f244a333a96a69a93eb0bfd54f57661143cffc0bf38591c",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      },
+      "N8": {
+        "mutation": "Flip species.Om.charge_number from -1 to +1",
+        "expected": "C2 charge sign contract reject",
+        "modified_target": "unified_s6_941_newonly.json",
+        "mutated_sha256": "2129369a1a89409350deeda93e3bdb1d2fd2e3c370bab52d596d1c3c8865d9c1",
+        "source_model_rejected": true,
+        "isolated_scratch": true,
+        "all_11_layers_and_json_restored_exact_sha": true,
+        "native_compiled_p05_run": "NOT_RUN"
+      }
+    }
+  },
+  "source_method": "Actual GitHub Actions ZIP raw bytes independently CRC and SHA verified; 2 cases × 8 independent temporary disposable Scratch copies of real 11 staged .i layers plus JSON, mutate one object/file, assert source-rule rejection in Python, restore target byte-identically, independently hash all 12 copied inputs, destroy temporary directory. Not an executed MOOSE --check-input or C++ Warehouse test.",
+  "source_code_reference": [
+    {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "lines": "252-369"
+    },
+    {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py",
+      "blob": "b17feb16c70ff28c090b6687a46044cff826072e",
+      "lines": "63-165"
+    },
+    {
+      "path": "physics_app/src/physics/plasma/Chemistry.C",
+      "blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "lines": "1399-1445"
+    }
+  ],
+  "checks": {
+    "input_sha_both_cases": "PASS_22_OF_22",
+    "source_model_rule_negative": "PASS_16_OF_16",
+    "isolated_scratch_restore": "PASS_16_OF_16",
+    "real_native_mutated_job_exits": "NOT_RUN",
+    "actual_p05_native_logs": "NOT_AVAILABLE",
+    "native_failure_cause_validation": "NOT_RUN"
+  },
+  "prior_N2_evidence": {
+    "branch_commit": "952fae05516a528f10b40424cf39c196f6dca751",
+    "path": "reports/issue671/p5-n2-diffusion-drift-reinsertion-source-negative-receipt.json",
+    "source_only_model_cases": 44,
+    "native_jobs": "NOT_RUN",
+    "not_double_counted_in_E3": true
+  },
+  "full_local_receipt": {
+    "filename": "p5_e3_p05_negative_aggregation_source_receipt.json",
+    "sha256": "81fe271684c7b9d48457e966001784ab78c4e3144be02027730faa9119a3073d",
+    "size_bytes": 22053,
+    "reproducer_filename": "p5_e3_verify_source_mutants.py",
+    "reproducer_sha256": "0583db0e65714e834ffa37f08220358190fb01f3edfe6a7120f3ed5d76633da3"
+  },
+  "unresolved": [
+    "P4-X #670 and source-single-owner cutover pending",
+    "P5-0 exact HEAD compiled PhysicsApp binary SHA/OCI/toolchain NOT_RUN",
+    "417 and 941 clean Native --check-input from same P5-0 binary not available",
+    "N1-N8 must be rerun as independent real Native jobs with expected P05/preflight error rather than unrelated mesh/syntax failure",
+    "Private EI rate bytes must remain protected; original main and PR665 must not be mutated"
+  ],
+  "gates": {
+    "P5_E3_SOURCE_ONLY_MODEL": "PASS_16_OF_16",
+    "P5_E3_RESTORE": "PASS_16_OF_16",
+    "P5_E3_NATIVE_P05": "HOLD_0_OF_16",
+    "P4_X": "HOLD",
+    "P5_0_BINARY": "NOT_RUN",
+    "P5_B2_C2": "NOT_RUN",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "non_mutation": {
+    "original": true,
+    "main": true,
+    "pr665": true,
+    "private_rate_bytes_published": false
+  }
+}
