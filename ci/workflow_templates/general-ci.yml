@@ -92,6 +92,11 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
+      - name: Verify S6 New-only required CI vs historical manual compatibility (fail closed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue633_s6_ci_route_guard.py --check --self-test
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
@@ -1031,17 +1036,8 @@ jobs:
       - name: P1 - Build PhysicsApp and verify generated and native solver operators
         shell: bash
         run: bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
-      # Distinct step: an S6 input or cleanup failure cannot erase earlier
-      # Native build/small-fixture results. The exact P1 binary is reused.
-      - name: P2 - Public S6-417 and S6-941 four-way Native input checks
-        shell: bash
-        run: |
-          set -euo pipefail
-          if test -f experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh; then
-            bash experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh
-          else
-            echo 'Public S6 full-input gate is not present on this PR head (legacy smoke scope)'
-          fi
+      # Historical Public B/D S6 P2 is compatibility-only, NOT this required New-only gate.
+      # Existing archived 10/11-layer evidence is retained under an independent lane.
       - name: Require actual native regression evidence before success
         shell: bash
         run: |
@@ -1328,81 +1324,141 @@ jobs:
           python3 ci/guards/workflow_surface_guard.py --self-test
           echo ISSUE541_ARCH_P3_REPLACEMENT_P0_PASS_NO_LIVE_P3_SCIENCE_HOLD
 
-  issue541_arch_s6_hybrid_native_p2:
-    name: Issue541 ARCH S6 417+941 hybrid native P1/P2 exact-source (no P3)
+
+  issue633_newonly_s6_native_p2_required:
+    name: Issue633 New-only S6-417/941 protected Native P2 (REQUIRED)
     if: >-
       github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo' &&
+      (github.event.action != 'edited' || github.event.changes.base != null)
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 95
     permissions:
       contents: read
+      actions: read
     env:
-      HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
-      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
-      CHEM: experiments/Issue395_powered_chemistry_ladder
-      OXYGEN_RESEARCH_400: '1'
-      OXYGEN_RESEARCH_FULL24: '0'
-      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
-      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      HISTORICAL_SHA: '29d1acc6ef7969908b86719e4b95c73a1565136d'
+      OCI: 'ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008'
       EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
     steps:
-      - name: Checkout exact ARCH source for both S6 variants
+      - name: Checkout exact New-only PR source HEAD (not synthetic merge)
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          path: control
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
-      - name: Checkout public original 400W data with immutable historical commit
+      - name: Fail-closed New-only PR source and lane routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          test ! -e physics_app/physics-opt
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          grep -Fq "$OCI" physics_app/dependencies.lock
+          python3 -m py_compile ci/issue633_required_newonly_s6_native_p2.py
+          python3 ci/guards/issue633_s6_ci_route_guard.py --check --self-test
+          echo REQUIRED_NEWONLY_SOURCE_AND_ROUTING_P0_PASS
+      - name: Checkout immutable historical public S6 mesh and support source
         uses: actions/checkout@v4
         with:
           ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
           path: historical
           fetch-depth: 1
           persist-credentials: false
-      - name: Source and no-private-rate guard for S6 P2
+      - name: Reproduce exact SHA-pinned 400 W public parent plasma mesh
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C control rev-parse HEAD)" = "$EXPECTED_HEAD"
-          test "$(git -C historical rev-parse HEAD)" = "$HISTORICAL_SHA"
-          test ! -e "historical/$CHEM/private_rates"
-          grep -Fq "$OCI" control/physics_app/dependencies.lock
-          test -f control/ci/guards/issue541_arch_s6_native_p2_only.py
-          python3 -m py_compile control/ci/guards/issue541_arch_s6_native_p2_only.py
-          mkdir -p control/experiments/Issue402_plasma_dsl_g1/evidence
-          echo ISSUE541_ARCH_S6_SOURCE_PIN_AND_NO_PRIVATE_RATES_P0_PASS
-      - name: Set up public 400W Python dependencies
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install pinned numerical preprocessing dependencies
-        run: |
-          python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
-      - name: Prepare original 400W public mesh (no private rates)
-        shell: bash
-        run: |
-          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
           cd historical
-          src=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
-          dst=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
-          test "$(sha256sum "$src" | cut -d ' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
-          cp "$src" "$dst"
-          export CHATGPT_WORK_BASE_SHA="$HISTORICAL_SHA"
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $SRC" | sha256sum --check -
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
+          export OXYGEN_RESEARCH_400=1
+          CHEM=experiments/Issue395_powered_chemistry_ladder
           bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
           python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
-          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          echo "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc  $CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" | sha256sum --check -
           test ! -e "$CHEM/private_rates"
-          echo ISSUE541_ARCH_S6_HISTORICAL_400W_PUBLIC_MESH_P0_PASS
-      - name: P1 build exact-source Native once for both S6-417 and S6-941
+          echo P05_PUBLIC_MESH_SHA_PASS
+      - name: Download exact verified 417 941 P3-X public source and immutable diagnostic staging helper
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          cd control
+          mkdir -p "$RUNNER_TEMP/p05-in"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14406746397/zip" \
+            --output "$RUNNER_TEMP/p05-in/p3x-source.zip"
+          echo "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111  $RUNNER_TEMP/p05-in/p3x-source.zip" | sha256sum --check -
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://raw.githubusercontent.com/HyungseonSong-plasma/moose-test-repo/41ab61e442a497db2388c025075237bd24cfd025/ci/issue671_p5_d8_native_probe.py" \
+            --output "$RUNNER_TEMP/p05-in/pinned_source_stager.py"
+          test "$(git hash-object "$RUNNER_TEMP/p05-in/pinned_source_stager.py")" = 8bf49b7807c9f9b3eed8e622e72062f2b5c822bc
+          python3 -m py_compile "$RUNNER_TEMP/p05-in/pinned_source_stager.py"
+          echo P05_PUBLIC_ARTIFACT_AND_STAGER_PIN_PASS
+      - name: Stage real eleven-layer inputs with original mesh and support; exact P4-X owner cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p05-in/staged"
+          python3 "$RUNNER_TEMP/p05-in/pinned_source_stager.py" \
+            --source "$GITHUB_WORKSPACE" --repo-head "$EXPECTED_HEAD" \
+            --artifact "$RUNNER_TEMP/p05-in/p3x-source.zip" \
+            --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            --historical-support-root "$GITHUB_WORKSPACE/historical" \
+            --output "$RUNNER_TEMP/p05-in/staged" --stage-only
+          python3 - "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-in/p4_receipt.json" <<'PY'
+          from pathlib import Path
+          import sys,json,hashlib
+          stage=Path(sys.argv[1]); root=Path(sys.argv[2]); out=Path(sys.argv[3])
+          sys.path.insert(0,str(root/"experiments/Issue402_plasma_dsl_g1/chemistry"))
+          from retire_s6_p4_duplicate_owners import retire_p4_duplicate_owners, C0, AFTER_SHA
+          stages=json.loads((stage/"readiness.json").read_text())["stage_cases"]
+          receipts={}
+          for case in ("417","941"):
+              folder=stage/"scratch"/case/"experiments"/"Issue395_powered_chemistry_ladder"
+              raw_ordered=stages[case]["ordered"]
+              ordered=[Path(p).name for p in raw_ordered]
+              assert len(ordered)==11 and ordered[0]==C0 and len(set(ordered))==11
+              sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+              baseline={n:sha(folder/n) for n in ordered}
+              marker=folder/".issue633_disposable_scratch"
+              assert not marker.is_symlink()
+              if marker.exists():
+                  assert marker.read_text().strip()=="issue633-scratch-only"
+              else:
+                  marker.write_text("issue633-scratch-only\n")
+              js=json.loads((folder/"chemistry"/f"unified_s6_{case}_newonly.json").read_text())
+              cut=retire_p4_duplicate_owners(folder,ordered,js,post_p3_layer_sha=baseline)
+              assert sha(folder/C0)==AFTER_SHA
+              assert all(sha(folder/n)==baseline[n] for n in ordered[1:])
+              assert cut["retired_source_materials"]==6 and cut["carrier_one_preserved"]
+              receipts[case]={"P4X":"P4X_7_OWNER_SOURCE_PASS","post_p4_C0_sha256":sha(folder/C0),
+                              "retired_old_ion_FV":26,"retired_old_electron":10,
+                              "retired_old_duplicate_materials":6,"carrier_one_preserved":True,
+                              "ordered_inputs":raw_ordered,
+                              "11_layer_sha256":{n:sha(folder/n) for n in ordered},
+                              "JSON_sha256":sha(folder/"chemistry"/f"unified_s6_{case}_newonly.json"),
+                              "parent_mesh_sha256":sha(folder/"baseline_plasma_plus_unstructured_cover_plus_wafer.msh")}
+          out.write_text(json.dumps(receipts,indent=2,sort_keys=True)+"\n")
+          print("P05_REAL_POST_P4X_STAGE_BOTH_CASES_11_LAYER_PASS")
+          PY
+      - name: P1 build exactly one current-PR-HEAD PhysicsApp ELF in pinned OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           docker pull "$OCI"
           docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
-            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$OCI" -lc '
               set -euo pipefail
               source /environment
               git config --global --add safe.directory /workspace
@@ -1413,57 +1469,31 @@ jobs:
               export METHOD=opt
               make -C physics_app -j2 app_non_unity_dirs="%/utils"
               test -x physics_app/physics-opt
-            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
-          EXPECTED_HEAD="$EXPECTED_HEAD" OCI="$OCI" python3 - <<'PY'
-          import hashlib,json,os,pathlib
-          root=pathlib.Path("experiments/Issue402_plasma_dsl_g1/evidence")
-          def sha(p):
-              h=hashlib.sha256()
-              with open(p,'rb') as f:
-                  for block in iter(lambda:f.read(1048576), b''): h.update(block)
-              return h.hexdigest()
-          binary=pathlib.Path("physics_app/physics-opt")
-          receipt={"schema":"issue402.native_p1.job_local.v1",
-                   "reusable_scope":"same_exact_head_ci_job_only",
-                   "source_sha":os.environ["EXPECTED_HEAD"],
-                   "oci_image":os.environ["OCI"],
-                   "binary_sha256":sha(binary),
-                   "build_log_sha256":sha(root/"native_build.log"),
-                   "P1":"PASS","P3":"NOT_RUN","science":"SCIENCE_HOLD"}
-          (root/"native_p1_identity.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
-          print("ISSUE541_ARCH_S6_NATIVE_P1_SHA="+receipt["binary_sha256"])
-          PY
-      - name: P2 real hybrid JSON+Native check-input for both distinct S6 cases (no timestep)
+            '
+          sha256sum physics_app/physics-opt | tee "$RUNNER_TEMP/p05-in/current-head-physics-opt.sha256"
+          echo REQUIRED_NEWONLY_P1_EXACT_HEAD_SINGLE_ELF_PASS
+      - name: P2 REQUIRED actual protected S6-417 AND 941 Native --check-input using SAME ELF
         shell: bash
+        env:
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
         run: |
           set -euo pipefail
-          cd control
-          test ! -e ../issue541_arch_s6_p2_evidence
-          mkdir -p ../issue541_arch_s6_p2_evidence
-          set +e
-          python3 ci/guards/issue541_arch_s6_native_p2_only.py \
-            --case 417 --historical ../historical \
+          umask 077
+          python3 ci/issue633_required_newonly_s6_native_p2.py \
+            --stage "$RUNNER_TEMP/p05-in/staged" \
             --expected-head "$EXPECTED_HEAD" \
-            --output ../issue541_arch_s6_p2_evidence/S6-417
-          first=$?
-          python3 ci/guards/issue541_arch_s6_native_p2_only.py \
-            --case 941 --historical ../historical \
-            --expected-head "$EXPECTED_HEAD" \
-            --output ../issue541_arch_s6_p2_evidence/S6-941
-          second=$?
-          set -e
-          test "$first" -eq 0
-          test "$second" -eq 0
-          echo ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD
-      - name: Always upload both S6 P2 diagnostics, no raw scratch or protected archive
+            --out "$RUNNER_TEMP/issue633-newonly-native"
+          echo ISSUE633_NEWONLY_S6_417_941_BOTH_REQUIRED_P2_PASS
+      - name: Upload REQUIRED New-only dual-case sanitized Native receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue541-arch-s6-hybrid-p2-${{ github.event.pull_request.head.sha }}
+          name: issue633-newonly-s6-417-941-required-native-${{ github.event.pull_request.head.sha }}
           path: |
-            issue541_arch_s6_p2_evidence/*/status.json
-            issue541_arch_s6_p2_evidence/*/native_P2.log
-            control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
-            control/experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
-          if-no-files-found: warn
-          retention-days: 30
+            ${{ runner.temp }}/issue633-newonly-native/status.json
+            ${{ runner.temp }}/issue633-newonly-native/S6-417-native-P2.log
+            ${{ runner.temp }}/issue633-newonly-native/S6-941-native-P2.log
+            ${{ runner.temp }}/p05-in/p4_receipt.json
+            ${{ runner.temp }}/p05-in/current-head-physics-opt.sha256
+          if-no-files-found: error
+          retention-days: 14
