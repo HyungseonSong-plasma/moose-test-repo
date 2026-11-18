@@ -1,0 +1,203 @@
+{
+  "schema": "issue671.p5_b3.s6_417.expected_12_fvkernel_source_readiness.v1",
+  "task_id": "P5-B3",
+  "case": "S6-417",
+  "issue": 671,
+  "verdict": "PASS_SOURCE_BOUND_EXPECTED_12_KERNEL_CONTRACT__HOLD_NATIVE_P05_WAREHOUSE",
+  "scope": "S6-417 ion FV Kernel generated 12 only; no assertion of actual MOOSE Warehouse object count",
+  "pin": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "PR665": 665,
+    "PR665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "PR665_open_draft_unmerged": true,
+    "P3_X_merged_PR675": true,
+    "P3_X_actual_source_only_CI": 44257739203,
+    "P3_X_actual_source_only_artifact": 14406746397,
+    "P3_X_actual_artifact_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "P3_X_artifact_stage_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P3_X_artifact_source_is_not_native_execution": true,
+    "main_branch_sha_at_receipt_writer_start": "ebcfd9e662bc40f0473d8da05da95d11b61789f8"
+  },
+  "input_provenance": {
+    "case": "S6-417",
+    "verified_actual_P3X_zip_CRC": "PASS",
+    "verified_staged_11_i_files": "11/11_PASS_SHA256",
+    "stage_C0_after_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "stage_JSON_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "stage_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+    "legacy_ion_fv_kernel_and_bc_explicitly_staged_count": 0,
+    "P2_exact_source_only_retirement_owner_count": 26,
+    "non_ion_FV_kernel_staged_count": 28,
+    "fvm_species": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "fem_species": [
+      "e"
+    ],
+    "no_dont_create_kernels_in_overlay": true,
+    "ion_source_functor_projection": {
+      "S_O2p_molar": "+R_EI415 +R_H25",
+      "S_Om_molar": "+R_EI401",
+      "S_Op_molar": "+R_EI417 -R_H25"
+    },
+    "scope_limiter": "Actual stage contains only explicitly declared Native .i objects. The twelve Physics-generated kernels are not in the staged source; their runtime creation requires a built PhysicsApp."
+  },
+  "latest_source_contract": {
+    "DDContinuityEq_C": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "DDContinuityEq_C_gitblob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "generation_lines": "419-486",
+    "P05_check_lines": "252-375",
+    "source_JSON": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+    "source_JSON_blob": "4a05649b42b798f566d5e455ef46be347ea2a461",
+    "overlay_path": "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_417_continuity.template.i",
+    "overlay_blob": "1cf7bc5e76576f02ebc39f7d9430cabf91b3d31e",
+    "CPlusPlus_source_check_count": 19,
+    "CPlusPlus_source_check_pass_count": 19,
+    "P05_guard": "Queries both FVElementalKernel and FVFluxKernel for nonlinear system 0, thread 0; compares exact 4 kernel names/factory/variable per selected ion; rejects unexpected, duplicate or missing and preserves dont_create_kernels guard only when explicitly set (not in staged overlay).",
+    "P05_guard_executed_on_real_S6_417": false
+  },
+  "expected_Physics_generated_ion_FV_Kernels": [
+    {
+      "name": "O2p_time",
+      "variable": "log_O2p",
+      "factory": "FVLogMolarTimeDerivative",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "O2p_diffusion",
+      "variable": "log_O2p",
+      "factory": "FVLogMolarDiffusion",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "O2p_drift",
+      "variable": "log_O2p",
+      "factory": "FVLogMolarElectrostaticDrift",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "O2p_source",
+      "variable": "log_O2p",
+      "factory": "FVCoupledForce",
+      "source_functor": "S_O2p_molar",
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "Om_time",
+      "variable": "log_Om",
+      "factory": "FVLogMolarTimeDerivative",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "Om_diffusion",
+      "variable": "log_Om",
+      "factory": "FVLogMolarDiffusion",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "Om_drift",
+      "variable": "log_Om",
+      "factory": "FVLogMolarElectrostaticDrift",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "Om_source",
+      "variable": "log_Om",
+      "factory": "FVCoupledForce",
+      "source_functor": "S_Om_molar",
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "Op_time",
+      "variable": "log_Op",
+      "factory": "FVLogMolarTimeDerivative",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "Op_diffusion",
+      "variable": "log_Op",
+      "factory": "FVLogMolarDiffusion",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "Op_drift",
+      "variable": "log_Op",
+      "factory": "FVLogMolarElectrostaticDrift",
+      "source_functor": null,
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    },
+    {
+      "name": "Op_source",
+      "variable": "log_Op",
+      "factory": "FVCoupledForce",
+      "source_functor": "S_Op_molar",
+      "observation": "NOT_OBSERVED_NATIVE_WAREHOUSE",
+      "owner_expected_count": 1
+    }
+  ],
+  "static_checks": {
+    "actual_CI_artifact_byte_SHA_256_independently_recalculated": true,
+    "actual_case_417_11_layer_SHA256_independently_recalculated_count": 11,
+    "static_source_expected_owners": 12,
+    "static_source_unique_owner_names": 12,
+    "actual_runtime_instantiated_owners": null,
+    "actual_runtime_missing_or_duplicate_owner_counts": null,
+    "Python_contract_mutations_rejected": 23,
+    "Python_contract_mutations_total": 23,
+    "Python_reproducer_sha256": "b05efdc730f84db1574784cb7536994fc25321059ad30890b4ca7e9699ff5d81",
+    "Python_audit_data_sha256": "fb5295bfe17b783372ba8e47dba41a4ca2bb25a01368d50d64317adc36f1af14",
+    "negative_types": [
+      "missing ion species/transport",
+      "incorrect charge/diffusivity/IC",
+      "changed or absent fvm_species",
+      "binding-only bypass",
+      "legacy Native Kernel reinserted",
+      "wrong or duplicate EI/H25 source stoichiometry",
+      "wrong molar reaction units"
+    ],
+    "negative_scope": "Independent Python static checks, NOT Native P05 negative tests."
+  },
+  "blocked_acceptance": {
+    "P4_X_source_consumer_cutover": "PENDING_NO_INTEGRATION_PROOF_AT_READ",
+    "P5_0_single_exact_head_P1_binary_build": "NOT_RUN_NO_BINARY_SHA",
+    "P5_B2_S6_417_native_check_input": "NOT_RUN_NO_EXIT_CODE",
+    "P5_B3_S6_417_12_kernel_Warehouse_inventory": "NOT_RUN",
+    "generated_12_source_expected": "PASS",
+    "actual_12_generated_kernel_owner_instances": "UNKNOWN_NOT_ZERO",
+    "P05_native_fail_closed": "NOT_RUN",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD",
+    "condition_to_accept": "After P4-X and P5-0 exact-head PhysicsApp binary SHA, run P5-B2 417 --check-input on independently staged Scratch and capture genuine Warehouse 12 object types/names/variables and P05 cardinality guard (including both FVKernel warehouse families). No bypass, skip or historical CI promotion."
+  },
+  "security_and_change_scope": {
+    "only_dedicated_evidence_branch_file_added": true,
+    "main_modified": false,
+    "PR665_modified": false,
+    "P3_X_artifact_modified": false,
+    "historical_original_inputs_modified": false,
+    "private_EI_rate_raw_bytes_published": false
+  }
+}
