@@ -289,7 +289,7 @@ jobs:
           data=p.read_bytes()
           print("P5X_PRELOAD_PREFLIGHT_BYTES",len(data),"SHA256",hashlib.sha256(data).hexdigest(),
                 "HEX",data[:80].hex())
-          assert data==b"P5X_PRELOAD_READY\\n", "PRELOAD_MARKER_CONTENT_INVALID"
+          assert data.strip()==b"P5X_PRELOAD_READY", "PRELOAD_MARKER_CONTENT_INVALID"
           PY
           grep -Fxq P5X_PRELOAD_READY "$RUNNER_TEMP/p05-in/observer-preflight/preload-ready.log"
           echo P5X_PRELOAD_ELF_LOADER_PASS_NO_PRIVATE_RATE
