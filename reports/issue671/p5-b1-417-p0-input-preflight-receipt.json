@@ -1,0 +1,140 @@
+{
+  "schema": "issue671.p5_b1.417.actual_source_p0_preflight_disposition.v1",
+  "task_id": "P5-B1",
+  "scope": "S6-417 actual full 11-layer, New-only JSON, ion native 26 retirement, non-ion owner preservation; source-only P0",
+  "source_pins": {
+    "current_PR665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "source_origin_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "preflight_script": "ci/p1_ion_new_only_preflight.py",
+    "preflight_script_git_blob": "c913bfbced72a9c37d0ed2214a44e5dd31657b35",
+    "preflight_guard_lines": "405-409: P1_GENERATED_C2_FUNCTOR_OWNER_COLLISION_* fail-closed",
+    "P1_0": {
+      "ci_run": 44182628032,
+      "artifact_id": 14372278070,
+      "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "P3_X": {
+      "ci_run": 44256823392,
+      "artifact_id": 14405784430,
+      "zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6"
+    }
+  },
+  "independent_actual_byte_results": {
+    "original_artifact_zip_sha_verified": true,
+    "staged_artifact_zip_sha_verified": true,
+    "both_zip_CRC_verified": true,
+    "S6_417_final_layers_after_SHA_count": "11/11",
+    "S6_417_original_layers_before_SHA_count": "11/11",
+    "original_ion_FVKernel_exact_retired": "14/14",
+    "original_ion_FVBC_exact_retired": "12/12",
+    "old_ion_exact_retirement_total": "26/26",
+    "electron_FEM_BC_exact_retired": "8/8",
+    "electron_FunctorMaterial_exact_retired": "2/2",
+    "exact_total_block_retirement": "36/36",
+    "first_10_layer_replay_from_P1_by_exact_section_scoped_removal": true,
+    "layer_11_Physics_overlay_replaced_intentionally": true,
+    "remaining_native_ion_FV_Kernel_BC_count": 0,
+    "non_target_object_blocks_byte_identical": 336,
+    "non_target_object_blocks_modified": 0,
+    "unchanged_input_layers": "5/11",
+    "changed_input_layers": "6/11",
+    "New_only_417_JSON_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "New_only_417_JSON_ion_species": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "variant_specific_EI417_present": true,
+    "variant_specific_EI941_absent": true,
+    "historical_electron_moments_rows": 42,
+    "electron_moments_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "Maxwell_child_sha256": "655fa43c4c1083e55ea4e845e0e2947c627aec39bc9dd0d384f52468db512698",
+    "Maxwell_base_sha256": "d7d3ea1f2d1fdb3fd63a3e22ca80a750487ef80bcac5af71d11c3c8c2b22a50c",
+    "Maxwell_overlay_sha256": "fc5fe6d59ead2f73faa6dacec408798fe595c28f462e2a5915c97f73ee6d0f45",
+    "QVT_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "actual_p3x_receipt_native_p2": "NOT_RUN"
+  },
+  "unresolved_C2_duplicate_candidates": [
+    {
+      "section": "FunctorMaterials",
+      "name": "ion_wall_flux",
+      "type": "PhysicsIonWallFluxMaterial",
+      "species_id": "O2p",
+      "intended_output": "O2p_wall_*"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "negative_ion_wall_flux",
+      "type": "PhysicsIonWallFluxMaterial",
+      "species_id": "Om",
+      "intended_output": "Om_wall_*"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "atomic_positive_ion_wall_flux",
+      "type": "PhysicsIonWallFluxMaterial",
+      "species_id": "Op",
+      "intended_output": "Op_wall_*"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "cover_surface_current",
+      "type": "ADParsedFunctorMaterial",
+      "property_name": "cover_net_surface_current_density"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "wafer_surface_current",
+      "type": "ADParsedFunctorMaterial",
+      "property_name": "wafer_net_surface_current_density"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "focus_ring_surface_current",
+      "type": "ADParsedFunctorMaterial",
+      "property_name": "focus_ring_net_surface_current_density"
+    }
+  ],
+  "source_c2_generated_intent": {
+    "Chemistry_C_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "expected": "PlasmasAction creates 3 ion wall Materials and 3 surface-current Materials from the New-only JSON",
+    "factory_registry_note": "Chemistry.C requests IonWallFluxMaterial, inspected registered class is PhysicsIonWallFluxMaterial; exact runtime resolution not verified",
+    "static_conflict_count": 6,
+    "proposed_resolution": "P4-X sole writer chooses a single provider for wall six-output properties and three surface-current functors, preserving consumer semantic equivalence and exact non-target input bytes."
+  },
+  "authoritative_P0_CLI": {
+    "current_source_guard_found": true,
+    "run_status": "NOT_CONFIRMED",
+    "one_shot_workflow_commit": "e1219f9ecec9ea0601f0ef9e36ed7ae4326e48e8",
+    "workflow_run_id": null,
+    "CLI_exit_code": null,
+    "CLI_output": null,
+    "note": "No successful/failed Actions run observed for the one-shot workflow, so no actual CLI exit status is claimed. The independent source-byte preflight identifies six collision candidates which current source guard is intended to reject."
+  },
+  "local_independent_verification": {
+    "executed": true,
+    "script_sha256": "583811ff3b9ceb9aec0e89cc0558ef59acbda8a77ddd222379d89d8dfa7a0fbb",
+    "report_sha256": "da2e97cb880616470fb2a3d0684eb7ae1e887f5cdc655ce304b0e10337dcf8a5",
+    "bundle_sha256": "3c30db7859f39c180327d98f682bd2fbf29f0dc6fe2fe277a85a56da5ea87720",
+    "independent_inputs": "Original P1-0 and actual P3-X archived ZIP raw bytes, section-scoped exact owner SHA and deletion replay; independent JSON and external public include/mesh/electron lookup sha readback"
+  },
+  "gate_decision": {
+    "P5_B1_SOURCE_INPUT_BYTE_IDENTITY": "PASS",
+    "P5_B1_NATIVE_ION_RETIREMENT_SOURCE_ONLY": "PASS",
+    "P5_B1_NONION_PRESERVATION": "PASS_SOURCE_ONLY",
+    "P5_B1_GENERATED_C2_SINGLE_OWNER_CONTRACT": "HOLD_SIX_COLLISION_CANDIDATES",
+    "P5_B1_OVERALL_P0": "HOLD_PENDING_P4_X_AND_AUTHORITATIVE_CLI",
+    "P5_0_BUILD": "NOT_RUN",
+    "P5_B2_NATIVE_CHECK_INPUT": "NOT_RUN",
+    "P5_X": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "native_MOOSE_invoked": false,
+    "science_P3_P4_invoked": false,
+    "private_EI_rates_exported": false,
+    "main_modified": false,
+    "PR665_modified": false,
+    "PR674_modified": false
+  }
+}
