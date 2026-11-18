@@ -1,0 +1,200 @@
+name: Issue672 PR684 exact-source Public FLOW Native P2 P05 one-shot
+on:
+  push:
+    branches:
+      - issue-672-p6-d1-integration-review-native-once-20261118
+permissions:
+  contents: read
+jobs:
+  evidence_only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SOURCE_SHA: 3e48a0651ac53ec32e34b4b31e44098ffad80e1c
+      HISTORY_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+    steps:
+      - name: Checkout disposable review evidence collector
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout immutable PR684 source
+        uses: actions/checkout@v4
+        with:
+          ref: 3e48a0651ac53ec32e34b4b31e44098ffad80e1c
+          path: control
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout historical public source
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Pin actual source SHAs and prohibit private rates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C control rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(git -C historical rev-parse HEAD)" = "$HISTORY_SHA"
+          test ! -e control/physics_app/physics-opt
+          test ! -d historical/experiments/Issue395_powered_chemistry_ladder/private_rates
+          grep -Fq "$OCI" control/physics_app/dependencies.lock
+          test "$(git -C control hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 2d120416d1bfe7c5454d0a7e955dcd6d9a763abc
+          test "$(git -C control hash-object experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py)" = 28e34e4352bec25006aca42e9abcac9acc584cc8
+          test "$(git -C control hash-object experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py)" = 6c6dcf6516d4169e4481f305dc882862253acbe9
+          echo PR684_SOURCE_HEAD_AND_CPP_BLOBS_PINNED
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install official Public FLOW P2 dependencies
+        run: >-
+          python3 -m pip install --disable-pip-version-check --quiet
+          'pytest>=8,<9' 'pydantic>=2,<3'
+          numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          -r control/requirements-evidence-engine.txt
+          -r control/requirements-ontology.txt
+      - name: Run exact-source PR684 new regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          python3 -m pytest -q tests/test_issue672_p6_d1_transport_owner_cutover.py
+      - name: Public exact-source environment P0
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          EXPECTED_SOURCE_HEAD="$SOURCE_SHA" bash experiments/Issue402_plasma_dsl_g1/preflight_public_option_s6.sh
+      - name: Prepare original historical 400W S6 mesh and electron moments
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd historical
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$SRC" | awk '{print $1}')" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA="$HISTORY_SHA"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          test ! -d "$CHEM/private_rates"
+          echo S6_400W_MESH_ORIGINAL_CUSTODY_PASS
+      - name: Build actual PR684 C++ physics-opt once in pinned MOOSE OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p review_outputs control/experiments/Issue402_plasma_dsl_g1/evidence
+          docker pull "$OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            --mount "type=bind,src=$PWD/control,dst=/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee control/experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
+          python3 - <<'PY'
+          import hashlib,json,pathlib,os
+          E=pathlib.Path('control/experiments/Issue402_plasma_dsl_g1/evidence')
+          def h(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+          binary=pathlib.Path('control/physics_app/physics-opt')
+          doc={'schema':'issue402.native_p1.job_local.v1','source_sha':os.environ['SOURCE_SHA'],
+               'oci_image':os.environ['OCI'],'binary_sha256':h(binary),
+               'build_log_sha256':h(E/'native_build.log'),
+               'reusable_scope':'same_exact_head_ci_job_only','P1':'PASS',
+               'P3':'NOT_RUN','science':'SCIENCE_HOLD'}
+          assert not (E/'native_p1_identity.json').exists()
+          (E/'native_p1_identity.json').write_text(json.dumps(doc,indent=2,sort_keys=True)+'\n')
+          print('PR684_EXACT_SOURCE_CPP_BINARY_SHA',doc['binary_sha256'])
+          PY
+      - name: Execute Public B and D 417+941 native cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p review_outputs
+          cd control
+          set +e
+          python3 experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py \
+            --historical "$GITHUB_WORKSPACE/historical" \
+            --binary "$GITHUB_WORKSPACE/control/physics_app/physics-opt" \
+            --expected-head "$SOURCE_SHA" \
+            --evidence "$GITHUB_WORKSPACE/control/experiments/Issue402_plasma_dsl_g1/evidence" \
+            > "$GITHUB_WORKSPACE/review_outputs/public_driver.log" 2>&1
+          rc=$?
+          set -e
+          echo "$rc" > "$GITHUB_WORKSPACE/review_outputs/public_driver.exit"
+          echo "PUBLIC_ACTUAL_NATIVE_DRIVER_EXIT=$rc"
+      - name: Execute FLOW 417 and 941 independently even after failure
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          for case in 417 941; do
+            set +e
+            python3 experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py \
+              --historical "$GITHUB_WORKSPACE/historical" \
+              --expected-head "$SOURCE_SHA" --case "$case" \
+              --timeout-seconds 300 \
+              --output "$GITHUB_WORKSPACE/review_outputs/flow-$case" \
+              > "$GITHUB_WORKSPACE/review_outputs/flow-$case-driver.log" 2>&1
+            rc=$?
+            set -e
+            echo "$rc" > "$GITHUB_WORKSPACE/review_outputs/flow-$case.exit"
+            printf 'FLOW_%s_NATIVE_DRIVER_EXIT=%s\n' "$case" "$rc"
+          done
+      - name: C++ P05 generated owner positive and duplicate negative controls only
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            --mount "type=bind,src=$PWD/control,dst=/workspace" \
+            --mount "type=bind,src=$PWD/review_outputs,dst=/out" \
+            "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              positive=experiments/Issue402_plasma_dsl_g1/chemistry_s6_417_three_ion_fv_generated_p2.i
+              negative=experiments/Issue402_plasma_dsl_g1/chemistry_s6_417_three_ion_fv_duplicate_p2.i
+              set +e
+              physics_app/physics-opt --check-input -i "$positive" > /out/p05-positive.log 2>&1
+              rc=$?
+              set -e
+              printf "%s\n" "$rc" > /out/p05-positive.exit
+              set +e
+              physics_app/physics-opt --check-input -i "$positive" "$negative" > /out/p05-negative.log 2>&1
+              rc=$?
+              set -e
+              printf "%s\n" "$rc" > /out/p05-negative.exit
+              echo P05_POSITIVE_AND_NEGATIVE_CPLUSPLUS_CONTROLS_EXECUTED
+            '
+      - name: Verify actual C++ binary, Native exit/logs and P05 stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/issue672_p6_d1_native_custody_collect.py --workspace "$GITHUB_WORKSPACE" --out "$GITHUB_WORKSPACE/review_outputs"
+      - name: Archive sanitized logs and source-bound P2 P05 receipt only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue672-p6-d1-pr684-native-review
+          path: |
+            review_outputs
+            control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
+            control/experiments/Issue402_plasma_dsl_g1/evidence/option_s6_environment.json
+            control/experiments/Issue402_plasma_dsl_g1/evidence/issue402_option_s6_p2_status.json
+            control/experiments/Issue402_plasma_dsl_g1/evidence/S6_*_P2.log
+          if-no-files-found: warn
+          retention-days: 14
