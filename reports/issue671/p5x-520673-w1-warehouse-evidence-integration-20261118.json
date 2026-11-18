@@ -1,0 +1,167 @@
+{
+  "schema": "issue671.p5_x.current_pr665_w1_warehouse_evidence_integration.v1",
+  "issued_on": "2026-11-18",
+  "scope": "read-only comparison + integration of prior actual W1/Warehouse/D8 receipts; no new Physics build or Native execution",
+  "repo": "HyungseonSong-plasma/moose-test-repo",
+  "issue": 671,
+  "source_pr": 665,
+  "target": {
+    "head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "tree": "2720fa5272a5fa98001e8e444331397723fe7ccb",
+    "state": "OPEN_DRAFT",
+    "pr_head_readback_before_write": true
+  },
+  "w1_source": {
+    "head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "tree": "10ab018235f047bf1abc250d3b18005b9156752a"
+  },
+  "latest_vs_w1": {
+    "git_compare": "ahead",
+    "merge_base": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "ahead_commits": 4,
+    "behind_commits": 0,
+    "changed_files": [
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "tests/test_issue633_newonly_run_species_schema.py"
+    ],
+    "physics_app_source_changes": 0,
+    "runtime_related_blob_comparisons": {
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "physics_app/src/functormaterials/IonWallFluxMaterial.C": "c965e1c2de9d1ba8eec6f3180c9eaeb5ca324fde",
+      "physics_app/src/fvbcs/FVLogMolarDielectricFluxBC.C": "08306f4545b806368a2c90bac0c83dacc5e7c9b5",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py": "a3f9d93ea1095c9d00053e5104bb7326d1af8f31",
+      "ci/guards/issue671_secure_ei_rate_scratch.py": "cd75238df8083f54b5b08330e46f88276ff8370a",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py": "d2091291161033a9662b0d583567f9c35d26c006"
+    },
+    "blob_pairs_identical": 7,
+    "additional_changed_test_blob": {
+      "W1": "30643d5a4179120cdb289dadbe813d05a6af9644",
+      "latest": "a4752e897e0b8877b48281d7c8f8790561a25fb8"
+    },
+    "runtime_relevant_source_byte_identity": "PASS",
+    "same_commit_identity": false,
+    "strict_final_head_build_attestation": "HOLD",
+    "comparison_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/compare/74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f...52067302d16074592503d0ef6b903cc344f55a08"
+  },
+  "w1_build": {
+    "run_id": 44319316180,
+    "artifact_id": 14435245012,
+    "zip_sha256": "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd",
+    "tar_sha256": "12f198cd17101b23b67a61a2fe95247af9c4c860d36b04ebf16b8dc91d4dadeb",
+    "elf_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "libs_sha256": {
+      "libphysics-opt.so.0": "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd",
+      "libphysics_test-opt.so.0": "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6"
+    },
+    "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "zip_crc": "PASS",
+    "raw_W1_bundle_rehashed_in_this_integration": true
+  },
+  "warehouse": {
+    "scope": "W1 original ELF; external LD_PRELOAD instrumented FEProblemBase::add* post-successful-call registration events, plus unmodified P05 checkIntegrity",
+    "workflow_run": 44340416703,
+    "job_id": 134928618612,
+    "job_conclusion": "success",
+    "artifact_id": 14444615886,
+    "artifact_zip_sha256": "4910a1df8547b796be19623b903b3932640ec64a9facf7770494fa6da3870841",
+    "artifact_crc": "PASS",
+    "native_receipt_sha256": "99e0c121a30fc77e43d0fb693f8825941afc542db709c961f95763f09dca06ca",
+    "per_case": {
+      "417": {
+        "check_input_exit": 0,
+        "syntax_ok": true,
+        "FVKernel": 12,
+        "FVBC": 12,
+        "electron_FEM_BC": 8,
+        "live_typed_name_factory_pairs_verified": 32,
+        "recorded_registration_events": 77,
+        "N1_N8_expected_failures": 8,
+        "public_inputs_sha_restored": true,
+        "registration_trace_sha256": "7ebd2c3bb67d959025b41e24363ec6e289fa4b36f606ccca7ccb0ca2d3e335e6"
+      },
+      "941": {
+        "check_input_exit": 0,
+        "syntax_ok": true,
+        "FVKernel": 12,
+        "FVBC": 12,
+        "electron_FEM_BC": 8,
+        "live_typed_name_factory_pairs_verified": 32,
+        "recorded_registration_events": 77,
+        "N1_N8_expected_failures": 8,
+        "public_inputs_sha_restored": true,
+        "registration_trace_sha256": "299193ef065c4ba6ca5071c6fc56b137dc9a0112d6ba6ed8e0a7c9ca72eab79e"
+      }
+    },
+    "negative_first_failure_class_per_case": {
+      "N1": "P05",
+      "N2": "P05",
+      "N3": "P05",
+      "N4": "P05",
+      "N5": "EARLY_REGISTRATION",
+      "N6": "CHEMISTRY",
+      "N7": "CHEMISTRY",
+      "N8": "CHEMISTRY"
+    },
+    "total_negative_expected_rejections": 16,
+    "private_rate_raw_export": false,
+    "tmpfs_cleanup_verified": true,
+    "typed_inventory_per_case_link": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9b7a55240880a178aa102483700746d7cd464db7/reports/issue671/p5x-w1-real-typed-12k-12fvbc-8fembc-417-941-receipt.json",
+    "harness_repair_receipt": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/ba40f2a880f7ee64571fee71fef21e68985c2b8e/reports/issue671/p5x-warehouse-harness-abi-typed-owner-receipt-20261118.json",
+    "evidence_boundary": {
+      "actual_typed_registration": "PASS_BOTH_CASES",
+      "check_input_unmodified_P05": "PASS_BOTH_CASES",
+      "live_variable_and_sideset_parameters_directly_captured": false,
+      "raw_TheWarehouse_memory_snapshot": false,
+      "raw_registration_trace_uploaded": false,
+      "raw_native_stdout_uploaded": false,
+      "trace_SHA_from_job_receipt_not_independently_recomputed": true
+    }
+  },
+  "d8_bounded": {
+    "run_id": 44337988067,
+    "artifact_id": 14442342839,
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "reported_artifact_sha256": "3a38a8598c8a9b4f9f17b46d0772d20190bba7f795cebb14cc059f6ac75ada73",
+    "original_S6_RF_Maxwell_child_transfers_7": "PASS_BOTH_CASES_3NS",
+    "wall_surface_current_poisson_8_integrated_postprocessors": "PASS_BOTH_CASES_3NS",
+    "same_W1_elf": true,
+    "evidence_type": "external prior completed CI + immutable issue671 receipt; not independently ZIP-rehashed in current comparison",
+    "receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/d9e3452cebec800aaec65cf557891ba1f164c49b/reports/issue671/d8-rf-wall-poisson-actual-417-941-bounded-3ns-20261118.json",
+    "caveats": [
+      "postprocessor integrals are not direct same-run computeQpResidual trace",
+      "full 100us science not tested"
+    ]
+  },
+  "evidence_integrity_this_integration": {
+    "original_w1_zip_crc": "PASS",
+    "actual_w1_tar_and_three_members_sha256": "PASS",
+    "warehouse_zip_crc": "PASS",
+    "warehouse_receipt_sha256": "PASS",
+    "per_case_typed_triple_set_exact": "PASS_32_OF_32_EACH",
+    "per_case_N1_N8_expected_exit": "PASS_8_OF_8_EACH",
+    "protected_scratch_privacy_flags": "PASS",
+    "source_blob_comparisons": "PASS_7_OF_7"
+  },
+  "gates": {
+    "W1_UNCHANGED_RUNTIME_SOURCE_BLOB_COMPATIBILITY": "PASS_7_OF_7",
+    "W1_EXACT_CURRENT_PR665_HEAD": "HOLD_74A_VS_520",
+    "W1_417_941_NATIVE_CHECK_INPUT": "PASS_ON_74A_W1",
+    "W1_TYPED_12K_12FVBC_8EBC": "PASS_ON_74A_W1",
+    "W1_N1_N8": "PASS_16_OF_16_ON_74A_W1",
+    "D8_ORIGINAL_RF_WALL_CURRENT_POISSON": "PASS_BOUNDED_3NS_ON_74A_W1",
+    "P5_X_STRICT_FINAL": "HOLD_CURRENT_HEAD_BINARY_IDENTITY",
+    "NEW_ONLY_S6_P2_FINAL": "HOLD_CURRENT_HEAD_BINARY_IDENTITY",
+    "P3_P4_100US": "NOT_RUN",
+    "SCIENCE": "HOLD",
+    "historical_hybrid": "KEEP_HOLD"
+  },
+  "next_required_gate": "Rebuild and rehash single W1 executable and both app libs at 52067302... and reuse in exact-current-head 417/941 P2/typed registrations/N1-N8; or obtain explicit approval for an alternative verified equivalence acceptance contract. Current file-only equivalence cannot silently replace exact-head policy.",
+  "safety": {
+    "main_unmodified": true,
+    "PR665_unmodified": true,
+    "original_S6_immutable": true,
+    "private_rate_raw_not_exported": true,
+    "no_workflow_or_science_run_in_this_integration": true
+  }
+}
