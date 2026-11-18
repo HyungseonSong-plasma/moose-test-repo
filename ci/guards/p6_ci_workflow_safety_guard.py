@@ -204,6 +204,29 @@ def validate(workflow: str, template: str, dd_source: str) -> None:
     need("P6_PUBLIC_B_PASS_D_KEEP_HOLD_EVIDENCE_NOT_NATIVE_D_PASS" in
          job_block(workflow,"plasma_native_regression"),
          "PUBLIC_D_MUST_KEEP_HOLD")
+    public_d=job_block(workflow,"p6_public_d_100row_native_p2")
+    need(PR_GUARD in public_d.split("    runs-on:",1)[0],
+         "PUBLIC_D_REQUIRED_INTERNAL_PR_TRIGGER")
+    for token in (
+        "needs: p6_newonly_s6_build",
+        "actions/download-artifact@v4",
+        "P6_NEWONLY_EXACT_HEAD_ONE_W1_THREE_BINARY_BYTES_VERIFIED",
+        "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+        "stage_public_d_physics",
+        "PUBLIC_D_100ROW_TWO_CASES_STAGED_EXACT_PHYSICS_NO_REBUILD_PASS",
+        "PASS_16_INTENDED_NATIVE_REJECTIONS",
+        "assert len(expected_kernels)==12 and len(expected_bc)==12 and len(expected_e)==8",
+        "tmpfs_cleanup_verified",
+        "source_restoration",
+        "if-no-files-found: error",
+        "retention-days: 14",
+        "if: always()",
+        "p6-public-d-original100-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}",
+    ):
+        need(token in public_d, "PUBLIC_D_REQUIRED_NATIVE_MISSING_"+token[:30])
+    need("make -C physics_app" not in public_d, "PUBLIC_D_MUST_REUSE_ONE_W1")
+    for bypass in BANNED_NATIVE:
+        need(bypass not in public_d, "PUBLIC_D_NO_NATIVE_BYPASS_"+bypass[:24])
     need("P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD" in
          job_block(workflow,"issue541_arch_s6_hybrid_native_p2"),
          "ARCH_HYBRID_MUST_KEEP_HOLD")
@@ -340,6 +363,18 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "          path: experiments/Issue402_plasma_dsl_g1/chemistry/**"
     ))
 
+    add("missing_public_d_native_job",workflow.replace(
+        "  p6_public_d_100row_native_p2:","  disabled_public_d_100row_native_p2:",1))
+    add("public_d_no_shared_w1",edit_job(
+        workflow,"p6_public_d_100row_native_p2",
+        "needs: p6_newonly_s6_build","needs: validate"))
+    add("public_d_falsified_100row_stage",edit_job(
+        workflow,"p6_public_d_100row_native_p2",
+        "PUBLIC_D_100ROW_TWO_CASES_STAGED_EXACT_PHYSICS_NO_REBUILD_PASS",
+        "PUBLIC_D_100ROW_SOURCE_HOLD"))
+    add("public_d_evidence_upload_optional",edit_job(
+        workflow,"p6_public_d_100row_native_p2",
+        "if-no-files-found: error","if-no-files-found: warn"))
     add("missing_mandatory_newonly_build",workflow.replace(
         "  p6_newonly_s6_build:","  disabled_p6_newonly_s6_build:",1))
     add("missing_mandatory_newonly_native",workflow.replace(
