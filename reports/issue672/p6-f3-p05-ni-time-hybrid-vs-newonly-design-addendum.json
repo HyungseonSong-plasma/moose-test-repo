@@ -1,0 +1,214 @@
+{
+  "schema": "issue672.p6_f3.flow_ni_time_owner_two_track_native_addendum.v1",
+  "task": "P6-F3",
+  "date_utc": "2026-11-18",
+  "status": "DESIGN_AND_REAL_P05_REPRO_PASS__MODE_AUTHORITY_AND_NATIVE_CUTOVER_HOLD",
+  "target": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr_665": 665,
+    "pr_665_source_sha": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "PR684": 684,
+    "PR684_head": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "PR684_merged": false,
+    "PR684_status": "OPEN",
+    "P6_F3_existing_standalone_decision_commit": "49b3e1dc6ca04f5808cd5e447be5dd13f43e57e2",
+    "P6_F3_existing_decision_path": "reports/issue672/p6-f3-flow-26native-vs-24generated-owner-decision.json",
+    "supersession_note": "Earlier F3 receipt said PR684 FLOW P05 NOT_RUN; this independent 2026-11-18 exact-source Native CI actually reached and rejected ni_time on BOTH 417 and 941. This addendum supersedes only that Native-result assertion, not the historical inventory."
+  },
+  "source_pins": {
+    "legacy_owner_inventory_file": "reports/issue667/p1-e/inventory.json",
+    "legacy_owner_inventory_commit": "a3e22628d863c3b2f06ba34b2050a6ae99a7c699",
+    "legacy_owner_inventory_git_blob": "34256b02a15e66e9298cc9ad0e4d2752e5f3f3c7",
+    "DDContinuityEq_C_path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "DDContinuityEq_C_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "actual_hybrid_preparer_path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py",
+    "actual_hybrid_preparer_git_blob": "8a76517c7863be77d8390cd04b0b3be055f2c147",
+    "newonly_preparer_path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py",
+    "newonly_preparer_git_blob": "d2091291161033a9662b0d583567f9c35d26c006",
+    "PR684_FLOW_runner_git_blob": "6c6dcf6516d4169e4481f305dc882862253acbe9",
+    "PR684_integration_review_git_blob": "e9260eeb0f1413514a9922a8ab4c91cef499b440"
+  },
+  "real_native_evidence": {
+    "CI_run": 44314726088,
+    "actual_source_checkout_sha": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "CI_wrapper_commit": "4a36e46281c000dd2e9ce6089defe11647ce7788",
+    "artifact_id": 14431723105,
+    "downloaded_outer_zip_sha256": "ef7ebac1d38b02a955c04e3e35a689eb3fb2168913f3dca6d69d1a0e58b6bdef",
+    "ZIP_CRC": "PASS",
+    "ZIP_members": 2702,
+    "local_OCI_binary_SHA256_observed_in_job": "256ab419c24aac9a292479a56958e72744de8deaece9f043fe15c777ac4cf9dd",
+    "raw_ELF_uploaded": false,
+    "real_binary_offjob_rehash": false,
+    "cases": {
+      "417": {
+        "flow_driver_exit": 1,
+        "Native_check_input_exit": 1,
+        "first_failed_stage": "P05 TheWarehouse",
+        "first_error_location": "migrated_continuity.i:19.9",
+        "first_error": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+        "full_log_sha256": "6c63786101580549c123ff77aacfea2418ad5f71757a6539968930f4de29d217",
+        "case_readiness_keys": [
+          "417"
+        ],
+        "no_case_941_in_same_run": true
+      },
+      "941": {
+        "flow_driver_exit": 1,
+        "Native_check_input_exit": 1,
+        "first_failed_stage": "P05 TheWarehouse",
+        "first_error_location": "migrated_continuity.i:19.9",
+        "first_error": "P05 FV Native/Physics duplicate or unexpected owner on 'log_O2p': ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+        "full_log_sha256": "5c785d6554c5e691207572e869c634a498a8d79c1df2358293e0849bfc918c7a",
+        "case_readiness_keys": [
+          "941"
+        ],
+        "separately_invoked_after_prior_417_abort": true
+      }
+    },
+    "public_D_control": {
+      "case417_native_exit": 1,
+      "case941_native_exit": 1,
+      "first_error": "FV species kernels require [Physics]/[Plasmas]/[Transport]/[Chemistry] to generate species source functors",
+      "reached_P05": false
+    },
+    "p05_positive_generated_only": {
+      "native_exit": 0,
+      "syntax_ok": true,
+      "log_sha256": "cdc0b0395094e6576b4aaacf4ee2c6312e18d977281d6cf3a9ab0c72e03e5a1e"
+    },
+    "p05_negative_reinsert_legacy_ni_time": {
+      "native_exit": 1,
+      "P05_reject": true,
+      "log_sha256": "217c04a35fdf782d71ee574fc5235276fb7a3c0cf9391a1b825fdf7886fa3d81"
+    },
+    "CI_overall_conclusion": "success for evidence collection ONLY, not Public/FLOW Native P2 acceptance",
+    "provenance_source": "GitHub Actions downloaded ZIP bytes; full outer SHA256, per-member logs SHA256, exact error text verified independently"
+  },
+  "owner_ledger": {
+    "cases": [
+      "417",
+      "941"
+    ],
+    "species": [
+      {
+        "id": "O2p",
+        "variable": "log_O2p",
+        "charge": 1
+      },
+      {
+        "id": "Om",
+        "variable": "log_Om",
+        "charge": -1
+      },
+      {
+        "id": "Op",
+        "variable": "log_Op",
+        "charge": 1
+      }
+    ],
+    "archived_per_case": {
+      "FV_Kernels": 14,
+      "FV_BCs": 12,
+      "total": 26,
+      "kernel_breakdown": {
+        "time_diffusion_drift": 9,
+        "individual_reaction_source_kernels": 5
+      },
+      "FVBC_breakdown": {
+        "general": 3,
+        "dielectric": 9
+      },
+      "first_old_owner": "ni_time",
+      "first_old_owner_raw_block_sha256": "7426f7f16d0440783cbf2d66a99d082fc1bb07cad464c3aad16a33e3e064af38"
+    },
+    "generated_per_case": {
+      "FV_Kernels": 12,
+      "FV_BCs": 12,
+      "total": 24,
+      "kernel_breakdown": {
+        "time_diffusion_drift": 9,
+        "aggregated_species_source": 3
+      },
+      "FVBC_breakdown": {
+        "general": 3,
+        "dielectric": 9
+      },
+      "generated_kernels_per_species": [
+        "<id>_time / FVLogMolarTimeDerivative",
+        "<id>_diffusion / FVLogMolarDiffusion",
+        "<id>_drift / FVLogMolarElectrostaticDrift",
+        "<id>_source / FVCoupledForce"
+      ]
+    },
+    "net_difference": "14 original kernels have five separate EI/H25 source terms; 12 generated kernels replace those five with three species-aggregated source Functors. BC counts are equal but owners MUST be switched in full.",
+    "P05_CXX_line_scope": "DDContinuityEq.C 254-370 checks exact name/type and variable across FVElementalKernel + FVFluxKernel and FVFluxBC + FVDirichletBC; checks unknown, duplicate and missing. Nonempty fvm_species causes generation; dont_create_kernels is not an acceptable ownership cutover."
+  },
+  "options": [
+    {
+      "name": "A_KEEP_HISTORICAL_HYBRID",
+      "decision": "KEEP_HOLD at latest #665/PR684, historical reference retained",
+      "authority": "Historically pinned FLOW/ARCH P2 purpose, not authorized new current-code Physics/FV behavior",
+      "implementation": "Retain original Native 14 FVKernels +12 FVBC and the historical independent mesh, rate, wall and lookup records unchanged. Do NOT simultaneously select Physics-generated 12+12 on same FV states; do NOT suppress P05, patch tests to green, or substitute New-only JSON.",
+      "supported_evidence": "Historical FLOW #578 CI run 43972605750 417/941 PASS only at own pinned source; latest #684 real 417/941 P05 exit1.",
+      "approval_for_future_current_head_compatible_runner": "Explicit owner/mode/Physics contract approval needed if maintaining old Native 26 on newer binary. Requires isolated Native-only P2-compatible runner/overlay under exact SHA; validator must assert old 26 count and not silently select generated FV. Architecture/semantic compatibility, electron energy closure and table baseline require independent proof.",
+      "now": "Reference-only / separate historical lane KEEP_HOLD; do not merge PR684 into current FLOW lane based on evidence-only CI."
+    },
+    {
+      "name": "B_DEDICATED_NEW_ONLY_26_TO_0",
+      "decision": "PREFERRED FOR NEW PRODUCTION PATH, CONDITIONAL_ACCEPT_ONLY",
+      "authority": "#633 P2/P3-X/P4-X and P5-X; independent CI/runner, not a destructive replacement of Historical FLOW source",
+      "implementation": "Disposably stage original 11 input layers with pinned manifests, securely materialize 5/case EI rates; atomically verify and remove exact 26 old Native ion blocks by original path/name/variable/type/byte SHA. Retire 10 old electron BC/material producers in separate source gate. Apply P4-X exact seven C0 cuts (6 wall/current Materials retired; constants trimmed to preserve carrier_one=1). Stage separate 417/941 unified typed JSON and appropriate Physics overlay; generate exactly 12 FV Kernels +12 FVBC per case via C++. Preserve legacy density/Poisson diagnostic aliases; never remove non-target blocks.",
+      "source_retirement": "14 old FV kernel (9 transport/time +5 source) ->0, 12 old FVBC ->0, new 12 kernels (9 transport/time+3 signed aggregate source) and12 BC.",
+      "preserved_consumers": [
+        "Species variables log_O2p/log_Om/log_Op with charges +1/-1/+1 and verified initial densities / N_A conversion",
+        "EI-417 vs EI-941, EI-415, EI-401, H25 rate sources; signed aggregate S_O2p, S_Om, S_Op in mol/(m^3 s)",
+        "Original Poisson: n_i_physical, n_m_physical, n_op_physical aliases -> charge_number_density = ni+nop-ne-nm -> poisson_source",
+        "Wall-flux mass/number and e_wall_number_flux, cover/wafer/focus_ring surface-current with Lower-D sigma consumers",
+        "3 ion general +9 dielectric BC with full JSON sidesets, drift-avoid, signed charge, wall gradient and smoothing",
+        "RF Maxwell child and seven Transfers, neutral gas, pressure/temperature, 42-row New-only electron lookup table; preserve protected EI custody and original SHA"
+      ],
+      "gate": "After P4-X source-only receipt: exact HEAD one build P5-0 ELF+libs+OCI; independent actual 417 and 941 Native P0/P2, live Warehouse 12+12, electron BC8, canonical single-owner consumer graph; 16 current-HEAD Native N1–N8 failures/restores; D8 full numerical caller; final P5-X readback PASS.",
+      "current": "New-only source stage and older/off-head Native probes exist, strict final P5-X remains HOLD."
+    },
+    {
+      "name": "C_MODERN_HYBRID_COMPAT",
+      "decision": "HOLD_SEPARATE_APPROVAL",
+      "description": "If old ion Native 26 must run under modern Chemistry/Physics C++, define a distinct Native-owner compatibility action/runner with explicit authority, source contract and monitored live Native 26 inventory. Do not reinterpret fvm_species selection or dont_create_kernels as implicit mode. Before implementation approve ownership graph, source/electron 5/3 and original historical table provenance, signed wall/Poisson behavior and scientific compatibility.",
+      "current": "Not approved or implemented; not a shortcut to a passing FLOW job."
+    }
+  ],
+  "approval_gates": {
+    "recommended_choice": "A KEEP historical reference unchanged, B separate New-only CI for future production. C only on explicit separate authorization.",
+    "must_approve_before_modifying_historical_FLOW": [
+      "Accepted authoritative physics model and history 26 vs generated 24 source aggregation semantics",
+      "Same original electron lookup choice 100-row historical vs 42-row New-only with numerical/physical equivalence if switching",
+      "Electron 5/3 closure and signed wall/Poisson current equivalence",
+      "Explicit owner selection without P05 bypass, no duplicate overlap",
+      "Workflow permissions and no implicit P3/P4/long timestep"
+    ],
+    "test_matrix": [
+      "Source originality 11/11 per case + original 26 block SHA, 0 residual in new-only, other bytes preserved",
+      "Case 417 and 941 separately with independent Scratch/log/artifacts; run both even if first fails, but fail job overall if either fails",
+      "Native --check-input exit0 and Syntax OK in both; same exact pinned source HEAD and executable/app-libs SHA/OCI",
+      "P05 full Warehouse 12 Kernel +12 BC for New-only and 8 FEM BC canonical single owners; separate historical 26 Native expected in any approved true Native-only compatibility",
+      "Counterexamples retained ni_time, duplicate diffusion/drift, BC malformed/missing, source missing, wrong charge/sideset, transport and JSON drift all fail-closed",
+      "Private EI rate SHA/count custody in secure tmpfs and deletion; old original untouched",
+      "D8 Poisson, density, wall current, Maxwell child seven Transfers, coupled RF validated only under separately accepted runtime gate",
+      "No implicit timestep / scientific P3/P4; SCIENCE_HOLD"
+    ]
+  },
+  "final_gates": {
+    "P6_F3_ARCHIVED_OWNER_COUNT": "PASS_26_PER_CASE",
+    "P6_F3_PR684_REAL_FLOW_P05_REPRO": "PASS_FAIL_CLOSED_417_AND_941",
+    "P6_F3_DESIGN": "PASS",
+    "HISTORIC_HYBRID_CURRENT_HEAD": "KEEP_HOLD",
+    "PR684_MERGE": "HOLD",
+    "NEW_ONLY_SOURCE_DESIGN": "CONDITIONAL_ACCEPT",
+    "NEW_ONLY_FINAL_P5_X": "HOLD",
+    "P6_F4": "HOLD_MODE_AUTHORITY_AND_P05",
+    "SCIENCE": "SCIENCE_HOLD",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN"
+  },
+  "mutations": "Isolated evidence branch only. No PR665/PR684/main/Workflow/P05/C++/original Private EI source modification."
+}
