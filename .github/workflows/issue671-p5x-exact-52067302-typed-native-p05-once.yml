@@ -1,15 +1,15 @@
-name: Issue671 P5-X exact 52067302 W1 417 941 typed P05 N1-N8
+name: Issue671 P5-X first-error verifier 52067302 417 941 N1-N8
 on:
   push:
     branches:
-      - issue-671-p5x-exact-52067302-typed-native-p05-20261118
+      - issue-671-p5x-negative-firsterror-verifier-20261118
     paths:
       - .github/workflows/issue671-p5x-exact-52067302-typed-native-p05-once.yml
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: issue671-p5x-w1-p05-owner-registration-52067302-one-shot
+  group: issue671-p5x-first-error-verifier-52067302-isolated-once
   cancel-in-progress: false
 jobs:
   exact-head-w1-native-p05:
@@ -376,9 +376,11 @@ jobs:
                    "set -euo pipefail; source /environment; "+("P5X_REGISTER_LOG=/case/p5x_registrations.log LD_PRELOAD=/workspace/physics_app/p5x_owner_tracer.so " if trace else "")+"/workspace/physics_app/physics-opt --check-input -i "+
                    " ".join(shlex.quote(x) for x in ordered)]
               try:
-                  p=subprocess.run(cmd,text=True,capture_output=True,timeout=480,check=False,
+                  # One combined pipe retains the emission order of the first fatal error.
+                  p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                                   timeout=480,check=False,
                                    env={k:v for k,v in os.environ.items() if k!="PROTECTED_ARCHIVE_B64"})
-                  return p.returncode, (p.stdout or "")+"\n"+(p.stderr or "")
+                  return p.returncode, p.stdout or ""
               except subprocess.TimeoutExpired:
                   return 124,"NATIVE_INPUT_TIMEOUT"
           
@@ -391,6 +393,37 @@ jobs:
           "N6":("equation without matching reaction ID: EI-401",),
           "N7":("initial_number_density must be finite and strictly positive",),
           "N8":("EI-401: charge conservation failed",)}
+          import re as _first_re
+          _first_family={"N1":"P05","N2":"P05","N3":"P05","N4":"P05",
+                         "N5":"EARLY_REGISTRATION","N6":"CHEMISTRY",
+                         "N7":"CHEMISTRY","N8":"CHEMISTRY"}
+          _fatal_marker=_first_re.compile(r"^\\s*(?:\\*{3}\\s*ERROR\\s*\\*{3}|ERROR:|terminate called)", _first_re.I)
+          def classify_first_native_error(rc,log,test):
+              """Require the expected signature inside the FIRST fatal error block only."""
+              if rc==0:
+                  return False,"NATIVE_EXIT_ZERO","NO_FIRST_FATAL"
+              lines=log.splitlines()
+              marks=[i for i,line in enumerate(lines) if _fatal_marker.search(line)]
+              if not marks:
+                  return False,"NO_FIRST_FATAL_MARKER","NO_FIRST_FATAL"
+              start=marks[0]
+              end=min(len(lines),start+45,marks[1] if len(marks)>1 else len(lines))
+              first="\\n".join(lines[start:end])
+              if test=="N5":
+                  hit=("O2p_cover_dielectric" in first and
+                       _first_re.search(r"duplicate|already|exists",first,_first_re.I) is not None)
+              else:
+                  hit=any(signature in first for signature in expected[test])
+              if not hit:
+                  return False,"UNEXPECTED_FIRST_FATAL","UNMATCHED_FIRST_FATAL"
+              return True,_first_family[test],"EXPECTED_FIRST_FATAL_"+test
+          # P0 verifier mutation/self-tests before protected inputs are read.
+          assert classify_first_native_error(1,"*** ERROR ***\\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
+          assert classify_first_native_error(1,"*** ERROR ***\\nAn object named O2p_cover_dielectric already exists","N5")[1]=="EARLY_REGISTRATION"
+          assert classify_first_native_error(1,"*** ERROR ***\\nequation without matching reaction ID: EI-401","N6")[1]=="CHEMISTRY"
+          assert not classify_first_native_error(0,"*** ERROR ***\\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
+          assert not classify_first_native_error(1,"*** ERROR ***\\nwrong first error\\n*** ERROR ***\\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
+          assert not classify_first_native_error(1,"P05 FV Native/Physics duplicate or unexpected owner","N1")[0]
           receipt={"schema":"issue671.p05.n1_n8.native_s6.v1","source_head":head,"OCI":oci,
                    "binary_sha256":sha(repo/"physics_app"/"physics-opt"),"cases":{},
                    "tests_total":16,"native_tests_completed":0,"native_expected_rejections":0,
@@ -536,17 +569,14 @@ jobs:
                       if before==after:raise RuntimeError("MUTATION_NOOP")
                       stage_rates(work,case,rates)
                       rc,log=native(work,exp["ordered_inputs"],receipt["binary_sha256"])
-                      matched=rc!=0 and any(p in log for p in expected[test])
-                      category=("P05" if "P05 " in log and matched else
-                                "CHEMISTRY" if matched else "UNRELATED_OR_ACCEPTED")
-                      if test=="N5" and not matched and rc!=0 and "O2p_cover_dielectric" in log and (
-                          "duplicate" in log.lower() or "already" in log.lower() or "exists" in log.lower()):
-                          matched=True;category="EARLY_REGISTRATION"
+                      matched,category,first_signature=classify_first_native_error(rc,log,test)
                       receipt["cases"][case]["tests"][test]={
                          "changed_file":changed,"before_sha256":before,"after_sha256":after,
                          "unchanged_file_count":len(baseline)-1,"exit_code":rc,
                          "expected_error_substrings":list(expected[test]),
                          "matched_expected":matched,"first_failure_class":category,
+                         "first_error_signature":first_signature,
+                         "first_error_verifier":"FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
                          "log_sha256":hashlib.sha256(log.encode()).hexdigest(),
                          "syntax_ok":"Syntax OK" in log}
                       receipt["native_tests_completed"]+=1
@@ -584,7 +614,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue671-p5x-exact-52067302-typed32-plus-n1n8
+          name: issue671-p5x-exact-52067302-first-error-classified-n1n8
           path: |
             ${{ runner.temp }}/p05-out/p05_negative_receipt.json
             ${{ runner.temp }}/p05-in/p4_receipt.json
