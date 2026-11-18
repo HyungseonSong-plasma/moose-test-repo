@@ -1,0 +1,39 @@
+{
+  "schema": "issue669.p3x.outstanding_worker_slot.v1",
+  "source_pr": 665,
+  "source_pr_head_before_p3x": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "p1_0_archived_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "p3x_CI_run": 44255749142,
+  "p3x_artifact_id": 14405638218,
+  "p3x_artifact_zip_sha256": "1c68a9622357cd13990521dad85504adf49c70916f2424c3511b600e2583e159",
+  "p3x_stage_head": "95d0cd11edfd666f0e33838d5114d9a273c8b05a",
+  "evidence_scope": "ACTUAL_SOURCE_ONLY_ARTIFACT_BYTE_READBACK__NOT_NATIVE_CXX_WAREHOUSE",
+  "Native_P2": "NOT_RUN",
+  "Native_P3": "NOT_RUN",
+  "Native_P4": "NOT_RUN",
+  "SCIENCE": "SCIENCE_HOLD",
+  "task_id": "P3-G2",
+  "status": "PASS_NO_NATIVE_ELECTRON_CONTINUITY_TIME_DUPLICATE_SOURCE__WAREHOUSE_HOLD",
+  "local_independent_detailed_receipt_sha256": "ad5de885139a07bd6891e23c7dfd5d01dd5e5a68778c25cb37f667baf6ee13ba",
+  "independent_task_proof": {
+    "cases": [
+      "417",
+      "941"
+    ],
+    "old_explicit_electron_time_transport_source_Kernels": 0,
+    "old_electron_FEM_BCs_after_P3X": 0,
+    "retained_non_target_rf_heating_t6": {
+      "type": "MatBodyForce",
+      "variable": "log_e_energy",
+      "one_per_case": true,
+      "block_sha256": "935798c5d6f16243c87d84eab193a6111ef19c9dff827e9381136f97c6fc9c92"
+    },
+    "Physics_Continuity_sections_each": 1,
+    "Physics_Energy_sections_each": 1,
+    "generated_CXX_Source": "physics_app/src/physics/plasma/DDContinuityEq.C + DDEnergyEq.C",
+    "dd_continuity_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "dd_energy_git_blob": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+    "negative_controls_rejected": 2,
+    "generated_warehouse_object_count": "NOT_RUN"
+  }
+}
