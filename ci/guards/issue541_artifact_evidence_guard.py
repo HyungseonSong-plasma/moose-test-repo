@@ -90,7 +90,7 @@ def check_policy(ci: str, template: str) -> None:
     for name, check in (
         ("Require complete CORE P0 artifact evidence", "--check-core-p0"),
         ("Require source-bound CORE Native P1/P2 artifact evidence", "--check-core-native"),
-        ("Require actual native regression evidence before success", "--check-regression"),
+        ("Require explicit Public D KEEP_HOLD evidence, not Native D PASS", "p6_legacy_hold_receipt.py --mode public"),
     ):
         assert check in step_block(ci, name), "ARTIFACT_CHECKER_NOT_WIRED:" + name
     assert "--self-test" in ci, "ARTIFACT_MUTATION_SELF_TEST_NOT_WIRED"

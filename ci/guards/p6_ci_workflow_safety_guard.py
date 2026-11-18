@@ -286,7 +286,7 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
     ))
     add("p3_auto_launch", edit_job(
         workflow, "issue541_arch_s6_hybrid_native_p2",
-        "echo ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD",
+        "echo P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD",
         "run_chemistry_s6_p3_once.py --authorize-p3"
     ))
     add("continue_on_error", edit_job(
