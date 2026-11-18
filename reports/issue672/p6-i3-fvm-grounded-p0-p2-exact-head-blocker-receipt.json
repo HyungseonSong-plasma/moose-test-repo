@@ -1,0 +1,124 @@
+{
+  "schema": "issue672.p6_i3.fvm_grounded_only.p0_to_native_p2_exact_head_repro.v1",
+  "issue": 672,
+  "task": "P6-I3",
+  "date_utc": "2026-11-18",
+  "status": "PASS_ISOLATED_P0_WALL_STATIC_13_NEGATIVES__P1_EXACT_SOURCE_BUILDS_PASS__FVM_FULL_NATIVE_P2_KEEP_HOLD",
+  "scope": "Standalone FVM-only Grounded sheath particle/energy physics experiment. Historical FEM-grounded hybrid 150/200-step matrix remains KEEP_HOLD and no time integration is run.",
+  "legacy_disposition": {
+    "historical_matrix": "KEEP_HOLD",
+    "original_workflow": ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+    "current_pr665_workflow_blob": "76d11f6bf5431f9750aa100c8a382006f706741f",
+    "current_workflow": "New-only S6 source P0 only; 150/200-step matrix not active on reviewed pinned head 5206730",
+    "workflow_edited_by_this_task": false,
+    "grounded_old_fem_factory": "RETIRED_UNREGISTERED",
+    "grounded_active_fv_factories": [
+      "PhysicsFVElectronGroundedSheathCollectionBC",
+      "PhysicsFVElectronGroundedSheathEnergyBC"
+    ]
+  },
+  "source_pins": {
+    "first_attempt_pr665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "final_attempt_pr665_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "original_fvm_generator_blob": "69ec14c58b502a953c9024c46d332494cad61e6c",
+    "historic_mean_energy_cpp_blob": "9e3a6f0163451f86738f7f986a54fccdc5afe8fc",
+    "current_mean_energy_cpp_blob": "4aebfa85282ab5e808309d68223099ded20276e7",
+    "current_DD_transport_cpp_blob": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+    "current_FV_Joule_cpp_blob": "07ecd234871c659b04389c87bff6f52fae7f800e",
+    "legacy_workflow_latest_blob": "76d11f6bf5431f9750aa100c8a382006f706741f",
+    "pinned_OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "attempts": {
+    "01_legacy_generated_fvm_deck": {
+      "run_id": 44329880980,
+      "ci_outcome": "failure",
+      "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "workflow_commit": "e58120bcbb41f830f2be9f13549241e1b36334c6",
+      "artifact_id": 14439486095,
+      "artifact_zip_sha256": "87c06fc3735a5cf6161aaf89624b634defbee1dfb0b553229f3012c44d348ab6",
+      "binary_sha256": "a2e97bfdac7922a389e9912b7b9d7435c101474dcd476d80430d45746b8627e3",
+      "p0_static_model": "PASS_13_OF_13_MUTANTS",
+      "p1_binary": "PASS_EXACT_SOURCE_BUILD",
+      "clean_native_check_input_exit": 1,
+      "clean_syntax_ok": false,
+      "clean_log_sha256": "f6b287d01a8a6efc67fb496e0da6d257c4bca4e8b9a245e5626fcd49e741ef12",
+      "first_failure": "A 'PhysicsElectronMeanEnergyMaterial' is not a registered object.",
+      "p2_expected_negatives": "NOT_RUN_CLEAN_FAILED",
+      "timestep": "NOT_RUN"
+    },
+    "02_canonicalized_standalone_fixture": {
+      "run_id": 44332052386,
+      "ci_outcome": "failure",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "workflow_commit": "a3f44543be26bd2d92c949bbb52c6b97254505e7",
+      "workflow_file": ".github/workflows/issue672-p6-i3-fvm-grounded-canonical-fixture-once.yml",
+      "artifact_id": 14438729284,
+      "artifact_zip_sha256": "9d0a9d444456246248ac8b94356b61df410d9295d0a035922cbae188f4e7a529",
+      "binary_sha256": "6b0ba21905dcd1a8f144030573ea96c293ef6ffca92d9b5a40050fe341735a33",
+      "p0_static_model": "PASS_13_OF_13_MUTANTS",
+      "p0_generated_deck_sha256": "bb0fa8ad8ba01ec5df7482f334e1348d996ab89d711bf0a6156bbbe902b458e9",
+      "p0_original_generator_deck_sha256": "5d94ebeb194013cc3fce9ee287a26244dfaa8bc7fedcd278386897c2735b7609",
+      "p0_mesh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+      "p0_electron_lookup_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "fixture_only_explicit_class_bridge": {
+        "PhysicsElectronMeanEnergyMaterial": "ElectronEnergyMaterial",
+        "DDMaterial": "DDTransportMaterial",
+        "mean_en_solved": "e_energy_eV"
+      },
+      "physics_bridge_limit": "Historic old and new mean energy log_molar_eV formulas are exp(log_e_energy-log_ne); 5/3/lookup/particle/energy model numerical parity not proved.",
+      "p1_binary": "PASS_EXACT_SOURCE_BUILD",
+      "clean_native_check_input_exit": 1,
+      "clean_syntax_ok": false,
+      "clean_log_sha256": "c322690379959df826b75411c98fd2a7247c4aaafaa31fed61faba676af916cd",
+      "first_failure": "fvm_grounded_only_p2.i:274.5: Invalid option 'molar_eV' in MooseEnum. Valid options 'normalized physical_eV'.",
+      "offending_factory": "PhysicsFVElectronEnergyJouleHeating",
+      "current_cpp_state_form_enum": "normalized physical_eV",
+      "fixture_state_form": "molar_eV",
+      "warning": "Changing to physical_eV/normalized is not an authorized log-molar FV Joule equivalence and is expressly NOT done.",
+      "p2_expected_negatives": "NOT_RUN_CLEAN_FAILED",
+      "timestep": "NOT_RUN"
+    }
+  },
+  "independent_readback": {
+    "method": "Downloaded both actual GitHub CI artifact ZIPs. Independently verified each full ZIP SHA256, CRC, Python structured P0+P2 receipt fields, same-attempt binary SHA and native logfile byte SHA. Independently read source code of historic and current material/Joule.",
+    "independent_json_filename": "issue672_p6_i3_fvm_grounded_p0_p2_independent_receipt.json",
+    "independent_json_sha256": "23ed640f0a5dfd25feef9ce8a3249b21266c208e43dea307ec26dd1278590111",
+    "local_verifier_filename": "verify_issue672_ionfvm_grounded_p0_p2.py",
+    "local_verifier_sha256": "ae4ab6bac60230235b37231248e0945b8dc9686a695885a8cf2f3d58b94d985b",
+    "artifacts_sha_crc": "2/2 PASS",
+    "p0_mutation_checks": "13/13 each attempt PASS",
+    "full_P0_native_model_compatible": "HOLD: Joule log-molar enum not supported; earlier P0 scoped to wall/owner static checks",
+    "overall_native_P2": "HOLD",
+    "p2_negative_runtime_2": "NOT_RUN",
+    "p3_p4": "NOT_RUN"
+  },
+  "requirements_for_P2_reacceptance": [
+    "Explicit model owner review of physics-correct FV log-molar electron Joule energy term, not mere enum relabel.",
+    "New independent fixture identity, unchanged retired FEM generator, explicit source-to-current law/units and wall energy closure.",
+    "P0 must reject unsupported state_form=molar_eV on registered PhysicsFVElectronEnergyJouleHeating before attempting P1/P2.",
+    "Fixed exact HEAD/OCI and single binary with full mesh/lookup/input SHA; clean --check-input must exit 0 and Syntax OK.",
+    "After clean P2, perform isolated native retired FEM Factory and missing-variable negative cases, log expected first failure and restore all scratch SHAs.",
+    "Never trigger 1ns/5ns/10ns or historical 150/200-step runs, P3/P4, science equivalence or automatic old matrix pass."
+  ],
+  "gate_summary": {
+    "P0_GROUNDED_FV_WALL_STATIC": "PASS",
+    "P0_FULL_FIXTURE_JOULE_STATE": "HOLD_UNSUPPORTED_ENUM",
+    "P1_EXACT_HEAD_NEW_BINARY": "PASS_TWO_ATTEMPTS_SEPARATELY",
+    "P2_CLEAN": "FAIL_EXPECTED_REQUIRES_OWNER_FIX",
+    "P2_NEGATIVES": "NOT_RUN",
+    "ORIGINAL_MATRIX": "KEEP_HOLD",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "main_modified": false,
+    "pr665_modified": false,
+    "source_generator_modified": false,
+    "physics_cpp_modified": false,
+    "legacy_workflow_modified_by_this_task": false,
+    "no_private_rates_handled": true,
+    "no_solver_timestep": true,
+    "no_workflow_skips_or_guards_weakened": true
+  }
+}
