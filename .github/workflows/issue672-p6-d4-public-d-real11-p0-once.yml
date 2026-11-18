@@ -53,9 +53,17 @@ jobs:
             'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 \
             -r requirements-evidence-engine.txt -r requirements-ontology.txt
           cd historical
+          # Historical 400W mesh preparation is a DIFFERENT reference contract.
+          # Only inside this discarded historical checkout, use the 42-row
+          # 23xsec reference expected by its pre-existing mesh generator.
+          # Actual Public D source and final disposable Physics input remain
+          # pinned to their immutable ORIGINAL 100-row table SHA.
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
           echo "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387  $DST" | sha256sum --check -
-          python3 -c "from pathlib import Path; p=Path('experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'); assert len(p.read_bytes().splitlines()) == 100"
+          echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $SRC" | sha256sum --check -
+          cp "$SRC" "$DST"
+          echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $DST" | sha256sum --check -
           export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
           export OXYGEN_RESEARCH_400=1
           CHEM=experiments/Issue395_powered_chemistry_ladder
