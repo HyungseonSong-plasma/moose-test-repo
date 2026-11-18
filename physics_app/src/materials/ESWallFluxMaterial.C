@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <type_traits>
+#include <set>
 
 registerMooseObject("PhysicsApp", ESWallFluxMaterial);
 
@@ -191,8 +192,18 @@ ESWallFluxMaterial::ESWallFluxMaterial(
         {
           const ADReal drop =
               adjacentSheathDrop(_potential, r, state, _use_element_gradient_for_potential);
-          return _sticking *
+          const ADReal result = _sticking *
                  PhysicsGroundedElectronSheath::primaryParticleFluxHat(n_e, eps_bar, drop);
+          if (r.fi)
+          {
+            static thread_local std::set<std::string> reported;
+            if (reported.insert(name()).second)
+              std::cout << "D8_E_WALL_FACE_VALUE owner=" << name()
+                        << " face_id=" << r.fi->id()
+                        << " drop_V=" << MetaPhysicL::raw_value(drop)
+                        << " value=" << MetaPhysicL::raw_value(result) << std::endl;
+          }
+          return result;
         }
       });
 }
