@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 48
     env:
-      SOURCE_SHA: '285900c46c94f06ff481d9e2d9f9f93210588fd9'
+      SOURCE_SHA: '070b7fe96de5ee64012813841f0b4091051de806'
       HIST_SHA: '29d1acc6ef7969908b86719e4b95c73a1565136d'
       PARENT_SHA: '74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f'
       OCI: 'ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008'
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout immutable isolated D4 candidate derived from PR684
         uses: actions/checkout@v4
         with:
-          ref: 285900c46c94f06ff481d9e2d9f9f93210588fd9
+          ref: 070b7fe96de5ee64012813841f0b4091051de806
           path: control
           fetch-depth: 1
           persist-credentials: false
@@ -246,7 +246,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue672-p6-d4-real-chemistry-native-48d0735c2a13
+          name: issue672-p6-d4-three-e-source-retired-070b7fe96de5
           path: |
             d5_evidence
             control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
