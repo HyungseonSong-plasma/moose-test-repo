@@ -14,6 +14,9 @@ from retire_s6_ion_fv_owners import CutoverError, retire_in_disposable_scratch
 from retire_s6_electron_newonly_owners import (
     inspect_electron_contract, retire_electron_in_disposable_scratch
 )
+from retire_s6_p4_duplicate_owners import (
+    C0 as P4_C0, retire_p4_duplicate_owners
+)
 
 PIN_HEAD = "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
 PILOT = Path(__file__).resolve().parents[1]
@@ -150,6 +153,23 @@ def prepare_newonly(
     )
     if p3_electron["removed_native_electron_owners"] != 10:
         raise CutoverError("P3X_ELECTRON_CUTOVER_INCOMPLETE")
+
+    # P4-X Stage 1: retire ONLY the seven exact duplicate ion producer
+    # objects from P3-X's disposable C0. Preserve carrier_one and all
+    # non-target Source/Density/Poisson/Lower-D RF/neutral/pressure bytes.
+    p4_expected_sha = {
+        Path(name).name: (
+            p3_electron["C0_after_electron_cutover_sha256"]
+            if Path(name).name == P4_C0
+            else cutover["files"][Path(name).name]["after_sha256"]
+        ) for name in ordered
+    }
+    p4_owners = retire_p4_duplicate_owners(
+        folder, [Path(name).name for name in ordered], parsed,
+        post_p3_layer_sha=p4_expected_sha
+    )
+    if p4_owners["retired_source_materials"] != 6:
+        raise CutoverError("P4X_EXACT_SIX_DUPLICATE_MATERIALS_NOT_RETIRED")
     (folder / "migrated_continuity.i").write_bytes(tmplblob)
     dest_json.parent.mkdir(exist_ok=True)
     dest_json.write_bytes(jsblob)
@@ -163,10 +183,15 @@ def prepare_newonly(
         raise CutoverError("P2_NEWONLY_TRANSPORT_TARGET_CHANGED")
     if sum(previous[x] != after[x] for x in after) != 6:
         raise CutoverError("P2_NEWONLY_UNEXPECTED_LAYER_DIFF_COUNT")
+    if after[P4_C0] != p4_owners["output_c0_sha256"]:
+        raise CutoverError("P4X_FINAL_C0_STAGE_SHA_MISMATCH")
     return {
         "status": "P2_NEWONLY_JSON_AND_LAYER11_STAGE_STATIC_PASS_RUNTIME_HOLD",
         "variant": variant, "source_head": PIN_HEAD,
         "retirement": cutover, "p3_x_electron": p3_electron,
+        "p4_x_duplicate_producers": p4_owners,
+        "P4_X_STAGE1_SOURCE_ONLY": "PASS_7_EXACT_OWNERS_6_REMOVED_1_REPLACED",
+        "P4_X_FULL_INTEGRATION": "HOLD_SOURCE_CONSUMER_AND_NATIVE_WAREHOUSE",
         "layers_before_sha256": previous,
         "layers_after_sha256": after, "json_sha256": sha(jsblob),
         "newonly_overlay_sha256": sha(tmplblob),
