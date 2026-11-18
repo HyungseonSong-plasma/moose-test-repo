@@ -248,7 +248,7 @@ jobs:
             if (!p || !*p) return;
             const int fd = open(p, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC | O_NOFOLLOW, 0600);
             if (fd < 0) return;
-            constexpr char marker[] = "P5X_PRELOAD_READY\\n";
+            constexpr char marker[] = "P5X_PRELOAD_READY\n";
             (void)write(fd, marker, sizeof(marker) - 1);
             close(fd);
           }
@@ -460,7 +460,7 @@ jobs:
                   from collections import Counter
                   raw_trace=tracefile.read_text().splitlines()
                   assert "P5X_PRELOAD_READY" in raw_trace, "P5X_PRELOAD_MARKER_MISSING"
-                  events=[line.split("\\t") for line in raw_trace if line.startswith("P5X_REGISTER\\t")]
+                  events=[line.split("\t") for line in raw_trace if line.startswith("P5X_REGISTER\t")]
                   if not events: raise RuntimeError("P5X_OWNER_HOOK_NOT_INVOKED_"+case)
                   assert all(len(e)==4 and e[0]=="P5X_REGISTER" for e in events)
                   counts=Counter((e[1],e[2],e[3]) for e in events)
