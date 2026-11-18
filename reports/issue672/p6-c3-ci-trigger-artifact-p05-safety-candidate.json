@@ -1,0 +1,115 @@
+{
+  "schema": "issue672.p6_c3.workflow_trigger_artifact_p05_safety_candidate.v1",
+  "scope": "SAFE_INDEPENDENT_BRANCH_CANDIDATE__NO_MAIN_OR_PR665_MUTATION",
+  "issue": 672,
+  "coordination": "P6-C1 audit + P6-C2 approval audit + P6-C3 single YAML writer; propose to P6-X later",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "PR665_reviewed_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "CI_baseline_git_blob": "c8cbd38369108229af7cf2395893a4539f05e024",
+    "baseline_template_blob": "c8cbd38369108229af7cf2395893a4539f05e024",
+    "P05_Cpp_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+  },
+  "branch": "issue-672-p6-ci3-trigger-artifact-p05-safety-20261118",
+  "modified_files": {
+    ".github/workflows/ci.yml": {
+      "status": "modified",
+      "git_blob": "8313e539c2e7cfa7cb25973ad62fbce1524db19d",
+      "additions": 19,
+      "deletions": 8
+    },
+    "ci/workflow_templates/general-ci.yml": {
+      "status": "modified",
+      "git_blob": "8313e539c2e7cfa7cb25973ad62fbce1524db19d",
+      "additions": 19,
+      "deletions": 8
+    },
+    "ci/guards/p6_ci_workflow_safety_guard.py": {
+      "status": "added",
+      "git_blob": "32ab854dda95040b2f00b050e6815e1d7351e536",
+      "lines": 280
+    },
+    "tests/test_issue672_p6_ci_workflow_safety.py": {
+      "status": "added",
+      "git_blob": "4a2425f8b8694be067e820163ca369dc8461c9e3",
+      "pytest_cases": 2
+    }
+  },
+  "behavior": {
+    "trigger": {
+      "affected_PR_Native_P2_jobs": [
+        "issue402_core_four_native_p2",
+        "plasma_native_regression",
+        "issue541_arch_dd_native_p2",
+        "issue541_arch_s6_hybrid_native_p2"
+      ],
+      "remains_enabled": [
+        "opened internal PR to main",
+        "synchronize internal PR to main",
+        "reopened internal PR to main",
+        "edited PR base to main"
+      ],
+      "suppressed": [
+        "metadata-only edited event with unchanged PR base",
+        "fork PR heavy jobs",
+        "main push heavy jobs"
+      ],
+      "base_edited_safeguard": "edited event with changes.base != null still runs; validate keeps existing edited-base gating",
+      "global_events": "main push and main-targeted pull_request only, no workflow_dispatch/schedule/automatic P3"
+    },
+    "artifact": {
+      "four_heavy_P2_artifact_names": "include GitHub run_id, run_attempt, and PR head SHA to distinguish reruns and updates",
+      "arch_dd_if_no_files": "warn -> error",
+      "arch_s6_if_no_files": "warn -> error",
+      "preserve": "if: always() upload Native evidence and case-specific P2 logs, 30-day retention",
+      "no_private_rate_raw": "No raw scratch, protected EI source or rate files added to Artifact paths"
+    },
+    "P05": {
+      "Cpp_modified": false,
+      "registered_warehouse_guard": "DDContinuityEq::checkIntegrity remains source-bound at exact original Git blob",
+      "prohibited": [
+        "dont_create_kernels bypass",
+        "continue-on-error: true",
+        "|| true",
+        "--authorize-p3",
+        "unconditional Native workflow skip"
+      ],
+      "existing_arch_current_failure": "P05 FV Native/Physics duplicate or unexpected owner on log_O2p: ni_time remains a real FAIL on modern HEAD",
+      "historical_h3": "P6-H3 pinned historical P2-only success remains separate from current-HEAD ARCH and New-only gates",
+      "mandatory_P2_scripts": "Missing Public S6 P0 or full 417/941 P2 runner now exits nonzero, no legacy-missing-source green fallback",
+      "ARCH_both_cases": "first and second exit codes must each be zero; source-bound P2 runner unchanged"
+    }
+  },
+  "verification": {
+    "source_review": "PASS: branch readback for 4 file blobs against pinned source",
+    "exact_CI_template_parity": "PASS: same bytes and Git blob 8313e539c2e7cfa7cb25973ad62fbce1524db19d",
+    "structural_JS_trigger_scenarios": "28/28 PASS (4 jobs × 7 events)",
+    "structural_JS_artifact_distinctness": "12/12 distinct (4 jobs × 3 run/attempt/head combinations)",
+    "structural_JS_P05_preserved": "PASS",
+    "guard_negative_mutation_cases": "17 DECLARED; EXECUTION_NOT_RUN",
+    "pytest_cases": "2 DECLARED; EXECUTION_NOT_RUN",
+    "python_compilation": "NOT_RUN",
+    "workflow_harness_check": "NOT_RUN",
+    "workflow_surface_guard_check": "NOT_RUN",
+    "Github_exact_head_CI": "NOT_RUN",
+    "native_P2": "NOT_RUN_ON_CANDIDATE",
+    "reason": "Candidate branch is not a PR targeting main; do not auto-dispatch expensive Native jobs solely to prepare reviewed CI patch."
+  },
+  "integration_requirements": [
+    "Review with P6-C1/C2 for governance #535/#541 and no new workflow targets, manual P3/P4 launch, 150/200-step automation, or P05 bypass.",
+    "P6-X/C3 single writer must own the final two identical YAMLs and compare latest #665 head; rebase/revalidate if source advances.",
+    "Run python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check and pytest tests/test_issue672_p6_ci_workflow_safety.py before merge.",
+    "Run python3 ci/workflow_harness.py --check and python3 ci/guards/workflow_surface_guard.py --check in the final integrated checkout.",
+    "Exact-source Repository CI check on correctly approved integration PR: code synchronize must execute all original Native P2 jobs; ARCH modern P05 duplicate remains failure unless owner/physics cutover separately approved.",
+    "Never treat historical H3 P2 PASS or current New-only P2 as automatic Public D/FLOW/ARCH CI success.",
+    "Do not release or merge into main solely on static checks; SCIENCE_HOLD remains."
+  ],
+  "gates": {
+    "P6_C3_CANDIDATE": "SOURCE_STATIC_READY",
+    "P6_X_MERGE": "HOLD",
+    "P6_EXACT_HEAD_CI": "NOT_RUN",
+    "ARCH_MODERN": "KEEP_HOLD_P05",
+    "P3_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
