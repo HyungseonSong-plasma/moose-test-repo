@@ -11,6 +11,9 @@ from pathlib import Path
 import shutil
 
 from retire_s6_ion_fv_owners import CutoverError, retire_in_disposable_scratch
+from retire_s6_electron_newonly_owners import (
+    inspect_electron_contract, retire_electron_in_disposable_scratch
+)
 
 PIN_HEAD = "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
 PILOT = Path(__file__).resolve().parents[1]
@@ -128,6 +131,13 @@ def prepare_newonly(
     if resolved_from_json != table_path.resolve():
         raise CutoverError("P2_NEWONLY_RELATIVE_ELECTRON_PATH_MISMATCH")
 
+    # P3-X electron BC/Functor source ownership must be characterized BEFORE
+    # P2 starts writing anything. Both P2 and P3 operate only on disposable
+    # copies. The existing historical original exact SHA pins are unchanged.
+    p3_preflight = inspect_electron_contract(
+        {f.name: f.read_bytes() for f in staged_inputs}, ordered, parsed
+    )
+
     # All dependency preflight checks complete; only now edit disposable files.
     previous = {f.name: sha(f.read_bytes()) for f in staged_inputs}
     cutover = retire_in_disposable_scratch(
@@ -135,6 +145,11 @@ def prepare_newonly(
     )
     if len(cutover["retired_owners"]) != 26:
         raise CutoverError("P2_NEWONLY_CUTOVER_INCOMPLETE")
+    p3_electron = retire_electron_in_disposable_scratch(
+        folder, ordered, parsed, p3_preflight, cutover
+    )
+    if p3_electron["removed_native_electron_owners"] != 10:
+        raise CutoverError("P3X_ELECTRON_CUTOVER_INCOMPLETE")
     (folder / "migrated_continuity.i").write_bytes(tmplblob)
     dest_json.parent.mkdir(exist_ok=True)
     dest_json.write_bytes(jsblob)
@@ -151,7 +166,8 @@ def prepare_newonly(
     return {
         "status": "P2_NEWONLY_JSON_AND_LAYER11_STAGE_STATIC_PASS_RUNTIME_HOLD",
         "variant": variant, "source_head": PIN_HEAD,
-        "retirement": cutover, "layers_before_sha256": previous,
+        "retirement": cutover, "p3_x_electron": p3_electron,
+        "layers_before_sha256": previous,
         "layers_after_sha256": after, "json_sha256": sha(jsblob),
         "newonly_overlay_sha256": sha(tmplblob),
         "electron_moments_sha256": sha(ebytes), "electron_moments_rows": 42,

@@ -91,6 +91,11 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
     assert retirement["exact_pin_verified"] is True
     assert len(retirement["retired_owners"]) == 26
     assert report["remaining_native_ion_fv_owners"] == 0
+    ecut = report["p3_x_electron"]
+    assert ecut["removed_native_electron_owners"] == 10
+    assert ecut["remaining_native_electron_FEM_BCs"] == 0
+    assert ecut["remaining_native_electron_FunctorMaterials_for_generated_properties"] == 0
+    assert len(ecut["retired_owner_receipts"]) == 10
     from importlib.util import module_from_spec, spec_from_file_location
     script = ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_ion_fv_owners.py"
     spec = spec_from_file_location("ion26_verify", script)
@@ -115,6 +120,11 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
                 (o["section"], o["name"]): o
                 for o in retirement["retired_owners"] if o["file"] == name
             }
+            if name == Path(manifest["layers"][0]["file_path"]).name:
+                for o in ecut["retired_owner_receipts"]:
+                    key = (o["section"], o["name"])
+                    assert key not in retired_by_section_name, key
+                    retired_by_section_name[key] = o
             selected = [x for x in all_objects if identity(x) in retired_by_section_name]
             assert len(selected) == len(retired_by_section_name)
             converted = original_text
@@ -125,6 +135,8 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
             for match in selected:
                 obj = retired_by_section_name[identity(match)]
                 assert sha(match.group().encode()) == obj["old_block_sha256"]
+    assert len([o for o in ecut["retired_owner_receipts"] if o["section"] == "BCs"]) == 8
+    assert len([o for o in ecut["retired_owner_receipts"] if o["section"] == "FunctorMaterials"]) == 2
     all_files = [folder / Path(entry["file_path"]).name for entry in manifest["layers"]]
     changed = [p.name for p in all_files if sha(p.read_bytes()) != sha(actual_orig[p.name])]
     assert len(changed) == 6, changed
@@ -136,8 +148,10 @@ def postcheck(folder: Path, manifest: dict, report: dict, baseline: zipfile.ZipF
     assert sha(staged_e.read_bytes()) == report["electron_moments_sha256"]
     assert staged_e.samefile((staged_json.parent / "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt").resolve())
     assert report["native_p2"] == "NOT_RUN"
+    assert ecut["non_target_byte_preservation"] == "PASS_EXACT_DELETION_ONLY"
     return {"case": case, "old_native_ion_owners": 26, "after_native_ion_owners": 0,
-            "retired_block_sha_matched": 26, "changed_staged_layers": sorted(changed),
+            "old_native_electron_owners_retired": 10,
+            "retired_block_sha_matched": 36, "changed_staged_layers": sorted(changed),
             "json_sha256": report["json_sha256"],
             "overlay_sha256": report["newonly_overlay_sha256"],
             "electron_moments_sha256": report["electron_moments_sha256"]}
@@ -171,6 +185,79 @@ def assert_no_write_failure(folder: Path, root: Path, case: str, moments: Path, 
     return tweak + ":REJECTED_NO_WRITE"
 
 
+def p3x_exact_owner_negative_controls(base: zipfile.ZipFile, case: str, folder: Path) -> list[str]:
+    """Exercise the *actual* P3-X preflight on real source bytes before mutation.
+
+    These are in-memory, fail-closed structural mutations; separate P2 CLI
+    negative controls prove that bad inputs do not write staged scratch files.
+    """
+    import copy
+    sys.path.insert(0, str(RUNNER.parent))
+    from retire_s6_electron_newonly_owners import (
+        inspect_electron_contract, objects, CutoverError, C0
+    )
+    manifest = json.loads(base.read(f"cases/{case}/case_manifest.json"))
+    ordered = manifest["ordered_input_paths"]
+    layers = {Path(x).name: base.read(f"cases/{case}/final_11_inputs/{Path(x).name}")
+              for x in ordered}
+    js = json.loads((folder / "chemistry" / f"unified_s6_{case}_newonly.json").read_text())
+    assert inspect_electron_contract(layers, ordered, js)["retired_electron_FEM_BCs"] == 8
+
+    def modify_object(section: str, name: str, transformation):
+        source = layers[C0].decode()
+        matched = [m for s, m in objects(source) if s == section and m["name"] == name]
+        assert len(matched) == 1, (section, name)
+        m = matched[0]
+        old = m.group(0)
+        new = transformation(old)
+        assert old != new, (section, name)
+        result = dict(layers)
+        result[C0] = (source[:m.start()] + new + source[m.end():]).encode()
+        return result
+
+    sample = [
+        ("bad_e_bc_factory", modify_object("BCs", "electron_sheath",
+            lambda b: b.replace("FEMElectronSheathBC", "InvalidFEMElectronSheathBC")), js),
+        ("bad_e_bc_variable", modify_object("BCs", "electron_sheath",
+            lambda b: b.replace("variable = log_e", "variable = log_O2p")), js),
+        ("bad_e_bc_flux", modify_object("BCs", "electron_sheath",
+            lambda b: b.replace("wall_number_flux = e_wall_number_flux",
+                                "wall_number_flux = old_e_wall_number_flux")), js),
+        ("bad_e_bc_boundary", modify_object("BCs", "electron_sheath",
+            lambda b: b.replace("plasma_electrode plasma_metal plasma_right", "plasma_wrong")), js),
+        ("bad_energy_mean", modify_object("BCs", "electron_energy_sheath",
+            lambda b: b.replace("mean_energy = e_energy_eV", "mean_energy = unknown_energy")), js),
+        ("duplicate_e_bc", modify_object("BCs", "electron_sheath", lambda b: b + b), js),
+        ("missing_e_bc", modify_object("BCs", "electron_sheath", lambda b: ""), js),
+        ("bad_e_density_property", modify_object("FunctorMaterials", "electron_physical_density",
+            lambda b: b.replace("property_name = n_e_physical", "property_name = duplicate_density")), js),
+        ("bad_e_wall_species", modify_object("FunctorMaterials", "electron_wall_flux",
+            lambda b: b.replace("species_id = e", "species_id = O2p")), js),
+        ("bad_solved_pressure", modify_object("Variables", "pressure",
+            lambda b: b.replace("type = INSFVPressureVariable", "type = MooseVariableFVReal")), js),
+        ("missing_e_functor", modify_object("FunctorMaterials", "electron_wall_flux", lambda b: ""), js),
+    ]
+    no_wall = copy.deepcopy(js)
+    no_wall["drift_diffusion_boundaries"]["plasma_electrode plasma_metal plasma_right"].pop("e_wall")
+    sample.append(("missing_json_e_wall", layers, no_wall))
+    wrong_energy = copy.deepcopy(js)
+    wrong_energy["drift_diffusion_boundaries"]["plasma_wafer"]["e_energy_wafer_dielectric"]["type"] = "WrongFEMEnergyBC"
+    sample.append(("wrong_json_e_energy_factory", layers, wrong_energy))
+    duplicate_e = copy.deepcopy(js)
+    duplicate_e["drift_diffusion_boundaries"]["plasma_cover"]["e_wall"] = {"type": "FEMElectronSheathBC"}
+    sample.append(("duplicate_json_e_wall_region", layers, duplicate_e))
+    rejected = []
+    for name, candidate_layers, candidate_json in sample:
+        try:
+            inspect_electron_contract(candidate_layers, ordered, candidate_json)
+        except CutoverError:
+            rejected.append(name + ":REJECTED_BEFORE_ANY_WRITE")
+        else:
+            raise AssertionError("P3X negative unexpectedly accepted: " + name)
+    assert len(rejected) == 14
+    return rejected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-zip", type=Path, required=True)
@@ -184,6 +271,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     rows = {}
     neg = {}
+    p3x_neg = {}
     for case in ("417", "941"):
         root = out / "cases" / case
         root.mkdir(parents=True)
@@ -194,6 +282,7 @@ def main() -> int:
             raise AssertionError(f"New-only {case} failed: {run.stderr[-1800:]}")
         report = json.loads(receipt.read_text())
         rows[case] = postcheck(folder, manifest, report, base, case)
+        p3x_neg[case] = p3x_exact_owner_negative_controls(base, case, folder)
         neg[case] = []
         for tweak in ("wrong_head", "file_tamper", "wrong_moments", "missing_marker"):
             negroot = out / "negatives" / (case + "_" + tweak)
@@ -203,14 +292,17 @@ def main() -> int:
                 badfolder, negroot, case, args.moments, tweak, badmanifest))
     receipt = {
         "schema": "issue668.p2_production_runner_newonly_source_stage.v1",
-        "status": "PASS_417_941_SOURCE_ONLY_PRODUCTION_RUNNER_JSON_LAYER11",
+        "status": "PASS_417_941_P2_PLUS_P3X_10_ELECTRON_OWNER_SOURCE_ONLY",
         "source_pr": 665, "source_pr_head": HEAD,
         "runner": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py --newonly",
         "p1_0_artifact_sha256": BASE_ARTIFACT_SHA,
         "p2_maxwell_artifact_sha256": MAXWELL_ARTIFACT_SHA,
         "cases": rows, "negative_tests": neg,
         "negative_rejected": sum(map(len, neg.values())),
-        "scope": "P2 source-only static stage, excludes dynamic/liveness/MOOSE runtime",
+        "p3_x_negative_controls": p3x_neg,
+        "p3_x_negative_controls_rejected": sum(map(len, p3x_neg.values())),
+        "p3_x_electron_source_only": "PASS_EXACT_TEN_OLD_BC_FUNCTOR_OWNERS_RETIRED_PER_CASE",
+        "scope": "P2+P3-X source-only static stage, excludes dynamic/liveness/MOOSE runtime",
         "d8_historical_and_physical_child_stage": "PASS_BOUNDED",
         "d8_newonly_dynamic_warehouse": "HOLD",
         "physics_generated_24": "NOT_RUN",
