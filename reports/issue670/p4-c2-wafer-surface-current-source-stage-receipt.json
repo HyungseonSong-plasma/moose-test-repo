@@ -1,0 +1,292 @@
+{
+  "schema": "issue670.p4_c2.wafer_current.source_bound_receipt.v1",
+  "task_id": "P4-C2",
+  "issue": 670,
+  "parent_issue": 633,
+  "dependency_issues": [
+    668,
+    669
+  ],
+  "date_utc": "2026-11-18",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "verdict": "STATIC_WAFER_CURRENT_LINEAGE_PASS__DUPLICATE_CXX_PRODUCER_P4_X_HOLD",
+  "immutable_review_source_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "prior_P2P3_stage_source_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_scope": "Case-specific actual 11-layer S6-417/941 P3-X disposable New-only Scratch byte readback plus current PR665 C++/JSON/overlay sources; Native runtime not executed",
+  "upstream_p3x": {
+    "run_id": 44257739203,
+    "artifact_id": 14406746397,
+    "artifact_digest": "sha256:592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "stage_origin_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "p2_ion_26_to_0_each_case": true,
+    "p3_old_electron_10_removed_each_case": true,
+    "p4_surface_current_legacy_owners_retired": false
+  },
+  "current_sources": {
+    "native_C0": {
+      "path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+      "git_blob_sha1": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+      "old_wafer_current_functors": [
+        "ion_wall_number_flux",
+        "atomic_positive_ion_wall_number_flux",
+        "negative_ion_wall_number_flux",
+        "electron_wall_number_flux"
+      ],
+      "old_wafer_current_expr": "1.602176634e-19*(gi+gop-gm-ge)",
+      "old_native_block_sha256_locator": "GitHub Actions Artifact #14407207897 -> historical_c0_source.current.block_sha256"
+    },
+    "Chemistry_Cxx": {
+      "path": "physics_app/src/physics/plasma/Chemistry.C",
+      "git_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "generator": "_problem->addFunctorMaterial(type, std::string(side) + \"_surface_current\", params)",
+      "wall_current_provider": "wafer_net_surface_current_density",
+      "selected_species_order": [
+        "O2p",
+        "Op",
+        "Om"
+      ],
+      "electron_flux": "_data.surfaceElectronWallFlux()",
+      "charged_species_signs": "sign of mechanism.species(id).charge_number",
+      "Cxx_codegen_runtime": "NOT_RUN"
+    }
+  },
+  "cases": {
+    "417": {
+      "verdict": "STATIC_SURVIVING_NATIVE_WAFER_CURRENT_PRODUCER__CXX_GENERATOR_COLLISION_HOLD",
+      "stage_file_sha_verified_count": 11,
+      "stage_file_sha256_readback_location": "GitHub Actions artifact #14407207897 c2-receipt/p4-c2-wafer-current-readback.json cases.417.layer_files[*].sha256",
+      "active_legacy_current": {
+        "section": "FunctorMaterials",
+        "object_name": "wafer_surface_current",
+        "type": "ADParsedFunctorMaterial",
+        "property_name": "wafer_net_surface_current_density",
+        "owner_count": 1,
+        "block_sha256": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+        "source_file_layer_and_line": "See independent receipt cases.417.staged_current.filename/layer_ordinal/line_start/line_end",
+        "functor_names": [
+          "O2p_wall_number_flux",
+          "Op_wall_number_flux",
+          "Om_wall_number_flux",
+          "e_wall_number_flux"
+        ],
+        "functor_symbols": [
+          "gi",
+          "gop",
+          "gm",
+          "ge"
+        ],
+        "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "block": "plasma"
+      },
+      "current_legacy_property_name_owner_count": 1,
+      "current_legacy_Kernel_consumer": {
+        "section": "Kernels",
+        "object_name": "sigma_wafer_surface_current",
+        "factory": "PhysicsLowerDSurfaceCurrent",
+        "variable": "sigma_wafer",
+        "block": "wafer_surface",
+        "surface_current_density": "wafer_net_surface_current_density",
+        "count": 1,
+        "exact_file_block_sha_locator": "GitHub Actions artifact #14407207897 -> cases.417.sigma_consumer"
+      },
+      "current_legacy_diagnostic_consumer": {
+        "section": "Postprocessors",
+        "object_name": "wafer_net_surface_current",
+        "factory": "ADSideIntegralFunctorPostprocessor",
+        "boundary": "plasma_wafer",
+        "functor": "wafer_net_surface_current_density",
+        "functor_argument": "face",
+        "count": 1,
+        "exact_file_block_sha_locator": "GitHub Actions artifact #14407207897 -> cases.417.diagnostic"
+      },
+      "new_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "new_11th_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "json_electron_wall_functor": "e_wall_number_flux",
+      "proposed_Cxx_generated_owner": {
+        "object_name": "wafer_surface_current",
+        "factory": "ADParsedFunctorMaterial",
+        "property_name": "wafer_net_surface_current_density",
+        "functor_names": [
+          "O2p_wall_number_flux",
+          "Op_wall_number_flux",
+          "Om_wall_number_flux",
+          "e_wall_number_flux"
+        ],
+        "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "created_in": "Chemistry.C PlasmasAction, if selected ion walls enabled",
+        "instantiated_in_native_Warehouse": false
+      },
+      "source_electrical_charge_signs": {
+        "O2p": 1,
+        "Op": 1,
+        "Om": -1,
+        "e": -1
+      },
+      "formula_current_density_A_per_m2": "e_C*(O2p_wall_number_flux + Op_wall_number_flux - Om_wall_number_flux - e_wall_number_flux)",
+      "electron_charge_C": 1.602176634e-19,
+      "native_producer_uniqueness_after_Cxx_activation": "HOLD_COLLISION_PREDICTED_FROM_SAME_OBJECT_NAME_AND_PROPERTY"
+    },
+    "941": {
+      "verdict": "STATIC_SURVIVING_NATIVE_WAFER_CURRENT_PRODUCER__CXX_GENERATOR_COLLISION_HOLD",
+      "stage_file_sha_verified_count": 11,
+      "stage_file_sha256_readback_location": "GitHub Actions artifact #14407207897 c2-receipt/p4-c2-wafer-current-readback.json cases.941.layer_files[*].sha256",
+      "active_legacy_current": {
+        "section": "FunctorMaterials",
+        "object_name": "wafer_surface_current",
+        "type": "ADParsedFunctorMaterial",
+        "property_name": "wafer_net_surface_current_density",
+        "owner_count": 1,
+        "block_sha256": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+        "source_file_layer_and_line": "See independent receipt cases.941.staged_current.filename/layer_ordinal/line_start/line_end",
+        "functor_names": [
+          "O2p_wall_number_flux",
+          "Op_wall_number_flux",
+          "Om_wall_number_flux",
+          "e_wall_number_flux"
+        ],
+        "functor_symbols": [
+          "gi",
+          "gop",
+          "gm",
+          "ge"
+        ],
+        "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "block": "plasma"
+      },
+      "current_legacy_property_name_owner_count": 1,
+      "current_legacy_Kernel_consumer": {
+        "section": "Kernels",
+        "object_name": "sigma_wafer_surface_current",
+        "factory": "PhysicsLowerDSurfaceCurrent",
+        "variable": "sigma_wafer",
+        "block": "wafer_surface",
+        "surface_current_density": "wafer_net_surface_current_density",
+        "count": 1,
+        "exact_file_block_sha_locator": "GitHub Actions artifact #14407207897 -> cases.941.sigma_consumer"
+      },
+      "current_legacy_diagnostic_consumer": {
+        "section": "Postprocessors",
+        "object_name": "wafer_net_surface_current",
+        "factory": "ADSideIntegralFunctorPostprocessor",
+        "boundary": "plasma_wafer",
+        "functor": "wafer_net_surface_current_density",
+        "functor_argument": "face",
+        "count": 1,
+        "exact_file_block_sha_locator": "GitHub Actions artifact #14407207897 -> cases.941.diagnostic"
+      },
+      "new_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "new_11th_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "json_electron_wall_functor": "e_wall_number_flux",
+      "proposed_Cxx_generated_owner": {
+        "object_name": "wafer_surface_current",
+        "factory": "ADParsedFunctorMaterial",
+        "property_name": "wafer_net_surface_current_density",
+        "functor_names": [
+          "O2p_wall_number_flux",
+          "Op_wall_number_flux",
+          "Om_wall_number_flux",
+          "e_wall_number_flux"
+        ],
+        "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "created_in": "Chemistry.C PlasmasAction, if selected ion walls enabled",
+        "instantiated_in_native_Warehouse": false
+      },
+      "source_electrical_charge_signs": {
+        "O2p": 1,
+        "Op": 1,
+        "Om": -1,
+        "e": -1
+      },
+      "formula_current_density_A_per_m2": "e_C*(O2p_wall_number_flux + Op_wall_number_flux - Om_wall_number_flux - e_wall_number_flux)",
+      "electron_charge_C": 1.602176634e-19,
+      "native_producer_uniqueness_after_Cxx_activation": "HOLD_COLLISION_PREDICTED_FROM_SAME_OBJECT_NAME_AND_PROPERTY"
+    }
+  },
+  "producer_consumer_graph": [
+    {
+      "producer": "Retained FunctorMaterials/wafer_surface_current",
+      "produced": "wafer_net_surface_current_density",
+      "stage_result": "ACTUAL_PINNED_SOURCE_OBJECT_PRESENT",
+      "target": "Lower-D sigma and wafer diagnostic"
+    },
+    {
+      "producer": "C++ generated Chemistry.C wafer_surface_current",
+      "produced": "wafer_net_surface_current_density",
+      "stage_result": "SOURCE_CONTRACT_ONLY_NOT_INSTANTIATED",
+      "consequence": "SAME_NAME_AND_PROPERTY collision if both remain"
+    },
+    {
+      "producer": "wafer_net_surface_current_density",
+      "consumer": "Kernels/sigma_wafer_surface_current",
+      "variable": "sigma_wafer",
+      "factory": "PhysicsLowerDSurfaceCurrent",
+      "stage_result": "PRESERVED_EXACT_SOURCE"
+    },
+    {
+      "producer": "wafer_net_surface_current_density",
+      "consumer": "Postprocessors/wafer_net_surface_current",
+      "boundary": "plasma_wafer",
+      "factory": "ADSideIntegralFunctorPostprocessor",
+      "stage_result": "PRESERVED_EXACT_SOURCE"
+    }
+  ],
+  "independent_verification": {
+    "run_id": 44260014333,
+    "job_id": 134650789594,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44260014333",
+    "status": "SUCCESS",
+    "verifier_commit": "7b87a64a4045929a951c40c1a3fab095cba0e798",
+    "artifact_id": 14407207897,
+    "artifact_name": "issue670-p4-c2-44260014333-1",
+    "artifact_digest": "sha256:a6a79e8dcf5593880531fb345de191c9dc6805470e330e46e8966e76774fd1fc",
+    "artifact_receipt_file": "c2-receipt/p4-c2-wafer-current-readback.json",
+    "method": "Exact HEAD checkout; P3-X artifact downloaded; independently hash all 22 .i files and recompute wafer current, sigma consumer, diagnostic object block SHA; validate current JSON/overlay SHA; inspect Chemistry.C generator and signed formula; mutate static controls",
+    "negative_controls": {
+      "wrong_negative_ion_sign": "REJECTED",
+      "wrong_electron_sign": "REJECTED",
+      "wrong_functor_provider": "REJECTED",
+      "wrong_property": "REJECTED",
+      "sigma_wrong_input": "REJECTED",
+      "wrong_diagnostic_sideset": "REJECTED",
+      "duplicate_legacy_material": "REJECTED",
+      "missing_legacy_material": "REJECTED",
+      "changed_stage_file_SHA": "REJECTED"
+    },
+    "total_negative_rejected": 9
+  },
+  "P4_X_handoff": {
+    "required_action": "Only the P4-X single writer may remove/rebind exact retained FunctorMaterials/wafer_surface_current, while retaining sigma_wafer time/current Kernel and wafer diagnostic, and avoiding duplicate generated wafer_net_surface_current_density.",
+    "preserve": [
+      "signed formula +O2p+Op-Om-e with elementary charge 1.602176634e-19",
+      "sigma_wafer_surface_current",
+      "wafer_net_surface_current",
+      "plasma_wafer boundary",
+      "all non-target 11-layer bytes",
+      "e_wall_number_flux current electron producer"
+    ],
+    "verify_after_cutover": [
+      "old current exact block no longer active",
+      "exactly one generated wafer surface current owner",
+      "sigma_wafer and postprocessor can resolve wafer_net_surface_current_density",
+      "no electron-wall or ion-wall flux double owner",
+      "actual new staged file/block SHA"
+    ],
+    "native_P5_required": true
+  },
+  "unresolved": [
+    "P4-X must remove/resolve legacy duplicate surface current producer; no modification made.",
+    "No native Physics addFunctorMaterial warehouse instantiation or duplicate Property/Functor resolution tested.",
+    "No signed wall-flux current numerical parity measured; no Native P2/P3/P4 executed.",
+    "Current C++ HEAD 395ee differs from stage Artifact immutable 9c pin: source correspondence checked, not current HEAD native execution."
+  ],
+  "guardrails": {
+    "one_shot_workflow": "REMOVED_AFTER_SUCCESS",
+    "source_or_PR665_modified": false,
+    "original_archives_modified": false,
+    "private_rate_bytes_read": false,
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
