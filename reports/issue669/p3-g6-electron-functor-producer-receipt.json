@@ -1,0 +1,317 @@
+{
+  "schema": "issue669.p3_g6.exact_newonly_source_functor_provenance.v1",
+  "task_id": "P3-G6",
+  "issue": 669,
+  "source_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "first_staging_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "status": "PASS_SOURCE_BYTES_AND_CPP_PRODUCER_CONTRACT__HOLD_NEWONLY_NATIVE_WAREHOUSE",
+  "method": "Downloaded source pinned exact current PR665 CI artifact; independently recomputed 11 file SHAs per case, JSON/42row electron table SHA, exact five C0 FunctorMaterial block SHAs, and compared 10-owner source shadow byte by byte. C++ source read-back by current PR665 head. Source-only negative mutation tests 12/12 per case.",
+  "case_inputs": {
+    "417": {
+      "ordered_11_layer_sha_recomputed": 11,
+      "c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "prepared_electron_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "prepared_electron_table_rows": 42,
+      "old_ion_native_fv_remaining": 0,
+      "negative_tests_rejected": 12
+    },
+    "941": {
+      "ordered_11_layer_sha_recomputed": 11,
+      "c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "prepared_electron_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "prepared_electron_table_rows": 42,
+      "old_ion_native_fv_remaining": 0,
+      "negative_tests_rejected": 12
+    }
+  },
+  "source_artifact": {
+    "run_id": 44201394393,
+    "artifact_id": 14381456912,
+    "zip_sha256": "5497c80badab09d7d3266a4c81e2a5d2272a1c9cc216e94e192c8ec1ecd78e95",
+    "run_head_sha": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+    "repo_PR665_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "artifact_src_manifest_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "note": "CI trigger HEAD and final PR665 HEAD differ after workflow cleanup; source blobs and artifact 179/179 files were independently verified identical by P3-X postmerge receipt. This receipt uses actual CI artifact bytes and current C++ blobs, not an unexecuted Native exact HEAD."
+  },
+  "explicit_C0_functor_owners": [
+    {
+      "object_name": "electron_molar_density",
+      "section": "FunctorMaterials",
+      "factory_type": "ADParsedFunctorMaterial",
+      "property_name": "electron_molar_density",
+      "input_functor": "log_e",
+      "expression": "exp(u)",
+      "block_sha256": "d62268f610d606b407c0e042162bdd490dd86b4cd3d1a6dbb8fd57070acafe2a",
+      "action": "PRESERVE",
+      "source_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "ordinal": 1,
+      "actual_case_count": {
+        "417": 1,
+        "941": 1
+      }
+    },
+    {
+      "object_name": "electron_molar_energy_density",
+      "section": "FunctorMaterials",
+      "factory_type": "ADParsedFunctorMaterial",
+      "property_name": "electron_molar_energy_density",
+      "input_functor": "log_e_energy",
+      "expression": "exp(ue)",
+      "block_sha256": "452b1796e5f6cb668ab13de65721eb7c85e3f58ef3acc544fb8919ab96463a3a",
+      "action": "PRESERVE",
+      "source_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "ordinal": 1,
+      "actual_case_count": {
+        "417": 1,
+        "941": 1
+      }
+    },
+    {
+      "object_name": "electron_physical_energy_density",
+      "section": "FunctorMaterials",
+      "factory_type": "ADParsedFunctorMaterial",
+      "property_name": "electron_energy_density_eV_m3",
+      "input_functor": "electron_molar_energy_density",
+      "expression": "6.02214076e23*we",
+      "block_sha256": "77a496774cef51d3905b90fdcb98da8e261d4c3969622508aa19a53481bf2ccc",
+      "action": "PRESERVE",
+      "source_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "ordinal": 1,
+      "actual_case_count": {
+        "417": 1,
+        "941": 1
+      }
+    },
+    {
+      "object_name": "electron_physical_density",
+      "section": "FunctorMaterials",
+      "factory_type": "ADParsedFunctorMaterial",
+      "property_name": "n_e_physical",
+      "input_functor": "electron_molar_density",
+      "expression": "6.02214076e23*ce",
+      "block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "action": "RETIRE_IN_P3_X_ONLY_WITH_EXACT_SHA",
+      "source_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "ordinal": 1,
+      "actual_case_count": {
+        "417": 1,
+        "941": 1
+      }
+    },
+    {
+      "object_name": "electron_wall_flux",
+      "section": "FunctorMaterials",
+      "factory_type": "ESWallFluxMaterial",
+      "property_name": "e_wall_number_flux",
+      "input_functor": "n_e_physical,e_energy_eV,potential",
+      "block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "action": "RETIRE_IN_P3_X_ONLY_WITH_EXACT_SHA",
+      "source_file": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "ordinal": 1,
+      "actual_case_count": {
+        "417": 1,
+        "941": 1
+      }
+    }
+  ],
+  "new_only_cpp_producer_edges": [
+    {
+      "producer": "DDEnergyEq::addFunctorMaterials -> ElectronEnergyMaterial",
+      "emits": [
+        "e_energy_eV"
+      ],
+      "reads": [
+        "log_e_energy",
+        "log_e"
+      ],
+      "law": "exp(log_e_energy-log_e) [eV]",
+      "status": "PINNED_CPP_CONTRACT_NO_EXPLICIT_C0_SOURCE"
+    },
+    {
+      "producer": "DDContinuityEq::addFunctorMaterials -> DDTransportMaterial(species_id=e)",
+      "emits": [
+        "e_mobility",
+        "e_diffusivity",
+        "electron_mobility",
+        "electron_diffusion",
+        "e_energy_mobility",
+        "e_energy_diffusivity",
+        "electron_energy_mobility",
+        "electron_energy_diffusion",
+        "neutral_number_density",
+        "electron_reduced_mobility",
+        "electron_reduced_diffusion"
+      ],
+      "reads": [
+        "e_energy_eV",
+        "prepared 42-row electron table",
+        "pressure",
+        "temperature"
+      ],
+      "model": "lookup",
+      "unit": "reduced",
+      "bounds_policy": "clamp",
+      "fluid_energy_factor": "5/3",
+      "status": "PINNED_CPP_CONTRACT_NO_EXPLICIT_E_TRANSPORT_OWNER"
+    },
+    {
+      "producer": "DDEnergyEq::addFunctorMaterials -> ADParsedFunctorMaterial",
+      "emits": [
+        "n_e_physical"
+      ],
+      "reads": [
+        "log_e"
+      ],
+      "law": "6.02214076e23*exp(log_e)",
+      "collides_with": "FunctorMaterials/electron_physical_density",
+      "status": "EXPLICIT_NATIVE_DUPLICATE_SOURCE"
+    },
+    {
+      "producer": "DDEnergyEq::addFunctorMaterials -> ESWallFluxMaterial",
+      "emits": [
+        "e_wall_number_flux"
+      ],
+      "reads": [
+        "n_e_physical",
+        "e_energy_eV",
+        "potential"
+      ],
+      "collides_with": "FunctorMaterials/electron_wall_flux",
+      "status": "EXPLICIT_NATIVE_DUPLICATE_SOURCE"
+    },
+    {
+      "producer": "FunctorMaterials/electron_molar_density -> electron_molar_density",
+      "emits": [
+        "electron_molar_density"
+      ],
+      "reads": [
+        "log_e"
+      ],
+      "status": "PRESERVE"
+    },
+    {
+      "producer": "FunctorMaterials/electron_molar_energy_density -> electron_molar_energy_density",
+      "emits": [
+        "electron_molar_energy_density"
+      ],
+      "reads": [
+        "log_e_energy"
+      ],
+      "status": "PRESERVE"
+    },
+    {
+      "producer": "FunctorMaterials/electron_physical_energy_density -> electron_energy_density_eV_m3",
+      "emits": [
+        "electron_energy_density_eV_m3"
+      ],
+      "reads": [
+        "electron_molar_energy_density"
+      ],
+      "status": "PRESERVE"
+    }
+  ],
+  "consumer_edges": [
+    {
+      "producer": "e_energy_eV",
+      "consumers": [
+        "DDTransportMaterial lookup coordinate",
+        "ESWallFluxMaterial mean_energy",
+        "eight electron FEM BC energy subset mean-energy",
+        "EI Rate materials mean-energy"
+      ],
+      "status": "STATIC_SOURCE_CONTRACT_NOT_LIVE_RESOLUTION"
+    },
+    {
+      "producer": "e_mobility/e_diffusivity",
+      "consumers": [
+        "DDContinuityEq electron FEM transport",
+        "DDEnergyEq energy/Joule kernels"
+      ],
+      "status": "STATIC_CPP"
+    },
+    {
+      "producer": "n_e_physical",
+      "consumers": [
+        "ESWallFluxMaterial",
+        "EI reaction producers",
+        "Poisson electron charge-density consumers"
+      ],
+      "status": "STATIC_REFERENCE"
+    },
+    {
+      "producer": "e_wall_number_flux",
+      "consumers": [
+        "8 electron FEM sheath boundary entries",
+        "ion_surface_current surface charge (JSON)"
+      ],
+      "status": "STATIC_REFERENCE"
+    }
+  ],
+  "source_code_blob_pins": [
+    {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "git_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+      "pinned_current_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a"
+    },
+    {
+      "path": "physics_app/src/physics/plasma/DDEnergyEq.C",
+      "git_blob_sha1": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+      "pinned_current_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a"
+    },
+    {
+      "path": "physics_app/src/materials/ElectronEnergyMaterial.C",
+      "git_blob_sha1": "4aebfa85282ab5e808309d68223099ded20276e7",
+      "pinned_current_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a"
+    },
+    {
+      "path": "physics_app/src/materials/DDTransportMaterial.C",
+      "git_blob_sha1": "e75687d73d8ca6fead0eff411ad7ffbb814a6909",
+      "pinned_current_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a"
+    },
+    {
+      "path": "physics_app/src/materials/ESWallFluxMaterial.C",
+      "git_blob_sha1": "7f0981608dad18e896b36af8fc8248211da381c6",
+      "pinned_current_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a"
+    },
+    {
+      "path": "physics_app/src/physics/plasma/Chemistry.C",
+      "git_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "pinned_current_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a"
+    }
+  ],
+  "verification": {
+    "explicit_old_owner_count_per_case": 5,
+    "old_functor_retire_count_per_case": 2,
+    "preserve_count_per_case": 3,
+    "explicit_mean_energy_functor_owner_count": 0,
+    "explicit_DDTransportMaterial_e_owner_count": 0,
+    "JSON_e_transport_coefficient_owner_count": 1,
+    "source_shadow": {
+      "bundle_sha256": "86867d92a1260d4c13fecf10612c39169f2ebf970a1effb60d56d9433ddb5eb3",
+      "before_c0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "after_c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "electron_bc_removed_per_case": 8,
+      "functor_material_removed_per_case": 2,
+      "unrelated_i_layers_byte_equal": 10,
+      "JSON_and_42row_table_byte_equal": true,
+      "production_applied": false
+    },
+    "source_mutants_rejected_per_case": 12,
+    "local_replay_python_sha256": "6d72d3898e4926e380d06bd9b76d4689655d1901090a3918bce259e7bccf6da7",
+    "local_detailed_receipt_sha256": "b38c98d4e8e826864139fd0b597d302b2d4c7e9c5d39b5798d2672f1562f147f"
+  },
+  "hold": [
+    "Production P3-X 10-owner retirement not applied: only a read-only disposable shadow shows correct deletion. Do not remove preserved three energy/molar Functors.",
+    "Actual C++ Warehouse must show single e_energy_eV, e mobility/diffusivity, 5/3 e energy mobility/diffusivity, n_e_physical and e_wall_number_flux providers, and 8 FEM BCs (no duplicated contribution).",
+    "Dynamic consumer reachability (EI material, Poisson, neutral/RF, sheath/surface charge) and real --check-input for both cases are not run.",
+    "Current P3-X integration must refresh its 26/30 worker index and bind this G6 receipt before advancing; no P3-X shared integration branch mutation by this worker."
+  ],
+  "private_rate_raw_bytes_included": false,
+  "native_P2": "NOT_RUN",
+  "native_P3": "NOT_RUN",
+  "native_P4": "NOT_RUN",
+  "science": "SCIENCE_HOLD",
+  "mutation_scope": "G6 evidence branch only"
+}
