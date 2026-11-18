@@ -1,0 +1,720 @@
+{
+  "schema": "issue671.p5x.generated32_typed_inventory_source_expected_vs_live_observed.v1",
+  "purpose": "Independent identity-bound typed inventory for S6-417/941 New-only; expected source and actual runtime are deliberately different gates",
+  "decision": "SOURCE_TYPED_32_OF_32_BOTH_CASES_PASS__SAME_W1_ACTUAL_REGISTRATION_HOLD",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "latest_pr665_head_at_receipt": "52067302d16074592503d0ef6b903cc344f55a08",
+    "w1_original_source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "exact_w1_elf_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "source_blobs_unchanged_between_heads": true,
+    "cpp_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "chemistry_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "source_sha_guard": "actual exact blob identities were separately compared across both HEADs"
+  },
+  "cases": {
+    "417": {
+      "source_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json",
+      "git_blob_sha1": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "case_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "count": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "FEBoundaryCondition": 8
+      },
+      "typed_expected_objects": [
+        {
+          "family": "FVKernel",
+          "name": "O2p_time",
+          "factory": "FVLogMolarTimeDerivative",
+          "variable": "log_O2p",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "O2p_diffusion",
+          "factory": "FVLogMolarDiffusion",
+          "variable": "log_O2p",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "O2p_drift",
+          "factory": "FVLogMolarElectrostaticDrift",
+          "variable": "log_O2p",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "O2p_source",
+          "factory": "FVCoupledForce",
+          "variable": "log_O2p",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Om_time",
+          "factory": "FVLogMolarTimeDerivative",
+          "variable": "log_Om",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Om_diffusion",
+          "factory": "FVLogMolarDiffusion",
+          "variable": "log_Om",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Om_drift",
+          "factory": "FVLogMolarElectrostaticDrift",
+          "variable": "log_Om",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Om_source",
+          "factory": "FVCoupledForce",
+          "variable": "log_Om",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Op_time",
+          "factory": "FVLogMolarTimeDerivative",
+          "variable": "log_Op",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Op_diffusion",
+          "factory": "FVLogMolarDiffusion",
+          "variable": "log_Op",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Op_drift",
+          "factory": "FVLogMolarElectrostaticDrift",
+          "variable": "log_Op",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Op_source",
+          "factory": "FVCoupledForce",
+          "variable": "log_Op",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_cover_dielectric",
+          "factory": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_energy_cover_dielectric",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_energy_focus_ring_dielectric",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_energy_wafer_dielectric",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_energy_wall",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_focus_ring_dielectric",
+          "factory": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_wafer_dielectric",
+          "factory": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_wall",
+          "factory": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "O2p_cover_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_O2p",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "O2p_focus_ring_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_O2p",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "O2p_wafer_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_O2p",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "O2p_wall",
+          "factory": "FVFunctorNeumannBC",
+          "variable": "log_O2p",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "inlet",
+            "outlet",
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Om_cover_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Om",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Om_focus_ring_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Om",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Om_wafer_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Om",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Om_wall",
+          "factory": "FVFunctorNeumannBC",
+          "variable": "log_Om",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "inlet",
+            "outlet",
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Op_cover_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Op",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Op_focus_ring_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Op",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Op_wafer_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Op",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Op_wall",
+          "factory": "FVFunctorNeumannBC",
+          "variable": "log_Op",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "inlet",
+            "outlet",
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        }
+      ],
+      "live_recorded_objects": null,
+      "live_status": "PENDING_RAW_W1_REGISTRATION"
+    },
+    "941": {
+      "source_path": "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json",
+      "git_blob_sha1": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "case_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "count": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "FEBoundaryCondition": 8
+      },
+      "typed_expected_objects": [
+        {
+          "family": "FVKernel",
+          "name": "O2p_time",
+          "factory": "FVLogMolarTimeDerivative",
+          "variable": "log_O2p",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "O2p_diffusion",
+          "factory": "FVLogMolarDiffusion",
+          "variable": "log_O2p",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "O2p_drift",
+          "factory": "FVLogMolarElectrostaticDrift",
+          "variable": "log_O2p",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "O2p_source",
+          "factory": "FVCoupledForce",
+          "variable": "log_O2p",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Om_time",
+          "factory": "FVLogMolarTimeDerivative",
+          "variable": "log_Om",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Om_diffusion",
+          "factory": "FVLogMolarDiffusion",
+          "variable": "log_Om",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Om_drift",
+          "factory": "FVLogMolarElectrostaticDrift",
+          "variable": "log_Om",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Om_source",
+          "factory": "FVCoupledForce",
+          "variable": "log_Om",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Op_time",
+          "factory": "FVLogMolarTimeDerivative",
+          "variable": "log_Op",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Op_diffusion",
+          "factory": "FVLogMolarDiffusion",
+          "variable": "log_Op",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Op_drift",
+          "factory": "FVLogMolarElectrostaticDrift",
+          "variable": "log_Op",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVKernel",
+          "name": "Op_source",
+          "factory": "FVCoupledForce",
+          "variable": "log_Op",
+          "owner": "DDContinuityEq",
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_cover_dielectric",
+          "factory": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_energy_cover_dielectric",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_energy_focus_ring_dielectric",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_energy_wafer_dielectric",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_energy_wall",
+          "factory": "FEMElectronEnergySheathBC",
+          "variable": "log_e_energy",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_focus_ring_dielectric",
+          "factory": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_wafer_dielectric",
+          "factory": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FEBoundaryCondition",
+          "name": "e_wall",
+          "factory": "FEMElectronSheathBC",
+          "variable": "log_e",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "O2p_cover_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_O2p",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "O2p_focus_ring_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_O2p",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "O2p_wafer_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_O2p",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "O2p_wall",
+          "factory": "FVFunctorNeumannBC",
+          "variable": "log_O2p",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "inlet",
+            "outlet",
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Om_cover_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Om",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Om_focus_ring_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Om",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Om_wafer_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Om",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Om_wall",
+          "factory": "FVFunctorNeumannBC",
+          "variable": "log_Om",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "inlet",
+            "outlet",
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Op_cover_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Op",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_cover"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Op_focus_ring_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Op",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_focus_ring"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Op_wafer_dielectric",
+          "factory": "FVLogMolarDielectricFluxBC",
+          "variable": "log_Op",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "plasma_wafer"
+          ],
+          "expected_multiplicity": 1
+        },
+        {
+          "family": "FVBC",
+          "name": "Op_wall",
+          "factory": "FVFunctorNeumannBC",
+          "variable": "log_Op",
+          "owner": "Chemistry/PlasmasAction",
+          "boundary": [
+            "inlet",
+            "outlet",
+            "plasma_electrode",
+            "plasma_metal",
+            "plasma_right"
+          ],
+          "expected_multiplicity": 1
+        }
+      ],
+      "live_recorded_objects": null,
+      "live_status": "PENDING_RAW_W1_REGISTRATION"
+    }
+  },
+  "real_evidence": {
+    "native_clean_417_941": "PASS_SAME_W1_44322557957",
+    "native_16_failclosed": "PASS_SAME_W1_44322557957",
+    "actual_12plus12_other_head": "PASS_DIAGNOSTIC_ONLY_44280359966",
+    "same_w1_live_typed_inventory": "HOLD_RAW_OBSERVER_NOT_YET_RETRIEVED",
+    "active_same_w1_observer_workflow": "issue-671-p5x-w1-registration-p05-observer-20261118",
+    "full_s6_rf_3ns_same_w1": "PASS_BOTH_CASES_44330414176",
+    "native_p3_p4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "safety": "No source/CI/PhysicsApp/main mutation by this report. No private raw rate data. Source-expected rows are NOT falsely labeled actual TheWarehouse observations."
+}
