@@ -143,8 +143,18 @@ def stage_public_d_physics(
         raise PublicDHold("PUBLIC_D_STAGED_LAYER_MISSING")
     original_layers = {name: sha((folder / name).read_bytes()) for name in names}
     checked(folder / C0, AFTER_SHA, "P4X_EXACT_SINGLE_OWNER_C0")
-    if any(VARIABLE_RE.search((folder / name).read_text()) for name in names):
-        raise PublicDHold("PUBLIC_D_OLD_NATIVE_ION_FV_VARIABLE_OWNER_REMAINS")
+    # The consumer graph may validly reference ions outside FV equations.
+    # Only the old Native ion FVKernel/FVBC objects are forbidden; preserve
+    # density/Poisson/diagnostic auxiliary consumers unchanged.
+    from retire_s6_ion_fv_owners import BLOCK, ROOT as SECTION
+    for name in names:
+        source = (folder / name).read_text(encoding="utf-8")
+        for match in BLOCK.finditer(source):
+            if not VARIABLE_RE.search(match.group("body")):
+                continue
+            roots = [r.group(1) for r in SECTION.finditer(source[:match.start()])]
+            if roots and roots[-1] in ("FVKernels", "FVBCs"):
+                raise PublicDHold("PUBLIC_D_OLD_NATIVE_ION_FV_OWNER_REMAINS_" + match.group("name"))
 
     chemistry = folder / "chemistry"
     newonly_json = chemistry / ("unified_s6_" + case + "_newonly.json")
