@@ -1,0 +1,506 @@
+{
+  "schema": "issue670.p4-w4.417_941.general_fv_neumann_three_owners.v1",
+  "issue": 670,
+  "task_id": "P4-W4",
+  "scope": "Source-bound only: inlet/outlet and electrode/metal/right general ion FVBC; dielectric three groups are excluded",
+  "status": "PASS_SOURCE_ONLY_GENERAL_3_BC_CANONICALIZATION_WITH_NATIVE_WAREHOUSE_HOLD",
+  "provenance": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "original_PR665_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "PR665_later_HEAD_verified": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "PR665_W4_JSON_Cpp_blob_unchanged": true,
+    "PR674_accepted_CI_head": "15f3e387b1c2c3b95c10232c6fe9d5884565c8f3",
+    "PR674_later_HEAD": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+    "new_PR674_whole_tree_runtime_not_reverified": true,
+    "P1_final_11_layer_ci_run": 44182663514,
+    "P1_final_11_layer_artifact_id": 14372278074,
+    "P1_nested_417_941_zip_sha256": "9923c7c875dff975ec203610e58797be7abbfe6a92be2173f1fbe525f49f1172",
+    "P2_successful_CI_run": 44199587771,
+    "P2_artifact_id": 14380831538,
+    "P2_artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44199587771/artifacts/14380831538",
+    "P2_artifact_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "independent_local_complete_json_sha256": "82bb4d36bb67f89af915885f317dda6069f8bd42d96313919e0933569742fa7c",
+    "independent_reproducer_py_sha256": "31f5234121db89b7811b80627ea5dcddaa693315275695c020b4be4db7dd37b7",
+    "private_rate_raw_bytes_copied": false
+  },
+  "Cpp_source_evidence": {
+    "parser_path": "physics_app/src/physics/plasma/Chemistry.C",
+    "blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "parser_lines": "704-832",
+    "producer_lines": "1563-1582",
+    "semantics": "merge repeated BC name across disjoint group sidesets, derive log_species, species_wall_number_flux, exactly one -1/N_A, reject overlapping physical sidesets/conflicting definitions",
+    "factor_expression": "-1.0/6.02214076e23",
+    "factor_transport": "std::setprecision(std::numeric_limits<Real>::max_digits10) to MooseFunctorName factor; avoids silent zero from std::to_string",
+    "warehouse_guard_path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+    "lines": "310-372",
+    "guard": "P05 queries FVFluxBC and FVDirichletBC warehouse and rejects unexpected/duplicate/missing BC for each selected ion"
+  },
+  "cases": {
+    "417": {
+      "actual_input_layer_count": 11,
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "json_blob_sha": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "file_SHA_receipts": [
+        {
+          "ordinal": 1,
+          "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "before_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "after_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e"
+        },
+        {
+          "ordinal": 2,
+          "file": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "before_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+          "after_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+        },
+        {
+          "ordinal": 3,
+          "file": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "before_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+          "after_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+        },
+        {
+          "ordinal": 4,
+          "file": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "before_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+          "after_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+        },
+        {
+          "ordinal": 5,
+          "file": "issue477_S2-415_generation_overlay.i",
+          "before_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+          "after_sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76"
+        },
+        {
+          "ordinal": 6,
+          "file": "issue477_S3-415-401_extra_overlay.i",
+          "before_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+          "after_sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05"
+        },
+        {
+          "ordinal": 7,
+          "file": "issue477_S4-401-417_op_ionization_overlay.i",
+          "before_sha256": "c700d87b79bd2985a0313a325048648c035c551127b9a38d7f5c2dc2e779de2c",
+          "after_sha256": "d4d58a53e739b9010ea77ccb7fe00091dc7f7c10f66e75da56c3e53e53d8ef2a"
+        },
+        {
+          "ordinal": 8,
+          "file": "issue477_S5-417-407_o2_consumer_overlay.i",
+          "before_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+          "after_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+        },
+        {
+          "ordinal": 9,
+          "file": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+          "before_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+          "after_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+        },
+        {
+          "ordinal": 10,
+          "file": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+          "before_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+          "after_sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc"
+        },
+        {
+          "ordinal": 11,
+          "file": "migrated_continuity.i",
+          "before_sha256": "ee8c26aca563f83b06319a47fc92333ee5efbf1bd83c1afb7ff9ed33d4daf895",
+          "after_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d"
+        }
+      ],
+      "source_P1_file_SHA_checked": 11,
+      "newonly_P2_file_SHA_checked": 11,
+      "changed_layers": 6,
+      "unchanged_layers": 5,
+      "old_general_fvbc_sha_count": 3,
+      "old_general_fvbc_deleted": 3,
+      "original_retired_all_ion_objects_replayed": 26,
+      "non_target_byte_changes": 0,
+      "two_JSON_general_groups": "inlet outlet | plasma_electrode plasma_metal plasma_right",
+      "general_JSON_declarations": 6,
+      "unique_general_merged_owners": 3,
+      "full_3_owner_contract": [
+        {
+          "species": "O2p",
+          "charge_number": 1,
+          "original": {
+            "section": "FVBCs",
+            "layer": 1,
+            "object_name": "ion_wall",
+            "factory": "FVFunctorNeumannBC",
+            "variable": "log_O2p",
+            "functor": "O2p_wall_number_flux",
+            "factor": "-1.6605390671738466e-24",
+            "boundaries": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "block_sha256": "fa4ad1a51cbcd4b6ffa1dc8fba3438b66b27642a598bc35abca2513b9f0bacb3",
+            "before_owner_count": 1,
+            "after_P2_native_count": 0
+          },
+          "newonly": {
+            "json_owner_name": "O2p_wall",
+            "type": "FVFunctorNeumannBC",
+            "variable": "log_O2p",
+            "functor": "O2p_wall_number_flux",
+            "factor": -1.6605390671738466e-24,
+            "units": "mol/particle",
+            "JSON_declarations": 2,
+            "normalized_owner_count": 1,
+            "generated_target_sidesets": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "generated_runtime_instance": "NOT_RUN"
+          }
+        },
+        {
+          "species": "Om",
+          "charge_number": -1,
+          "original": {
+            "section": "FVBCs",
+            "layer": 1,
+            "object_name": "negative_ion_wall",
+            "factory": "FVFunctorNeumannBC",
+            "variable": "log_Om",
+            "functor": "Om_wall_number_flux",
+            "factor": "-1.6605390671738466e-24",
+            "boundaries": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "block_sha256": "cf5d56c3af0f77832f08139360753ac8c300e24cd86f6fd24158e77893fe375b",
+            "before_owner_count": 1,
+            "after_P2_native_count": 0
+          },
+          "newonly": {
+            "json_owner_name": "Om_wall",
+            "type": "FVFunctorNeumannBC",
+            "variable": "log_Om",
+            "functor": "Om_wall_number_flux",
+            "factor": -1.6605390671738466e-24,
+            "units": "mol/particle",
+            "JSON_declarations": 2,
+            "normalized_owner_count": 1,
+            "generated_target_sidesets": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "generated_runtime_instance": "NOT_RUN"
+          }
+        },
+        {
+          "species": "Op",
+          "charge_number": 1,
+          "original": {
+            "section": "FVBCs",
+            "layer": 1,
+            "object_name": "atomic_positive_ion_wall",
+            "factory": "FVFunctorNeumannBC",
+            "variable": "log_Op",
+            "functor": "Op_wall_number_flux",
+            "factor": "-1.6605390671738466e-24",
+            "boundaries": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "block_sha256": "8a32490bce4f29361270661c094f8d0e45cb3555b8d9ce9127dd725ac340d67f",
+            "before_owner_count": 1,
+            "after_P2_native_count": 0
+          },
+          "newonly": {
+            "json_owner_name": "Op_wall",
+            "type": "FVFunctorNeumannBC",
+            "variable": "log_Op",
+            "functor": "Op_wall_number_flux",
+            "factor": -1.6605390671738466e-24,
+            "units": "mol/particle",
+            "JSON_declarations": 2,
+            "normalized_owner_count": 1,
+            "generated_target_sidesets": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "generated_runtime_instance": "NOT_RUN"
+          }
+        }
+      ],
+      "independent_negative_tests": 31,
+      "negative_tests_rejected": 31,
+      "status": "PASS_STATIC_PRE_POST_BYTES_AND_GENERAL_3_OWNER_CONTRACT; GENERATED_NATIVE_HOLD"
+    },
+    "941": {
+      "actual_input_layer_count": 11,
+      "source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "json_blob_sha": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "file_SHA_receipts": [
+        {
+          "ordinal": 1,
+          "file": "rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+          "before_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+          "after_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e"
+        },
+        {
+          "ordinal": 2,
+          "file": "rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+          "before_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864",
+          "after_sha256": "1acaafa6f65e67b24252756b0a8730a4d37ba94bdb35cb59b8ae07bde7f98864"
+        },
+        {
+          "ordinal": 3,
+          "file": "o2_elastic_400w_100us_dt1000ns_overlay.i",
+          "before_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818",
+          "after_sha256": "1e50c72580583f64f87ad80014a550fcdf76ca7cceae32e04c4fba8a8ad3a818"
+        },
+        {
+          "ordinal": 4,
+          "file": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i",
+          "before_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e",
+          "after_sha256": "ced2d475a44b1f845fdf47b91c5af6cf5e09866a945502da9fe0e9ed2528143e"
+        },
+        {
+          "ordinal": 5,
+          "file": "issue477_S2-415_generation_overlay.i",
+          "before_sha256": "59b9af114ec8eb9832e4c665d11606b98458705ce5b424bcba20785de3e95531",
+          "after_sha256": "398137e4d6edeac38558fb2b291763426e9b2e239a5fd507554650077f6c5d76"
+        },
+        {
+          "ordinal": 6,
+          "file": "issue477_S3-415-401_extra_overlay.i",
+          "before_sha256": "ba172a68f0b3ad744d2057c360b0159478ec715a96063b8276b7e51bff51d6c0",
+          "after_sha256": "de41c87c7ae4f99884352d82ce657b1fa47099c118acc3782ec95d5519e7ff05"
+        },
+        {
+          "ordinal": 7,
+          "file": "issue477_S4-401-941_op_ionization_overlay.i",
+          "before_sha256": "a6a1a1075dbc5a31e0350596996d2842382cf02186322cb46d44aa06b70fbd43",
+          "after_sha256": "e71a979ee5459c29db9a3593516eb60498c4d2c3af81101c8a5938669521bdfa"
+        },
+        {
+          "ordinal": 8,
+          "file": "issue477_S5-941-407_o2_consumer_overlay.i",
+          "before_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863",
+          "after_sha256": "04cea2077abb32552d9fffe2c79518b724529ea05ccc074a20bc582390a63863"
+        },
+        {
+          "ordinal": 9,
+          "file": "issue477_S6-941-407-2069-H25_EI2069_overlay.i",
+          "before_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35",
+          "after_sha256": "d2f4ecf7e7498980d27892d36c3f485bff18d886a8f1c6a5e7b693ec76ab8d35"
+        },
+        {
+          "ordinal": 10,
+          "file": "issue477_S6-941-407-2069-H25_H25_overlay.i",
+          "before_sha256": "67064d2a962ce6f3711ef2355635d9ef8dc061f7bf848276b62e4b91dd2e74fc",
+          "after_sha256": "dfb177dc17cd0ac350dd38966a8efda392859de6ecb665c85f1e312f8c157acc"
+        },
+        {
+          "ordinal": 11,
+          "file": "migrated_continuity.i",
+          "before_sha256": "19c1b1b25fedc76706b8becca327d2b9f32766c50c4947aabfcec49088ce9cb0",
+          "after_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+        }
+      ],
+      "source_P1_file_SHA_checked": 11,
+      "newonly_P2_file_SHA_checked": 11,
+      "changed_layers": 6,
+      "unchanged_layers": 5,
+      "old_general_fvbc_sha_count": 3,
+      "old_general_fvbc_deleted": 3,
+      "original_retired_all_ion_objects_replayed": 26,
+      "non_target_byte_changes": 0,
+      "two_JSON_general_groups": "inlet outlet | plasma_electrode plasma_metal plasma_right",
+      "general_JSON_declarations": 6,
+      "unique_general_merged_owners": 3,
+      "full_3_owner_contract": [
+        {
+          "species": "O2p",
+          "charge_number": 1,
+          "original": {
+            "section": "FVBCs",
+            "layer": 1,
+            "object_name": "ion_wall",
+            "factory": "FVFunctorNeumannBC",
+            "variable": "log_O2p",
+            "functor": "O2p_wall_number_flux",
+            "factor": "-1.6605390671738466e-24",
+            "boundaries": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "block_sha256": "fa4ad1a51cbcd4b6ffa1dc8fba3438b66b27642a598bc35abca2513b9f0bacb3",
+            "before_owner_count": 1,
+            "after_P2_native_count": 0
+          },
+          "newonly": {
+            "json_owner_name": "O2p_wall",
+            "type": "FVFunctorNeumannBC",
+            "variable": "log_O2p",
+            "functor": "O2p_wall_number_flux",
+            "factor": -1.6605390671738466e-24,
+            "units": "mol/particle",
+            "JSON_declarations": 2,
+            "normalized_owner_count": 1,
+            "generated_target_sidesets": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "generated_runtime_instance": "NOT_RUN"
+          }
+        },
+        {
+          "species": "Om",
+          "charge_number": -1,
+          "original": {
+            "section": "FVBCs",
+            "layer": 1,
+            "object_name": "negative_ion_wall",
+            "factory": "FVFunctorNeumannBC",
+            "variable": "log_Om",
+            "functor": "Om_wall_number_flux",
+            "factor": "-1.6605390671738466e-24",
+            "boundaries": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "block_sha256": "cf5d56c3af0f77832f08139360753ac8c300e24cd86f6fd24158e77893fe375b",
+            "before_owner_count": 1,
+            "after_P2_native_count": 0
+          },
+          "newonly": {
+            "json_owner_name": "Om_wall",
+            "type": "FVFunctorNeumannBC",
+            "variable": "log_Om",
+            "functor": "Om_wall_number_flux",
+            "factor": -1.6605390671738466e-24,
+            "units": "mol/particle",
+            "JSON_declarations": 2,
+            "normalized_owner_count": 1,
+            "generated_target_sidesets": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "generated_runtime_instance": "NOT_RUN"
+          }
+        },
+        {
+          "species": "Op",
+          "charge_number": 1,
+          "original": {
+            "section": "FVBCs",
+            "layer": 1,
+            "object_name": "atomic_positive_ion_wall",
+            "factory": "FVFunctorNeumannBC",
+            "variable": "log_Op",
+            "functor": "Op_wall_number_flux",
+            "factor": "-1.6605390671738466e-24",
+            "boundaries": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "block_sha256": "8a32490bce4f29361270661c094f8d0e45cb3555b8d9ce9127dd725ac340d67f",
+            "before_owner_count": 1,
+            "after_P2_native_count": 0
+          },
+          "newonly": {
+            "json_owner_name": "Op_wall",
+            "type": "FVFunctorNeumannBC",
+            "variable": "log_Op",
+            "functor": "Op_wall_number_flux",
+            "factor": -1.6605390671738466e-24,
+            "units": "mol/particle",
+            "JSON_declarations": 2,
+            "normalized_owner_count": 1,
+            "generated_target_sidesets": [
+              "inlet",
+              "outlet",
+              "plasma_electrode",
+              "plasma_metal",
+              "plasma_right"
+            ],
+            "generated_runtime_instance": "NOT_RUN"
+          }
+        }
+      ],
+      "independent_negative_tests": 31,
+      "negative_tests_rejected": 31,
+      "status": "PASS_STATIC_PRE_POST_BYTES_AND_GENERAL_3_OWNER_CONTRACT; GENERATED_NATIVE_HOLD"
+    }
+  },
+  "independent_mutation_tests": {
+    "total": 62,
+    "rejected": 62,
+    "per_case": 31,
+    "classes": [
+      "missing general JSON group, missing species entry",
+      "wrong factory/species prefix",
+      "extra explicit factor/functor",
+      "invalid/missing/overlapping sideset",
+      "third general group",
+      "incorrect ion charge",
+      "old source wrong sign or zero/NaN factor",
+      "wrong original functor/variable/name/section",
+      "reappearing Native owner after P2",
+      "poststage file SHA tamper"
+    ],
+    "result": "PASS_TASK_SPECIFIC_FAIL_CLOSED_SOURCE_CHECKER",
+    "caveat": "Mutation checker uses independent task-specific Python rules. It does not execute MOOSE native runtime parser or warehouse."
+  },
+  "gates": {
+    "P1_0_exact_source_sha": "PASS",
+    "P2_668_source_stage_26_to_zero": "PASS",
+    "P4_W4_original_general_3_removed": "PASS",
+    "P4_W4_normalized_JSON_6_to_3": "PASS_SOURCE_CONTRACT",
+    "P4_X": "PENDING",
+    "P5_671_native_warehouse": "NOT_RUN",
+    "generated_3_FV_BC_warehouse": "NOT_RUN",
+    "dynamic_ion_wall_functors": "HOLD",
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "protection": {
+    "historical_archives_modified": false,
+    "PR665_modified": false,
+    "PR674_modified": false,
+    "main_modified": false,
+    "original_chemistry_json_modified": false
+  }
+}
