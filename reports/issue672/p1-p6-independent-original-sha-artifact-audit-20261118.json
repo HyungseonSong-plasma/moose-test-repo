@@ -1,0 +1,276 @@
+{
+  "schema": "issue672.P1_P6.independent_original_SHA_and_25_artifacts.audit.v1",
+  "source": {
+    "pr": 665,
+    "head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "tree": "2720fa5272a5fa98001e8e444331397723fe7ccb",
+    "main_at_start": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "p5_real_native_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d"
+  },
+  "status": "PASS_INDEPENDENT_BYTES_SHA_CRC_CUSTODY__KEEP_P5X_P6X_SCIENCE_HOLD",
+  "audit": {
+    "actual_downloaded_artifact_zip_count": 25,
+    "zip_sha256": "25/25_MATCH",
+    "ZIP_CRC": "25/25_PASS",
+    "checks_passed_minimum": 340,
+    "checks_failed": 0,
+    "local_independent_audit_json_sha256": "213728e058232e2892532caa10800dabcece94e09d458e3ca17a63375d8bf279",
+    "local_script_sha256": "ad3447e37f7da4a266c2bae36e14a6380347720cc4ae87abc5cf238d8e9e85f1",
+    "local_human_report_sha256": "e934181098ab23f7208363a106e4fff06ee1535370ba9ecccf46e06c30b394b7"
+  },
+  "artifacts": [
+    {
+      "role": "original_417",
+      "artifact_id": null,
+      "sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "original_941",
+      "artifact_id": null,
+      "sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P1_11layer",
+      "artifact_id": 14372278070,
+      "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P2_source",
+      "artifact_id": 14380831538,
+      "sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P3X_source",
+      "artifact_id": 14405784430,
+      "sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P3X_real",
+      "artifact_id": 14406746397,
+      "sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P4X_source",
+      "artifact_id": 14414026909,
+      "sha256": "6773dfa54bd1a77c908831be3edd6a93699152f5879e96f6bf3db435df431540",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "secret_original_6_sha_only",
+      "artifact_id": null,
+      "sha256": "a382af3a6ebba656e070747814df45267e2880849fe6f492757ceda1c7058a20",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P5_rate_secure_stage",
+      "artifact_id": 14411626010,
+      "sha256": "195210cc96c80a096103c855e31804e2a0fd52ed9f31a64cde23f9dc773f6127",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P5_single_build",
+      "artifact_id": 14435245012,
+      "sha256": "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P5_S6_417",
+      "artifact_id": 14435014200,
+      "sha256": "5fb73f09ad76150b9b5fa09dfcf0ba2b384b171e9bfe33098d872c89681ea89d",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P5_S6_941",
+      "artifact_id": 14435303009,
+      "sha256": "3ffb3f76ac158b21c49d4be3b6fbd3c67c7805aa06d8f1c4f6df2d15b6177cb2",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_old_Public",
+      "artifact_id": 14425191296,
+      "sha256": "5571de71f340112f4c7526afd370ad3482f80f4f75af77c7bb8580d4e881e7af",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_old_FLOW",
+      "artifact_id": 14424786177,
+      "sha256": "5fbc73b45939389c5e9b563f54099c03ce0400bec77c017f0d02b759634cbf92",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_old_ARCH",
+      "artifact_id": 14424707119,
+      "sha256": "79d942499ca863aff4aa2bba82af42eab51776b495b1d1fe7f2a72a194dc6f0e",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_old_Ion5",
+      "artifact_id": 14423912810,
+      "sha256": "41b5cdead487cd4269234a963d55c46adc84c4c49b7d7e7a5b43ca9877c3fc6d",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_old_Ion10",
+      "artifact_id": 14424203209,
+      "sha256": "980263b7150e3d799ca3a0a75cb10106216ce56bd7f7e5ecc2359a08d210fa49",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_hist_Public",
+      "artifact_id": 14281776411,
+      "sha256": "9cf25eff1305674f3e4d36282efb5de1080a14eccbf9590257f6725e0c9b7688",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_hist_ARCH",
+      "artifact_id": 14282791149,
+      "sha256": "ed7a1e72a98cd192f3b755740de9d637decf830b347cc1d496fd8bc6c8f1e9e7",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_hist_ARCH_pinned",
+      "artifact_id": 14429419728,
+      "sha256": "2967fe46aad41bfcb845da76c2da0a1be86540f4099d9f7e6350362902e7411a",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_new_P0_417",
+      "artifact_id": 14439461098,
+      "sha256": "6f1bac3021745bcefd83e30d94f9250ab76fca0b4b33b6ce25c60460f9758e32",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_new_P0_941",
+      "artifact_id": 14439341716,
+      "sha256": "47d48cb42983a275d70af300e0bbb37e071a7b6bf2380c616aa98dbc706f303f",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_new_Public",
+      "artifact_id": 14440525398,
+      "sha256": "453ff7e80e7afd2cf87c989cf554720ef29feddc8d5b9b8ee62478c0a520a0ad",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_new_ARCH",
+      "artifact_id": 14438713435,
+      "sha256": "1dbf045701c744d4d3e92856a94803ad5e2fd69ecdf86088ab0ef00d7e3be186",
+      "ZIP_CRC": "PASS"
+    },
+    {
+      "role": "P6_new_FLOW",
+      "artifact_id": 14440340727,
+      "sha256": "c83454189c779b3de059b88d2642aec83ccaa3904173870ef74aee4c8ffac14b",
+      "ZIP_CRC": "PASS"
+    }
+  ],
+  "input_lineage": {
+    "S6_417": {
+      "historical_original_10": "10/10",
+      "P1_11": "11/11",
+      "P2_11": "11/11",
+      "P3X_11": "11/11",
+      "historical_original_to_P1_10_files_byte_different": 10,
+      "old_ion_retired": 26,
+      "old_electron_retired": 10
+    },
+    "S6_941": {
+      "historical_original_10": "10/10",
+      "P1_11": "11/11",
+      "P2_11": "11/11",
+      "P3X_11": "11/11",
+      "historical_original_to_P1_10_files_byte_different": 10,
+      "old_ion_retired": 26,
+      "old_electron_retired": 10
+    },
+    "P3X_archives": {
+      "artifact_a": 14405784430,
+      "artifact_b": 14406746397,
+      "zip_SHA_identical": false,
+      "member_bytes_identical": "179/179"
+    },
+    "P4X": {
+      "actual_artifact_members": 1,
+      "member_name": "p4x-full-source-stage.json",
+      "after_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "direct_full_P4X_archive": "NOT_PROVIDED",
+      "post_C0_verified_in_later_actual_native_receipt": true
+    }
+  },
+  "private_kinetic_rate": {
+    "six_original_sha256_attested_in_protected_CI": true,
+    "case_417_rate_count": 5,
+    "case_941_rate_count": 5,
+    "actual_original_rate_bytes_available_to_public_auditor": false,
+    "raw_private_table_bytes_uploaded": false
+  },
+  "same_binary_native": {
+    "build_run": 44319316180,
+    "artifact": 14435245012,
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "oci_build_sha256": "2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "build_count": 1,
+    "elf_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "app_libs_sha256": [
+      "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd",
+      "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6"
+    ],
+    "native_run": 44322715807,
+    "S6_417": {
+      "exit": 0,
+      "log_sha256": "0a075c1cd4e6069db84c8749c5d3e5151fcdab114d51e51d46da272a4a0d5b4d"
+    },
+    "S6_941": {
+      "exit": 0,
+      "log_sha256": "2d4190c7aabcf270209bc8b355ae242fded9a98ea7acfbd543fb64266fb2e4f1"
+    },
+    "P05_compiled_integrity": "PASS_BOUNDED",
+    "P05_direct_registered_12K_12BC": "NOT_INSTRUMENTED_IN_THIS_RUN",
+    "latest_520_exact_binary_run": "NOT_RUN"
+  },
+  "latest_HEAD_delta": {
+    "from": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "to": "52067302d16074592503d0ef6b903cc344f55a08",
+    "commits_ahead": 4,
+    "changed_files": [
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "tests/test_issue633_newonly_run_species_schema.py"
+    ],
+    "twelve_old_new_git_blob_pairs": "10_UNCHANGED_2_CHANGED",
+    "CI_template_byte_equal": true
+  },
+  "P6_lanes": {
+    "Public_B": "HISTORICAL_P2_BOTH_CASES_PASS",
+    "Public_D": "KEEP_HOLD_417_941_E_TRANSPORT_JSON",
+    "FLOW": "KEEP_HOLD_417_FAIL_941_NOT_RUN",
+    "ARCH_Hybrid": "KEEP_HOLD_417_941_P05_NI_TIME",
+    "historical_ARCH_P2": "PASS_ONLY_AT_OLD_PINNED_SHA",
+    "Ion_FVM_Newonly_latest": "417_941_P0_ONLY_PASS_P1_P2_P3_P4_NOT_RUN",
+    "new_latest_repo_CI_run": 44330849818,
+    "new_latest_repo_CI": "FAIL_WITH_VALIDATE_SUCCESS",
+    "latest_ion_P0_run": 44330850043,
+    "latest_FLOW_run": 44330850055
+  },
+  "gates": {
+    "P1": "PASS_SOURCE_PIN",
+    "P2": "PASS_ION_CUTOVER_SOURCE",
+    "P3X": "PASS_ELECTRON_CUTOVER_SOURCE",
+    "P4X_7_PROVIDERS": "PASS_SOURCE_RECEIPT",
+    "P4X_FULL": "HOLD_INTEGRATION",
+    "P5_417_941_NATIVE_74a2b0f": "PASS",
+    "P5_EXACT_LATEST_520_HEAD": "NOT_RUN",
+    "P5_X": "HOLD",
+    "P6_E1": "PASS_INDEPENDENT_CUSTODY",
+    "P6_X": "HOLD",
+    "SCIENCE": "HOLD"
+  },
+  "scope_limit": "This auditor did not directly open the protected EI source bytes, independently rebuild latest HEAD, run timestep, or produce a fresh exact latest HEAD native science receipt. Artifact 14414026909 is 1 JSON source-only file. The old P5 success is source-bound to 74a2b0f, not relabeled as exact 52067302.",
+  "mutation": "Evidence-only branch; no source, workflows, CI trigger, PR665/main, protected files modified."
+}
