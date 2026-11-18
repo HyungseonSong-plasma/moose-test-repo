@@ -1,0 +1,177 @@
+name: Issue669 P3-G2 electron kernel ownership exact-stage readback
+on:
+  push:
+    branches: [issue-669-p3-g2-electron-time-owner-20261118]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: b5c1de717bd944bfa11685e826a922fbb6ae483a
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: issue668-p2-newonly-production-runner-static-417-941
+          run-id: 44199587771
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: evidence
+      - name: Independently read 417 and 941 real ion-retired New-only input kernels
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = b5c1de717bd944bfa11685e826a922fbb6ae483a
+          python3 - <<'PY'
+          import hashlib,json,re,copy
+          from pathlib import Path
+          H="b5c1de717bd944bfa11685e826a922fbb6ae483a"
+          OLD="9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          ROOT=Path("experiments/Issue402_plasma_dsl_g1")
+          JHASH={"417":"ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+                 "941":"2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"}
+          OHASH={"417":"c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+                 "941":"76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"}
+          def sha(b):return hashlib.sha256(b).hexdigest()
+          def ensure(b,why):
+              if not b:raise ValueError(why)
+          def parse(b,filename,layer):
+              out=[];stack=[];offset=0;b.decode("utf-8")
+              for lineno,line in enumerate(b.splitlines(keepends=True),1):
+                  tag=re.fullmatch(rb"\[([^\[\]]*)\]",line.strip())
+                  if tag:
+                      name=tag.group(1).decode()
+                      if name:stack.append((name,offset,lineno))
+                      elif stack:
+                          name,start,first=stack.pop()
+                          if len(stack)==1 and stack[0][0]=="Kernels":
+                              raw=b[start:offset+len(line)];params={}
+                              for item in raw.decode().splitlines()[1:-1]:
+                                  m=re.fullmatch(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*",item)
+                                  if m:
+                                      ensure(m.group(1) not in params,"DUPLICATE_KERNEL_PARAM:"+name)
+                                      params[m.group(1)]=m.group(2).strip().strip("'\"")
+                              out.append({"section":"Kernels","name":name,"filename":filename,
+                                          "layer":layer,"line_start":first,"line_end":lineno,
+                                          "block_sha256":sha(raw),"type":params.get("type"),
+                                          "variable":params.get("variable"),"params":params})
+                  offset+=len(line)
+              ensure(not stack,"UNBALANCED_INPUT:"+filename)
+              ensure(not re.search(rb"(?m)^\s*!include\b",b),"UNRESOLVED_PARENT_INCLUDE:"+filename)
+              return out
+          def owner(x):
+              return x["section"]=="Kernels" and x["variable"] in ("log_e","log_ne") and (
+                  "FEMLogMolar" in (x["type"] or "") or
+                  x["name"] in ("ne_time","e_time","e_transport"))
+          def time(x):
+              return owner(x) and x["type"] in ("PhysicsFEMLogMolarTimeDerivative",
+                                               "FEMLogMolarTimeDerivative")
+          code=Path("physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
+          for token in ('getProblem().addKernel(time_type, species[i] + "_time", time_params);',
+                        'getProblem().addKernel(type, kernel_name, params);',
+                        'const std::string time_type = "FEMLogMolarTimeDerivative";',
+                        'const std::string type = "FEMLogMolarDriftDiffusion";',
+                        'requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);',
+                        'requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);'):
+              ensure(token in code,"CXX_CONTRACT_CHANGED:"+token)
+          results={}
+          for case in ("417","941"):
+              base=Path("evidence/cases")/case
+              stage=base/"experiments/Issue395_powered_chemistry_ladder"
+              receipt=json.loads((base/"newonly_stage_receipt.json").read_bytes())
+              ensure(receipt["source_head"]==OLD and str(receipt["variant"])==case,
+                     "STAGE_WRONG_SOURCE:"+case)
+              ensure(receipt["status"]=="P2_NEWONLY_JSON_AND_LAYER11_STAGE_STATIC_PASS_RUNTIME_HOLD",
+                     "STAGE_NOT_ACCEPTED:"+case)
+              ensure(receipt["retired_native_ion_owners"]==26 and
+                     receipt["remaining_native_ion_fv_owners"]==0,"ION_RETIRE_NOT_26_TO_ZERO:"+case)
+              expected=receipt["layers_after_sha256"]
+              ensure(len(expected)==11 and len(set(expected))==11,"STAGE_WRONG_LAYER_COUNT:"+case)
+              kernels=[];layers=[]
+              for i,(filename,pinned_hash) in enumerate(expected.items(),1):
+                  file=stage/filename
+                  ensure(filename==file.name and file.is_file() and not file.is_symlink(),
+                         "MISSING_INPUT:"+case+":"+filename)
+                  raw=file.read_bytes()
+                  ensure(0<len(raw)<200000 and sha(raw)==pinned_hash,
+                         "FILE_SHA_CHANGED:"+case+":"+filename)
+                  kernels.extend(parse(raw,filename,i))
+                  layers.append({"ordinal":i,"filename":filename,"sha256":sha(raw)})
+              jsonfile=ROOT/"chemistry"/("unified_s6_"+case+"_newonly.json")
+              overlay=ROOT/("issue633_newonly_s6_"+case+"_continuity.template.i")
+              ensure(sha(jsonfile.read_bytes())==JHASH[case] and
+                     sha((stage/"chemistry"/jsonfile.name).read_bytes())==JHASH[case],
+                     "NEWONLY_JSON_CURRENT_OR_STAGE_MISMATCH:"+case)
+              ensure(sha(overlay.read_bytes())==OHASH[case] and
+                     sha((stage/"migrated_continuity.i").read_bytes())==OHASH[case],
+                     "NEWONLY_LAYER11_CURRENT_OR_STAGE_MISMATCH:"+case)
+              overlay_text=overlay.read_text()
+              ensure(overlay_text.count("fem_species = e")==2 and
+                     "fvm_species = 'O2p Om Op'" in overlay_text,
+                     "ELECTRON_PHYSICS_SELECTION_BAD:"+case)
+              electron=json.loads(jsonfile.read_text())["species"]["e"]
+              ensure(electron["charge_number"]==-1 and
+                     electron["transport_coef"]["type"]=="lookup","ELECTRON_CONTRACT_BAD:"+case)
+              nat=[x for x in kernels if owner(x)]
+              times=[x for x in kernels if time(x)]
+              same_names=[x for x in kernels if x["name"] in ("e_time","e_transport","e_source")]
+              status=("HOLD_NATIVE_ELECTRON_RESIDUAL_OWNER_PRESENT"
+                      if nat else "STATIC_NATIVE_ELECTRON_OWNER_ABSENT_RUNTIME_HOLD")
+              results[case]={"status":status,"source_sha":OLD,"review_head":H,
+                "layer_file_sha256":layers,"file_sha_pass_count":len(layers),
+                "native_fe_kernel_count":len(kernels),"electron_native_residual_count":len(nat),
+                "native_electron_time_count":len(times),"native_electron_owners":nat,
+                "old_electron_time_owners":times,
+                "explicit_generated_name_collisions":same_names,
+                "would_be_generated_e_time":{"type":"FEMLogMolarTimeDerivative",
+                  "name":"e_time","variable":"log_e","proof":"CURRENT_CXX_STATIC_ONLY"},
+                "would_be_generated_e_transport":{"type":"FEMLogMolarDriftDiffusion",
+                  "name":"e_transport","variable":"log_e","proof":"CURRENT_CXX_STATIC_ONLY"},
+                "runtime_kernel_warehouse":"NOT_RUN"}
+              print(f"P3_G2_{case}_FILES=11/11 NATIVE_E_RESIDUAL={len(nat)} NATIVE_E_TIME={len(times)}",flush=True)
+              for x in nat:
+                  print("P3_G2_"+case+"_OWNER="+json.dumps(
+                      {k:x[k] for k in ("name","type","variable","filename","layer","block_sha256")}),flush=True)
+          controls={}
+          baseline={"section":"Kernels","name":"ne_time",
+                    "variable":"log_e","type":"FEMLogMolarTimeDerivative"}
+          samples=[
+            ("legacy_ne_time",baseline),
+            ("renamed_e_time",dict(baseline,name="e_time")),
+            ("legacy_e_transport",dict(baseline,name="old_transport",
+                                       type="FEMLogMolarDriftDiffusion"))]
+          for name,sample in samples:
+              ensure(owner(sample),"NEGATIVE_NOT_DETECTED:"+name)
+              controls[name]="REJECTED"
+          overall=("STATIC_NATIVE_ELECTRON_OWNER_CONFLICT_P3_X_HOLD"
+                   if any(v["electron_native_residual_count"] for v in results.values())
+                   else "STATIC_OLD_OWNER_ABSENT__NATIVE_RUNTIME_HOLD")
+          report={"schema":"issue669.p3_g2.electron_continuity_kernel.v1",
+             "task_id":"P3-G2","review_head":H,"historical_p2_stage_head":OLD,
+             "upstream_run":44199587771,"upstream_artifact_id":14380831538,
+             "status":overall,"cases":results,"negative_controls":controls,
+             "cxx_source":"physics_app/src/physics/plasma/DDContinuityEq.C",
+             "generated_FE_time_owner":"e_time / FEMLogMolarTimeDerivative / log_e",
+             "generated_FE_transport_owner":"e_transport / FEMLogMolarDriftDiffusion / log_e",
+             "generated_FE_source_owner":"e_source only when mechanism.hasSpeciesSource(e)",
+             "critical_rule":"Different object names on the same residual are not independent ownership",
+             "remaining_gates":["P3-X single-writer owner repair if Native duplicates",
+                                "Current-head binary FE KernelWarehouse one-owner verification",
+                                "P5 Native P2 and dynamic callers"],
+             "runtime":"NOT_RUN","science":"SCIENCE_HOLD"}
+          Path("g2-receipt").mkdir(exist_ok=True)
+          (Path("g2-receipt")/"p3-g2-electron-owners.json").write_text(
+              json.dumps(report,sort_keys=True,indent=2)+"\n")
+          print("P3_G2_FINAL="+overall,flush=True)
+          PY
+      - name: Upload G2 receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue669-p3-g2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: g2-receipt/
+          if-no-files-found: warn
+          retention-days: 30
