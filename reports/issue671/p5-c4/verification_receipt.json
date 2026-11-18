@@ -1,0 +1,250 @@
+{
+  "schema": "issue671.p5_c4.s6_941.fv_bc_source_audit.v1",
+  "task_id": "P5-C4",
+  "case": "S6-941",
+  "issue": 671,
+  "source_pr": 665,
+  "status": "SOURCE_STATIC_CONTRACT_PASS__NATIVE_FVBC_WAREHOUSE_NOT_REACHED_HOLD",
+  "scope": "S6-941 generated ion FV BoundaryCondition names, Factory, sidesets, physical-sign and P05 uniqueness/readiness; not full native success",
+  "provenance": {
+    "integration_head_at_audit": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "integration_draft": true,
+    "source_only_ci_run": 44257739203,
+    "source_only_artifact_id": 14406746397,
+    "source_only_artifact_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "real_941_case_manifest_sha256": "5d4a857f72f06ae9323f4e279f7fc426a1a74dd9c0ad75a530ff288732e6fde8",
+    "real_941_stage_receipt_sha256": "308630d14828dba646fc5a7e6742c5b13a1dc9a40a76e320916e793b0263850b",
+    "real_941_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "real_941_C0_file_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "real_941_newonly_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+    "source_blobs": {
+      "physics_app/src/physics/plasma/Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+    },
+    "local_independent_auditor": "p5_c4_941_static_audit.py",
+    "local_auditor_sha256": "54f0df803aa005dd9d8d5934b5817d3221fa3aef9be35f9ed4a81d57609a27a9",
+    "local_audit_output_sha256": "d0190232e1dc992a4e919120b520977594df79c4265dd6dd55ca727a436132c8"
+  },
+  "source_byte_readback": {
+    "artifact_sha": "PASS",
+    "archive_crc": "PASS",
+    "actual_941_layer_file_sha": "11/11_PASS",
+    "native_ion_owner_retired_total": 26,
+    "explicit_native_FVBC_retired": 12,
+    "explicit_native_FVBC_remaining_in_P3X_input": 0,
+    "case_json": "PASS",
+    "expected_FVBC_owners": 12,
+    "expected_unique_normal_neumann": 3,
+    "expected_unique_dielectric": 9,
+    "unique_sidesets": 8,
+    "bc_to_sideset_bindings": 24
+  },
+  "retired_old_941_fvbc_exact_block_sha256": {
+    "atomic_positive_ion_cover_dielectric": "f44eddb6f571b5bc1b33cbe08a772bba4dcc86f129f53fe4127b715f47cfbe45",
+    "atomic_positive_ion_focus_ring_dielectric": "bd7e0cf631d41a4670e1a744af6c94bc66d57e1aace960acb183249906425e62",
+    "atomic_positive_ion_wafer_dielectric": "4f6259aa4c0c1d69495581e27e229fc9b4d3e4fb3dcbd59ff09c8ff53ad2937b",
+    "atomic_positive_ion_wall": "8a32490bce4f29361270661c094f8d0e45cb3555b8d9ce9127dd725ac340d67f",
+    "ion_cover_dielectric": "6cf04ff67cabc68ad5852678c5c83c646495f994c5bf6c7dfc3628d637812d5b",
+    "ion_focus_ring_dielectric": "830e2cddd31b70308732cf4dab3e7d4327d38c34d0200ec50da4fcf011eee761",
+    "ion_wafer_dielectric": "07256ce1face22d3fbe6b318d5e1857bf61289b2619adfea3cefec707a37b31c",
+    "ion_wall": "fa4ad1a51cbcd4b6ffa1dc8fba3438b66b27642a598bc35abca2513b9f0bacb3",
+    "negative_ion_cover_dielectric": "61acf3daa0654c6beb7220c7aaca1f3dbab944e9586a09e756aa2d419014ff02",
+    "negative_ion_focus_ring_dielectric": "b96509870ac57132a0d71588709753b065ec699afe36917cf715480e5480febe",
+    "negative_ion_wafer_dielectric": "ce57b0e42089b7266f623359eeb56cc4349cda356b9503ef37fb244e8cedbea3",
+    "negative_ion_wall": "cf5d56c3af0f77832f08139360753ac8c300e24cd86f6fd24158e77893fe375b"
+  },
+  "json_normalized_FVBC_expectations": [
+    {
+      "name": "O2p_wall",
+      "variable": "log_O2p",
+      "factory": "FVFunctorNeumannBC",
+      "sidesets": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "O2p_wall_number_flux",
+      "factor": "-1/N_A"
+    },
+    {
+      "name": "O2p_cover_dielectric",
+      "variable": "log_O2p",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_cover"
+      ],
+      "signed_number_flux": "O2p_wall_number_flux"
+    },
+    {
+      "name": "O2p_wafer_dielectric",
+      "variable": "log_O2p",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_wafer"
+      ],
+      "signed_number_flux": "O2p_wall_number_flux"
+    },
+    {
+      "name": "O2p_focus_ring_dielectric",
+      "variable": "log_O2p",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_focus_ring"
+      ],
+      "signed_number_flux": "O2p_wall_number_flux"
+    },
+    {
+      "name": "Om_wall",
+      "variable": "log_Om",
+      "factory": "FVFunctorNeumannBC",
+      "sidesets": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "Om_wall_number_flux",
+      "factor": "-1/N_A"
+    },
+    {
+      "name": "Om_cover_dielectric",
+      "variable": "log_Om",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_cover"
+      ],
+      "signed_number_flux": "Om_wall_number_flux"
+    },
+    {
+      "name": "Om_wafer_dielectric",
+      "variable": "log_Om",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_wafer"
+      ],
+      "signed_number_flux": "Om_wall_number_flux"
+    },
+    {
+      "name": "Om_focus_ring_dielectric",
+      "variable": "log_Om",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_focus_ring"
+      ],
+      "signed_number_flux": "Om_wall_number_flux"
+    },
+    {
+      "name": "Op_wall",
+      "variable": "log_Op",
+      "factory": "FVFunctorNeumannBC",
+      "sidesets": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right"
+      ],
+      "functor": "Op_wall_number_flux",
+      "factor": "-1/N_A"
+    },
+    {
+      "name": "Op_cover_dielectric",
+      "variable": "log_Op",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_cover"
+      ],
+      "signed_number_flux": "Op_wall_number_flux"
+    },
+    {
+      "name": "Op_wafer_dielectric",
+      "variable": "log_Op",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_wafer"
+      ],
+      "signed_number_flux": "Op_wall_number_flux"
+    },
+    {
+      "name": "Op_focus_ring_dielectric",
+      "variable": "log_Op",
+      "factory": "FVLogMolarDielectricFluxBC",
+      "sidesets": [
+        "plasma_focus_ring"
+      ],
+      "signed_number_flux": "Op_wall_number_flux"
+    }
+  ],
+  "json_group_semantics": "Each species id_wall repeats in two disjoint JSON groups (inlet outlet) and (plasma_electrode plasma_metal plasma_right) and is merged by Chemistry parser into ONE FVFunctorNeumannBC with five sidesets; do NOT count this repetition as two owners. Three one-sideset dielectric BCs per species.",
+  "factory_and_units": {
+    "neumann": {
+      "factory": "FVFunctorNeumannBC",
+      "functor": "<species>_wall_number_flux",
+      "factor": "-1/6.02214076e23",
+      "factor_units": "number flux to molar Neumann contribution",
+      "factor_serialization": "std::setprecision(std::numeric_limits<Real>::max_digits10)"
+    },
+    "dielectric": {
+      "factory": "FVLogMolarDielectricFluxBC",
+      "signed_number_flux": "<species>_wall_number_flux"
+    },
+    "charges": {
+      "O2p": 1,
+      "Om": -1,
+      "Op": 1
+    },
+    "p05": "DDContinuityEq::checkIntegrity scans FVFluxBC and FVDirichletBC warehouses by solver variable; compares expected unique JSON (name, type) and rejects unexpected/missing/duplicate objects. This is inspected C++ only; no runtime query completed.",
+    "source_guard": "PlasmasAction::act checks exactly 12 ion FV BC, general 5-sideset union and three dielectric singleton sidesets per species; validates species/variable and wall source functor."
+  },
+  "independent_negative_tests": {
+    "mode": "PURE_PYTHON_OFFLINE_JSON_MUTANTS_NOT_NATIVE_P05",
+    "rejected": 7,
+    "total": 7,
+    "cases": {
+      "missing_wafer": "REJECTED",
+      "wrong_factory": "REJECTED",
+      "duplicate_general_name": "REJECTED",
+      "overlap_sideset": "REJECTED",
+      "wrong_negative_charge": "REJECTED",
+      "extra_bc": "REJECTED",
+      "missing_general_group": "REJECTED"
+    }
+  },
+  "isolated_native_diagnostic": {
+    "workflow_run_id": 44262035027,
+    "workflow_conclusion": "success",
+    "workflow_meaning": "diagnostic job completed; NOT an accepted S6 --check-input PASS",
+    "probe_source_head": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f",
+    "actual_941_exit_code": 1,
+    "syntax_ok": false,
+    "first_failure_class": "HARNESS_OR_CONSTRUCTION_FAIL_MISSING_MESH_FILE",
+    "first_failure": "Unable to open file /case/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+    "diagnostic_artifact_id": 14408333164,
+    "diagnostic_artifact_zip_sha256": "5fdf86be670f6c09e0a3ea79f4303f61c8afe6cb83ae94cc9d18d5b0b2c3a6ed",
+    "diagnostic_941_log_sha256": "1a7be338b5b6423933d1513ffb113d3f4618ae619eb350b9951c1651d7f0be23",
+    "diagnostic_binary_sha256": "7968019d100e66f8979575aa0895506d1a188c58a85b9a5d561b45f41cb1cc96",
+    "p05_warehouse_reached": false,
+    "not_equivalent_to_p5_0_exact_head_binary": true
+  },
+  "gates": {
+    "P5_C4_SOURCE_STATIC": "PASS",
+    "P4_X_SOURCE_CONSUMER_CUTOVER": "HOLD_NOT_INTEGRATED",
+    "P5_0_ACCEPTED_SHARED_BINARY": "NOT_RUN",
+    "P5_C2_ACCEPTED_941_CHECK_INPUT": "NOT_RUN",
+    "P5_C4_NATIVE_WAREHOUSE_FVBC_12": "HOLD_NOT_REACHED",
+    "P5_NATIVE_P2": "HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN",
+    "D8_NEWONLY_DYNAMIC": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "next_steps": [
+    "Restore or stage the exact required S6 base .msh-mesh.cpa.gz at its expected case-local path and independently pin its SHA; confirm required mesh provenance before rerun. Do not substitute the QVT child mesh without proving equivalence.",
+    "Complete P4-X single-writer retirement of duplicate Physics transport/wall/surface-current source owners while keeping carrier_one and existing Poisson/diagnostic/sigma consumers.",
+    "Run P5-0 source-bound accepted single-build binary and S6-941 Native --check-input, then verify exact 12 Warehouse FVBC instances (name, type, variable, sidesets) and P05 negative controls. Only then promote P5-C4 native gate."
+  ],
+  "security": "No main/PR665/archived source or private rate mutation; independent worker report branch only. No Native run or workflow dispatch performed by P5-C4; separately observed diagnostic not promoted."
+}
