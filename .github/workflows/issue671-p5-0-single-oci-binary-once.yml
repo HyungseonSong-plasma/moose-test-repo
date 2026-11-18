@@ -118,6 +118,70 @@ jobs:
           (evidence / "p5_0_binary_identity.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
           print("P5_0_SINGLE_BINARY_PASS", receipt["binary_sha256"], receipt["binary_size_bytes"])
           PY
+      - name: Package local shared libraries and validate isolated OCI runtime startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/runtime-bundle/bin evidence/runtime-bundle/lib
+          cp -p physics_app/physics-opt evidence/runtime-bundle/bin/physics-opt
+          python3 - <<'PY'
+          import hashlib, json, pathlib, shutil, subprocess
+          root = pathlib.Path.cwd()
+          libdest = root / "evidence/runtime-bundle/lib"
+          expected = ("libphysics-opt.so.0", "libphysics_test-opt.so.0")
+          libs = {}
+          def sha(path):
+              with path.open("rb") as stream:
+                  return hashlib.file_digest(stream, "sha256").hexdigest()
+          executable = root / "evidence/runtime-bundle/bin/physics-opt"
+          needed = subprocess.check_output(["readelf", "-d", str(executable)], text=True)
+          for soname in expected:
+              if soname not in needed:
+                  raise RuntimeError("P5_0_LINK_CLOSURE_REQUIRED_" + soname)
+              matches = sorted((root / "physics_app").rglob(soname), key=lambda p: len(str(p)))
+              paths = [p for p in matches if p.is_file()]
+              if not paths:
+                  raise RuntimeError("P5_0_MISSING_LOCAL_SHARED_LIBRARY_" + soname)
+              src = paths[0].resolve(strict=True)
+              dst = libdest / soname
+              shutil.copy2(src, dst)
+              if sha(src) != sha(dst):
+                  raise RuntimeError("P5_0_COPIED_LIBRARY_SHA_MISMATCH_" + soname)
+              libs[soname] = {"sha256": sha(dst), "size_bytes": dst.stat().st_size}
+          evidence = root / "evidence"
+          base_receipt = json.loads((evidence / "p5_0_binary_identity.json").read_text())
+          if sha(executable) != base_receipt["binary_sha256"]:
+              raise RuntimeError("P5_0_EXECUTABLE_COPIED_SHA_MISMATCH")
+          base_receipt.update({
+              "runtime_bundle_path": "evidence/p5_0_runtime_bundle.tar.gz",
+              "runtime_bundle_executable_sha256": sha(executable),
+              "runtime_bundle_application_libraries": libs,
+              "runtime_bundle_cli_smoke": "PENDING",
+              "reusable_binary_runtime": "OCI_VENDOR_AND_APP_SHARED_LIBRARIES",
+          })
+          (evidence / "p5_0_binary_identity.json").write_text(json.dumps(base_receipt, indent=2, sort_keys=True)+"\\n")
+          print("P5_0_DEDICATED_APP_LIBRARIES_PACKAGED", list(libs))
+          PY
+          docker run --rm --network none --entrypoint /bin/bash \
+            --workdir /bundle \
+            -v "$PWD/evidence/runtime-bundle:/bundle:ro" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export LD_LIBRARY_PATH="/bundle/lib:\${LD_LIBRARY_PATH:-}"
+              /bundle/bin/physics-opt --version
+            ' 2>&1 | tee evidence/p5_0_cli_smoke.log
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          p=pathlib.Path("evidence/p5_0_binary_identity.json")
+          d=json.loads(p.read_text())
+          d["runtime_bundle_cli_smoke"]="PASS_ISOLATED_VENDOR_OCI_VERSION_ONLY"
+          with pathlib.Path("evidence/p5_0_cli_smoke.log").open("rb") as f:
+              d["runtime_bundle_cli_smoke_log_sha256"]=hashlib.file_digest(f,"sha256").hexdigest()
+          p.write_text(json.dumps(d, indent=2, sort_keys=True)+"\\n")
+          PY
+          tar -C evidence/runtime-bundle -czf evidence/p5_0_runtime_bundle.tar.gz .
+          sha256sum evidence/p5_0_runtime_bundle.tar.gz | tee evidence/p5_0_runtime_bundle.tar.gz.sha256
+          echo "P5_0_PORTABLE_BUNDLE_SAME_EXACT_HEAD_PASS"
       - name: Upload the actual single binary with full build and provenance
         if: always()
         uses: actions/upload-artifact@v4
@@ -125,6 +189,9 @@ jobs:
           name: issue671-p5-0-common-binary-3bf1777ee4c1
           path: |
             physics_app/physics-opt
+            evidence/p5_0_runtime_bundle.tar.gz
+            evidence/p5_0_runtime_bundle.tar.gz.sha256
+            evidence/p5_0_cli_smoke.log
             evidence/native_p1_build.log
             evidence/toolchain.txt
             evidence/p5_0_binary_identity.json
