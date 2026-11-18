@@ -8,7 +8,17 @@
     "observed_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
     "observed_state": "OPEN_DRAFT_NOT_MERGED_TO_MAIN",
     "initial_input_source_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
-    "main_reference": "ebcfd9e662bc40f0473d8da05da95d11b61789f8"
+    "main_reference": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "latest_observed_head_after_W1": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "latest_head_changed_from_W1": {
+      "previous": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+      "latest": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "ahead_commits": 6,
+      "changed_files": [
+        "tests/test_issue633_s6_scratch_ion_retirement.py"
+      ],
+      "consequence": "final exact-head binary attestation remains HOLD; source C++/runner differences not observed but SHA mismatch cannot be ignored"
+    }
   },
   "receipt_roles": [
     {
@@ -118,6 +128,37 @@
       "code_git_blob": "c965e1c2de9d1ba8eec6f3180c9eaeb5ca324fde",
       "case_scope": [],
       "status": "PASS_SINGLE_FACTORY_SOURCE_BUILD_NOT_FINAL_NATIVE"
+    },
+    {
+      "id": "W1_LATEST_HEAD_SINGLE_BUILD",
+      "run_id": 44293156216,
+      "artifact_id": 14422701532,
+      "zip_sha256": "ce50a51f2ab565b5dc6aced272adcf12f1075f7593417c603ce05274c8291c18",
+      "zip_bytes": 1375989,
+      "tar_sha256": "705e1f3fa58c4da3c1d76cbca7f2a761045f8f46ee6f54d3391aeaf5ab62033c",
+      "evidence_level": "real_binary_and_two_app_libraries_independently_sha_verified",
+      "source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+      "source_tree": "0385fbf71ef384bbad02a4222f2e799deb02b9a6",
+      "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+      "binary_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+      "binary_bytes": 67368,
+      "shared_libs": [
+        {
+          "name": "libphysics-opt.so.0",
+          "bytes": 4869600,
+          "sha256": "3274751989604b06e7e7e677435b16c874388a4f7b8735b059eafc605fbb7e51"
+        },
+        {
+          "name": "libphysics_test-opt.so.0",
+          "bytes": 105984,
+          "sha256": "86aa0d4ebe18d731e7e052f5ad62594b1a3b48074f848693b0958f728b61ba80"
+        }
+      ],
+      "build_count": 1,
+      "build_log_sha256": "5bdda6ecfdcb2b8da8e6cd066f427cecfea1f33cdbbc5a483039cf521928b3c8",
+      "toolchain_log_sha256": "069772ddb3e8df032f756ae6e78329deb4125790fd612f90797933c8c55158c1",
+      "case_scope": [],
+      "status": "PASS_W1_EXECUTABLE_AND_APP_LIBS_BYTE_SHA__HOLD_NEWER_HEAD_NATIVE"
     }
   ],
   "physical_pins": {
@@ -156,6 +197,11 @@
       "previous": "P5-N6 42/42 fail-closed",
       "disposition": "INDEPENDENT_SOURCE_ORACLE_ONLY",
       "resolution": "Native N6 including partially missing EI/H25 channel still required"
+    },
+    {
+      "previous": "Latest P5-0 binary was only 3bf1777... prior head",
+      "disposition": "SUPERSEDED_BY_NEW_W1_BUILD",
+      "resolution": "W1 Run 44293156216 proves exact physical binary+two libraries at 05d7ce4...; subsequent 74a2b0... test-only drift still prevents final exact-HEAD acceptance"
     }
   ],
   "final_required_fields": {
@@ -181,7 +227,8 @@
       "ion_fvbc_count": null,
       "electron_bc_count": null,
       "canonical_electron_functors_unique": null,
-      "d8_dynamic_callers": null
+      "d8_dynamic_callers": null,
+      "native_job_status": "NOT_RUN_ON_W1_EXACT_BINARY"
     },
     "native_941": {
       "job_id": null,
@@ -192,7 +239,8 @@
       "ion_fvbc_count": null,
       "electron_bc_count": null,
       "canonical_electron_functors_unique": null,
-      "d8_dynamic_callers": null
+      "d8_dynamic_callers": null,
+      "native_job_status": "NOT_RUN_ON_W1_EXACT_BINARY"
     },
     "native_negative_matrix": {
       "required_groups": [
@@ -212,7 +260,11 @@
     },
     "same_final_head_binary_oci_across_417_941_and_negatives": false,
     "final_P5_native_P2_accepted": false,
-    "science_P3_P4_equivalence_accepted": false
+    "science_P3_P4_equivalence_accepted": false,
+    "w1_candidate_binary_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+    "w1_candidate_source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+    "w1_candidate_artifact_id": 14422701532,
+    "w1_candidate_verified": true
   },
   "final_gates": [
     {
@@ -227,7 +279,7 @@
     },
     {
       "key": "P5_0_FINAL_SINGLE_BINARY",
-      "status": "HOLD",
+      "status": "PASS_W1_BUILD_AT_05D7_HEAD__HOLD_LATEST_74A2_HEAD_AND_NATIVE",
       "mandatory_for_native": true
     },
     {
@@ -275,7 +327,8 @@
   "artifacts": {
     "ledger": "reports/issue671/p5-source-artifact-evidence-ledger.md",
     "final_form": "reports/issue671/p5-final-acceptance-form.md",
-    "machine_index": "reports/issue671/p5-evidence-gate-index.json"
+    "machine_index": "reports/issue671/p5-evidence-gate-index.json",
+    "w1_handoff": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44293156216/artifacts/14422701532"
   },
   "policy": {
     "task_isolated_branch": "issue-671-final-evidence-ledger-20261118",
