@@ -1,0 +1,170 @@
+{
+  "schema": "issue671.p5_n4.generated_fv_kernel_p05_static_mutations.v1",
+  "task_id": "P5-N4",
+  "issue": 671,
+  "status": "PASS_STATIC_P05_EXPECTED_OWNER_REFERENCE_NEGATIVES__NATIVE_P05_HOLD",
+  "source_pin": {
+    "repository": "HyungseonSong-plasma/moose-test-repo",
+    "pr": 665,
+    "pr_observed_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "pr_draft_open": true,
+    "DDContinuityEq_C_blob_sha": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "cpp_p05_integrity_lines": "252-335",
+    "cpp_fv_generator_lines": "419-486",
+    "cpp_p05_query_families": [
+      "FVElementalKernel",
+      "FVFluxKernel"
+    ],
+    "guard_exact_checks": [
+      "name",
+      "factory type",
+      "nonlinear variable",
+      "exactly one owner"
+    ],
+    "dont_create_kernels_early_return": true,
+    "p4_x_latest_known_status": "stage1 branch issue-670-p4-x-stage1-source-only-20261118 exists; NOT integrated in PR #665",
+    "p5_0_exact_head_binary": "NOT_BUILT"
+  },
+  "real_stage_evidence": {
+    "kind": "immutable source-only staged Scratch; does not execute actual Native P2",
+    "p3_x_ci_run": 44257739203,
+    "p3_x_artifact_id": 14406746397,
+    "artifact_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "staged_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "staged_input_sha_checks_per_case": 11,
+    "staged_retired_ion_native_owners_per_case": 26,
+    "staged_remaining_ion_native_owners_per_case": 0,
+    "json_sha256_by_case": {
+      "417": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "941": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+    },
+    "newonly_layer11_sha256": {
+      "417": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "941": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"
+    },
+    "verified_case_independence": true
+  },
+  "expected_runtime_generated_FV_kernel_inventory": [
+    {
+      "name": "O2p_time",
+      "type": "FVLogMolarTimeDerivative",
+      "variable": "log_O2p",
+      "warehouse_family": "FVElementalKernel"
+    },
+    {
+      "name": "O2p_diffusion",
+      "type": "FVLogMolarDiffusion",
+      "variable": "log_O2p",
+      "warehouse_family": "FVFluxKernel"
+    },
+    {
+      "name": "O2p_drift",
+      "type": "FVLogMolarElectrostaticDrift",
+      "variable": "log_O2p",
+      "warehouse_family": "FVFluxKernel"
+    },
+    {
+      "name": "O2p_source",
+      "type": "FVCoupledForce",
+      "variable": "log_O2p",
+      "warehouse_family": "FVElementalKernel"
+    },
+    {
+      "name": "Om_time",
+      "type": "FVLogMolarTimeDerivative",
+      "variable": "log_Om",
+      "warehouse_family": "FVElementalKernel"
+    },
+    {
+      "name": "Om_diffusion",
+      "type": "FVLogMolarDiffusion",
+      "variable": "log_Om",
+      "warehouse_family": "FVFluxKernel"
+    },
+    {
+      "name": "Om_drift",
+      "type": "FVLogMolarElectrostaticDrift",
+      "variable": "log_Om",
+      "warehouse_family": "FVFluxKernel"
+    },
+    {
+      "name": "Om_source",
+      "type": "FVCoupledForce",
+      "variable": "log_Om",
+      "warehouse_family": "FVElementalKernel"
+    },
+    {
+      "name": "Op_time",
+      "type": "FVLogMolarTimeDerivative",
+      "variable": "log_Op",
+      "warehouse_family": "FVElementalKernel"
+    },
+    {
+      "name": "Op_diffusion",
+      "type": "FVLogMolarDiffusion",
+      "variable": "log_Op",
+      "warehouse_family": "FVFluxKernel"
+    },
+    {
+      "name": "Op_drift",
+      "type": "FVLogMolarElectrostaticDrift",
+      "variable": "log_Op",
+      "warehouse_family": "FVFluxKernel"
+    },
+    {
+      "name": "Op_source",
+      "type": "FVCoupledForce",
+      "variable": "log_Op",
+      "warehouse_family": "FVElementalKernel"
+    }
+  ],
+  "static_verification": {
+    "method": "Independently rehashed downloaded P3-X ZIP, each of 22 staged input layer SHA256, exact pair JSON bytes and last Physics layer; checked selected 3 ion states, nonzero reaction source channels, existing Native ion FVKernels/FVBCs zero. Applied independently mutated 12-object inventories to a Python reference model equivalent to pinned C++ P05 name/type/variable/exact-one-owner check, not the actual C++ runtime.",
+    "positive_expected_inventory_checked_per_case": 12,
+    "negative_categories_per_case": {
+      "DUPLICATE_CROSS_FAMILY": 12,
+      "DUPLICATE_SAME_FAMILY": 12,
+      "LEGACY_ADDITIONAL_NATIVE": 3,
+      "MISSING": 12,
+      "MISSING_ALL_SPECIES": 3,
+      "RENAMED": 12,
+      "SWAPPED_VARIABLE": 12,
+      "WRONG_TYPE": 12
+    },
+    "negative_rejections_per_case": 78,
+    "total_negative_rejections": 156,
+    "not_claimed": "No real MOOSE TheWarehouse query or physics-opt --check-input executed"
+  },
+  "independent_files": {
+    "python_script": "verify_issue671_p5_n4.py",
+    "python_script_sha256": "f0fb3b3546682e230b9c8836818cedbcbb880ec142dab09c86dfc3c1cf720271",
+    "full_source_only_receipt": "issue671_p5_n4_generated_kernel_static_receipt.json",
+    "full_source_only_receipt_sha256": "796320fdad8285fd29767d4dcec1153972c124c9b1f36ce2a74258f775cd403d"
+  },
+  "pending_native_gate": {
+    "required_dependency": [
+      "P4-X final integration into exact PR #665 HEAD",
+      "P5-0 PhysicsApp single source-bound binary SHA",
+      "Case-separated real 417/941 Native --check-input and Warehouse inventory",
+      "Native P05 negative tests, every mutation in isolated disposable Scratch"
+    ],
+    "expected_runtime_owners": "3 ions x (time,diffusion,drift,source) = 12; exactly one each",
+    "P4_X": "HOLD_NOT_INTEGRATED",
+    "P5_0": "NOT_RUN",
+    "S6_417_NATIVE_P05": "NOT_RUN",
+    "S6_941_NATIVE_P05": "NOT_RUN",
+    "NEW_ONLY_S6_P2": "HOLD",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "main_modified": false,
+    "pr665_modified": false,
+    "cpp_modified": false,
+    "workflow_modified": false,
+    "no_original_zip_mutation": true,
+    "negative_mutations_in_memory_only": true,
+    "no_native_job_dispatched": true
+  }
+}
