@@ -1,0 +1,136 @@
+{
+  "schema": "issue671.p5-e4.independent-exact-head-source-to-native-custody.v1",
+  "task_id": "P5-E4",
+  "issue_number": 671,
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "verdict": "PASS_INDEPENDENT_ARTIFACT_LINEAGE__HOLD_FINAL_417_941_NEGATIVE_SAME_PR_HEAD_AND_BINARY",
+  "exact_current_integration_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "immutable_inputs": {
+    "original_417_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "original_941_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+    "P1_0_artifact_id": 14372278070,
+    "P1_0_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "original_staged_input_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "independently_recomputed": "ZIP_SHA256_ALL_3",
+    "mutation": "NONE"
+  },
+  "p3x_production_stage": {
+    "workflow_run": 44257739203,
+    "artifact_id": 14406746397,
+    "artifact_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "P3X_case_manifest_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "case_417_input_sha_verified": "11/11",
+    "case_941_input_sha_verified": "11/11",
+    "case_417_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "case_941_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "staged_C0_sha256_both_cases": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+    "post_P4X_stage1_C0_sha256_both_cases": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+    "post_P4X_stage1_used_in_native_probes": false,
+    "each_case_removed_old_ion_owners": 26,
+    "each_case_removed_old_electron_owners": 10,
+    "each_case_newonly_json_and_electron_table_sha_recomputed": true,
+    "all_22_real_input_bytes_SHA_verified": true,
+    "case_identifiers_not_conflated": true
+  },
+  "observed_native_diagnostic_runs": [
+    {
+      "run_id": 44262035027,
+      "source_head": "2c47c0d1e864f499db7edaf06ea8acc0ce4ab56f",
+      "artifact_id": 14408333164,
+      "artifact_sha256": "5fdf86be670f6c09e0a3ea79f4303f61c8afe6cb83ae94cc9d18d5b0b2c3a6ed",
+      "expected_staged_artifact_head": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+      "executable_sha256_from_job_record": "7968019d100e66f8979575aa0895506d1a188c58a85b9a5d561b45f41cb1cc96",
+      "executable_bytes_available_for_independent_sha": false,
+      "cases": {
+        "417": {
+          "exit_code": 1,
+          "log_sha256": "91b82d79c914f1914bd97fcccde2e4dc9609b60b4b53a88e5aba5bccf9ff7778"
+        },
+        "941": {
+          "exit_code": 1,
+          "log_sha256": "1a7be338b5b6423933d1513ffb113d3f4618ae619eb350b9951c1651d7f0be23"
+        }
+      },
+      "first_failure": "MISSING_PARENT_PLASMA_MESH:baseline_plasma_plus_unstructured_cover_plus_wafer.msh-mesh.cpa.gz",
+      "workflow_conclusion": "SUCCESS_DIAGNOSTIC_COLLECTION_ONLY",
+      "Native_P2": "HOLD"
+    },
+    {
+      "run_id": 44263548084,
+      "source_head": "be3e2dde54445ad7a4a41f8cff059ae6cb853fd8",
+      "artifact_id": 14408624933,
+      "artifact_sha256": "871133ddc581ad2bcfa951583f1dd502a68ff0c90e58640c3defac77f6129652",
+      "expected_staged_artifact_head": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+      "executable_sha256_from_job_record": "ba217a5ad9abe3182f756cc5d8a22d927ca9e85f7d142b5f5d31bb84d886fe1b",
+      "executable_bytes_available_for_independent_sha": false,
+      "cases": {
+        "417": {
+          "exit_code": 1,
+          "log_sha256": "0c91196e4c6089fdca21d8f35e469eadd5acf3daca1c267aaf34c8f5e480c738"
+        },
+        "941": {
+          "exit_code": 1,
+          "log_sha256": "346030799928258d8439932165ccd940ba7eb51bd775dbd5b626ed90979a5f70"
+        }
+      },
+      "first_failure": "MISSING_NV_TRANSPORT_DATABASE:experiments/Issue21_qvt_six_species_bulk_advection/transport_data.txt",
+      "workflow_conclusion": "SUCCESS_DIAGNOSTIC_COLLECTION_ONLY",
+      "Native_P2": "HOLD"
+    }
+  ],
+  "observed_negative_job": {
+    "task_id": "P5-N1",
+    "run_id": 44263856625,
+    "run_head": "983d3c5b0d211bad02d26309b3af18b252b4a07a",
+    "artifact_id": 14409626344,
+    "artifact_sha256": "bd9b62a3b4473c1f9bd1278415a5001defe4a365cef1f51b49e216d152f2fa0c",
+    "review_head_record": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "source_P0_mutants_rejected": "12/12",
+    "actual_Native_P05_job": "NOT_RUN",
+    "actual_binary_sha256": null,
+    "actual_native_exit_codes": null,
+    "eligible_for_E4_three_job_same_head_binary": "NO"
+  },
+  "checks": {
+    "source_orig_archives_and_P1_zip": "PASS_EXACT_SHA",
+    "P3X_417_file_SHA": "PASS_11_OF_11",
+    "P3X_941_file_SHA": "PASS_11_OF_11",
+    "real_417_941_input_SHA_matches_both_diagnostic_manifests": "PASS",
+    "case_specific_json_and_11th_overlay_SHA_distinct": "PASS",
+    "each_diagnostic_417_941_same_declared_binary_SHA": "PASS_RECORD_ONLY",
+    "two_diagnostics_same_binary_SHA": "NO",
+    "either_diagnostic_source_HEAD_matches_current_PR665": "NO",
+    "negative_job_same_HEAD_and_binary_and_Native_P05": "NO",
+    "final_P4X_merged_runner": "NO",
+    "current_exact_HEAD_417_941_and_negative_native_qualified_triplet": "MISSING",
+    "binary_bytes_available_to_rehash": "NO",
+    "actual_newonly_native_owner_12_FVKernel_plus_12_FVBC": "NOT_OBSERVED",
+    "science_gate": "SCIENCE_HOLD"
+  },
+  "required_next": [
+    "Integrate P4-X source transformation into guarded production runner and independently verify the new 11-layer SHA for both cases against current exact PR665 HEAD; do not reuse pre-P4X C0 hash.",
+    "Obtain immutable and source-SHA-verified parent plasma mesh and neutral transport database for Native check-input.",
+    "P5-0 produce an exact-PR-HEAD Physics binary, publish verifiable binary bytes or attestation and SHA, and provide the same single binary to two case jobs and separate P05 negative jobs.",
+    "Run both actual S6 --check-input exit=0 and confirm generated 12 FV kernels + 12 FV BC Warehouse and no Native FV owners, and 8/8 independent executable P05 negatives.",
+    "Preserve exact inputs, private EI rate access constraints, runtime P3/P4=NOT_RUN and SCIENCE_HOLD; do not mark science or Native PASS from CI success or static receipts."
+  ],
+  "independent_local": {
+    "full_json_filename": "P5-E4_417_941_exact_head_independent_receipt.json",
+    "full_json_sha256": "2522d46e08fd6279c1d50794d78b7a67787a1f3f27577130da62699cb616d69a",
+    "full_json_size_bytes": 12978,
+    "verifier_python_filename": "verify_p5_e4_exact_head.py",
+    "verifier_sha256": "c375e8838bdec6ae2c7b35d899e5223df10d9511ff0d36f2b328be0a36915c2e"
+  },
+  "gates": {
+    "P5_E4_INDEPENDENT_CUSTODY": "PASS",
+    "P5_E4_FINAL_SAME_HEAD_BINARY_NATIVE": "HOLD",
+    "P5_NEGATIVE_P05": "NOT_RUN",
+    "P5_0_FINAL_SHARED_BINARY": "NOT_ESTABLISHED",
+    "P4_X_PRODUCTION": "NOT_INTEGRATED",
+    "P5_NATIVE_P2": "HOLD",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "preservation": "Read-only audit, isolated branch JSON only. No main, draft PR #665, workflow, original archive/ZIP, private rate, canonical input or runtime science mutation."
+}
