@@ -170,6 +170,57 @@ def verify(m: dict, archive: dict[str, bytes], ci: str, native: str,
                     "P0_ORIGINAL_WRONGLY_PROMOTED_TO_NATIVE")
         require(item["decision"] == "STAGED_DELETE_KEEP_HOLD_INTEGRATION",
                 "PREMATURE_RETIREMENT:" + key)
+    # Wave2-8-A-2 evidence is a bounded historical observation, not caller-zero proof.
+    audit = m["wave2_evidence"]
+    require(audit["schema"] == "issue541.wave2_8_a_2.repository_visible_audit.v1" and
+            audit["audit_date"] == "2026-11-16" and
+            audit["observed_integration_source_sha"] ==
+            "860dd366e191a20124b0eae85d369498738233d6",
+            "WAVE2_AUDIT_AUTHORITY")
+    original_runs = audit["originals"]
+    require(set(original_runs) == set(CASES), "WAVE2_MISSING_ORIGINAL")
+    a3, a4 = original_runs["A3"], original_runs["A4"]
+    require(a3["historical_branch_observation"] == "NOT_FOUND" and
+            a3["historical_branch_run_total"] == 4 and
+            a3["original_workflow_run_ids"] ==
+            [43461593885, 43463870372, 43464123958] and
+            a3["original_workflow_events"] == "ALL_PUSH" and
+            a3["original_workflow_actors"] == "HyungseonSong-plasma" and
+            a3["successful_original_run"] == 43464123958 and
+            a3["successful_original_source_sha"] == CASES["A3"]["source_sha"],
+            "WAVE2_A3_HISTORICAL_RUN_CENSUS")
+    require(a4["historical_branch_observation"] == "NOT_FOUND" and
+            a4["historical_branch_run_total"] == 40 and
+            a4["original_workflow_run_ids"] ==
+            [43427534411, 43427738396, 43428078424, 43428302896] and
+            a4["original_workflow_events"] == "ALL_PUSH" and
+            a4["original_workflow_actors"] == "HyungseonSong-plasma" and
+            a4["successful_original_run"] == 43428302896 and
+            a4["successful_original_source_sha"] == CASES["A4"]["source_sha"] and
+            a4["successful_run_artifact_count"] == 0,
+            "WAVE2_A4_HISTORICAL_RUN_CENSUS")
+    a3_zip = a3["fresh_github_artifact_readback"]
+    require(a3_zip["artifact_id"] == CASES["A3"]["artifact"][0] and
+            a3_zip["zip_bytes"] == CASES["A3"]["artifact"][1] and
+            a3_zip["zip_sha256"] == CASES["A3"]["artifact"][2] and
+            a3_zip["zip_integrity"] == "PASS" and
+            a3_zip["entries"] ==
+            ["issue402_json_rates_native_build.log",
+             "issue402_json_rates_native_p2.log"] and
+            a3_zip["expires_at"] == "2026-12-13T16:40:46Z" and
+            a3_zip["worm_permanence"] == "NOT_PROVEN",
+            "WAVE2_A3_ZIP_CUSTODY_OR_DURABILITY")
+    require(audit["limitations"] == {
+        "search_and_events": "REPOSITORY_VISIBLE_EVIDENCE_ONLY",
+        "external_controller_or_api_callers": "NOT_ATTESTED",
+        "cross_branch_or_off_platform_dynamic_push": "NOT_PROVEN_ABSENT",
+        "caller_zero": "NOT_PROVEN",
+        "A3_retirement": "KEEP_HOLD_INTEGRATION",
+        "A4_retirement": "KEEP_HOLD_INTEGRATION",
+        "main_merged": False,
+        "P3": "NOT_RUN",
+        "science": "SCIENCE_HOLD",
+    }, "WAVE2_UNSUPPORTED_CALLER_OR_RETIREMENT_PROMOTION")
     gate = m["integration"]
     require(gate["status"] == "PENDING_CONFLICT_FREE_EXACT_HEAD_REVIEW_AND_CI" and
             gate["no_auto_merge"] is True and gate["no_global_guard_waiver"] is True and
@@ -243,6 +294,34 @@ def self_test(m: dict, archives: dict[str, bytes], ci: str,
                                       "REMOVED_NATIVE_MARKER", 1))
     reject("GUARD_BYPASS", m,
            test_surface=surface.replace("ONE_SHOT_NAME", "REMOVED_GUARD_OWNER"))
+    for case in CASES:
+        bad = copy.deepcopy(m)
+        bad["wave2_evidence"]["originals"][case]["historical_branch_observation"] = "ACTIVE"
+        reject("WAVE2_ACTIVE_BRANCH_" + case, bad)
+        bad = copy.deepcopy(m)
+        bad["wave2_evidence"]["originals"][case]["original_workflow_events"] = "WORKFLOW_DISPATCH"
+        reject("WAVE2_FABRICATED_DISPATCH_" + case, bad)
+        bad = copy.deepcopy(m)
+        bad["wave2_evidence"]["originals"][case]["original_workflow_run_ids"].pop()
+        reject("WAVE2_INCOMPLETE_RUN_CENSUS_" + case, bad)
+    bad = copy.deepcopy(m)
+    bad["wave2_evidence"]["originals"]["A3"]["fresh_github_artifact_readback"]["zip_sha256"] = "0" * 64
+    reject("WAVE2_ZIP_HASH_FORGERY", bad)
+    bad = copy.deepcopy(m)
+    bad["wave2_evidence"]["originals"]["A3"]["fresh_github_artifact_readback"]["worm_permanence"] = "PROVEN"
+    reject("WAVE2_FALSE_WORM", bad)
+    bad = copy.deepcopy(m)
+    bad["wave2_evidence"]["originals"]["A4"]["successful_run_artifact_count"] = 1
+    reject("WAVE2_FABRICATED_A4_ARTIFACT", bad)
+    bad = copy.deepcopy(m)
+    bad["wave2_evidence"]["limitations"]["caller_zero"] = "PROVEN"
+    reject("WAVE2_FALSE_EXTERNAL_CALLER_ZERO", bad)
+    bad = copy.deepcopy(m)
+    bad["wave2_evidence"]["limitations"]["main_merged"] = True
+    reject("WAVE2_FALSE_MAIN_MERGE", bad)
+    bad = copy.deepcopy(m)
+    bad["wave2_evidence"]["limitations"]["science"] = "PASS"
+    reject("WAVE2_FALSE_SCIENCE_PROMOTION", bad)
     print(f"ISSUE541_GROUP_A2_NEGATIVE_MUTATIONS_{count}_REJECTED")
 
 
