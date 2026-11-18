@@ -1,0 +1,164 @@
+{
+  "schema": "issue670.p4_w1.o2p_wall_material_source_owner_disposition.v1",
+  "task_id": "P4-W1",
+  "verdict": "HOLD_DUPLICATE_WALL_FUNCTOR_OWNER_AND_UNRESOLVED_FACTORY",
+  "source_pins": {
+    "P1_base_PR665_HEAD": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "current_PR665_HEAD_at_check": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "current_stacked_PR674_HEAD_at_check": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+    "P1_0_run": 44182628032,
+    "P1_0_artifact": 14372278070,
+    "P1_0_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db",
+    "P2_production_source_only_run": 44199587771,
+    "P2_artifact": 14380831538,
+    "P2_zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+    "Cpp_Chemistry_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "Cpp_DDContinuityEq_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "Cpp_existing_PhysicsIonWallFluxMaterial_blob": "215e9c81720e6813be22a8a51405fe99639cf0ab",
+    "JSON_O2p_newonly_417_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "JSON_O2p_newonly_941_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "head_compatibility": "Current PR665 retains source blobs Chemistry.C, DDContinuityEq.C and ion wall class; P2 stage source was exact prior production CI. This is not a new current-head Native P2."
+  },
+  "cases": {
+    "417": {
+      "staged_11_of_11_SHA_verified": true,
+      "old_C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "new_C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "native_wall_owners_named_ion_wall_flux": 1,
+      "existing_O2p_material_exact_block_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5",
+      "existing_O2p_material_original_P1_byte_equal": true,
+      "explicit_staged_O2p_wall_material": 0,
+      "retained_direct_consumers": 7,
+      "synthetic_parameter_mutations_rejected": 11,
+      "retired_native_ion_FV_owners": 26,
+      "Physics_generated_wall_owner_observed": false
+    },
+    "941": {
+      "staged_11_of_11_SHA_verified": true,
+      "old_C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+      "new_C0_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "native_wall_owners_named_ion_wall_flux": 1,
+      "existing_O2p_material_exact_block_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5",
+      "existing_O2p_material_original_P1_byte_equal": true,
+      "explicit_staged_O2p_wall_material": 0,
+      "retained_direct_consumers": 7,
+      "synthetic_parameter_mutations_rejected": 11,
+      "retired_native_ion_FV_owners": 26,
+      "Physics_generated_wall_owner_observed": false
+    }
+  },
+  "preserved_input_owner": {
+    "section": "FunctorMaterials",
+    "name": "ion_wall_flux",
+    "factory_type": "PhysicsIonWallFluxMaterial",
+    "species_id": "O2p",
+    "params": {
+      "ion_number_density": "n_i_physical",
+      "potential": "potential",
+      "mobility": "O2p_mobility",
+      "gas_temperature": "temperature",
+      "charge_number": 1,
+      "molar_mass": 0.032,
+      "sticking": 1,
+      "ion_temperature_eV": 0,
+      "migration_gate_smoothing_width": 0.001,
+      "use_element_gradient_for_potential": true,
+      "block": "plasma"
+    },
+    "available_functors": [
+      "O2p_wall_surface_number_flux",
+      "O2p_wall_migration_number_flux",
+      "O2p_wall_number_flux",
+      "O2p_wall_surface_mass_flux",
+      "O2p_wall_migration_mass_flux",
+      "O2p_wall_mass_flux"
+    ],
+    "native_density_producer": "ion_molar_density=exp(log_O2p) -> n_i_physical = 6.02214076e23*ion_molar_density",
+    "native_physical_density_block_sha256": "3905f6ad33c6d6ba7d9d577e96a1bd7107bc0ba02b82603cd557e9f3d7c0a1a6"
+  },
+  "proposed_Physics_owner_source": {
+    "Cpp_path": "physics_app/src/physics/plasma/Chemistry.C",
+    "generated_object_name": "O2p_wall",
+    "generated_factory_string": "IonWallFluxMaterial",
+    "expected_wall_functor_names": "O2p_wall_*",
+    "source_line_numbers": "1497-1520",
+    "derived_params": {
+      "ion_number_density": "O2p_number_density",
+      "potential": "potential",
+      "mobility": "O2p_mobility",
+      "gas_temperature": "temperature",
+      "charge_number": 1,
+      "molar_mass": 0.032,
+      "sticking": 1,
+      "ion_temperature_eV": 0,
+      "migration_gate_smoothing_width": 0.001,
+      "use_element_gradient_for_potential": true,
+      "block": "plasma"
+    },
+    "Cpp_generated_density_path": "DDContinuityEq.C:503-523 publishes N_A*exp(log_O2p) as O2p_number_density",
+    "factory_registration_gap": "Registered source examined is PhysicsIonWallFluxMaterial, not bare IonWallFluxMaterial; exact generated Factory resolution not verified in MOOSE runtime.",
+    "static_overlap_if_generated": "Native source publishes O2p_wall_*; generated source also intends O2p_wall_*. Therefore 2 potential canonical output providers, not single-owner.",
+    "runtime_duplicate_registry_error": "NOT_RUN_NOT_CLAIMED"
+  },
+  "actual_downstream": {
+    "flux_postprocessors": {
+      "cover_O2p_flux": {
+        "functor": "O2p_wall_number_flux",
+        "sha256": "7537b9a2ce13e06e441291a0c3aaf43bdd05e8cd715a426e19e8791b1dfb06f5"
+      },
+      "wafer_O2p_flux": {
+        "functor": "O2p_wall_number_flux",
+        "sha256": "eb5d60fca5dbfcb2c989d0b43b8674c2845c4529390a42f03488d0b25991ec47"
+      },
+      "focus_ring_O2p_flux": {
+        "functor": "O2p_wall_number_flux",
+        "sha256": "28304baf5870edc162cd5d7a26961a51a46eca5ae5d71ada863bba09280e5346"
+      },
+      "stageb4_O2p_wall_mass_rate": {
+        "functor": "O2p_wall_mass_flux",
+        "sha256": "7e24efa159f0f673673fbe1d1b0571fdf2b28e93a97613b6a21d36db05042ce8"
+      }
+    },
+    "signed_current_functor_consumers": [
+      "cover_surface_current",
+      "wafer_surface_current",
+      "focus_ring_surface_current"
+    ],
+    "all_direct_consumer_blocks_exactly_once_each_case": true,
+    "newonly_BC_consumers_json": "O2p_wall (general + 5 sidesets) and O2p_cover/wafer/focus_ring_dielectric (3 physical faces), must receive same unique wall Functor",
+    "physical_BC_count_expected": 4
+  },
+  "executable_validation": {
+    "source_only": true,
+    "actual_native_check_input": false,
+    "actual_generated_materials_count": "NOT_OBSERVED",
+    "actual_material_warehouse": "NOT_OBSERVED",
+    "synthetic_parameter_mutations_rejected": "22/22 total (11 per case)",
+    "verifier_sha256": "e4524a6cbd39da36177b803f8b4182673825f9bca24508137fbb2a6af8fc74eb",
+    "independent_receipt_sha256": "9f925e3886d7263fe0033e28375173dcd89ca340674d1eab0cc266f3b31a6b86",
+    "public_bundle_sha256": "c48b4efd513e9e0cebe9cff70efe932c700697372c1f43aa1ccd38be4c065b4d"
+  },
+  "handoff_to_P4_X": [
+    "Resolve exact generated factory: source name IonWallFluxMaterial versus registered PhysicsIonWallFluxMaterial. Do not assert runtime registrability from static code.",
+    "Choose exactly one wall producer per ion. If generating Physics O2p_wall, retire or suppress legacy native ion_wall_flux in disposable Scratch, and prove same six public O2p_wall_* functors, physical law, signed charge, density/mobility scaling, gradient/gate values and seven existing consumers.",
+    "Apply coordinated all-three-species Wall cutover with W2/W3; do not alter original 10-layer, P1 manifests or PR665/674 from independent worker.",
+    "Guard missing and duplicate O2p_wall outputs, loss of four FV BCs, miswired current/diagnostic consumers, and typo/missing factory in Native P2 (#671)."
+  ],
+  "gates": {
+    "P4_W1_EXISTING_INPUT_BYTE_SOURCE": "PASS",
+    "P4_W1_WALL_PARAMS": "PASS_STATIC",
+    "P4_W1_SINGLE_WALL_OWNER": "HOLD_DUPLICATE_IF_GENERATED",
+    "P4_W1_FACTORY": "HOLD_UNRESOLVED",
+    "P4_X": "PENDING",
+    "NEW_ONLY_NATIVE_P2": "NOT_RUN",
+    "P3_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "safety": {
+    "original_archives_modified": false,
+    "main_modified": false,
+    "PR665_modified": false,
+    "PR674_modified": false,
+    "no_protected_EI_rate_bytes": true
+  }
+}
