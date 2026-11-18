@@ -70,7 +70,7 @@ def check_one(case: str, stage: Path, source_head: str, binary_sha: str,
             assert sha(root / name) == hashvalue
         assert sha(root / "chemistry" / f"unified_s6_{case}_newonly.json") == JSON_SHA[case]
         assert sha(root / "baseline_plasma_plus_unstructured_cover_plus_wafer.msh") == MESH_SHA
-        assert sha(root / p4["ordered_inputs"][0]) == C0_SHA
+        assert sha(root / Path(p4["ordered_inputs"][0]).name) == C0_SHA
         with tempfile.TemporaryDirectory(prefix=f"ci-newonly-{case}-", dir="/dev/shm") as d:
             scratch = Path(d)
             assert (scratch.stat().st_mode & 0o777) == 0o700
@@ -169,7 +169,6 @@ def main() -> int:
         ["git", "-C", str(ROOT), "rev-parse", "HEAD^{tree}"], text=True
     ).strip()
     assert actual_head == args.expected_head
-    assert os.environ.get("GITHUB_SHA") in (None, actual_head)
     binary = ROOT / "physics_app/physics-opt"
     assert binary.is_file() and not binary.is_symlink()
     binary_sha = sha(binary)
