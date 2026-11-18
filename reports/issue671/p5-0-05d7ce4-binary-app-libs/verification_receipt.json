@@ -1,0 +1,52 @@
+{
+  "schema": "issue671.p5_0.exact_head_single_build_elf_and_app_libraries.independent_receipt.v1",
+  "source_repository": "HyungseonSong-plasma/moose-test-repo",
+  "pr": 665,
+  "source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+  "source_tree": "0385fbf71ef384bbad02a4222f2e799deb02b9a6",
+  "workflow_branch": "issue-671-p5-0-binary-app-libs-05d7ce4-20261118",
+  "workflow_execution_head": "e1671e1fd3793e274acc586352b0889755a48947",
+  "ci_run": 44293156216,
+  "ci_status": "completed",
+  "ci_conclusion": "success",
+  "ci_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44293156216",
+  "artifact_id": 14422701532,
+  "artifact_name": "issue671-p5-0-exact-05d7ce4-exe-app-libs",
+  "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44293156216/artifacts/14422701532",
+  "artifact_zip_sha256": "ce50a51f2ab565b5dc6aced272adcf12f1075f7593417c603ce05274c8291c18",
+  "bundle_tar_gz_sha256": "705e1f3fa58c4da3c1d76cbca7f2a761045f8f46ee6f54d3391aeaf5ab62033c",
+  "build_oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+  "build_command": "make -C physics_app -j2 app_non_unity_dirs='%/utils'",
+  "build_count": 1,
+  "files": [
+    {
+      "path": "physics-opt",
+      "size_bytes": 67368,
+      "sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc"
+    },
+    {
+      "path": "lib/libphysics-opt.so.0",
+      "size_bytes": 4869600,
+      "sha256": "3274751989604b06e7e7e677435b16c874388a4f7b8735b059eafc605fbb7e51"
+    },
+    {
+      "path": "lib/libphysics_test-opt.so.0",
+      "size_bytes": 105984,
+      "sha256": "86aa0d4ebe18d731e7e052f5ad62594b1a3b48074f848693b0958f728b61ba80"
+    }
+  ],
+  "build_log_sha256": "5bdda6ecfdcb2b8da8e6cd066f427cecfea1f33cdbbc5a483039cf521928b3c8",
+  "toolchain_log_sha256": "069772ddb3e8df032f756ae6e78329deb4125790fd612f90797933c8c55158c1",
+  "independent_archive_crc": "PASS",
+  "independent_tar_member_set": "PASS_3_OF_3",
+  "independent_actual_elf_bytes_sha": "PASS_3_OF_3",
+  "upstream_pr_mutated": false,
+  "main_mutated": false,
+  "external_vendor_runtime_bundled": false,
+  "protected_rate_data_bundled": false,
+  "native_check_input": "NOT_RUN_THIS_BUILD",
+  "native_P3_P4": "NOT_RUN",
+  "D8": "HOLD",
+  "science": "SCIENCE_HOLD",
+  "caveat": "Source-head build is fixed; executable and app libs require pinned OCI vendor runtime. A build PASS does not imply Native P2/P3/P4 or D8 runtime acceptance."
+}
