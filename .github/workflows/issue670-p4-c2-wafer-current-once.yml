@@ -1,0 +1,259 @@
+name: Issue670 P4-C2 wafer surface current producer and consumer exact source audit
+on:
+  push:
+    branches: [issue-670-p4-c2-wafer-surface-current-20261118]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 395eeac274125ffa632b4d75a4531996dee24fe0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: issue669-p3x-newonly-10-electron-owner-source-417-941
+          run-id: 44257739203
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: evidence
+      - name: Independently rehash 417/941 P3-X Scratch and wafer current lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "395eeac274125ffa632b4d75a4531996dee24fe0"
+          python3 - <<'PY'
+          import copy,hashlib,json,re,math
+          from pathlib import Path
+          HEAD="395eeac274125ffa632b4d75a4531996dee24fe0"
+          SOURCE_PIN="9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+          S6=Path("experiments/Issue402_plasma_dsl_g1")
+          EVID=Path("evidence/cases")
+          JHASH={"417":"ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+                 "941":"2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"}
+          OHASH={"417":"c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+                 "941":"76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac"}
+          EPS="1.602176634e-19"
+          OLD_NAMES="ion_wall_number_flux atomic_positive_ion_wall_number_flux negative_ion_wall_number_flux electron_wall_number_flux"
+          NEW_NAMES="O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux"
+          EXPRESSION=EPS+"*(gi+gop-gm-ge)"
+          def hash256(b):return hashlib.sha256(b).hexdigest()
+          def must(ok,msg):
+              if not ok:raise ValueError(msg)
+          def strict_pairs(items):
+              d={}
+              for k,v in items:
+                  must(k not in d,"DUPLICATE_JSON_KEY:"+k)
+                  d[k]=v
+              return d
+          def load(b):return json.loads(b.decode("utf-8"),object_pairs_hook=strict_pairs)
+          def parse(b,filename,layer):
+              entries=[];stack=[];offset=0
+              b.decode("utf-8")
+              for ln,line in enumerate(b.splitlines(keepends=True),1):
+                  match=re.fullmatch(rb"\[([^\[\]]*)\]",line.strip())
+                  if match:
+                      name=match.group(1).decode()
+                      if name:
+                          stack.append((name,offset,ln))
+                      elif stack:
+                          name,start,begin=stack.pop()
+                          if len(stack)==1 and stack[0][0] in ("FunctorMaterials","Materials","Kernels","Postprocessors","UserObjects"):
+                              raw=b[start:offset+len(line)]
+                              params={}
+                              for row in raw.decode().splitlines()[1:-1]:
+                                  m=re.fullmatch(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*",row)
+                                  if m:
+                                      must(m.group(1) not in params,"DUP_PARAM:"+name)
+                                      params[m.group(1)]=m.group(2).strip().strip("'\"")
+                              entries.append(dict(section=stack[0][0],object_name=name,layer_ordinal=layer,
+                                  filename=filename,line_start=begin,line_end=ln,
+                                  block_sha256=hash256(raw),params=params))
+                  offset+=len(line)
+              must(not stack,"UNBALANCED_INPUT:"+filename)
+              must(not re.search(rb"(?m)^\s*!include\b",b),"UNRESOLVED_INCLUDE:"+filename)
+              return entries
+          def same(entries,section,name):
+              return [x for x in entries if x["section"]==section and x["object_name"]==name]
+          def one(entries,section,name):
+              obj=same(entries,section,name)
+              must(len(obj)==1,"OBJECT_UNIQUENESS:"+section+":"+name+":"+str(len(obj)))
+              return obj[0]
+          def assert_old_current(x):
+              p=x["params"]
+              must(p.get("type")=="ADParsedFunctorMaterial","OLD_CURRENT_FACTORY")
+              must(p.get("property_name")=="wafer_net_surface_current_density","OLD_CURRENT_PROPERTY")
+              must(p.get("functor_symbols")=="gi gop gm ge","OLD_CURRENT_SYMBOLS")
+              must(p.get("expression")==EXPRESSION,"OLD_CURRENT_EXPRESSION_OR_SIGN")
+              must(p.get("block")=="plasma","OLD_CURRENT_BLOCK")
+              # The original Native source can be renamed by the exact Scratch stage
+              # canonicalizer, so record actual input names rather than guessing.
+              must(p.get("functor_names") in (OLD_NAMES,NEW_NAMES),"OLD_CURRENT_FUNCTOR_NAMES_UNEXPECTED")
+          def check_consumer(x):
+              p=x["params"]
+              must(p.get("type") in ("PhysicsLowerDSurfaceCurrent","LowerDSurfaceCurrent"),
+                   "SIGMA_WAFER_CONSUMER_FACTORY")
+              must(p.get("variable")=="sigma_wafer","SIGMA_WAFER_VARIABLE")
+              must(p.get("surface_current_density")=="wafer_net_surface_current_density","SIGMA_WAFER_INPUT")
+              must(p.get("block")=="wafer_surface","SIGMA_WAFER_BLOCK")
+          def check_postprocess(x):
+              p=x["params"]
+              must(p.get("type")=="ADSideIntegralFunctorPostprocessor","WAFER_DIAGNOSTIC_FACTORY")
+              must(p.get("boundary")=="plasma_wafer","WAFER_DIAGNOSTIC_SIDESET")
+              must(p.get("functor")=="wafer_net_surface_current_density","WAFER_DIAGNOSTIC_INPUT")
+              must(p.get("functor_argument")=="face","WAFER_DIAGNOSTIC_FACE")
+          cpp=Path("physics_app/src/physics/plasma/Chemistry.C").read_text()
+          for needle in (
+               'for (const auto & id : {"O2p", "Op", "Om"})',
+               'functors.push_back(std::string(id) + "_wall_number_flux");',
+               'functors.push_back(_data.surfaceElectronWallFlux());',
+               'symbols.push_back("ge");',
+               'current_expression += "-ge";',
+               'std::string(side) + "_net_surface_current_density";',
+               '"1.602176634e-19*(" + current_expression + ")";',
+               '_problem->addFunctorMaterial(type, std::string(side) + "_surface_current", params);'):
+              must(needle in cpp,"NEW_CPP_SURFACE_CURRENT_CONTRACT:"+needle)
+          for id,signed in (("O2p",1),("Op",1),("Om",-1)):
+              must((("charge_number" in cpp) and ("current_expression" in cpp)),
+                   "CPP_CHARGE_SIGN_LOGIC:"+id)
+          native_src=(S6/"native/s6_c0_physics_base_no_d1.i").read_bytes()
+          native_objects=parse(native_src,"native/s6_c0_physics_base_no_d1.i",0)
+          native_current=one(native_objects,"FunctorMaterials","wafer_surface_current")
+          assert_old_current(native_current)
+          must(native_current["params"]["functor_names"]==OLD_NAMES,"ORIGINAL_NATIVE_FUNCTORS_DIFFER")
+          native_sigma=one(native_objects,"Kernels","sigma_wafer_surface_current")
+          check_consumer(native_sigma)
+          native_pp=one(native_objects,"Postprocessors","wafer_net_surface_current")
+          check_postprocess(native_pp)
+          old_chain={"current":native_current,"sigma_consumer":native_sigma,"diagnostic":native_pp}
+          results={}
+          for case in ("417","941"):
+              folder=EVID/case/"experiments/Issue395_powered_chemistry_ladder"
+              stage_receipt=load((EVID/case/"newonly_stage_receipt.json").read_bytes())
+              must(stage_receipt.get("source_head")==SOURCE_PIN and
+                   str(stage_receipt.get("variant"))==case,"STAGE_IDENTITY:"+case)
+              must(stage_receipt.get("status")=="P2_NEWONLY_JSON_AND_LAYER11_STAGE_STATIC_PASS_RUNTIME_HOLD",
+                   "STAGE_STATUS:"+case)
+              must(stage_receipt.get("retired_native_ion_owners")==26 and
+                   stage_receipt.get("remaining_native_ion_fv_owners")==0,
+                   "P2_ION_CUTOVER_COUNT:"+case)
+              must(stage_receipt.get("p3_x_electron",{}).get("removed_native_electron_owners")==10,
+                   "P3_ELECTRON_CUTOVER_COUNT:"+case)
+              layers=stage_receipt["layers_after_sha256"]
+              must(len(layers)==11 and len(set(layers))==11,"STAGE_11_LAYER_MANIFEST:"+case)
+              files=[];objects=[]
+              for i,(fn,expected_sha) in enumerate(layers.items(),1):
+                  f=folder/fn
+                  must(f.name==fn and f.is_file() and not f.is_symlink(),"MISSING_LAYER:"+case+fn)
+                  data=f.read_bytes()
+                  must(0<len(data)<250000 and hash256(data)==expected_sha,
+                       "FILE_SHA_MISMATCH:"+case+fn)
+                  files.append({"ordinal":i,"name":fn,"sha256":hash256(data),"byte_count":len(data)})
+                  objects.extend(parse(data,fn,i))
+              json_path=S6/"chemistry"/("unified_s6_"+case+"_newonly.json")
+              ov_path=S6/("issue633_newonly_s6_"+case+"_continuity.template.i")
+              must(hash256(json_path.read_bytes())==JHASH[case] and
+                   hash256((folder/"chemistry"/json_path.name).read_bytes())==JHASH[case],
+                   "JSON_BYTE_MISMATCH:"+case)
+              must(hash256(ov_path.read_bytes())==OHASH[case] and
+                   hash256((folder/"migrated_continuity.i").read_bytes())==OHASH[case],
+                   "OVERLAY_BYTE_MISMATCH:"+case)
+              jo=load(json_path.read_bytes())
+              must(jo.get("ion_surface_current")=={"electron_wall_number_flux":"e_wall_number_flux"},
+                   "SURFACE_ELECTRON_WALL_JSON_CONTRACT:"+case)
+              must(all(jo["species"][x]["charge_number"]==q for x,q in
+                    (("O2p",1),("Op",1),("Om",-1))),
+                   "CURRENT_ION_CHARGE_SIGN:"+case)
+              old=one(objects,"FunctorMaterials","wafer_surface_current")
+              assert_old_current(old)
+              con=one(objects,"Kernels","sigma_wafer_surface_current")
+              check_consumer(con)
+              diag=one(objects,"Postprocessors","wafer_net_surface_current")
+              check_postprocess(diag)
+              # Check both exact object identity and property ownership; at source-only
+              # runtime the C++ would propose the same identity/property.
+              alternate=[x for x in objects if x["params"].get("property_name")==
+                         "wafer_net_surface_current_density"]
+              must(len(alternate)==1 and alternate[0]["object_name"]=="wafer_surface_current",
+                   "STAGED_DUPLICATE_NET_WAFER_PROPERTY:"+case)
+              must(len(same(objects,"FunctorMaterials","wafer_surface_current"))==1,
+                   "STAGED_DUPLICATE_WAFER_MATERIAL:"+case)
+              downstream=[x for x in objects if
+                          x["params"].get("surface_current_density")=="wafer_net_surface_current_density" or
+                          (x["params"].get("functor")=="wafer_net_surface_current_density")]
+              must(len(downstream)>=2,"WAFER_CURRENT_CONSUMER_COUNT:"+case)
+              # Physical sign and charge are independent from object name: +O2p,+Op,-Om,-e.
+              results[case]={"status":"STATIC_OLD_WAFER_CURRENT_SURVIVES__FUTURE_CPP_DUPLICATE_OWNER_HOLD",
+                 "stage_source_pin":SOURCE_PIN,"review_head":HEAD,"file_sha256_verified":11,"layer_files":files,
+                 "native_wafer_surface_current_staged_count":1,"staged_current":old,
+                 "matching_property_owner_count":len(alternate),"legacy_current_functor_names":old["params"]["functor_names"],
+                 "json_electron_flux":"e_wall_number_flux",
+                 "cpp_expected_new_owner":{"object_name":"wafer_surface_current",
+                      "property_name":"wafer_net_surface_current_density",
+                      "type":"ADParsedFunctorMaterial","functor_names":NEW_NAMES,
+                      "expression":EXPRESSION,"created_at":"Chemistry.C / PlasmasAction",
+                      "native_instantiated":False},
+                 "sigma_consumer":con,"diagnostic":diag,
+                 "downstream_consumers":downstream,
+                 "sign_ledger":"+O2p_wall_number_flux +Op_wall_number_flux -Om_wall_number_flux -e_wall_number_flux",
+                 "unit_conversion":EPS+" C per ion/electron number flux",
+                 "native_cpp_warehouse":"NOT_RUN"}
+              print(f"P4_C2_{case}_11_FILES_SHA=PASS OLD_WAFER_CURRENT_OWNER=1 SIGMA=1 POSTPROCESSOR=1",flush=True)
+              print("P4_C2_"+case+"_OLD_BLOCK_SHA256="+old["block_sha256"],flush=True)
+              print("P4_C2_"+case+"_STAGE_FUNCTORS="+old["params"]["functor_names"],flush=True)
+          neg={}
+          def expect_reject(name,fn):
+              try:fn()
+              except ValueError:neg[name]="REJECTED"
+              else:raise ValueError("NEGATIVE_FALSE_PASS:"+name)
+          old=results["417"]["staged_current"]
+          bad=copy.deepcopy(old);bad["params"]["expression"]=EPS+"*(gi+gop+gm-ge)"
+          expect_reject("wrong_om_sign",lambda:assert_old_current(bad))
+          bad=copy.deepcopy(old);bad["params"]["expression"]=EPS+"*(gi+gop-gm+ge)"
+          expect_reject("wrong_electron_sign",lambda:assert_old_current(bad))
+          bad=copy.deepcopy(old);bad["params"]["functor_names"]="wrong_provider"
+          expect_reject("wrong_functor_producer",lambda:assert_old_current(bad))
+          bad=copy.deepcopy(old);bad["params"]["property_name"]="wrong_wafer_property"
+          expect_reject("wrong_property",lambda:assert_old_current(bad))
+          bad=copy.deepcopy(results["417"]["sigma_consumer"])
+          bad["params"]["surface_current_density"]="wrong_source"
+          expect_reject("sigma_wrong_input",lambda:check_consumer(bad))
+          bad=copy.deepcopy(results["417"]["diagnostic"]);bad["params"]["boundary"]="plasma_cover"
+          expect_reject("wafer_wrong_sideset",lambda:check_postprocess(bad))
+          expect_reject("duplicate_staged_current",lambda:one([old,copy.deepcopy(old)],"FunctorMaterials","wafer_surface_current"))
+          expect_reject("missing_staged_current",lambda:one([],"FunctorMaterials","wafer_surface_current"))
+          def stage_sha_check(b,expected):
+              must(hash256(b)==expected,"STAGE_SHA_TAMPER")
+          expect_reject("mutated_stage_file_sha",lambda:stage_sha_check(b"tampered",files[0]["sha256"]))
+          must(len(neg)==9,"NEGATIVE_CONTROL_COUNT")
+          status="STATIC_SURVIVING_WAFER_SURFACE_CURRENT_CPP_OWNER_COLLISION_P4_X_HOLD"
+          report={"schema":"issue670.p4_c2.wafer_surface_current_source_stage.v1",
+             "task_id":"P4-C2","review_head":HEAD,"source_stage_head":SOURCE_PIN,
+             "p3x_run":44257739203,"p3x_artifact_id":14406746397,
+             "status":status,"cases":results,"historical_c0_source":old_chain,
+             "historical_c0_sha256":hash256(native_src),
+             "negative_controls":neg,
+             "critical_finding":"A staged Native wafer_surface_current still declares the SAME name/property as the new Physics Chemistry.C generated owner; Physics has NOT been instantiated. P4-X must use exact deletion or guarded rebind before Native P2.",
+             "extra_risk":"Old Native current references historical wall Functor names; JSON/Physics generator requests canonical O2p/Op/Om/e wall Functors. Preserve both consumer edges and signed charge ledger during single writer cutover.",
+             "limits":["Source-only stage P3X original pin 9c; review head 395e new",
+                       "No Native C++ Warehouse/Functor resolution executed",
+                       "No actual surface current numeric parity or P5 Native input checked",
+                       "No original files/PR665/main/private rates mutated"],
+             "native_p2":"NOT_RUN","native_p3":"NOT_RUN","native_p4":"NOT_RUN","science":"SCIENCE_HOLD"}
+          dest=Path("c2-receipt");dest.mkdir(exist_ok=True)
+          (dest/"p4-c2-wafer-current-readback.json").write_text(
+             json.dumps(report,sort_keys=True,indent=2)+"\n")
+          print("P4_C2_NEGATIVES=9/9_REJECTED",flush=True)
+          print("P4_C2_FINAL="+status,flush=True)
+          PY
+      - name: Upload P4-C2 independent receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue670-p4-c2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: c2-receipt/
+          if-no-files-found: warn
+          retention-days: 30
