@@ -1,0 +1,205 @@
+{
+  "schema": "issue672.p6x.final_scoped_native_p2_ci_acceptance.v1",
+  "date_utc": "2026-11-18",
+  "decision": "PASS_SCOPED_P2_CI_WITH_EXPLICIT_HISTORICAL_KEEP_HOLD",
+  "owner": "P6-X single writer",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source": {
+    "pr665": 665,
+    "head": "fd21e2e31c48d0fa495f0830b52a70fb06815514",
+    "tree": "788a7eb8247536482a639316a29cd1ce4d673baa",
+    "state": "OPEN_DRAFT_UNMERGED",
+    "pr684": 684,
+    "pr684_head": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "pr684_state": "OPEN_DRAFT_UNMERGED",
+    "main_not_modified": true,
+    "workflow_template_blob": "12b7a28fdd19436a8321d6ebefa628d6b82b7dfc"
+  },
+  "official_repository_ci": {
+    "run_id": 44356150381,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44356150381",
+    "event": "pull_request",
+    "attempt": 1,
+    "head": "fd21e2e31c48d0fa495f0830b52a70fb06815514",
+    "status": "COMPLETED_SUCCESS",
+    "jobs_total": 19,
+    "jobs_success": 19,
+    "jobs_failure": 0,
+    "pytest_passed": 1569,
+    "pytest_skipped": 13,
+    "workflow_harness": "PASS",
+    "workflow_surface": "PASS",
+    "p6_guard_mutation_negatives": 25,
+    "source_generated_workflow_template_parity": "PASS"
+  },
+  "p5x_new_only_native": {
+    "status": "PASS_EXACT_HEAD_P2_SCOPE",
+    "case_ids": [
+      "417",
+      "941"
+    ],
+    "old_native_ion_owners_retired_per_case": {
+      "FVKernel": 14,
+      "FVBC": 12,
+      "total": 26,
+      "remaining": 0
+    },
+    "generated_per_case": {
+      "FVKernel": 12,
+      "FVBC": 12,
+      "electron_FEM_BC": 8,
+      "typed_total": 32
+    },
+    "w1_single_build": {
+      "source_head": "fd21e2e31c48d0fa495f0830b52a70fb06815514",
+      "source_tree": "788a7eb8247536482a639316a29cd1ce4d673baa",
+      "build_count": 1,
+      "workflow_run_id": 44356150381,
+      "artifact_id": 14453226571,
+      "artifact_sha256": "51defc884ba3d942d2f80790f4bc84bfd313826360a5b9b5e94e9becc323a787",
+      "archive_tar_sha256": "f71ac7c21a01c57115aef3df077746157d98a905078b01e63369eef751253363",
+      "elf_sha256": "3edbc26ff6ffb12491e260e16b7a4a6e36ac3b2a372222c37056be3bd1a88269",
+      "libphysics_sha256": "ab8edb2250f816450bc7eb6626e85224484ad06b08bd7edb7140d04a0f4164a8",
+      "libphysics_test_sha256": "43eefdffef53abe0d8b1fb7b098ec1f6f8410a0e6cd71a5ece3c020fa1d3a534",
+      "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+      "off_job_actual_elf_bytes_sha_verified": true
+    },
+    "native_job": {
+      "name": "P6 REQUIRED New-only 417/941 Native P2 typed 12+12+8 and N1-N8 x2",
+      "job_id": 134987766000,
+      "conclusion": "success",
+      "run_id": 44356150381,
+      "artifact_id": 14452484196,
+      "artifact_zip_sha256": "0ab2c4ec6fee326f22d56b14fa51481b29df3c573efccbc4494ff50c08eeacfc",
+      "artifact_receipt_sha256": "979c1174e1e822a09b15dac29ccff38f51323828cddd00a312a638ab7c338b21",
+      "zip_crc": "PASS",
+      "same_w1_sha_verified": true,
+      "private_rate_archive_exposed": false
+    },
+    "per_case": {
+      "417": {
+        "native_check_input_exit": 0,
+        "syntax_ok": true,
+        "typed_registration_12_12_8": "PASS_32_OF_32",
+        "n1_n8": "PASS_8_OF_8",
+        "negative_categories": {
+          "P05": 4,
+          "EARLY_REGISTRATION": 1,
+          "CHEMISTRY": 3
+        },
+        "original_public_source_sha_restored": true
+      },
+      "941": {
+        "native_check_input_exit": 0,
+        "syntax_ok": true,
+        "typed_registration_12_12_8": "PASS_32_OF_32",
+        "n1_n8": "PASS_8_OF_8",
+        "negative_categories": {
+          "P05": 4,
+          "EARLY_REGISTRATION": 1,
+          "CHEMISTRY": 3
+        },
+        "original_public_source_sha_restored": true
+      }
+    },
+    "native_negatives_total": 16,
+    "native_negatives_expected_rejected": 16,
+    "protected_private_ei_tmpfs_cleanup_verified": true,
+    "unmodified_physics_elf_used_across_all_cases": true,
+    "typed_method_limit": "post-registration FEProblemBase::addFVKernel/addFVBC/addBoundaryCondition trace of names/Factory; not direct TheWarehouse raw memory dump, variable/sideset parameter memory, or complete original stdout/stderr rehash",
+    "d8_latest_head_bounded_rf": "HOLD_NOT_RETESTED_ON_FD21",
+    "science": "SCIENCE_HOLD",
+    "p3_p4": "NOT_RUN"
+  },
+  "history_lanes": {
+    "public_B": {
+      "status": "PASS_HISTORICAL_P2_ONLY",
+      "real_417_941": "PASS",
+      "public_original_mode_kept_separate": true
+    },
+    "public_D": {
+      "status": "KEEP_HOLD",
+      "real_417_941": "EXPECTED_NATIVE_REJECTION",
+      "artifact_id": 14452327403,
+      "electron_lookup_contract": "original_100_row_vs_prepared_42_row_remain_distinct",
+      "new_chemistry_science_not_authorized": true
+    },
+    "flow_hybrid": {
+      "status": "KEEP_HOLD",
+      "independent_current_head_ci_run": 44356150439,
+      "conclusion": "failure",
+      "f4_417_941_duplicate_p05_run": 44314726088,
+      "actual_collision": "ni_time on log_O2p duplicate old26 vs generated24",
+      "no_p05_bypass": true
+    },
+    "arch_hybrid": {
+      "status": "KEEP_HOLD",
+      "real_417_941_p05": "PASS_EXPECTED_REJECTION",
+      "artifact_id": 14452286825,
+      "positive_native": false
+    },
+    "ion_fvm_legacy": {
+      "status": "KEEP_HOLD",
+      "newonly_source_P0_run": 44356150504,
+      "newonly_source_P0": "PASS",
+      "history_long_timestep": "NOT_RUN"
+    }
+  },
+  "artifact_compatibility": {
+    "result": "PASS_4_OF_4_PAIRS",
+    "run_id": 44356150381,
+    "method": "Download all eight first-attempt canonical+legacy GitHub ZIPs; verify CRC and sha256 per relative member path; compare member maps for each pair. ZIP envelopes differ.",
+    "pairs": [
+      {
+        "name": "core_native",
+        "legacy_artifact": 14452716796,
+        "canonical_artifact": 14453271740,
+        "member_count": 3,
+        "member_sha_parity": true
+      },
+      {
+        "name": "public_native",
+        "legacy_artifact": 14452377411,
+        "canonical_artifact": 14452327403,
+        "member_count": 92,
+        "member_sha_parity": true
+      },
+      {
+        "name": "arch_s6_hybrid",
+        "legacy_artifact": 14451876853,
+        "canonical_artifact": 14452286825,
+        "member_count": 7,
+        "member_sha_parity": true
+      },
+      {
+        "name": "arch_dd_native",
+        "legacy_artifact": 14451581837,
+        "canonical_artifact": 14453366511,
+        "member_count": 4,
+        "member_sha_parity": true
+      }
+    ]
+  },
+  "gates": {
+    "P6_C3": "PASS_EXACT_HEAD_CODE_AND_TRIGGER_ARTIFACT_P05",
+    "P5_X_NATIVE_P2_CURRENT_HEAD": "PASS_EXACT_FD21_417_941_TYPED_32_N8x2",
+    "P6_N2_N3": "PASS_OFFICIAL_REPOSITORY_CI",
+    "P6_X_FINAL": "PASS_SCOPED_P2_CI_WITH_HISTORICAL_KEEP_HOLD",
+    "P7_FINAL": "HOLD_SEPARATE_EVIDENCE_AND_SCIENCE_GATES",
+    "PR665_MERGE": "NOT_APPROVED",
+    "PR684_MERGE": "NOT_APPROVED",
+    "public_D_current_native": "KEEP_HOLD",
+    "FLOW_HYBRID": "KEEP_HOLD",
+    "ARCH_HYBRID": "KEEP_HOLD",
+    "SCIENCE": "SCIENCE_HOLD",
+    "P3_P4_100US": "NOT_RUN",
+    "D8_FD21_FULL_RF_DYNAMIC": "HOLD_NOT_RUN"
+  },
+  "non_promotions": [
+    "Repository CI green is a validated mixed-mode matrix, not historical Public D/FLOW/ARCH positive Native acceptance",
+    "New-only Native P2 pass is not 100us scientific equivalence",
+    "post-registration typed inventory is not direct full TheWarehouse memory dump or signed residual/numerical parity",
+    "prior D8 bounded three-ns at earlier source SHA is not current fd21 D8 evidence",
+    "no automatic PR merge, 150/200-step science, P3/P4 dispatch, P05 weakening, dont_create_kernels shortcut, private EI leak"
+  ]
+}
