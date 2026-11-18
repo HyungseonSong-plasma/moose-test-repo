@@ -1,4 +1,5 @@
 #include "ESWallFluxMaterial.h"
+#include <iostream>
 
 #include "FaceInfo.h"
 #include "MooseFunctorArguments.h"
@@ -146,6 +147,12 @@ ESWallFluxMaterial::ESWallFluxMaterial(
     paramError("species_id", "Electron wall species_id must be 'e'.");
   if (_sticking < 0.0 || _sticking > 1.0)
     paramError("sticking", "Electron sticking must be in [0,1].");
+  // All three named electron wall Functors have been resolved in the initializer.
+  std::cout << "D8_E_WALL_CTOR owner=" << name() << " species=" << species_id
+            << " density=" << getParam<MooseFunctorName>("electron_density")
+            << " mean_energy=" << getParam<MooseFunctorName>("mean_energy")
+            << " potential=" << getParam<MooseFunctorName>("potential")
+            << std::endl;
 
   addFunctorProperty<ADReal>(
       species_id.empty() ? "electron_mean_speed" : "e_mean_speed",
