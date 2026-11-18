@@ -1,0 +1,55 @@
+{
+  "schema": "issue671.P5-D.typed_warehouse_registration_work_closure.v1",
+  "target_repo": "HyungseonSong-plasma/moose-test-repo",
+  "issue": 671,
+  "work_lane": "D",
+  "source_integration_pr": 665,
+  "integration_head_at_closure": "52067302d16074592503d0ef6b903cc344f55a08",
+  "physics_source_and_unmodified_w1_build_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "w1_physics_opt_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+  "verdict": "PASS_TYPED_REGISTRATION_EVIDENCE_WORK_CLOSED",
+  "observed_registration_per_case": {
+    "417": {
+      "fv_kernels": 12,
+      "fv_boundary_conditions": 12,
+      "electron_fem_boundary_conditions": 8,
+      "typed_name_factory_unique": 32,
+      "post_add_registration_events": 77,
+      "clean_native_p05": "PASS"
+    },
+    "941": {
+      "fv_kernels": 12,
+      "fv_boundary_conditions": 12,
+      "electron_fem_boundary_conditions": 8,
+      "typed_name_factory_unique": 32,
+      "post_add_registration_events": 77,
+      "clean_native_p05": "PASS"
+    }
+  },
+  "protected_native_negative_tests": "PASS_16_OF_16_EXPECTED_REJECTIONS",
+  "independent_zip_and_receipt_audit": "PASS_113_OF_113",
+  "validated_actions_runs": [
+    44340416703,
+    44341132985
+  ],
+  "primary_artifact_id": 14444615886,
+  "primary_artifact_zip_sha256": "4910a1df8547b796be19623b903b3932640ec64a9facf7770494fa6da3870841",
+  "primary_immutable_receipt_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9b7a55240880a178aa102483700746d7cd464db7/reports/issue671/p5x-w1-real-typed-12k-12fvbc-8fembc-417-941-receipt.json",
+  "evidence_boundary": {
+    "instrumentation": "LD_PRELOAD captures successful FEProblemBase add events; not direct TheWarehouse memory traversal",
+    "actual_live_variable_and_sideset_params": "NOT_OBSERVED_AS_RAW_MEMORY; verified in C++/JSON source",
+    "raw_event_log_and_full_native_stdout_uploaded": false,
+    "tested_binary_exact_integration_head": false,
+    "tested_source_equivalence": "Relevant Physics C++ and JSON Git blobs identical between build source and current integration head"
+  },
+  "remaining_gates_not_owned_by_D": {
+    "P5_X_FINAL": "HOLD_EXACT_HEAD_BINARY_AND_ADDITIONAL_INTEGRATION",
+    "P6_X": "HOLD",
+    "P7_FINAL": "HOLD",
+    "REPOSITORY_CI": "NOT_PASSED_AT_INTEGRATION_HEAD",
+    "SCIENCE": "SCIENCE_HOLD",
+    "NATIVE_P3_P4": "NOT_RUN"
+  },
+  "closure_scope": "D work only; does not close issue #671 or authorize PR #665/main merge, new science, or hybrid P05 bypass",
+  "mutation_scope": "One new evidence file on isolated branch; PR665, main, issue body, original archived inputs, physics source and workflow unchanged."
+}
