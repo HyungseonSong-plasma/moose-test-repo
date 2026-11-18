@@ -1,0 +1,145 @@
+{
+  "schema": "issue671.p5_x.latest_head_w1_shared_elf.native_clean_2_and_16_negative.v1",
+  "task_id": "P5-X",
+  "case_scope": [
+    "S6-417",
+    "S6-941"
+  ],
+  "receipt_date_utc": "2026-11-18",
+  "verdict": "EXACT_HEAD_SHARED_ELF_AND_CLEAN_NATIVE_2_OF_2_AND_NEGATIVE_16_OF_16_PASS__P5X_FINAL_WAREHOUSE_D8_HOLD",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr665": 665,
+    "pr665_actual_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "git_tree": "10ab018235f047bf1abc250d3b18005b9156752a",
+    "source_checkout_exact_pin": true,
+    "isolated_workflow_commit": "6ebcc9813833831182b569058b293a40ec2f6c90",
+    "workflow_branch": "issue-671-p5x-common-w1-74a2-20261118",
+    "workflow_only_diff_from_pr665": true,
+    "shared_CI_YAML_unchanged": true
+  },
+  "exact_head_build": {
+    "run_id": 44319316180,
+    "artifact_id": 14435245012,
+    "artifact_zip_sha256": "b1f2dea2ab3d03b3c640260ce4fbdab72b2497a3d1faa24c54106e5f5847d4cd",
+    "zip_crc": "PASS",
+    "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "source_tree": "10ab018235f047bf1abc250d3b18005b9156752a",
+    "build_invocations": 1,
+    "app_binary": {
+      "path": "physics-opt",
+      "sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+      "bytes": 67368,
+      "elf_magic": "PASS"
+    },
+    "app_libraries": [
+      {
+        "path": "lib/libphysics-opt.so.0",
+        "sha256": "b107698dfc7539237cd194331e306efd28f3fba7bc7e0b958f4f8dd2165f67bd",
+        "bytes": 4869600,
+        "ELF": "PASS"
+      },
+      {
+        "path": "lib/libphysics_test-opt.so.0",
+        "sha256": "bd1e0626a5e6682ffdda66fa6e1589f3f0d975a66aa9f79b964efeb1d84924a6",
+        "bytes": 105984,
+        "ELF": "PASS"
+      }
+    ],
+    "binary_archive_tar_sha256": "12f198cd17101b23b67a61a2fe95247af9c4c860d36b04ebf16b8dc91d4dadeb",
+    "actual_ELF_bytes_rehashed_independently": true
+  },
+  "one_binary_native_p2_and_negatives": {
+    "run": 44322557957,
+    "job": 134865078211,
+    "run_status": "COMPLETED",
+    "run_conclusion": "SUCCESS_NATIVE_POSITIVE_AND_EXPECTED_NEGATIVES",
+    "artifact_id": 14436920479,
+    "artifact_name": "issue671-p5x-w1-dual-case-clean-and-n1n8",
+    "zip_sha256": "bbdfc54bd509a5a7f574c5bb9131460c78c727478aee0688c8d304d558ad97a3",
+    "zip_crc": "PASS",
+    "artifact_contains": [
+      "p05-out/p05_negative_receipt.json",
+      "p05-in/physics-opt.sha256",
+      "p05-in/p4_receipt.json",
+      "p05-in/w1_identity.json"
+    ],
+    "negative_receipt_json_sha256": "0e8f3f59e12b43c5f9ca7b3ff9ec34a86b3aebf7926620ddd609cd0576bc042d",
+    "P4X_input_receipt_sha256": "2541da81f23937226c328109267215e8778cfd159b41801ee110258aca0838ea",
+    "W1_identity_embedded_sha256": "240e60a2b2f47b54ccd82b6f4427be21b5cecc8b054fc14365370cb3127b8dfd",
+    "W1_identity_byte_equal_build_artifact": true,
+    "case_417": {
+      "native_clean_exit": 0,
+      "syntax_ok": true,
+      "clean_log_sha256_in_receipt": "13fbd6439b2ff7b7307bb289467aca103ddeae74639b49e47026cdc3007d9e0c",
+      "exact_original_11layer_sha_count": 11,
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "retired_ion_26": true,
+      "retired_electron_10": true,
+      "retired_old_materials_6": true,
+      "carrier_one_preserved": true,
+      "post_p4x_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "private_source_restore": "SHA_ALL_PUBLIC_FILES_UNCHANGED",
+      "N1_N8_intended_nonzero": 8
+    },
+    "case_941": {
+      "native_clean_exit": 0,
+      "syntax_ok": true,
+      "clean_log_sha256_in_receipt": "4efd9abe8af47210f925a1c9defc2290d06b0716932b218bfaefec49f5d55675",
+      "exact_original_11layer_sha_count": 11,
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "retired_ion_26": true,
+      "retired_electron_10": true,
+      "retired_old_materials_6": true,
+      "carrier_one_preserved": true,
+      "post_p4x_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "private_source_restore": "SHA_ALL_PUBLIC_FILES_UNCHANGED",
+      "N1_N8_intended_nonzero": 8
+    },
+    "source_code_negatives": {
+      "N1_N4_each_case": "P05",
+      "N5_each_case": "EARLY_REGISTRATION",
+      "N6_N8_each_case": "CHEMISTRY",
+      "mutants": 16,
+      "intended_failure_matching": 16,
+      "normal_cases": 2,
+      "normal_exit0": 2,
+      "all_real_same_elf_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+      "original_SHA_restored_both": true,
+      "private_tmpfs_cleanup_verified": true,
+      "private_data_in_artifact": false
+    },
+    "staging": "Real original public S6 main plasma mesh SHA ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc; case 417/941 separate historical 11-layer exact files; protected EI 5 source per case; source rate secure tempfs and removal; no source/protected archive mutation"
+  },
+  "independent_check": {
+    "count": 110,
+    "passed": 110,
+    "failed": 0,
+    "tool": "container Python audit over actual downloaded ZIP bytes and detached source receipts",
+    "script_name": "p5x_w1_integrated_audit.py",
+    "script_sha256": "d5b2a439d3f0072d7fa6c235d5ae011c5fb5084c81e16854ca92f42dfdb16ef6",
+    "full_case_mutant_audit_name": "p5x-w1-74a2-native-independent-audit.json",
+    "full_case_mutant_audit_sha256": "6ddf161350c4b744fd1c68ff0b614fce01389f7f0194cd0de6286827344e8dd8",
+    "caveats": [
+      "New Artifact includes source SHA receipts and log SHA digests, not all 22 raw staged input .i bytes; earlier original P4-X source artifact separately independently verifies inputs.",
+      "The CI Artifact does NOT upload raw Native stdout/stderr; their recorded SHA256s are checksummed receipts from job-local real process, not independently rehashable log bytes.",
+      "Native P05 guard runs in real normal input (exact expected name, variable, Factory and BC catalogue) and 16 negative tests reject as expected; a separate exact-ELF object-by-object Warehouse 12+12/electron 8 inventory dump is not in this Artifact.",
+      "Full original S6 RF-coupled dynamic D8/Maxwell current and science equivalence not proven by --check-input. Earlier bounded D8 diagnostic probes use different HEAD/ELF."
+    ]
+  },
+  "remaining_gates": {
+    "P5_0_EXACT_HEAD_ONE_ELF_AND_2_LIBS": "PASS",
+    "S6_417_S6_941_SAME_ELF_NATIVE_P2": "PASS",
+    "P05_NATIVE_NEGATIVES_N1_N8_SAME_ELF": "PASS_16_OF_16",
+    "ORIGINAL_FILE_SHA_RESTORE": "PASS",
+    "PROTECTED_EI_SECURE_CLEANUP": "PASS",
+    "WAREHOUSE_12PLUS12_ELECTRON_BC8_EXACT_SAME_ELF_DETAILED_INVENTORY": "HOLD",
+    "D8_FULL_ORIGINAL_S6_RF_COUPLING": "HOLD",
+    "P5_X_OFFICIAL_FINAL_NATIVE_P2": "HOLD_REMAINING_LIVE_WAREHOUSE_AND_D8",
+    "SCIENCE": "SCIENCE_HOLD",
+    "NATIVE_P3": "NOT_RUN",
+    "NATIVE_P4": "NOT_RUN"
+  },
+  "policy": "One shot isolated workflow branch only; PR665/PR684/main/shared workflow/P05/originals unchanged. No temporal solve triggered, no private rate bytes published; historical FLOW KEEP_HOLD."
+}
