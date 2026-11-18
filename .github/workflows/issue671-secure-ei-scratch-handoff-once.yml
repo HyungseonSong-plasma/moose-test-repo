@@ -1,5 +1,6 @@
 # Source-only protected handoff: never upload or log original kinetic table bytes.
 name: Issue671 protected original EI rates to 417/941 disposable tmpfs Scratch
+# Exact-head premerge protected handoff rerun after permanent sanitized receipt creation
 on:
   push:
     branches:
@@ -37,6 +38,7 @@ jobs:
           printf '%s\n' \
             .github/workflows/issue671-secure-ei-scratch-handoff-once.yml \
             ci/guards/issue671_secure_ei_rate_scratch.py \
+            reports/issue671/p5_a3_protected_original_ei_scratch_handoff_receipt.json \
             | sort > "$RUNNER_TEMP/approved-files.txt"
           diff -u "$RUNNER_TEMP/approved-files.txt" "$RUNNER_TEMP/actual-files.txt"
           python3 -m py_compile ci/guards/issue671_secure_ei_rate_scratch.py
