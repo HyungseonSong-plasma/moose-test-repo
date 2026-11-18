@@ -1,0 +1,62 @@
+{
+  "schema": "issue672.p6_x.c_evidence_root_cause_handoff.v1",
+  "recorded_date": "2026-11-18",
+  "workstream": "C",
+  "target_gate": "P6-X",
+  "C": "PASS_EVIDENCE_AND_ROOT_CAUSE",
+  "ARCH_HYBRID": "KEEP_HOLD",
+  "scope": {
+    "C_completed": "Evidence authenticity, original historical compatibility provenance, and causal classification of ni_time Native/Physics owner collision",
+    "C_not_claimed": [
+      "current ARCH Hybrid Native P2 compatibility PASS",
+      "current New-only vs historical Hybrid scientific equivalence",
+      "P6-X/P7 final acceptance",
+      "Native P3/P4 or timetable/timestep approval",
+      "P05 relaxation, dont_create_kernels, or physical BC reinterpretation"
+    ],
+    "standalone_historical_compatibility": "PASS_PINNED_HISTORICAL_P2_ONLY",
+    "modern_hybrid": "KEEP_HOLD",
+    "newonly": "SEPARATE_SOURCE_OWNERSHIP_AND_NATIVE_ACCEPTANCE"
+  },
+  "exact_heads": {
+    "current_pr": 665,
+    "current_pr_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "modern_p05_source_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "negative_native_source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "historic_compatible_physics_head": "1efdd922096df10239cff8adc132e8f3811c1a63",
+    "original_historical_source_head": "29d1acc6ef7969908b86719e4b95c73a1565136d"
+  },
+  "proof": {
+    "independent_audit_run": 44338627249,
+    "independent_audit_artifact": 14443505429,
+    "independent_audit_receipt": "reports/issue672/p6-h-ni-time-historical-compatibility-independent-20261118.json",
+    "independent_audit_receipt_blob": "4517839753e4f6b786860631cdec5775fca24fbe",
+    "actual_negative_native_run": 44311107973,
+    "negative_417_941_canonical_and_original": "PASS_4_OF_4_EXPECTED_REJECTIONS",
+    "protected_scratch_cleanup": "PASS",
+    "historical_native_run": 44324197618,
+    "historical_native_B_D_417_941": "PASS_4_OF_4_HISTORICAL_ONLY",
+    "historical_100row_source_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "historical_100row_untouched": true,
+    "current_newonly_p2_source": "SEPARATE_EVIDENCE_NOT_CLAIMED_BY_C"
+  },
+  "root_cause": {
+    "legacy_owner": "Native [FVKernels]/ni_time, type PhysicsFVLogMolarElectronTimeDerivative",
+    "canonical_mutant_variable": "log_O2p",
+    "canonical_failure": "P05 FV Native/Physics duplicate or unexpected owner",
+    "original_mutant_variable": "log_ni",
+    "original_failure": "Legacy variable precheck",
+    "decisive_invariant": "Do not mix historical Native ion FV owners with New-only Physics-generated ion FV 12 kernels +12 FV BCs",
+    "fail_closed": "PASS_VERIFIED"
+  },
+  "handoff": {
+    "C": "PASS_EVIDENCE_AND_ROOT_CAUSE",
+    "ARCH_HYBRID": "KEEP_HOLD",
+    "P6_X": "REQUIRES_INDEPENDENT_REMAINING_LANE_GATES",
+    "P7": "NOT_PROMOTED_BY_C",
+    "SCIENCE": "SCIENCE_HOLD",
+    "P3_P4": "NOT_RUN",
+    "release_historical_hybrid_to_modern": "REQUIRES_SEPARATE_APPROVED_OWNER_AND_COMPATIBILITY_CONTRACT",
+    "modifications_to_pr665_main_physics_sources": false
+  }
+}
