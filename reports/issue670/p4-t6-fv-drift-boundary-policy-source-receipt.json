@@ -1,0 +1,237 @@
+{
+  "schema": "issue670.p4_t6.fv_drift_source_and_stage_receipt.v1",
+  "task_id": "P4-T6",
+  "issue": 670,
+  "upstream_issue": 668,
+  "date_utc": "2026-11-18",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "verdict": "PASS_SOURCE_AND_P3X_STAGE_STATIC_DRIFT_POLICY__NATIVE_HOLD",
+  "immutable_review_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "historical_P1P2_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "stage_source_epoch": "Source-only P2+P3-X CI staged from original 9c source, current PR665 395e source independently read. No current-head native run inferred.",
+  "original_C0": {
+    "path": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+    "original_source_file_sha256_locator": "GitHub Actions Artifact #14407651361 -> t6-receipt/p4-t6-drift-policy.json -> native_original_C0.file_sha256",
+    "original_drift_block_sha256_locator": "GitHub Actions Artifact #14407651361 -> t6-receipt/p4-t6-drift-policy.json -> native_original_C0.original_drift_objects[O2p|Om|Op].block_sha256",
+    "original_drift_owners": {
+      "O2p": {
+        "charge": 1,
+        "original_name": "ni_drift",
+        "original_variable": "log_ni",
+        "original_mobility": "ion_mobility"
+      },
+      "Om": {
+        "charge": -1,
+        "original_name": "nm_drift",
+        "original_variable": "log_nm",
+        "original_mobility": "negative_ion_mobility"
+      },
+      "Op": {
+        "charge": 1,
+        "original_name": "nop_drift",
+        "original_variable": "log_nop",
+        "original_mobility": "atomic_positive_ion_mobility"
+      }
+    },
+    "factory_type": "PhysicsFVLogMolarElectrostaticDrift",
+    "interpolation": "upwind",
+    "use_element_gradient_for_potential": true,
+    "excluded_sidesets": [
+      "inlet",
+      "outlet",
+      "plasma_electrode",
+      "plasma_metal",
+      "plasma_right",
+      "plasma_cover",
+      "plasma_wafer",
+      "plasma_focus_ring"
+    ],
+    "excluded_sideset_count": 8
+  },
+  "policy": {
+    "generated_factory_type": "FVLogMolarElectrostaticDrift",
+    "interpolation": "upwind",
+    "use_element_gradient_for_potential": true,
+    "variable_template": "log_<species>",
+    "mobility_template": "<species>_mobility",
+    "potential": "potential",
+    "carrier": "carrier_one",
+    "charge_numbers": {
+      "O2p": 1,
+      "Om": -1,
+      "Op": 1
+    },
+    "wall_sidesets_source": "JSON drift_diffusion_boundaries[type in {FVFunctorNeumannBC,FVLogMolarDielectricFluxBC} and bc.variable==log_species]",
+    "wall_exclusion_policy": "DDContinuityEq iterates ChemistryData::boundaries, inserts mesh_boundaries into std::set<BoundaryName> and passes sorted deduplicated boundaries_to_avoid to each drift kernel.",
+    "wall_group_to_type": {
+      "inlet outlet": "FVFunctorNeumannBC",
+      "plasma_electrode plasma_metal plasma_right": "FVFunctorNeumannBC",
+      "plasma_cover": "FVLogMolarDielectricFluxBC",
+      "plasma_wafer": "FVLogMolarDielectricFluxBC",
+      "plasma_focus_ring": "FVLogMolarDielectricFluxBC"
+    },
+    "excluded_sidesets_per_ion": [
+      "inlet",
+      "outlet",
+      "plasma_electrode",
+      "plasma_metal",
+      "plasma_right",
+      "plasma_cover",
+      "plasma_wafer",
+      "plasma_focus_ring"
+    ],
+    "migration_smoothing_width": {
+      "specified_in": "[Continuity] migration_smoothing_width=0.001",
+      "units": "V/m",
+      "value": 0.001,
+      "consumer": "Chemistry.C generated Ion Wall Flux Material migration_gate_smoothing_width",
+      "not_a_parameter_of": "FVLogMolarElectrostaticDrift",
+      "Cxx_input_rejection": "Negative or nonfinite values rejected; 0 means hard outward-gate max(x,0), >0 enables smoothing"
+    },
+    "wall_gradient": {
+      "specified_in": "[Plasmas] wall_gradient=adjacent_element",
+      "consumer": "Chemistry.C Ion Wall Flux Material use_element_gradient_for_potential=true",
+      "drift_gradient_separate": "DDContinuityEq FVLogMolarElectrostaticDrift use_element_gradient_for_potential=true"
+    },
+    "json_override_rejections": [
+      "root boundaries_to_avoid forbidden",
+      "root or species migration_smoothing_width forbidden"
+    ]
+  },
+  "source_code": {
+    "DDContinuityEq": {
+      "path": "physics_app/src/physics/plasma/DDContinuityEq.C",
+      "git_blob_sha1": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+    },
+    "Chemistry": {
+      "path": "physics_app/src/physics/plasma/Chemistry.C",
+      "git_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330"
+    }
+  },
+  "cases": {
+    "417": {
+      "status": "PASS_SOURCE_AND_P3X_STAGE_STATIC_DRIFT_POLICY__NATIVE_HOLD",
+      "p3x_stage_actual_input_file_sha256_verified": "11/11",
+      "exact_file_sha256_locator": "GitHub Actions Artifact #14407651361, t6-receipt/p4-t6-drift-policy.json, cases.417.layers[*].sha256",
+      "p3x_staged_newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "p3x_staged_continuity_overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "original_native_ion_drift_remaining": 0,
+      "expected_physics_generated_drift_count": 3,
+      "expected_generated_names": [
+        "O2p_drift",
+        "Om_drift",
+        "Op_drift"
+      ],
+      "expected_generated_variables": [
+        "log_O2p",
+        "log_Om",
+        "log_Op"
+      ],
+      "interpolation": "upwind",
+      "use_element_gradient_for_potential": true,
+      "potential": "potential",
+      "carrier": "carrier_one",
+      "migration_smoothing_width_V_per_m": 0.001,
+      "wall_gradient": "adjacent_element",
+      "boundaries_to_avoid_each_ion": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right",
+        "plasma_cover",
+        "plasma_wafer",
+        "plasma_focus_ring"
+      ],
+      "boundaries_to_avoid_count_each_ion": 8,
+      "dynamic_factory_inventory": "NOT_RUN",
+      "dynamic_wall_flux_values": "NOT_RUN"
+    },
+    "941": {
+      "status": "PASS_SOURCE_AND_P3X_STAGE_STATIC_DRIFT_POLICY__NATIVE_HOLD",
+      "p3x_stage_actual_input_file_sha256_verified": "11/11",
+      "exact_file_sha256_locator": "GitHub Actions Artifact #14407651361, t6-receipt/p4-t6-drift-policy.json, cases.941.layers[*].sha256",
+      "p3x_staged_newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "p3x_staged_continuity_overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "original_native_ion_drift_remaining": 0,
+      "expected_physics_generated_drift_count": 3,
+      "expected_generated_names": [
+        "O2p_drift",
+        "Om_drift",
+        "Op_drift"
+      ],
+      "expected_generated_variables": [
+        "log_O2p",
+        "log_Om",
+        "log_Op"
+      ],
+      "interpolation": "upwind",
+      "use_element_gradient_for_potential": true,
+      "potential": "potential",
+      "carrier": "carrier_one",
+      "migration_smoothing_width_V_per_m": 0.001,
+      "wall_gradient": "adjacent_element",
+      "boundaries_to_avoid_each_ion": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right",
+        "plasma_cover",
+        "plasma_wafer",
+        "plasma_focus_ring"
+      ],
+      "boundaries_to_avoid_count_each_ion": 8,
+      "dynamic_factory_inventory": "NOT_RUN",
+      "dynamic_wall_flux_values": "NOT_RUN"
+    }
+  },
+  "independent_verification": {
+    "run_id": 44259015411,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44259015411",
+    "job_id": 134647539302,
+    "conclusion": "SUCCESS",
+    "artifact_id": 14407651361,
+    "artifact_name": "issue670-p4-t6-44259015411-1",
+    "artifact_digest": "sha256:b8483d12bf4b8cb39b21f0163fb9ceaaefecd48541553b9175d9010166672688",
+    "artifact_receipt_file": "t6-receipt/p4-t6-drift-policy.json",
+    "stage_upstream_CI": 44257739203,
+    "stage_upstream_artifact": 14406746397,
+    "stage_upstream_zip_digest": "sha256:592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "method": "Exact current-head checkout + artifact downloaded from prior P3-X run; independent SHA256 of all 22 staged .i bytes matched actual stage receipt; independently SHA256 original C0/three Native Drift blocks; typed FV Kernel parser and 0 old owner check; current JSON/overlay byte hashes checked, C++ settings/field mappings checked; negative mutations.",
+    "negative_controls_rejected": 11,
+    "negative_controls_total": 11,
+    "negative_classes": [
+      "charge sign",
+      "missing wall",
+      "wrong wall factory",
+      "unexpected wall group",
+      "forbidden JSON boundaries override",
+      "forbidden JSON smoothing override",
+      "wrong fvm selection",
+      "negative smoothing value",
+      "wrong wall gradient",
+      "wrong potential",
+      "disabled generation"
+    ]
+  },
+  "unresolved": [
+    "Native P2/PhysicsApp real FV Kernel TheWarehouse count for generated O2p_drift, Om_drift, Op_drift not run.",
+    "No numerical flux/gradient and migration gate evaluation at actual wall faces.",
+    "P4-X integrator must re-pin all 35 work slots, preserve Poisson, wall flux, current and diagnostics aliases, and compare actual new source and stage SHA.",
+    "P3-X stage artifact originates earlier pin and must not be promoted to current PR665 native execution evidence."
+  ],
+  "next_gate": "P4-X bounded single-writer source integration and P5 real Native P2 Warehouse acceptance, not science P4",
+  "mutations": {
+    "Original_10layer_or_ZIP": false,
+    "PR665": false,
+    "main": false,
+    "private_rate_bytes_read": false,
+    "temporary_workflow": "REMOVED_AFTER_SUCCESS",
+    "worker_branch_only_receipt": true
+  },
+  "Native_P2": "NOT_RUN",
+  "Native_P3": "NOT_RUN",
+  "Native_P4": "NOT_RUN",
+  "SCIENCE": "HOLD"
+}
