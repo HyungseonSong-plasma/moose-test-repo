@@ -85,8 +85,17 @@ def audit_raw_wall_sources(raw_layers:dict[str,bytes])->tuple[dict,dict]:
         # physical fields MUST remain unchanged: do not inject new constants.
         required={"type":"IonWallFluxMaterial","species_id":id,
                   "ion_number_density":density,"potential":"potential",
-                  "mobility":mobility,"charge_number":str(charge),
+                  "charge_number":str(charge),
                   "molar_mass":mass,"block":"plasma"}
+        # Public D original manual ion coefficient producers and New-only
+        # canonical constants are independent named aliases. The source
+        # material retains its actual unmodified mobility Functor reference.
+        original_mobility={
+            "O2p":"ion_mobility",
+            "Om":"negative_ion_mobility",
+            "Op":"atomic_positive_ion_mobility"}
+        if p.get("mobility") not in (mobility,original_mobility[id]):
+            fail("UNRECOGNIZED_WALL_MOBILITY_SOURCE_"+id)
         wrong={k:(p.get(k),expected) for k,expected in required.items()
                if p.get(k)!=expected}
         if wrong:
