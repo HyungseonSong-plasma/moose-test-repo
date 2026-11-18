@@ -1,0 +1,307 @@
+{
+  "schema": "issue670.p4_c5.electron_wall_current.source_bound.v1",
+  "task_id": "P4-C5",
+  "issue": 670,
+  "source_pr": 665,
+  "pr_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+  "worker_branch": "issue670-p4-c5-electron-current-20261118",
+  "verdict": "HOLD_DUPLICATE_CURRENT_PRODUCERS_IN_NEWONLY_SOURCE__ELECTRON_WALL_HANDOFF_STATIC_PASS__NATIVE_NOT_RUN",
+  "evidence_class": "INDEPENDENT_SOURCE_ONLY_ZIP_FILE_BLOCK_SHA_AND_CPP_CONTRACT_AUDIT",
+  "source_pins": {
+    "historical_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "current_pr_665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "artifacts": [
+      {
+        "stage": "P1-0",
+        "run_id": 44182628032,
+        "artifact_id": 14372278070,
+        "zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+      },
+      {
+        "stage": "P2 New-only",
+        "run_id": 44199587771,
+        "artifact_id": 14380831538,
+        "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683"
+      },
+      {
+        "stage": "P3-X",
+        "run_id": 44256823392,
+        "artifact_id": 14405784430,
+        "zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6"
+      }
+    ]
+  },
+  "audit_method": "Downloaded all three CI ZIP archives. Independently SHA-256 rehashed archives, each case's 11/11 staged input bytes for all three stages against immutable P1 and stage receipts (66/66 comparisons), parsed C0's exact [FunctorMaterials], [Kernels] and [Postprocessors] blocks, and rehashed retained surface-current owner and consumer byte spans. Inspected exact-head DDEnergyEq/Chemistry/ESWallFluxMaterial source. No Native execution or new workflow dispatch.",
+  "cases": {
+    "417": {
+      "case_id": "S6-417",
+      "source_layer": 1,
+      "layer_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "layer_sha256_by_stage": {
+        "P1": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "P2": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+        "P3-X": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+      },
+      "checked_layer_files_each_stage": 11,
+      "checked_file_SHA_passes": 33,
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "json_ion_surface_current": {
+        "electron_wall_number_flux": "e_wall_number_flux"
+      },
+      "json_electron_boundary_objects": 8,
+      "newonly_layer11_ion_fvm_selection": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "newonly_layer11_electron_fem_selection": [
+        "e"
+      ],
+      "legacy_e_wall_material_P1_P2_count": 1,
+      "legacy_e_wall_material_P3X_count": 0,
+      "legacy_e_wall_material_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "retained_c0_current_materials": [
+        {
+          "name": "cover_surface_current",
+          "factory": "ADParsedFunctorMaterial",
+          "property_name": "cover_net_surface_current_density",
+          "block_sha256": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+          "functor_names": "O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux",
+          "functor_symbols": "gi gop gm ge",
+          "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+          "units": "A/m^2",
+          "status": "RETAINED_UNCHANGED_P1_P2_P3X"
+        },
+        {
+          "name": "wafer_surface_current",
+          "factory": "ADParsedFunctorMaterial",
+          "property_name": "wafer_net_surface_current_density",
+          "block_sha256": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+          "functor_names": "O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux",
+          "functor_symbols": "gi gop gm ge",
+          "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+          "units": "A/m^2",
+          "status": "RETAINED_UNCHANGED_P1_P2_P3X"
+        },
+        {
+          "name": "focus_ring_surface_current",
+          "factory": "ADParsedFunctorMaterial",
+          "property_name": "focus_ring_net_surface_current_density",
+          "block_sha256": "b7f8870d2c6b4431fc0dff3fa90e158b64edfa5e7f0f1f68371ffc570fe442a2",
+          "functor_names": "O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux",
+          "functor_symbols": "gi gop gm ge",
+          "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+          "units": "A/m^2",
+          "status": "RETAINED_UNCHANGED_P1_P2_P3X"
+        }
+      ],
+      "retained_sigma_consumers": [
+        {
+          "name": "sigma_surface_current",
+          "surface_current_density": "cover_net_surface_current_density",
+          "block_sha256": "974e11b136ae11dc234af36a4fe27359116b54a53f8c3bae3ecaa545acc49fb5"
+        },
+        {
+          "name": "sigma_wafer_surface_current",
+          "surface_current_density": "wafer_net_surface_current_density",
+          "block_sha256": "574479001966e2977ff6086325241a41e637952312cc2457e22d91f0a363835f"
+        },
+        {
+          "name": "sigma_focus_ring_surface_current",
+          "surface_current_density": "focus_ring_net_surface_current_density",
+          "block_sha256": "cfc0a9a018a39451890da56837c77b98f3f850f724f634244cf95ad0411e3470"
+        }
+      ],
+      "retained_postprocessors": [
+        {
+          "name": "cover_net_surface_current",
+          "functor": "cover_net_surface_current_density",
+          "block_sha256": "00d4e6ae5c416e06de754b3c50bad9067a2f558e76ad5bd119542f4a3d55b5d1"
+        },
+        {
+          "name": "wafer_net_surface_current",
+          "functor": "wafer_net_surface_current_density",
+          "block_sha256": "9c2910dff2567051c16cb3c97c15e8036b289feefc9721d00444a4d951f1cc84"
+        },
+        {
+          "name": "focus_ring_net_surface_current",
+          "functor": "focus_ring_net_surface_current_density",
+          "block_sha256": "cbce750f35cf282791089d526e02767488e63f4f200728c1e49c68f8be570372"
+        }
+      ]
+    },
+    "941": {
+      "case_id": "S6-941",
+      "source_layer": 1,
+      "layer_path": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+      "layer_sha256_by_stage": {
+        "P1": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9",
+        "P2": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+        "P3-X": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a"
+      },
+      "checked_layer_files_each_stage": 11,
+      "checked_file_SHA_passes": 33,
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "json_ion_surface_current": {
+        "electron_wall_number_flux": "e_wall_number_flux"
+      },
+      "json_electron_boundary_objects": 8,
+      "newonly_layer11_ion_fvm_selection": [
+        "O2p",
+        "Om",
+        "Op"
+      ],
+      "newonly_layer11_electron_fem_selection": [
+        "e"
+      ],
+      "legacy_e_wall_material_P1_P2_count": 1,
+      "legacy_e_wall_material_P3X_count": 0,
+      "legacy_e_wall_material_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "retained_c0_current_materials": [
+        {
+          "name": "cover_surface_current",
+          "factory": "ADParsedFunctorMaterial",
+          "property_name": "cover_net_surface_current_density",
+          "block_sha256": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+          "functor_names": "O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux",
+          "functor_symbols": "gi gop gm ge",
+          "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+          "units": "A/m^2",
+          "status": "RETAINED_UNCHANGED_P1_P2_P3X"
+        },
+        {
+          "name": "wafer_surface_current",
+          "factory": "ADParsedFunctorMaterial",
+          "property_name": "wafer_net_surface_current_density",
+          "block_sha256": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+          "functor_names": "O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux",
+          "functor_symbols": "gi gop gm ge",
+          "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+          "units": "A/m^2",
+          "status": "RETAINED_UNCHANGED_P1_P2_P3X"
+        },
+        {
+          "name": "focus_ring_surface_current",
+          "factory": "ADParsedFunctorMaterial",
+          "property_name": "focus_ring_net_surface_current_density",
+          "block_sha256": "b7f8870d2c6b4431fc0dff3fa90e158b64edfa5e7f0f1f68371ffc570fe442a2",
+          "functor_names": "O2p_wall_number_flux Op_wall_number_flux Om_wall_number_flux e_wall_number_flux",
+          "functor_symbols": "gi gop gm ge",
+          "expression": "1.602176634e-19*(gi+gop-gm-ge)",
+          "units": "A/m^2",
+          "status": "RETAINED_UNCHANGED_P1_P2_P3X"
+        }
+      ],
+      "retained_sigma_consumers": [
+        {
+          "name": "sigma_surface_current",
+          "surface_current_density": "cover_net_surface_current_density",
+          "block_sha256": "974e11b136ae11dc234af36a4fe27359116b54a53f8c3bae3ecaa545acc49fb5"
+        },
+        {
+          "name": "sigma_wafer_surface_current",
+          "surface_current_density": "wafer_net_surface_current_density",
+          "block_sha256": "574479001966e2977ff6086325241a41e637952312cc2457e22d91f0a363835f"
+        },
+        {
+          "name": "sigma_focus_ring_surface_current",
+          "surface_current_density": "focus_ring_net_surface_current_density",
+          "block_sha256": "cfc0a9a018a39451890da56837c77b98f3f850f724f634244cf95ad0411e3470"
+        }
+      ],
+      "retained_postprocessors": [
+        {
+          "name": "cover_net_surface_current",
+          "functor": "cover_net_surface_current_density",
+          "block_sha256": "00d4e6ae5c416e06de754b3c50bad9067a2f558e76ad5bd119542f4a3d55b5d1"
+        },
+        {
+          "name": "wafer_net_surface_current",
+          "functor": "wafer_net_surface_current_density",
+          "block_sha256": "9c2910dff2567051c16cb3c97c15e8036b289feefc9721d00444a4d951f1cc84"
+        },
+        {
+          "name": "focus_ring_net_surface_current",
+          "functor": "focus_ring_net_surface_current_density",
+          "block_sha256": "cbce750f35cf282791089d526e02767488e63f4f200728c1e49c68f8be570372"
+        }
+      ]
+    }
+  },
+  "electron_handoff": {
+    "historical_owner": "[FunctorMaterials]/electron_wall_flux ESWallFluxMaterial species_id=e -> e_wall_number_flux",
+    "historical_owner_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+    "historical_owner_status": "ABSENT_IN_P3X_SOURCE_BOTH_CASES",
+    "new_source_owner": "DDEnergyEq::addFunctorMaterials -> ESWallFluxMaterial species_id=e (DDEnergyEq.C + ESWallFluxMaterial.C)",
+    "new_source_outputs": [
+      "n_e_physical",
+      "e_energy_eV",
+      "e_wall_number_flux"
+    ],
+    "new_source_single_owner_status": "ONLY_ONE_INTENDED_CPP_GENERATOR; NOT_INSTANTIATED",
+    "electron_FEM_BCs_expected": {
+      "particle": 4,
+      "energy": 4,
+      "total": 8,
+      "wall_number_flux": "e_wall_number_flux",
+      "energy_mean_energy": "e_energy_eV"
+    },
+    "cpp_source_sha": {
+      "DDEnergyEq.C": "e0c48c8914e4692ffdbde2ae2898f64d8bbbbbab",
+      "Chemistry.C": "045de080e3d836d75495b1749d75d5d3deea2330",
+      "ESWallFluxMaterial.C": "7f0981608dad18e896b36af8fc8248211da381c6",
+      "retire_s6_electron_newonly_owners.py": "10e8edc07946b9cf6ea9602c3c9f7fc80dae8061"
+    }
+  },
+  "current_collision": {
+    "kind": "STATIC_DUPLICATE_MOOSE_OBJECT_NAME_AND_FUNCTOR_PROPERTY_IN_PROPOSED_NEWONLY",
+    "count_per_case": 3,
+    "total_cases": 2,
+    "reason": "P3-X leaves each C0 [FunctorMaterials] cover/wafer/focus_ring_surface_current in both final 11-layer cases. Chemistry.C PlasmasAction::act on C2 requested/selected fvm_species O2p Om Op unconditionally adds the same named ADParsedFunctorMaterial objects publishing identical ${side}_net_surface_current_density outputs. JSON ion_surface_current is configured and DDEnergyEq supplies the named electron flux source. Source contains 1 legacy input owner + 1 generated owner per surface; no actual C++ Warehouse collision asserted.",
+    "collision_pairs": [
+      {
+        "input_object": "[FunctorMaterials]/cover_surface_current",
+        "generated_object": "PlasmasAction::act -> cover_surface_current",
+        "property_name": "cover_net_surface_current_density",
+        "input_block_sha256": "acaa407f7dafae72a7b83f0eaefbdcbd29a292e1cb0a8275293acdb2c4bdba0f",
+        "sign_expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "candidate_producers_on_native_instantiation": 2
+      },
+      {
+        "input_object": "[FunctorMaterials]/wafer_surface_current",
+        "generated_object": "PlasmasAction::act -> wafer_surface_current",
+        "property_name": "wafer_net_surface_current_density",
+        "input_block_sha256": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+        "sign_expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "candidate_producers_on_native_instantiation": 2
+      },
+      {
+        "input_object": "[FunctorMaterials]/focus_ring_surface_current",
+        "generated_object": "PlasmasAction::act -> focus_ring_surface_current",
+        "property_name": "focus_ring_net_surface_current_density",
+        "input_block_sha256": "b7f8870d2c6b4431fc0dff3fa90e158b64edfa5e7f0f1f68371ffc570fe442a2",
+        "sign_expression": "1.602176634e-19*(gi+gop-gm-ge)",
+        "candidate_producers_on_native_instantiation": 2
+      }
+    ],
+    "downstream_preservation": "Sigma kernels and net-surface-current postprocessors still consume these three outputs; altering current names/signs would break existing consumers.",
+    "source_only_observed_owner_counts": {
+      "old_electron_wall_flux": 0,
+      "retained_current_materials": 3,
+      "generated_current_materials_source_defined": 3
+    },
+    "recommended_P4X_disposition": "Single-writer P4-X: SHA-guarded retire exactly 3 retained C0 current producer blocks in disposable New-only Scratch after verifying each block/file SHA; preserve sigma and diagnostic consumers and all original source layers. Independently verify generated 3-only static targets and fail-closed negatives for missing, duplicate, sign and e_wall functor alias. Do not change shared C++/JSON or unilaterally retire consumer owners in this worker."
+  },
+  "gates": {
+    "P4_C5_electron_handoff": "PASS_SOURCE_STATIC",
+    "P4_C5_duplicate_current_producer": "HOLD_CONCRETE_SOURCE_COLLISION",
+    "P4_X": "HOLD_SOURCE_OWNER_CUTOVER_PENDING",
+    "P5_cpp_warehouse_late_binding": "NOT_RUN",
+    "native_P2": "NOT_RUN",
+    "native_P3": "NOT_RUN",
+    "native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD",
+    "main_merge": "NOT_RUN"
+  },
+  "security": "No private rate bytes accessed or recorded; no original 10-layer/ZIP, current main or PR665 mutations; no production Native or scientific acceptance."
+}
