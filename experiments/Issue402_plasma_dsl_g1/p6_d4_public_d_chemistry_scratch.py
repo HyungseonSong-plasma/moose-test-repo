@@ -12,7 +12,13 @@ import re
 
 PILOT=Path(__file__).resolve().parent
 CHEM=PILOT/"chemistry"
-RATE_TABLE_SHA="35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
+RATE_TABLE_AUTHORITY={
+    "prepared42": ("35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+                   42, (1.658212908,22.3312233)),
+    "original100": ("994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+                    100, (1.40991,22.1378)),
+}
+RATE_TABLE_SHA=RATE_TABLE_AUTHORITY["prepared42"][0]  # Historical 42row contract unchanged
 ARCHIVED_MECHANISM_BLOB={"417":"87ed65fb1fda5102616c8b1095ca296125ca2a89",
                          "941":"d7fc036054fa1c1eb025d4edae89eeb96a5f526f"}
 EXPECTED_COMMON={"EI-02","EI-17","EI-415","EI-401","EI-407","EI-2069","H25"}
@@ -39,7 +45,8 @@ def load_python(filename:Path,module_name:str):
     spec.loader.exec_module(obj)
     return obj
 
-def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
+def plan(chem:Path,ordered:list[str],case:str,
+         table_authority:str='prepared42')->tuple[dict[Path,bytes],dict]:
     """Plan all exact-source changes in memory, no on-disk edits before gates."""
     if case not in ("417","941") or len(ordered)!=11 or Path(ordered[-1]).name!="migrated_continuity.i":
         raise ValueError("P6_D4_CASE_OR_11_LAYER_MISMATCH")
@@ -63,8 +70,17 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
         if actual.get("charge_number")!=charge or not isinstance(actual.get("initial_number_density"),(int,float)):
             raise ValueError("P6_D4_DENSITY_OR_CHARGE_CHANGED_"+id)
     table=(chem/"../Issue91_real_qvt_r3/r3_e0/electron_moments.txt").resolve()
-    if not table.is_file() or table.is_symlink() or sha(table.read_bytes())!=RATE_TABLE_SHA:
-        raise ValueError("P6_D4_PREPARED42_SHA_MISMATCH")
+    if table_authority not in RATE_TABLE_AUTHORITY:
+        raise ValueError("P6_D4_UNKNOWN_LOOKUP_AUTHORITY")
+    expected_sha, rows, grid=RATE_TABLE_AUTHORITY[table_authority]
+    if not table.is_file() or table.is_symlink() or sha(table.read_bytes())!=expected_sha:
+        raise ValueError("P6_D4_"+table_authority.upper()+"_SHA_MISMATCH")
+    data=[tuple(map(float,line.split())) for line in table.read_text().splitlines()
+          if line.strip() and not line.lstrip().startswith("#")]
+    if (len(data)!=rows or any(len(line)!=3 for line in data)
+            or any(data[i][0]>=data[i+1][0] for i in range(len(data)-1))
+            or (data[0][0],data[-1][0])!=grid):
+        raise ValueError("P6_D4_"+table_authority.upper()+"_LOOKUP_GRID_MISMATCH")
     e=document["species"]["e"]
     for k,v in {"transport_coef":"lookup","table_units":"reduced",
                 "pressure":"p","gas_temperature":"T_g_fixed",
@@ -166,9 +182,13 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
     changes[out]=(json.dumps(doc,indent=2,sort_keys=True)+"\n").encode("utf-8")
     return changes,{
         "schema":"issue672.p6_d4.disposable_real_chemistry_source_handoff.pilot.v1",
-        "mode":"EXISTING_PUBLIC_RESEARCH_PREPARED_42ROW",
+        "mode":("HISTORICAL_ORIGINAL_100ROW_COMPATIBILITY" if table_authority=="original100"
+                else "EXISTING_PUBLIC_RESEARCH_PREPARED_42ROW"),
+        "table_authority":table_authority,
+        "table_rows":rows,
+        "table_source_SHA256":expected_sha,
         "case":case,
-        "electron_42_row_sha256":RATE_TABLE_SHA,
+        "electron_lookup_sha256":expected_sha,
         "real_mechanism_source":str(original.relative_to(PILOT)),
         "real_mechanism_sha256":sha(rawmechanism),
         "species_count":len(doc["species"]),"reaction_count":len(reactions),
@@ -193,8 +213,8 @@ def plan(chem:Path,ordered:list[str],case:str)->tuple[dict[Path,bytes],dict]:
         "P3":"NOT_RUN","P4":"NOT_RUN","science":"SCIENCE_HOLD"
     }
 
-def apply(chem:Path,ordered:list[str],case:str)->dict:
-    changes,receipt=plan(chem,ordered,case)
+def apply(chem:Path,ordered:list[str],case:str,table_authority:str="prepared42")->dict:
+    changes,receipt=plan(chem,ordered,case,table_authority=table_authority)
     # The only mutations are validated disposable scratch writes.
     for p,b in changes.items():
         p.write_bytes(b)
