@@ -111,9 +111,13 @@ jobs:
           print('HISTORICAL_100ROW_EXACT_BINARY',report['binary_sha256'])
           PY
           test -f control/physics_app/lib/libphysics-opt.so.0
-          test -f control/physics_app/lib/libphysics_test-opt.so.0
-          tar --dereference -czf review_100row/real_elf_libraries.tar.gz -C control/physics_app \
-            physics-opt lib/libphysics-opt.so.0 lib/libphysics_test-opt.so.0
+          bundle=(physics-opt lib/libphysics-opt.so.0)
+          if test -f control/physics_app/test/lib/libphysics_test-opt.so.0; then
+            bundle+=(test/lib/libphysics_test-opt.so.0)
+          elif test -f control/physics_app/lib/libphysics_test-opt.so.0; then
+            bundle+=(lib/libphysics_test-opt.so.0)
+          fi
+          tar --dereference -czf review_100row/real_elf_libraries.tar.gz -C control/physics_app "${bundle[@]}"
           sha256sum review_100row/real_elf_libraries.tar.gz > review_100row/real_elf_libraries.sha256
           cp control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json review_100row/native_p1_identity.json
       - name: Execute exact Historical 100-row Public B/D S6-417 and 941 Native P2
