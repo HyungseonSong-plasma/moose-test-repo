@@ -1,0 +1,463 @@
+{
+  "schema": "issue673.p7_handoff.c_d_c3_source_ci_20261118.v1",
+  "status": "PASS_HANDOFF_EVIDENCE_UPDATE__P7_FINAL_NOT_RUN__P6_X_KEEP_HOLD",
+  "updated_date": "2026-11-18",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr665": 665,
+    "head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "tree": "2720fa5272a5fa98001e8e444331397723fe7ccb",
+    "main": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "state": "OPEN_DRAFT",
+    "W1_actual_build_source": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "commit_gap": 4,
+    "changed_files": [
+      ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "tests/test_issue633_newonly_run_species_schema.py"
+    ],
+    "production_cpp_json_and_build_lock_git_blobs_identical": true,
+    "commits_not_equal": true
+  },
+  "C": {
+    "C": "PASS_EVIDENCE_AND_ROOT_CAUSE",
+    "ARCH_HYBRID": "KEEP_HOLD",
+    "negative_controls": "4/4",
+    "reason": "ni_time legacy Native vs generated Physics selected ion owner collision, canonical P05 and historical precheck are separate fail-closed guards",
+    "receipt": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/e08c66af57b69327c555f9bc159647b633361991/reports/issue672/p6-x-c-evidence-root-cause-handoff-20261118.json"
+  },
+  "D": {
+    "typed_registration": "PASS_TYPED_NAME_FACTORY_32_OF_32_PER_CASE",
+    "per_case": {
+      "417": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "FEMElectronBC": 8
+      },
+      "941": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "FEMElectronBC": 8
+      }
+    },
+    "run": 44340416703,
+    "artifact_id": 14444615886,
+    "ZIP_sha256": "4910a1df8547b796be19623b903b3932640ec64a9facf7770494fa6da3870841",
+    "actual_registration_post_add": true,
+    "original_W1_unmodified": true,
+    "ELF_sha256": "1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa",
+    "trace_events_per_case": 77,
+    "name_factory_count_per_case": 32,
+    "raw_trace_stdout_in_artifact": false,
+    "runtime_parameter_memory_dump": false,
+    "strict_520_binary_rebuilt": false,
+    "independent_zip_rehash_current_turn": "PASS_SHA_CRC",
+    "evidence_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9b7a55240880a178aa102483700746d7cd464db7/reports/issue671/p5x-w1-real-typed-12k-12fvbc-8fembc-417-941-receipt.json"
+  },
+  "ci": {
+    "baseline_520": {
+      "run": 44330849818,
+      "head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "validate": "PASS",
+      "workflow": "FAIL",
+      "failed_jobs": [
+        "plasma_native_regression",
+        "Issue541 ARCH S6 417+941 hybrid native P1/P2 exact-source (no P3)"
+      ],
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330849818"
+    },
+    "C3_candidate": {
+      "run": 44339607332,
+      "head": "6920d6b025200815b721fc8b08eebbf10e735253",
+      "base_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "changed_files": [
+        ".github/workflows/ci.yml",
+        "ci/workflow_templates/general-ci.yml",
+        "ci/guards/p6_ci_workflow_safety_guard.py",
+        "tests/test_issue672_p6_ci_workflow_safety.py"
+      ],
+      "ci_template_git_blob": "8313e539c2e7cfa7cb25973ad62fbce1524db19d",
+      "source_guard_checks": "PASS_IN_VALIDATE",
+      "validate": "PASS_1569_13SKIPPED",
+      "workflow": "FAIL",
+      "failed_jobs": [
+        "plasma_native_regression",
+        "Issue541 ARCH S6 417+941 hybrid native P1/P2 exact-source (no P3)"
+      ],
+      "integrated_into_pr665": false,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44339607332"
+    }
+  },
+  "head_compatibility": {
+    "W1_build_source": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "latest_pr_head": "52067302d16074592503d0ef6b903cc344f55a08",
+    "source_blob_equivalence": "PASS_FOR_AUDITED_PRODUCTION_CPP_JSON_STAGER_LOCK",
+    "strict_commit_identity": "FAIL_NOT_EQUAL",
+    "postmerge_520_native_run": 44331086356,
+    "postmerge_417_941": "PASS_WITH_OLDER_W1",
+    "postmerge_binary_build_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "strict_exact_latest_HEAD_ELF": "NOT_RUN",
+    "prohibited_inference": "Do not relabel W1 build source 74a2 as 5206 exact-head build."
+  },
+  "gates": [
+    {
+      "gate": "P1_ORIGINAL_AND_11_LAYER",
+      "state": "PASS",
+      "decision_code": "PASS_SOURCE_SHA",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "historical 10-file per case vs converted P1 11-file per case, all hashes independently checked; not byte-equal history",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "P2_ION_26_TO_0",
+      "state": "PASS",
+      "decision_code": "PASS_SOURCE_RETIREMENT",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "417/941 each original native ion 26 removed in dedicated New-only stage, source/manifest SHA",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "P3X_ELECTRON_10_TO_0",
+      "state": "PASS",
+      "decision_code": "PASS_SOURCE_RETIREMENT",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "417/941 8 FEM BC and 2 electron FunctorMaterials retired; CI P3X two ZIPs 179/179 same members",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "P4X_SEVEN_PROVIDER_SOURCE",
+      "state": "PASS",
+      "decision_code": "PASS_SOURCE_SEVEN_CONFLICTS",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "six old wall/current materials removed plus carrier-only constants; 35 full consumer acceptance separately pending",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "P4X_ALL_35_CONSUMERS",
+      "state": "KEEP_HOLD",
+      "decision_code": "KEEP_HOLD_FULL_INTEGRATION",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "Full P4-X source/consumer and science closure not generally accepted",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json"
+      ],
+      "required_next": "finish bounded consumer verification and independent final integration"
+    },
+    {
+      "gate": "HEAD_520_SOURCE_LOCK",
+      "state": "PASS",
+      "decision_code": "PASS_EXACT_HEAD_AND_BLOB_DELTA",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "PR665 HEAD 5206730 four commits beyond W1 source 74a2b0f, changed only Ion-FVM YAML and New-only schema tests; 10/12 audited blobs unchanged, Physics C++/JSON/stager/lock/CI parity unchanged",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/665"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "OLDER_W1_SOURCE_TO_HEAD_COMPATIBILITY",
+      "state": "PASS",
+      "decision_code": "PASS_STATIC_PRODUCTION_BLOB_EQUIVALENCE",
+      "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "scope": "One build/ELF and two libraries from 74a2b0f, production C++ and JSON file blobs identical at 5206730; compatibility evidence is not exact-commit binary identity",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44319316180",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "LATEST_HEAD_EXACT_BUILD_AND_ELF",
+      "state": "NOT_RUN",
+      "decision_code": "NOT_RUN_SAME_COMMIT_ELF_BUILD",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "No new one-build PhysicsApp ELF and two app libs produced with source build identity equal to 52067302; old W1 actual ELF SHA 1bdc85c6... remains 74a2b0f source",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44319316180",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44331086356"
+      ],
+      "required_next": "build or formally approve source-equivalence substitution under explicit P7 contract"
+    },
+    {
+      "gate": "LATEST_520_SOURCE_NATIVE_CHECK_INPUT",
+      "state": "PASS",
+      "decision_code": "PASS_417_941_P2_USING_OLDER_EQUIVALENT_ELF",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "Run #44331086356 checked out 52067302, 417/941 exit 0, reused old W1 ELF+app libs from 74a2b0f; not strict same-head build",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44331086356"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "P5_SAME_W1_NATIVE_AND_N1_N8",
+      "state": "PASS",
+      "decision_code": "PASS_2_CASES_AND_16_NEGATIVES_OLDER_SOURCE",
+      "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "scope": "417/941 --check-input clean exit0 and 16/16 expected failure controls, same W1 ELF, original tmpfs cleanup; older source 74a2b0f",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44322557957",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9b7a55240880a178aa102483700746d7cd464db7/reports/issue671/p5x-w1-real-typed-12k-12fvbc-8fembc-417-941-receipt.json"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "D_WAREHOUSE_TYPED_12_12_8",
+      "state": "PASS",
+      "decision_code": "PASS_TYPED_NAME_FACTORY_32_OF_32_PER_CASE",
+      "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "scope": "Real unchanged-W1 runtime registration post-add: 417/941 each 12 FVKernel+12 FVBC+8 FEM BC, 32 unique names/Factories, 77 trace events per case; native P05 exit0. Actual artifact ZIP SHA256 4910a1df8547b796be19623b903b3932640ec64a9facf7770494fa6da3870841",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9b7a55240880a178aa102483700746d7cd464db7/reports/issue671/p5x-w1-real-typed-12k-12fvbc-8fembc-417-941-receipt.json",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44340416703",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44340416703/artifacts/14444615886"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "D_RAW_WAREHOUSE_TRACE_AND_PARAMETER_BYTES",
+      "state": "KEEP_HOLD",
+      "decision_code": "HOLD_RAW_TRACE_NOT_UPLOADED",
+      "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "scope": "Artifact contains typed name/Factory list and trace SHA entries, not raw 77 trace-event bytes, full solver stdout or live runtime parameter-memory dump",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9b7a55240880a178aa102483700746d7cd464db7/reports/issue671/p5x-w1-real-typed-12k-12fvbc-8fembc-417-941-receipt.json",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/f7b01ee2602d6ef5d4a14cb80dd916c36619e348/reports/issue671/p5x-exact-w1-detailed-warehouse-observation-hold-20261118.json"
+      ],
+      "required_next": "preserve/upload trusted trace/parameter proof if required by P7 acceptance"
+    },
+    {
+      "gate": "D8_FULL_ORIGINAL_RF_BOUNDED_3NS",
+      "state": "PASS",
+      "decision_code": "PASS_3NS_BOUNDED_BOTH_CASES",
+      "source_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "scope": "actual original S6 RF/Wall/Surface Current/Poisson coupled 3ns diagnostic in separate source-bound run; not 100us science",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330414176"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "C_EVIDENCE_AND_ROOT_CAUSE",
+      "state": "PASS",
+      "decision_code": "PASS_EVIDENCE_AND_ROOT_CAUSE",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "4/4 intentional canonical log_O2p P05 ni_time and historical log_ni precheck rejections; original/history SHA, CI ELF and log custody independently verified",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/e08c66af57b69327c555f9bc159647b633361991/reports/issue672/p6-x-c-evidence-root-cause-handoff-20261118.json",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44311107973",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44338627249"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "ARCH_HYBRID",
+      "state": "KEEP_HOLD",
+      "decision_code": "KEEP_HOLD",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "Current Physics-generated 12+12 mixed with legacy Native26; modern ARCH Hybrid P05 ni_time duplicate rejects 417/941; historic PR578 100row B/D 4/4 P2 PASS only at pinned historical model",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/e08c66af57b69327c555f9bc159647b633361991/reports/issue672/p6-x-c-evidence-root-cause-handoff-20261118.json",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44324197618",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330849818"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "PUBLIC_B_HISTORICAL_P2",
+      "state": "PASS",
+      "decision_code": "PASS_LEGACY_B_ONLY",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "417/941 historic Public B 10-layer --check-input, distinct from dedicated New-only",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/6b545d7f1eeba83890184f991ce6d4786d1ea099/reports/issue672/p6-e2-lane-pass-keep-hold-p7-handoff-20261118.md",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330849818"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "PUBLIC_D_CURRENT",
+      "state": "KEEP_HOLD",
+      "decision_code": "KEEP_HOLD_D_TRANSPORT_AND_CHEMISTRY",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "Public D current 417/941 e transport/chemistry ownership and 100row vs 42row authority unresolved; independent pilots not final production",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/6b545d7f1eeba83890184f991ce6d4786d1ea099/reports/issue672/p6-e2-lane-pass-keep-hold-p7-handoff-20261118.md",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330849818",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/4ffe1d03854cb2e2415f3345affdedd7b1000e28/reports/issue672/p6-d5-public-d-original100-vs-prepared42-417-941-real-native-receipt.json"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "FLOW_CURRENT",
+      "state": "KEEP_HOLD",
+      "decision_code": "KEEP_HOLD_FLOW_NATIVE26",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "FLOW current 417 fail and 941 not run under failfast; old Hybrid native26 versus generated24 and PR684 not accepted",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330850055",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/6b545d7f1eeba83890184f991ce6d4786d1ea099/reports/issue672/p6-e2-lane-pass-keep-hold-p7-handoff-20261118.md"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "ION_FVM_NEWONLY_P0",
+      "state": "PASS",
+      "decision_code": "PASS_417_941_P0_ONLY",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "new source-only Ion-FVM workflow at current #665 HEAD validated both cases; no Native/science in that workflow",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330850043"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "ION_FVM_CURRENT_WORKFLOW_NATIVE_P2",
+      "state": "NOT_RUN",
+      "decision_code": "NOT_RUN_IN_SOURCE_ONLY_P0_WORKFLOW",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "Updated Ion-FVM current CI workflow no longer runs Native or 150/200 transient; historic Grounded sheath failure held as legacy reference",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330850043",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/6b545d7f1eeba83890184f991ce6d4786d1ea099/reports/issue672/p6-e2-lane-pass-keep-hold-p7-handoff-20261118.md"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "REPOSITORY_CI_BASELINE_520",
+      "state": "KEEP_HOLD",
+      "decision_code": "FAIL_WORKFLOW_VALIDATE_PASS",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "official #665 CI validate PASS, whole workflow FAIL: plasma_native_regression and ARCH Hybrid Native jobs; do not substitute past PASS",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44330849818"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "C3_CANDIDATE_TEMPLATE_GUARD",
+      "state": "PASS",
+      "decision_code": "PASS_SEPARATE_C3_PARITY_VALIDATE",
+      "source_head": "6920d6b025200815b721fc8b08eebbf10e735253",
+      "scope": "C3 four-file candidate ahead of #665 HEAD; ci.yml and generated template blob 8313e539... byte identical, validate 1569 passed/13 skipped, guard source and negative controls; separate branch not integrated",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/commit/6920d6b025200815b721fc8b08eebbf10e735253",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44339607332"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "C3_FOLLOWUP_WHOLE_REPOSITORY_CI",
+      "state": "KEEP_HOLD",
+      "decision_code": "FAIL_WORKFLOW_VALIDATE_PASS",
+      "source_head": "6920d6b025200815b721fc8b08eebbf10e735253",
+      "scope": "C3 candidate CI #44339607332 overall failure, same plasma_native_regression and ARCH Hybrid jobs failed despite validate PASS",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44339607332"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "C3_INTEGRATION_IN_PR665",
+      "state": "NOT_RUN",
+      "decision_code": "NOT_MERGED_INTO_665",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "Candidate 6920d6b is not current PR665 HEAD; source/guard/template branch is independent",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/commit/6920d6b025200815b721fc8b08eebbf10e735253",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/665"
+      ],
+      "required_next": "single-writer integration approval, commit and exact-head re-run"
+    },
+    {
+      "gate": "P6_X_OPERATIONAL_ACCEPTANCE",
+      "state": "KEEP_HOLD",
+      "decision_code": "KEEP_HOLD_P6_X",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "C evidence complete, modern ARCH remains KEEP_HOLD, D typed name/factory complete in old-source W1, CI remains failure; P6-X final lane acceptance not established",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/e08c66af57b69327c555f9bc159647b633361991/reports/issue672/p6-x-c-evidence-root-cause-handoff-20261118.json",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9b7a55240880a178aa102483700746d7cd464db7/reports/issue671/p5x-w1-real-typed-12k-12fvbc-8fembc-417-941-receipt.json",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44339607332"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "P7_HANDOFF_TABLE",
+      "state": "PASS",
+      "decision_code": "PASS_EVIDENCE_TABLE_UPDATED",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "Present machine-readable decision rows link every gate to source head, scope, and evidence URLs",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/6b545d7f1eeba83890184f991ce6d4786d1ea099/reports/issue672/p6-e2-lane-pass-keep-hold-p7-handoff-20261118.md",
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "P7_FINAL_ACCEPTANCE",
+      "state": "NOT_RUN",
+      "decision_code": "NOT_RUN_FINAL_GATE",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "P7 #673 final same-head signoff/DoD and #633 merge gate not performed",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/673"
+      ],
+      "required_next": "confirm latest HEAD/ELF exact contract and C3 approval, then formally adjudicate P7"
+    },
+    {
+      "gate": "NATIVE_P3_P4_100US_SCIENCE",
+      "state": "NOT_RUN",
+      "decision_code": "NOT_RUN_SCIENCE_HOLD",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "No authorized 100us science P3/P4 or silent long transient started as part of this handoff",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/673"
+      ],
+      "required_next": null
+    },
+    {
+      "gate": "MAIN_MERGE",
+      "state": "NOT_RUN",
+      "decision_code": "NOT_RUN_MAIN_MERGE",
+      "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+      "scope": "PR665 stays draft open, main unchanged",
+      "evidence_urls": [
+        "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/665"
+      ],
+      "required_next": null
+    }
+  ],
+  "counts": {
+    "total": 29,
+    "PASS": 15,
+    "KEEP_HOLD": 8,
+    "NOT_RUN": 6
+  },
+  "required_before_P7_final": [
+    "Explicit strict 520 build identity decision (new ELF+2 app libs or authorized source-compatibility waiver with documented scope)",
+    "Preserve typed 12+12+8 evidence but do not claim raw Warehouse parameter dump or raw event SHA readback",
+    "C3 single-writer integration and exact #665 CI rerun; lane failures visible and approved PASS/KEEP_HOLD policy",
+    "Formal Public D/FLOW/ARCH/Ion-FVM historical-vs-modern lane decisions",
+    "P5-X/P6-X bounded acceptance and P7 #673 DoD/issue handoff; no P3/P4 science or main merge without separate authorization"
+  ],
+  "provenance": {
+    "prior_E2": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/6b545d7f1eeba83890184f991ce6d4786d1ea099/reports/issue672/p6-e2-lane-pass-keep-hold-p7-handoff-20261118.md",
+    "prior_P1_P6_independent_audit": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/2793cb4216242ac16f2279a90f4ace6db9b9be9f/reports/issue672/p1-p6-independent-original-sha-artifact-audit-20261118.json",
+    "no_PR665_or_main_mutation": true,
+    "no_build_or_native_job_dispatched_by_handoff": true,
+    "artifact_byte_rehash": "typed artifact #14444615886 ZIP SHA and CRC directly recalculated; other evidence referenced by immutable receipts and verified GitHub runs"
+  }
+}
