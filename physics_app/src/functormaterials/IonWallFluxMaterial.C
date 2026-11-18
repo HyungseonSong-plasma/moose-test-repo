@@ -10,17 +10,19 @@
 
 registerMooseObject("PhysicsApp", IonWallFluxMaterial);
 
-namespace IonWallC2Detail
+namespace
 {
+// Only one IonWallFluxMaterial implementation remains. Keep helper names
+// unique across Unity translation units without a temporary C2 namespace.
 template <typename SpaceArg>
 constexpr bool
-isFaceArg()
+ionWallIsFaceArg()
 {
   return std::is_same_v<std::decay_t<SpaceArg>, Moose::FaceArg>;
 }
 
 ADReal
-outwardPositivePart(const ADReal & directed_field, const Real smoothing_width)
+ionWallOutwardPositivePart(const ADReal & directed_field, const Real smoothing_width)
 {
   if (smoothing_width <= 0.0)
     return MetaPhysicL::raw_value(directed_field) > 0.0
@@ -33,7 +35,7 @@ outwardPositivePart(const ADReal & directed_field, const Real smoothing_width)
 }
 
 RealVectorValue
-outwardNormal(const Moose::FaceArg & face)
+ionWallOutwardNormal(const Moose::FaceArg & face)
 {
   if (!face.fi)
     mooseError("IonWallFluxMaterial received a FaceArg without FaceInfo.");
@@ -61,7 +63,7 @@ outwardNormal(const Moose::FaceArg & face)
 }
 
 ADRealVectorValue
-faceElectricField(const Moose::Functor<ADReal> & potential,
+ionWallFaceElectricField(const Moose::Functor<ADReal> & potential,
                   const Moose::FaceArg & face,
                   const Moose::StateArg & state,
                   const bool use_element_gradient)
@@ -209,7 +211,7 @@ IonWallFluxMaterial::IonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!IonWallC2Detail::isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -238,18 +240,18 @@ IonWallFluxMaterial::IonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!IonWallC2Detail::isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
-          const RealVectorValue n_out = IonWallC2Detail::outwardNormal(r);
+          const RealVectorValue n_out = ionWallOutwardNormal(r);
           const ADRealVectorValue electric_field =
-              IonWallC2Detail::faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
+              ionWallFaceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal E_n = electric_field * n_out;
 
           const ADReal directed_field = _charge_number * E_n;
           const ADReal outward_drift_field =
-              IonWallC2Detail::outwardPositivePart(
+              ionWallOutwardPositivePart(
                   directed_field, _migration_gate_smoothing_width);
 
           return _ion_number_density(r, state) *
@@ -264,7 +266,7 @@ IonWallFluxMaterial::IonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!IonWallC2Detail::isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -286,13 +288,13 @@ IonWallFluxMaterial::IonWallFluxMaterial(
           const ADReal surface =
               _sticking * 0.25 * n_i * v_th;
 
-          const RealVectorValue n_out = IonWallC2Detail::outwardNormal(r);
+          const RealVectorValue n_out = ionWallOutwardNormal(r);
           const ADRealVectorValue electric_field =
-              IonWallC2Detail::faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
+              ionWallFaceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
-              IonWallC2Detail::outwardPositivePart(
+              ionWallOutwardPositivePart(
                   directed_field, _migration_gate_smoothing_width);
 
           const ADReal migration =
@@ -308,7 +310,7 @@ IonWallFluxMaterial::IonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!IonWallC2Detail::isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -338,17 +340,17 @@ IonWallFluxMaterial::IonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!IonWallC2Detail::isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
-          const RealVectorValue n_out = IonWallC2Detail::outwardNormal(r);
+          const RealVectorValue n_out = ionWallOutwardNormal(r);
           const ADRealVectorValue electric_field =
-              IonWallC2Detail::faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
+              ionWallFaceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
-              IonWallC2Detail::outwardPositivePart(
+              ionWallOutwardPositivePart(
                   directed_field, _migration_gate_smoothing_width);
 
           return _ion_number_density(r, state) *
@@ -363,7 +365,7 @@ IonWallFluxMaterial::IonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!IonWallC2Detail::isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -385,13 +387,13 @@ IonWallFluxMaterial::IonWallFluxMaterial(
           const ADReal surface =
               _sticking * 0.25 * n_i * v_th;
 
-          const RealVectorValue n_out = IonWallC2Detail::outwardNormal(r);
+          const RealVectorValue n_out = ionWallOutwardNormal(r);
           const ADRealVectorValue electric_field =
-              IonWallC2Detail::faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
+              ionWallFaceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
-              IonWallC2Detail::outwardPositivePart(
+              ionWallOutwardPositivePart(
                   directed_field, _migration_gate_smoothing_width);
 
           const ADReal migration =
