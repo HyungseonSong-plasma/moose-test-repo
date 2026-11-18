@@ -397,7 +397,7 @@ jobs:
           _first_family={"N1":"P05","N2":"P05","N3":"P05","N4":"P05",
                          "N5":"EARLY_REGISTRATION","N6":"CHEMISTRY",
                          "N7":"CHEMISTRY","N8":"CHEMISTRY"}
-          _fatal_marker=_first_re.compile(r"^\\s*(?:\\*{3}\\s*ERROR\\s*\\*{3}|ERROR:|terminate called)", _first_re.I)
+          _fatal_marker=_first_re.compile(r"^\s*(?:\*{3}\s*ERROR\s*\*{3}|ERROR:|terminate called)", _first_re.I)
           def classify_first_native_error(rc,log,test):
               """Require the expected signature inside the FIRST fatal error block only."""
               if rc==0:
@@ -408,7 +408,7 @@ jobs:
                   return False,"NO_FIRST_FATAL_MARKER","NO_FIRST_FATAL"
               start=marks[0]
               end=min(len(lines),start+45,marks[1] if len(marks)>1 else len(lines))
-              first="\\n".join(lines[start:end])
+              first="\n".join(lines[start:end])
               if test=="N5":
                   hit=("O2p_cover_dielectric" in first and
                        _first_re.search(r"duplicate|already|exists",first,_first_re.I) is not None)
@@ -418,11 +418,11 @@ jobs:
                   return False,"UNEXPECTED_FIRST_FATAL","UNMATCHED_FIRST_FATAL"
               return True,_first_family[test],"EXPECTED_FIRST_FATAL_"+test
           # P0 verifier mutation/self-tests before protected inputs are read.
-          assert classify_first_native_error(1,"*** ERROR ***\\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
-          assert classify_first_native_error(1,"*** ERROR ***\\nAn object named O2p_cover_dielectric already exists","N5")[1]=="EARLY_REGISTRATION"
-          assert classify_first_native_error(1,"*** ERROR ***\\nequation without matching reaction ID: EI-401","N6")[1]=="CHEMISTRY"
-          assert not classify_first_native_error(0,"*** ERROR ***\\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
-          assert not classify_first_native_error(1,"*** ERROR ***\\nwrong first error\\n*** ERROR ***\\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
+          assert classify_first_native_error(1,"*** ERROR ***\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
+          assert classify_first_native_error(1,"*** ERROR ***\nAn object named O2p_cover_dielectric already exists","N5")[1]=="EARLY_REGISTRATION"
+          assert classify_first_native_error(1,"*** ERROR ***\nequation without matching reaction ID: EI-401","N6")[1]=="CHEMISTRY"
+          assert not classify_first_native_error(0,"*** ERROR ***\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
+          assert not classify_first_native_error(1,"*** ERROR ***\nwrong first error\n*** ERROR ***\nP05 FV Native/Physics duplicate or unexpected owner","N1")[0]
           assert not classify_first_native_error(1,"P05 FV Native/Physics duplicate or unexpected owner","N1")[0]
           receipt={"schema":"issue671.p05.n1_n8.native_s6.v1","source_head":head,"OCI":oci,
                    "binary_sha256":sha(repo/"physics_app"/"physics-opt"),"cases":{},
