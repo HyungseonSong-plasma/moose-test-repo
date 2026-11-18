@@ -59,6 +59,11 @@ def check(ci, template, manual, runner, surface):
     assert "ARCH_HYBRID_P05_FAILURE_REPRO_BOTH_CASES_KEEP_HOLD" in manual, "HYBRID_HOLD_RECEIPT_GONE"
     assert "continue-on-error:" not in manual and "if-no-files-found: error" in manual, "HYBRID_ARTIFACT_FALSE_GREEN"
     assert "dont_create_kernels" not in manual, "HYBRID_P05_BYPASS"
+    assert "\n  historical_public_BD_p2:\n" in manual, "PUBLIC_BD_COMPAT_RUNNER_MISSING"
+    assert "HISTORICAL_PUBLIC_B_PASS_D_TRANSPORT_KEEP_HOLD_BOTH_CASES" in manual, "PUBLIC_COMPAT_RESULT_GONE"
+    assert 'b["P2"]=="PASS"' in manual and 'd["P2"]=="HOLD"' in manual, "PUBLIC_BD_NEGATIVE_CONTRACT_REMOVED"
+    assert 'b["layers"]==10' in manual and 'd["layers"]==11' in manual, "PUBLIC_BD_LAYER_CONTRACT_REMOVED"
+    assert "Missing drift-diffusion transport JSON record for FEM species 'e'" in manual, "PUBLIC_D_TRANSPORT_FAILURE_LOST"
     assert '"issue541-arch-s6-hybrid-p2-compat.yml": {"workflow_dispatch"}' in surface, "SURFACE_MANUAL_TRIGGER_NOT_PINNED"
     assert 'CASES = ("417", "941")' in runner and "for case in CASES:" in runner, "NEWONLY_CASE_MISSING"
     assert '"--check-input"' in runner and 'code == 0 and "Syntax OK" in log' in runner, "REAL_NATIVE_P2_OR_SYNTAX_MISSING"
@@ -83,6 +88,8 @@ def selftest(ci,tmpl,man,run,surface):
     must_reject("HYBRID_FALSE_SUCCESS",ci,tmpl,man.replace('status["P2"]=="HOLD"','status["P2"]=="PASS"'),run,surface)
     must_reject("HYBRID_SECOND_CASE_IGNORED",ci,tmpl,man.replace('test "$second" -eq 3','true'),run,surface)
     must_reject("HYBRID_P05_LOST",ci,tmpl,man.replace("on 'log_O2p': ni_time","on 'log_O2p': unknown"),run,surface)
+    must_reject("PUBLIC_BD_COMPAT_REMOVED",ci,tmpl,man.replace("  historical_public_BD_p2:","  removed_public_compat:"),run,surface)
+    must_reject("PUBLIC_D_FALSE_PASS",ci,tmpl,man.replace('d["P2"]=="HOLD"','d["P2"]=="PASS"'),run,surface)
     must_reject("REQUIRED_P2_BAD_CASE",ci,tmpl,man,run.replace('CASES = ("417", "941")','CASES = ("417",)'),surface)
     must_reject("REQUIRED_FAKE_SUCCESS",ci,tmpl,man,run.replace('record["P2"] = "PASS_NATIVE_CHECK_INPUT"','record["P2"] = "UNKNOWN"'),surface)
     must_reject("REQUIRED_CHECK_INPUT_REMOVED",ci,tmpl,man,run.replace('"--check-input"','"--version"'),surface)
@@ -90,7 +97,7 @@ def selftest(ci,tmpl,man,run,surface):
     must_reject("TRIGGER_SURFACE_DISABLED",ci,tmpl,man,run,surface.replace('"issue541-arch-s6-hybrid-p2-compat.yml": {"workflow_dispatch"},',''))
     artifact="S6-941-native-P2.log"
     must_reject("REQUIRED_941_ARTIFACT_REMOVED",ci.replace(artifact,"deleted"),tmpl.replace(artifact,"deleted"),man,run,surface)
-    print("ISSUE633_ROUTE_MUTATION_SELF_TEST_PASS 12")
+    print("ISSUE633_ROUTE_MUTATION_SELF_TEST_PASS 14")
 
 def main():
     parser=argparse.ArgumentParser()
