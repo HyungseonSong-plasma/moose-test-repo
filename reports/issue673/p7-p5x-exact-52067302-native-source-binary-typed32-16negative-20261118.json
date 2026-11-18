@@ -1,0 +1,117 @@
+{
+  "schema": "issue673.p7.p5x_exact_head_52067302_binary_native_evidence.v1",
+  "date_utc": "2026-11-18",
+  "scope": "Evidence audit only; completed existing one-shot jobs reused; no repeated build or Native execution",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source_pr": 665,
+  "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+  "source_tree": "2720fa5272a5fa98001e8e444331397723fe7ccb",
+  "status": {
+    "P5_X_EXACT_HEAD_SOURCE_BUILD": "PASS",
+    "P5_X_BINARY_AND_TWO_APP_LIBS_SHA": "PASS_INDEPENDENT_ZIP_TAR_MEMBER_BYTES",
+    "P5_X_NATIVE_P2_417_941": "PASS",
+    "P5_X_TYPED_REGISTERED_OWNER_417_941": "PASS_32_OF_32_EACH",
+    "P5_X_N1_N8": "PASS_16_OF_16",
+    "P5_X_PROTECTED_RATE_CLEANUP": "PASS",
+    "P5_X_NATIVE_CONNECTION_ACCEPTANCE": "PASS_BOUNDED_P2",
+    "P7_FINAL": "HOLD_INDEPENDENT_P6_LANES_AND_ISSUE633",
+    "P6_REPOSITORY_CI": "FAIL_SEPARATE",
+    "HISTORICAL_HYBRID": "KEEP_HOLD",
+    "P3_P4_100US": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  },
+  "build": {
+    "workflow_run_id": 44345886330,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44345886330",
+    "artifact_id": 14446611291,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44345886330/artifacts/14446611291",
+    "artifact_zip_sha256": "6d24d997075c76983b5d99fc28c3cfc0f9fae1a57ccc00c63af4d8697c83d676",
+    "zip_crc": "PASS",
+    "identity_json_sha256": "f61ac2b2763681b349219acf118e09247487c7946e5627bb28cb4d84565bb8f7",
+    "tar_sha256": "e42e29529121e7312062fdbe39a6cb50881b6424fb7197b10a36be97a6bbca64",
+    "build_count": 1,
+    "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "elf_sha256": "912b212c3c1849165ab3da13d758f5b3e101f5b6cb7e1e3f3820259f6080f7eb",
+    "app_libs_sha256": {
+      "libphysics-opt.so.0": "61f66ec66843f1d51bd79ef7542197410bebf92487f2cff70e9e08f9e958da82",
+      "libphysics_test-opt.so.0": "e9ad1adeb8fcba312cf836520927a3de3fc5ad986d35d50f6cfe5d114e825f0f"
+    },
+    "three_member_sha_recomputed": true,
+    "build_log_sha256": "e51257100dbdd3541258d54fa1a06ccd3f0222c1c066f656e01d84198d8fe332"
+  },
+  "native": {
+    "workflow_run_id": 44347074110,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44347074110",
+    "artifact_id": 14446522947,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44347074110/artifacts/14446522947",
+    "artifact_zip_sha256": "69273ea8c28b050240ced8e5a891686350a2588ecc283da09ecf216521a9dca2",
+    "receipt_json_sha256": "7291a18045a873277be9b5cc4068383ca3eee3652caaf75b14a2efc335fd0677",
+    "w1_identity_bytes_equal_build_artifact": true,
+    "zip_crc": "PASS",
+    "cases": {
+      "417": {
+        "clean_native_exit": 0,
+        "syntax_ok": true,
+        "FVKernel": 12,
+        "FVBC": 12,
+        "electron_FEM_BC": 8,
+        "typed_name_factory_count": 32,
+        "registered_events": 77,
+        "negative_pass": "8/8",
+        "first_failure_class": {
+          "N1": "P05",
+          "N2": "P05",
+          "N3": "P05",
+          "N4": "P05",
+          "N5": "EARLY_REGISTRATION",
+          "N6": "CHEMISTRY",
+          "N7": "CHEMISTRY",
+          "N8": "CHEMISTRY"
+        },
+        "source_restoration": "PASS"
+      },
+      "941": {
+        "clean_native_exit": 0,
+        "syntax_ok": true,
+        "FVKernel": 12,
+        "FVBC": 12,
+        "electron_FEM_BC": 8,
+        "typed_name_factory_count": 32,
+        "registered_events": 77,
+        "negative_pass": "8/8",
+        "first_failure_class": {
+          "N1": "P05",
+          "N2": "P05",
+          "N3": "P05",
+          "N4": "P05",
+          "N5": "EARLY_REGISTRATION",
+          "N6": "CHEMISTRY",
+          "N7": "CHEMISTRY",
+          "N8": "CHEMISTRY"
+        },
+        "source_restoration": "PASS"
+      }
+    },
+    "total_native_negative_rejections": 16,
+    "one_elf_across_all_cases": true,
+    "protected_original_rates_raw_export": false,
+    "private_tmpfs_cleanup": true
+  },
+  "evidence_boundary": {
+    "registration_source": "LD_PRELOAD intercepts successful FEProblemBase::addFVKernel/addFVBC/addBoundaryCondition calls; not raw postconstruction TheWarehouse memory dump",
+    "variable_sideset_runtime_parameter_memory": "NOT_CAPTURED",
+    "raw_native_stdout_and_registration_trace_artifact": "NOT_UPLOADED; SHA field in receipt is job-generated, cannot be off-job rehashed",
+    "independent_bare_archive_crc_sha_and_three_elf_bytes": "PASS",
+    "full_rf_3ns_bounded": "Previously PASS on older W1 (74a2), not re-executed at new 52067302 in this batch",
+    "new_100us_science": "NOT_RUN",
+    "current_Public_D_FLOW_ARCH_CI": "INDEPENDENT_HOLD_NOT_RESOLVED"
+  },
+  "next_owner": "P6-X independent Public D/FLOW/ARCH/Ion-FVM CI lane acceptance; P7 final review after it",
+  "safety": {
+    "main_unmodified": true,
+    "PR665_unmodified": true,
+    "no_merge": true,
+    "no_P3_P4": true,
+    "private_rates_not_uploaded": true
+  }
+}
