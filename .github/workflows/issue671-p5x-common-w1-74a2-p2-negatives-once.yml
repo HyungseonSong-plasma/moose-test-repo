@@ -1,15 +1,15 @@
-name: Issue671 P5-X one pinned W1 ELF native 417 941 and N1-N8
+name: Issue671 W1 EI H25 417 941 sixteen channel knockout native P2
 on:
   push:
     branches:
-      - issue-671-p5x-common-w1-74a2-20261118
+      - issue-671-ei-h25-channel-knockout-w1-20261118
     paths:
       - .github/workflows/issue671-p5x-common-w1-74a2-p2-negatives-once.yml
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: issue671-p5x-w1-native-p2-negatives-74a2-isolated-one-shot
+  group: issue671-ei-h25-w1-channel-knockout-isolated-once
   cancel-in-progress: false
 jobs:
   exact-head-w1-native-p05:
@@ -187,7 +187,7 @@ jobs:
           printf '%s  %s\n' 1bdc85c65f5847ae58d51c76f89f8e67c67291dc9b5ee842bcbab98c4a71befa physics_app/physics-opt > "$RUNNER_TEMP/p05-in/physics-opt.sha256"
           echo P5X_REUSED_EXACT_HEAD_ONE_BINARY_FOR_BOTH_CASES_AND_ALL_NEGATIVES
 
-      - name: Protected original EI Rate, clean controls, and N1-N8 actual Native mutants
+      - name: Protected original EI Rate, clean controls, and sixteen channel knockout Native P2
         shell: bash
         env:
           PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
@@ -246,7 +246,18 @@ jobs:
                   c0.write_text(insert(c0.read_text(),section,name,params))
                   return c0
               doc=json.loads(js.read_text())
-              if test=="N6":
+              if test.startswith("K"):
+                  channel_ids=("EI-02","EI-17","EI-415","EI-401","EI-407","EI-2069","EI-"+case,"H25")
+                  if test not in tuple("K"+str(i) for i in range(1,9)):
+                      raise RuntimeError("UNKNOWN_CHANNEL_MUTATION")
+                  channel=channel_ids[int(test[1:])-1]
+                  if sum(x["id"]==channel for x in doc["reactions"])!=1 or channel not in doc["equations"]:
+                      raise RuntimeError("NOT_EXACT_SINGLE_REQUIRED_CHANNEL_"+channel)
+                  doc["reactions"]=[x for x in doc["reactions"] if x["id"]!=channel]
+                  del doc["equations"][channel]
+                  if len(doc["reactions"])!=7 or len(doc["equations"])!=7:
+                      raise RuntimeError("CHANNEL_KNOCKOUT_CARDINALITY_WRONG")
+              elif test=="N6":
                   if sum(x["id"]=="EI-401" for x in doc["reactions"])!=1: raise RuntimeError("NO_UNIQUE_EI401")
                   doc["reactions"]=[x for x in doc["reactions"] if x["id"]!="EI-401"]
               elif test=="N7":
@@ -287,16 +298,16 @@ jobs:
               except subprocess.TimeoutExpired:
                   return 124,"NATIVE_INPUT_TIMEOUT"
           
-          expected={
-          "N1":("P05 FV Native/Physics duplicate or unexpected owner",),
-          "N2":("P05 FV Native/Physics duplicate or unexpected owner",),
-          "N3":("P05 legacy, duplicate or unexpected FV BC",),
-          "N4":("P05 FV Native/Physics duplicate or unexpected owner",),
-          "N5":("P05 legacy, duplicate or unexpected FV BC",),
-          "N6":("equation without matching reaction ID: EI-401",),
-          "N7":("initial_number_density must be finite and strictly positive",),
-          "N8":("EI-401: charge conservation failed",)}
-          receipt={"schema":"issue671.p05.n1_n8.native_s6.v1","source_head":head,"OCI":oci,
+          def first_native_error(log):
+              lines=log.splitlines()
+              for i,line in enumerate(lines):
+                  if "*** ERROR ***" in line or re.search(r"(?i)^\\s*(?:error:|mooseerror)",line):
+                      parts=[x.strip() for x in lines[i:i+6] if x.strip()]
+                      excerpt=" | ".join(parts)[:500]
+                      return re.sub(r"/dev/shm/[^\\s|]+","[PROTECTED_SCRATCH]",excerpt)
+              return "NO_PARSED_NATIVE_ERROR"
+          expected={"K"+str(i):i-1 for i in range(1,9)}
+          receipt={"schema":"issue671.ei_h25.channel_missing.native_16.v1","source_head":head,"OCI":oci,
                    "binary_sha256":sha(repo/"physics_app"/"physics-opt"),"cases":{},
                    "tests_total":16,"native_tests_completed":0,"native_expected_rejections":0,
                    "status":"HOLD","science":"SCIENCE_HOLD","Native_P3":"NOT_RUN","Native_P4":"NOT_RUN",
@@ -357,16 +368,19 @@ jobs:
                       if before==after:raise RuntimeError("MUTATION_NOOP")
                       stage_rates(work,case,rates)
                       rc,log=native(work,exp["ordered_inputs"],receipt["binary_sha256"])
-                      matched=rc!=0 and any(p in log for p in expected[test])
-                      category=("P05" if "P05 " in log and matched else
-                                "CHEMISTRY" if matched else "UNRELATED_OR_ACCEPTED")
-                      if test=="N5" and not matched and rc!=0 and "O2p_cover_dielectric" in log and (
-                          "duplicate" in log.lower() or "already" in log.lower() or "exists" in log.lower()):
-                          matched=True;category="EARLY_REGISTRATION"
+                      channel=("EI-02","EI-17","EI-415","EI-401","EI-407","EI-2069","EI-"+case,"H25")[expected[test]]
+                      first_error=first_native_error(log)
+                      missing_terms=r"(?i)\\b(missing|not found|absent|required|requires|undefined)\\b"
+                      channel_named=channel.lower() in first_error.lower()
+                      matched=(rc!=0 and "Syntax OK" not in log and channel_named and
+                               bool(re.search(missing_terms,first_error)))
+                      category=("CHANNEL_MISSING_REJECTED" if matched else
+                                "ACCEPTED_MISSING_CHANNEL" if rc==0 else
+                                "UNRELATED_OR_GENERIC_REJECT")
                       receipt["cases"][case]["tests"][test]={
                          "changed_file":changed,"before_sha256":before,"after_sha256":after,
                          "unchanged_file_count":len(baseline)-1,"exit_code":rc,
-                         "expected_error_substrings":list(expected[test]),
+                         "removed_channel":channel,"first_native_error":first_error,
                          "matched_expected":matched,"first_failure_class":category,
                          "log_sha256":hashlib.sha256(log.encode()).hexdigest(),
                          "syntax_ok":"Syntax OK" in log}
@@ -375,8 +389,8 @@ jobs:
                   if file_shas(public)!=clean[case]:
                       raise RuntimeError("PUBLIC_STAGE_CHANGED_AFTER_NEGATIVES")
                   receipt["cases"][case]["source_restoration"]="SHA_ALL_PUBLIC_FILES_UNCHANGED"
-              receipt["status"]=("PASS_16_INTENDED_NATIVE_REJECTIONS" if receipt["native_expected_rejections"]==16
-                                else "HOLD_WRONG_NATIVE_FAILURES")
+              receipt["status"]=("PASS_16_CHANNEL_IDENTIFIED_NATIVE_REJECTIONS" if receipt["native_expected_rejections"]==16
+                                else "HOLD_CHANNEL_MISSING_NOT_GUARANTEED")
           except Exception as e:
               receipt["status"]="HOLD_NATIVE_OR_HARNESS"
               receipt["harness_error_type"]=type(e).__name__
@@ -395,17 +409,17 @@ jobs:
               if not receipt["tmpfs_cleanup_verified"]:
                   receipt["status"]="HOLD_PRIVATE_SCRATCH_NOT_CLEANED"
               (out/"p05_negative_receipt.json").write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")
-              print("P05_NEGATIVES",receipt["status"],"COUNT",receipt["native_expected_rejections"],"/16",
+              print("EI_H25_CHANNEL_NEGATIVES",receipt["status"],"COUNT",receipt["native_expected_rejections"],"/16",
                     "SOURCE_HEAD",receipt["source_head"],"BINARY_SHA",receipt["binary_sha256"],
                     "PRIVATE_CLEANUP",receipt["tmpfs_cleanup_verified"])
-          sys.exit(0 if receipt["status"]=="PASS_16_INTENDED_NATIVE_REJECTIONS" else 1)
+          sys.exit(0 if receipt["status"]=="PASS_16_CHANNEL_IDENTIFIED_NATIVE_REJECTIONS" else 1)
           PY
 
-      - name: Upload sanitized N1-N8 receipt and exact binary hash only
+      - name: Upload sanitized EI H25 channel knockout receipt and exact binary hash only
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue671-p5x-w1-dual-case-clean-and-n1n8
+          name: issue671-ei-h25-w1-channel-knockout-16
           path: |
             ${{ runner.temp }}/p05-out/p05_negative_receipt.json
             ${{ runner.temp }}/p05-in/p4_receipt.json
