@@ -1,0 +1,167 @@
+{
+  "schema": "issue672.p6.latest_public_flow_arch_ion_fvm_failure_taxonomy.v2",
+  "task_id": "P6-PUBLIC-FLOW-ARCH-ION-FVM-INDEPENDENT",
+  "issue": 672,
+  "verdict": "PASS_INDEPENDENT_FAILURE_CLASSIFICATION__CI_REPAIR_NOT_RUN__NATIVE_NEWONLY_NOT_PROMOTED",
+  "pr665_exact_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+  "runs": {
+    "repository": {
+      "id": 44283348884,
+      "conclusion": "failure",
+      "jobs": {
+        "public": {
+          "id": 134729550648,
+          "status": "failure"
+        },
+        "arch": {
+          "id": 134729550576,
+          "status": "failure"
+        },
+        "pytest": {
+          "id": 134729550280,
+          "status": "failure"
+        }
+      }
+    },
+    "flow": {
+      "id": 44283348947,
+      "job_id": 134729550450,
+      "conclusion": "failure"
+    },
+    "ion_fvm": {
+      "id": 44283348827,
+      "job_ids": [
+        134729549521,
+        134729549988
+      ],
+      "conclusion": "failure"
+    }
+  },
+  "source_exact_blobs_sha1": {
+    "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py": "a6414baf70590b79f4b4ee4cb16c4b9039355f40",
+    "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json": "c563f54b4914773f153b170fb8b5b63f2687c170",
+    "experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py": "96c8ca548392a1ad08334b87b082dd1595893070",
+    "ci/guards/issue541_arch_s6_native_p2_only.py": "533dfa16395c041c610130f90d0489300fdd548f",
+    "physics_app/src/physics/plasma/DDContinuityEq.C": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+    "experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py": "db90fe634a7ddc234daeab7b94dd21618bd3c893",
+    "experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py": "9f7461c6287212f52d8c55e9ef361284080dfb90",
+    "tests/test_issue633_s6_scratch_ion_retirement.py": "6e1d3ee5998419f01ca94385296e78c0325ba509",
+    "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_ion_fv_owners.py": "41219d43c63aa2c6db025a48831ccc9a6493190e"
+  },
+  "actual_zip_artifacts": {
+    "public": {
+      "artifact_id": 14419080630,
+      "outer_sha256": "0310b310967acd5f4072c4e3eb13f51b63e7d0beae515f5ba4449c4e244c969f",
+      "members": 90,
+      "crc": "PASS"
+    },
+    "arch": {
+      "artifact_id": 14418740651,
+      "outer_sha256": "23470702c14534d7ed61311821b7e6e8b97eefcb0a7f2dc2cd749e50cfd4a601",
+      "members": 6,
+      "crc": "PASS"
+    },
+    "flow": {
+      "artifact_id": 14419060052,
+      "outer_sha256": "39e6755e6d024c802a892cb7de1dad3373ad3c6c1761e043ec2e182aca7c7d0b",
+      "members": 7,
+      "crc": "PASS"
+    },
+    "ion_5ns": {
+      "artifact_id": 14417303934,
+      "outer_sha256": "646607693750bc55dc399f8e80e0cd9c0a7e82ac36da50192dbb00c7493d2fbb",
+      "members": 2,
+      "crc": "PASS"
+    },
+    "ion_10ns": {
+      "artifact_id": 14417772484,
+      "outer_sha256": "b8bc1a6ac077815dde864384ef73807b651c4438586a03571aaf44037c5fc926",
+      "members": 2,
+      "crc": "PASS"
+    }
+  },
+  "lane_results": {
+    "public_B": {
+      "417": "PASS_10_LAYER_NATIVE_CHECK_INPUT_EXIT0_SYNTAX_OK",
+      "941": "PASS_10_LAYER_NATIVE_CHECK_INPUT_EXIT0_SYNTAX_OK",
+      "not": "CURRENT_NEWONLY_NATIVE"
+    },
+    "public_D": {
+      "417": {
+        "exit": 1,
+        "error": "migrated_continuity.i:11.11 Missing drift-diffusion transport JSON record for FEM species e",
+        "log_sha256": "b017ff7501572388eaf9b5d93ceb8c4e3b64449afa04ed5abe738eca6f2142df"
+      },
+      "941": {
+        "exit": 1,
+        "error": "same",
+        "log_sha256": "8b43a9ae630ec301709a61ef6394f8c1f5c81f5b5cfdea6d2b6c4be5ed49dfa4"
+      },
+      "root_cause": "option overlay fem_species=e reads plasma_species_only.json where species.e only has charge_number (no transport_coef). Earlier D option-only transport fixture is not New-only JSON."
+    },
+    "FLOW_D": {
+      "417": {
+        "exit": 1,
+        "error": "migrated_continuity.i:18.11 Missing drift-diffusion transport JSON record for FEM species e",
+        "wrapper": "P2_S6_417_CHECK_INPUT_FAILED"
+      },
+      "941": "NOT_RUN_SEQUENTIAL_EARLY_ABORT",
+      "reaction_reduction": "INDEPENDENT_SUBCHECK_PASS",
+      "root_cause": "Chemistry hybrid D-base still selects e FEM without JSON transport_coef, same missing invariant as Public D, distinct runner/overlay."
+    },
+    "ARCH_HYBRID": {
+      "417": "P05_NATIVE_PHYSICS_DUPLICATE_ni_time_log_O2p",
+      "941": "P05_NATIVE_PHYSICS_DUPLICATE_ni_time_log_O2p",
+      "error": "ni_time [PhysicsFVLogMolarElectronTimeDerivative]",
+      "root_cause": "Legacy Hybrid retains 26 Native ion FV owner declarations while Continuity Physics generates its new FV operators; P05 rejects instead of false-green."
+    },
+    "ion_FVM": {
+      "step": "prepare_ion_fvm_hybrid_staged_dt.py via prepare_ion_fvm_hybrid_contour.py -> prepare_full_fem_contour_mesh.py",
+      "error": "RuntimeError: RETIRED_GROUNDED_SHEATH_BCS",
+      "job_labels": [
+        "1ns100-5ns100",
+        "1ns100-10ns50"
+      ],
+      "build_before_error": "SUCCESS",
+      "mesh_generation": "PASS",
+      "native_timestep": "NOT_RUN",
+      "root_cause": "Generator explicitly rejects removed grounded sheath BC law; scientific replacement uncharacterized."
+    },
+    "pytest_validate": {
+      "failed": 5,
+      "passed": 1558,
+      "skipped": 13,
+      "error": "TypeError: retire_in_disposable_scratch() missing required keyword-only exact_manifest and expected_source_head",
+      "root_cause": "5 tests call production routine with 2 positional args after source API was tightened; tests must pass genuine pinned manifest/HEAD, production guard must not be relaxed."
+    }
+  },
+  "evidence": {
+    "current_epoch": "2026-11-18T10:13:34Z",
+    "reference_epoch": "2026-11-17T18:56:29Z",
+    "local_detailed_artifact_log_receipt_sha256": "420ad112274e332680b6f88eaf3cc6bc254a1fdf35a3a8d5d5b636e02d749850",
+    "reproduction_script_sha256": "35f5268e29fbe2855b185d1830f0eb0e399be85a5d456a53021a20fe9dbd506f",
+    "source_log_evidence": "Actual GitHub job logs read for all six failed jobs and ZIP bytes downloaded+CRC+SHA independently verified. Ion error only in job logs (ion artifact prepare.log is empty).",
+    "caveat": "Source signatures identify first observed failure, not proof of absence of later failures. P6 diagnosis does not perform CI fixes or science runs."
+  },
+  "recommended_workstreams": {
+    "P6_F0": "Update tests/test_issue633_s6_scratch_ion_retirement.py callers to pass exact_manifest/expected_source_head; keep fail-closed production signature.",
+    "P6_D1": "Give Public D/FLOW explicit scientifically characterized e transport in respective owned JSON contract, without blindly importing New-only or hiding missing data.",
+    "P6_H1": "Historical Hybrid provenance lane KEEP_HOLD or separately pinned compatible historical binary/run; do not bypass P05 or use dont_create_kernels to obtain green.",
+    "P6_I1": "Ion-FVM research generator requires new characterized grounded sheath law; if not approved classify KEEP_HOLD and stop triggering old long dt regression.",
+    "P6_N1": "New-only S6 417/941 must be separate exact-head binary+input+P05 lane after P4-X/P5 gates.",
+    "P6_CI1": "Review workflow/template parity and #535/#541 approval before modifying triggers; no skip/false-green."
+  },
+  "gates": {
+    "P6_DIAG": "PASS",
+    "P6_REPAIR": "NOT_RUN",
+    "PUBLIC_B": "HISTORICAL_NATIVE_P2_PASS",
+    "PUBLIC_D": "HOLD",
+    "FLOW_D": "HOLD",
+    "ARCH_HYBRID": "HOLD_P05_EXPECTED",
+    "ION_FVM": "HOLD_RETIRED_BC",
+    "VALIDATE": "FAIL_5_TESTS",
+    "NEWONLY_NATIVE_P2": "NOT_ESTABLISHED",
+    "NATIVE_P3_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
