@@ -1,0 +1,231 @@
+{
+  "schema": "issue672.p6_f1.flow_dbase_417_to_941_early_exit_newonly_separation.source_and_ci.v1",
+  "task_id": "P6-F1",
+  "issue": 672,
+  "verdict": "PASS_FLOW_SOURCE_AND_ACTUAL_CI_ROOT_CAUSE_AUDIT__HOLD_NATIVE_FLOW_AND_941",
+  "scope": "Read-only current #665 FLOW Hybrid generator vs P2/P3-X/P4-stage1 New-only comparison, with independent authentic FLOW exact-HEAD CI Artifact readback; no runner/CI/physics edits and no time-step solve.",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr": 665,
+    "exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "historical_deck_checkout": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "source_paths_and_git_blobs": {
+      "experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py": "96c8ca548392a1ad08334b87b082dd1595893070",
+      "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py": "a6414baf70590b79f4b4ee4cb16c4b9039355f40",
+      "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i": "793f3f24bc95bf71d0b2537288cb2ecc8a5f74fa",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py": "60a12878a26969fdf1ae26eab47694244b601634",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py": "d2091291161033a9662b0d583567f9c35d26c006",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py": "8a76517c7863be77d8390cd04b0b3be055f2c147",
+      "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json": "c563f54b4914773f153b170fb8b5b63f2687c170",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/oxygen_s6_common.json": "e4572d36cba500c68a9c12fdde02805a3bcf0f00",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/oxygen_s6_941.json": "0d39a0720c8e6a8c0a363a32771312bacd987034",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_417_newonly.json": "4a05649b42b798f566d5e455ef46be347ea2a461",
+      "experiments/Issue402_plasma_dsl_g1/chemistry/unified_s6_941_newonly.json": "9568e2cae6640a755f9403c4f58e077c801b998c",
+      "experiments/Issue402_plasma_dsl_g1/s6_417_chemistry_run.template.i": "bce9125d48591f91281ac01498597aab403a041e",
+      "experiments/Issue402_plasma_dsl_g1/s6_941_chemistry_run.template.i": "4cabb8cb452f7dec1d5e376597e489d6fb874d3f",
+      "experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_941_continuity.template.i": "4daa6f080f3d7bbd35c9839110cbb955b8914fee",
+      ".github/workflows/issue402-flow-native-p2-regression.yml": "3f2360f7ae71ed9081dfa55aeba5119f5c44a9b0"
+    }
+  },
+  "FLOW_D_base_source_contract": {
+    "case_order": [
+      "417",
+      "941"
+    ],
+    "CLI_default_case": "both",
+    "CLI_options": [
+      "both",
+      "417",
+      "941"
+    ],
+    "stage_method": "option.p2.stage(ROOT, historical, case, 'C', staged, manifest, d_base_source=D_BASE)",
+    "d_base_source": "experiments/Issue402_plasma_dsl_g1/native/s6_c0_physics_base_no_d1.i",
+    "original_historical_C_layers": 10,
+    "output_staged_layers": 11,
+    "input_generation_order": [
+      "Stage historical immutable C candidate 10 layers + one migrated_continuity.i sidecar using D_BASE C0 replacing old C0.",
+      "Scratch-only canonicalize_staged_D_inputs (remove ne_time; log_ne -> log_e etc), remap FEM Factory types.",
+      "prepare() Hybrid Chemistry: remove nine obsolete electron particle/energy Kernels; cutover 8 registered electron sheath BCs; four charged species initial states into JSON; preserve Native energy and Native ion FV owners.",
+      "Use s6_<case>_chemistry_run.template.i overlay binding chemistry/oxygen_s6_common.json + chemistry/oxygen_s6_<case>.json, Chemistry + Continuity fem_species=e, fvm_species=O2p Om Op, partial Energy.",
+      "Verify hash and binary identity, then call option.run_one(physics-opt, exact SHA, staged 11-layer, native_P2.log, timeout).",
+      "Store check results into result.cases[case], and raise immediately if checked.P2 is not PASS."
+    ],
+    "root_cause_of_417": "The hybrid oxygen_s6_common.json contains only elements and charge for each e/O2p/Om/Op, with staged initial_number_density but no transport_coef for any of the four selected species. Current DDContinuityEq requires explicit JSON DD records. Existing manually configured electron transport Material cannot substitute for missing JSON record.",
+    "manual_electron_owner": {
+      "historical_factory": "PhysicsElectronTransportLookupMaterial",
+      "migrated_factory": "DDTransportMaterial",
+      "historical_functor_material_name": "electron_transport",
+      "historical_table": "../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "pressure": "p",
+      "gas_temperature": "T_g_fixed",
+      "bounds_policy": "clamp",
+      "additional_risk": "Legacy manually declared Transport + all4 added JSON records would yield competing Material outputs without coordinated single-owner cutover and 5/3 fluid energy closure."
+    },
+    "short_circuit": {
+      "source_lines": {
+        "for_case": 122,
+        "run_one_start": 168,
+        "result_recorded": 171,
+        "raise_on_failed_P2": 182,
+        "raise_line": 183,
+        "finally_start": 186,
+        "readiness_json_write": 188
+      },
+      "conditional": "if checked['P2'] != 'PASS': raise ValueError('P2_S6_'+case+'_CHECK_INPUT_FAILED')",
+      "effect": "With default both case ordering, failure in 417 raises before loop reaches 941; finally writes readiness.json containing only 417.",
+      "case_941_evidence": "Not executed or prepared in the cited CI artifact. No 941 Native outcome can be inferred from the 417 failure. CLI already supports --case 941 as a separate invocation; any CI workflow changes belong to P6-C3 single writer."
+    }
+  },
+  "actual_latest_exact_HEAD_CI": {
+    "run_id": 44297212567,
+    "workflow": "Issue402 FLOW maintained EI-H and reaction-reduction Native P2",
+    "workflow_conclusion": "failure",
+    "artifact_id": 14424786177,
+    "artifact_zip_sha256": "5fbc73b45939389c5e9b563f54099c03ce0400bec77c017f0d02b759634cbf92",
+    "artifact_size_bytes": 9883,
+    "artifact_members": 7,
+    "artifact_ZIP_CRC": "PASS",
+    "source_sha256_binary": {
+      "exact_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "physics_opt_sha256": "119b5e0c69c0f1bc817e04a76465c499355e459b6159268ea6f6ff15280d04cb",
+      "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+    },
+    "source_bound_status": {
+      "P0": "PASS",
+      "P1": "PASS_SOURCE_BOUND_BINARY",
+      "P2": "HOLD",
+      "P3": "NOT_RUN",
+      "P4": "NOT_RUN",
+      "SCIENCE": "SCIENCE_HOLD"
+    },
+    "S6_417": {
+      "staged_files": 11,
+      "staging_result": "P2_INPUT_PREPARED",
+      "changed_archived_state_references": 47,
+      "retired_legacy_electron_kernels": 9,
+      "rebound_electron_sheath_BCs": 8,
+      "charge_species_initial_state_JSON_owners": 4,
+      "overlay_sha256": "bed32e0f743b210dd182c8f672d9d1d2af8f7f00fae3b17b5c18fe618e842840",
+      "native_exit_code": 1,
+      "classification": "NATIVE_CHECK_INPUT_REJECTED",
+      "native_log_sha256": "7e21b7c985aee6f0d61213eef6a3fe853aa6bf62430919d8270747abec648ceb",
+      "native_error_location": "migrated_continuity.i:18.11",
+      "first_error": "Missing drift-diffusion transport JSON record for FEM species 'e'",
+      "driver_error": "ValueError: P2_S6_417_CHECK_INPUT_FAILED",
+      "driver_log_sha256": "82e0d9060a3639d78c55097aa3dab2c100e1317393f14f7fe5db1d99b09038cf",
+      "readiness_json_sha256": "1925d1c9ab01fdfd584439f5f3c9995b9ec7d58fb4ef78ed3b6fb69fffb013d7"
+    },
+    "S6_941": {
+      "configured_case_order_second": true,
+      "actual_stage_started": false,
+      "readiness_case_entry_present": false,
+      "native_log_present": false,
+      "native_exit_code": "NOT_RUN",
+      "first_failure": "NOT_OBSERVED_IN_THIS_CI"
+    },
+    "other_separate_flow_checks": {
+      "ideal_gas_native": "PASS",
+      "reaction_reduction": "PASS",
+      "independent_subcheck_not_shared_with_failed_S6_Chemistry": "YES"
+    },
+    "workflow_call": "--case both --output $RUNNER_TEMP/flow_issue402_dbase_native_p2 --timeout-seconds 600, shell set -euo pipefail; required step fails at 417 before 941"
+  },
+  "newonly_comparison": {
+    "user_authorized_source_lane": "Issue633 P2/P3-X/P4-stage1 source-only, not FLOW Hybrid/ Public D",
+    "newonly_entrypoint": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_run_input.py --newonly",
+    "requires_exact_manifest": true,
+    "disposable_marker": true,
+    "protected_electron_original_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "JSONs": {
+      "417": {
+        "source_git_blob_sha1": "4a05649b42b798f566d5e455ef46be347ea2a461",
+        "reaction_unique": "EI-417",
+        "species_e_transport": {
+          "type": "lookup",
+          "unit": "reduced",
+          "bounds_policy": "clamp"
+        },
+        "ions": [
+          "O2p",
+          "Om",
+          "Op"
+        ]
+      },
+      "941": {
+        "source_git_blob_sha1": "9568e2cae6640a755f9403c4f58e077c801b998c",
+        "reaction_unique": "EI-941",
+        "species_e_transport": {
+          "type": "lookup",
+          "unit": "reduced",
+          "bounds_policy": "clamp"
+        },
+        "ions": [
+          "O2p",
+          "Om",
+          "Op"
+        ]
+      }
+    },
+    "owner_retirement": "26 old Native FV ion kernels/BCs, 10 old electron owners, P4 Stage1 7 duplicate ion producers (six removed, one constants trimmed keeping carrier_one); final P4-X and dynamic Native acceptance are separate.",
+    "full_P4_X": "HOLD_SOURCE_CONSUMER_AND_NATIVE_WAREHOUSE",
+    "compatibility_warning": "Do not silently substitute unified New-only JSON for FLOW hybrid oxygen_s6_common+case JSON. Distinct historical compatibility/physics and CI approval contract."
+  },
+  "concurrent_proposal": {
+    "pr": 684,
+    "pr_status": "OPEN_NOT_MERGED",
+    "base_pr665_sha": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "proposal_head": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "current_proposal_github_receipt": "reports/issue672/p6-d1-real-transport-owner-cutover-417-941-source-replay.json",
+    "proposed_changed_production_files": [
+      "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py",
+      "experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py",
+      "physics_app/src/physics/plasma/DDContinuityEq.C"
+    ],
+    "source_only_tests": "PASS_LOCAL_18_OF_18",
+    "real_archived_417_941_replay": "PASS_SOURCE_ONLY",
+    "independent_native_CI_at_proposal_sha": "NOT_RUN",
+    "residual_P05_ion_collision": "POSSIBLE_HOLD",
+    "short_circuit_logic_on_proposal": "STILL_PRESENT; source fix does not cause 941 to run independently if 417 fails"
+  },
+  "audit": {
+    "source_bound_assertions": {
+      "pass": 18,
+      "total": 18
+    },
+    "source_synthetic_negative_mutations": {
+      "rejected": 8,
+      "total": 8,
+      "scope": "static source predicates, not actual Native rejects"
+    },
+    "real_CI_artifact_assertions": {
+      "pass": 19,
+      "total": 19,
+      "scope": "independent sha256 CRC and bound status/log parser against actual downloaded ZIP"
+    },
+    "artifact_synthetic_negative_mutations": {
+      "rejected": 5,
+      "total": 5
+    },
+    "local_verification_script": "p6_f1_flow_artifact_verify.py",
+    "local_verification_script_sha256": "488e16c84280d3e37f2203bd4ab7dd0d9925952540e22d545ba66f63c8820003",
+    "local_real_zip_readback": "p6-f1-flow-independent-readback.json",
+    "local_real_zip_readback_sha256": "44f35f2012bdd245322644a308d1ea29b12acba12164466e5455031ad320721c"
+  },
+  "recommendations": [
+    "P6-F2/F3: explicitly reconcile four e/ion transport JSON records with single DDTransportMaterial owner and electron 5/3 Energy and retained 26 Native ion operators. Preserve legacy Hybrid semantics and P05 fail-closed.",
+    "For independent failure diagnosis, run the existing CLI twice with --case 417 and --case 941 in separate disposable Scratch/output paths, capture and upload BOTH exit/log SHA even if one fails; after both complete still fail CI if either fails. Workflow/template editing restricted to P6-C3 single writer, and needs approval.",
+    "Do not promote PR #684 source replay as merged PR #665 or Native P2 PASS; first reverify latest review HEAD/CI.",
+    "Never bypass P05 via dont_create_kernels, skip, workflow disable or arbitrary physics constants; do not trigger P3/P4 science."
+  ],
+  "gates": {
+    "P6_F1_DIAGNOSTIC": "PASS",
+    "FLOW_417_NATIVE": "FAIL_E_TRANSPORT_JSON",
+    "FLOW_941_NATIVE": "NOT_RUN_DUE_TO_EARLY_ABORT",
+    "FLOW_HYBRID_CUTOVER": "HOLD",
+    "PR684_CODE": "SEPARATE_DRAFT_UNMERGED",
+    "P6_F4_NATIVE": "HOLD_P6_F2_F3_AND_APPROVAL",
+    "P6_X": "HOLD",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "data_safety": "No private EI raw rates read or published. No source workflow/YAML/input/main edits in F1 evidence. No Native timestep or scientific equivalence claim."
+}
