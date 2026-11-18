@@ -1,0 +1,161 @@
+{
+  "schema": "issue672.p6_c3_three_condition_exact_source_artifact_receipt.v1",
+  "asof": "2026-11-18",
+  "title": "P6-C3 Artifact backward compatibility + Public D/FLOW + ARCH approval boundaries",
+  "exact_validation_source": "20f89959567a472180032683b38af5c920089825",
+  "parent_pr665_source": "52067302d16074592503d0ef6b903cc344f55a08",
+  "draft_validation_pr": {
+    "number": 688,
+    "base_after_validation": "issue-633-ion23-integration-20261117",
+    "draft": true,
+    "merged": false,
+    "files_changed_vs_pr665": 5,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/688"
+  },
+  "ci_and_template_git_blob": "24a2b278c3bd33649cb2c83be33e7abb2febd4eb",
+  "P05_cpp_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0",
+  "P0_test": {
+    "run": 44344988303,
+    "conclusion": "SUCCESS",
+    "negative_mutants_rejected": 21,
+    "pytest": "2/2 PASS",
+    "harness": "PASS",
+    "surface_guard": "PASS"
+  },
+  "exact_source_repository_ci": {
+    "run": 44345972609,
+    "conclusion": "failure",
+    "jobs_total": 17,
+    "jobs_success": 15,
+    "jobs_failed": 2,
+    "validate": {
+      "result": "PASS",
+      "pytest_passed": 1569,
+      "pytest_skipped": 13,
+      "safety_negative_mutants_rejected": 21,
+      "template_parity": "PASS",
+      "workflow_harness": "PASS",
+      "workflow_surface_guard": "PASS"
+    },
+    "CORE_NATIVE": "PASS",
+    "ARCH_DD_NATIVE": "PASS",
+    "PUBLIC_NATIVE": "FAIL_EXPECTED_PUBLIC_D",
+    "ARCH_S6_HYBRID": "FAIL_EXPECTED_P05_NI_TIME",
+    "FLOW_run": 44345972623,
+    "FLOW_result": "FAIL",
+    "ION_NEWONLY_SOURCE_P0_run": 44345972513,
+    "ION_NEWONLY_SOURCE_P0_result": "PASS",
+    "SOL_RUNTIME_run": 44345972713,
+    "SOL_RUNTIME_result": "PASS",
+    "P3_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "artifact_aliases": {
+    "contract": "canonical run_id-run_attempt-HEAD always; exact historical first-attempt name only on run_attempt==1; same source evidence files; no overwrite on subsequent attempts",
+    "upload_same_exact_source": "8 actual independently downloaded GitHub Actions artifacts for 4 jobs",
+    "pair_checks": [
+      {
+        "lane": "CORE_FOUR",
+        "members": 3,
+        "canonical": {
+          "id": 14445503931,
+          "sha256": "ba313b7644601cbe98dd8ec3eaac4f8de781cd69390f6ffadb287acc0f791f8f"
+        },
+        "legacy": {
+          "id": 14445149350,
+          "sha256": "9bf9430dce010ea3f7f0ea6a2e046ef485a4acdb3345cd69f23a322fb2b77c21"
+        },
+        "CRC": "BOTH_PASS",
+        "members_identical": "3/3"
+      },
+      {
+        "lane": "ARCH_DD",
+        "members": 4,
+        "canonical": {
+          "id": 14446556371,
+          "sha256": "baf5d9b153fcf8d0d8b289877b21bfe82dc52d41881ef8dc01364efcc6c2dd27"
+        },
+        "legacy": {
+          "id": 14446027431,
+          "sha256": "baf5d9b153fcf8d0d8b289877b21bfe82dc52d41881ef8dc01364efcc6c2dd27"
+        },
+        "CRC": "BOTH_PASS",
+        "members_identical": "4/4"
+      },
+      {
+        "lane": "ARCH_S6_HYBRID",
+        "members": 6,
+        "canonical": {
+          "id": 14446551857,
+          "sha256": "11abadfff2c4b95ae9b208fa71301173cb0231b05645b002d8adcb4ea3023916"
+        },
+        "legacy": {
+          "id": 14445429259,
+          "sha256": "4e552b3fed69781c441c1735005fd43a54a1d3e33d9fa90cf384b0c2ac4d4f6c"
+        },
+        "CRC": "BOTH_PASS",
+        "members_identical": "6/6"
+      },
+      {
+        "lane": "PUBLIC_NATIVE",
+        "members": 90,
+        "canonical": {
+          "id": 14446183014,
+          "sha256": "5aacedad11132f1af57c6eb237813faa0ef729c7f76f58ec4fe55f14b3db95ff"
+        },
+        "legacy": {
+          "id": 14446457265,
+          "sha256": "6c12f14658517adb7617067bc6f9843b398f6c236e7f33bb4c1c43df7f7f079d"
+        },
+        "CRC": "BOTH_PASS",
+        "members_identical": "90/90"
+      }
+    ],
+    "member_bytes_identical_total": "103/103",
+    "zip_outer_sha_can_differ_due_to_archive_member_order": true,
+    "owner_approval_boundary": "Old artifact name compatible on attempt1. Off-platform/dynamic caller behavior for rerun attempt>1 remains UNVERIFIED; owner explicit residual-risk acceptance required for P6-X merge."
+  },
+  "Native_fail_closed": {
+    "PUBLIC_B_417": "P2_PASS_HISTORICAL_10_LAYER",
+    "PUBLIC_B_941": "P2_PASS_HISTORICAL_10_LAYER",
+    "PUBLIC_D_417": {
+      "P2": "HOLD",
+      "exit": 1,
+      "first_error": "Missing drift-diffusion transport JSON record for FEM species e",
+      "log_sha256": "4c30560c6a3bad07a2f867785368cdef63277d9b3fa46eab6989e1e547b428b3"
+    },
+    "PUBLIC_D_941": {
+      "P2": "HOLD",
+      "exit": 1,
+      "first_error": "Missing drift-diffusion transport JSON record for FEM species e",
+      "log_sha256": "d0b8c2aacb7884feb124e4d1323dc74a6373df27cdc30542c0bd3c804071f7b1"
+    },
+    "FLOW_417": {
+      "P2": "HOLD",
+      "first_error": "Missing drift-diffusion transport JSON record for FEM species e"
+    },
+    "FLOW_941": {
+      "P2": "NOT_RUN",
+      "reason": "FAIL_FAST_AFTER_417"
+    },
+    "ARCH_417": {
+      "P2": "HOLD",
+      "first_error": "P05 FV Native/Physics duplicate or unexpected owner on log_O2p ni_time",
+      "log_sha256": "ec607b37a329449f90544705881b8f993ab4a291e2d29365caf9bebb60047b52"
+    },
+    "ARCH_941": {
+      "P2": "HOLD",
+      "first_error": "P05 FV Native/Physics duplicate or unexpected owner on log_O2p ni_time",
+      "log_sha256": "2f9be687330db1e6323639d30f2f537a65c6a9a0f887dd39b56d1d756f03dc9b"
+    }
+  },
+  "authority_decisions": {
+    "PUBLIC_D": "Historical Public D 100-row e lookup SHA256 994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387 must not be replaced by separate New-only 42-row lookup SHA256 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b. PR684 source cutover reached a new unsupported FV Chemistry source generation first error, and is HOLD. Requires approved source-owned Physics Chemistry contract or historical compatibility runner.",
+    "FLOW": "Historical FLOW Hybrid KEEP_HOLD with original Native ion FV 26, New-only disposable 26->0 separate and conditional; PR684 independent Native two-case P05 ni_time confirms mixing old 26 with generated24 prohibited.",
+    "ARCH": "Historical pinned P2-only source 5d15c4054a00aa9fa8a778a87bb21690a3a5469b job134820962860 on run43883076025 attempt2 both case PASS; current exact-head ARCH is KEEP_HOLD on real P05, no bypass.",
+    "P6_X": "HOLD until off-platform Artifact consumer owner attestation + approved Public D Physics Source mode or bounded historically compatible lane + full exact-head New-only Warehouse/D8 owner evidence; genuine current Native failures remain visible.",
+    "science": "SCIENCE_HOLD",
+    "P05": "UNMODIFIED"
+  },
+  "mutation_scope": "This independent receipt only. PR #688 code HEAD remains identical to fully executed CI head; PR665 and main unchanged, no merge and no P3/P4 run."
+}
