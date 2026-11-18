@@ -1,0 +1,72 @@
+{
+  "schema": "issue672.historical100.nativeP2.real_4case.v1",
+  "verdict": "PASS_HISTORICAL_PR578_ORIGINAL100ROW_NATIVE_P2_4_OF_4",
+  "source_candidate": "1efdd922096df10239cff8adc132e8f3811c1a63",
+  "historical_source": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "current_PR684": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+  "current_PR665": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+  "run_id": 44324197618,
+  "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44324197618",
+  "artifact_id": 14436442632,
+  "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44324197618/artifacts/14436442632",
+  "artifact_sha256": "ae112219034dfa0a456ed41ef62974a0603992a0607d4845b45c2a549ae3275d",
+  "artifact_zip_crc": "PASS",
+  "original_table": {
+    "rows": 100,
+    "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "git_blob": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+    "before_after_unchanged": true,
+    "all_4_scratch_files_sha_verified": true
+  },
+  "separate_public_42row": {
+    "rows": 42,
+    "sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "not_used_as_historical_original": true,
+    "scientific_functionality": "USER_CONFIRMED_DISTINCT_RESEARCH_LANE"
+  },
+  "historical_400W_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+  "real_binary_custody": {
+    "physical_ELF_sha256": "617b8316d7519c560964c3df8bc4ee2c9f50ca16b9d7448889860e43ce144a07",
+    "libphysics_sha256": "6dc69fa9ca4c515f664e4db9c9ba42aaa2883555248ff3ceeabea8afde5e1675",
+    "libphysics_test_sha256": "88f90c3fa59f947f5694fd1969f1fc181f4e15bd624b19fbae398bef3575ba33",
+    "tar_sha256": "7be95ccf586dd4613bf6643f1e794371e644b0a717f9ebdbf41252324bd18fa0",
+    "all_3_rehashed_from_downloaded_actual_binary": true,
+    "original_CI_native_P1_provenance": "PASS_SAME_SOURCE_AND_BINARY"
+  },
+  "cases": {
+    "417_B": {
+      "layers": 10,
+      "exit": 0,
+      "syntax_ok": true,
+      "log_sha256": "e71bdb93ebead39e4c80650c467a9c087845f8fc97020e2cfa84e8fc9392b25d"
+    },
+    "417_D": {
+      "layers": 11,
+      "exit": 0,
+      "syntax_ok": true,
+      "log_sha256": "cb30a117ad9679b464966b5a3507258817470dc51507c9d43dac0c1916438f72"
+    },
+    "941_B": {
+      "layers": 10,
+      "exit": 0,
+      "syntax_ok": true,
+      "log_sha256": "b63e67815cceac7de7498b09fb84d713d9046dbba098016cc61f10c0b122c2e9"
+    },
+    "941_D": {
+      "layers": 11,
+      "exit": 0,
+      "syntax_ok": true,
+      "log_sha256": "05240b30b0d1755b9028052a7618f41ae50e3c90230de24b434aeff8686aeace"
+    }
+  },
+  "driver_receipt_sha256": "e27de5b9121e2db4cdcdb07a8c8951c369efba940b451495d2887798ee2ebdcd",
+  "independent_receipt_sha256": "24bcc9268984885d1f93a0a45d2242613a56d27d8bf134f9dcbdb55c50717fad",
+  "independent_audit_script_sha256": "78d2fc0c06432fab5819a9ada5685c6713cbbdd668333225c1ee64bc457a9350",
+  "native_timesteps": "NOT_RUN",
+  "P05_newonly": "NOT_ATTESTED",
+  "PR684_public_D_newonly": "HOLD_PREVIOUS_CHEMISTRY_SOURCE_FAILURE",
+  "PR684_FLOW": "HOLD_PREVIOUS_NI_TIME_DUPLICATE",
+  "PR684_to_PR665_merge": "HOLD",
+  "SCIENCE_HOLD": true,
+  "repo_mutations": "EVIDENCE_BRANCH_ONLY; ONE_SHOT_WORKFLOW_REMOVED; PR684_PR665_MAIN_UNCHANGED"
+}
