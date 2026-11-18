@@ -1,0 +1,197 @@
+{
+  "schema": "issue671.p5x.first_fatal_classifier.exact_52067302.v2",
+  "date_utc": "2026-11-18",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "scope": "P2 check-input plus 16 protected-rate negative mutants; no P3/P4",
+  "source_pr": 665,
+  "source_head": "52067302d16074592503d0ef6b903cc344f55a08",
+  "current_pr_head_at_evidence_write": "3b447b67283dac3b1d5e592ed3db6e56754c3d0e",
+  "verifier_branch": "issue-671-p5x-negative-firsterror-verifier-20261118",
+  "verifier_workflow_commit": "f57542875074a3cd34a3575e1d8181fac3749e2a",
+  "workflow_run_id": 44351987050,
+  "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44351987050",
+  "workflow_conclusion": "success",
+  "artifact_id": 14450585864,
+  "artifact_name": "issue671-p5x-exact-52067302-first-error-classified-n1n8",
+  "artifact_zip_sha256": "914f2dc65b662087294d309a95729a4e5d8e0bd6cdf3903e50f4214178cd9b2f",
+  "artifact_zip_crc": "PASS",
+  "receipt_json_sha256": "6c6b79099e2b89469c7b43c8be55266907b99cff30c2693dc8eae0b2c6b3a077",
+  "w1_build_run": 44345886330,
+  "w1_build_artifact_id": 14446611291,
+  "elf_sha256": "912b212c3c1849165ab3da13d758f5b3e101f5b6cb7e1e3f3820259f6080f7eb",
+  "app_libraries_sha256": {
+    "libphysics-opt.so.0": "61f66ec66843f1d51bd79ef7542197410bebf92487f2cff70e9e08f9e958da82",
+    "libphysics_test-opt.so.0": "e9ad1adeb8fcba312cf836520927a3de3fc5ad986d35d50f6cfe5d114e825f0f"
+  },
+  "verifier_change": [
+    "merge native stdout and stderr to preserve first emitted error order",
+    "match expected signature within first fatal error block only",
+    "N5 early registration separated from P05",
+    "self-test later-error mismatch, zero exit and missing fatal marker before protected inputs"
+  ],
+  "cases": {
+    "417": {
+      "clean_native_p2_exit": 0,
+      "syntax_ok": true,
+      "owner_registration": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "electron_FEM_BC": 8
+      },
+      "negative": {
+        "N1": {
+          "exit_code": 1,
+          "first_error_class": "P05",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N1",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "4d90193e3a550191d410ed0f41ec10f0c4ed86bd851acc775561609437660937"
+        },
+        "N2": {
+          "exit_code": 1,
+          "first_error_class": "P05",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N2",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "3da2feb5b458038028ead71babca778b7c264772b55a5d223466da0b6e5e292a"
+        },
+        "N3": {
+          "exit_code": 1,
+          "first_error_class": "P05",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N3",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "3c11f08d441787eeb09f3b742520cbeb28e6763f0d59d9f2f759690f943c5f24"
+        },
+        "N4": {
+          "exit_code": 1,
+          "first_error_class": "P05",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N4",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "76717c2228fdf4d68083660f8cef838b67e6d4020d88b49a50e317c287dedd44"
+        },
+        "N5": {
+          "exit_code": 1,
+          "first_error_class": "EARLY_REGISTRATION",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N5",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "085999f870edc05f9212a93f7b0a73d1935b774b73db53295b537fb935c98014"
+        },
+        "N6": {
+          "exit_code": 1,
+          "first_error_class": "CHEMISTRY",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N6",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "4c61243de04f076c38fd8d0c48723413ff2ff40c34df0575308da51317d9ed4d"
+        },
+        "N7": {
+          "exit_code": 1,
+          "first_error_class": "CHEMISTRY",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N7",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "2220686e697d43fda15f0f7d206e258c93db4e983eafba3883728b46a3bff309"
+        },
+        "N8": {
+          "exit_code": 1,
+          "first_error_class": "CHEMISTRY",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N8",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "807bd55b0d1a29b565d97e9c0ad3090981af0f8c15c55ccaf2890772cdb76fbd"
+        }
+      },
+      "source_restoration_sha": "PASS"
+    },
+    "941": {
+      "clean_native_p2_exit": 0,
+      "syntax_ok": true,
+      "owner_registration": {
+        "FVKernel": 12,
+        "FVBC": 12,
+        "electron_FEM_BC": 8
+      },
+      "negative": {
+        "N1": {
+          "exit_code": 1,
+          "first_error_class": "P05",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N1",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "55b4c6bac1a445367133f30fc0b9eaf02644d80063830725ce1a3e69e5a981ff"
+        },
+        "N2": {
+          "exit_code": 1,
+          "first_error_class": "P05",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N2",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "2245f527286fb7c8c3dbe13d4e234489ea31f1f5de39e821362310ee6b045527"
+        },
+        "N3": {
+          "exit_code": 1,
+          "first_error_class": "P05",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N3",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "61033f27eaf5b55cda8a61aaa0520ac1226c4a373b40fe9e8badb852c9"
+        },
+        "N4": {
+          "exit_code": 1,
+          "first_error_class": "P05",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N4",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "db9b2821343983ec9dc9fed087a47f1055bb527158323a34692a561041bbf1cb"
+        },
+        "N5": {
+          "exit_code": 1,
+          "first_error_class": "EARLY_REGISTRATION",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N5",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "153316e486ea40de5fec25d83ca5a2f5c92736e8408e34633fc08d0e65131e61"
+        },
+        "N6": {
+          "exit_code": 1,
+          "first_error_class": "CHEMISTRY",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N6",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "45d19572e12fd8669c104173e91f60f3e98ff3d343a5564bcefeefae738f899b"
+        },
+        "N7": {
+          "exit_code": 1,
+          "first_error_class": "CHEMISTRY",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N7",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "2b3b4cbdd8f1415f1562ad6eafa4dcca9988fa920936b0745bb85138c830cbc7"
+        },
+        "N8": {
+          "exit_code": 1,
+          "first_error_class": "CHEMISTRY",
+          "first_error_signature": "EXPECTED_FIRST_FATAL_N8",
+          "first_error_verifier": "FIRST_FATAL_BLOCK_V2_MERGED_STDOUT_STDERR",
+          "log_sha256": "a777949b7733249d034954872d83c4e76524211a272a92095b65615d5e7305f2"
+        }
+      },
+      "source_restoration_sha": "PASS"
+    }
+  },
+  "summary": {
+    "clean_native_cases_pass": 2,
+    "negative_mutants_completed": 16,
+    "first_error_expected_rejections": 16,
+    "P05": 8,
+    "EARLY_REGISTRATION": 2,
+    "CHEMISTRY": 6,
+    "protected_private_tmpfs_cleanup": "PASS",
+    "raw_private_rates_in_artifact": false,
+    "source_stage_restored": true
+  },
+  "boundaries": {
+    "source_520_negative_verifier": "PASS_16_OF_16",
+    "latest_pr_exact_head_binary": "HOLD_HEAD_DRIFT",
+    "P6_REPOSITORY_CI": "INDEPENDENT",
+    "P7_FINAL": "HOLD",
+    "P3_P4_100US": "NOT_RUN",
+    "SCIENCE": "HOLD",
+    "historical_hybrid": "KEEP_HOLD",
+    "runtime_warehouse_direct_memory_dump": "NOT_CLAIMED",
+    "raw_native_stdout_uploaded": false
+  },
+  "mutation": {
+    "only_isolated_workflow_and_report_branch": true,
+    "pr665_main_unmodified": true,
+    "no_merge": true
+  }
+}
