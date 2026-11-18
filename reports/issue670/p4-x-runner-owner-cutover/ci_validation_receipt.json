@@ -1,0 +1,88 @@
+{
+  "schema": "issue670.p4x.owner_conflict.CI_crosschecked.v1",
+  "task_id": "P4-X",
+  "issue": 670,
+  "verdict": "PASS_417_941_P4_X_DUPLICATE_PROVIDER_CUTOVER_IN_PRODUCTION_SOURCE_RUNNER__NATIVE_HOLD",
+  "branch": "issue-670-p4-x-owner-runner-integration-20261118",
+  "stacked_PR": 677,
+  "base_draft_PR": 665,
+  "pr_head_at_report": "5e4b764ed409c47b9c36bf8ca89b98975fdeb4ac",
+  "verified_CI": [
+    {
+      "run_id": 44273559356,
+      "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44273559356",
+      "head_sha": "a9029b80f273083e02da60b12cf17924b0f64656",
+      "conclusion": "success",
+      "test": "Real P3-X stage 417/941 11-layer SHA + exact seven old blocks and 30/30 negative mutations",
+      "artifact_id": 14412683558,
+      "artifact_zip_sha256": "96d34760cc8f281305fddebb177b75a1e2c1aba176171d556e25e1525e10e9d5",
+      "artifact_zip_CRC": "PASS",
+      "artifact_result_JSON_sha256": "9bef4bfd67277e4fc1f0f89190233e6e35b299af5bb816a4451eeea5f3cfdb51"
+    },
+    {
+      "run_id": 44274320806,
+      "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44274320806",
+      "head_sha": "f5481cdd474b941102ed2c6b0a9121fd2aab589e",
+      "conclusion": "success",
+      "test": "Real original P1 source -> production prepare_newonly P2 26 ion -> P3-X 10 electron -> P4-X 7 FunctorMaterial edits on 417/941",
+      "P1_actual_outer_artifact_id": 14372278074,
+      "P1_actual_outer_sha256": "584fd8eff989ab1f7f0a7582ae72b4dc2429f84b8b05ed91c1a46f89df88da5e",
+      "P1_original_nested_11layer_zip_sha256": "9923c7c875dff975ec203610e58797be7abbfe6a92be2173f1fbe525f49f1172",
+      "P3X_actual_source_artifact_id": 14406746397,
+      "P3X_actual_zip_sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+      "artifact_id": 14414026909,
+      "artifact_zip_sha256": "6773dfa54bd1a77c908831be3edd6a93699152f5879e96f6bf3db435df431540",
+      "artifact_zip_CRC": "PASS",
+      "artifact_result_JSON_sha256": "8813848be5efde22bbec7e1ccbe4603aaa73defdeab0d3e2a3ebb18b8a75dd2b"
+    }
+  ],
+  "per_case": {
+    "S6_417": {
+      "original_P1_11_layer_SHA": "11/11_PASS",
+      "final_P4X_11_layer_SHA": "11/11_PASS",
+      "old_Native_ion_retired": 26,
+      "old_electron_retired": 10,
+      "old_duplicate_functor_material_removed": 6,
+      "one_constants_block_preserved_carrier_one": 1,
+      "unchanged_other_10_layers": true,
+      "P3_X_C0_SHA": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "P4_X_C0_SHA": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490"
+    },
+    "S6_941": {
+      "original_P1_11_layer_SHA": "11/11_PASS",
+      "final_P4X_11_layer_SHA": "11/11_PASS",
+      "old_Native_ion_retired": 26,
+      "old_electron_retired": 10,
+      "old_duplicate_functor_material_removed": 6,
+      "one_constants_block_preserved_carrier_one": 1,
+      "unchanged_other_10_layers": true,
+      "P3_X_C0_SHA": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "P4_X_C0_SHA": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490"
+    }
+  },
+  "source_code_git_blobs": {
+    "owner_retirement": "a3f9d93ea1095c9d00053e5104bb7326d1af8f31",
+    "production_preparer": "d2091291161033a9662b0d583567f9c35d26c006",
+    "negative_test": "ecbee86ff4fbac83366fcc72b221df81e79f2586",
+    "full_production_source_test": "5a9eabe1efbc51898cbdb2ed40b926e27c28f22c"
+  },
+  "one_shot_workflows_removed_after_success": true,
+  "caveats": {
+    "source_only_success_does_not_prove_generated_CPP_owner_inventory": true,
+    "entire_P4_X_35_source_and_consumer_receipt_completion": "NOT_ATTESTED",
+    "D8_dynamic_Maxwell_pressure_RF_wall_source": "HOLD",
+    "original_S6_main_mesh_missing_in_previous_Native_probe": true,
+    "P5_0_same_final_exact_head_PhysicsApp_binary": "NOT_BUILT",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  },
+  "security_and_scope": {
+    "historical_10_layer_ZIPs_unchanged": true,
+    "protected_private_rates_not_published": true,
+    "main_branch_unchanged": true,
+    "P05_guard_unmodified": true,
+    "unit_coefficients_unchanged": true
+  }
+}
