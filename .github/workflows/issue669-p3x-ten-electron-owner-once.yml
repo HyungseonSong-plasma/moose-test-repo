@@ -1,4 +1,5 @@
 name: Issue669 P3-X exact electron ten-owner source-only cutover
+# CI retry after pressure SHA full 64-hex correction
 # Retry after independent verifier section/name identity correction
 on:
   push:
