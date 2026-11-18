@@ -1,0 +1,120 @@
+{
+  "schema": "issue672.p6_f3.flow_native_vs_physics_ion_ownership_v1",
+  "slot": "P6-F3",
+  "verdict": "PASS_READONLY_OWNER_MODE_DECISION__FLOW_NATIVE_P05_HOLD",
+  "source": {
+    "PR665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "candidate_PR684_head": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c",
+    "candidate_merged": false,
+    "source_checks": "6/6 PASS exact-head in-memory predicates",
+    "inventory_blob": "34256b02a15e66e9298cc9ad0e4d2752e5f3f3c7",
+    "FLOW_candidate_runner_blob": "6c6dcf6516d4169e4481f305dc882862253acbe9",
+    "DDContinuityEq_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+  },
+  "old_by_case": {
+    "417": {
+      "Native_FVKernels": 14,
+      "Native_FVBCs": 12,
+      "Native_total": 26,
+      "states": [
+        "log_O2p",
+        "log_Om",
+        "log_Op"
+      ]
+    },
+    "941": {
+      "Native_FVKernels": 14,
+      "Native_FVBCs": 12,
+      "Native_total": 26,
+      "states": [
+        "log_O2p",
+        "log_Om",
+        "log_Op"
+      ]
+    }
+  },
+  "new_physics": {
+    "fvm_species": [
+      "O2p",
+      "Om",
+      "Op"
+    ],
+    "generated_FVKernels": 12,
+    "generated_FVBCs": 12,
+    "total": 24,
+    "generated_kernels_per_species": [
+      "time",
+      "diffusion",
+      "drift",
+      "aggregated_source"
+    ],
+    "generated_bcs_per_species": "one general-wall + three dielectric, per ion",
+    "P05": "TheWarehouse rejects unexpected/missing/duplicate selected variable kernel and BC owners"
+  },
+  "real_CI": {
+    "FLOW_old": {
+      "run": 43972605750,
+      "job": 133668371495,
+      "conclusion": "success",
+      "sha": "1efdd922096df10239cff8adc132e8f3811c1a63",
+      "S6_417": "PASS",
+      "S6_941": "PASS",
+      "status": "historical pinned only"
+    },
+    "FLOW_current": {
+      "run": 44297212567,
+      "job": 134777260454,
+      "conclusion": "failure",
+      "source_sha": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+      "S6_417": "FAIL first e transport JSON record missing",
+      "S6_941": "NOT_RUN_417_EARLY_ABORT"
+    },
+    "P05_in_repaired_FLOW": "NOT_RUN; ni_time first-failure precedent observed in current ARCH only, do not misattribute ARCH log as FLOW log"
+  },
+  "FLOW_candidate_behavior": "PR684 calls prepare_hybrid_transport retaining full 7 species/8 reactions and 5/3 energy, removes old e Transport Material, does not remove 26 old Native ion FV owners, retains wall/Poisson/current and old D-base semantics.",
+  "decision": [
+    {
+      "lane": "historical_FLOW_Hybrid",
+      "authority": "historical approved purpose",
+      "verdict": "KEEP_HOLD_CURRENT_HEAD",
+      "owner_mode": "keep Native 26 for historical interpretation; do not enable generated 24 concurrently or skip P05; immutable source/archive retained"
+    },
+    {
+      "lane": "dedicated_NewOnly",
+      "authority": "new #633/P5-X/P6-N1 separated CI",
+      "verdict": "CONDITIONAL_ACCEPT",
+      "owner_mode": "retire all old 26 in exact disposable case, 7 C0 duplicate providers and electron owners; generate exactly 12+12 from Physics; preserve all surviving consumers"
+    },
+    {
+      "lane": "modern_FLOW_compatibility",
+      "authority": "distinct model and workflow approval required",
+      "verdict": "HOLD_SEPARATE_DECISION",
+      "owner_mode": "cannot simply set dont_create_kernels or remove current P05; would require separate fully specified and tested Native-only mode/Science review"
+    }
+  ],
+  "preservation": [
+    "Original public EI/H25 sources and 417/941 reaction distinctions",
+    "electron 5/3 energy transport mobility and diffusivity",
+    "Ion O2p +1, Om -1, Op +1 mobility/diffusion and signed wall number/mass flux",
+    "n_i_physical/n_op_physical/n_m_physical and charge_number_density -> Poisson source",
+    "cover/wafer/focus ring net wall current and lower-D sigma, neutral gas pressure, RF child and 7 Transfers",
+    "historical 11-layer/mesh/electron lookup original byte identity and protected EI rate custody"
+  ],
+  "P05_negatives_to_test": [
+    "retained Native ni_time with generated O2p time kernel must fail nonzero",
+    "Om or Op extra/missing FVBC or wrong signed number flux must fail nonzero",
+    "partial/empty fvm_species with dont_create_kernels must not be accepted as 12+12",
+    "remove exactly 26, preserve all non-target owner SHA; actual Warehouse 12+12",
+    "mismatch table, ion transport or surface-current consumers fail closed"
+  ],
+  "gates": {
+    "P6_F3_AUTHORITY_DECISION": "PASS_KEEP_HOLD_HISTORICAL__SPLIT_NEWONLY",
+    "P6_F3_NATIVE_WAREHOUSE": "HOLD_NOT_RUN",
+    "P6_F4_CURRENT_FLOW_NATIVE": "NOT_RUN",
+    "PR684_MERGED": false,
+    "SCIENCE": "HOLD"
+  },
+  "next": "Keep historical FLOW as explicit KEEP_HOLD; obtain independent authority for modern FLOW cutover or isolate new-only; run F4 417/941 independently only after source-bound single owner, actual table SHA and same binary. Preserve first error and P05 failure evidence.",
+  "method": "Independently fetched P1-E 26-owner actual inventory for both cases, FLOW #578/current Actions job logs, PR684 FLOW runner, DDContinuityEq P05 code and F1/F2 source receipts. Source assertions 6/6; no re-run of repaired FLOW P2 and no private Rate content exposed.",
+  "mutation": "evidence-only isolated branch; PR665/PR684/main/workflows unchanged"
+}
