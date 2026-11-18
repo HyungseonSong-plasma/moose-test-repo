@@ -1,0 +1,271 @@
+{
+  "schema": "issue671.p5_x.native_evidence_integration.20261118.v1",
+  "task_id": "P5-X",
+  "issue": 671,
+  "final_verdict": "HOLD_NEW_ONLY_S6_P2_EXACT_HEAD_NEGATIVE_MATRIX_FULL_D8",
+  "evaluation_date_utc": "2026-11-18",
+  "stage": "INDEPENDENT_NATIVE_EVIDENCE_AGGREGATION_NOT_FINAL_ACCEPTANCE",
+  "target": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "pr": 665,
+    "pr_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "pr_git_tree": "10ab018235f047bf1abc250d3b18005b9156752a",
+    "pr_state": "OPEN_DRAFT",
+    "originals_unchanged": true
+  },
+  "local_independent_audit": {
+    "source": "p5x_native_evidence_verify.py",
+    "script_sha256": "57fafc8337b264386a56956db016ca57be44c7f4704d16aa73a469ef20c50e86",
+    "detailed_output": "p5x-native-evidence-integrated.json",
+    "detailed_json_sha256": "a369b27f8862e80639c5fed745603b014bb691f268e2daf348b5bc09fbb7f500",
+    "actual_ZIP_file_count": 9,
+    "assertions_total": 96,
+    "assertions_pass": 96,
+    "independent_ZIP_SHA_CRC": "9/9",
+    "scope_limit": "CI Artifact metadata, ELF/Library bytes, Native output logs, detached diagnostic Warehouse object dumps; W2/W3 do not contain raw final 11 .i bytes"
+  },
+  "evidence": [
+    {
+      "role": "W1_SINGLE_EXECUTABLE_AND_APP_LIBS",
+      "run": 44293156216,
+      "artifact": 14422701532,
+      "zip_sha256": "ce50a51f2ab565b5dc6aced272adcf12f1075f7593417c603ce05274c8291c18",
+      "source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+      "source_tree": "0385fbf71ef384bbad02a4222f2e799deb02b9a6",
+      "tar_sha256": "705e1f3fa58c4da3c1d76cbca7f2a761045f8f46ee6f54d3391aeaf5ab62033c",
+      "elf_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+      "elf_bytes": 67368,
+      "libphysics_sha256": "3274751989604b06e7e7e677435b16c874388a4f7b8735b059eafc605fbb7e51",
+      "libphysics_test_sha256": "86aa0d4ebe18d731e7e052f5ad62594b1a3b48074f848693b0958f728b61ba80",
+      "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+      "verdict": "PASS_REAL_SINGLE_BUILD_PREVIOUS_HEAD_ONLY"
+    },
+    {
+      "role": "W2_S6_417_REAL_NATIVE_INPUT_P2",
+      "run": 44300489811,
+      "artifact": 14425706979,
+      "zip_sha256": "668815e6bcd15353586e177512cce45c32d1bb1e17d5ff0755fc4f6393105456",
+      "case": "417",
+      "exit": 0,
+      "syntax_ok": true,
+      "log_sha256": "e154a21a53c935bfb39e58dfd7f6ae81b5cd313450295bc6a2825e5848757071",
+      "w1_elf_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+      "case_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "case_input_sha_receipt_count": 11,
+      "C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+      "protected_rate_source_count": 5,
+      "private_tmpfs_removed": true,
+      "explicit_w1_exact_head_match": false,
+      "verdict": "PASS_NATIVE_SYNTAX_OFF_SOURCE_HEAD"
+    },
+    {
+      "role": "W3_S6_941_REAL_NATIVE_INPUT_P2",
+      "run": 44300489811,
+      "artifact": 14425516960,
+      "zip_sha256": "19180959b6dbd43aa748ddc900365eb1edcda22583d14275d62fd762f7a81990",
+      "case": "941",
+      "exit": 0,
+      "syntax_ok": true,
+      "log_sha256": "c06952f0c600df4ef02a1d6a7580937ae75ae856e69b0e30e78fe004a0a50516",
+      "w1_elf_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc",
+      "case_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "case_input_sha_receipt_count": 11,
+      "C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "parent_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+      "protected_rate_source_count": 5,
+      "private_tmpfs_removed": true,
+      "explicit_w1_exact_head_match": false,
+      "verdict": "PASS_NATIVE_SYNTAX_OFF_SOURCE_HEAD"
+    },
+    {
+      "role": "P4X_FINAL_SOURCE_STAGE",
+      "run": 44274320806,
+      "artifact": 14414026909,
+      "zip_sha256": "6773dfa54bd1a77c908831be3edd6a93699152f5879e96f6bf3db435df431540",
+      "case_scope": [
+        "417",
+        "941"
+      ],
+      "C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "verdict": "PASS_SOURCE_ONLY_FULL_DYNAMIC_CONSUMER_HOLD"
+    },
+    {
+      "role": "EI_RATE_SECURE_STAGE",
+      "run": 44268361259,
+      "artifact": 14411626010,
+      "zip_sha256": "195210cc96c80a096103c855e31804e2a0fd52ed9f31a64cde23f9dc773f6127",
+      "historical_original_rate_sha6_of6": true,
+      "private_rates_per_case": 5,
+      "raw_private_data_in_public": false,
+      "verdict": "PASS_SOURCE_SECURE_CUSTODY_NOT_FINAL_WAREHOUSE"
+    },
+    {
+      "role": "REAL_P05_WAREHOUSE_OBSERVATION",
+      "run": 44280359966,
+      "artifact": 14417221187,
+      "zip_sha256": "edd8569834038cce51f7a1e13130c48bc76e4de4b6fac62d40cb5bce1323401b",
+      "diagnostic_head": "9e9b4f5ddb99bcbbf8c31746d7331587c9885a3f",
+      "diagnostic_elf_sha256": "65dcb77a7483e9a3861e8c1bfbe2413daec739e38240efa57d0a501dd1a36765",
+      "actual_417_941_ion_Kernels": 12,
+      "actual_417_941_ion_FVBC": 12,
+      "per_species_Kernel_BC": "4+4",
+      "observed_P05_negative": {
+        "case": "417",
+        "type": "duplicate O2p FV Time Kernel",
+        "exit": 1
+      },
+      "verdict": "PASS_ACTUAL_DIAGNOSTIC_HEAD_ONLY"
+    },
+    {
+      "role": "D8_LIVE_CTOR_BINDING",
+      "run": 44297119716,
+      "artifact": 14423883385,
+      "zip_sha256": "bcaeb9b1aff9cf28e26a5bc12eded70f13488876d0bce54dbf7691d16c49732b",
+      "diagnostic_head": "e68dc832e018aaa7e089d5a005d141d20974aed1",
+      "both_case_12_plus_12": true,
+      "ion_electron_density_wall_surface_current_ctors": true,
+      "native_face_residual": "NOT_MEASURED_IN_THIS_RUN",
+      "verdict": "PASS_REAL_DETACHED_CTOR_ONLY"
+    },
+    {
+      "role": "D8_WALL_FACE_LOWERD_RESIDUAL_NUMERICAL",
+      "run": 44303391987,
+      "artifact": 14427412814,
+      "zip_sha256": "7b74bc979d2b3b48fc1083f1d360bf2c0f839e55f67a2a2d1c84dfe4de78946e",
+      "diagnostic_head": "c78b824e8e94db3c6879b5eb4e0c74f33313a146",
+      "both_case_exit0": true,
+      "each_case_ion_number_mass_faces": 6,
+      "each_case_lowerD_current_residuals": 3,
+      "first_sample_j_A_m2": "-43.7561",
+      "scope": "RF_OFF_BOUNDED_12TH_DIAGNOSTIC_OVERLAY",
+      "verdict": "PASS_REAL_DETACHED_NUMERICAL_PROBE_NOT_FULL"
+    },
+    {
+      "role": "D8_REAL_MAXWELL_SEVEN_TRANSFERS",
+      "run": 44304244747,
+      "artifact": 14428450104,
+      "zip_sha256": "80461f67e18428d4a50f78017a3b59a9227e4651d52473c24ec3e13ae1f4f3fe",
+      "diagnostic_head": "7c37ca51a72e5e9c540ff59d7c2a4a46774a0155",
+      "each_case_exit0": true,
+      "bidirectional_transfer_checks": "12/12 case-specific checks true",
+      "observed_child_power_W": 48.194624866912,
+      "scope": "REDUCED_PARENT_ONE_STEP_REAL_MAXWELL_CHILD",
+      "full_production_S6_RF_coupling": "NOT_TESTED",
+      "verdict": "PASS_REAL_DETACHED_TRANSFER_PROBE_NOT_FULL"
+    }
+  ],
+  "head_compatibility": {
+    "W1_binary_source": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+    "current_pr665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "GitHub_compare": "05d7ce4...74a2b0f",
+    "commits_ahead": 6,
+    "changed_files": [
+      "tests/test_issue633_s6_scratch_ion_retirement.py"
+    ],
+    "changed_physics_app_files": 0,
+    "explicit_W2W3_receipt_w1_exact_head_match": false,
+    "interpretation": "C++ source unchanged in observed compare, but absolute P5-X exact Git HEAD identity condition is NOT satisfied. Rebuild on 74a2 or newer actual HEAD before final acceptance."
+  },
+  "negative_matrix": {
+    "required_cases": [
+      "417",
+      "941"
+    ],
+    "required_groups": [
+      "N1",
+      "N2",
+      "N3",
+      "N4",
+      "N5",
+      "N6",
+      "N7",
+      "N8"
+    ],
+    "full_required": 16,
+    "qualified_full_latest_head": 0,
+    "bounded_other_head_p05_negative": "One 417 O2p time duplicate exits 1 and gets P05 at detached diagnostic HEAD, not evidence for complete 16-case latest-head matrix",
+    "static_source_mutants": "Previously reported, not promoted to Native"
+  },
+  "gates": [
+    {
+      "gate": "P4X_SOURCE_7_OWNER_CUTOVER",
+      "verdict": "PASS_SOURCE"
+    },
+    {
+      "gate": "ONE_SHARED_W1_NATIVE_ELF_REAL",
+      "verdict": "PASS_SOURCE_05d7_ONLY"
+    },
+    {
+      "gate": "S6_417_NATIVE_SYNTAX",
+      "verdict": "PASS_REAL_OFF_HEAD"
+    },
+    {
+      "gate": "S6_941_NATIVE_SYNTAX",
+      "verdict": "PASS_REAL_OFF_HEAD"
+    },
+    {
+      "gate": "SHARED_ELF_417_941",
+      "verdict": "PASS"
+    },
+    {
+      "gate": "EXACT_PR665_HEAD_ONE_BUILD_BINARY_AND_LIBS",
+      "verdict": "HOLD"
+    },
+    {
+      "gate": "P05_GENERATED_12_KERNEL_12_FVBC_BOTH",
+      "verdict": "PASS_DIAGNOSTIC_OTHER_HEAD__HOLD_CURRENT"
+    },
+    {
+      "gate": "FEM_ELECTRON_8_BC_UNIQUE_CURRENT",
+      "verdict": "HOLD"
+    },
+    {
+      "gate": "N1_N8_16_NATIVE_FAIL_CLOSED_AND_RESTORE",
+      "verdict": "HOLD_0_OF_16_QUALIFIED"
+    },
+    {
+      "gate": "D8_CTOR",
+      "verdict": "PASS_DIAGNOSTIC_OTHER_HEAD"
+    },
+    {
+      "gate": "D8_WALL_FACE_LOWERD",
+      "verdict": "PASS_DIAGNOSTIC_BOUNDED_OTHER_HEAD"
+    },
+    {
+      "gate": "D8_MAXWELL_SEVEN_TRANSFERS",
+      "verdict": "PASS_DIAGNOSTIC_REDUCED_PARENT_OTHER_HEAD"
+    },
+    {
+      "gate": "D8_FULL_REAL_S6_RF_COUPLING",
+      "verdict": "HOLD"
+    },
+    {
+      "gate": "P5_X_FINAL_NATIVE_P2",
+      "verdict": "HOLD"
+    },
+    {
+      "gate": "SCIENCE",
+      "verdict": "SCIENCE_HOLD_NATIVE_P3_P4_NOT_RUN"
+    }
+  ],
+  "next_required": [
+    "P5-0: build real PhysicsApp executable and both app libs once from final exact PR665 HEAD (or repin if updated); source/tree/OCI/ELF checks",
+    "P5-B2/C2: rerun actual 417 and 941 full 11-layer New-only --check-input and SHA logs with that exact binary; source native inputs and protected EI within each run",
+    "P5-B3/B4/C3/C4: re-observe live P05 12+12, 8 FEM BC, all generated and legacy source/functor owners at that same exact source/binary and avoid false PASS",
+    "P5-N1..N8: run 16 independent Native mutant checks (8 groups x 2 cases) with correct nonzero exit/error log SHA and original SHA restore",
+    "D8: record fully coupled original S6 RF/Maxwell caller and residuals beyond the detached RF-off or reduced-parent diagnostics",
+    "Only then fill the official final acceptance form and promote P5-X to PASS; no P3/P4 science or main merge."
+  ],
+  "safety": {
+    "Private_EI_raw_bytes_exposed": false,
+    "P05_bypass": false,
+    "dont_create_kernels_bypass": false,
+    "workflow_skip": false,
+    "source_and_main_modified_by_this_task": false,
+    "original_archived_inputs_modified": false,
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  }
+}
