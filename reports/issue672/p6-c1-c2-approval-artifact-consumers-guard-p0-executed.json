@@ -1,0 +1,141 @@
+{
+  "schema": "issue672.p6_c1_c2_approval_external_consumer_and_executed_guards.v1",
+  "reviewed_utc_date": "2026-11-18",
+  "task": "P6-C1/C2 authority review + Artifact consumer audit + real P6 Python/Workflow Guard execution",
+  "verdict": "P6_C1_C2_SOURCE_AND_P0_PASS__ARTIFACT_EXTERNAL_CONSUMER_APPROVAL_HOLD__ION_FVM_150_200_AUTO_TRIGGER_SEPARATE_HOLD",
+  "source_identity": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "baseline_pr665_head": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "tested_branch_push_head": "4d52b94bbc6df0cb9ed0844ff9197d9248fcc9dc",
+    "candidate_before_receipt_head": "b577f0b9ec96b1997eeed72bf5554b6b6b6f8c8b",
+    "CI_and_generated_template_git_blob": "8313e539c2e7cfa7cb25973ad62fbce1524db19d",
+    "CI_and_generated_template_SHA256": "92770213030cfd3952c36e8b73b89f1221c3e5813e8cf076ae3d51a51d37b73f",
+    "P6_guard_git_blob": "32ab854dda95040b2f00b050e6815e1d7351e536",
+    "P6_pytest_git_blob": "4a2425f8b8694be067e820163ca369dc8461c9e3",
+    "Physics_Cpp_DDContinuityEq_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+  },
+  "authority_review": {
+    "issue535": "No bulk workflow deletion, no retargeting historical science one-shot to main, identify dynamic/external callers, exact-head source-bound replacement and negative tests; unknown caller -> KEEP_HOLD.",
+    "issue541": "Individual whole workflow package, immutable historical source/artifact, P2 not a P3/science replacement; integration across branches by one writer; unresolved replay and external consumers -> KEEP_HOLD.",
+    "issue672": "Only P6-C3/P6-X single writer may update ci.yml + generated general-ci.yml, with source SHA parity; P6-N2/newonly lane separate and P5-X native acceptance independent.",
+    "branch_policy": "Main/default branch required checks unknown: previous GitHub API branch protection 403. No assumption that branch protection is absent.",
+    "C1": "Previous C1 exact-source general CI and template identical; P0 new branch continues exact byte parity. Native four same-repo PR jobs now skip PR edited metadata without changed base; base edit, synchronize, opened, reopened still run.",
+    "C2": "P05 is not muted; historical ARCH ni_time conflict in modern HEAD remains real Native FAIL; historical P6-H3 P2-only qualified at old source does not convert modern ARCH to PASS. Manual ARCH S6 P3/P4 and DD P3 remain manual workflow_dispatch with SHA+approval.",
+    "special_auto_trigger_risk": {
+      "workflow": ".github/workflows/ion-fvm-hybrid-staged-dt.yml",
+      "git_blob": "230e4367e7a688f297747b7f03bb0fdfaf4e4d23",
+      "triggers": [
+        "workflow_dispatch",
+        "pull_request targeting main with paths whitelist",
+        "push main with paths whitelist"
+      ],
+      "long_run_matrix": [
+        {
+          "case": "ion_fvm_hybrid_staged_1ns100_5ns100",
+          "expected_steps": 200
+        },
+        {
+          "case": "ion_fvm_hybrid_staged_1ns100_10ns50",
+          "expected_steps": 150
+        }
+      ],
+      "risk": "The existing job launches solver time integration after --check-input; whitelisted Physics C++/input edits may auto-trigger 150 and 200 steps on PR/main; current C3 five modified paths do NOT overlap whitelist.",
+      "decision": "KEEP_HOLD for future changes touching whitelisted paths; workflow owner must approve protective trigger plan before P6-X integration; no ion-fvm YAML change in this task"
+    },
+    "issue493_guard": {
+      "workflow": ".github/workflows/issue493-public-bc-results-p4-once.yml",
+      "behavior": "Existing path-filtered main push self-YAML trigger includes approved expensive complete B/C P3, unchanged and not touched by C3.",
+      "decision": "Do not edit its own YAML casually; no automatic trigger from this C3 patch."
+    }
+  },
+  "artifact_consumer_audit": {
+    "scope": "GitHub code-search across accessible HyungseonSong-plasma org/default branch, direct source readback, #535/#541 governance. Does not cover off-platform clients, hidden repos, or arbitrary GitHub API readers.",
+    "proposed_change": "Four native Artifact names include run_id, run_attempt, PR head SHA, changing former names.",
+    "results": [
+      {
+        "prefix": "issue541-core-four-native-",
+        "references": [
+          ".github/workflows/ci.yml",
+          "ci/workflow_templates/general-ci.yml",
+          "ci/guards/issue541_core_four_contract.py",
+          "ci/baselines/issue541_core_four_retirement.json"
+        ],
+        "classification": "KNOWN_HISTORICAL_PINNED_CONTRACT",
+        "hazard": "The exact old Artifact name 'issue541-core-four-native-43835330764' is hard-asserted for historical run #43835330764; must NOT rewrite that immutable baseline. No proof yet for current dynamic consumers."
+      },
+      {
+        "prefix": "plasma-native-regression-",
+        "references": [
+          ".github/workflows/ci.yml",
+          "ci/workflow_templates/general-ci.yml"
+        ],
+        "classification": "NO_OTHER_VISIBLE_CODE_REFERENCE",
+        "hazard": "External/hidden consumers unknown"
+      },
+      {
+        "prefix": "issue541-arch-dd-p1-p2-",
+        "references": [
+          ".github/workflows/ci.yml",
+          "ci/workflow_templates/general-ci.yml"
+        ],
+        "classification": "NO_OTHER_VISIBLE_CODE_REFERENCE",
+        "hazard": "External/hidden consumers unknown"
+      },
+      {
+        "prefix": "issue541-arch-s6-hybrid-p2-",
+        "references": [
+          ".github/workflows/ci.yml",
+          "ci/workflow_templates/general-ci.yml"
+        ],
+        "classification": "NO_OTHER_VISIBLE_CODE_REFERENCE",
+        "hazard": "External/hidden consumers unknown"
+      }
+    ],
+    "external_off_platform_callers": "UNVERIFIED_NOT_ZERO",
+    "required_decision": "Before integration approve new per-attempt names with owner and verify off-platform/scripted artifact consumers, or provide a backward-compatible dual-identity/alias strategy without rewriting historical run receipts; do not merge on code-search miss alone."
+  },
+  "actual_execution": {
+    "run_id": 44328843502,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44328843502",
+    "job_id": 134887393176,
+    "run_status": "completed",
+    "run_conclusion": "success",
+    "job_conclusion": "success",
+    "event": "push",
+    "source_head": "4d52b94bbc6df0cb9ed0844ff9197d9248fcc9dc",
+    "temporary_test_workflow": ".github/workflows/issue672-p6-ci3-source-guards-p0-once.yml",
+    "temporary_workflow_removed_from_repository_commit": "b577f0b9ec96b1997eeed72bf5554b6b6b6f8c8b",
+    "limited_scope": "Python source-only guard and workflow checks, NO Docker/MOOSE/native P3/P4 or private rates.",
+    "artifact_id": 14437419879,
+    "artifact_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44328843502/artifacts/14437419879",
+    "artifact_zip_sha256": "2b8f914474148acce61d3261c547f08765e5f6a91b85afeeef84e177d99b8864",
+    "artifact_zip_bytes": 1938,
+    "artifact_members": 8,
+    "artifact_zip_crc": "PASS",
+    "receipt_byte_parity": true,
+    "logs": {
+      "Python_compilation": "PASS",
+      "safety_guard_self_test": "P6_CI_SAFETY_NEGATIVES_REJECTED 17",
+      "safety_guard_check": "P6_CI_TRIGGER_ARTIFACT_P05_FAIL_CLOSED_SOURCE_PASS",
+      "pytest": "2 passed in 0.04s",
+      "workflow_harness_self_test": "WORKFLOW_HARNESS_SELF_TEST=PASS",
+      "workflow_harness_check": "WORKFLOW_HARNESS_CHECK=PASS",
+      "workflow_surface_self_test": "WORKFLOW_SURFACE_GUARD_SELF_TEST=PASS",
+      "workflow_surface_check": "WORKFLOW_SURFACE_GUARD=PASS"
+    },
+    "fixture_policy": "Temporary branch-only P0 workflow was removed from the GitHub branch after success. For workflow_surface_check it was removed only from the ephemeral Actions working copy to validate intended final tracked workflow surface.",
+    "final_source_sha_caveat": "The successful P0 run belongs to 4d52b94; removing its temporary runner changed final branch HEAD. Four production code source blobs are byte-identical, but there has been no newly rerun Actions job at the final post-cleanup HEAD."
+  },
+  "status": {
+    "C1": "PASS_SOURCE_PARITY_AND_TRIGGER_AUDIT",
+    "C2": "PASS_SAFETY_SCOPE_REVIEW__ION_FVM_AUTORUN_RISK_HOLD",
+    "C3": "GUARD_P0_REAL_PASS",
+    "artifact_current_name_compatibility": "KEEP_HOLD_EXTERNAL_CONSUMER_UNKNOWN",
+    "P6_X": "HOLD_AWAIT_SINGLE_WRITER_APPROVAL",
+    "main_and_PR665": "UNCHANGED",
+    "modern_ARCH_Hybrid": "KEEP_HOLD_P05",
+    "newonly_P5_X": "SEPARATE",
+    "P3_P4": "NOT_RUN",
+    "science": "SCIENCE_HOLD"
+  }
+}
