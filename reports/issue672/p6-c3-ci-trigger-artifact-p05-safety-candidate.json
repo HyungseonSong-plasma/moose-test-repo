@@ -96,6 +96,7 @@
     "reason": "Candidate branch is not a PR targeting main; do not auto-dispatch expensive Native jobs solely to prepare reviewed CI patch."
   },
   "integration_requirements": [
+    "Review historical ci/guards/issue541_core_four_contract.py pinned artifact naming and external/dynamic consumers; preserve baseline metadata byte-for-byte.",
     "Review with P6-C1/C2 for governance #535/#541 and no new workflow targets, manual P3/P4 launch, 150/200-step automation, or P05 bypass.",
     "P6-X/C3 single writer must own the final two identical YAMLs and compare latest #665 head; rebase/revalidate if source advances.",
     "Run python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check and pytest tests/test_issue672_p6_ci_workflow_safety.py before merge.",
@@ -111,5 +112,12 @@
     "ARCH_MODERN": "KEEP_HOLD_P05",
     "P3_P4": "NOT_RUN",
     "SCIENCE": "SCIENCE_HOLD"
+  },
+  "artifact_consumer_audit": {
+    "code_search_scope": "current default branch: all 4 modified artifact prefixes",
+    "results": "ARCH S6 / ARCH DD / plasma regression referenced only by old YAML and generated template; CORE native also appears in historical pinned baseline and ci/guards/issue541_core_four_contract.py",
+    "baseline_immutable": "Historical PR #553 artifact name asserts exact issue541-core-four-native-<historical_run_id> and remains unchanged. It is not an assertion that future artifact names cannot be run/attempt-scoped.",
+    "external_dynamic_consumers": "UNKNOWN — governance #535/#541 review before integration",
+    "integration_constraint": "Do not rewrite historical core-four baseline receipt to match new names; keep historical artifact identity separate from future per-attempt names."
   }
 }
