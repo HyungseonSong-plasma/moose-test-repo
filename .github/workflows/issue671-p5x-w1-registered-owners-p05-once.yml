@@ -405,7 +405,10 @@ jobs:
                   rc,log=native(work,expected_case["ordered_inputs"],receipt["binary_sha256"],trace=True)
                   valid=(rc==0 and "Syntax OK" in log)
                   tracefile=work/"p5x_registrations.log"
-                  if not tracefile.is_file(): raise RuntimeError("OWNER_INTERPOSER_NOT_INVOKED_"+case)
+                  if not tracefile.is_file():
+                      diag=re.search(r"P5X_INTERPOSER_UNRESOLVED[^\n]{0,150}",log)
+                      reason=("_"+diag.group(0) if diag else "")
+                      raise RuntimeError("OWNER_INTERPOSER_NOT_INVOKED_"+case+"_rc_"+str(rc)+reason)
                   from collections import Counter
                   events=[line.split("\t") for line in tracefile.read_text().splitlines()]
                   assert all(len(e)==4 and e[0]=="P5X_REGISTER" for e in events)
@@ -492,8 +495,8 @@ jobs:
           except Exception as e:
               receipt["status"]="HOLD_NATIVE_OR_HARNESS"
               receipt["harness_error_type"]=type(e).__name__
-              if str(e).startswith(("CLEAN_CASE_","NON_SINGLE_FILE_","PUBLIC_STAGE_","MUTATION_")):
-                  receipt["harness_error_code"]=str(e)
+              if str(e).startswith(("CLEAN_CASE_","NON_SINGLE_FILE_","PUBLIC_STAGE_","MUTATION_","P5X_","OWNER_")):
+                  receipt["harness_error_code"]=str(e)[:330]
           finally:
               os.environ.pop("PROTECTED_ARCHIVE_B64",None)
               if private is not None and private.exists():
