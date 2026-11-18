@@ -1,5 +1,6 @@
 #include "PhysicsLowerDSurfaceCurrent.h"
 #include <iostream>
+#include <set>
 
 #include "FEProblemBase.h"
 #include "FaceInfo.h"
@@ -118,5 +119,15 @@ PhysicsLowerDSurfaceCurrent::computeQpResidual()
 
   // ADTimeDerivative contributes +test*d(sigma_s)/dt.  Therefore this
   // source contributes -test*j_to_surface to obtain d(sigma_s)/dt=j.
-  return -_test[_i][_qp] * j_to_surface;
+  const ADReal residual = -_test[_i][_qp] * j_to_surface;
+  // D8 numerical probe: only executed by actual lower-D residual assembly.
+  static thread_local std::set<std::string> reported;
+  if (reported.insert(name()).second)
+    std::cout << "D8_LOWERD_RESIDUAL_VALUE owner=" << name()
+              << " face_id=" << fi->id()
+              << " element_id=" << _current_elem->id()
+              << " qp=" << _qp
+              << " current=" << MetaPhysicL::raw_value(j_to_surface)
+              << " residual=" << MetaPhysicL::raw_value(residual) << std::endl;
+  return residual;
 }
