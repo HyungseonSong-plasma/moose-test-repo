@@ -1,0 +1,298 @@
+{
+  "schema": "issue672.p6_0.parallel_receipt_index.v1",
+  "work_id": "P6-0",
+  "decision": "SOURCE_AND_RECEIPT_INDEX_PASS_BOUNDED__P6_X_HOLD",
+  "updated_as_of": "2026-11-18",
+  "source": {
+    "repo": "HyungseonSong-plasma/moose-test-repo",
+    "PR665": 665,
+    "HEAD": "74a2b0fbeaf411d9c76cb82a69de1629fa55fa7f",
+    "tree": "10ab018235f047bf1abc250d3b18005b9156752a",
+    "main": "ebcfd9e662bc40f0473d8da05da95d11b61789f8",
+    "historical": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "PR684_unmerged": "3e48a0651ac53ec32e34b4b31e44098ffad80e1c"
+  },
+  "coverage": {
+    "planned": 24,
+    "independent": 12,
+    "indirect": 3,
+    "hold": 9,
+    "counts_are_receipt_coverage_not_jobs_executed": true
+  },
+  "slots": [
+    {
+      "id": "P6-B1",
+      "lane": "B",
+      "evidence_class": "INDIRECT",
+      "result": "E1 historical Public B 417/941 pass; needs separate B1 signoff",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/c54ad7fccf6357ceded8d2af28dfebc54d55e31f/reports/issue672/p6-e1-ci-artifact-binary-source-custody-20261118.json"
+    },
+    {
+      "id": "P6-D1",
+      "lane": "D",
+      "evidence_class": "INDEPENDENT_CANDIDATE",
+      "result": "PR684 code candidate, 18-case CI green, unmerged; Native hold",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/pull/684"
+    },
+    {
+      "id": "P6-D2",
+      "lane": "D",
+      "evidence_class": "INDEPENDENT_READONLY",
+      "result": "Authority/auto-science/P05 audit PASS; new cutover approval HOLD",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/a02d2438005e8165321ec9f5bd807c41b8a51f7c/reports/issue672/p6-approval-auto-p3-p4-p05-risk-audit-20261118.md"
+    },
+    {
+      "id": "P6-D3",
+      "lane": "D",
+      "evidence_class": "INDEPENDENT_SOURCE",
+      "result": "Original 100-row lookup and ion 3/3 coefficient SHA, 8/8 negatives PASS",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/d11451aa1dd4f4266205e3792561965d4881f8c6/reports/issue672/p6-d3-public-d-transport-lookup-unit-charge-original-sha.json"
+    },
+    {
+      "id": "P6-D4",
+      "lane": "D",
+      "evidence_class": "HOLD",
+      "result": "No independent 417/941 4 manual transport owner retirement final",
+      "reference_url": null
+    },
+    {
+      "id": "P6-D5",
+      "lane": "D",
+      "evidence_class": "HOLD",
+      "result": "Public D 417/941 Native --check-input FAIL at e transport JSON",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212655"
+    },
+    {
+      "id": "P6-F1",
+      "lane": "F",
+      "evidence_class": "INDEPENDENT_DIAGNOSIS",
+      "result": "FLOW 417 transport FAIL, 941 not run after early abort",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-672-p6-f1-flow-dbase-early-exit-readonly-20261118/reports/issue672/p6-f1-flow-dbase-417-941-early-exit-newonly-separation.json"
+    },
+    {
+      "id": "P6-F2",
+      "lane": "F",
+      "evidence_class": "INDEPENDENT_SOURCE",
+      "result": "FLOW e 5/3 energy and ion provider graph static PASS; candidate not Native",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-672-p6-f2-flow-owner-5over3-20261118/reports/issue672/p6-f2-flow-transport-material-and-electron-5over3-owner-source-receipt.json"
+    },
+    {
+      "id": "P6-F3",
+      "lane": "F",
+      "evidence_class": "HOLD",
+      "result": "FLOW ion Native26+Physics24 ownership decision not settled",
+      "reference_url": null
+    },
+    {
+      "id": "P6-F4",
+      "lane": "F",
+      "evidence_class": "HOLD",
+      "result": "FLOW repaired 417/941 Native P2 not run",
+      "reference_url": null
+    },
+    {
+      "id": "P6-H1",
+      "lane": "H",
+      "evidence_class": "INDEPENDENT_READONLY",
+      "result": "Retain historical Hybrid, modern ARCH KEEP_HOLD, historical compatible separately",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-672-p6-h1-arch-hybrid-compatibility-20261118/reports/issue672/p6-h1-arch-historical-hybrid-compat-approval.md"
+    },
+    {
+      "id": "P6-H2",
+      "lane": "H",
+      "evidence_class": "INDEPENDENT_NATIVE_NEGATIVE",
+      "result": "Both current ARCH cases real P05 ni_time fail, static 36/36 negatives",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-672-p6-h2-arch-p05-20261118/reports/issue672/p6-h2-arch-p05-owner-negative.json"
+    },
+    {
+      "id": "P6-H3",
+      "lane": "H",
+      "evidence_class": "INDEPENDENT_HISTORICAL_NATIVE",
+      "result": "Old pinned source P2-only 417/941 success; overall historical workflow failure; modern ARCH HOLD",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/issue-672-p6-h3-pinned-arch-p2-20261118/reports/issue672/p6-h3-historical-arch-p2-replay.json"
+    },
+    {
+      "id": "P6-I1",
+      "lane": "I",
+      "evidence_class": "INDIRECT",
+      "result": "Ion-FVM two matrix Python prepare failures RETIRED_GROUNDED_SHEATH_BCS; standalone missing",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44297212333"
+    },
+    {
+      "id": "P6-I2",
+      "lane": "I",
+      "evidence_class": "INDEPENDENT_ANALYSIS",
+      "result": "C2 adjacent-field sheath differs from grounded conductor; no equivalent substitution",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/9d5e5762b53574e41e65850fc217ddf9a1572e11/reports/issue672/p6-i2-c2-wall-dielectric-vs-grounded-sheath-physics-contract.json"
+    },
+    {
+      "id": "P6-I3",
+      "lane": "I",
+      "evidence_class": "HOLD",
+      "result": "New bounded P0/P2 execution requires approval; no 150/200 timestep automatic run",
+      "reference_url": null
+    },
+    {
+      "id": "P6-N1",
+      "lane": "N",
+      "evidence_class": "INDEPENDENT_DESIGN",
+      "result": "New-only CI contract G0-G6 documented; N2 not implemented",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/4e486f3e833693b289f9e7f27329fa3c17dabade/reports/issue672/p6-n1-newonly-native-p2-contract.json"
+    },
+    {
+      "id": "P6-N2",
+      "lane": "N",
+      "evidence_class": "HOLD",
+      "result": "P5-X exact HEAD source+ELF+app libraries+OCI not formally accepted",
+      "reference_url": null
+    },
+    {
+      "id": "P6-N3",
+      "lane": "N",
+      "evidence_class": "HOLD",
+      "result": "No P5-X based 417/941 same binary exact-head N3 Native run",
+      "reference_url": null
+    },
+    {
+      "id": "P6-C1",
+      "lane": "C",
+      "evidence_class": "INDEPENDENT_SOURCE",
+      "result": "ci.yml/template exact SHA equality, 17 jobs, edit-only trigger/native costs gap",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/c0db8aa2fca47ffe5fc6045872d1b7a5351de5b8/reports/issue672/p6-c1-ci-template-trigger-protection-readonly-audit-20261118.json"
+    },
+    {
+      "id": "P6-C2",
+      "lane": "C",
+      "evidence_class": "INDIRECT",
+      "result": "D2 authority + trigger/P05 audit covers much of C2 but standalone signoff absent",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/a02d2438005e8165321ec9f5bd807c41b8a51f7c/reports/issue672/p6-approval-auto-p3-p4-p05-risk-audit-20261118.md"
+    },
+    {
+      "id": "P6-C3",
+      "lane": "C",
+      "evidence_class": "HOLD",
+      "result": "Shared CI/template single-writer integration and exact-head rerun not performed",
+      "reference_url": null
+    },
+    {
+      "id": "P6-E1",
+      "lane": "E",
+      "evidence_class": "INDEPENDENT_CUSTODY",
+      "result": "11 artifact SHA+CRC, binary sources; E1 receipt branch diverged from PR665; never whole-merge",
+      "reference_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/blob/c54ad7fccf6357ceded8d2af28dfebc54d55e31f/reports/issue672/p6-e1-ci-artifact-binary-source-custody-20261118.json"
+    },
+    {
+      "id": "P6-E2",
+      "lane": "E",
+      "evidence_class": "HOLD",
+      "result": "Final PASS/KEEP_HOLD and P7 handoff pending",
+      "reference_url": null
+    }
+  ],
+  "input_identity": {
+    "P1_0": {
+      "run": 44182628032,
+      "artifact": 14372278070,
+      "sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "P3_X": {
+      "run": 44257739203,
+      "artifact": 14406746397,
+      "sha256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111"
+    },
+    "P4_X_final_C0_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+    "archived_417_zip_sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+    "archived_941_zip_sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+    "newonly_417_JSON_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "newonly_941_JSON_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "public_D_original_100row_lookup_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "newonly_42row_lookup_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "protected_original_EI": "6/6 SHA verified by protected CI #44190774410; raw private bytes not used here"
+  },
+  "CI_boundaries": {
+    "current_head_repo": {
+      "run": 44297212655,
+      "validate": "PASS_1566_13skipped",
+      "workflow": "FAIL"
+    },
+    "current_head_FLOW": {
+      "417": "FAIL_missing_e_transport",
+      "941": "NOT_RUN",
+      "run": 44297212567
+    },
+    "current_head_ionfvm": {
+      "run": 44297212333,
+      "matrix": "both FAIL before Native"
+    },
+    "current_head_ARCH": {
+      "run": 44297212655,
+      "417_941": "FAIL_P05_ni_time"
+    },
+    "older_binary_Native_417_941": {
+      "run": 44300489811,
+      "417_artifact": 14425706979,
+      "941_artifact": 14425516960,
+      "same_latest_exact_head": false
+    },
+    "N1_N8_Native_negatives": {
+      "run": 44300759948,
+      "artifact": 14426253052,
+      "passed": 16,
+      "total": 16,
+      "shared_older_binary_identity": false
+    },
+    "live_Warehouse": {
+      "run": 44297119716,
+      "artifact": 14423883385,
+      "kernels": 12,
+      "FVBCs": 12,
+      "head_class": "instrumented"
+    },
+    "historical_ARCH_H3": {
+      "run": 43883076025,
+      "attempt": 2,
+      "target_job": "success",
+      "whole_workflow": "failure",
+      "source_head": "5d15c4054a00aa9fa8a778a87bb21690a3a5469b"
+    },
+    "W1_binary": {
+      "run": 44293156216,
+      "source_head": "05d7ce4eceb81769cb2f0146c51535fc35e74ac1",
+      "ELF_sha256": "cab62a4a9caa4d99a82564f31f915f1a7dc14565607712841123a30276d329bc"
+    }
+  },
+  "workflow": {
+    "ci_sha1": "c8cbd38369108229af7cf2395893a4539f05e024",
+    "generated_template_sha1": "c8cbd38369108229af7cf2395893a4539f05e024",
+    "FLOW_workflow_sha1": "3f2360f7ae71ed9081dfa55aeba5119f5c44a9b0",
+    "IonFVM_workflow_sha1": "230e4367e7a688f297747b7f03bb0fdfaf4e4d23",
+    "Public_D_runner_sha1": "a6414baf70590b79f4b4ee4cb16c4b9039355f40",
+    "FLOW_runner_sha1": "96c8ca548392a1ad08334b87b082dd1595893070",
+    "ARCH_runner_sha1": "533dfa16395c041c610130f90d0489300fdd548f",
+    "Newonly_stager_sha1": "d2091291161033a9662b0d583567f9c35d26c006",
+    "OCI_build_sha256": "2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "risk": "PR edited-only can trigger 4 Native P2 jobs (405 minute summed timeouts), other 100us/150/200-step workflow triggers; C3 owner must preserve CI/template byte parity and no auto science."
+  },
+  "prerequisite_edges": [
+    "D2+D3->D4->D5",
+    "F1+F2->F3->F4",
+    "H1+H2->H3 historical only; modern ARCH KEEP_HOLD",
+    "I1+I2+approval->I3 P0/P2 only",
+    "P5-X+N1->N2->N3",
+    "C1+C2+lane decisions+N3->C3->P6-X->P7",
+    "E1->E2 provisional decisions"
+  ],
+  "gate": {
+    "P6_0": "PASS_BOUNDED",
+    "P6_X": "HOLD",
+    "P5_X": "HOLD_FORMAL",
+    "P4_X_seven_providers": "PASS_SOURCE_ONLY",
+    "P4_X_all_35": "HOLD",
+    "P6_N2": "NOT_IMPLEMENTED",
+    "P6_N3": "NOT_RUN",
+    "SCIENCE": "HOLD",
+    "main_merge": "NOT_AUTHORIZED"
+  },
+  "important_limitation": "GitHub readback of live HEAD, source blobs, worker receipts and run/artifact metadata only. Not a new full rehash of all 11 ZIPs; P6-E1 separately attests physical artifact SHA and CRC. Historical H3 job success is not modern ARCH success. E1 branch divergence forbids merging entire receipt branch.",
+  "changes": "Evidence-only isolated P6-0 branch: one Markdown and one JSON; no PR665/main, protected source, C++/JSON/workflow, CI dispatch or solver."
+}
