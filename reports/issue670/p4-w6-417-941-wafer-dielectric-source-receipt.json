@@ -1,0 +1,283 @@
+{
+  "schema": "issue670.p4_w6.wafer_417_941_source_only_v1",
+  "task_id": "P4-W6",
+  "issue": 670,
+  "verdict": "PASS_EXACT_6_WAFER_BC_SOURCE_RETIREMENTS_AND_JSON__HOLD_DUPLICATE_WALL_FUNCTOR_OWNERS",
+  "comparison_scope": "S6 restoration P4-W6, NOT Native science P4",
+  "refs": {
+    "source_current_pr665_head": "395eeac274125ffa632b4d75a4531996dee24fe0",
+    "original_pr665_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "source_archived_head": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+    "P3X_pr675_merged": true,
+    "P1_0_artifact": {
+      "id": 14372278070,
+      "ci_run": 44182628032,
+      "outer_zip_sha256": "97333b09ca3017edb04a35b2ceb82398894ddb61f256fee10e4e8cb7ede623db"
+    },
+    "P3X_artifact": {
+      "id": 14405784430,
+      "ci_run": 44256823392,
+      "outer_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6"
+    },
+    "full_local_independent_receipt_sha256": "3daa96db277a8b1c5fcbae7fdf93038852afc29861c078332713ccac3eaf95d9",
+    "reproducible_verifier_sha256": "5ce91b8f646ac166f95c0c8dcd20e89de59922a3f089144c9b9447a926605d6f"
+  },
+  "actual_bytes": {
+    "P1_0_exact_file_sha_verified": 22,
+    "P3_X_exact_file_sha_verified": 22,
+    "old_wafer_BC_block_sha_verified": 6,
+    "all_stage_receipt_before_after_sha_equal": true,
+    "zip_crc_pass": true,
+    "old_wafer_BC_417": 3,
+    "old_wafer_BC_941": 3,
+    "legacy_wafer_BC_newonly_after": 0,
+    "newonly_json_wafer_typed_bcs_each_case": 3,
+    "existing_wall_material_blocks_preserved_exactly": 6,
+    "downstream_wafer_current_poisson_lowerD_blocks_preserved_exactly": 6
+  },
+  "cases": {
+    "417": {
+      "case": "S6-417-407-2069-H25",
+      "source_hybrid": {
+        "file_sha256_checked": 11,
+        "wafer_native_bc_count": 3,
+        "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+      },
+      "final_p3x": {
+        "file_sha256_checked": 11,
+        "old_wafer_native_bc_count": 0,
+        "json_wafer_declarations": 3,
+        "C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "all_26_old_native_ion_owners_removed": true,
+        "old_electron_owners_removed": 10,
+        "native_p2": "NOT_RUN"
+      },
+      "newonly_json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+      "newonly_layer11_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+      "stage_provenance": "GitHub Actions artifact 14405784430 cases/417/newonly_stage_receipt.json",
+      "old_block_sha_checked": 3,
+      "source_bc_vs_json": {
+        "O2p": {
+          "old_name": "ion_wafer_dielectric",
+          "new_name": "O2p_wafer_dielectric",
+          "charge_number": 1,
+          "old_sha256": "07256ce1face22d3fbe6b318d5e1857bf61289b2619adfea3cefec707a37b31c",
+          "old_size": 172,
+          "variable": "log_O2p",
+          "signed_number_flux": "O2p_wall_number_flux",
+          "retained_wall_material_name": "ion_wall_flux",
+          "retained_wall_material_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5"
+        },
+        "Om": {
+          "old_name": "negative_ion_wafer_dielectric",
+          "new_name": "Om_wafer_dielectric",
+          "charge_number": -1,
+          "old_sha256": "ce57b0e42089b7266f623359eeb56cc4349cda356b9503ef37fb244e8cedbea3",
+          "old_size": 179,
+          "variable": "log_Om",
+          "signed_number_flux": "Om_wall_number_flux",
+          "retained_wall_material_name": "negative_ion_wall_flux",
+          "retained_wall_material_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162"
+        },
+        "Op": {
+          "old_name": "atomic_positive_ion_wafer_dielectric",
+          "new_name": "Op_wafer_dielectric",
+          "charge_number": 1,
+          "old_sha256": "4f6259aa4c0c1d69495581e27e229fc9b4d3e4fb3dcbd59ff09c8ff53ad2937b",
+          "old_size": 186,
+          "variable": "log_Op",
+          "signed_number_flux": "Op_wall_number_flux",
+          "retained_wall_material_name": "atomic_positive_ion_wall_flux",
+          "retained_wall_material_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+        }
+      },
+      "preserved_diagnostic_consumer_sha256": {
+        "wafer_surface_current": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+        "wafer_surface_charge_poisson": "890d205cacae47948f6d850e7ab70a42a5db346570c98735a0cf7e31b7bc258b",
+        "sigma_wafer_surface_current": "574479001966e2977ff6086325241a41e637952312cc2457e22d91f0a363835f"
+      },
+      "negative_controls_rejected": 14,
+      "negative_controls_total": 14,
+      "statuses": {
+        "old_BC_actual_bytes": "PASS",
+        "old_BC_exact_retirement": "PASS",
+        "JSON_BC_species_and_boundary": "PASS",
+        "sign_normalization": "PASS_SOURCE",
+        "retained_wall_materials": "PASS_BYTES_BUT_DUPLICATE_OWNER_PATH",
+        "final_unique_functor_owner": "HOLD",
+        "generated_BC_runtime": "NOT_RUN"
+      }
+    },
+    "941": {
+      "case": "S6-941-407-2069-H25",
+      "source_hybrid": {
+        "file_sha256_checked": 11,
+        "wafer_native_bc_count": 3,
+        "C0_sha256": "9aa3d478c32175821861d899a62436034a484ec8bbc40b057dc9713f0a9dfec9"
+      },
+      "final_p3x": {
+        "file_sha256_checked": 11,
+        "old_wafer_native_bc_count": 0,
+        "json_wafer_declarations": 3,
+        "C0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "all_26_old_native_ion_owners_removed": true,
+        "old_electron_owners_removed": 10,
+        "native_p2": "NOT_RUN"
+      },
+      "newonly_json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+      "newonly_layer11_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+      "stage_provenance": "GitHub Actions artifact 14405784430 cases/941/newonly_stage_receipt.json",
+      "old_block_sha_checked": 3,
+      "source_bc_vs_json": {
+        "O2p": {
+          "old_name": "ion_wafer_dielectric",
+          "new_name": "O2p_wafer_dielectric",
+          "charge_number": 1,
+          "old_sha256": "07256ce1face22d3fbe6b318d5e1857bf61289b2619adfea3cefec707a37b31c",
+          "old_size": 172,
+          "variable": "log_O2p",
+          "signed_number_flux": "O2p_wall_number_flux",
+          "retained_wall_material_name": "ion_wall_flux",
+          "retained_wall_material_sha256": "dd5ef36dfb9d64a50724492eb48728cea1dcd61a2de24102c47271519049edf5"
+        },
+        "Om": {
+          "old_name": "negative_ion_wafer_dielectric",
+          "new_name": "Om_wafer_dielectric",
+          "charge_number": -1,
+          "old_sha256": "ce57b0e42089b7266f623359eeb56cc4349cda356b9503ef37fb244e8cedbea3",
+          "old_size": 179,
+          "variable": "log_Om",
+          "signed_number_flux": "Om_wall_number_flux",
+          "retained_wall_material_name": "negative_ion_wall_flux",
+          "retained_wall_material_sha256": "65068da6f4fccaa8043a04dc5893cd41eccbd15db60d1e26bf19c1f6fa38c162"
+        },
+        "Op": {
+          "old_name": "atomic_positive_ion_wafer_dielectric",
+          "new_name": "Op_wafer_dielectric",
+          "charge_number": 1,
+          "old_sha256": "4f6259aa4c0c1d69495581e27e229fc9b4d3e4fb3dcbd59ff09c8ff53ad2937b",
+          "old_size": 186,
+          "variable": "log_Op",
+          "signed_number_flux": "Op_wall_number_flux",
+          "retained_wall_material_name": "atomic_positive_ion_wall_flux",
+          "retained_wall_material_sha256": "67d3fe76f7dbc8cfd58070808eca35ef3626e553689b68a5f3270afec0b9478e"
+        }
+      },
+      "preserved_diagnostic_consumer_sha256": {
+        "wafer_surface_current": "e523769c7b4782a7be3e5b1f926b5cdc5ec31240cc4c1df45760efca9b06b0d2",
+        "wafer_surface_charge_poisson": "890d205cacae47948f6d850e7ab70a42a5db346570c98735a0cf7e31b7bc258b",
+        "sigma_wafer_surface_current": "574479001966e2977ff6086325241a41e637952312cc2457e22d91f0a363835f"
+      },
+      "negative_controls_rejected": 14,
+      "negative_controls_total": 14,
+      "statuses": {
+        "old_BC_actual_bytes": "PASS",
+        "old_BC_exact_retirement": "PASS",
+        "JSON_BC_species_and_boundary": "PASS",
+        "sign_normalization": "PASS_SOURCE",
+        "retained_wall_materials": "PASS_BYTES_BUT_DUPLICATE_OWNER_PATH",
+        "final_unique_functor_owner": "HOLD",
+        "generated_BC_runtime": "NOT_RUN"
+      }
+    }
+  },
+  "physics_factory_contract": {
+    "old_bc": "PhysicsFVLogMolarDielectricFluxBC",
+    "new_bc": "FVLogMolarDielectricFluxBC",
+    "old_cpp_blob_sha1": "a0ec100f03116a8ddfdf459600c8a8da1c717595",
+    "new_cpp_blob_sha1": "08306f4545b806368a2c90bac0c83dacc5e7c9b5",
+    "bc_cpp_equivalence": "exact same source bytes after replacing old C++ class/header identifier with new; confirmed read-only",
+    "boundary": "plasma_wafer",
+    "generated_names": [
+      "O2p_wafer_dielectric",
+      "Om_wafer_dielectric",
+      "Op_wafer_dielectric"
+    ],
+    "generated_variable_map": {
+      "O2p_wafer_dielectric": "log_O2p",
+      "Om_wafer_dielectric": "log_Om",
+      "Op_wafer_dielectric": "log_Op"
+    },
+    "generated_signed_flux_map": {
+      "O2p_wafer_dielectric": "O2p_wall_number_flux",
+      "Om_wafer_dielectric": "Om_wall_number_flux",
+      "Op_wafer_dielectric": "Op_wall_number_flux"
+    },
+    "resolved_outward_number_flux_convention": "positive outward from plasma/species domain",
+    "residual_convention": "signed_number_flux / 6.02214076e23 [mol/(m^2 s)]",
+    "source_Chemistry_C_blob_sha1": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "C2_guard": "requires four unique FV BC names per species: general+cover+wafer+focus ring, 12 total",
+    "actually_instantiated_bcs": 0
+  },
+  "blockers": [
+    {
+      "id": "ION_WALL_FUNCTOR_DUPLICATE",
+      "finding": "C0 retains PhysicsIonWallFluxMaterial for O2p, Om, Op with species_id set; legacy class declares each canonical <id>_wall_number_flux. Exact-source Chemistry.C::PlasmasAction::act generates IonWallFluxMaterial for same species and same Functor properties. Two independent owner paths on same final source.",
+      "legacy_owners": [
+        "ion_wall_flux",
+        "negative_ion_wall_flux",
+        "atomic_positive_ion_wall_flux"
+      ],
+      "generated_owners": [
+        "O2p_wall",
+        "Om_wall",
+        "Op_wall"
+      ],
+      "overlap": [
+        "O2p_wall_number_flux",
+        "Om_wall_number_flux",
+        "Op_wall_number_flux"
+      ],
+      "scope": "P4-W1/W2/W3 + P4-X must choose exactly one producer and prove downstream BC/diagnostics preserved",
+      "runtime_double_registration_observed": false,
+      "status": "HOLD_SOURCE_DETECTED_DUPLICATE"
+    },
+    {
+      "id": "WAFER_SURFACE_CURRENT_DUPLICATE",
+      "finding": "C0 preserves wafer_surface_current ADParsedFunctorMaterial property wafer_net_surface_current_density; exact Chemistry.C also generates wafer_surface_current for surface current.",
+      "scope": "P4-C2 + P4-X ownership consolidation",
+      "runtime_double_registration_observed": false,
+      "status": "HOLD_SOURCE_DETECTED_DUPLICATE"
+    }
+  ],
+  "negative_controls": {
+    "per_case_rejected": 14,
+    "total_rejected": 28,
+    "cases": [
+      "drop_old_wafer",
+      "duplicate_old_wafer",
+      "wrong_legacy_factory",
+      "wrong_legacy_variable",
+      "wrong_legacy_boundary",
+      "wrong_signed_flux",
+      "missing_wafer_group",
+      "missing_Om_json_wafer",
+      "wrong_json_bc_factory",
+      "duplicate_json_wafer_name_elsewhere",
+      "wrong_negative_charge",
+      "wrong_positive_charge",
+      "reintroduce_old_wafer_owner",
+      "wrong_JSON_species_owner_name"
+    ],
+    "method": "in-memory mutations rejected by independent fail-closed source predicate, not Native execution"
+  },
+  "resolution_contract": {
+    "P4X": "retire or explicitly rebind duplicated legacy wall/current source Material owners only in disposable Scratch; independently compare before/after SHA and preservation of wafer sigma/Poisson/current and all three ion wall diagnostics",
+    "Native_P5": "prove one live Functor and one generated wafer FV BC per selected species in actual Warehouse; no premature Native acceptance",
+    "guard_scope": "do not modify common JSON/Physics C++ or original artifact in this P4-W6 task; do not relax P05 guards"
+  },
+  "gates": {
+    "P4_W6_OLD_BLOCK_SHA": "PASS",
+    "P4_W6_SOURCE_RETIREMENT": "PASS",
+    "P4_W6_NEWONLY_JSON": "PASS_STATIC",
+    "P4_W6_SIGNED_FLUX": "PASS_SOURCE_STATIC",
+    "P4_W6_SINGLE_WALL_FUNCTOR": "HOLD_DUPLICATE",
+    "P4_W6_SINGLE_WAFER_CURRENT": "HOLD_DUPLICATE",
+    "P4_W6_NATIVE_WAREHOUSE": "NOT_RUN",
+    "P4_X": "PENDING",
+    "Native_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "HOLD"
+  }
+}
