@@ -246,7 +246,7 @@ def audit(repo: Path, archive: Path) -> dict:
             for k,v in IONS.items()},
         "original_electron_lookup":{"owner":"[FunctorMaterials]/electron_transport",
              "factory":"PhysicsElectronTransportLookupMaterial",
-             "original_block_sha256":sha(("  [electron_transport]\n"+original_e+"  []").encode()),
+             "original_block_sha256":sha(("  [electron_transport]\n"+original_e+"  []\n").encode()),
              "table_path":expected_e["property_table_file"],
              "coordinate_legacy":"mean_en_solved",
              "gas_pressure_functor":"p","gas_temperature_functor":"T_g_fixed",
