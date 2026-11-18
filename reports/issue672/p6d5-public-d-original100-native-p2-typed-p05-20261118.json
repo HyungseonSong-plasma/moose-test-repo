@@ -1,0 +1,127 @@
+{
+  "schema": "issue672.p6d5.public_d_100row_real_native_p2_and_typed_p05.v1",
+  "date_utc": "2026-11-18",
+  "source_repo": "HyungseonSong-plasma/moose-test-repo",
+  "mode": "PUBLIC_D_GENERATED_PHYSICS_CHEMISTRY_ONLY",
+  "immutable_source": {
+    "physics_source_head": "3b447b67283dac3b1d5e592ed3db6e56754c3d0e",
+    "p2_one_shot_source_head": "5c7c64e6d089815f7c747ddf9d8774756ad4d106",
+    "p05_one_shot_workflow_commit": "210f6882eb9144c84597a75a12215f8dc5ada3e5",
+    "current_integration_pr665_head_observed": "fd21e2e31c48d0fa495f0830b52a70fb06815514",
+    "integration_changes_since_physics_head": [
+      ".github/workflows/ci.yml",
+      "ci/guards/issue541_artifact_evidence_guard.py",
+      "ci/guards/p6_ci_workflow_safety_guard.py",
+      "ci/guards/p6_legacy_hold_receipt.py",
+      "ci/workflow_templates/general-ci.yml",
+      "tests/test_issue672_p6_ci_workflow_safety.py"
+    ],
+    "physics_app_and_original_table_unchanged": true,
+    "exact_current_integration_head_executable_claim": "NOT_CLAIMED_CI_ONLY_DIFF"
+  },
+  "original_electron_lookup": {
+    "rows": 100,
+    "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "repository_git_blob": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+    "prepared_reference_42row_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "table_semantic_equivalence": "NOT_CLAIMED",
+    "original_file_modified": false
+  },
+  "native_p2": {
+    "run_id": 44354230639,
+    "job_id": 134977864548,
+    "artifact_id": 14453620080,
+    "artifact_zip_sha256": "9ebea15f02fc1e4e21d8ab8d395480addebaad28df67769685369a493e4cee9c",
+    "receipt_sha256": "005e5c0c9459cfe7de48b783ea0454e97bb5bf699a5c8d179b5cd0cd39cb7639",
+    "same_binary_both_cases": true,
+    "source_specific_elf_sha256": "35aba69374914309857e291694f54762e558cd2ad991498396070dc1a8555467",
+    "outcome": "PASS_BOTH_NATIVE_CHECK_INPUT_EXIT0",
+    "p2_logs_sha256": {
+      "417": "4a94735008ba772e4c5ad2165e9611619be8cecd6081eaa5103d8959144c8a90",
+      "941": "e2718a67b6f2237cc68fc1c3863ccb39d6d9ce60e3e627c5fe6c3c27520d5851"
+    }
+  },
+  "same_physics_source_fixed_w1": {
+    "artifact_id": 14449097760,
+    "source_head": "3b447b67283dac3b1d5e592ed3db6e56754c3d0e",
+    "artifact_zip_sha256": "84ce92ead209f458042977452a9284b78cac224c9adadc7b74015568474fcb7e",
+    "binary_tar_sha256": "40aa3da97c9710530831859dcaf85f11f36224f81605f93a471ded6056bc00d4",
+    "elf_sha256": "efab43df773398d0c1f6eadf5bc384fbb325da10e67a5c21571039fec6dadcc6",
+    "app_libs_sha256": {
+      "libphysics-opt.so.0": "141c951d6887eea44694324c70f48add2d6fd8e31285327196b5aa49f48f6b41",
+      "libphysics_test-opt.so.0": "80cc6690292a4c26064756be14ab0d82aea2c53f85f60c16546c871af1f6568f"
+    },
+    "binary_reused_without_rebuild_for_p05": true
+  },
+  "typed_p05": {
+    "run_id": 44357169166,
+    "job_id": 134988276209,
+    "artifact_id": 14451778372,
+    "completed_conclusion": "success",
+    "artifact_zip_sha256": "f6b295c99d34177228dd0989251612afa23c07644e9d990a4a3c84e37948cc5f",
+    "receipt_sha256": "fc1da5e9900108ad5d2d726ff4eee1c1c4318aa7e0f7e88b3f80f2d3063e03d5",
+    "same_100row_staging_receipt_sha_both_runs": {
+      "417": "22683fcfe76c800fe1041212f818fe3aecf77105d66b059b5a46ab273212e2ed",
+      "941": "9b08f33cd9db3c7a5dd9c5ee7a19d03397a13fb408987768bfac51aebc3d8bda"
+    },
+    "registration_method": "LD_PRELOAD_EXTERNAL_FEProblemBase_after_successful_add_calls",
+    "registration_is_not_raw_warehouse_memory": true,
+    "cases": {
+      "417": {
+        "p2_exit": 0,
+        "syntax_ok": true,
+        "typed": {
+          "FVKernel": 12,
+          "FVBC": 12,
+          "electron_FEM_BC": 8
+        },
+        "registered_events": 77,
+        "register_log_sha256": "7ebd2c3bb67d959025b41e24363ec6e289fa4b36f606ccca7ccb0ca2d3e335e6",
+        "negatives_expected": 8,
+        "negative_exit1": 8
+      },
+      "941": {
+        "p2_exit": 0,
+        "syntax_ok": true,
+        "typed": {
+          "FVKernel": 12,
+          "FVBC": 12,
+          "electron_FEM_BC": 8
+        },
+        "registered_events": 77,
+        "register_log_sha256": "299193ef065c4ba6ca5071c6fc56b137dc9a0112d6ba6ed8e0a7c9ca72eab79e",
+        "negatives_expected": 8,
+        "negative_exit1": 8
+      }
+    },
+    "negative_first_failure_classes": {
+      "N1": "P05",
+      "N2": "P05",
+      "N3": "P05",
+      "N4": "P05",
+      "N5": "EARLY_REGISTRATION",
+      "N6": "CHEMISTRY",
+      "N7": "CHEMISTRY",
+      "N8": "CHEMISTRY"
+    },
+    "expected_negative_rejections": "16/16",
+    "protected_EI_cleanup": true,
+    "protected_EI_raw_in_artifact": false
+  },
+  "acceptance": {
+    "PUBLIC_D_ORIGINAL100_SOURCE_STAGE": "PASS",
+    "PUBLIC_D_ORIGINAL100_TWO_CASE_NATIVE_P2": "PASS",
+    "PUBLIC_D_ORIGINAL100_TYPED_P05_OWNER": "PASS_12_12_8_PER_CASE",
+    "PUBLIC_D_P05_NEGATIVES": "PASS_16_OF_16",
+    "PUBLIC_D_P2_P05_ACCEPTANCE": "PASS_CONSTRUCTION_ONLY",
+    "P6_X_FULL_REPOSITORY_CI": "SEPARATE_HOLD",
+    "FLOW_HISTORICAL_HYBRID": "KEEP_HOLD",
+    "ARCH_HISTORICAL_HYBRID": "KEEP_HOLD",
+    "P7_FINAL": "HOLD",
+    "SCIENCE": "HOLD",
+    "NATIVE_P3_P4": "NOT_RUN",
+    "MAIN_OR_PR665_MERGE": "NOT_AUTHORIZED",
+    "RAW_THEWAREHOUSE_MEMORY": "NOT_CAPTURED",
+    "D8_FULL_RF_SCIENTIFIC_EQUIVALENCE": "NOT_ESTABLISHED"
+  }
+}
