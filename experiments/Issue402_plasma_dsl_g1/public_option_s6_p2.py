@@ -998,7 +998,8 @@ def persist_report(evidence: Path, report: dict) -> None:
 
 
 def execute(historical: Path, binary: Path, expected_head: str,
-            evidence: Path, timeout_seconds: int = 1200) -> dict:
+            evidence: Path, timeout_seconds: int = 1200,
+            experimental_generated_chemistry: bool = False) -> dict:
     validate_overlay()
     gate_file = evidence / "option_s6_environment.json"
     if not gate_file.is_file():
@@ -1075,6 +1076,15 @@ def execute(historical: Path, binary: Path, expected_head: str,
                         if variant == "D":
                             scratch_transport = cutover_staged_D_transport_owners(
                                 staged / p2.CHEM, ordered)
+                            if experimental_generated_chemistry:
+                                bridge_spec = importlib.util.spec_from_file_location(
+                                    'p6_d4_disposable_generated_chemistry',
+                                    ROOT / 'experiments/Issue402_plasma_dsl_g1/p6_d4_public_d_chemistry_scratch.py')
+                                if bridge_spec is None or bridge_spec.loader is None:
+                                    raise ValueError('P6_D4_CHEMISTRY_BRIDGE_NOT_INSTALLED')
+                                bridge = importlib.util.module_from_spec(bridge_spec)
+                                bridge_spec.loader.exec_module(bridge)
+                                scratch_chemistry = bridge.apply(staged / p2.CHEM, ordered, case)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
                             binary, identity["binary_sha256"], staged, ordered,
@@ -1091,6 +1101,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                             report["checks"][case][variant]["scratch_json_initials"] = scratch_initials
                             report["checks"][case][variant]["scratch_transport_owner_cutover"] = scratch_transport
+                            if experimental_generated_chemistry:
+                                report["checks"][case][variant]["scratch_real_chemistry_ion26_cutover"] = scratch_chemistry
                     except Exception as exc:
                         report["checks"][case][variant] = {
                             "P2": "HOLD", "classification": type(exc).__name__,
@@ -1122,10 +1134,13 @@ def main() -> int:
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--expected-head", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument("--d4-experimental-generated-chemistry", action="store_true",
+                        help="Explicit isolated-P2-only genuine 7+8 Chemistry and ion26 Scratch pilot; not historical D or science")
     args = parser.parse_args()
     try:
         result = execute(args.historical.resolve(), args.binary.resolve(),
-                         args.expected_head, args.evidence.resolve())
+                         args.expected_head, args.evidence.resolve(),
+                         experimental_generated_chemistry=args.d4_experimental_generated_chemistry)
         exit_code = 0 if (result["P2"] == "PASS" and result.get("cleanup") == "PASS" and result["status"] == "PASS") else 3
     except Exception as exc:
         result = {"gate": "Issue402 S6 option-only public P2",
