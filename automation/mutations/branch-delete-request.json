@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue670-p4-c5-electron-current-20261118",
-      "expected_sha": "13268868df93c692b5d6b9be6384dfe2f3ee357a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue670-p4-c5-electron-current-20261118-13268868df93"
+      "branch": "issue-671-p5-a3-rate-lookup-custody-20261118",
+      "expected_sha": "2fbdefee64058675d7996c702617597786d4268e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-a3-rate-lookup-custody-20261118-2fbdefee6405"
     },
     {
-      "branch": "issue-670-p4-c4-lowerd-sigma-20261118",
-      "expected_sha": "aa7b80ccce37b829863eeae66683b6fcb1146bcf",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-c4-lowerd-sigma-20261118-aa7b80ccce37"
+      "branch": "issue-671-p5-b3-s6-417-fvkernel-source-gate-20261118",
+      "expected_sha": "98fa1b4e4998e1c6c2ed29c332c304e0bc174a25",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-b3-s6-417-fvkernel-source-gate-20261118-98fa1b4e4998"
     },
     {
-      "branch": "issue-670-p4-c3-focus-ring-current-20261118",
-      "expected_sha": "8328534446a2468cdbe59dde7feed1c360e6bd28",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-c3-focus-ring-current-20261118-8328534446a2"
+      "branch": "issue-671-p5-b2-417-native-job-gate-20261118",
+      "expected_sha": "aa3752f92aced19acd04cc55148ca4a66e2543a9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-b2-417-native-job-gate-20261118-aa3752f92ace"
     },
     {
-      "branch": "issue-671-p5-a1-417-20261118",
-      "expected_sha": "bf2d8326fc9f53b186d824b8c158a870255ff4a3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-a1-417-20261118-bf2d8326fc9f"
+      "branch": "issue-671-p5-b4-417-fvbc-native-gate-20261118",
+      "expected_sha": "699aae3d5cede72e51b405928b4a7bf5e9712707",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-b4-417-fvbc-native-gate-20261118-699aae3d5ced"
     },
     {
-      "branch": "issue-671-p5-b1-p0-preflight-20261118",
-      "expected_sha": "802c37e2f94f74bc1eeb5d17b65cc8fc0aa8fa7b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-b1-p0-preflight-20261118-802c37e2f94f"
+      "branch": "issue-671-p5-b5-417-late-caller-20261118",
+      "expected_sha": "461717586bd645e1d0d449325c3595d360e3742b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-b5-417-late-caller-20261118-461717586bd6"
     }
   ]
 }
