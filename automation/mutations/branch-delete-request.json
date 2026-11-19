@@ -1,14 +1,19 @@
 {
   "targets": [
     {
-      "branch": "cleanup-wave1-dd-p3-fallback-20261116",
-      "expected_sha": "47263519025aaa55837be0d4bb897edad33df430",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-p3-fallback-20261116-47263519025a"
+      "branch": "cleanup-wave1-cd-evidence-integration-20261116",
+      "expected_sha": "907573533b1523b42ba668332aa54ee03ceeb81c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-cd-evidence-integration-20261116-907573533b15"
     },
     {
-      "branch": "cleanup-wave1-s6-3step-20261116",
-      "expected_sha": "b4843dd47f9cfb6dd3d83de3581df1052ae38ca1",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-3step-20261116-b4843dd47f9c"
+      "branch": "cleanup-wave1-dd-p3-20261116",
+      "expected_sha": "ad1285b9e32be7467c07c5b09d56d6e9309211d0",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-p3-20261116-ad1285b9e32b"
+    },
+    {
+      "branch": "cleanup-wave1-s6-retirement-guard-contract-20261116",
+      "expected_sha": "24b4c89720909397c55577c9aec4267d639074bd",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-retirement-guard-contract-20261116-24b4c8972090"
     }
   ]
 }
