@@ -308,7 +308,7 @@ class PythonAstCollector:
                         parts.append(part.value)
                     elif isinstance(part, ast.FormattedValue):
                         dynamic = True
-                        parts.append("__PYTHON_DYNAMIC_EXPRESSION__")
+                        parts.append("<PYTHON_DYNAMIC_EXPRESSION>")
                         self.visit(part.value)
                         if part.format_spec is not None:
                             self.visit(part.format_spec)
