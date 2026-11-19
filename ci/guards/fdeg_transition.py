@@ -335,8 +335,84 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
         "VERIFY_POST_CHANGE_AND_ROLLBACK": ["EXACT_HEAD_REPOSITORY_CI", "NATIVE_POST_CHANGE_REVALIDATION"],
     }
     steps = []
+    consumer_step_ids = []
+    history_step_ids = []
     for index, name in enumerate(STEP_ORDER):
+        # Insert per-consumer candidate work AFTER qualification, BEFORE the
+        # aggregate rewire gate, so exact instance/edge edits are not lost.
+        if name == "REWIRE_DECLARED_CONSUMERS":
+            for consumer in consumers:
+                if consumer["disposition"] not in {"HOLD_UNKNOWN", "PRESERVE_HISTORICAL"}:
+                    continue
+                is_history = consumer["disposition"] == "PRESERVE_HISTORICAL"
+                verb = "PRESERVE_HISTORICAL_CONSUMER" if is_history else "REWIRE_CONSUMER_CANDIDATE"
+                task_id = "step:" + verb + ":" + consumer["structural_edge_id"]
+                parents = (["step:RESOLVE_CONSUMER_SCOPE"] if is_history else
+                           ["step:QUALIFY_REPLACEMENT"])
+                paths = [] if is_history else [consumer["input_path"]]
+                gates = (["PINNED_HISTORICAL_REPLAY_SEPARATE",
+                          "CURRENT_BINARY_COMPATIBILITY_INDEPENDENT"] if is_history else
+                         ["CONSUMER_ACTIVATION_AND_EFFECTIVE_BINDING",
+                          "APPROVED_REPLACEMENT_SEMANTIC_PARITY",
+                          "DIRECT_INPUT_GENERATOR_AND_CHECKER_P0"])
+                task = {
+                    "step_id": task_id, "operation": verb,
+                    "consumer_id": consumer["consumer_id"],
+                    "structural_edge_id": consumer["structural_edge_id"],
+                    "instance_id": consumer["instance_id"],
+                    "depends_on_steps": parents,
+                    "status": "PLANNED", "execution_status": "NOT_EXECUTED",
+                    "eligible_to_execute": False,
+                    "preconditions": ["PREDECESSOR_VERIFIED",
+                                      "OWNER_APPROVED_DISPOSITION_AND_ORACLE"],
+                    "affected_paths": paths,
+                    "before": consumer["before"],
+                    "after_proposal": consumer["after_proposal"],
+                    "expected_graph_delta": {
+                        "kind": "PROPOSED_NOT_MEASURED",
+                        "may_remove_structural_edge_ids":
+                            [] if is_history else [consumer["structural_edge_id"]],
+                        "preserve_functional_claim_ids": sorted(
+                            functional_report["preservation_contract"]["claim_ids"]),
+                        "observed_removed_edges": []},
+                    "verification_gates": [
+                        {"gate": g, "status": "NOT_EVALUATED",
+                         "oracle": "INDEPENDENT_EVIDENCE_REQUIRED",
+                         "tolerance": "OWNER_UNSPECIFIED", "artifact": "NOT_ATTACHED"}
+                        for g in gates],
+                    "blocking_obligation_ids": sorted(
+                        set(consumer["blocking_obligation_ids"] +
+                            [b["obligation_id"] for b in blockers
+                             if b["consumer"] is None])),
+                    "stop_condition": "ANY_REQUIRED_EVIDENCE_MISSING_OR_FAILURE",
+                    "rollback": {
+                        "baseline_head": head, "restore_paths": paths,
+                        "rollback_status": "RECIPE_ONLY_NOT_EXECUTED",
+                        "after_rollback_gate":
+                            "REGENERATE_EXACT_HEAD_P0_P1_P2_AS_APPLICABLE"}
+                }
+                steps.append(task)
+                if is_history:
+                    history_step_ids.append(task_id)
+                else:
+                    consumer_step_ids.append(task_id)
+                edges.append(edge(task_id, "REWIRE_STEP" if not is_history else
+                                  "PRESERVES", consumer["consumer_id"],
+                                  {"status": "PROPOSED_ONLY", "structural_edge_id":
+                                   consumer["structural_edge_id"]}))
+                for parent in parents:
+                    edges.append(edge(task_id, "DEPENDS_ON_STEP", parent,
+                                      {"status": "ORDERING_CONSTRAINT_ONLY"}))
+                for gate in gates:
+                    edges.append(edge(task_id, "REQUIRES_EVIDENCE", "gate:" + gate,
+                                      {"status": "NOT_EVALUATED"}))
+                edges.append(edge(task_id, "ROLLBACK_TO", "commit:" + str(head),
+                                  {"status": "PROPOSED_RECOVERY_TARGET"}))
         before = ["step:" + STEP_ORDER[index - 1]] if index else []
+        if name == "REWIRE_DECLARED_CONSUMERS" and consumer_step_ids:
+            before = sorted(consumer_step_ids)
+        if name == "VERIFY_FUNCTION_AND_HISTORY" and history_step_ids:
+            before += sorted(history_step_ids)
         stage = {
             "step_id": "step:" + name, "operation": name,
             "depends_on_steps": before, "status": "PLANNED",
