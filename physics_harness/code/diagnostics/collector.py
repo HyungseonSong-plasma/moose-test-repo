@@ -34,8 +34,9 @@ def graph_edge_id(source_id: str, target_id: str, relation: str,
 
 
 def scan_scope_id(request: ScanRequest) -> str:
+    # Collector selection is set-like: request order cannot change scope identity.
     return stable_id("scope", request.repository, request.revision,
-                     request.includes, request.excludes, request.collectors)
+                     request.includes, request.excludes, tuple(sorted(request.collectors)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,6 +167,9 @@ def run_scan(
             raise ValueError(f"UNKNOWN_COLLECTOR: {key}")
         selected_collectors.append(item)
 
+    # Make handler execution and receipt ordering independent of request ordering.
+    selected_collectors.sort(key=lambda item: item.name)
+
     started = time.monotonic()
     inventory = provider.inventory(request)
     if not isinstance(inventory, tuple) or any(
@@ -258,7 +262,7 @@ def run_scan(
             raise ValueError(f"SOURCE_BLOB_IDENTITY_MISMATCH:{record.path}")
 
         all_details: list[str] = []
-        final_status = "SCANNED"
+        statuses: set[str] = set()
         for handler in handlers:
             try:
                 output = handler.collect(SourceInput(record, data), request, scope_id)
@@ -266,13 +270,21 @@ def run_scan(
                     raise TypeError("collector must return CollectionResult")
                 batches.append(output.batch)
                 all_details.extend(output.errors + output.batch.unresolved)
-                if output.status == "FAILED":
-                    final_status = "FAILED"
-                elif output.status in {"UNSUPPORTED", "PARTIAL"} and final_status != "FAILED":
-                    final_status = "UNRESOLVED" if output.status == "PARTIAL" else "UNSUPPORTED"
+                statuses.add(output.status)
+                if output.status in {"UNSUPPORTED", "PARTIAL", "FAILED"}:
+                    all_details.append(f"COLLECTOR_{output.status}:{handler.name}")
             except Exception as exc:
-                final_status = "FAILED"
+                statuses.add("FAILED")
                 all_details.append(f"COLLECTOR_FAILED:{handler.name}:{type(exc).__name__}")
+
+        # The conservative merge is commutative: never hide PARTIAL under
+        # UNSUPPORTED just because a collector happened to run last.
+        final_status = (
+            "FAILED" if "FAILED" in statuses
+            else "UNRESOLVED" if "PARTIAL" in statuses
+            else "UNSUPPORTED" if "UNSUPPORTED" in statuses
+            else "SCANNED"
+        )
         if time.monotonic() - started > request.budget.max_seconds:
             final_status = "UNRESOLVED" if final_status == "SCANNED" else final_status
             all_details.append("TIME_BUDGET_EXCEEDED")
