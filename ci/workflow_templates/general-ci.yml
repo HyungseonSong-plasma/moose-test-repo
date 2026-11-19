@@ -1037,6 +1037,19 @@ jobs:
       - name: P1 - Build PhysicsApp and verify generated and native solver operators
         shell: bash
         run: bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+      - name: Code1 R2 exploratory ON/OFF Native characterization (nonblocking)
+        if: github.event_name == 'pull_request' && github.head_ref == 'issue-701-code1-native-onoff-preflight'
+        continue-on-error: true
+        shell: bash
+        run: bash experiments/Issue701_code1_retirement/run_native_onoff.sh
+      - name: Upload Code1 R2 Native characterization receipt (not retirement approval)
+        if: always() && github.event_name == 'pull_request' && github.head_ref == 'issue-701-code1-native-onoff-preflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code1-native-onoff-${{ github.event.pull_request.head.sha }}
+          path: experiments/Issue701_code1_retirement/evidence/**
+          if-no-files-found: warn
+          retention-days: 30
       # Distinct step: an S6 input or cleanup failure cannot erase earlier
       # Native build/small-fixture results. The exact P1 binary is reused.
       - name: P2 - Public S6-417 and S6-941 four-way Native input checks
