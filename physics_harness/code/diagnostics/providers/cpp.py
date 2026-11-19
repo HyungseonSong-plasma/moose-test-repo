@@ -31,6 +31,19 @@ _CLASS = re.compile(
     r'[ \t]*(?:\{|;)',
 )
 _CONDITIONAL = re.compile(r"(?m)^[ \t]*#[ \t]*(?:if|ifdef|ifndef|elif)\b")
+_VALID_PARAMS_START = re.compile(
+    r"(?m)^[ \t]*([A-Za-z_]\w*(?:::\w+)*)::validParams\s*\(\s*\)\s*\{"
+)
+_PARAM_CALL = re.compile(
+    r'\bparams\s*\.\s*add(?P<required>Required)?Param\s*<\s*'
+    r'(?P<cpp_type>[A-Za-z_]\w*(?:::\w+)*)\s*>\s*\(\s*"'
+    r'(?P<name>[^"\n]+)"'
+)
+_PARAM_TOKEN = re.compile(r"\bparams\s*\.\s*add(?:Required)?Param\b")
+_CPP_ENUM = re.compile(
+    r'MooseEnum\s*\(\s*"([^"\n]+)"\s*'
+    r'(?:,\s*"([^"\n]+)")?\s*\)'
+)
 
 
 def _without_comments(text: str) -> str:
@@ -78,9 +91,34 @@ def _without_comments(text: str) -> str:
     return "".join(chars)
 
 
+def _closing_brace(text: str, opening: int) -> int | None:
+    """Find a balanced function body end; ignore string literal braces."""
+    depth = 0
+    quote = None
+    escaped = False
+    for index in range(opening, len(text)):
+        char = text[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+        elif char in {'"', "'"}:
+            quote = char
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
 class CppSourceCollector:
     name = "cpp"
-    version = "cpp-static-v0.1"
+    version = "cpp-static-v0.2"
 
     def supports(self, record: SourceRecord) -> bool:
         return record.path.endswith(_SUFFIXES)
@@ -180,6 +218,71 @@ class CppSourceCollector:
             relation(parent, type_id, "DECLARES_MOOSE_REGISTRATION",
                      eid, f"{line_of(match.start())}:{macro}",
                      attributes={"app": app, "macro": macro})
+
+        # Bound parameter evidence to the owning C++ validParams() body.
+        # These declarations are never proof of runtime accepted parameters.
+        for match in _VALID_PARAMS_START.finditer(text):
+            owner = match.group(1)
+            closing = _closing_brace(text, match.end() - 1)
+            if closing is None:
+                unresolved.add(
+                    f"CPP_VALIDPARAMS_UNPARSED:{record.path}:{line_of(match.start())}"
+                )
+                continue
+            body = text[match.end():closing]
+            declared_starts = set()
+            type_id = stable_id("node", request.repository, "moose_type", owner)
+            for declaration in _PARAM_CALL.finditer(body):
+                declared_starts.add(declaration.start())
+                name = declaration.group("name")
+                parameter_type = declaration.group("cpp_type")
+                required = declaration.group("required") is not None
+                start = match.end() + declaration.start()
+                call_end = body.find(");", declaration.end())
+                if call_end < 0:
+                    unresolved.add(
+                        f"CPP_PARAM_UNTERMINATED:{record.path}:{line_of(start)}"
+                    )
+                    continue
+                options: tuple[str, ...] = ()
+                default: str | None = None
+                if parameter_type == "MooseEnum":
+                    enum = _CPP_ENUM.search(body, declaration.end(), call_end)
+                    if enum is None:
+                        unresolved.add(
+                            f"CPP_MOOSE_ENUM_OPTIONS_UNRESOLVED:"
+                            f"{record.path}:{line_of(start)}:{name}"
+                        )
+                        continue
+                    options = tuple(enum.group(1).split())
+                    default = enum.group(2)
+                eid = witness("param_contract", start,
+                              f"{owner}:{name}:{parameter_type}:{options}:{default}")
+                nodes.append(Node(
+                    id=type_id, kind="moose_type", name=owner,
+                    evidence_ids=(eid,),
+                ))
+                parameter_id = stable_id(
+                    "node", request.repository, "moose_param_contract", owner, name,
+                )
+                nodes.append(Node(
+                    id=parameter_id, kind="moose_param_contract", name=name,
+                    language="cpp",
+                    attributes={
+                        "parameter_type": parameter_type,
+                        "required": required, "enum_options": options,
+                        "enum_default": default,
+                    },
+                    evidence_ids=(eid,),
+                ))
+                relation(type_id, parameter_id, "DECLARES_PARAM_CONTRACT",
+                         eid, name)
+            for token in _PARAM_TOKEN.finditer(body):
+                if token.start() not in declared_starts:
+                    unresolved.add(
+                        f"CPP_PARAM_DECLARATION_UNPARSED:"
+                        f"{record.path}:{line_of(match.end()+token.start())}"
+                    )
 
         for match in _REGISTER_TOKEN.finditer(text):
             if match.start() not in matched_starts:

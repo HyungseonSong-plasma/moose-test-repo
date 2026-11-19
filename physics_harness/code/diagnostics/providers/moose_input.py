@@ -42,7 +42,7 @@ def _uncomment(line: str) -> str:
 
 class MooseInputCollector:
     name = "moose_input"
-    version = "moose-hit-static-v0.1"
+    version = "moose-hit-static-v0.2"
 
     def supports(self, record: SourceRecord) -> bool:
         return record.path.endswith(".i")
@@ -110,6 +110,7 @@ class MooseInputCollector:
                     "parent": stack[-1] if stack else None,
                     "attributes": {},
                     "parameters": set(),
+                    "parameter_values": {},
                 })
                 stack.append(len(blocks) - 1)
                 continue
@@ -117,7 +118,15 @@ class MooseInputCollector:
             match = _ASSIGNMENT.fullmatch(line)
             if match and stack:
                 key, value = match.groups()
-                blocks[stack[-1]]["parameters"].add(key)
+                block = blocks[stack[-1]]
+                block["parameters"].add(key)
+                if key in block["parameter_values"]:
+                    unresolved.add(
+                        f"MOOSE_DUPLICATE_PARAMETER:{record.path}:{line_number}:{key}"
+                    )
+                # Exact textual values, not evaluated expressions or runtime
+                # defaults; typed interpretation belongs to Analysis.
+                block["parameter_values"][key] = value
                 if key in {"active", "inactive"}:
                     blocks[stack[-1]]["attributes"][key] = value
                 if key == "type":
@@ -180,6 +189,7 @@ class MooseInputCollector:
                 attributes={
                     **block["attributes"],
                     "parameter_names": tuple(sorted(block["parameters"])),
+                    "parameter_values": tuple(sorted(block["parameter_values"].items())),
                 },
                 evidence_ids=(eid,),
             ))

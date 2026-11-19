@@ -2,6 +2,8 @@
 
 import pytest
 
+from physics_harness.code.analysis import assess_input_parameter_contract
+
 from physics_harness.code.diagnostics import (
     CppSourceCollector, GitSourceProvider, MooseInputCollector,
     ScanRequest, run_scan,
@@ -156,3 +158,142 @@ def test_source_extensions_select_correct_provider():
     assert not cpp.supports(SourceRecord("src/a.i", sha, "100644", 1))
     assert hit.supports(SourceRecord("inputs/a.i", sha, "100644", 1))
     assert not hit.supports(SourceRecord("src/a.C", sha, "100644", 1))
+
+
+
+_VALID_PARAMS_CPP = """\
+#include "PhysicsFVElectronEnergyJouleHeating.h"
+registerMooseObject("PhysicsApp", PhysicsFVElectronEnergyJouleHeating);
+
+InputParameters
+PhysicsFVElectronEnergyJouleHeating::validParams()
+{
+  auto params = FVElementalKernel::validParams();
+  params.addParam<MooseEnum>(
+      "state_form",
+      MooseEnum("normalized physical_eV", "normalized"),
+      "Electron energy representation.");
+  params.addRequiredParam<MooseFunctorName>(
+      "electron_density", "Electron number density.");
+  params.addRequiredParam<MooseFunctorName>(
+      "potential", "Electrostatic potential.");
+  params.addRequiredParam<MooseFunctorName>(
+      "mobility", "Electron mobility.");
+  params.addRequiredParam<MooseFunctorName>(
+      "diffusion", "Electron diffusion.");
+  params.addParam<Real>(
+      "energy_reference_eV", "Historical normalization scale.");
+  return params;
+}
+"""
+
+
+def _parameter_input(state_form="physical_eV", *, density=True):
+    density_line = "    electron_density = n_profile\n" if density else ""
+    return (
+        "[FVKernels]\n"
+        "  [./joule]\n"
+        "    type = PhysicsFVElectronEnergyJouleHeating\n"
+        f"    state_form = {state_form}\n"
+        f"{density_line}"
+        "    potential = phi\n"
+        "    mobility = mu\n"
+        "    diffusion = D\n"
+        "  [../]\n"
+        "[]\n"
+    )
+
+
+def _scan_parameter_contract(git_factory, input_content, cpp_source=_VALID_PARAMS_CPP):
+    return scan(
+        git_factory, {
+            "src/Joule.C": cpp_source,
+            "inputs/joule.i": input_content,
+        },
+        ("src/*.C", "inputs/*.i"),
+    )
+
+
+def _joule_type(result):
+    return next(n.id for n in result.graph.nodes
+                if n.kind == "moose_type"
+                and n.name == "PhysicsFVElectronEnergyJouleHeating")
+
+
+def test_moose_enum_contract_records_options_and_exact_input_values(git_factory):
+    result = _scan_parameter_contract(git_factory, _parameter_input())
+    assert result.status == "COMPLETE"
+    checks = assess_input_parameter_contract(result.graph, _joule_type(result))
+    assert checks.disposition == "CANDIDATE_FOR_VERIFICATION"
+    assert len(checks.blocks) == 1
+    assert not checks.blocks[0].invalid_enum_values
+    contracts = [n for n in result.graph.nodes if n.kind == "moose_param_contract"]
+    assert {n.name for n in contracts} >= {
+        "state_form", "electron_density", "potential", "mobility", "diffusion",
+    }
+    state = next(n for n in contracts if n.name == "state_form")
+    assert state.attributes["enum_options"] == ("normalized", "physical_eV")
+    assert state.attributes["enum_default"] == "normalized"
+    density = next(n for n in contracts if n.name == "electron_density")
+    assert density.attributes["required"] is True
+    block = next(n for n in result.graph.nodes if n.kind == "moose_input_block"
+                 and n.name == "joule")
+    assert dict(block.attributes["parameter_values"])["state_form"] == "physical_eV"
+    assert not checks.actionable_without_verification
+    assert "RUNTIME_INSTANTIATES" not in {e.relation for e in result.graph.edges}
+
+
+def test_molar_ev_is_invalid_against_literal_cpp_moose_enum(git_factory):
+    result = _scan_parameter_contract(git_factory, _parameter_input("molar_eV"))
+    assert result.status == "COMPLETE"  # syntax is parsable, semantics are not.
+    assessed = assess_input_parameter_contract(result.graph, _joule_type(result))
+    assert assessed.disposition == "BLOCKED"
+    assert assessed.blocks[0].invalid_enum_values == (
+        "INVALID_DECLARED_ENUM:state_form:molar_eV",
+    )
+    assert assessed.verification_obligations
+    assert not assessed.actionable_without_verification
+
+
+def test_missing_cpp_required_param_is_hold_not_certain_invalid(git_factory):
+    result = _scan_parameter_contract(git_factory, _parameter_input(density=False))
+    check = assess_input_parameter_contract(result.graph, _joule_type(result))
+    assert check.disposition == "HOLD"
+    assert "REQUIRED_PARAM_NOT_EXPLICIT:electron_density" in check.blocks[0].unknown
+
+
+def test_dynamic_state_form_stays_unresolved_and_cannot_be_approved(git_factory):
+    result = _scan_parameter_contract(git_factory, _parameter_input("$" + "{MODE}"))
+    assert result.status == "PARTIAL"
+    assessed = assess_input_parameter_contract(result.graph, _joule_type(result))
+    assert assessed.disposition == "HOLD"
+    assert assessed.blockers
+    assert "DYNAMIC_PARAMETER_VALUE:state_form" in assessed.blocks[0].unknown
+
+
+def test_cpp_nonliteral_enum_options_fail_closed(git_factory):
+    source = _VALID_PARAMS_CPP.replace(
+        'MooseEnum("normalized physical_eV", "normalized")',
+        "allowed_energy_forms",
+    )
+    result = _scan_parameter_contract(git_factory, _parameter_input(), cpp_source=source)
+    assert result.status == "PARTIAL"
+    assert any("CPP_MOOSE_ENUM_OPTIONS_UNRESOLVED" in x
+               for x in result.receipt.unresolved)
+    assessment = assess_input_parameter_contract(result.graph, _joule_type(result))
+    assert assessment.disposition == "HOLD"
+
+
+def test_parameter_values_and_enum_evidence_bound_to_original_sources(git_factory):
+    result = _scan_parameter_contract(git_factory, _parameter_input())
+    contract_edges = [e for e in result.graph.edges
+                      if e.relation == "DECLARES_PARAM_CONTRACT"]
+    assert contract_edges
+    for edge in contract_edges:
+        for eid in edge.evidence_ids:
+            ev = result.graph.evidence_by_id()[eid]
+            assert "src/Joule.C:" in ev.source_ref
+            assert ev.attributes["source_sha"] == result.graph.scope.revision
+            assert ev.observation_status == "SOURCE_DECLARED"
+    assert any("inputs/joule.i:" in ev.source_ref
+               for ev in result.graph.evidence)
