@@ -59,7 +59,35 @@ class FunctionalP0Test(unittest.TestCase):
                    "acceptance_tolerance": "OWNER_UNSPECIFIED"}
             for name in self.profile["required_discriminators"]
         }
-        self.registry = {"schema": "fdeg.functional_registry.v0.1",
+        self.profile["preservation_contract"] = {
+            "applicability": "IF_ACTIVATED_ONLY", "equation_term_owner": "electron_continuity",
+            "removal_effect": "signed residual lost if active",
+            "representation_and_state": "normalized source",
+            "required_producer_names": ["number_source"],
+            "coupled_guards": ["AD/Jacobian signed source"],
+            "explicit_refusals": ["runtime unverified"],
+            "claim_ids": ["residual"],
+            "effective_runtime_status": "UNKNOWN",
+            "science_acceptance": "NOT_EVALUATED"}
+        dimensions = {
+            key: {"incumbent": "R=-source/scale", "candidate_expected": "UNKNOWN",
+                  "parity_status": "NOT_EVALUATED"}
+            for key in ("representation", "residual_formula", "sign", "units",
+                        "time_state", "face_and_boundary", "interpolation_and_limiter",
+                        "ad_jacobian", "parameters_and_defaults", "source_owner")}
+        self.profile["alternatives"][0]["comparison_contract"] = {
+            "status": "CANDIDATE_UNVERIFIED",
+            "decision": "HOLD",
+            "runtime_evidence": "NOT_OBSERVED",
+            "dimensions": dimensions,
+            "candidate_source": {"source_status": "NOT_LOCALLY_SOURCE_VERIFIED"},
+            "equivalence_class": "NUMERIC_UNVERIFIED",
+            "incumbent_claim_ids": ["residual"],
+            "documented_conditions": ["same functor"],
+            "known_counterexamples": ["AD mismatch"],
+            "measured_residual_jacobian": "NOT_EVALUATED",
+            "tolerance": "OWNER_UNSPECIFIED"}
+        self.registry = {"schema": "fdeg.functional_registry.v0.2",
                          "profiles": {"Legacy": self.profile}}
         self.graph = structural.scan(self.root, "Legacy")
 
@@ -75,7 +103,7 @@ class FunctionalP0Test(unittest.TestCase):
 
     def test_verified_claim_and_declared_instance_join(self):
         result = self.assemble()
-        self.assertEqual(result["schema"], "fdeg.functional.v0.1")
+        self.assertEqual(result["schema"], "fdeg.functional.v0.2")
         self.assertEqual(result["source_identity"]["structural_graph_id"],
                          self.graph["graph_id"])
         claims = [e for e in result["edges"] if e["relation"] == "IMPLEMENTS"]
@@ -91,12 +119,52 @@ class FunctionalP0Test(unittest.TestCase):
         bound = {b["name"]: b["raw_value"] for b in consumers[0]["declared_bindings"]}
         self.assertEqual(bound["state_form"], "normalized")
         self.assertEqual(bound["variable"], "n_e")
-        self.assertEqual(consumers[0]["effective_runtime_binding"], "NOT_OBSERVED")
+        self.assertEqual(consumers[0]["effective_runtime_binding"], "UNKNOWN")
         self.assertEqual(result["equivalence_verdict"], "NOT_PROVEN")
         self.assertEqual(len(result["discriminator_contracts"]), 3)
         self.assertTrue(all(x["status"] == "NOT_EVALUATED"
                             for x in result["discriminator_contracts"].values()))
         self.assertTrue(result["parameter_declarations"] == [])
+
+    def test_v02_declared_functor_binding_is_not_effective_provider(self):
+        self.put("cases/electron.i",
+            "[FunctorMaterials]\n  [src]\n    type = ADGenericFunctorMaterial\n"
+            "    prop_names = 'rate'\n  []\n[]\n"
+            "[Kernels]\n  [electron]\n    type = Legacy\n"
+            "    variable = n_e\n    number_source = rate\n  []\n[]\n")
+        graph = structural.scan(self.root, "Legacy")
+        result = self.assemble(graph=graph)
+        binding = next(b for b in result["producer_binding_graph"]
+                       if b["parameter"] == "number_source")
+        self.assertEqual(binding["status"], "SAME_FILE_DECLARED_CANDIDATE")
+        self.assertEqual(binding["effective_provider"], "UNKNOWN")
+        owned = [e for e in result["edges"]
+                 if e["relation"] == "EQUATION_TERM_OWNER_CONDITIONAL"]
+        self.assertEqual(len(owned), 1)
+        self.assertEqual(owned[0]["runtime_status"], "NOT_OBSERVED")
+        self.assertTrue(any(e["relation"] == "EFFECTIVE_FUNCTIONAL_BINDING_CANDIDATE"
+                            for e in result["edges"]))
+
+    def test_v02_forged_provider_candidate_rejected_after_rehash(self):
+        self.put("cases/electron.i",
+            "[Kernels]\n  [electron]\n    type = Legacy\n"
+            "    number_source = rate\n  []\n[]\n")
+        graph = structural.scan(self.root, "Legacy")
+        forged = copy.deepcopy(graph)
+        self.assertTrue(forged["enrichment"]["provider_bindings"])
+        forged["enrichment"]["provider_bindings"][0]["status"] = "RUNTIME_CONFIRMED"
+        forged["graph_id"] = structural.stable_id(
+            "graph", {k: v for k, v in forged.items() if k != "graph_id"})
+        with self.assertRaisesRegex(ValueError, "STRUCTURAL_ENRICHMENT_SOURCE_RECONSTRUCTION_MISMATCH"):
+            self.assemble(graph=forged)
+
+    def test_v02_replacement_dimension_promotion_fails_closed(self):
+        forged = copy.deepcopy(self.registry)
+        dimensions = forged["profiles"]["Legacy"]["alternatives"][0][
+            "comparison_contract"]["dimensions"]
+        dimensions["sign"]["parity_status"] = "PASS"
+        with self.assertRaisesRegex(ValueError, "FUNCTIONAL_REPLACEMENT_DIMENSION_FALSE_PASS"):
+            self.assemble(registry=forged)
 
     def test_stability_and_candidate_must_stay_unverified(self):
         a, b = self.assemble(), self.assemble()
@@ -199,6 +267,33 @@ class LiveContractsP0Test(unittest.TestCase):
                 self.assertEqual(set(profile["required_discriminators"]),
                                  set(profile["discriminator_contracts"]))
                 self.assertTrue(functional.extract_parameters(ROOT, profile))
+
+    def test_v02_live_candidate_source_witness_and_variable_density_blocker(self):
+        registry = functional.load_registry(ROOT)
+        mass = registry["profiles"]["PhysicsFVMassFractionTimeDerivative"]
+        candidate = mass["alternatives"][0]
+        witnesses = functional.validate_candidate_source(ROOT, candidate)
+        self.assertTrue(witnesses)
+        self.assertEqual(witnesses[0]["support"],
+                         "CANDIDATE_SOURCE_EXPRESSION_NOT_EQUIVALENCE")
+        self.assertIn("rho_n-rho_old", candidate["comparison_contract"][
+            "dimensions"]["residual_formula"]["candidate_expected"])
+        self.assertEqual(candidate["comparison_contract"]["decision"], "HOLD")
+        self.assertEqual(candidate["comparison_contract"]["runtime_evidence"],
+                         "NOT_OBSERVED")
+
+    def test_v02_code5_shared_file_and_semantic_diff_all_hold(self):
+        registry = functional.load_registry(ROOT)
+        target = "PhysicsFVLogMolarElectronReactionSource"
+        result = functional.assemble(ROOT, structural.scan(ROOT, target),
+                                     target, registry)
+        self.assertEqual(result["schema"], "fdeg.functional.v0.2")
+        self.assertEqual(result["shared_file_retirement_requirement"],
+                         "ALL_REGISTERED_CLASSES_MUST_BE_DISCONNECTED")
+        self.assertEqual(result["replacement_verdict"], "ALL_CANDIDATES_UNVERIFIED")
+        self.assertTrue(all(x["transition_permission"] == "HOLD"
+                            for x in result["semantic_replacement_diffs"]))
+        self.assertTrue(result["build_and_header_ownership"]["translation_units"])
 
     def test_code5_four_classes_share_one_file_but_distinct_contracts(self):
         registry = functional.load_registry(ROOT)
