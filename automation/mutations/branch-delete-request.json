@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-667-p1-c1-941-o2p-ei415-20261117",
-      "expected_sha": "7729273bc83d91bdf9aef9db01ae65726257d23c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c1-941-o2p-ei415-20261117-7729273bc83d"
+      "branch": "issue-667-p1-c7-941-h25-rate-20261117",
+      "expected_sha": "dbc0b7f9a10ad9eee6965653073ff0d2d3c327df",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c7-941-h25-rate-20261117-dbc0b7f9a10a"
     },
     {
-      "branch": "issue-667-p1-c3-941-om-source-20261117",
-      "expected_sha": "66a6203b7a30f781021ac16cea28484228d7e042",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c3-941-om-source-20261117-66a6203b7a30"
+      "branch": "issue-667-p1-d2-electron-energy-20261117",
+      "expected_sha": "e2ba8a6c2840576d203f4a148df4675d122e9799",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d2-electron-energy-20261117-e2ba8a6c2840"
     },
     {
-      "branch": "issue-667-p1-c4-s6-941-op-source-20261117",
-      "expected_sha": "1427f02dc0e63f8e32a18ba4e04554beec38ee8d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c4-s6-941-op-source-20261117-1427f02dc0e6"
+      "branch": "issue-667-p1-d3-pressure-neutral-20261117",
+      "expected_sha": "1d5e4902080d8dd06553370b800bea0320206cfc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d3-pressure-neutral-20261117-1d5e4902080d"
     },
     {
-      "branch": "issue-667-p1-c5-op-h25-941-20261117",
-      "expected_sha": "987a60fd2cc333500f548aca4cba704ffcd2a8fe",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c5-op-h25-941-20261117-987a60fd2cc3"
+      "branch": "issue-667-p1-d4-rf-joule-20261117",
+      "expected_sha": "d1a1ee56801b0f9c4d3cb9e9ff18e74007de838a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d4-rf-joule-20261117-d1a1ee56801b"
     },
     {
-      "branch": "issue-667-p1-c6-s6-941-ei-provenance-9c15a4f-20261117",
-      "expected_sha": "3461ad2da1586505135d38a941f2eac49f0ab84b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c6-s6-941-ei-provenance-9c15a4f-20261117-3461ad2da158"
+      "branch": "issue-667-p1-d5-poisson-density-20261117",
+      "expected_sha": "0e01791db7b22e9153fa51d43410afde403ecaa5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d5-poisson-density-20261117-0e01791db7b2"
     }
   ]
 }
