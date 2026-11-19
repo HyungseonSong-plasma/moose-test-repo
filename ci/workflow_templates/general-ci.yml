@@ -98,6 +98,25 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
       - name: Validate FDEG Transition Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Validate FDEG Profile Lifecycle P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_profile_lifecycle.py -v
+      - name: Capture code1 FDEG exact-head retirement baseline (no Native)
+        if: github.event_name == 'pull_request' && github.head_ref == 'issue-701-code1-retirement-evidence-prep'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/fdeg_retirement_snapshot.py \
+            --target FVElectronResponseBandedCorrection \
+            --expected-head "$(git rev-parse HEAD)" \
+            --output-dir fdeg-code1-evidence
+      - name: Upload code1 pre-retirement FDEG JSONs (not approval)
+        if: github.event_name == 'pull_request' && github.head_ref == 'issue-701-code1-retirement-evidence-prep'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fdeg-code1-baseline-${{ github.event.pull_request.head.sha }}
+          path: fdeg-code1-evidence/**
+          if-no-files-found: error
+          retention-days: 90
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |

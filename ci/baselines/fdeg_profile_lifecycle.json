@@ -1,0 +1,16 @@
+{
+  "schema": "fdeg.profile_lifecycle.v0.1",
+  "target": "FVElectronResponseBandedCorrection",
+  "baseline_commit": "d0010827910581a1ca3bf4b405846a9960416c39",
+  "status": "PRE_RETIREMENT",
+  "historical_profile_file": "ci/baselines/fdeg_historical_profiles_code1.json",
+  "historical_profile_blob_sha": "9a8b0d60a9511fe089ef6cb3d900f902123ee742",
+  "current_implementation": "PRESENT",
+  "active_registry_contracts": "REQUIRED_UNTIL_RETIREMENT_PR",
+  "removal_approval": "NOT_GRANTED",
+  "scientific_equivalence": "NOT_PROVEN",
+  "historical_replay": "PRESERVE_PINNED_SEPARATELY",
+  "current_binary_legacy_input_compatibility": "REQUIRES_SEPARATE_DECISION",
+  "source_removal_in_this_pr": false,
+  "retirement_receipt": null
+}
