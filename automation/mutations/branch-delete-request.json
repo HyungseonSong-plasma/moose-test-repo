@@ -1,29 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6-c1-workflow-parity-trigger-audit-20261118",
-      "expected_sha": "c0db8aa2fca47ffe5fc6045872d1b7a5351de5b8",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-c1-workflow-parity-trigger-audit-20261118-c0db8aa2fca4"
+      "branch": "issue-672-p6-e1-crosslane-artifact-custody-20261118",
+      "expected_sha": "c54ad7fccf6357ceded8d2af28dfebc54d55e31f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-e1-crosslane-artifact-custody-20261118-c54ad7fccf63"
     },
     {
-      "branch": "issue-672-p6-h2-arch-p05-20261118",
-      "expected_sha": "846543da3e7ce316a2b29fde8935e7d3eec19ab3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-h2-arch-p05-20261118-846543da3e7c"
+      "branch": "issue-672-p6-d3-public-d-transport-origin-sha-20261118",
+      "expected_sha": "ec619f93ca1da9e5c25c365ad89bba4e5f8d4879",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d3-public-d-transport-origin-sha-20261118-ec619f93ca1d"
     },
     {
-      "branch": "issue-671-p05-arch-ni-time-26to24-20261118",
-      "expected_sha": "1abdeddbe91d33f49b59f27a7835ab6d59262f59",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p05-arch-ni-time-26to24-20261118-1abdeddbe91d"
+      "branch": "issue-671-p05-arch-ni-time-two-real-native-20261118",
+      "expected_sha": "07cbfd869b984fc783d3f351ed523e7a78a81403",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p05-arch-ni-time-two-real-native-20261118-07cbfd869b98"
     },
     {
-      "branch": "issue-672-p6-n1-newonly-ci-contract-20261118",
-      "expected_sha": "4e486f3e833693b289f9e7f27329fa3c17dabade",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-n1-newonly-ci-contract-20261118-4e486f3e8336"
-    },
-    {
-      "branch": "issue-672-535-541-auto-p3-p4-p05-risk-20261118",
-      "expected_sha": "a02d2438005e8165321ec9f5bd807c41b8a51f7c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-535-541-auto-p3-p4-p05-risk-20261118-a02d2438005e"
+      "branch": "issue-672-p6-h3-pinned-arch-p2-20261118",
+      "expected_sha": "d1eee0be6c16859ff20ee7e2ac0fe5b54c44f4ce",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-h3-pinned-arch-p2-20261118-d1eee0be6c16"
     }
   ]
 }
