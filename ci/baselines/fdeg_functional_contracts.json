@@ -1,0 +1,1033 @@
+{
+  "schema": "fdeg.functional_registry.v0.1",
+  "origin": "source-anchored reviewed requirements from issue #691 code1/code2/code3/code4/code6/code7",
+  "profiles": {
+    "PhysicsFVElectronReactionSource": {
+      "target": "PhysicsFVElectronReactionSource",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
+        "blob_sha": "35ded0eab65ad7bed85baa0104261c90bc26bf3d"
+      },
+      "capability": "SIGNED_ELECTRON_NUMBER_SOURCE_PROJECTION",
+      "equation": "electron_continuity.number_source",
+      "operator_kind": "FVElementalKernel",
+      "notes": "Kernel consumes signed physical electron-number Functor, not reaction progress owner.",
+      "claims": [
+        {
+          "id": "source_projector",
+          "relation": "IMPLEMENTS",
+          "to": "capability:SIGNED_ELECTRON_NUMBER_SOURCE_PROJECTION",
+          "expression": "R_e=-S_e (physical); R_e=-S_e/n_ref (normalized)",
+          "anchors": [
+            "return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "physical: 1/(m^3 s); normalized: source/n_ref",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "flip sign",
+            "omit 1/n_ref",
+            "normalize twice"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
+            "blob_sha": "35ded0eab65ad7bed85baa0104261c90bc26bf3d"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "number_source",
+          "relation": "REQUIRES",
+          "to": "parameter:number_source",
+          "expression": "required MooseFunctorName source (signed particle-number rate)",
+          "anchors": [
+            "\"number_source\",",
+            "_number_source(getFunctor<ADReal>(\"number_source\"))"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "1/(m^3 s)",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
+            "blob_sha": "35ded0eab65ad7bed85baa0104261c90bc26bf3d"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "state_form",
+          "relation": "APPLIES_WHEN",
+          "to": "mode:physical|normalized",
+          "expression": "state_form MooseEnum default normalized",
+          "anchors": [
+            "MooseEnum(\"normalized physical\", \"normalized\")"
+          ],
+          "mode": "physical|normalized",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
+            "blob_sha": "35ded0eab65ad7bed85baa0104261c90bc26bf3d"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "normalize_guard",
+          "relation": "REQUIRES",
+          "to": "parameter:n_ref",
+          "expression": "normalized mode requires positive n_ref; physical may omit",
+          "anchors": [
+            "if (!isParamValid(\"n_ref\"))",
+            "if (_n_ref <= 0.0)"
+          ],
+          "mode": "normalized",
+          "conditions": [],
+          "units": "1/m^3",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "n_ref=0",
+            "n_ref<0",
+            "missing n_ref"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
+            "blob_sha": "35ded0eab65ad7bed85baa0104261c90bc26bf3d"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "ad_sample",
+          "relation": "EVALUATES",
+          "to": "quantity:electron_signed_source_functor",
+          "expression": "Functor evaluated with AD at current element and determineState()",
+          "anchors": [
+            "_number_source(makeElemArg(_current_elem), determineState());"
+          ],
+          "mode": "all",
+          "conditions": [
+            "valid number_source Functor"
+          ],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "different element or time state"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
+            "blob_sha": "35ded0eab65ad7bed85baa0104261c90bc26bf3d"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        }
+      ],
+      "required_discriminators": [
+        "SIGNED_SOURCE_POS_NEG_ZERO",
+        "NORMALIZED_N_REF_NOT_ONE",
+        "AD_JACOBIAN",
+        "REACTION_OWNERSHIP",
+        "EI18_EI19_NO_SOURCE",
+        "CONSERVATION"
+      ],
+      "alternatives": [
+        {
+          "candidate_type": "FVCoupledForce",
+          "status": "CANDIDATE_UNVERIFIED",
+          "conditions": [
+            "physical:coef=1",
+            "normalized:coef=1/n_ref",
+            "same variable/block/AD functor/state"
+          ],
+          "semantic_risks": [
+            "floating-point reordering",
+            "off-diagonal Jacobian",
+            "source ownership double counting"
+          ],
+          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF"
+        }
+      ],
+      "unresolved_semantics": [
+        "ACTUAL_FUNCTOR_PROVIDER_BINDING",
+        "ELECTRON_SOURCE_REACTION_PROVENANCE",
+        "REPLACEMENT_NUMERICAL_PARITY",
+        "NATIVE_CONTRIBUTION_NOT_OBSERVED"
+      ],
+      "historical_guards": [
+        "EI18_EI19_NO_ELECTRON_NUMBER_SOURCE",
+        "S5R_SIGNED_PROGRESS_AVOGADRO_OWNERSHIP"
+      ]
+    },
+    "PhysicsFVElectrostaticDrift": {
+      "target": "PhysicsFVElectrostaticDrift",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+        "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+      },
+      "capability": "SIGNED_FV_ELECTROSTATIC_DRIFT_FLUX",
+      "equation": "charged_species_continuity.face_flux",
+      "operator_kind": "FVFluxKernel",
+      "notes": "Face electric field, charge-dependent signed drift and upwind variable; carrier units depend on consumer.",
+      "claims": [
+        {
+          "id": "drift_law",
+          "relation": "IMPLEMENTS",
+          "to": "capability:SIGNED_FV_ELECTROSTATIC_DRIFT_FLUX",
+          "expression": "R_face=carrier_f*u_up*z*mu_f*(E_f·n), E_f=-grad(phi)_f",
+          "anchors": [
+            "-_potential.gradient(centered_face, state);",
+            "return carrier_face * transported_value * drift_normal;"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "depends on carrier and transported variable",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "invert potential gradient sign",
+            "invert charge sign",
+            "remove carrier factor"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+            "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "drift_normal",
+          "relation": "CONTRIBUTES_TO",
+          "to": "equation:charged_species_continuity",
+          "expression": "signed normal velocity z*mu_f*(E·n)",
+          "anchors": [
+            "_charge_number * mobility_face * (electric_field * _normal);"
+          ],
+          "mode": "all",
+          "conditions": [
+            "z != 0"
+          ],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "z=0",
+            "upwind direction reversed"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+            "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "upwind",
+          "relation": "EVALUATES",
+          "to": "numerical:upwind_limiter",
+          "expression": "upwind selected by raw drift normal; limiter method preserved",
+          "anchors": [
+            "MetaPhysicL::raw_value(drift_normal) >= 0.0;",
+            "Moose::FV::limiterType(_advected_interp_method)"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "use opposite upwind sign",
+            "replace limiter with centered only"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+            "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "limiter_state",
+          "relation": "APPLIES_WHEN",
+          "to": "numerical:limiter_time_state",
+          "expression": "transient uses previous time state; steady uses previous nonlinear state",
+          "anchors": [
+            "Moose::SolutionIterationType::Time",
+            "Moose::SolutionIterationType::Nonlinear"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "replace previous limiter state with current iterate"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+            "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "zero_charge_guard",
+          "relation": "REQUIRES",
+          "to": "parameter:charge_number",
+          "expression": "charge_number required and zero rejected",
+          "anchors": [
+            "\"charge_number\", \"Signed integer-like charge number z.\"",
+            "if (_charge_number == 0.0)"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "signed dimensionless",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "charge_number=0"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+            "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "potential",
+          "relation": "REQUIRES",
+          "to": "parameter:potential",
+          "expression": "potential AD gradient",
+          "anchors": [
+            "\"potential\""
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "missing potential provider"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+            "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "mobility",
+          "relation": "REQUIRES",
+          "to": "parameter:mobility",
+          "expression": "mobility AD face functor",
+          "anchors": [
+            "\"mobility\""
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "missing mobility provider"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+            "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "carrier",
+          "relation": "REQUIRES",
+          "to": "parameter:carrier",
+          "expression": "carrier AD face functor",
+          "anchors": [
+            "\"carrier\""
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "missing carrier provider"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+            "blob_sha": "8d61a535b4e0fbf0a008fabb98d45e723affe999"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "mass_correction",
+          "relation": "COUPLED_WITH",
+          "to": "class:PhysicsFVHeavyMassElectromigrationCorrection",
+          "expression": "heavy mass correction reconstructs negative provisional total charged-heavy drift mass flux",
+          "anchors": [
+            "const ADReal correction_mass_flux_normal =",
+            "-direct_mass_flux_normal;"
+          ],
+          "mode": "all",
+          "conditions": [
+            "matching charged species",
+            "same interpolator/time-state/face"
+          ],
+          "units": "UNSPECIFIED",
+          "applicability": "CONDITIONAL_COUPLING_NOT_VALIDATED",
+          "assumptions": [],
+          "counterexamples": [
+            "change shared upwind choice",
+            "omit one ion in mass correction"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.C",
+            "blob_sha": "79bf6045942369bb483ab4e7480a08a5d1040d65"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        }
+      ],
+      "required_discriminators": [
+        "CHARGE_SIGN_REVERSAL",
+        "E_ZERO_AND_MOBILITY_ZERO",
+        "UPWIND_DIRECTION",
+        "LIMITER_TIME_STATE",
+        "MASS_CORRECTION_CANCELLATION",
+        "AD_JACOBIAN"
+      ],
+      "alternatives": [
+        {
+          "candidate_type": "PhysicsFVLogMolarElectrostaticDrift",
+          "status": "CANDIDATE_UNVERIFIED",
+          "conditions": [
+            "same variable representation",
+            "same face gradient interpolation",
+            "same limiter/time-state"
+          ],
+          "semantic_risks": [
+            "raw vs exp(log_c) carrier state",
+            "FEM potential gradient path",
+            "Jacobian mismatch"
+          ],
+          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF"
+        }
+      ],
+      "unresolved_semantics": [
+        "PER_CONSUMER_CARRIER_UNITS",
+        "FUNCTOR_PROVIDER_BINDING",
+        "FACE_BOUNDARY_OWNERSHIP",
+        "MASS_CORRECTION_PARITY",
+        "NATIVE_CONTRIBUTION_NOT_OBSERVED"
+      ],
+      "historical_guards": []
+    },
+    "PhysicsFVMassFractionTimeDerivative": {
+      "target": "PhysicsFVMassFractionTimeDerivative",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVMassFractionTimeDerivative.C",
+        "blob_sha": "09b0f60eb6473ac295a690e463198c370fc2870b"
+      },
+      "capability": "DENSITY_WEIGHTED_MASS_FRACTION_ACCUMULATION",
+      "equation": "heavy_species_mass_fraction.time",
+      "operator_kind": "FVTimeKernel",
+      "notes": "Source specifies rho * u_dot at element; source alone does NOT establish Backward Euler integration semantics.",
+      "claims": [
+        {
+          "id": "time_term",
+          "relation": "IMPLEMENTS",
+          "to": "capability:DENSITY_WEIGHTED_MASS_FRACTION_ACCUMULATION",
+          "expression": "R=rho(elem,determineState()) * _u_dot[_qp]",
+          "anchors": [
+            "return rho * _u_dot[_qp];"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "kg/(m^3 s) if u is dimensionless mass fraction",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "drop rho factor",
+            "change state/evaluation position"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVMassFractionTimeDerivative.C",
+            "blob_sha": "09b0f60eb6473ac295a690e463198c370fc2870b"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "rho_required",
+          "relation": "REQUIRES",
+          "to": "parameter:rho",
+          "expression": "required AD Functor for mixture mass density",
+          "anchors": [
+            "\"rho\",",
+            "_rho(getFunctor<ADReal>(\"rho\"))"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "kg/m^3",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVMassFractionTimeDerivative.C",
+            "blob_sha": "09b0f60eb6473ac295a690e463198c370fc2870b"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "time_unknown",
+          "relation": "EVALUATES",
+          "to": "numerical:fv_time_integrator",
+          "expression": "uses FVTimeKernel _u_dot; effective time integrator must be separately bound",
+          "anchors": [
+            "FVTimeKernel::validParams();",
+            "_u_dot[_qp]"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [
+            "MOOSE_TIME_DISCRETIZATION_UNVERIFIED"
+          ],
+          "counterexamples": [
+            "assume Backward Euler without pinned base-class evidence"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVMassFractionTimeDerivative.C",
+            "blob_sha": "09b0f60eb6473ac295a690e463198c370fc2870b"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        }
+      ],
+      "required_discriminators": [
+        "VARIABLE_DENSITY_COUNTEREXAMPLE",
+        "TIME_INTEGRATOR_IDENTITY",
+        "STATE_REPRESENTATION",
+        "AD_JACOBIAN",
+        "SPECIES_MASS_INVENTORY"
+      ],
+      "alternatives": [
+        {
+          "candidate_type": "PhysicsFVConservativeMassFractionTimeDerivative",
+          "status": "CANDIDATE_UNVERIFIED",
+          "conditions": [
+            "constant rho over accepted timestep",
+            "identical time discretization",
+            "same state and variable representation",
+            "same block and element evaluation"
+          ],
+          "semantic_risks": [
+            "for variable rho conservative minus old term includes (rho_n-rho_old)*w_old/dt",
+            "mass_fraction vs log_molar",
+            "old/current-state mismatch"
+          ],
+          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF"
+        }
+      ],
+      "unresolved_semantics": [
+        "MOOSE_TIME_DISCRETIZATION_NOT_BOUND",
+        "PER_CONSUMER_STATE_REPRESENTATION",
+        "VARIABLE_DENSITY_EQUIVALENCE_NOT_PROVEN",
+        "NATIVE_CONTRIBUTION_NOT_OBSERVED"
+      ],
+      "historical_guards": [
+        "QPX_ALIAS_NOT_PROVEN_EQUIVALENT"
+      ]
+    },
+    "PhysicsFVElectronEnergyJouleHeating": {
+      "target": "PhysicsFVElectronEnergyJouleHeating",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+        "blob_sha": "07ecd234871c659b04389c87bff6f52fae7f800e"
+      },
+      "capability": "ELECTRON_ELECTRIC_WORK_RESIDUAL",
+      "equation": "electron_energy.electric_work",
+      "operator_kind": "FVElementalKernel",
+      "notes": "Electric work is computed through shared PhysicsElectronFluxModel helper; shared helper is not solely owned by this kernel.",
+      "claims": [
+        {
+          "id": "electric_field",
+          "relation": "EVALUATES",
+          "to": "quantity:electric_field",
+          "expression": "E=-grad(phi) at element and state",
+          "anchors": [
+            "const auto electric_field = -_potential.gradient(elem, state);"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "V/m",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "drop leading minus"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+            "blob_sha": "07ecd234871c659b04389c87bff6f52fae7f800e"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "residual",
+          "relation": "IMPLEMENTS",
+          "to": "capability:ELECTRON_ELECTRIC_WORK_RESIDUAL",
+          "expression": "R=-electronElectricWork(n,gradn,E,mu,D)/scale(state_form)",
+          "anchors": [
+            "PhysicsElectronFluxModel::electronElectricWork(",
+            "return -source;"
+          ],
+          "mode": "physical_eV|normalized",
+          "conditions": [],
+          "units": "physical_eV: eV/(m^3 s); normalized: scaled energy source",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "remove residual sign",
+            "forget energy_reference_eV division"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+            "blob_sha": "07ecd234871c659b04389c87bff6f52fae7f800e"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "normalized_guard",
+          "relation": "APPLIES_WHEN",
+          "to": "mode:normalized",
+          "expression": "normalized requires positive energy_reference_eV; physical_eV does not",
+          "anchors": [
+            "if (!isParamValid(\"energy_reference_eV\"))",
+            "if (_energy_reference_eV <= 0.0)"
+          ],
+          "mode": "normalized",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "omit epsilon_ref",
+            "epsilon_ref=0"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+            "blob_sha": "07ecd234871c659b04389c87bff6f52fae7f800e"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "shared_helper",
+          "relation": "EVALUATES",
+          "to": "helper:PhysicsElectronFluxModel::electronElectricWork",
+          "expression": "helper returns E·Gamma_e; kernel residual has opposite sign",
+          "anchors": [
+            "return electric_field * electron_flux;"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "eV/(m^3 s) per documented helper",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "assume helper already negated"
+          ],
+          "source": {
+            "path": "physics_app/include/utils/PhysicsElectronFluxModel.h",
+            "blob_sha": "f02712897d4d659fc677b8182c04f3ef18fef03f"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "input_electron_density",
+          "relation": "REQUIRES",
+          "to": "parameter:electron_density",
+          "expression": "AD Functor electron_density",
+          "anchors": [
+            "\"electron_density\""
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "missing electron_density provider"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+            "blob_sha": "07ecd234871c659b04389c87bff6f52fae7f800e"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "input_potential",
+          "relation": "REQUIRES",
+          "to": "parameter:potential",
+          "expression": "AD Functor potential",
+          "anchors": [
+            "\"potential\""
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "missing potential provider"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+            "blob_sha": "07ecd234871c659b04389c87bff6f52fae7f800e"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "input_mobility",
+          "relation": "REQUIRES",
+          "to": "parameter:mobility",
+          "expression": "AD Functor mobility",
+          "anchors": [
+            "\"mobility\""
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "missing mobility provider"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+            "blob_sha": "07ecd234871c659b04389c87bff6f52fae7f800e"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "input_diffusion",
+          "relation": "REQUIRES",
+          "to": "parameter:diffusion",
+          "expression": "AD Functor diffusion",
+          "anchors": [
+            "\"diffusion\""
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "missing diffusion provider"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+            "blob_sha": "07ecd234871c659b04389c87bff6f52fae7f800e"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        }
+      ],
+      "required_discriminators": [
+        "JOULE_DRIFT_DIFFUSION_SPLIT",
+        "E_ZERO_CONTROL",
+        "MOBILITY_DIFFUSION_ZERO",
+        "NORMALIZED_VS_PHYSICAL_EV",
+        "AD_COUPLING",
+        "SHARED_HELPER_PRESERVATION"
+      ],
+      "alternatives": [],
+      "unresolved_semantics": [
+        "APPROVED_REPLACEMENT_NONE",
+        "MODE_DEPENDENT_STATE_BINDING",
+        "SHARED_HELPER_OTHER_CONSUMERS_NOT_CERTIFIED",
+        "NATIVE_CONTRIBUTION_NOT_OBSERVED"
+      ],
+      "historical_guards": [
+        "NORMALIZED_HISTORICAL_INPUT_REQUIRES_OWN_PARITY"
+      ]
+    },
+    "PhysicsFVThermalDiffusion": {
+      "target": "PhysicsFVThermalDiffusion",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+        "blob_sha": "6887710910c95f37f5f6ed94d4344384b297b4e0"
+      },
+      "capability": "HEAVY_SPECIES_THERMAL_DIFFUSION_FLUX",
+      "equation": "heavy_species_mass_fraction.thermal_flux",
+      "operator_kind": "FVFluxKernel",
+      "notes": "Internal and boundary face paths differ. Flag false/zero flux in one case does not mean dead code globally.",
+      "claims": [
+        {
+          "id": "thermal_flux",
+          "relation": "IMPLEMENTS",
+          "to": "capability:HEAVY_SPECIES_THERMAL_DIFFUSION_FLUX",
+          "expression": "j_T·n= -D_T/T * grad(T)·n",
+          "anchors": [
+            "return -DT_face * dTdn / T_face;"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "kg/(m^2 s) if D_T [kg/(m s)] and T [K]",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "flip sign",
+            "omit 1/T",
+            "invert normal"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+            "blob_sha": "6887710910c95f37f5f6ed94d4344384b297b4e0"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "switch",
+          "relation": "APPLIES_WHEN",
+          "to": "mode:include_thermal_diffusion",
+          "expression": "default true; false returns zero",
+          "anchors": [
+            "\"include_thermal_diffusion\",",
+            "if (!_include_thermal_diffusion)"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "treat disabled as globally unused"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+            "blob_sha": "6887710910c95f37f5f6ed94d4344384b297b4e0"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "temperature",
+          "relation": "REQUIRES",
+          "to": "parameter:temperature",
+          "expression": "required temperature AD Functor",
+          "anchors": [
+            "\"temperature\",",
+            "_temperature(getFunctor<ADReal>(\"temperature\"))"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "K",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+            "blob_sha": "6887710910c95f37f5f6ed94d4344384b297b4e0"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "thermal_coefficient",
+          "relation": "REQUIRES",
+          "to": "parameter:thermal_diffusion_coefficient",
+          "expression": "required D_T AD Functor",
+          "anchors": [
+            "\"thermal_diffusion_coefficient\",",
+            "getFunctor<ADReal>(\"thermal_diffusion_coefficient\")"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "kg/(m s)",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+            "blob_sha": "6887710910c95f37f5f6ed94d4344384b297b4e0"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "face_modes",
+          "relation": "EVALUATES",
+          "to": "numerical:internal_and_boundary_face",
+          "expression": "internal: average element/neighbor; boundary: single-sided face with adjacent-element gradient",
+          "anchors": [
+            "if (_var.isInternalFace(*_face_info))",
+            "const auto face = singleSidedFaceArg();"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "drop boundary branch",
+            "treat face normal as direction independent"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+            "blob_sha": "6887710910c95f37f5f6ed94d4344384b297b4e0"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        }
+      ],
+      "required_discriminators": [
+        "FLAG_ON_OFF",
+        "ZERO_GRADIENT",
+        "ZERO_D_T",
+        "INTERNAL_VS_BOUNDARY_FACE",
+        "AD_JACOBIAN",
+        "NATIVE_INSTANTIATION"
+      ],
+      "alternatives": [],
+      "unresolved_semantics": [
+        "RUNTIME_INSTANTIATION_NOT_OBSERVED",
+        "NVTRANSPORT_DT_FUNCTOR_BINDING",
+        "APPROVED_REPLACEMENT_NONE",
+        "NATIVE_ON_OFF_OBSERVATION_NOT_EVALUATED"
+      ],
+      "historical_guards": [
+        "QPX_THERMAL_DIFFUSION_ALIAS_NOT_AUTO_MAPPED"
+      ]
+    },
+    "FVElectronResponseBandedCorrection": {
+      "target": "FVElectronResponseBandedCorrection",
+      "source": {
+        "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+        "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+      },
+      "capability": "NONLOCAL_BANDED_ELECTRON_RESPONSE",
+      "equation": "poisson.nonlocal_residual",
+      "operator_kind": "FVElementalKernel",
+      "notes": "Historic fixed-point parity with this kernel present on BOTH arms does not prove kernel removal parity.",
+      "claims": [
+        {
+          "id": "matrix_response",
+          "relation": "IMPLEMENTS",
+          "to": "capability:NONLOCAL_BANDED_ELECTRON_RESPONSE",
+          "expression": "R_i=beta_i*sum_band(W_ij*(phi_j-anchor_j))",
+          "anchors": [
+            "response += w * (_var(arg_j, state) - _anchor(arg_j, state));",
+            "return beta_i * response;"
+          ],
+          "mode": "all",
+          "conditions": [
+            "valid 1D row mapping",
+            "matrix size N*N",
+            "1<=bandwidth<N",
+            "ghost_layers>=bandwidth+1"
+          ],
+          "units": "Poisson residual per beta and potential",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "phi=anchor requires zero",
+            "band width changed",
+            "negative beta sign"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+            "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "parameter_guards",
+          "relation": "REQUIRES",
+          "to": "condition:positive_cell_dx_and_band",
+          "expression": "n_cells>0, dx>0, bandwidth in [1,n_cells-1] and sufficient ghosts",
+          "anchors": [
+            "if (_n_cells == 0)",
+            "if (_dx <= 0.0)",
+            "if (_bandwidth == 0 || _bandwidth >= _n_cells)"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "n_cells=0",
+            "dx<=0",
+            "invalid band"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+            "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "row_mapping",
+          "relation": "EVALUATES",
+          "to": "numerical:one_dimensional_row_mapping",
+          "expression": "lround((centroid.x-xmin)/dx-0.5) maps cell to response row",
+          "anchors": [
+            "std::lround((x - _xmin) / _dx - 0.5);"
+          ],
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [
+            "uniform 1D mesh mapping not independently validated"
+          ],
+          "counterexamples": [
+            "nonuniform mesh"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+            "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        },
+        {
+          "id": "zero_response",
+          "relation": "SATISFIES",
+          "to": "invariant:phi_equals_anchor",
+          "expression": "R=0 when phi==anchor for sampled stencil and valid inputs",
+          "anchors": [
+            "response += w * (_var(arg_j, state) - _anchor(arg_j, state));"
+          ],
+          "mode": "all",
+          "conditions": [
+            "phi_j=anchor_j for band neighbors"
+          ],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "missing stencil ghost"
+          ],
+          "source": {
+            "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+            "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+          },
+          "evidence_kind": "SOURCE_OBSERVATION"
+        }
+      ],
+      "required_discriminators": [
+        "PHI_EQUALS_ANCHOR",
+        "BETA_ZERO",
+        "ROW_SUM_ZERO_ASSUMPTION",
+        "ROW_SUM_NONZERO_COUNTEREXAMPLE",
+        "BAND_AND_GHOST_BOUNDARY",
+        "ON_OFF_NATIVE_COMPARISON"
+      ],
+      "alternatives": [],
+      "unresolved_semantics": [
+        "ROW_SUM_ZERO_NOT_CHECKED",
+        "HISTORICAL_KERNEL_REMOVAL_PARITY_NOT_PROVEN",
+        "NATIVE_ON_OFF_NOT_OBSERVED",
+        "CURRENT_LEGACY_INPUT_COMPAT_UNVERIFIED"
+      ],
+      "historical_guards": [
+        "HISTORICAL_GUMMEL_CLOSURE_PARITY_NOT_REMOVAL_PARITY"
+      ]
+    }
+  }
+}
