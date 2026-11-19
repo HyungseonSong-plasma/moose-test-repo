@@ -80,6 +80,10 @@ class ScanCacheP0Test(unittest.TestCase):
         self.assertEqual(other["scan_scope"]["files_scanned"],
                          original["scan_scope"]["files_scanned"])
         self.assertEqual(other["safety"], "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT")
+        with mock.patch.dict(os.environ, {"FDEG_CACHE_DIR": ""}):
+            independent = structural.scan(self.root, "Other", self.head)
+        self.assertEqual(other, independent)
+        self.assertEqual(other["graph_id"], independent["graph_id"])
 
     def test_broken_shared_source_index_rescans_instead_of_silently_skipping(self):
         self.scan(self.head)
@@ -147,7 +151,7 @@ class ScanCacheP0Test(unittest.TestCase):
         self.assertEqual(len(list(self.cache_dir.glob("structural-*.json"))), 2)
 
     def test_no_opt_in_has_no_implicit_cache(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
+        with mock.patch.dict(os.environ, {"FDEG_CACHE_DIR": ""}):
             first = structural.scan(self.root, "Legacy", self.head)
             again = structural.scan(self.root, "Legacy", self.head)
         self.assertEqual(first, again)
