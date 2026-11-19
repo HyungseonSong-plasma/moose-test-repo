@@ -1,19 +1,14 @@
 {
   "targets": [
     {
-      "branch": "cleanup-wave1-c-legacy-ref-sunset-20261116",
-      "expected_sha": "85d6968f5155e25eabfca8b503828979d9509506",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-legacy-ref-sunset-20261116-85d6968f5155"
+      "branch": "cleanup-wave1-dd-p3-fallback-20261116",
+      "expected_sha": "47263519025aaa55837be0d4bb897edad33df430",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-p3-fallback-20261116-47263519025a"
     },
     {
-      "branch": "cleanup-wave1-dd-historical-selfpath-retire-20261116",
-      "expected_sha": "4f8763083b598ffb7bde77e4e2dd130a0f1e7619",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-historical-selfpath-retire-20261116-4f8763083b59"
-    },
-    {
-      "branch": "cleanup-wave1-s6-historical-one-shot-cutover-20261116",
-      "expected_sha": "f1fb952cabecc6e11804119ac6047821276d0d6f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-historical-one-shot-cutover-20261116-f1fb952cabec"
+      "branch": "cleanup-wave1-s6-3step-20261116",
+      "expected_sha": "b4843dd47f9cfb6dd3d83de3581df1052ae38ca1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-3step-20261116-b4843dd47f9c"
     }
   ]
 }
