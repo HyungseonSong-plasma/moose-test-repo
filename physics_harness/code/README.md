@@ -1,7 +1,7 @@
 # Code lifecycle namespace
 
 This package provides language-agnostic foundations for code across the entire
-\`moose-test-repo\` repository, including C++, Python, Fortran, MOOSE inputs,
+`moose-test-repo\` repository, including C++, Python, Fortran, MOOSE inputs,
 workflow definitions, and other supported sources.
 
 | Package | Responsibility |
@@ -29,3 +29,17 @@ integrity validation, and context hierarchy unfolding only**. No language
 parsers, FDEG report adapters, automated refactoring/deletion, native runtime
 evidence, or physics acceptance were added. Existing FDEG and Physics
 implementations and the existing \`physics_harness/analysis/\` remain unchanged.
+
+## Harness Code CI
+
+Only `physics_harness/code/tests/` is in the `Harness Code CI` scope.
+The dedicated workflow `.github/workflows/harness-code.yml` runs on
+changes to `physics_harness/code/**` (or its workflow file) and executes:
+
+```bash
+python -m pytest -q physics_harness/code/tests
+```
+
+The general Repository CI ignores harness-code-only changes; the SOL
+Integration workflow is restricted to ontology/runtime-integration changes.
+Mixed-scope pull requests still receive the applicable broader validation.
