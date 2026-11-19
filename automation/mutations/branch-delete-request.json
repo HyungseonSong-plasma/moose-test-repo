@@ -1,24 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-670-p4-x-owner-runner-integration-20261118",
-      "expected_sha": "a685ab348af43e9429871b1cf93b20552d75ba03",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-x-owner-runner-integration-20261118-a685ab348af4"
+      "branch": "issue-471-codeqa-architecture-pilot-20261109",
+      "expected_sha": "625702fa325a0a62243786b5a752c548ba54100f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-471-codeqa-architecture-pilot-20261109-625702fa325a"
     },
     {
-      "branch": "issue-671-secure-original-ei-scratch-handoff-20261118",
-      "expected_sha": "cf6960bfe1905415f7789280f11f1383b8da7ecd",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-secure-original-ei-scratch-handoff-20261118-cf6960bfe190"
+      "branch": "p1-p04a-fvm-ownership-failclosed-20261117",
+      "expected_sha": "9afb80aa9e441d63d140107801ce920891409c33",
+      "archive_tag": "archive/oxygen-cleanup-20261106/p1-p04a-fvm-ownership-failclosed-20261117-9afb80aa9e44"
     },
     {
-      "branch": "issue-672-p6-d5-public-d-100row-physics-integrate-20261118",
-      "expected_sha": "47de15f603111cd94b94238534bf821d4be04167",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d5-public-d-100row-physics-integrate-20261118-47de15f60311"
+      "branch": "issue-672-p6-c3-rebase-5206730-ci-20261118",
+      "expected_sha": "6920d6b025200815b721fc8b08eebbf10e735253",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-c3-rebase-5206730-ci-20261118-6920d6b02520"
     },
     {
-      "branch": "issue-672-p6-public-d-100row-required-ci-20261118",
-      "expected_sha": "a7f51b10f9c76389bb2ba968ca9f50161762f7eb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-public-d-100row-required-ci-20261118-a7f51b10f9c7"
+      "branch": "issue-672-p6-c3-artifact-compat-20261118",
+      "expected_sha": "20f89959567a472180032683b38af5c920089825",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-c3-artifact-compat-20261118-20f89959567a"
     }
   ]
 }
