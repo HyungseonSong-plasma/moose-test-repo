@@ -98,6 +98,20 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
       - name: Validate FDEG Transition Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Generate code5-A four-owner FDEG triple evidence and HOLD manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          head_sha="$(git rev-parse HEAD)"
+          python3 ci/code5_retirement_manifest.py --expected-head "$head_sha" --output-dir "$RUNNER_TEMP/code5-fdeg"
+          test "$(find "$RUNNER_TEMP/code5-fdeg" -maxdepth 1 -name '*.json' -type f | wc -l)" -eq 13
+      - name: Upload code5-A exact-HEAD source-bound evidence (HOLD only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: code5-fdeg-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/code5-fdeg/*.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
