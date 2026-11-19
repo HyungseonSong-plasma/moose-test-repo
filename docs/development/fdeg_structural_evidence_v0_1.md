@@ -1,3 +1,7 @@
+# FDEG Structural Evidence v0.1 (historical design)
+
+**Superseded on the implementation branch by [Structural v0.2](fdeg_structural_evidence_v0_2.md).** This version is retained as the initial contract snapshot and is not an accepted Functional join schema.
+
 # Functional Dependency Evidence Graph — Structural Evidence v0.1
 
 **Status:** P0 structural extraction only; no retirement authorization  
