@@ -279,6 +279,21 @@ class RetirementEvidenceDP0Test(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "RETIREMENT_SOURCE_SYMBOL_REINTRODUCED"):
                 self.retire.verify_retired(root, receipt, review, "c" * 40)
 
+    def test_retired_guard_rejects_active_profile_and_unpinned_archive_exemption(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            receipt, review = self.synthetic_receipt(root)
+            base = root / "ci/baselines"
+            base.mkdir(parents=True)
+            (base / "fdeg_functional_contracts.json").write_text(
+                '{"profiles":{"Legacy":{"target":"Legacy"}}}')
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_ACTIVE_PROFILE_NOT_ARCHIVED"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+            (base / "fdeg_functional_contracts.json").unlink()
+            review["historical_protected_paths"] = ["experiments/frozen.i"]
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_HISTORICAL_PATH_NOT_PREPINNED"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+
     def test_static_retired_guard_never_returns_safe_delete_pass(self):
         with tempfile.TemporaryDirectory() as name:
             root = Path(name)
