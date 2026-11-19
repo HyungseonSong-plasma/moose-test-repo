@@ -1,34 +1,34 @@
 {
   "targets": [
     {
-      "branch": "cleanup-wave1-int-s6-archive-intake-20261116",
-      "expected_sha": "8cc81e2706cb83faac3fa87e929582c8f25ba7fe",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-int-s6-archive-intake-20261116-8cc81e2706cb"
+      "branch": "cleanup-wave1-main-s6-original-retirement-after-dd-20261116",
+      "expected_sha": "dc8e3bbe71140203d9530f9ccd22a0acf647a3b2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-main-s6-original-retirement-after-dd-20261116-dc8e3bbe7114"
     },
     {
-      "branch": "cleanup-wave1-dd-p3-registration-20261116",
-      "expected_sha": "def01751269879dbd10106294cf6b974b7640fb9",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-p3-registration-20261116-def017512698"
+      "branch": "int-issue541-s6-manual-required-after-main-reg-20261116",
+      "expected_sha": "b0adfcb5ea7d19d5c51c60540b1b852317e7362d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/int-issue541-s6-manual-required-after-main-reg-20261116-b0adfcb5ea7d"
     },
     {
-      "branch": "cleanup-wave1-dd-manual-required-20261116",
-      "expected_sha": "b1e66428f6d1389d186515ce1f43b90b5cd51f17",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-manual-required-20261116-b1e66428f6d1"
+      "branch": "cleanup-wave1e-postmerge-event-scope-20261116",
+      "expected_sha": "abad66091645c12bd1a632adc56655d86218b143",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1e-postmerge-event-scope-20261116-abad66091645"
     },
     {
-      "branch": "cleanup-wave1-dd-original-retirement-archive-20261116",
-      "expected_sha": "090d3b1d8dd358ba33698edd9a0a1a4bab668d96",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-original-retirement-archive-20261116-090d3b1d8dd3"
+      "branch": "cleanup-issue535-wave1-postrelease-audit-20261116",
+      "expected_sha": "1d7c2f193a0983281769867d07107a0932623433",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue535-wave1-postrelease-audit-20261116-1d7c2f193a09"
     },
     {
-      "branch": "cleanup-wave1-s6-manual-register-20261116",
-      "expected_sha": "c258d7ff483d8656ec8eb68e23e12c2b0c96c218",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-manual-register-20261116-c258d7ff483d"
+      "branch": "cleanup-issue535-eight-hold-failclosed-20261116",
+      "expected_sha": "792469ca634a94227626da67631cfa21627db3c4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue535-eight-hold-failclosed-20261116-792469ca634a"
     },
     {
-      "branch": "cleanup-wave1-main-dd-original-retirement-20261116",
-      "expected_sha": "8e1ab9c0ece72193b8fb7b44b327260d8eb69f68",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-main-dd-original-retirement-20261116-8e1ab9c0ece7"
+      "branch": "issue535-arch-dd-retirement-s6-manual-p3-authorization-20261117",
+      "expected_sha": "849105fd8ddcb9820e146b5bdcf8a0485fd73d25",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue535-arch-dd-retirement-s6-manual-p3-authorization-20261117-849105fd8ddc"
     }
   ]
 }
