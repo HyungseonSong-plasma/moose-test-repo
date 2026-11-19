@@ -36,6 +36,6 @@ jobs:
         shell: bash
         run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
       - name: Install pytest
-        run: python -m pip install 'pytest>=8,<9'
+        run: python -m pip install 'pytest>=8,<9' -r physics_harness/code/requirements.txt
       - name: Run only harness_code tests
         run: python -m pytest -q physics_harness/code/tests

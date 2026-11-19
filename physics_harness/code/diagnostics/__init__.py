@@ -1,7 +1,18 @@
-"""Read-only code diagnostics namespace.
+"""Read-only graph-backed Code Diagnostics v0.1 public API."""
 
-Files define module ownership only; no diagnostic APIs are implemented yet.
-Do not export provisional collectors or claim any coverage guarantees.
-"""
+from .request import ScanBudget, ScanRequest
+from .collector import (
+    CollectionResult, FactBatch, SourceInput, SourceRecord, UnresolvedTarget,
+    file_node_id, graph_edge_id, run_scan, scan_scope_id, stable_id,
+)
+from .assemble import DiagnosticResult, GraphAssembler
+from .receipt import EvidenceReceipt, FileCoverage
+from .providers.git import GitSourceProvider
+from .providers.workflow import WorkflowCollector
 
-__all__: list[str] = []
+__all__ = [
+    "ScanBudget", "ScanRequest", "CollectionResult", "FactBatch", "SourceInput",
+    "SourceRecord", "UnresolvedTarget", "file_node_id", "graph_edge_id",
+    "run_scan", "scan_scope_id", "stable_id", "DiagnosticResult", "GraphAssembler",
+    "EvidenceReceipt", "FileCoverage", "GitSourceProvider", "WorkflowCollector",
+]
