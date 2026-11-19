@@ -123,14 +123,21 @@ class PureTransitionGraphP0Test(unittest.TestCase):
     def test_ordered_dag_and_rollback_pinned_to_exact_head(self):
         result = self.compose()
         steps = result["steps"]
-        self.assertEqual(len(steps), len(transition.STEP_ORDER))
-        for i, step in enumerate(steps):
+        core_steps = [step for step in steps
+                      if step["operation"] in transition.STEP_ORDER]
+        self.assertEqual(len(core_steps), len(transition.STEP_ORDER))
+        self.assertEqual(len(steps), len(transition.STEP_ORDER) + 2)
+        for i, step in enumerate(core_steps):
             self.assertEqual(step["status"], "PLANNED")
             self.assertEqual(step["execution_status"], "NOT_EXECUTED")
             self.assertFalse(step["eligible_to_execute"])
             self.assertEqual(step["rollback"]["baseline_head"], "a" * 40)
-            self.assertEqual(step["depends_on_steps"],
-                             ["step:" + transition.STEP_ORDER[i - 1]] if i else [])
+            expected = ["step:" + transition.STEP_ORDER[i - 1]] if i else []
+            if step["operation"] == "REWIRE_DECLARED_CONSUMERS":
+                expected = ["step:REWIRE_CONSUMER_CANDIDATE:edge:declaration"]
+            if step["operation"] == "VERIFY_FUNCTION_AND_HISTORY":
+                expected.append("step:PRESERVE_HISTORICAL_CONSUMER:edge:history")
+            self.assertEqual(step["depends_on_steps"], expected)
             self.assertTrue(all(x["status"] == "NOT_EVALUATED"
                                 for x in step["verification_gates"]))
         rewire = next(s for s in steps if s["operation"] == "REWIRE_DECLARED_CONSUMERS")
@@ -139,6 +146,33 @@ class PureTransitionGraphP0Test(unittest.TestCase):
         self.assertFalse(rewire["expected_graph_delta"]["observed_removed_edges"])
         self.assertTrue(any(e["relation"] == "ROLLBACK_TO" for e in result["edges"]))
         self.assertTrue(any(e["relation"] == "DEPENDS_ON_STEP" for e in result["edges"]))
+
+    def test_per_consumer_rewire_step_has_exact_edge_and_rollback(self):
+        report = self.compose()
+        step = next(s for s in report["steps"]
+                    if s["operation"] == "REWIRE_CONSUMER_CANDIDATE")
+        self.assertEqual(step["structural_edge_id"], "edge:declaration")
+        self.assertEqual(step["instance_id"], "instance:one")
+        self.assertEqual(step["affected_paths"], ["tests/current.i"])
+        self.assertEqual(step["after_proposal"]["binding_status"],
+                         "NOT_SPECIFIED_UNTIL_REPLACEMENT_PROOF")
+        self.assertEqual(step["expected_graph_delta"]["may_remove_structural_edge_ids"],
+                         ["edge:declaration"])
+        self.assertFalse(step["eligible_to_execute"])
+        self.assertEqual(step["rollback"]["baseline_head"], "a" * 40)
+        self.assertTrue(any(e["relation"] == "REWIRE_STEP"
+                            and e["from"] == step["step_id"] for e in report["edges"]))
+
+    def test_historical_step_is_no_modification_and_separate_replay(self):
+        report = self.compose()
+        step = next(s for s in report["steps"]
+                    if s["operation"] == "PRESERVE_HISTORICAL_CONSUMER")
+        self.assertEqual(step["affected_paths"], [])
+        self.assertEqual(step["expected_graph_delta"]["may_remove_structural_edge_ids"], [])
+        gates = {item["gate"] for item in step["verification_gates"]}
+        self.assertIn("PINNED_HISTORICAL_REPLAY_SEPARATE", gates)
+        self.assertIn("CURRENT_BINARY_COMPATIBILITY_INDEPENDENT", gates)
+        self.assertFalse(step["eligible_to_execute"])
 
     def test_historical_lexical_not_promoted_to_active_consumer(self):
         result = self.compose()
