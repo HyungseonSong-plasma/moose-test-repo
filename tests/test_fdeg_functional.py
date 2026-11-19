@@ -136,6 +136,16 @@ class FunctionalP0Test(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "STRUCTURAL_WITNESS_MISMATCH"):
             self.assemble()
 
+    def test_forged_declared_binding_rejected_even_if_graph_id_rehashed(self):
+        graph = copy.deepcopy(self.graph)
+        binding = next(x for x in graph["instances"][0]["bindings"]
+                       if x["name"] == "state_form")
+        binding["raw_value"] = "physical"
+        graph["graph_id"] = structural.stable_id(
+            "graph", {k: v for k, v in graph.items() if k != "graph_id"})
+        with self.assertRaisesRegex(ValueError, "STRUCTURAL_BINDING_WITNESS_MISMATCH"):
+            self.assemble(graph=graph)
+
     def test_legacy_schema_target_and_wrong_head_rejected(self):
         tampered = copy.deepcopy(self.graph)
         tampered["schema"] = "fdeg.structural.v0.1"
@@ -188,6 +198,20 @@ class LiveContractsP0Test(unittest.TestCase):
                 self.assertEqual(set(profile["required_discriminators"]),
                                  set(profile["discriminator_contracts"]))
                 self.assertTrue(functional.extract_parameters(ROOT, profile))
+
+    def test_optional_description_is_not_default(self):
+        doc = functional.load_registry(ROOT)
+        source = functional.extract_parameters(
+            ROOT, doc["profiles"]["PhysicsFVElectronReactionSource"])
+        params = {p["name"]: p for p in source}
+        self.assertTrue(params["state_form"]["has_explicit_source_default"])
+        self.assertFalse(params["n_ref"]["has_explicit_source_default"])
+        self.assertFalse(params["number_source"]["has_explicit_source_default"])
+        self.assertTrue(params["number_source"]["required"])
+        thermal = functional.extract_parameters(
+            ROOT, doc["profiles"]["PhysicsFVThermalDiffusion"])
+        switch = next(p for p in thermal if p["name"] == "include_thermal_diffusion")
+        self.assertTrue(switch["has_explicit_source_default"])
 
     def test_real_source_signed_projection_graph_join(self):
         target = "PhysicsFVElectronReactionSource"
