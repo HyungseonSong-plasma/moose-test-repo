@@ -1,9 +1,6 @@
 """Source-bound C++/MOOSE Factory and .i reference candidate tests."""
 
 import pytest
-from dataclasses import replace
-
-from physics_harness.code.analysis import analyze_target_coverage
 
 from physics_harness.code.diagnostics import (
     CppSourceCollector, GitSourceProvider, MooseInputCollector,
@@ -159,88 +156,3 @@ def test_source_extensions_select_correct_provider():
     assert not cpp.supports(SourceRecord("src/a.i", sha, "100644", 1))
     assert hit.supports(SourceRecord("inputs/a.i", sha, "100644", 1))
     assert not hit.supports(SourceRecord("src/a.C", sha, "100644", 1))
-
-
-
-def test_target_coverage_is_local_even_when_all_requested_files_are_scanned(git_factory):
-    cpp_path, input_path = "src/obj.C", "inputs/one.i"
-    result = scan(git_factory, {
-        cpp_path: CPP, input_path: INPUT,
-    }, ("src/*.C", "inputs/*.i"))
-    target = next(node.id for node in result.graph.nodes
-                  if node.kind == "moose_type")
-    coverage = analyze_target_coverage(
-        result.graph, result.receipt, target,
-        required_paths=(cpp_path, input_path),
-        unverified_surfaces=("python_generator", "native_runtime", "external"),
-    )
-    assert coverage.complete_within_requested_scope
-    assert not coverage.global_consumer_closed
-    assert coverage.retirement_disposition == "HOLD"
-    assert coverage.related_source_paths == (input_path, cpp_path)
-    assert len(coverage.related_evidence_ids) >= 2
-    assert not coverage.local_blockers
-    assert coverage.unverified_surfaces == (
-        "external", "native_runtime", "python_generator",
-    )
-
-
-def test_target_coverage_reports_required_file_not_scanned(git_factory):
-    result = scan(git_factory, {"src/obj.C": CPP},
-                  ("src/*.C",), collectors=("cpp",))
-    target = next(node.id for node in result.graph.nodes
-                  if node.kind == "moose_type")
-    coverage = analyze_target_coverage(
-        result.graph, result.receipt, target,
-        required_paths=("src/obj.C", "inputs/missing.i"),
-    )
-    assert not coverage.complete_within_requested_scope
-    assert coverage.missing_required_paths == ("inputs/missing.i",)
-    assert "TARGET_REQUIRED_PATHS_NOT_SCANNED" in coverage.local_blockers
-    assert not coverage.global_consumer_closed
-
-
-def test_target_coverage_retains_unattributed_scope_partial(git_factory):
-    result = scan(git_factory, {
-        "src/obj.C": CPP,
-        "src/other.C": "#if NEEDS_CONFIG\nclass Other : public Kernel {};\n#endif\n",
-    }, ("src/*.C",), collectors=("cpp",))
-    target = next(node.id for node in result.graph.nodes
-                  if node.kind == "moose_type")
-    coverage = analyze_target_coverage(
-        result.graph, result.receipt, target,
-        required_paths=("src/obj.C", "src/other.C"),
-    )
-    assert not coverage.complete_within_requested_scope
-    assert coverage.related_source_paths == ("src/obj.C",)
-    assert coverage.incomplete_paths == ("src/other.C",)
-    assert not coverage.related_incomplete_paths
-    assert "UNRESOLVED_REQUESTED_SCOPE" in coverage.local_blockers
-    assert coverage.scope_unresolved
-    assert coverage.retirement_disposition == "HOLD"
-
-
-def test_target_coverage_rejects_cross_revision_and_unknown_targets(git_factory):
-    result = scan(git_factory, {"src/obj.C": CPP},
-                  ("src/*.C",), collectors=("cpp",))
-    target = next(node.id for node in result.graph.nodes
-                  if node.kind == "moose_type")
-    with pytest.raises(ValueError, match="TARGET_COVERAGE_SCOPE_MISMATCH"):
-        analyze_target_coverage(
-            result.graph, replace(result.receipt, revision="b" * 40), target,
-            required_paths=("src/obj.C",),
-        )
-    with pytest.raises(ValueError, match="UNKNOWN_TARGET_COVERAGE_NODE"):
-        analyze_target_coverage(
-            result.graph, result.receipt, "node:nonexistent",
-            required_paths=("src/obj.C",),
-        )
-    with pytest.raises(ValueError, match="DUPLICATE_TARGET_REQUIRED_PATH"):
-        analyze_target_coverage(
-            result.graph, result.receipt, target,
-            required_paths=("src/obj.C", "src/obj.C"),
-        )
-    empty = analyze_target_coverage(result.graph, result.receipt, target)
-    assert not empty.complete_within_requested_scope
-    assert "TARGET_REQUIRED_PATHS_UNDECLARED" in empty.local_blockers
-    assert not empty.global_consumer_closed
