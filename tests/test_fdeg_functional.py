@@ -185,7 +185,7 @@ class FunctionalP0Test(unittest.TestCase):
 class LiveContractsP0Test(unittest.TestCase):
     def test_six_source_pinned_profiles_and_anchors(self):
         registry = functional.load_registry(ROOT)
-        self.assertEqual(len(registry["profiles"]), 6)
+        self.assertEqual(len(registry["profiles"]), 10)
         for target, profile in sorted(registry["profiles"].items()):
             with self.subTest(target=target):
                 functional.validate_registry_profile(profile)
@@ -198,6 +198,47 @@ class LiveContractsP0Test(unittest.TestCase):
                 self.assertEqual(set(profile["required_discriminators"]),
                                  set(profile["discriminator_contracts"]))
                 self.assertTrue(functional.extract_parameters(ROOT, profile))
+
+    def test_code5_four_classes_share_one_file_but_distinct_contracts(self):
+        registry = functional.load_registry(ROOT)
+        names = [
+            "PhysicsFVLogMolarElectronTimeDerivative",
+            "PhysicsFVLogMolarElectronDiffusion",
+            "PhysicsFVLogMolarElectrostaticDrift",
+            "PhysicsFVLogMolarElectronReactionSource"]
+        params = {}
+        for name in names:
+            profile = registry["profiles"][name]
+            unit = functional.shared_unit_evidence(ROOT, profile)
+            self.assertEqual(set(unit["co_registered_classes"]), set(names))
+            self.assertEqual(unit["status"], "GROUP_REGISTERED_NOT_RETIRED")
+            params[name] = {p["name"] for p in functional.extract_parameters(ROOT, profile)}
+        self.assertIn("vector_tags", params[names[0]])
+        self.assertNotIn("coeff", params[names[0]])
+        self.assertIn("coeff", params[names[1]])
+        self.assertIn("use_element_gradient_for_potential", params[names[2]])
+        self.assertEqual(params[names[3]], {"number_source"})
+
+    def test_code5_claim_cannot_use_another_class_method_as_witness(self):
+        registry = functional.load_registry(ROOT)
+        profile = copy.deepcopy(
+            registry["profiles"]["PhysicsFVLogMolarElectronTimeDerivative"])
+        profile["claims"][0]["anchors"] = [
+            "return -physical_number_source / avogadro_per_mol;"]
+        with self.assertRaisesRegex(ValueError, "FUNCTIONAL_SOURCE_ANCHOR_MISSING"):
+            functional.source_witnesses(ROOT, profile)
+
+    def test_code5_structural_join_has_shared_owner_edges(self):
+        target = "PhysicsFVLogMolarElectronReactionSource"
+        graph = structural.scan(ROOT, target)
+        result = functional.assemble(ROOT, graph, target,
+                                     functional.load_registry(ROOT))
+        self.assertEqual(result["shared_translation_unit"]["status"],
+                         "GROUP_REGISTERED_NOT_RETIRED")
+        self.assertEqual(
+            sum(e["relation"] == "SHARES_TRANSLATION_UNIT_WITH"
+                for e in result["edges"]), 3)
+        self.assertEqual(result["equivalence_verdict"], "NOT_PROVEN")
 
     def test_optional_description_is_not_default(self):
         doc = functional.load_registry(ROOT)
