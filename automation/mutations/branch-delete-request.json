@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-wave1b-arch-s6-native-p2-20261116",
-      "expected_sha": "9636987313636d489abce35d9d1ae095481a6a3a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-wave1b-arch-s6-native-p2-20261116-963698731363"
+      "branch": "issue-667-p1-b3-source-417-20261117",
+      "expected_sha": "b25f8ad3225e194ccfc0937b41cb8d64dd96a6d2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b3-source-417-20261117-b25f8ad3225e"
     },
     {
-      "branch": "issue-667-p1-a1-3-op-archive-20261117",
-      "expected_sha": "789c4ddc819d22450c87d1435bce9d7347022e74",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-a1-3-op-archive-20261117-789c4ddc819d"
+      "branch": "issue-667-p1-b4-20261117",
+      "expected_sha": "2b341c2273ed06af78aff6175cb55cacdf9cb483",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b4-20261117-2b341c2273ed"
     },
     {
-      "branch": "issue-667-p1-e-independent-census-hold-20261117",
-      "expected_sha": "a3e22628d863c3b2f06ba34b2050a6ae99a7c699",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-e-independent-census-hold-20261117-a3e22628d863"
+      "branch": "issue-667-p1-b5-h25-source-20261117",
+      "expected_sha": "3db55ad207a7774939b84dbdeb98e8746cf4a49e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b5-h25-source-20261117-3db55ad207a7"
     },
     {
-      "branch": "issue-667-rate-sha-independent-20261117",
-      "expected_sha": "1e84d5d787414680f1af818900fef4ceed0cfdd2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-rate-sha-independent-20261117-1e84d5d78741"
+      "branch": "issue-667-p1-c2-941-o2p-h25-20261117",
+      "expected_sha": "56abada3ad677c557d3099f794c12a7821cc3bb9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c2-941-o2p-h25-20261117-56abada3ad67"
     },
     {
-      "branch": "issue-696-fdeg-structural-v03",
-      "expected_sha": "9da664ea11bd96ac5854137fc7229079d25a70a7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-696-fdeg-structural-v03-9da664ea11bd"
+      "branch": "issue-667-p1-d1-electron-continuity-20261117",
+      "expected_sha": "d6d4d3527be9dbd83ed4d3db687a60e28de6aea4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d1-electron-continuity-20261117-d6d4d3527be9"
     }
   ]
 }
