@@ -1,5 +1,5 @@
 {
-  "schema": "fdeg.functional_registry.v0.1",
+  "schema": "fdeg.functional_registry.v0.2",
   "origin": "source-anchored reviewed requirements from issue #691 code1/code2/code3/code4/code6/code7",
   "profiles": {
     "PhysicsFVElectronReactionSource": {
@@ -150,7 +150,83 @@
             "off-diagonal Jacobian",
             "source ownership double counting"
           ],
-          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF"
+          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF",
+          "comparison_contract": {
+            "status": "CANDIDATE_UNVERIFIED",
+            "equivalence_class": "TIME_SCHEME_OR_REPRESENTATION_OR_NUMERIC_AS_APPLICABLE",
+            "incumbent_claim_ids": [
+              "source_projector"
+            ],
+            "candidate_source": {
+              "source_status": "NOT_LOCALLY_SOURCE_VERIFIED"
+            },
+            "dimensions": {
+              "representation": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "residual_formula": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "sign": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "legacy -S_e or -S_e/n_ref; generic force sign/coef must be proven",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "units": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "time_state": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "face_and_boundary": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "interpolation_and_limiter": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "ad_jacobian": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "parameters_and_defaults": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "n_ref positive normalized only; force coefficient 1 or 1/n_ref conditional",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "source_owner": {
+                "incumbent": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              }
+            },
+            "documented_conditions": [
+              "physical:coef=1",
+              "normalized:coef=1/n_ref",
+              "same variable/block/AD functor/state"
+            ],
+            "known_counterexamples": [
+              "floating-point reordering",
+              "off-diagonal Jacobian",
+              "source ownership double counting"
+            ],
+            "measured_residual_jacobian": "NOT_EVALUATED",
+            "runtime_evidence": "NOT_OBSERVED",
+            "tolerance": "OWNER_UNSPECIFIED",
+            "decision": "HOLD"
+          }
         }
       ],
       "unresolved_semantics": [
@@ -212,6 +288,31 @@
           "measured_run_id": null,
           "acceptance_tolerance": "OWNER_UNSPECIFIED"
         }
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "electron_continuity.number_source",
+        "removal_effect": "signed electron-number source projected into continuity residual disappears when active",
+        "representation_and_state": "physical vs normalized /n_ref, signed source / reaction progress single owner",
+        "required_producer_names": [
+          "number_source",
+          "n_ref"
+        ],
+        "coupled_guards": [
+          "electron continuity",
+          "chemical signed stoichiometry",
+          "AD reaction-state derivatives"
+        ],
+        "explicit_refusals": [
+          "EI18/EI19 no electron source",
+          "N_A conversion once in progress owner",
+          "avoid double source projection"
+        ],
+        "claim_ids": [
+          "source_projector"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "PhysicsFVElectrostaticDrift": {
@@ -461,7 +562,90 @@
             "FEM potential gradient path",
             "Jacobian mismatch"
           ],
-          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF"
+          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF",
+          "comparison_contract": {
+            "status": "CANDIDATE_UNVERIFIED",
+            "equivalence_class": "TIME_SCHEME_OR_REPRESENTATION_OR_NUMERIC_AS_APPLICABLE",
+            "incumbent_claim_ids": [
+              "drift_law",
+              "drift_normal"
+            ],
+            "candidate_source": {
+              "path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+              "blob_sha": "0a7e72d64e6d9f7f059046a9abc1a7607757111f",
+              "anchors": [
+                "return carrier_face * c_face * drift_normal;"
+              ],
+              "function_scope": "PhysicsFVLogMolarElectrostaticDrift::computeQpResidual",
+              "source_status": "LOCAL_SOURCE_EXPRESSION_OBSERVED"
+            },
+            "dimensions": {
+              "representation": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "generic transported u vs log_molar exp(u_face)",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "residual_formula": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "sign": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "units": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "time_state": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "face_and_boundary": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "FEM/FV potential gradient, boundary/ghost context must match",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "interpolation_and_limiter": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "log reconstruction and previous-state limiter may differ",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "ad_jacobian": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "parameters_and_defaults": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "source_owner": {
+                "incumbent": "carrier basis, signed z, FV face E and previous-state limiter history",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              }
+            },
+            "documented_conditions": [
+              "same variable representation",
+              "same face gradient interpolation",
+              "same limiter/time-state"
+            ],
+            "known_counterexamples": [
+              "raw vs exp(log_c) carrier state",
+              "FEM potential gradient path",
+              "Jacobian mismatch"
+            ],
+            "measured_residual_jacobian": "NOT_EVALUATED",
+            "runtime_evidence": "NOT_OBSERVED",
+            "tolerance": "OWNER_UNSPECIFIED",
+            "decision": "HOLD"
+          }
         }
       ],
       "unresolved_semantics": [
@@ -521,6 +705,32 @@
           "measured_run_id": null,
           "acceptance_tolerance": "OWNER_UNSPECIFIED"
         }
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "charged_species_continuity.face_flux",
+        "removal_effect": "charged-species face drift transport and coupled mass-flux closure lose their contribution when active",
+        "representation_and_state": "carrier basis, signed z, FV face E and previous-state limiter history",
+        "required_producer_names": [
+          "potential",
+          "mobility",
+          "carrier"
+        ],
+        "coupled_guards": [
+          "PhysicsFVHeavyMassElectromigrationCorrection",
+          "upwind/limiter/normal",
+          "AD off-diagonal"
+        ],
+        "explicit_refusals": [
+          "zero phi smoke not nonzero sign/upwind proof",
+          "mass correction cancellation conditional"
+        ],
+        "claim_ids": [
+          "drift_law",
+          "drift_normal"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "PhysicsFVMassFractionTimeDerivative": {
@@ -626,7 +836,89 @@
             "mass_fraction vs log_molar",
             "old/current-state mismatch"
           ],
-          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF"
+          "requires": "INDEPENDENT_RESIDUAL_AND_AD_PARITY_PROOF",
+          "comparison_contract": {
+            "status": "CANDIDATE_UNVERIFIED",
+            "equivalence_class": "TIME_SCHEME_OR_REPRESENTATION_OR_NUMERIC_AS_APPLICABLE",
+            "incumbent_claim_ids": [
+              "time_term"
+            ],
+            "candidate_source": {
+              "path": "physics_app/src/fvkernels/PhysicsFVConservativeMassFractionTimeDerivative.C",
+              "blob_sha": "177a8d74bf9806cf9000f710b6583847ae6c0c58",
+              "anchors": [
+                "return (rho * w - rho_old * w_old) / _dt;"
+              ],
+              "source_status": "LOCAL_SOURCE_EXPRESSION_OBSERVED"
+            },
+            "dimensions": {
+              "representation": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "mass fraction on both sides must be confirmed",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "residual_formula": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "old rho_n*(w_n-w_old)/dt vs candidate (rho_n*w_n-rho_old*w_old)/dt; difference (rho_n-rho_old)*w_old/dt under same BE",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "sign": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "units": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "time_state": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "BE-specific formula; actual FVTimeKernel integrator UNKNOWN",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "face_and_boundary": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "interpolation_and_limiter": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "ad_jacobian": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "different density state derivatives under variable rho",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "parameters_and_defaults": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "source_owner": {
+                "incumbent": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+                "candidate_expected": "conservative source is distinct class; no automatic replace",
+                "parity_status": "NOT_EVALUATED"
+              }
+            },
+            "documented_conditions": [
+              "constant rho over accepted timestep",
+              "identical time discretization",
+              "same state and variable representation",
+              "same block and element evaluation"
+            ],
+            "known_counterexamples": [
+              "for variable rho conservative minus old term includes (rho_n-rho_old)*w_old/dt",
+              "mass_fraction vs log_molar",
+              "old/current-state mismatch"
+            ],
+            "measured_residual_jacobian": "NOT_EVALUATED",
+            "runtime_evidence": "NOT_OBSERVED",
+            "tolerance": "OWNER_UNSPECIFIED",
+            "decision": "HOLD"
+          }
         }
       ],
       "unresolved_semantics": [
@@ -679,6 +971,29 @@
           "measured_run_id": null,
           "acceptance_tolerance": "OWNER_UNSPECIFIED"
         }
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "heavy_species_mass_fraction.time",
+        "removal_effect": "heavy-species rho*u_dot residual contribution removed when active",
+        "representation_and_state": "mass fraction w_k, rho evaluated determineState, integrator FVTimeKernel unspecified",
+        "required_producer_names": [
+          "rho"
+        ],
+        "coupled_guards": [
+          "time integrator and old/current state",
+          "species and mixture mass budget",
+          "AD rho and variable"
+        ],
+        "explicit_refusals": [
+          "not same as d(rho*w)/dt when rho varies",
+          "no automatic log-molar replacement"
+        ],
+        "claim_ids": [
+          "time_term"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "PhysicsFVElectronEnergyJouleHeating": {
@@ -940,6 +1255,31 @@
           "measured_run_id": null,
           "acceptance_tolerance": "OWNER_UNSPECIFIED"
         }
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "electron_energy.electric_work",
+        "removal_effect": "electron-energy E·Gamma electric-work term disappears from residual when active",
+        "representation_and_state": "physical_eV vs normalized energy_reference_eV; helper electric-work sign must be preserved",
+        "required_producer_names": [
+          "electron_density",
+          "potential",
+          "mobility",
+          "diffusion"
+        ],
+        "coupled_guards": [
+          "PhysicsElectronFluxModel shared helper",
+          "AD density/electric-field gradients"
+        ],
+        "explicit_refusals": [
+          "no approved replacement",
+          "zero E smoke cannot prove nonzero Joule parity"
+        ],
+        "claim_ids": [
+          "residual"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "PhysicsFVThermalDiffusion": {
@@ -1134,6 +1474,29 @@
           "measured_run_id": null,
           "acceptance_tolerance": "OWNER_UNSPECIFIED"
         }
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "heavy_species_mass_fraction.thermal_flux",
+        "removal_effect": "heavy-species thermal-diffusion face flux removed when active and ON",
+        "representation_and_state": "D_T/T grad(T) normal; internal/boundary paths, include_thermal_diffusion default true",
+        "required_producer_names": [
+          "temperature",
+          "thermal_diffusion_coefficient"
+        ],
+        "coupled_guards": [
+          "NVTransportMaterial D_T producer",
+          "AD temperature gradient"
+        ],
+        "explicit_refusals": [
+          "D_T producer may have other consumers",
+          "zero-gradient or OFF scope not global unused"
+        ],
+        "claim_ids": [
+          "thermal_flux"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "FVElectronResponseBandedCorrection": {
@@ -1319,6 +1682,32 @@
           "measured_run_id": null,
           "acceptance_tolerance": "OWNER_UNSPECIFIED"
         }
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "poisson.nonlocal_residual",
+        "removal_effect": "conditional Poisson banded nonlocal residual and Jacobian removed if kernel executes",
+        "representation_and_state": "Poisson potential/anchor/beta, 1D band/ghost mapping, row-sum-zero UNVERIFIED",
+        "required_producer_names": [
+          "anchor",
+          "beta",
+          "matrix",
+          "potential"
+        ],
+        "coupled_guards": [
+          "Poisson nonlinear solve",
+          "ghost stencil",
+          "AD Jacobian"
+        ],
+        "explicit_refusals": [
+          "historical both-with-kernel parity != removal parity",
+          "row-sum-zero not proven"
+        ],
+        "claim_ids": [
+          "matrix_response"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "PhysicsFVLogMolarElectronTimeDerivative": {
@@ -1472,7 +1861,81 @@
             "log derivative vs concentration difference",
             "nonlinear time-level mismatch"
           ],
-          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY"
+          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY",
+          "comparison_contract": {
+            "status": "CANDIDATE_UNVERIFIED",
+            "equivalence_class": "TIME_SCHEME_OR_REPRESENTATION_OR_NUMERIC_AS_APPLICABLE",
+            "incumbent_claim_ids": [
+              "time_law"
+            ],
+            "candidate_source": {
+              "source_status": "NOT_LOCALLY_SOURCE_VERIFIED"
+            },
+            "dimensions": {
+              "representation": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "residual_formula": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "legacy exp(u_n)-exp(u_old) / dt; candidate source absent from this repo, no proof of identity",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "sign": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "units": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "time_state": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "old-state and tag parity conditional",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "face_and_boundary": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "interpolation_and_limiter": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "ad_jacobian": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "parameters_and_defaults": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "source_owner": {
+                "incumbent": "molar concentration exp(u) old/current, positive dt, FV time tags",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              }
+            },
+            "documented_conditions": [
+              "same exp(log_c) state & old-state time discretization",
+              "same tags, AD and molar units"
+            ],
+            "known_counterexamples": [
+              "log derivative vs concentration difference",
+              "nonlinear time-level mismatch"
+            ],
+            "measured_residual_jacobian": "NOT_EVALUATED",
+            "runtime_evidence": "NOT_OBSERVED",
+            "tolerance": "OWNER_UNSPECIFIED",
+            "decision": "HOLD"
+          }
         }
       ],
       "unresolved_semantics": [
@@ -1494,6 +1957,27 @@
           "PhysicsFVLogMolarElectronReactionSource"
         ],
         "retirement_constraint": "KEEP_FILE_UNTIL_ALL_FOUR_FACTORY_OBJECTS_DISCONNECTED_AND_VALIDATED"
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "species_log_molar_balance.time",
+        "removal_effect": "exp(log_c) conservative molar concentration time difference vanishes if active",
+        "representation_and_state": "molar concentration exp(u) old/current, positive dt, FV time tags",
+        "required_producer_names": [],
+        "coupled_guards": [
+          "old-state exp",
+          "molar inventory",
+          "AD time residual"
+        ],
+        "explicit_refusals": [
+          "not d(log_c)/dt",
+          "one class cannot authorize shared file removal"
+        ],
+        "claim_ids": [
+          "time_law"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "PhysicsFVLogMolarElectronDiffusion": {
@@ -1643,7 +2127,81 @@
             "different coeff defaults or ghost layers",
             "boundary behavior"
           ],
-          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY"
+          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY",
+          "comparison_contract": {
+            "status": "CANDIDATE_UNVERIFIED",
+            "equivalence_class": "TIME_SCHEME_OR_REPRESENTATION_OR_NUMERIC_AS_APPLICABLE",
+            "incumbent_claim_ids": [
+              "diffusion_law"
+            ],
+            "candidate_source": {
+              "source_status": "NOT_LOCALLY_SOURCE_VERIFIED"
+            },
+            "dimensions": {
+              "representation": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "residual_formula": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "sign": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "units": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "time_state": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "face_and_boundary": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "legacy internal-only flux returns zero at boundary; candidate unknown",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "interpolation_and_limiter": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "harmonic/average and ghost layers must match",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "ad_jacobian": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "parameters_and_defaults": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "source_owner": {
+                "incumbent": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              }
+            },
+            "documented_conditions": [
+              "same face flux and interpolation",
+              "same AD dependence, ghosting and unit basis"
+            ],
+            "known_counterexamples": [
+              "different coeff defaults or ghost layers",
+              "boundary behavior"
+            ],
+            "measured_residual_jacobian": "NOT_EVALUATED",
+            "runtime_evidence": "NOT_OBSERVED",
+            "tolerance": "OWNER_UNSPECIFIED",
+            "decision": "HOLD"
+          }
         }
       ],
       "unresolved_semantics": [
@@ -1665,6 +2223,29 @@
           "PhysicsFVLogMolarElectronReactionSource"
         ],
         "retirement_constraint": "KEEP_FILE_UNTIL_ALL_FOUR_FACTORY_OBJECTS_DISCONNECTED_AND_VALIDATED"
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "species_log_molar_balance.diffusion",
+        "removal_effect": "internal-face -D Δexp(u)/dCN molar flux contribution vanishes if active",
+        "representation_and_state": "log-molar exp reconstruction, coeff interpolation, ghost and boundary branch",
+        "required_producer_names": [
+          "coeff"
+        ],
+        "coupled_guards": [
+          "FV face gradient",
+          "AD exp",
+          "boundary returns zero"
+        ],
+        "explicit_refusals": [
+          "boundary-only zero not globally unused",
+          "shared file four owners"
+        ],
+        "claim_ids": [
+          "diffusion_law"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "PhysicsFVLogMolarElectrostaticDrift": {
@@ -1836,7 +2417,82 @@
             "carrier convention",
             "boundary/ghosting"
           ],
-          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY"
+          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY",
+          "comparison_contract": {
+            "status": "CANDIDATE_UNVERIFIED",
+            "equivalence_class": "TIME_SCHEME_OR_REPRESENTATION_OR_NUMERIC_AS_APPLICABLE",
+            "incumbent_claim_ids": [
+              "drift_law"
+            ],
+            "candidate_source": {
+              "source_status": "NOT_LOCALLY_SOURCE_VERIFIED"
+            },
+            "dimensions": {
+              "representation": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "legacy exp(log_c) vs other log-molar implementation must be proven",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "residual_formula": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "sign": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "units": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "time_state": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "face_and_boundary": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "interpolation_and_limiter": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "limited log-linear reconstruction and FE/FV potential gradient conditional",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "ad_jacobian": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "parameters_and_defaults": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "source_owner": {
+                "incumbent": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              }
+            },
+            "documented_conditions": [
+              "same FEM/FV electric-field evaluation",
+              "same upwind, AD and limiter modes"
+            ],
+            "known_counterexamples": [
+              "log reconstruction difference",
+              "carrier convention",
+              "boundary/ghosting"
+            ],
+            "measured_residual_jacobian": "NOT_EVALUATED",
+            "runtime_evidence": "NOT_OBSERVED",
+            "tolerance": "OWNER_UNSPECIFIED",
+            "decision": "HOLD"
+          }
         }
       ],
       "unresolved_semantics": [
@@ -1859,6 +2515,31 @@
           "PhysicsFVLogMolarElectronReactionSource"
         ],
         "retirement_constraint": "KEEP_FILE_UNTIL_ALL_FOUR_FACTORY_OBJECTS_DISCONNECTED_AND_VALIDATED"
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "species_log_molar_balance.drift",
+        "removal_effect": "charge signed molar drift flux vanishes if active",
+        "representation_and_state": "exp(log_c_face), FEM/FV E gradient, signed charge, previous-state limiter",
+        "required_producer_names": [
+          "potential",
+          "mobility",
+          "carrier"
+        ],
+        "coupled_guards": [
+          "upwind face",
+          "FEM/FV gradient",
+          "AD Jacobian"
+        ],
+        "explicit_refusals": [
+          "carrier 1 convention not universally effective",
+          "shared file four owners"
+        ],
+        "claim_ids": [
+          "drift_law"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     },
     "PhysicsFVLogMolarElectronReactionSource": {
@@ -2006,7 +2687,82 @@
             "shared signed reaction progress",
             "off-diagonal Jacobian"
           ],
-          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY"
+          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY",
+          "comparison_contract": {
+            "status": "CANDIDATE_UNVERIFIED",
+            "equivalence_class": "TIME_SCHEME_OR_REPRESENTATION_OR_NUMERIC_AS_APPLICABLE",
+            "incumbent_claim_ids": [
+              "number_to_molar"
+            ],
+            "candidate_source": {
+              "source_status": "NOT_LOCALLY_SOURCE_VERIFIED"
+            },
+            "dimensions": {
+              "representation": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "residual_formula": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "sign": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "units": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "legacy -S_number/N_A; FVCoupledForce needs exactly one number-to-molar conversion",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "time_state": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "face_and_boundary": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "interpolation_and_limiter": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "ad_jacobian": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "parameters_and_defaults": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "UNKNOWN_UNTIL_PINNED_CANDIDATE_SOURCE_OR_NATIVE_PROOF",
+                "parity_status": "NOT_EVALUATED"
+              },
+              "source_owner": {
+                "incumbent": "R=-S_number/N_A once, element determineState",
+                "candidate_expected": "single owner of signed reaction progress and source projection",
+                "parity_status": "NOT_EVALUATED"
+              }
+            },
+            "documented_conditions": [
+              "preconvert signed S_number to molar S_number/N_A",
+              "identical AD, element, sign and variable scope"
+            ],
+            "known_counterexamples": [
+              "missing/doubled N_A",
+              "shared signed reaction progress",
+              "off-diagonal Jacobian"
+            ],
+            "measured_residual_jacobian": "NOT_EVALUATED",
+            "runtime_evidence": "NOT_OBSERVED",
+            "tolerance": "OWNER_UNSPECIFIED",
+            "decision": "HOLD"
+          }
         }
       ],
       "unresolved_semantics": [
@@ -2028,6 +2784,29 @@
           "PhysicsFVLogMolarElectronReactionSource"
         ],
         "retirement_constraint": "KEEP_FILE_UNTIL_ALL_FOUR_FACTORY_OBJECTS_DISCONNECTED_AND_VALIDATED"
+      },
+      "preservation_contract": {
+        "applicability": "IF_ACTIVATED_ONLY",
+        "equation_term_owner": "species_log_molar_balance.reaction",
+        "removal_effect": "signed physical electron-number source / N_A molar projection vanishes if active",
+        "representation_and_state": "R=-S_number/N_A once, element determineState",
+        "required_producer_names": [
+          "number_source"
+        ],
+        "coupled_guards": [
+          "electron stoichiometry",
+          "signed production/loss",
+          "AD number source"
+        ],
+        "explicit_refusals": [
+          "never omit/double N_A",
+          "shared file four owners"
+        ],
+        "claim_ids": [
+          "number_to_molar"
+        ],
+        "effective_runtime_status": "UNKNOWN",
+        "science_acceptance": "NOT_EVALUATED"
       }
     }
   }
