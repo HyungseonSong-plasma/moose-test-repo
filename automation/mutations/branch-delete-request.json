@@ -1,24 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5-0-native-dualcase-74a2b0f-20261118",
-      "expected_sha": "805a86f0955b91879a0e4a0fc63fe7a9e0e59802",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-native-dualcase-74a2b0f-20261118-805a86f0955b"
+      "branch": "issue-672-p6-ci3-trigger-artifact-p05-safety-20261118",
+      "expected_sha": "d28fa2ef34518a63282dd981edb188c70f05df56",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-ci3-trigger-artifact-p05-safety-20261118-d28fa2ef3451"
     },
     {
-      "branch": "issue-672-p6-d5-public-d-100-vs-42-dual-native-20261118",
-      "expected_sha": "ff9cbb5397c91aac8572a9c711fadddcbb7f6239",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d5-public-d-100-vs-42-dual-native-20261118-ff9cbb5397c9"
+      "branch": "issue-672-p6-d2-d4-authority-singleowner-contract-20261118",
+      "expected_sha": "bda70f103fb53f2d3c0323195fcc42f1c8708485",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d2-d4-authority-singleowner-contract-20261118-bda70f103fb5"
     },
     {
-      "branch": "issue-671-p5x-common-w1-74a2-20261118",
-      "expected_sha": "b5c4cb8e32a5f7036db35962c7a68751505a5d8d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-common-w1-74a2-20261118-b5c4cb8e32a5"
+      "branch": "issue-671-p5x-d8-same-w1-full-rf-20261118",
+      "expected_sha": "4618d62971afbed02dc544fb39bc83351b463d16",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-d8-same-w1-full-rf-20261118-4618d62971af"
     },
     {
-      "branch": "issue-672-historical-100row-native-p2-custody-20261118",
-      "expected_sha": "ac8afa1a665c1069deb52f9f757fbfb80083b4e9",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-historical-100row-native-p2-custody-20261118-ac8afa1a665c"
+      "branch": "issue-633-ion-fvm-newonly-p0-ci-20261118",
+      "expected_sha": "b039ed38f15acbee396de9767fb71257f54769d0",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ion-fvm-newonly-p0-ci-20261118-b039ed38f15a"
+    },
+    {
+      "branch": "issue-633-ion-fvm-newonly-dual-native-20261118",
+      "expected_sha": "2e14776c0361361e139c6be2daac87cd9270f5c8",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ion-fvm-newonly-dual-native-20261118-2e14776c0361"
     }
   ]
 }
