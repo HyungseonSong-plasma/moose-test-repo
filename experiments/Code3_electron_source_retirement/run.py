@@ -102,23 +102,22 @@ def build_pair() -> tuple[str, str, dict]:
 
 def self_test() -> dict:
     """Pure input contract: no W5 imports, no solver, no science PASS."""
-    raw = ("[FVKernels]\\n"
-           "  [s5r_electron_source]\\n"
-           "    type = PhysicsFVElectronReactionSource\\n"
-           "    variable = n_e\\n"
-           "    number_source = S_e_s5r\\n"
-           "    n_ref = 4\\n"
-           "    block = plasma\\n"
-           "  []\\n"
-           "  [heavy]\\n"
-           "    type = PhysicsFVSpeciesReactionSource\\n"
-           "  []\\n"
-           "[]\\n")
-    # Literal Python source above must contain \\n escapes, not embedded newline.
+    raw = ("[FVKernels]\n"
+           "  [s5r_electron_source]\n"
+           "    type = PhysicsFVElectronReactionSource\n"
+           "    variable = n_e\n"
+           "    number_source = S_e_s5r\n"
+           "    n_ref = 4\n"
+           "    block = plasma\n"
+           "  []\n"
+           "  [heavy]\n"
+           "    type = PhysicsFVSpeciesReactionSource\n"
+           "  []\n"
+           "[]\n")
     custom = raw
     standard, meta = replace_electron_only(custom)
-    physical = custom.replace("    n_ref = 4\\n",
-                              "    state_form = physical\\n")
+    physical = custom.replace("    n_ref = 4\n",
+                              "    state_form = physical\n")
     physical_std, physical_meta = replace_electron_only(physical)
     checks = {
         "electron_only": _outside_target(custom) == _outside_target(standard),
