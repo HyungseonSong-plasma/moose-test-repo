@@ -131,7 +131,7 @@ def python_template_instances(text: str, target: str, aliases: set[str]) -> list
         if isinstance(parents.get(node), ast.JoinedStr):
             continue
         raw = ast.get_source_segment(text, node)
-        if not raw or "[FVKernels]" not in raw or "type =" not in raw:
+        if not raw or "[FVKernels]" not in raw or not re.search(r'\btype\s*=', raw):
             continue
         if any(isinstance(parent, (ast.Assert, ast.Compare))
                for parent in _ast_ancestors(node, parents)):
