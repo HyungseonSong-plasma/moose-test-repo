@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-633-c2-static-contract-20261117",
-      "expected_sha": "5d48e78c986bbca3a5c73b55e31b03aa9c5969fa",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-c2-static-contract-20261117-5d48e78c986b"
+      "branch": "issue-667-p1-0-byte-evidence-20261117",
+      "expected_sha": "feb659de5809e6aaf615d3396ed00144b1eacdc7",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-byte-evidence-20261117-feb659de5809"
     },
     {
-      "branch": "issue-633-p21-p22-newonly-ci-20261117",
-      "expected_sha": "87777a78a77083f43fb02e4d829f5eae5e8ce916",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p21-p22-newonly-ci-20261117-87777a78a770"
+      "branch": "issue-667-p1-0-417-finalbytes-20261117",
+      "expected_sha": "5c0346dedbe87482abe30e64f5d75409766bfa9e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-417-finalbytes-20261117-5c0346dedbe8"
     },
     {
-      "branch": "issue-633-c2-rebased-ion2-20261117",
-      "expected_sha": "c4faf1c603cc61bd105dfd9c68459a86dc58f233",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-c2-rebased-ion2-20261117-c4faf1c603cc"
+      "branch": "issue-667-p1-0-byte-readback-20261117",
+      "expected_sha": "a335fc35acf1b7de6b9c629320deb9298197e50b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-byte-readback-20261117-a335fc35acf1"
     },
     {
-      "branch": "issue-633-single-integrator-20261117",
-      "expected_sha": "c4d7d41fb912c2718a69e864460ef50eaf378ef3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-single-integrator-20261117-c4d7d41fb912"
+      "branch": "issue-667-p1-0-source-pin-20261117",
+      "expected_sha": "cc6b1c16696e2abdd11a522342e8fb41749d791f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-source-pin-20261117-cc6b1c16696e"
     },
     {
-      "branch": "issue-undefined-fdeg-transition-v01",
-      "expected_sha": "699769c50d8741640f6fd1ce3ddd661c8e704695",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-undefined-fdeg-transition-v01-699769c50d87"
+      "branch": "issue-667-p1-0-common-pin-20261117",
+      "expected_sha": "7e8aeefcdd93cef9d48e37551a308811e451e57f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-common-pin-20261117-7e8aeefcdd93"
     }
   ]
 }
