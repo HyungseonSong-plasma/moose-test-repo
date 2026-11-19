@@ -1,24 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5-n3-native-fvbc-20261118",
-      "expected_sha": "249635b5d94ca2d06dd7ea035ae9c11e450b582c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n3-native-fvbc-20261118-249635b5d94c"
+      "branch": "issue-671-p5-e4-exact-head-crosscheck-20261118",
+      "expected_sha": "c81dc2b3b99d286051868a5a2590fcb148483f01",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-e4-exact-head-crosscheck-20261118-c81dc2b3b99d"
     },
     {
-      "branch": "issue-671-p5-n7-transport-ic-20261118",
-      "expected_sha": "df8c908a90ba2637cefc802236a567c29118eefb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n7-transport-ic-20261118-df8c908a90ba"
+      "branch": "issue671-p5-e2-941-full-evidence-20261118",
+      "expected_sha": "8abe4b6c06bda88c3b154e2021e60a0b21179409",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue671-p5-e2-941-full-evidence-20261118-8abe4b6c06bd"
     },
     {
-      "branch": "issue-671-p5-n5-generated-bc-negative-20261118",
-      "expected_sha": "4520e25eb29b469597df82dbb4863fa6a84a4fb0",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n5-generated-bc-negative-20261118-4520e25eb29b"
+      "branch": "issue-671-p5-n8-dynamic-sign-boundary-negative-20261118",
+      "expected_sha": "8924e4b7132794cfe03f3f94acd7e8a42ea52171",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n8-dynamic-sign-boundary-negative-20261118-8924e4b71327"
     },
     {
-      "branch": "issue-671-p5-n6-source-rate-negatives-20261118",
-      "expected_sha": "47159657a1c00b0aaf8fd43581c883cd5ddb1eff",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n6-source-rate-negatives-20261118-47159657a1c0"
+      "branch": "issue-671-p5-e1-417-full-custody-20261118",
+      "expected_sha": "4333258b2f617bffec63bd70300d3da9ad741db2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-e1-417-full-custody-20261118-4333258b2f61"
+    },
+    {
+      "branch": "issue-672-p6-failure-taxonomy-20261118",
+      "expected_sha": "ad967d51022864762c05c723e081baa95b72f8fb",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-failure-taxonomy-20261118-ad967d510228"
     }
   ]
 }
