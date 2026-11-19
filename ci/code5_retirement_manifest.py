@@ -60,6 +60,7 @@ def build_manifest(head: str, reports: dict[str, tuple[dict, dict, dict]]) -> di
     consumers, obligations, targets, candidate_sites = [], [], [], set()
     all_paths, generated_sites, workflow_sites = set(), set(), set()
     source_blobs = set()
+    header_blobs = set()
     for target in TARGETS:
         s, f, t = reports[target]
         identity = t.get("source_identity", {})
@@ -83,6 +84,14 @@ def build_manifest(head: str, reports: dict[str, tuple[dict, dict, dict]]) -> di
         if not blob:
             raise ValueError("CODE5_SOURCE_BLOB_MISSING:" + target)
         source_blobs.add(blob)
+        local_header_blobs = {
+            e.get("evidence", {}).get("blob_sha")
+            for e in s.get("edges", [])
+            if e.get("evidence", {}).get("path") == SHARED_H
+        }
+        if len(local_header_blobs) != 1 or not next(iter(local_header_blobs)):
+            raise ValueError("CODE5_SHARED_HEADER_WITNESS_MISSING_OR_AMBIGUOUS:" + target)
+        header_blobs.update(local_header_blobs)
         change = t.get("change_sites", {})
         all_paths.update(change.get("declared_input_and_other_consumer_paths", []))
         generated_sites.update(change.get("generator_paths", []))
@@ -149,6 +158,8 @@ def build_manifest(head: str, reports: dict[str, tuple[dict, dict, dict]]) -> di
         })
     if len(source_blobs) != 1:
         raise ValueError("CODE5_SHARED_SOURCE_BLOB_DIVERGED")
+    if len(header_blobs) != 1:
+        raise ValueError("CODE5_SHARED_HEADER_BLOB_DIVERGED")
     consumers.sort(key=lambda x: (x["target"], x["structural_edge_id"]))
     obligations.sort(key=lambda x: (x["target"], x["obligation_id"]))
     manifest = {
@@ -158,6 +169,7 @@ def build_manifest(head: str, reports: dict[str, tuple[dict, dict, dict]]) -> di
         "source_path": SHARED_C,
         "header_path": SHARED_H,
         "source_blob_sha": next(iter(source_blobs)),
+        "header_blob_sha": next(iter(header_blobs)),
         "owners": list(TARGETS),
         "targets": targets,
         "consumers": consumers,
