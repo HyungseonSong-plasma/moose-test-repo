@@ -1,12 +1,9 @@
 {
   "targets": [
     {
-      "branch": "issue-701-fdeg-transition-v01",
-      "expected_sha": "6e42f5671bbfb4c50d914b02668e1623b4c0533c"
-    },
-    {
-      "branch": "issue-697-fdeg-functional-v02-recovery-bff0465cd9",
-      "expected_sha": "f2105f603633003072392582e8890236f6630d21"
+      "branch": "issue-633-p04-json-selection-20261117",
+      "expected_sha": "3822d68dbf42486dd71ba3ba72f53cc8518f4696",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p04-json-selection-20261117-3822d68dbf42"
     }
   ]
 }
