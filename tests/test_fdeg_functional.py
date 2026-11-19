@@ -24,7 +24,8 @@ class FunctionalP0Test(unittest.TestCase):
         self.root = Path(tmp.name)
         self.source = self.put("src/Legacy.C",
             'registerMooseObject("PhysicsApp", Legacy);\n'
-            'auto params = FVElementalKernel::validParams();\n'
+            'InputParameters Legacy::validParams()\n'
+            '{\n  return FVElementalKernel::validParams();\n}\n'
             'return -source / scale;\n')
         self.put("cases/electron.i",
             "[Kernels]\n  [./electron]\n    type = Legacy\n"
