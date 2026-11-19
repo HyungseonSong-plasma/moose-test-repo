@@ -150,7 +150,8 @@ def python_template_instances(text: str, target: str, aliases: set[str]) -> list
                 if not name:
                     block = None
                 elif name != "FVKernels":
-                    block = name if line.startswith("  ") else None
+                    # MOOSE templates may indent blocks by one or more spaces.
+                    block = name if line[:1].isspace() else None
                     if block is None:
                         inside = False
                 continue
