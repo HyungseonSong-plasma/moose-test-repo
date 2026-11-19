@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "design/issue402-fem-fvm-species-no-schema-version-20261109",
-      "expected_sha": "01a2289c54bb32e9f2bec00b8c645ae3021e50e6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/design-issue402-fem-fvm-species-no-schema-version-20261109-01a2289c54bb"
+      "branch": "cleanup-issue541-arch-two-20261115",
+      "expected_sha": "18380935af91661ed15f90977573fbd915999b78",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-arch-two-20261115-18380935af91"
     },
     {
-      "branch": "cleanup-issue535-workflow-native-20261114",
-      "expected_sha": "b31c6d1b0327079c994a46b630bf50e63d300ae8",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue535-workflow-native-20261114-b31c6d1b0327"
+      "branch": "issue541-core-arch-handoff-review-20261115",
+      "expected_sha": "7a695f8281f55bb2ec6b59cd33ddc8fb3990cc8f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue541-core-arch-handoff-review-20261115-7a695f8281f5"
     },
     {
-      "branch": "cleanup-issue535-reaction-p0-20261115",
-      "expected_sha": "28347d0a291d6c59ef16c4e37e1c46f089667fb2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue535-reaction-p0-20261115-28347d0a291d"
+      "branch": "issue-541-flow-native-trigger-20261116",
+      "expected_sha": "44053a93e7e663b9580c292450ce6393de1d3a01",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-flow-native-trigger-20261116-44053a93e7e6"
     },
     {
-      "branch": "cleanup-issue541-flow-symbol-p0-20261115",
-      "expected_sha": "bd3ec9fd5476a36875e635872673da454ce76d15",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-flow-symbol-p0-20261115-bd3ec9fd5476"
+      "branch": "cleanup-issue541-group-b-flow-native-20261116",
+      "expected_sha": "2f0c82bc2d641d1c1a1e541f087d6540ac57db7a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-group-b-flow-native-20261116-2f0c82bc2d64"
     },
     {
-      "branch": "cleanup-issue541-flow-four-20261115",
-      "expected_sha": "d4c5ab58895fe300638fb406a22d0a5f5e06fb49",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-flow-four-20261115-d4c5ab58895f"
+      "branch": "cleanup-issue541-group-a2-flow-20261116",
+      "expected_sha": "7ecc31179d9ab95374ba5067a0b51323947500b9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-group-a2-flow-20261116-7ecc31179d9a"
     }
   ]
 }
