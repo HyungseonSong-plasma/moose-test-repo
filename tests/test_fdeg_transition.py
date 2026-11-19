@@ -220,6 +220,7 @@ class PureTransitionGraphP0Test(unittest.TestCase):
         f = copy.deepcopy(self.f)
         s["target"] = f["target"] = target
         s["edges"][0]["to"] = s["edges"][1]["to"] = "class:" + target
+        f["edges"][0]["claim_id"] = "claim:" + target + ":time_term"
         f["semantic_replacement_diffs"] = []
         result = self.compose(s=s, f=f)
         self.assertEqual(result["target_strategy"], "RETAIN_NO_APPROVED_REPLACEMENT")
@@ -234,6 +235,7 @@ class PureTransitionGraphP0Test(unittest.TestCase):
         s, f = copy.deepcopy(self.s), copy.deepcopy(self.f)
         s["target"] = f["target"] = target
         s["edges"][0]["to"] = s["edges"][1]["to"] = "class:" + target
+        f["edges"][0]["claim_id"] = "claim:" + target + ":time_term"
         f["shared_translation_unit"] = {
             "source_path": "src/Four.C",
             "co_registered_classes": [
