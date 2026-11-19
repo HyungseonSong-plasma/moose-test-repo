@@ -1,19 +1,9 @@
 {
   "targets": [
     {
-      "branch": "issue-541-task4-json-negative-routing-20261116",
-      "expected_sha": "dcb327d311a9a67ab4401160de4d08f4aa357314",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-task4-json-negative-routing-20261116-dcb327d311a9"
-    },
-    {
-      "branch": "issue-541-workflow-allowlist-20261116",
-      "expected_sha": "62e1400f1e8ffabb6f3c45345689e0cca15a7d91",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-workflow-allowlist-20261116-62e1400f1e8f"
-    },
-    {
-      "branch": "cleanup-wave1-s6-legacy-retirement-20261116",
-      "expected_sha": "41696556caa3c72be4592940d56569b95f081a05",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-legacy-retirement-20261116-41696556caa3"
+      "branch": "wave1-s6-p3-regression-20261116",
+      "expected_sha": "37bef43dc338526c95b11a03df384a74d06b337a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/wave1-s6-p3-regression-20261116-37bef43dc338"
     }
   ]
 }
