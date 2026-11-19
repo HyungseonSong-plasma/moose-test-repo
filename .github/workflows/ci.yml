@@ -92,6 +92,20 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
+      - name: Capture code2 exact-head Structural/Functional/Transition evidence (no delete)
+        if: github.event_name == 'pull_request' && github.head_ref == 'issue-code2-retirement-pra'
+        shell: bash
+        env:
+          EXPECTED_CODE2_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: bash ci/guards/code2_retirement_snapshot.sh "$RUNNER_TEMP/code2-fdeg"
+      - name: Upload code2 pre-retirement evidence (SAFE_DELETE=HOLD)
+        if: github.event_name == 'pull_request' && github.head_ref == 'issue-code2-retirement-pra'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code2-fdeg-${{ github.event.pull_request.head.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/code2-fdeg/
+          if-no-files-found: error
+          retention-days: 30
       - name: Validate FDEG Structural Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_structural.py -v
       - name: Validate FDEG Functional Contract P0
