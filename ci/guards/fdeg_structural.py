@@ -12,6 +12,7 @@ import ast
 import fnmatch
 import hashlib
 import json
+import time
 import posixpath
 import re
 import subprocess
@@ -21,6 +22,7 @@ from pathlib import Path
 SCHEMA = "fdeg.structural.v0.3"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fdeg_structural_enrichment as route_evidence  # noqa: E402
+import fdeg_scan_cache as scan_cache  # noqa: E402
 EXTENSIONS = {".C", ".cc", ".cpp", ".h", ".hpp", ".py", ".i", ".json", ".yml", ".yaml", ".sh"}
 SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache"}
 REGISTRATION = re.compile(
@@ -138,13 +140,38 @@ def input_blocks(text: str) -> list[dict]:
 
 def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     root = root.resolve()
+    started = time.perf_counter()
     if not SYMBOL.fullmatch(target):
         raise ValueError("INVALID_CXX_CLASS_NAME")
+    # Verify the HEAD and the tracked worktree *before* loading a cached graph.
+    # A cached graph is strictly a performance shortcut for an earlier complete
+    # source scan; caller-zero, runtime and retirement verdicts never change.
+    git_head = git(root, "rev-parse", "HEAD") if (root / ".git").exists() else None
+    if expected_head is not None and git_head != expected_head:
+        raise ValueError("EXACT_HEAD_MISMATCH")
+    cache = None
+    if git_head is not None:
+        dirty = bool(git(root, "status", "--porcelain", "--untracked-files=no"))
+        if expected_head is not None and dirty:
+            raise ValueError("TRACKED_WORKTREE_DIRTY")
+        if not dirty:
+            try:
+                cache = scan_cache.cache_key(
+                    root, git_head, target,
+                    (Path(__file__), Path(route_evidence.__file__),
+                     Path(scan_cache.__file__)))
+            except OSError:
+                cache = None
+            if cache is not None:
+                hit = scan_cache.load(cache, target, git_head, SCHEMA, stable_id)
+                if hit is not None:
+                    print("FDEG_STRUCTURAL_CACHE=HIT target=" + target +
+                          " seconds=" + format(time.perf_counter() - started, ".3f"),
+                          file=sys.stderr)
+                    return hit
     files, head = tracked_files(root)
     if expected_head is not None and (head is None or head != expected_head):
         raise ValueError("EXACT_HEAD_MISMATCH")
-    if expected_head is not None and git(root, "status", "--porcelain", "--untracked-files=no"):
-        raise ValueError("TRACKED_WORKTREE_DIRTY")
     contents: dict[str, tuple[str, str]] = {}
     errors: list[dict] = []
     for path in files:
@@ -535,6 +562,12 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
               "status": "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED",
               "safety": "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT"}
     report["graph_id"] = stable_id("graph", report)
+    if cache is not None:
+        saved = scan_cache.save(cache, report)
+        print("FDEG_STRUCTURAL_CACHE=" + ("MISS_STORED" if saved else "MISS_UNSTORED") +
+              " target=" + target +
+              " seconds=" + format(time.perf_counter() - started, ".3f"),
+              file=sys.stderr)
     return report
 
 
