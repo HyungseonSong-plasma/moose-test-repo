@@ -100,6 +100,51 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
       - name: Validate code3 electron-only source migration P0
         run: python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v
+      - name: Generate code3 exact-HEAD Structural-Functional-Transition evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          head_sha="$(git rev-parse HEAD)"
+          mkdir -p "$RUNNER_TEMP/code3-fdeg"
+          set +e
+          python3 ci/guards/fdeg_structural.py \
+            --target PhysicsFVElectronReactionSource --expected-head "$head_sha" \
+            --output "$RUNNER_TEMP/code3-fdeg/structural.json"
+          structural_rc=$?
+          set -e
+          if [[ "$structural_rc" != 0 && "$structural_rc" != 2 ]]; then
+            echo "code3 Structural failed to generate evidence: $structural_rc"
+            exit "$structural_rc"
+          fi
+          python3 ci/guards/fdeg_functional.py \
+            --target PhysicsFVElectronReactionSource \
+            --structural "$RUNNER_TEMP/code3-fdeg/structural.json" \
+            --expected-head "$head_sha" \
+            --output "$RUNNER_TEMP/code3-fdeg/functional.json"
+          python3 ci/guards/fdeg_transition.py \
+            --target PhysicsFVElectronReactionSource \
+            --structural "$RUNNER_TEMP/code3-fdeg/structural.json" \
+            --functional "$RUNNER_TEMP/code3-fdeg/functional.json" \
+            --expected-head "$head_sha" \
+            --output "$RUNNER_TEMP/code3-fdeg/transition.json"
+          python3 - "$RUNNER_TEMP/code3-fdeg" "$head_sha" <<'PY'
+          import json, pathlib, sys
+          folder, sha = pathlib.Path(sys.argv[1]), sys.argv[2]
+          s, f, t = [json.loads((folder / (x + ".json")).read_text())
+                     for x in ("structural", "functional", "transition")]
+          assert s["repository_head"] == f["source_identity"]["repository_head"] == t["source_identity"]["repository_head"] == sha
+          assert f["source_identity"]["structural_graph_id"] == t["source_identity"]["structural_graph_id"] == s["graph_id"]
+          assert t["source_identity"]["functional_graph_id"] == f["graph_id"]
+          assert t["safe_delete"] == "HOLD" and t["execution_status"] == "NOT_EXECUTED"
+          print("CODE3_THREE_GRAPH_IDENTITY_P0=PASS; RETIREMENT=HOLD")
+          PY
+      - name: Upload code3 retirement evidence (P0 only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code3-fdeg-p0-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/code3-fdeg/*.json
+          if-no-files-found: warn
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
