@@ -170,3 +170,22 @@ Run fetch returns `FAILED` without invented runtime Evidence.
 This provider does not discover changeset diffs, checkout SHA from logs,
 Required Checks, actual build/test identity, external artifact custody or
 time cost. Those remain separate follow-on obligations.
+
+
+### Generated MOOSE source candidates in Python
+
+The Python AST source collector recognizes literal `type = X` lines
+in Python strings and f-string literal fragments. Literal names share
+the exact canonical `moose_type` identity used by `cpp` registrations
+and `moose_input` declarations. New relations distinguish:
+- `MAY_GENERATE_INPUT`: a literal inside a Python `return` expression;
+- `HISTORICAL_ASSERTS_TYPE`: a literal in an `assert` expression;
+- `DECLARES_GENERATOR_TEMPLATE_CANDIDATE`: other literal strings.
+
+A Python string is not evidence the program actually generated, loaded
+or executed an MOOSE input. Rendered f-strings with formatted values are
+`PARTIAL` with `PYTHON_GENERATOR_RENDER_UNVERIFIED` even if their
+literal type is known. Nonliteral `type = {variable}` values generate
+an unresolved placeholder, rather than a fabricated `moose_type`.
+Docstrings do not count as generators. No runtime evidence, binding
+resolution or `SAFE_DELETE` verdict is created.

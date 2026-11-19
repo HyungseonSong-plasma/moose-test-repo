@@ -5,8 +5,9 @@ from dataclasses import replace
 import pytest
 
 from physics_harness.code.analysis import (
-    analyze_impact, assess_finding, compare_graphs, propose_finding,
+    analyze_impact, analyze_target_coverage, assess_finding, compare_graphs, propose_finding,
 )
+from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
 from physics_harness.code.graph import (
     Edge, Evidence, GraphSnapshot, Node, Scope,
 )
@@ -240,3 +241,114 @@ def test_diff_rejects_cross_repository_sources():
     after = replace(after, scope=other_scope)
     with pytest.raises(ValueError, match="CROSS_REPOSITORY_GRAPH_DIFF"):
         compare_graphs(before, after)
+
+
+
+_TARGET_CPP = """\
+#include "MyKernel.h"
+registerADMooseObject("PhysicsApp", MyKernel);
+class MyKernel : public Kernel {
+};
+"""
+_TARGET_INPUT = """\
+[Kernels]
+  [./test]
+    type = MyKernel
+    variable = u
+  [../]
+[]
+"""
+
+
+def scan_target(git_factory, files, includes, collectors=("cpp", "moose_input")):
+    root, sha = git_factory(files)
+    request = ScanRequest(
+        repository="example/repo", revision=sha,
+        includes=includes, collectors=collectors,
+    )
+    return run_scan(request, GitSourceProvider(root))
+
+
+
+def test_target_coverage_is_local_even_when_all_requested_files_are_scanned(git_factory):
+    cpp_path, input_path = "src/obj.C", "inputs/one.i"
+    result = scan_target(git_factory, {
+        cpp_path: _TARGET_CPP, input_path: _TARGET_INPUT,
+    }, ("src/*.C", "inputs/*.i"))
+    target = next(node.id for node in result.graph.nodes
+                  if node.kind == "moose_type")
+    coverage = analyze_target_coverage(
+        result.graph, result.receipt, target,
+        required_paths=(cpp_path, input_path),
+        unverified_surfaces=("python_generator", "native_runtime", "external"),
+    )
+    assert coverage.complete_within_requested_scope
+    assert not coverage.global_consumer_closed
+    assert coverage.retirement_disposition == "HOLD"
+    assert coverage.related_source_paths == (input_path, cpp_path)
+    assert len(coverage.related_evidence_ids) >= 2
+    assert not coverage.local_blockers
+    assert coverage.unverified_surfaces == (
+        "external", "native_runtime", "python_generator",
+    )
+
+
+def test_target_coverage_reports_required_file_not_scanned(git_factory):
+    result = scan_target(git_factory, {"src/obj.C": _TARGET_CPP},
+                  ("src/*.C",), collectors=("cpp",))
+    target = next(node.id for node in result.graph.nodes
+                  if node.kind == "moose_type")
+    coverage = analyze_target_coverage(
+        result.graph, result.receipt, target,
+        required_paths=("src/obj.C", "inputs/missing.i"),
+    )
+    assert not coverage.complete_within_requested_scope
+    assert coverage.missing_required_paths == ("inputs/missing.i",)
+    assert "TARGET_REQUIRED_PATHS_NOT_SCANNED" in coverage.local_blockers
+    assert not coverage.global_consumer_closed
+
+
+def test_target_coverage_retains_unattributed_scope_partial(git_factory):
+    result = scan_target(git_factory, {
+        "src/obj.C": _TARGET_CPP,
+        "src/other.C": "#if NEEDS_CONFIG\nclass Other : public Kernel {};\n#endif\n",
+    }, ("src/*.C",), collectors=("cpp",))
+    target = next(node.id for node in result.graph.nodes
+                  if node.kind == "moose_type")
+    coverage = analyze_target_coverage(
+        result.graph, result.receipt, target,
+        required_paths=("src/obj.C", "src/other.C"),
+    )
+    assert not coverage.complete_within_requested_scope
+    assert coverage.related_source_paths == ("src/obj.C",)
+    assert coverage.incomplete_paths == ("src/other.C",)
+    assert not coverage.related_incomplete_paths
+    assert "UNRESOLVED_REQUESTED_SCOPE" in coverage.local_blockers
+    assert coverage.scope_unresolved
+    assert coverage.retirement_disposition == "HOLD"
+
+
+def test_target_coverage_rejects_cross_revision_and_unknown_targets(git_factory):
+    result = scan_target(git_factory, {"src/obj.C": _TARGET_CPP},
+                  ("src/*.C",), collectors=("cpp",))
+    target = next(node.id for node in result.graph.nodes
+                  if node.kind == "moose_type")
+    with pytest.raises(ValueError, match="TARGET_COVERAGE_SCOPE_MISMATCH"):
+        analyze_target_coverage(
+            result.graph, replace(result.receipt, revision="b" * 40), target,
+            required_paths=("src/obj.C",),
+        )
+    with pytest.raises(ValueError, match="UNKNOWN_TARGET_COVERAGE_NODE"):
+        analyze_target_coverage(
+            result.graph, result.receipt, "node:nonexistent",
+            required_paths=("src/obj.C",),
+        )
+    with pytest.raises(ValueError, match="DUPLICATE_TARGET_REQUIRED_PATH"):
+        analyze_target_coverage(
+            result.graph, result.receipt, target,
+            required_paths=("src/obj.C", "src/obj.C"),
+        )
+    empty = analyze_target_coverage(result.graph, result.receipt, target)
+    assert not empty.complete_within_requested_scope
+    assert "TARGET_REQUIRED_PATHS_UNDECLARED" in empty.local_blockers
+    assert not empty.global_consumer_closed

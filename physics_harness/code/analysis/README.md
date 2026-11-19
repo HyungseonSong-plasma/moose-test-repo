@@ -36,3 +36,23 @@ not establish semantic compatibility.
   mutations. Independent Verification gates remain required.
 - `compare_graphs` ignores only Evidence links when comparing the
   Node/Edge *payload*; it reports Evidence identity changes separately.
+
+## Target-centric coverage (P0)
+
+Use `analyze_target_coverage(graph, receipt, target_id, required_paths=...,
+unverified_surfaces=...)` to inspect directly attributable source evidence,
+unscanned required paths, unresolved Scope and other incomplete files.
+The caller must declare the required exact paths. Cross-Scope or cross-HEAD
+Graph/Receipt combinations are rejected, not silently aggregated.
+
+`complete_within_requested_scope` means only that the declared source files
+were scanned with the enabled collectors. Even `COMPLETE` here cannot prove
+global caller-zero, Factory linkage, generated-input closure or runtime
+behavior. Accordingly `global_consumer_closed` is **always False** and
+`retirement_disposition` is **always HOLD** at this stage.
+
+Unknown Scope reasons and incomplete files remain in the report even when
+not adjacent to the target, because their relevance is unproven.
+This deliberately does not implement `ScanRequest.roots` filtering, a
+target-consumer universe certificate, or semantic equivalence verification.
+Those require separately evidenced later contracts.
