@@ -610,8 +610,8 @@ jobs:
               argv=["/workspace/physics_app/physics-opt"]
               if check: argv+=["--check-input"]
               argv+=["-i",*ordered,str(chemroot/extra),
-                      "Executioner/num_steps=3",
-                      "Outputs/csv=true","Outputs/exodus=false","Outputs/checkpoint=false",
+                      "Executioner/num_steps=460",
+                      "Outputs/csv=true","Outputs/exodus=true","Outputs/checkpoint=true",
                       "Outputs/file_base=rf_full_plasma",
                       "MultiApps/maxwell_t6/input_files=rf_full_d8_child.i",
                       "MultiApps/maxwell_t6/cli_args=Outputs/exodus=false;Outputs/csv=true"]
@@ -622,12 +622,42 @@ jobs:
                     "--env","OXYGEN_RESEARCH_EI2738_FORMULA=0","--env","OXYGEN_RESEARCH_QUICK_5MIN=0",
                     "--mount",f"type=bind,src={repo},dst=/workspace,readonly",
                     "--mount",f"type=bind,src={work},dst=/case",
-                    oci,"-lc","timeout -k 10s 320s /bin/bash -lc "+shlex.quote(command)]
+                    oci,"-lc",("timeout -k 10s 600s" if check else "timeout -k 10s 19800s")+" /bin/bash -lc "+shlex.quote(command)]
+              if check:
+                  try:
+                      p=subprocess.run(args,text=True,capture_output=True,timeout=650,env=os.environ.copy())
+                      return p.returncode,(p.stdout or "")+"\n"+(p.stderr or "")
+                  except subprocess.TimeoutExpired:
+                      return 124,"P3_CHECK_INPUT_TIMEOUT"
+              # P3 long solve: real-time progress and full private scratch log.
+              import time
+              from collections import deque
+              chunks=deque(maxlen=12000)
+              started=time.monotonic()
+              count=0
+              proc=None
               try:
-                  p=subprocess.run(args,text=True,capture_output=True,timeout=380,env=os.environ.copy())
-                  return p.returncode,(p.stdout or "")+"\n"+(p.stderr or "")
-              except subprocess.TimeoutExpired:
-                  return 124,"RF_FULL_S6_BOUNDED_TIMEOUT"
+                  proc=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                      text=True,bufsize=1,env=os.environ.copy())
+                  with (work/"p3_private_solver.log").open("w") as logfile:
+                      for line in proc.stdout:
+                          logfile.write(line)
+                          chunks.append(line)
+                          if "Time Step" in line:
+                              count+=1
+                              if count<=3 or count%10==0:
+                                  print("P3_LIVE",os.environ["CASE"],"step_event",count,
+                                        "elapsed_s",round(time.monotonic()-started,1),flush=True)
+                          if "DIVERGED" in line or "Solve failed" in line:
+                              print("P3_SOLVER_WARNING",os.environ["CASE"],flush=True)
+                      logfile.flush()
+                  code=proc.wait()
+                  print("P3_SOLVER_EXIT",os.environ["CASE"],code,
+                        "elapsed_s",round(time.monotonic()-started,1),flush=True)
+                  return code,"".join(chunks)
+              except Exception as e:
+                  if proc is not None and proc.poll() is None: proc.terminate()
+                  return 125,"P3_STREAM_HARNESS_ERROR:"+type(e).__name__+":"+str(e)[:180]
           try:
               with tempfile.TemporaryDirectory(prefix="full-s6-rf-private-",dir="/dev/shm") as tmp:
                   private_path=Path(tmp)
