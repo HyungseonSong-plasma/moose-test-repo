@@ -26,8 +26,10 @@ PRODUCER_KEYS = {"prop_names", "property_name", "functor_name", "functor_names",
 TOKEN = re.compile(r'[A-Za-z_]\w*')
 
 
-def scope(path: str) -> str:
+def scope(path: str, imported_historical: set[str] | None = None) -> str:
     if "/historical_" in path or path.startswith("archive/"):
+        if imported_historical and path in imported_historical:
+            return "HISTORICAL_MODULE_IMPORTED_BY_CURRENT_SOURCE_NOT_PROVEN_ACTIVE"
         return "HISTORICAL_SOURCE_NOT_PROVEN_ACTIVE"
     if path.startswith("tests/") or path.startswith("physics_app/ci/"):
         return "TEST_OR_CHECKER_ONLY"
@@ -41,6 +43,51 @@ def witness(contents: dict, path: str, line: int) -> dict:
     lines = body.splitlines()
     return {"path": path, "line": line, "blob_sha": sha,
             "excerpt": lines[line - 1].strip()[:240] if 0 < line <= len(lines) else ""}
+
+
+def historical_import_candidates(contents: dict, target: str, aliases: set[str]) -> list[dict]:
+    """Source-bound direct imports into historical modules that mention this target.
+
+    An import from a non-historical experiment is an *edit-impact candidate*,
+    never evidence of invocation or runtime activation. Tests/checkers alone
+    must not promote a historical producer to the current migration surface.
+    """
+    modules = {
+        path[:-3].replace("/", "."): path
+        for path, (text, _) in contents.items()
+        if path.endswith(".py") and scope(path) == "HISTORICAL_SOURCE_NOT_PROVEN_ACTIVE"
+        and any(alias in text for alias in aliases)
+    }
+    imports = []
+    for path, (text, _) in sorted(contents.items()):
+        if not path.endswith(".py") or scope(path) != "CURRENT_SOURCE_NOT_PROVEN_ACTIVE":
+            continue
+        try:
+            tree = ast.parse(text, filename=path)
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            names = []
+            if isinstance(node, ast.Import):
+                names = [item.name for item in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                names = [node.module] + [
+                    node.module + "." + item.name for item in node.names
+                ]
+            for name in sorted(set(names)):
+                imported = modules.get(name)
+                if imported is None or imported == path:
+                    continue
+                imports.append({
+                    "source": path, "imported_path": imported,
+                    "imported_module": name,
+                    "activation": "NOT_OBSERVED",
+                    "role": "STATIC_IMPORT_CANDIDATE_NOT_RUNTIME",
+                    "evidence": witness(contents, path, node.lineno),
+                    "imported_blob_sha": contents[imported][1],
+                })
+    return sorted(imports, key=lambda r: (
+        r["imported_path"], r["source"], r["evidence"]["line"], r["imported_module"]))
 
 
 def blocks(text: str) -> list[dict]:
@@ -108,7 +155,8 @@ def declared_providers(contents: dict) -> list[dict]:
     return sorted(providers, key=lambda x: (x["name"], x["path"], x["block_path"]))
 
 
-def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
+def python_routes(contents: dict, target: str, aliases: set[str],
+                  imported_historical: set[str] | None = None) -> list[dict]:
     routes = []
     for path, (text, _) in sorted(contents.items()):
         if not path.endswith(".py"):
@@ -130,7 +178,7 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                                    "route_kind": "STATIC_COMPREHENSION_TYPE_MAP",
                                    "generated_input_path": "UNKNOWN",
                                    "activation": "NOT_OBSERVED",
-                                   "reference_scope": scope(path),
+                                   "reference_scope": scope(path, imported_historical),
                                    "evidence": witness(contents, path, line)})
                     taken.add((node.value.lineno, node.value.col_offset))
             if isinstance(node, ast.Dict):
@@ -144,7 +192,7 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                                    "route_kind": "STATIC_TYPE_MAP",
                                    "generated_input_path": "UNKNOWN",
                                    "activation": "NOT_OBSERVED",
-                                   "reference_scope": scope(path),
+                                   "reference_scope": scope(path, imported_historical),
                                    "evidence": witness(contents, path, line)})
                     taken.add((value.lineno, value.col_offset))
         for node in ast.walk(tree):
@@ -163,7 +211,7 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                            "route_kind": "STATIC_TEMPLATE_OR_STRING",
                            "generated_input_path": "UNKNOWN",
                            "activation": "NOT_OBSERVED",
-                           "reference_scope": scope(path),
+                           "reference_scope": scope(path, imported_historical),
                            "evidence": witness(contents, path, node.lineno)})
     return sorted(routes, key=lambda x: (x["source"], x["line"],
                                           x["route_kind"], x["block_path_expression"]))
@@ -174,7 +222,8 @@ def enrichment(contents: dict, target: str, aliases: set[str], instances: list[d
     """Append source-bound incoming edges before graph reachability is computed."""
     result = {"build_ownership": [], "shared_translation_units": [],
               "generator_routes": [], "provider_bindings": [],
-              "workflow_execution_paths": [], "external_imports": []}
+              "workflow_execution_paths": [], "external_imports": [],
+              "historical_import_routes": []}
     source_names = set(contents)
     owners = {}
     for path, (text, _) in sorted(contents.items()):
@@ -226,8 +275,20 @@ def enrichment(contents: dict, target: str, aliases: set[str], instances: list[d
                         "evidence": witness(contents, makefile, i)})
                     break
 
+    # A historical-path generator may be imported by a non-historical experiment.
+    # Preserve the import witness and expose the path for migration review;
+    # it is NOT evidence that the experiment or generated object ever ran.
+    imported = historical_import_candidates(contents, target, aliases)
+    result["historical_import_routes"].extend(imported)
+    for item in imported:
+        emit("file:" + item["source"], "IMPORTS_HISTORICAL_GENERATOR_CANDIDATE",
+             "file:" + item["imported_path"], item["source"],
+             item["evidence"]["line"], item["imported_module"],
+             "STATIC_IMPORT_NOT_EXECUTION")
+    imported_paths = {item["imported_path"] for item in imported}
+
     # Static Python input templates/type maps are NOT generated .i observations.
-    routes = python_routes(contents, target, aliases)
+    routes = python_routes(contents, target, aliases, imported_paths)
     seen = set()
     for route in routes:
         key = (route["source"], route["line"], route["route_kind"],
