@@ -1,9 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-633-p04-json-selection-20261117",
-      "expected_sha": "3822d68dbf42486dd71ba3ba72f53cc8518f4696",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p04-json-selection-20261117-3822d68dbf42"
+      "branch": "issue-633-p21-p23-on-664-20261117",
+      "expected_sha": "f0c44b8cedeb7332ebcf0872b6e11fb3a89093f5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p21-p23-on-664-20261117-f0c44b8cedeb"
+    },
+    {
+      "branch": "issue-667-p1-a1-1-o2p-source-receipt-20261117",
+      "expected_sha": "fedd2cf27aacfa92f6744dbabecfdd636128e4a2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-a1-1-o2p-source-receipt-20261117-fedd2cf27aac"
+    },
+    {
+      "branch": "issue-667-p1-a2-1-general-fvbc-evidence-20261117",
+      "expected_sha": "0634050af57bcd6224c6f8b45a4a2faec6d7ad15",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-a2-1-general-fvbc-evidence-20261117-0634050af57b"
+    },
+    {
+      "branch": "issue-667-p1-a2-2-cover-source-bound-20261117",
+      "expected_sha": "ff128567ae904561311657c9b6b04c755bae9973",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-a2-2-cover-source-bound-20261117-ff128567ae90"
+    },
+    {
+      "branch": "issue-667-p1-a2-3-wafer-final11-20261117",
+      "expected_sha": "f38311cb317188e5392781b5a20016fb4ff08a6c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-a2-3-wafer-final11-20261117-f38311cb3171"
     }
   ]
 }
