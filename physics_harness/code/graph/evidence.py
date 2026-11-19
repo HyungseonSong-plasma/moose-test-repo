@@ -1,5 +1,7 @@
-"""Code graph provenance and claim evidence (reserved).
+"""Provenance and claim-strength boundary for graph facts (v0.1).
 
-Future edges and nodes must retain source witnesses and distinguish declared,
-inferred, and observed relationships. No evidence contract is implemented yet.
+Future node/edge evidence must distinguish source-declared, inferred,
+runtime-observed, and unresolved claims using source lines/blobs or execution
+receipts as applicable. A context must not promote static facts to observed
+runtime edges by merely changing the view. No implementation.
 """

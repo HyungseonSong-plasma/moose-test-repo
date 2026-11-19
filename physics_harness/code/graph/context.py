@@ -1,17 +1,16 @@
-"""Context-defined hierarchy views over a shared code graph (reserved).
+"""Dynamic contexts and cycle-safe hierarchy views (v0.1 design boundary).
 
-A context is a query/view specification, not a predefined fixed node hierarchy.
-It selects roots, semantic edge types, traversal direction, source scope,
-evidence filters, and exploration limits. For example, a CALL context projects
-CALLS edges into parent -> child relationships for that view.
+Contexts select roots, relations, direction, evidence filters, scope, and
+traversal budgets. Names are not a fixed enum; selected relation semantics
+must be explicit. Each context projects the canonical directed multigraph
+into a directed subgraph, optionally unfolded as a rooted hierarchy.
 
-A displayed parent-child occurrence refers to a canonical node ID. A node may
-have several parents and appear in several paths without being copied.
-A hierarchy projection may unfold a cyclic graph for display, but it must
-stop expansion on a node already in the active ancestor path and expose a
-cycle reference rather than silently dropping the original edge. A node
-encountered through a different path remains a valid shared reference.
+Each appearance has an occurrence identity while keeping its canonical node
+identity. Multiple parents and parallel paths are permitted. On a repeated
+node within the active ancestor path, show a CYCLE_REF without expanding that
+path. Nodes reached on other paths remain valid (possibly SHARED_REF).
+Budget cutoffs are TRUNCATED and cannot imply complete exploration. Optional
+SCC summaries must never replace underlying nodes or edges.
 
-The underlying graph retains its semantic edges and possible cycles.
-No context schema, traversal engine, or renderer is implemented here.
+No context schema, projection engine, or renderer is implemented.
 """

@@ -1,7 +1,8 @@
-"""Code graph analysis scope and completeness (reserved).
+"""Analysis scope and completeness boundary (v0.1 design).
 
-A future graph snapshot will bind to an exact source revision and represent
-unresolved dependencies explicitly; lack of edges is not proof of no consumers.
+Bind analyzed source to an exact revision, record in/out-of-scope surfaces,
+unresolved references, and evidence coverage. A missing edge in a partial
+scan, or a TRUNCATED view, is not evidence of caller-zero or safe deletion.
 
-No completeness evaluator is implemented in this scaffold.
+No scope evaluator is implemented.
 """

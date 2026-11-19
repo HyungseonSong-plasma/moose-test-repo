@@ -1,12 +1,8 @@
-"""Context-independent code graph node identity (reserved).
+"""Context-independent graph node identity (v0.1 design boundary).
 
-A node represents one code entity and has no intrinsic parent or parent_id.
-Hierarchy is not a fixed repository -> folder -> file -> class -> function
-chain: the same node can appear under different parents in different contexts.
+Nodes have stable identities within a source/revision identity contract, not
+intrinsic parents. A node may be displayed under several parents or roots,
+depending on context. Neither multiple parents nor cycles require new nodes.
 
-For example, a function can be a child of its source file in a source view and
-of an entry point in an execution view. Context-specific parent-child
-relationships belong to edges, not node identity.
-
-No node model or parser is implemented in this scaffold.
+Context-specific occurrences are not new canonical nodes. No implementation.
 """
