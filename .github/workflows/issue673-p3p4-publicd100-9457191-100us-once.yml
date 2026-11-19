@@ -955,14 +955,8 @@ jobs:
           path: |
             ${{ runner.temp }}/p05-in/p4_receipt.json
             ${{ runner.temp }}/p05-in/physics-opt.sha256
-            ${{ runner.temp }}/full-rf-evidence/rf_full_s6_receipt.json
-            ${{ runner.temp }}/full-rf-evidence/417_receipt.json
-            ${{ runner.temp }}/full-rf-evidence/941_receipt.json
-            ${{ runner.temp }}/full-rf-evidence/417_check_excerpt.txt
-            ${{ runner.temp }}/full-rf-evidence/941_check_excerpt.txt
-            ${{ runner.temp }}/full-rf-evidence/417_native_excerpt.txt
-            ${{ runner.temp }}/full-rf-evidence/941_native_excerpt.txt
-            physics_app/physics-opt
             ${{ runner.temp }}/p05-in/w1_identity.json
+            ${{ runner.temp }}/full-rf-evidence/
+            physics_app/physics-opt
           if-no-files-found: error
           retention-days: 14
