@@ -1,13 +1,14 @@
-"""Context-scoped code graph relationships (reserved).
+"""Code graph semantic relationships and context projections (reserved).
 
-Hierarchy is expressed by directed PARENT_CHILD relations with a context:
-(context_id, parent_node_id, child_node_id). Parents are not intrinsic node
-properties. The same child may have distinct parents in different contexts.
+Underlying directed edges retain their own meaning: CALLS, DEFINES, IMPORTS,
+REFERENCES, and so on. A context selects relevant edges and projects them into
+parent -> child relationships for its hierarchy view, including a CALL context
+where caller -> callee forms the displayed hierarchy.
 
-Source ownership, execution reachability, and other views may project their
-own parent-child hierarchies. Underlying semantic edges such as CALLS,
-IMPORTS, or REFERENCES remain distinct: a call is not automatically a
-parent-child claim. Static possibilities are not observed runtime activity.
+Parent-child is a context-specific interpretation, not an intrinsic node
+property or proof of unique ownership. Multiple parents and cycles are valid
+in the graph and must be preserved. Static candidates are not observed
+runtime activity.
 
 No edge model or traversal is implemented in this scaffold.
 """
