@@ -62,9 +62,9 @@ def git(root: Path, *args: str) -> str:
 def tracked_files(root: Path) -> tuple[list[Path], str | None]:
     if (root / ".git").exists():
         names = git(root, "ls-files", "-z").split("\0")
-        return ([root / p for p in sorted(set(names)) if p and Path(p).suffix in EXTENSIONS
+        return ([root / p for p in sorted(set(names)) if p and (Path(p).suffix in EXTENSIONS or Path(p).name == "Makefile")
                  and not (set(Path(p).parts) & SKIP_DIRS)], git(root, "rev-parse", "HEAD"))
-    return (sorted(p for p in root.rglob("*") if p.is_file() and p.suffix in EXTENSIONS
+    return (sorted(p for p in root.rglob("*") if p.is_file() and (p.suffix in EXTENSIONS or p.name == "Makefile")
                    and not (set(p.relative_to(root).parts) & SKIP_DIRS)), None)
 
 
