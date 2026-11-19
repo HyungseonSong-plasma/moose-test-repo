@@ -7,7 +7,7 @@ workflow definitions, and other supported sources.
 | Package | Responsibility |
 | --- | --- |
 | \`graph/\` | Shared graph records: node, edge, evidence, claim, scope, context |
-| \`diagnostics/\` | Evidence collection and code fact extraction (reserved) |
+| [diagnostics/](diagnostics/README.md) | Source-bound fact extraction and incomplete-coverage reporting (scaffold only) |
 | \`analysis/\` | Code review, findings, quality/impact analysis (reserved) |
 | \`refactor/\` | Approved refactoring plans and changes (reserved) |
 | \`delete/\` | Approved code-retirement and deletion (reserved) |
