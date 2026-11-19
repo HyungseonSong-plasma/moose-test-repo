@@ -158,43 +158,58 @@ def unfold_context(graph: GraphSnapshot, context: Context) -> HierarchyView:
         ancestors: frozenset[str],
         depth: int,
     ) -> None:
-        cycle = node_id in ancestors
-        this_id = occurrence_id(path)
-        current_index = len(occurrences)
-        occurrences.append(
-            NodeOccurrence(
-                id=this_id,
-                context_id=context.id,
-                node_id=node_id,
-                parent_occurrence_id=parent_id,
-                via_edge_id=edge_id,
-                status="CYCLE_REF" if cycle else "NORMAL",
-                shared=node_id in seen,
-            )
-        )
-        seen.add(node_id)
-        if cycle:
-            return
+        # Explicit depth-first frames preserve the exact recursive preorder
+        # while allowing a bounded traversal deeper than Python's call stack.
+        frames = [("enter", node_id, path, parent_id, edge_id, ancestors, depth)]
+        while frames:
+            action, *state = frames.pop()
+            if action == "resume":
+                index, this_id, parent_path, lineage, level, neighbors, position = state
+                if position >= len(neighbors):
+                    continue
+                if len(occurrences) >= context.max_occurrences:
+                    mark_truncated(index, "MAX_OCCURRENCES")
+                    continue
+                next_edge_id, child, direction = neighbors[position]
+                frames.append((
+                    "resume", index, this_id, parent_path, lineage,
+                    level, neighbors, position + 1,
+                ))
+                frames.append((
+                    "enter", child, parent_path + (f"{direction}:{next_edge_id}",),
+                    this_id, next_edge_id, lineage, level + 1,
+                ))
+                continue
 
-        neighbors = adjacency.get(node_id, ())
-        if depth >= context.max_depth:
+            current, current_path, parent, incoming_edge, lineage, level = state
+            cycle = current in lineage
+            this_id = occurrence_id(current_path)
+            index = len(occurrences)
+            occurrences.append(
+                NodeOccurrence(
+                    id=this_id,
+                    context_id=context.id,
+                    node_id=current,
+                    parent_occurrence_id=parent,
+                    via_edge_id=incoming_edge,
+                    status="CYCLE_REF" if cycle else "NORMAL",
+                    shared=current in seen,
+                )
+            )
+            seen.add(current)
+            if cycle:
+                continue
+
+            neighbors = adjacency.get(current, ())
+            if level >= context.max_depth:
+                if neighbors:
+                    mark_truncated(index, "MAX_DEPTH")
+                continue
             if neighbors:
-                mark_truncated(current_index, "MAX_DEPTH")
-            return
-
-        updated_ancestors = ancestors | {node_id}
-        for next_edge_id, child, direction in neighbors:
-            if len(occurrences) >= context.max_occurrences:
-                mark_truncated(current_index, "MAX_OCCURRENCES")
-                return
-            visit(
-                child,
-                path + (f"{direction}:{next_edge_id}",),
-                this_id,
-                next_edge_id,
-                updated_ancestors,
-                depth + 1,
-            )
+                frames.append((
+                    "resume", index, this_id, current_path,
+                    lineage | {current}, level, neighbors, 0,
+                ))
 
     for root in context.roots:
         if len(occurrences) >= context.max_occurrences:
