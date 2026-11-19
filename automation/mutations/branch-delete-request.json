@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-633-ion-fvm-newonly-postmerge-p2-20261118",
-      "expected_sha": "92c3299063e13013fbb7f9de12a98800cc3b9cfa",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ion-fvm-newonly-postmerge-p2-20261118-92c3299063e1"
+      "branch": "issue-633-s6-hybrid-newonly-evidence-isolation-20261118",
+      "expected_sha": "ae8f082e5eccb5c434c6ed816d2511115337dca8",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-s6-hybrid-newonly-evidence-isolation-20261118-ae8f082e5ecc"
     },
     {
-      "branch": "issue-671-d8-same-exact-w1-3ns-20261118",
-      "expected_sha": "800b3c423a7d4121175f9bf5610d9f3d71290950",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-same-exact-w1-3ns-20261118-800b3c423a7d"
+      "branch": "issue-672-p6-d2-d4-chemistry-100-42-independent-20261118",
+      "expected_sha": "a69428732f51d41395754db25ad763e64b245952",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d2-d4-chemistry-100-42-independent-20261118-a69428732f51"
     },
     {
-      "branch": "issue-672-p6-i3-fvm-grounded-fixture-v2-20261118",
-      "expected_sha": "15838d1f3b3d3f7d42341185d724a3f9a3f63336",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-i3-fvm-grounded-fixture-v2-20261118-15838d1f3b3d"
+      "branch": "issue-671-d8-rf-wall-poisson-coupled-20261118",
+      "expected_sha": "d9e3452cebec800aaec65cf557891ba1f164c49b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-rf-wall-poisson-coupled-20261118-d9e3452cebec"
     },
     {
-      "branch": "issue-671-p5x-w1-rf-warehouse-review-20261118",
-      "expected_sha": "f7b01ee2602d6ef5d4a14cb80dd916c36619e348",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-w1-rf-warehouse-review-20261118-f7b01ee2602d"
+      "branch": "issue-672-p6-h-ni-time-historic-custody-20261118",
+      "expected_sha": "e08c66af57b69327c555f9bc159647b633361991",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-h-ni-time-historic-custody-20261118-e08c66af57b6"
     },
     {
-      "branch": "issue-672-p6-d4-real-chemistry-public-d-scratch-20261118",
-      "expected_sha": "44ce91e330dac52d634d327831e0562595d99e36",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d4-real-chemistry-public-d-scratch-20261118-44ce91e330da"
+      "branch": "issue-671-p5x-w1-registration-p05-observer-20261118",
+      "expected_sha": "fce2778b7ff517771067ca0d77a14b7e2215c601",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-w1-registration-p05-observer-20261118-fce2778b7ff5"
     }
   ]
 }
