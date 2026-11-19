@@ -96,13 +96,47 @@ def verify_structural(root: Path, report: dict, target: str,
         if (sha != ev.get("blob_sha") or line < 1 or line > len(lines)
                 or lines[line - 1].strip()[:240] != ev.get("excerpt")):
             raise ValueError("STRUCTURAL_WITNESS_MISMATCH")
+    id_to_edge = {e["edge_id"]: e for e in report["edges"]}
     for instance in report["instances"]:
-        if instance.get("instance_id") not in node_set:
+        instance_id = instance.get("instance_id")
+        if instance_id not in node_set:
             raise ValueError("STRUCTURAL_INSTANCE_NODE_MISSING")
         if instance.get("structural_edge_id") not in edge_ids:
             raise ValueError("STRUCTURAL_INSTANCE_EDGE_MISSING")
+        edge = id_to_edge[instance["structural_edge_id"]]
+        if (edge["from"] != instance_id or edge["relation"] != "INPUT_INSTANTIATES"
+                or edge["to"] != "class:" + target):
+            raise ValueError("STRUCTURAL_INSTANCE_EDGE_NOT_BOUND")
         if not isinstance(instance.get("bindings"), list):
             raise ValueError("STRUCTURAL_BINDINGS_MALFORMED")
+        path = instance.get("input_path")
+        if not isinstance(path, str):
+            raise ValueError("STRUCTURAL_INSTANCE_SOURCE_MISSING")
+        if path not in cache:
+            try:
+                data = safe_path(root, path).read_bytes()
+                cache[path] = (data.decode("utf-8").splitlines(), structural.blob_sha(data))
+            except (OSError, UnicodeError) as exc:
+                raise ValueError("STRUCTURAL_INSTANCE_SOURCE_MISSING") from exc
+        lines, blob = cache[path]
+        type_line = instance.get("type_line")
+        if (not isinstance(type_line, int) or type_line < 1 or type_line > len(lines)
+                or blob != instance.get("evidence", {}).get("blob_sha")
+                or edge["evidence"]["path"] != path
+                or edge["evidence"]["line"] != type_line):
+            raise ValueError("STRUCTURAL_INSTANCE_WITNESS_MISMATCH")
+        type_assignment = structural.MOOSE_ASSIGN.match(lines[type_line - 1])
+        if (not type_assignment or type_assignment.group(1) != "type"
+                or type_assignment.group(2).strip().strip("'\"") != instance.get("factory_type")):
+            raise ValueError("STRUCTURAL_INSTANCE_TYPE_MISMATCH")
+        for binding in instance["bindings"]:
+            line = binding.get("line")
+            if not isinstance(line, int) or line < 1 or line > len(lines):
+                raise ValueError("STRUCTURAL_BINDING_LINE_MISMATCH")
+            match = structural.MOOSE_ASSIGN.match(lines[line - 1])
+            if (not match or match.group(1) != binding.get("name")
+                    or match.group(2).strip() != binding.get("raw_value")):
+                raise ValueError("STRUCTURAL_BINDING_WITNESS_MISMATCH")
 
 
 def source_witnesses(root: Path, profile: dict) -> tuple[list[dict], dict]:
