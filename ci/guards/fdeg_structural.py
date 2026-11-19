@@ -11,6 +11,7 @@ import argparse
 import ast
 import hashlib
 import json
+import posixpath
 import re
 import subprocess
 from pathlib import Path
@@ -67,6 +68,19 @@ def literal(node: ast.AST) -> str | None:
         lhs, rhs = literal(node.left), literal(node.right)
         if lhs is not None and rhs is not None:
             return lhs + rhs
+    return None
+
+
+def python_output_path(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+            and node.func.id == "Path" and len(node.args) == 1):
+        return literal(node.args[0])
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        left, right = python_output_path(node.left), literal(node.right)
+        if left is not None and right is not None:
+            return posixpath.join(left, right)
     return None
 
 
@@ -145,7 +159,7 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                 m = MOOSE_INCLUDE.match(line)
                 if m:
                     name = m.group(1)
-                    dest = (Path(path).parent / name).as_posix()
+                    dest = posixpath.normpath(posixpath.join(posixpath.dirname(path), name))
                     if dest in source_names:
                         emit(node, "INCLUDES_INPUT", "file:" + dest, path, i, name)
                     else:
@@ -173,6 +187,18 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                                 emit(node, "PYTHON_DECLARES_TYPE", class_id, path, n.lineno, name)
                             elif name is None:
                                 unknown(path, n.lineno, "DYNAMIC_PYTHON_TYPE")
+                    output = None
+                    if isinstance(n.func, ast.Attribute) and n.func.attr in {"write_text", "write_bytes"}:
+                        output = python_output_path(n.func.value)
+                    elif (isinstance(n.func, ast.Name) and n.func.id == "open"
+                          and len(n.args) >= 2 and (literal(n.args[1]) or "").startswith(("w", "a", "x"))):
+                        output = python_output_path(n.args[0])
+                    if output is not None and output.endswith(".i"):
+                        dest = posixpath.normpath(output.removeprefix("./"))
+                        if dest in source_names:
+                            emit(node, "PYTHON_WRITES_INPUT", "file:" + dest, path, n.lineno, dest)
+                        else:
+                            unknown(path, n.lineno, "GENERATED_INPUT_NOT_TRACKED:" + dest)
                 if isinstance(n, ast.Constant) and isinstance(n.value, str):
                     if target in SYMBOL.findall(n.value):
                         emit(node, "MENTIONS_SYMBOL", class_id, path, n.lineno, target, "LEXICAL_ONLY")
