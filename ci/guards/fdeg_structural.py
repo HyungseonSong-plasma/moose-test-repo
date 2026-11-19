@@ -355,6 +355,9 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     # provider and build declarations in the target-rooted graph.
     enrichment = route_evidence.enrichment(contents, target, aliases, instances,
                                           edges, emit, unknown)
+    current_imported_historical = {
+        item["imported_path"] for item in enrichment["historical_import_routes"]
+    }
 
     # The graph contains only incoming paths that can reach the selected class.
     reached = {class_id}
@@ -369,7 +372,7 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     for edge in selected:
         path = edge["evidence"]["path"]
         edge["source_head"] = head
-        edge["revision_scope"] = route_evidence.scope(path)
+        edge["revision_scope"] = route_evidence.scope(path, current_imported_historical)
         edge["activation_status"] = "NOT_OBSERVED"
         if edge["relation"] == "MENTIONS_SYMBOL":
             source_line = edge["evidence"]["excerpt"]
@@ -378,7 +381,8 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
             else:
                 edge["reference_role"] = "LEXICAL_REFERENCE_NOT_CONSUMER"
         elif edge["relation"] in {"GENERATOR_EMITS_OBJECT_CANDIDATE", "PYTHON_DECLARES_TYPE",
-                                   "PYTHON_WRITES_INPUT"}:
+                                   "PYTHON_WRITES_INPUT",
+                                   "IMPORTS_HISTORICAL_GENERATOR_CANDIDATE"}:
             edge["reference_role"] = "STATIC_GENERATOR_NOT_RUNTIME"
         elif edge["relation"] in {"WORKFLOW_RUNS_SCRIPT", "WORKFLOW_CALLS", "SHELL_RUNS_SCRIPT"}:
             edge["reference_role"] = "DECLARED_WORKFLOW_PATH_NOT_EXECUTION"
