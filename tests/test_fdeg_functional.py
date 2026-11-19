@@ -50,6 +50,14 @@ class FunctionalP0Test(unittest.TestCase):
             "required_discriminators": ["SIGN_FLIP", "SCALING", "AD_JACOBIAN"],
             "unresolved_semantics": ["RUNTIME_NOT_OBSERVED"],
             "historical_guards": ["NO_HISTORICAL_PARITY_PROMOTION"]}
+        self.profile["discriminator_contracts"] = {
+            name: {"setup": "same signed source under controlled mutation",
+                   "observable": "residual and Jacobian",
+                   "expected": "detect any missing source, sign or AD scale",
+                   "status": "NOT_EVALUATED", "measured_run_id": None,
+                   "acceptance_tolerance": "OWNER_UNSPECIFIED"}
+            for name in self.profile["required_discriminators"]
+        }
         self.registry = {"schema": "fdeg.functional_registry.v0.1",
                          "profiles": {"Legacy": self.profile}}
         self.graph = structural.scan(self.root, "Legacy")
@@ -84,6 +92,10 @@ class FunctionalP0Test(unittest.TestCase):
         self.assertEqual(bound["variable"], "n_e")
         self.assertEqual(consumers[0]["effective_runtime_binding"], "NOT_OBSERVED")
         self.assertEqual(result["equivalence_verdict"], "NOT_PROVEN")
+        self.assertEqual(len(result["discriminator_contracts"]), 3)
+        self.assertTrue(all(x["status"] == "NOT_EVALUATED"
+                            for x in result["discriminator_contracts"].values()))
+        self.assertTrue(result["parameter_declarations"] == [])
 
     def test_stability_and_candidate_must_stay_unverified(self):
         a, b = self.assemble(), self.assemble()
@@ -133,6 +145,18 @@ class FunctionalP0Test(unittest.TestCase):
             functional.assemble(self.root, self.graph, "Legacy",
                                 self.registry, "a" * 40)
 
+    def test_missing_discriminator_contract_rejected(self):
+        tampered = copy.deepcopy(self.registry)
+        tampered["profiles"]["Legacy"]["discriminator_contracts"].pop("AD_JACOBIAN")
+        with self.assertRaisesRegex(ValueError, "FUNCTIONAL_DISCRIMINATOR_CONTRACT_INCOMPLETE"):
+            self.assemble(registry=tampered)
+
+    def test_discriminator_forged_runtime_pass_rejected(self):
+        tampered = copy.deepcopy(self.registry)
+        tampered["profiles"]["Legacy"]["discriminator_contracts"]["SIGN_FLIP"]["status"] = "PASS"
+        with self.assertRaisesRegex(ValueError, "FUNCTIONAL_DISCRIMINATOR_CANNOT_ASSERT_PASS"):
+            self.assemble(registry=tampered)
+
     def test_no_registry_equivalence_promotion(self):
         tampered = copy.deepcopy(self.registry)
         tampered["profiles"]["Legacy"]["alternatives"][0]["status"] = "NUMERICALLY_VALIDATED"
@@ -161,6 +185,9 @@ class LiveContractsP0Test(unittest.TestCase):
                 self.assertTrue(all(w["line_start"] >= 1 for w in witnesses))
                 self.assertTrue(profile["required_discriminators"])
                 self.assertTrue(profile["unresolved_semantics"])
+                self.assertEqual(set(profile["required_discriminators"]),
+                                 set(profile["discriminator_contracts"]))
+                self.assertTrue(functional.extract_parameters(ROOT, profile))
 
     def test_real_source_signed_projection_graph_join(self):
         target = "PhysicsFVElectronReactionSource"
