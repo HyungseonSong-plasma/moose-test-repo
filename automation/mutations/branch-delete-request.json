@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-670-p4-w3-op-wall-20261118",
-      "expected_sha": "af2e1c2ecc50d7e4d84acdd9de8a8a40e021fa47",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w3-op-wall-20261118-af2e1c2ecc50"
+      "branch": "issue-670-p4-w4-general-neumann-20261118",
+      "expected_sha": "77b2d3d900fc5adede8a0789f23183bed6291ecc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w4-general-neumann-20261118-77b2d3d900fc"
     },
     {
-      "branch": "issue-670-p4-d5-diagnostics-alias-20261118",
-      "expected_sha": "6968140b69a7371ffe1950ca1f4a7073bf4726fa",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-d5-diagnostics-alias-20261118-6968140b69a7"
+      "branch": "issue-670-p4-w6-wafer-20261118",
+      "expected_sha": "217f2ec368e716f9dedd455c92f80e70b1a8bc27",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w6-wafer-20261118-217f2ec368e7"
     },
     {
-      "branch": "issue670-p4-d4-poisson-sha-20261118",
-      "expected_sha": "2fd0533ec0cd0241aecfd9a82d9211ca91171c45",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue670-p4-d4-poisson-sha-20261118-2fd0533ec0cd"
+      "branch": "issue-670-p4-w5-cover-dielectric-20261118",
+      "expected_sha": "3ef0858dc1756fb09a33f797b6ec90c5b0ceda50",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w5-cover-dielectric-20261118-3ef0858dc175"
     },
     {
-      "branch": "issue-670-p4-d2-om-density-20261118",
-      "expected_sha": "df61610a113ba1c2b0c45dd5b7c921395e156d0e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-d2-om-density-20261118-df61610a113b"
+      "branch": "issue-670-p4-c1-cover-current-20261118",
+      "expected_sha": "ef6cbd27ff8e047cbf0e792b188f6ad5d38c1989",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-c1-cover-current-20261118-ef6cbd27ff8e"
     },
     {
-      "branch": "issue-670-p4-c2-wafer-surface-current-20261118",
-      "expected_sha": "897e7e41769f30e9b3525d0623929a4f9b823c9f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-c2-wafer-surface-current-20261118-897e7e41769f"
+      "branch": "issue-670-p4-w7-focus-ring-20261118",
+      "expected_sha": "51939a237ab59d1ecf0e5ff9d0cfd18834af95a4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w7-focus-ring-20261118-51939a237ab5"
     }
   ]
 }
