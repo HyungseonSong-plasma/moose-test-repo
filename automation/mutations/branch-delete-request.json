@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "cleanup-issue541-group-b-arch-p3-diagnostics-20261116",
-      "expected_sha": "72c88b5c58d1e563c9af79b085e0b9fe85e7c58e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-group-b-arch-p3-diagnostics-20261116-72c88b5c58d1"
+      "branch": "cleanup-wave1-cd-core-bridge-current-20261116",
+      "expected_sha": "4782f341233c7baa6b381482e04e4b7f1e644a21",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-cd-core-bridge-current-20261116-4782f341233c"
     },
     {
-      "branch": "cleanup-issue541-p3-manual-bootstrap-20261116",
-      "expected_sha": "7435c68e3d728867522ba775968fec43e99413fe",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-p3-manual-bootstrap-20261116-7435c68e3d72"
+      "branch": "issue-541-wave2-6b-s6-integrated-20261116",
+      "expected_sha": "79a8392f1a4fb34e24b01e2271f25a87d908f5f3",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-wave2-6b-s6-integrated-20261116-79a8392f1a4f"
     },
     {
-      "branch": "cleanup-issue541-task8-a1-integration-20261116",
-      "expected_sha": "a2553f81ac4c25ca6eb4bdb54808f78b64dbc568",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-task8-a1-integration-20261116-a2553f81ac4c"
+      "branch": "cleanup-wave2-8a2-flow-evidence-20261116",
+      "expected_sha": "71a61b63836400c44e953d2ec432167f7afb5c61",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave2-8a2-flow-evidence-20261116-71a61b638364"
     },
     {
-      "branch": "cleanup-issue541-wave1d-core-legacy-20261116",
-      "expected_sha": "3d6ebccbca24f314181bc8bf7c439cfa3c51fcab",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-wave1d-core-legacy-20261116-3d6ebccbca24"
+      "branch": "cleanup-wave1-c-a1-caller-closure-20261116",
+      "expected_sha": "8dcec2c195b683d795d162ab6825da1366c932d2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a1-caller-closure-20261116-8dcec2c195b6"
     },
     {
-      "branch": "issue-541-wave1-e-evidence-identity-20261116",
-      "expected_sha": "81ba114357ce61f926fd1d98fd172eaf83df128e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-wave1-e-evidence-identity-20261116-81ba114357ce"
+      "branch": "cleanup-wave1-selective-intake-20261116",
+      "expected_sha": "53fbb935815a337fa5dffa4ff5f206eb515b654b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-selective-intake-20261116-53fbb935815a"
     }
   ]
 }
