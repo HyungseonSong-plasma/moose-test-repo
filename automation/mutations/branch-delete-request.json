@@ -1,14 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6-d1-public-flow-readonly-guard-20261118",
-      "expected_sha": "44cf27387a539503c2f111a103a61248f31a7773",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d1-public-flow-readonly-guard-20261118-44cf27387a53"
+      "branch": "issue-672-p6-h1-arch-hybrid-compatibility-20261118",
+      "expected_sha": "32deee001ee25df68e6803ac26555b7102727e78",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-h1-arch-hybrid-compatibility-20261118-32deee001ee2"
     },
     {
-      "branch": "issue-671-d8-wall-face-residual-native-20261118",
-      "expected_sha": "70e23b6d738778e246e8f4ec47ea2917b1ed0704",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-wall-face-residual-native-20261118-70e23b6d7387"
+      "branch": "issue-672-pr684-independent-exact-ci-20261118",
+      "expected_sha": "eb79442972a330a0bf8497ca533e66e1ec8c14a1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-pr684-independent-exact-ci-20261118-eb79442972a3"
+    },
+    {
+      "branch": "issue-672-p6-i2-grounded-c2-physics-contract-20261118",
+      "expected_sha": "9d5e5762b53574e41e65850fc217ddf9a1572e11",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-i2-grounded-c2-physics-contract-20261118-9d5e5762b535"
+    },
+    {
+      "branch": "issue-672-p6-f1-flow-dbase-early-exit-readonly-20261118",
+      "expected_sha": "35b2b81c063f9cc64154f84b0afa2b1b666ba50e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f1-flow-dbase-early-exit-readonly-20261118-35b2b81c063f"
+    },
+    {
+      "branch": "issue-672-p6-f2-flow-owner-5over3-20261118",
+      "expected_sha": "1e26387a39e30e19ed98b7566551f0c55b239613",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f2-flow-owner-5over3-20261118-1e26387a39e3"
     }
   ]
 }
