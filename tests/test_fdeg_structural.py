@@ -248,6 +248,46 @@ class StructuralEvidenceTest(unittest.TestCase):
         self.assertTrue(all(x["activation"] == "NOT_OBSERVED" for x in routes))
         self.assertEqual(graph["status"], "STRUCTURAL_RECORDED")
 
+    def test_v03_historical_generator_imported_by_current_experiment_is_migration_candidate(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        history = "experiments/historical_recipe_support/legacy.py"
+        self.put(history, 'def build():\n    return "type = Legacy"\n')
+        self.put("experiments/Issue100_case/run.py",
+                 "from experiments.historical_recipe_support.legacy import build\n")
+        graph = fdeg.scan(self.root, "Legacy")
+        imports = self.edges(graph, "IMPORTS_HISTORICAL_GENERATOR_CANDIDATE")
+        self.assertEqual(len(imports), 1)
+        self.assertEqual(imports[0]["from"], "file:experiments/Issue100_case/run.py")
+        self.assertEqual(imports[0]["to"], "file:" + history)
+        self.assertEqual(imports[0]["activation_status"], "NOT_OBSERVED")
+        self.assertEqual(imports[0]["reference_role"], "STATIC_GENERATOR_NOT_RUNTIME")
+        routes = [r for r in graph["enrichment"]["generator_routes"]
+                  if r["source"] == history]
+        self.assertTrue(routes)
+        self.assertTrue(all(r["reference_scope"] ==
+                            "HISTORICAL_MODULE_IMPORTED_BY_CURRENT_SOURCE_NOT_PROVEN_ACTIVE"
+                            and r["activation"] == "NOT_OBSERVED" for r in routes))
+        self.assertTrue(all(e["revision_scope"] ==
+                            "HISTORICAL_MODULE_IMPORTED_BY_CURRENT_SOURCE_NOT_PROVEN_ACTIVE"
+                            for e in self.edges(graph, "GENERATOR_EMITS_OBJECT_CANDIDATE")
+                            if e["evidence"]["path"] == history))
+        self.assertEqual(graph["status"], "INCOMPLETE")
+        self.assertNotEqual(graph["safety"], "SAFE_DELETE")
+
+    def test_v03_historical_generator_test_only_import_remains_historical(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        history = "experiments/historical_recipe_support/legacy.py"
+        self.put(history, 'def build():\n    return "type = Legacy"\n')
+        self.put("tests/test_legacy.py",
+                 "from experiments.historical_recipe_support.legacy import build\n")
+        graph = fdeg.scan(self.root, "Legacy")
+        self.assertFalse(self.edges(graph, "IMPORTS_HISTORICAL_GENERATOR_CANDIDATE"))
+        routes = [r for r in graph["enrichment"]["generator_routes"]
+                  if r["source"] == history]
+        self.assertTrue(routes)
+        self.assertTrue(all(r["reference_scope"] == "HISTORICAL_SOURCE_NOT_PROVEN_ACTIVE"
+                            for r in routes))
+
     def test_json_stability_and_git_blob_hash(self):
         path = self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
         first, second = fdeg.scan(self.root, "Legacy"), fdeg.scan(self.root, "Legacy")
