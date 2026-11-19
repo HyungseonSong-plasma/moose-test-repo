@@ -104,7 +104,11 @@ def verify_structural(root: Path, report: dict, target: str,
         if instance.get("structural_edge_id") not in edge_ids:
             raise ValueError("STRUCTURAL_INSTANCE_EDGE_MISSING")
         edge = id_to_edge[instance["structural_edge_id"]]
-        if (edge["from"] != instance_id or edge["relation"] != "INPUT_INSTANTIATES"
+        allowed_relation = ("PYTHON_TEMPLATE_INSTANTIATES"
+                            if instance.get("instance_kind") ==
+                            "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"
+                            else "INPUT_INSTANTIATES")
+        if (edge["from"] != instance_id or edge["relation"] != allowed_relation
                 or edge["to"] != "class:" + target):
             raise ValueError("STRUCTURAL_INSTANCE_EDGE_NOT_BOUND")
         if not isinstance(instance.get("bindings"), list):
@@ -374,6 +378,7 @@ def consumer_role(edge: dict) -> str | None:
     relationship = edge["relation"]
     return {
         "INPUT_INSTANTIATES": "DECLARED_INPUT_NOT_RUNTIME",
+        "PYTHON_TEMPLATE_INSTANTIATES": "DECLARED_PYTHON_TEMPLATE_NOT_GENERATED_OR_RUNTIME",
         "INPUT_MATCHES_ACTION_SYNTAX": "DECLARED_ACTION_INPUT_NOT_RUNTIME",
         "ACTION_CREATES": "SOURCE_ACTION_FACTORY_CALL_NOT_RUNTIME",
         "ACTION_CREATES_VIA_LOCAL_LITERAL": "SOURCE_LEXICAL_FLOW_CANDIDATE",
@@ -513,6 +518,10 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
             "structural_edge_id": edge["edge_id"], "source_node": edge["from"],
             "role": role, "evidence_strength": edge["strength"],
             "instance_id": instance["instance_id"] if instance else None,
+            "instance_kind": instance.get("instance_kind", "TRACKED_MOOSE_INPUT")
+                if instance else "NO_INSTANCE",
+            "generated_output_path": instance.get("generated_output_path", "NOT_APPLICABLE")
+                if instance else "UNKNOWN",
             "declared_bindings": instance["bindings"] if instance else [],
             "input_path": instance["input_path"] if instance else edge["evidence"]["path"],
             "block_path": instance["block_path"] if instance else None,
