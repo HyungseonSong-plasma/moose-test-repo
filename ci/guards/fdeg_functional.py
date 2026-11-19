@@ -253,6 +253,40 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
     return sorted(params, key=lambda p: (p["name"], p["witness"]["line"]))
 
 
+def shared_unit_evidence(root: Path, profile: dict) -> dict | None:
+    """Bind all Factory registrations in a shared C++ translation unit."""
+    unit = profile.get("shared_translation_unit")
+    if unit is None:
+        return None
+    path = unit.get("source_path")
+    expected = unit.get("co_registered_classes")
+    if (path != profile["source"]["path"] or not isinstance(expected, list)
+            or len(expected) < 2 or len(set(expected)) != len(expected)
+            or profile["target"] not in expected):
+        raise ValueError("SHARED_TRANSLATION_UNIT_CONTRACT_MALFORMED")
+    data = safe_path(root, path).read_bytes()
+    sha = structural.blob_sha(data)
+    if sha != profile["source"]["blob_sha"]:
+        raise ValueError("STALE_SHARED_TRANSLATION_UNIT_SOURCE")
+    body = data.decode("utf-8")
+    found = {}
+    for match in structural.REGISTRATION.finditer(body):
+        cls = match.group(3)
+        found.setdefault(cls, []).append({
+            "path": path, "blob_sha": sha,
+            "line_start": body.count("\n", 0, match.start()) + 1,
+            "excerpt": match.group(0)})
+    if set(found) != set(expected):
+        raise ValueError("SHARED_TRANSLATION_UNIT_OWNER_SET_CHANGED")
+    return {
+        "source_path": path, "blob_sha": sha,
+        "co_registered_classes": sorted(expected),
+        "registrations": found,
+        "retirement_constraint": unit["retirement_constraint"],
+        "status": "GROUP_REGISTERED_NOT_RETIRED"
+    }
+
+
 def validate_registry_profile(profile: dict) -> None:
     ids = [claim.get("id") for claim in profile.get("claims", [])]
     if not ids or len(set(ids)) != len(ids) or any(not isinstance(x, str) or not x for x in ids):
@@ -294,6 +328,7 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
     validate_registry_profile(profile)
     witnesses, blobs = source_witnesses(root, profile)
     parameters = extract_parameters(root, profile)
+    shared_unit = shared_unit_evidence(root, profile)
     registration = sorted(
         e["edge_id"] for e in structural_report["edges"]
         if e["to"] == "class:" + target and
@@ -337,6 +372,24 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         }
         edge["edge_id"] = structural.stable_id("functional-edge", edge)
         functional_edges.append(edge)
+    if shared_unit is not None:
+        for other in shared_unit["co_registered_classes"]:
+            if other == target:
+                continue
+            edge = {
+                "claim_id": "shared-file:" + target + ":" + other,
+                "from": "class:" + target,
+                "relation": "SHARES_TRANSLATION_UNIT_WITH",
+                "to": "class:" + other,
+                "shared_source_path": shared_unit["source_path"],
+                "retirement_constraint": shared_unit["retirement_constraint"],
+                "evidence_kind": "STATIC_SOURCE",
+                "claim_status": "SOURCE_SUPPORTED",
+                "runtime_status": "NOT_OBSERVED",
+                "witnesses": shared_unit["registrations"][other]
+            }
+            edge["edge_id"] = structural.stable_id("functional-edge", edge)
+            functional_edges.append(edge)
     for param in parameters:
         edge = {
             "claim_id": "param:" + target + ":" + param["name"],
@@ -401,6 +454,14 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         "capability": profile["capability"], "equation": profile["equation"],
         "operator_kind": profile["operator_kind"], "notes": profile.get("notes", ""),
         "edges": functional_edges,
+        "nodes": [
+            {"id": ident, "kind": "CLASS" if ident.startswith("class:")
+             else "CAPABILITY" if ident.startswith("capability:")
+             else "CONTRACT"}
+            for ident in sorted({target_id for edge in functional_edges
+                                 for target_id in (edge["from"], edge["to"])})
+        ],
+        "shared_translation_unit": shared_unit,
         "consumer_contracts": consumers,
         "required_discriminators": sorted(profile.get("required_discriminators", [])),
         "discriminator_contracts": {key: discriminators[key] for key in sorted(discriminators)},
