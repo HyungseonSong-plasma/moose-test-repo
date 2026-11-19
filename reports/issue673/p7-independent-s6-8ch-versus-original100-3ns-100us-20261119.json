@@ -1,0 +1,98 @@
+{
+  "schema": "issue673.p7.independent_historical_s6_quantitative_comparison.v1",
+  "review_date_utc": "2026-11-19",
+  "current_source": {
+    "pr": 665,
+    "source_head": "9457191f4c0693ae886586edd961965867ccd5c0",
+    "elf_sha256": "b327aea7f496809779dd233336d8c62d15ab021accdb13e552efe1a750c72e18"
+  },
+  "historical": {
+    "run_id": 42589883028,
+    "artifact_417": 13677089020,
+    "artifact_941": 13677375813,
+    "lookup_table_rows": 42,
+    "lookup_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "csv_rows_each": 461,
+    "metric_source": "ORIGINAL_ARCHIVE_CSV_HASH_RECOMPUTED"
+  },
+  "modern": {
+    "newonly_3ns_run_id": 44409942970,
+    "original100_3ns_run_id": 44423713218,
+    "original100_100us_run_id": 44426913036,
+    "artifact_100us_417": 14500940527,
+    "artifact_100us_941": 14499369656,
+    "original100_lookup_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "original100_lookup_rows": 100,
+    "source_100us": "SANITIZED_FINAL_ROW_ONLY_NO_CANDIDATE_RAW_CSV_EXODUS",
+    "native_p3_100us_completed_both": true
+  },
+  "comparisons": {
+    "3ns_newonly42_vs_historical42": {
+      "417": {
+        "n_metrics": 26,
+        "n_exact_values": 16,
+        "max_abs_relative_difference": 3.5575e-13
+      },
+      "941": {
+        "n_metrics": 26,
+        "n_exact_values": 18,
+        "max_abs_relative_difference": 4.269e-13
+      },
+      "class": "SAME_INPUT_SHORT_WINDOW_REPRODUCIBILITY_DIAGNOSTIC"
+    },
+    "3ns_publicd100_vs_historical42": {
+      "417": {
+        "n_metrics": 26,
+        "max_abs_relative_difference": 0.0763568
+      },
+      "941": {
+        "n_metrics": 26,
+        "max_abs_relative_difference": 0.0763568
+      },
+      "class": "DIFFERENT_EEDF_LOOKUP_CONFUNDED"
+    },
+    "100us_publicd100_vs_historical42": {
+      "417": {
+        "n_metrics": 26,
+        "max_abs_relative_difference": 0.14854336784838207,
+        "max_metric": "wafer_net_surface_current",
+        "radiofrequency_power_relative": 0.00150209,
+        "electron_density_peak_relative": 0.113716,
+        "poisson_integral_charge_relative": 0.059896,
+        "wafer_current_magnitude_relative": 0.148543
+      },
+      "941": {
+        "n_metrics": 26,
+        "max_abs_relative_difference": 0.15016529439364412,
+        "max_metric": "wafer_net_surface_current",
+        "radiofrequency_power_relative": 0.00149592,
+        "electron_density_peak_relative": 0.113883,
+        "poisson_integral_charge_relative": 0.060025,
+        "wafer_current_magnitude_relative": 0.150165
+      },
+      "class": "DIFFERENT_EEDF_LOOKUP_CONFUNDED"
+    }
+  },
+  "HPEM_reference": {
+    "reference_origin": "E_matrix(2).dat",
+    "timestamp": "UNKNOWN",
+    "coordinates_calibrated": false,
+    "axial_points": 45,
+    "radial_points": 51,
+    "maximum_ne_m_minus3": 88850000000000000,
+    "spatial_RMSE": "NOT_COMPUTABLE_CANDIDATE_RAW_EXODUS_UNAVAILABLE"
+  },
+  "data_archive": {
+    "local_full_combined_audit_sha256": "92133d30345bf678e4765f705d92b3c79a46473bb1dea08dc0dd71739f5c6315",
+    "full_metric_comparisons": 156,
+    "native_new_runs_launched_by_this_work": 0
+  },
+  "gates": {
+    "historical_sameinput_3ns": "PASS_REPRODUCIBILITY_DIAGNOSTIC",
+    "publicd_100us": "QUANTIFIED_DIFFERENT_INPUT_NOT_SCIENCE_VERDICT",
+    "P3_full100us": "PASS_EXECUTION_BOTH",
+    "P4_restart": "SEPARATE_WORKFLOW_PENDING_OBSERVATION_AT_LAST_CHECK",
+    "scientific_equivalence": "SCIENCE_HOLD",
+    "PR_merge": "NOT_AUTHORIZED"
+  }
+}
