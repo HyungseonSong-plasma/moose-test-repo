@@ -117,7 +117,7 @@ jobs:
                   except SyntaxError as ex:
                       raise SystemExit('G1_SYNTAX_SELFTEST_FAIL:'+str(ex))
                   hits.append((i+1,end+1))
-          assert len(hits)==3,('G1_UNEXPECTED_PYTHON_BLOCKS',hits)
+          assert len(hits)==4,('G1_UNEXPECTED_PYTHON_BLOCKS',hits)
           print('G1_EMBEDDED_PYTHON_AST_ALL_PASS',len(hits))
           PY_G1_SELFTEST
       - name: P3/P4 stage full 11-layer and PublicD100 Chemistry JSON
