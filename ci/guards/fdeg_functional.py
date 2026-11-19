@@ -657,7 +657,9 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
                         ({"STRUCTURAL_TARGET_DEPENDENCIES_INCOMPLETE"}
                          if structural_report.get("target_dependency_status",
                                                   structural_report["status"]) == "INCOMPLETE"
-                         else set()))
+                         else set()) |
+                        ({"STRUCTURAL_UPSTREAM_GENERATOR_OR_INPUT_UNRESOLVED"}
+                         if structural_report.get("upstream_unresolved") else set()))
     report = {
         "schema": SCHEMA, "target": target,
         "source_identity": {
@@ -695,6 +697,8 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         "workflow_execution_routes": structural_enrichment["workflow_execution_paths"],
         "external_generator_imports": structural_enrichment["external_imports"],
         "target_scoped_unresolved": structural_report["target_scoped_unresolved"],
+        "upstream_unresolved": structural_report.get("upstream_unresolved", []),
+        "source_template_census": structural_report.get("source_template_census"),
         "required_discriminators": sorted(profile.get("required_discriminators", [])),
         "discriminator_contracts": {key: discriminators[key] for key in sorted(discriminators)},
         "parameter_declarations": parameters,
