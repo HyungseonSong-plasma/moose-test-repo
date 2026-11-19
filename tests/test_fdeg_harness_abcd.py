@@ -78,6 +78,26 @@ def render():
         self.assertEqual(len([e for e in g["edges"] if e["relation"] ==
                               "PYTHON_TEMPLATE_INSTANTIATES"]), 2)
 
+    def test_compact_type_equals_is_a_distinct_source_template_instance(self):
+        self.put("physics_app/ci/compact.py", """
+def render():
+    return '''[FVKernels]
+  [w_Om_time]
+    type=Legacy
+    variable=w_Om
+    rho=rho_const
+  []
+[]
+'''
+""")
+        g = structural.scan(self.root, "Legacy")
+        rows = [i for i in g["instances"]
+                if i.get("instance_kind") == "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["block_path"], "FVKernels/w_Om_time")
+        self.assertEqual(g["source_template_census"]["mapped_virtual_instances"], 1)
+        self.assertEqual(g["source_template_census"]["unmapped_declarations"], [])
+
     def test_unmapped_template_declaration_cannot_pass_census(self):
         self.put("physics_app/ci/unmapped.py", '''
 def fake():
@@ -131,7 +151,7 @@ class LiveCode6CensusP0Test(unittest.TestCase):
         found = {x["input_path"] for x in g["instances"]
                  if x.get("instance_kind") == "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"}
         self.assertTrue(expected <= found)
-        self.assertGreaterEqual(census["mapped_virtual_instances"], 15)
+        self.assertEqual(census["mapped_virtual_instances"], 15)
         self.assertEqual(census["unmapped_declarations"], [])
         self.assertEqual(census["runtime_coverage"], "NOT_PROVEN")
 
