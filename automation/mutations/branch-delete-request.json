@@ -1,29 +1,9 @@
 {
   "targets": [
     {
-      "branch": "issue-667-p1-c7-941-h25-rate-20261117",
-      "expected_sha": "dbc0b7f9a10ad9eee6965653073ff0d2d3c327df",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c7-941-h25-rate-20261117-dbc0b7f9a10a"
-    },
-    {
-      "branch": "issue-667-p1-d2-electron-energy-20261117",
-      "expected_sha": "e2ba8a6c2840576d203f4a148df4675d122e9799",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d2-electron-energy-20261117-e2ba8a6c2840"
-    },
-    {
-      "branch": "issue-667-p1-d3-pressure-neutral-20261117",
-      "expected_sha": "1d5e4902080d8dd06553370b800bea0320206cfc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d3-pressure-neutral-20261117-1d5e4902080d"
-    },
-    {
       "branch": "issue-667-p1-d4-rf-joule-20261117",
       "expected_sha": "d1a1ee56801b0f9c4d3cb9e9ff18e74007de838a",
       "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d4-rf-joule-20261117-d1a1ee56801b"
-    },
-    {
-      "branch": "issue-667-p1-d5-poisson-density-20261117",
-      "expected_sha": "0e01791db7b22e9153fa51d43410afde403ecaa5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d5-poisson-density-20261117-0e01791db7b2"
     }
   ]
 }
