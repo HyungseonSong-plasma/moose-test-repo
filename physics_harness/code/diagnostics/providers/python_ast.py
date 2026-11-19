@@ -51,7 +51,7 @@ def _body_metrics(node: ast.AST) -> tuple[int, int]:
 
 class PythonAstCollector:
     name = "python_ast"
-    version = "python-ast-v0.1"
+    version = "python-ast-v0.2"
 
     def supports(self, record: SourceRecord) -> bool:
         return record.path.endswith(".py")
