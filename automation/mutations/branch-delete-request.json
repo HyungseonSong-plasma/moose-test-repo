@@ -1,24 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5-c1-s6-941-final-ei941-source-recheck-20261118",
-      "expected_sha": "0706205750974bd1154b3d7d4fc0f94f2fc8b330",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c1-s6-941-final-ei941-source-recheck-20261118-070620575097"
+      "branch": "issue671-p5-final-gates-independent-audit-20261118",
+      "expected_sha": "d31ae066fc182f58744578b0a8f3d0e5446248a0",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue671-p5-final-gates-independent-audit-20261118-d31ae066fc18"
     },
     {
-      "branch": "issue-671-s6-417-final-input-reverify-20261118",
-      "expected_sha": "7f17146e5f0e44468a142536a0956d7bf57901d0",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-s6-417-final-input-reverify-20261118-7f17146e5f0e"
+      "branch": "issue-672-p6-f0-p6-d1-exacthead-gates-20261118",
+      "expected_sha": "12e7519dc991f97bf0ef92bdd927130da0ef0b8d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f0-p6-d1-exacthead-gates-20261118-12e7519dc991"
     },
     {
-      "branch": "issue-672-p6-public-flow-arch-ion-fvm-ci-latest-20261118",
-      "expected_sha": "3314fb94e7cedcd5d688a830e424eec076669a7b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-public-flow-arch-ion-fvm-ci-latest-20261118-3314fb94e7ce"
+      "branch": "issue-671-p05-negatives-n1-n8-74a2-20261118",
+      "expected_sha": "72320bf2bdc0fe3c6e670df4029a8abb4c92d9dc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p05-negatives-n1-n8-74a2-20261118-72320bf2bdc0"
     },
     {
-      "branch": "issue-671-final-evidence-ledger-20261118",
-      "expected_sha": "dee8e357a9adcd2a73e9c631bf3ca42a066ee8d4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-final-evidence-ledger-20261118-dee8e357a9ad"
+      "branch": "issue-671-w2-w3-parallel-native-w1-20261118",
+      "expected_sha": "533421f7b4878d180eb5f1b4e48b4eac9424b536",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-w2-w3-parallel-native-w1-20261118-533421f7b487"
     }
   ]
 }
