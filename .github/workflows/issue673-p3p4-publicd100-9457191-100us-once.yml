@@ -262,16 +262,16 @@ jobs:
           assert all(orig_meta[n]["sha256_match"] and orig_meta[n]["numeric_shape_pass"] for n in EXPECTED)
           os.environ.pop("PROTECTED_ARCHIVE_B64",None)
           binary=repo/"physics_app"/"physics-opt"
-          receipt={"schema":"issue673.g1.public_d_original100_rf_3step_feasibility.v1",
+          receipt={"schema":"issue673.p3p4.public_d_original100_100us.v1",
                    "source_HEAD":head,"OCI":oci,"binary_sha256":dg(binary),
                    "all_11_layer_files_original_post_p4x":True,
                    "rf_enabled":True,"original_TimeSequenceStepper":True,
                    "d8_wall_current_poisson_postprocessors_required":34,
                    "diagnostic_output_only_additions":True,
                    "d8_residual_evidence":"DISCRETE_VARIABLE_ASSEMBLED_RESIDUAL_L2_NOT_KERNEL_FUNCTION_ENTRY",
-                   "bounded_max_physical_steps":3,"first_time_step_expected_s":1e-9,
-                   "bounded_final_time_expected_s":3e-9,
-                   "full_S6_100us":"NOT_RUN","P3_P4_science":"SCIENCE_HOLD",
+                   "target_physical_steps":460,"first_time_step_expected_s":1e-9,
+                   "target_final_time_s":1e-4,
+                   "full_S6_100us":"P3_REQUESTED","P3_P4_science":"SCIENCE_HOLD",
                    "cases":{},"protected_scratch_removed_on_exit":False}
           out.mkdir(parents=True,exist_ok=True)
           private_path=None
@@ -663,9 +663,9 @@ jobs:
                   private_path=Path(tmp)
                   assert private_path.stat().st_mode&0o777 == 0o700
                   try:
-                      for case in ("417","941"):
+                      for case in (os.environ["CASE"],):
                           r={"case":case,"input_files_verified":False,"protected_EI_count":0,
-                             "native_check_input_rc":None,"full_3ns_rc":None,
+                             "native_check_input_rc":None,"full_100us_rc":None,"P3_timegrid_pass":False,
                              "maxwell_child_numeric_observed":False,
                              "seven_transfers_numeric_observed":False,
                              "full_S6_original_11_layers_unchanged":False}
@@ -711,7 +711,7 @@ jobs:
                               (out/f"{case}_check_excerpt.txt").write_text(limit_log(log))
                               if rc==0 and "Syntax OK" in log:
                                   rc,log=run_native(work,expected["ordered_inputs"],"rf_full_d8_observers.i")
-                                  r["full_3ns_rc"]=rc
+                                  r["full_100us_rc"]=rc
                                   r["native_full_log_sha256"]=hashlib.sha256(log.encode()).hexdigest()
                                   r["maxwell_solver_message_seen"]=("Solve Converged!" in log and "maxwell" in log.lower())
                                   (out/f"{case}_native_excerpt.txt").write_text(limit_log(log))
@@ -848,11 +848,11 @@ jobs:
                                           for n in original_default}
                                       r["drive_differs_from_initial_default"]=abs(
                                           cv.get("rf_drive_scale_child",4.7406324819559)-4.7406324819559)>1e-8
-                                      r["three_ns_time_observed"]=abs(pv.get("time",-1)-3e-9)<1e-13
+                                      r["full_100us_time_observed"]=abs(pv.get("time",-1)-1e-4)<1e-9
                                       r["actual_evolving_physical_state_observed"]=any(
                                           r["child_state_differs_from_initial_default"].values())
                                       r["seven_transfers_numeric_observed"]=bool(
-                                          ppass and fpass and all(forward) and r["three_ns_time_observed"]
+                                          ppass and fpass and all(forward) and r["full_100us_time_observed"]
                                           and r["drive_differs_from_initial_default"]
                                           and r["actual_evolving_physical_state_observed"])
                               else:
@@ -879,16 +879,16 @@ jobs:
           finally:
               receipt["RF_FULL_S6_CASES_PASS"]=bool(
                   receipt["protected_scratch_removed_on_exit"] and
-                  len(receipt["cases"])==2 and
-                  all(r["full_3ns_rc"]==0 and r["seven_transfers_numeric_observed"] and r.get("d8_coupled_functor_numeric_pass",False) and r.get("d8_four_boundary_consistency_pass",False)
+                  len(receipt["cases"])==1 and
+                  all(r["full_100us_rc"]==0 and r["P3_timegrid_pass"] and r["seven_transfers_numeric_observed"] and r.get("d8_coupled_functor_numeric_pass",False) and r.get("d8_four_boundary_consistency_pass",False)
                       and r["full_S6_original_11_layers_unchanged"]
                       for r in receipt["cases"].values()))
               (out/"rf_full_s6_receipt.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
               print("RF_AND_D8_FULL_S6_REAL_NATIVE_VERDICT",
-                    "PASS_BOTH_S6_RF_MASS_CURRENT_CHARGE_ASSEMBLED_RESIDUAL_3NS" if receipt["RF_FULL_S6_CASES_PASS"]
+                    "PASS_CASE_100US_P3_AND_P4_DIAGNOSTIC" if receipt["RF_FULL_S6_CASES_PASS"]
                     else "HOLD_WITH_CASE_SPECIFIC_CAUSE")
               for case,r in receipt["cases"].items():
-                  print("RF_CASE",case,"P2",r["native_check_input_rc"],"P3_BOUND_3NS",r["full_3ns_rc"],
+                  print("RF_CASE",case,"P2",r["native_check_input_rc"],"P3_FULL_100US",r["full_100us_rc"],
                         "P_ABS",r.get("maxwell_child_P_abs_W"),"ACTUAL_TRANSFER",r["seven_transfers_numeric_observed"],
                         "CAUSE",r.get("first_blocker","NONE"))
               sys.exit(0 if receipt["RF_FULL_S6_CASES_PASS"] else 1)
@@ -898,7 +898,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue673-g1-publicd100-9457191-W1-417-941-3ns-pilot
+          name: issue673-publicd100-S6-${{ matrix.case }}-P3P4-100us-9457191
           path: |
             ${{ runner.temp }}/p05-in/p4_receipt.json
             ${{ runner.temp }}/p05-in/physics-opt.sha256
