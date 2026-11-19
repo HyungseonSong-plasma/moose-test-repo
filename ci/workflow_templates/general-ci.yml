@@ -98,6 +98,19 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
       - name: Validate FDEG Transition Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Generate code6 exact-HEAD retirement evidence P0 (no Native)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/code6_retirement_baseline.py --self-test
+          python3 ci/guards/code6_retirement_baseline.py --expected-head "$(git rev-parse HEAD)" --output-dir code6-evidence
+      - name: Upload code6 Structural Functional Transition evidence (HOLD)
+        uses: actions/upload-artifact@v4
+        with:
+          name: code6-fdeg-${{ github.run_id }}-${{ github.run_attempt }}
+          path: code6-evidence/code6-*.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |

@@ -1,0 +1,135 @@
+{
+  "schema": "code6.consumer_census.v0.1",
+  "target": "PhysicsFVMassFractionTimeDerivative",
+  "reviewed_base_head": "d0010827910581a1ca3bf4b405846a9960416c39",
+  "evidence_kind": "SOURCE_DECLARED_INPUT_TEMPLATE_NOT_OBSERVED_RUNTIME",
+  "expected_direct_script_count": 10,
+  "expected_declared_instance_count": 15,
+  "consumers": [
+    {
+      "path": "physics_app/ci/check_stage5_h05_runtime.py",
+      "instances": [
+        {
+          "block": "w_O_time",
+          "variable": "w_O",
+          "rho": "rho_const"
+        },
+        {
+          "block": "w_Om_time",
+          "variable": "w_Om",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_stage5_s5d_heavy_reactions.py",
+      "instances": [
+        {
+          "block": "t_O2p",
+          "variable": "w_O2p",
+          "rho": "rho_const"
+        },
+        {
+          "block": "t_O",
+          "variable": "w_O",
+          "rho": "rho_const"
+        },
+        {
+          "block": "t_Om",
+          "variable": "w_Om",
+          "rho": "rho_const"
+        },
+        {
+          "block": "t_Op",
+          "variable": "w_Op",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_stage5_edetach_runtime.py",
+      "instances": [
+        {
+          "block": "wt",
+          "variable": "w_Om",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_stage5_ei18_runtime.py",
+      "instances": [
+        {
+          "block": "w_Os_time",
+          "variable": "w_Os",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_stage5_ei20_runtime.py",
+      "instances": [
+        {
+          "block": "w_Op_time",
+          "variable": "w_Op",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_e8_ei10_energy_runtime.py",
+      "instances": [
+        {
+          "block": "w_O2s_time",
+          "variable": "w_O2s",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_e8_ei16_energy_runtime.py",
+      "instances": [
+        {
+          "block": "w_O2p_time",
+          "variable": "w_O2p",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_standard_moose_energy_projection.py",
+      "instances": [
+        {
+          "block": "w_O2s_time",
+          "variable": "w_O2s",
+          "rho": "rho_const"
+        },
+        {
+          "block": "w_O2p_time",
+          "variable": "w_O2p",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_r2_o2_ionization_implementation.py",
+      "instances": [
+        {
+          "block": "w_O2p_time",
+          "variable": "w_O2p",
+          "rho": "rho_const"
+        }
+      ]
+    },
+    {
+      "path": "physics_app/ci/check_r3_o2s_excitation_implementation.py",
+      "instances": [
+        {
+          "block": "w_O2s_time",
+          "variable": "w_O2s",
+          "rho": "rho_const"
+        }
+      ]
+    }
+  ]
+}
