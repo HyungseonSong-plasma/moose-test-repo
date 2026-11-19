@@ -1,9 +1,9 @@
 {
   "targets": [
     {
-      "branch": "issue-693-fdeg-functional-recovery-292ae68625",
-      "expected_sha": "1af90fdf88c54f38e7c9ffad02291aa9c737c5de",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-693-fdeg-functional-recovery-292ae68625-1af90fdf88c5"
+      "branch": "refactor/ei-rate-moose-linear-interpolation-20261109",
+      "expected_sha": "1d785cb04adbbaa6f2ddff6b59c8f0b1abdb6a36",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-ei-rate-moose-linear-interpolation-20261109-1d785cb04adb"
     }
   ]
 }
