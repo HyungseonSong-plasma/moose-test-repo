@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-669-p3-g6-electron-material-receipt-20261118",
-      "expected_sha": "72e317974d472461bd12b5e837df5d7c08df473b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g6-electron-material-receipt-20261118-72e317974d47"
+      "branch": "issue-670-p4-s1-417-o2p-source-proof-20261117",
+      "expected_sha": "e232440b2ef473f43c8f0e98a1acbbbd73df7e9d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-s1-417-o2p-source-proof-20261117-e232440b2ef4"
     },
     {
-      "branch": "issue-669-p3-g6-functor-provenance-b5c1de7-20261118",
-      "expected_sha": "c18dfca492741b37c7ecac973f1081e650a3c606",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g6-functor-provenance-b5c1de7-20261118-c18dfca49274"
+      "branch": "issue-670-p4-s2-417-om-source-20261117",
+      "expected_sha": "01a1a6daec51a8d7b01e5d60db94c8d43062ccf2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-s2-417-om-source-20261117-01a1a6daec51"
     },
     {
-      "branch": "issue-669-p3-n3-pressure-outlet-receipt-20261118",
-      "expected_sha": "edc03a09dced43b12592d94991f3a0875b8100a5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-n3-pressure-outlet-receipt-20261118-edc03a09dced"
+      "branch": "issue-670-p4-s3-417-op-source-20261117",
+      "expected_sha": "12ea91e4ea3cca328da5749db538651c5bd90cc1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-s3-417-op-source-20261117-12ea91e4ea3c"
     },
     {
-      "branch": "issue-669-p3-t5-941-electron-json-ic-lookup-20261118",
-      "expected_sha": "d10adeb30610ab6544da39e5437e10742b97f491",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t5-941-electron-json-ic-lookup-20261118-d10adeb30610"
+      "branch": "issue-670-p4-s4-417-ei-h25-rate-20261117",
+      "expected_sha": "0c7955f8e844cb84f2d1e74aebeaa9cdf19b561b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-s4-417-ei-h25-rate-20261117-0c7955f8e844"
     },
     {
-      "branch": "issue-669-p3-t5-941-receipt-20261118",
-      "expected_sha": "cfedbfd5750cea2d42341488ed53f4d08e1554b4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t5-941-receipt-20261118-cfedbfd5750c"
+      "branch": "issue-670-p4-s5-941-o2p-20261117",
+      "expected_sha": "d7b69e85246808f5266ed300baefdd0bc14e985b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-s5-941-o2p-20261117-d7b69e852468"
     }
   ]
 }
