@@ -3,9 +3,15 @@ name: Repository CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'physics_harness/code/**'
+      - '.github/workflows/harness-code.yml'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, edited]
+    paths-ignore:
+      - 'physics_harness/code/**'
+      - '.github/workflows/harness-code.yml'
 
 permissions:
   contents: read

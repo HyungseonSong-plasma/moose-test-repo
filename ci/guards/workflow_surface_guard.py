@@ -6,6 +6,7 @@ from pathlib import Path
 
 ENTRYPOINTS = {
     "ci.yml": {"push", "pull_request"},
+    "harness-code.yml": {"push", "pull_request"},
     "experiment.yml": {"workflow_dispatch"},
     "refactor.yml": {"workflow_dispatch"},
     "sol-runtime-integration.yml": {"push", "pull_request"},
