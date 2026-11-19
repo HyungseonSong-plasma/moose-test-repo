@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-667-p1-b3-source-417-20261117",
-      "expected_sha": "b25f8ad3225e194ccfc0937b41cb8d64dd96a6d2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b3-source-417-20261117-b25f8ad3225e"
+      "branch": "issue-541-arch-retired-option-negatives-20261115",
+      "expected_sha": "b349c6ac4cdeda910963015f4609d9fe155daaca",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-arch-retired-option-negatives-20261115-b349c6ac4cde"
     },
     {
-      "branch": "issue-667-p1-b4-20261117",
-      "expected_sha": "2b341c2273ed06af78aff6175cb55cacdf9cb483",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b4-20261117-2b341c2273ed"
+      "branch": "issue-541-task3-json-fem-residual-20261116",
+      "expected_sha": "6d737d800dfdc6d63a1f2c0f0b052de5009535b9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-task3-json-fem-residual-20261116-6d737d800dfd"
     },
     {
-      "branch": "issue-667-p1-b5-h25-source-20261117",
-      "expected_sha": "3db55ad207a7774939b84dbdeb98e8746cf4a49e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b5-h25-source-20261117-3db55ad207a7"
+      "branch": "issue-541-task3-latest-source-20261116",
+      "expected_sha": "2f7644cf7702fff82ea5939665700c088b0f0ad4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-task3-latest-source-20261116-2f7644cf7702"
     },
     {
-      "branch": "issue-667-p1-c2-941-o2p-h25-20261117",
-      "expected_sha": "56abada3ad677c557d3099f794c12a7821cc3bb9",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c2-941-o2p-h25-20261117-56abada3ad67"
+      "branch": "cleanup-issue541-task8-species-initial-20261116",
+      "expected_sha": "436c5b1c43a6f6ddb1b629c81f6c7d97fbfaf9a9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-task8-species-initial-20261116-436c5b1c43a6"
     },
     {
-      "branch": "issue-667-p1-d1-electron-continuity-20261117",
-      "expected_sha": "d6d4d3527be9dbd83ed4d3db687a60e28de6aea4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d1-electron-continuity-20261117-d6d4d3527be9"
+      "branch": "cleanup-issue541-task8-a1-dd-legacy-20261116",
+      "expected_sha": "925528bb4bca1268e22721c55f2d51c008e8652e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-task8-a1-dd-legacy-20261116-925528bb4bca"
     }
   ]
 }
