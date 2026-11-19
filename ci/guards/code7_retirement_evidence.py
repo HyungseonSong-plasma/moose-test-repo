@@ -96,11 +96,11 @@ def generate(root: Path, expected_head: str, output_dir: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-head", required=True)
-    parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--root", default=str(ROOT))
+    parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
     try:
-        summary = generate(args.root, args.expected_head, args.output_dir)
+        summary = generate(Path(args.root), args.expected_head, Path(args.output_dir))
     except (ValueError, KeyError, TypeError, OSError) as exc:
         print("CODE7_FDEG_P0=FAIL:" + str(exc))
         return 1
