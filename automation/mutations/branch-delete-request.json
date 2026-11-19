@@ -1,19 +1,19 @@
 {
   "targets": [
     {
-      "branch": "validation/issue518-replay-after-513-516-517-519-20261111",
-      "expected_sha": "64fbf29495067f2289f9e723d991fc0f167d75bb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/validation-issue518-replay-after-513-516-517-519-20261111-64fbf2949506"
+      "branch": "cleanup-issue541-core-four-20261115",
+      "expected_sha": "a7f83b8a65249d91422f809fcee6cb319feb7941",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-core-four-20261115-a7f83b8a6524"
     },
     {
-      "branch": "test/physics402-s6d-joule-rf-owners",
-      "expected_sha": "c171dfd465a4318390b9b799531fff65c27123f1",
-      "archive_tag": "archive/oxygen-cleanup-20261106/test-physics402-s6d-joule-rf-owners-c171dfd465a4"
+      "branch": "cleanup-issue541-integrate-core-flow-arch-20261115",
+      "expected_sha": "d18a802e41cf3c5b152f21ff13374cd622fe9c5a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-integrate-core-flow-arch-20261115-d18a802e41cf"
     },
     {
-      "branch": "issue-402-continuity-e-time",
-      "expected_sha": "00dc1ae28ddb4cda42b19d1abc9eeb77af2d28c0",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-continuity-e-time-00dc1ae28ddb"
+      "branch": "issue-541-ci-template-sync-20261115",
+      "expected_sha": "34a3539477071d56027c60b1f19d0b502b2e9733",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-ci-template-sync-20261115-34a353947707"
     }
   ]
 }
