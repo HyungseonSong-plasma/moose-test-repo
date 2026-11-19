@@ -8,6 +8,7 @@ a fresh scan; the persisted result never promotes scope or SAFE_DELETE.
 from __future__ import annotations
 
 import gzip
+import io
 import hashlib
 import json
 import os
@@ -70,6 +71,8 @@ def load(key: CacheKey, target: str, head: str, schema: str,
             return None
         raw = key.path.read_bytes()
         record = json.loads(raw)
+        if not isinstance(record, dict):
+            return None
         if (record.get("key") != key.identity
                 or record.get("schema") != SCHEMA):
             return None
@@ -143,10 +146,13 @@ def load_source_index(key: CacheKey, git_blob_manifest: dict[str, str]
             return None
         if key.path.stat().st_size > MAX_CACHE_BYTES:
             return None
-        raw = gzip.decompress(key.path.read_bytes())
+        with gzip.GzipFile(fileobj=io.BytesIO(key.path.read_bytes())) as stream:
+            raw = stream.read(4 * MAX_CACHE_BYTES + 1)
         if len(raw) > 4 * MAX_CACHE_BYTES:
             return None
         record = json.loads(raw)
+        if not isinstance(record, dict):
+            return None
         if (record.get("schema") != SOURCE_SCHEMA
                 or record.get("key") != key.identity):
             return None
@@ -165,7 +171,10 @@ def load_source_index(key: CacheKey, git_blob_manifest: dict[str, str]
         # The cache's own SHA-256 is not a completeness oracle. Cross-check
         # *every* expected tracked path/blob against the HEAD's Git index;
         # this rejects a rehashed-but-omitted file or forged source value.
-        failed_paths = {e.get("path") for e in payload["errors"]}
+        if not all(isinstance(e, dict) and isinstance(e.get("path"), str)
+                   for e in payload["errors"]):
+            return None
+        failed_paths = {e["path"] for e in payload["errors"]}
         if (set(contents) & failed_paths
                 or set(contents) | failed_paths != set(git_blob_manifest)):
             return None
@@ -176,7 +185,7 @@ def load_source_index(key: CacheKey, git_blob_manifest: dict[str, str]
             if sha != actual_sha or sha != git_blob_manifest[path]:
                 return None
         return contents, payload["errors"]
-    except (OSError, ValueError, TypeError, KeyError, EOFError):
+    except (OSError, ValueError, TypeError, KeyError, EOFError, UnicodeError):
         return None
 
 
