@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-667-p1-0-byte-evidence-20261117",
-      "expected_sha": "feb659de5809e6aaf615d3396ed00144b1eacdc7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-byte-evidence-20261117-feb659de5809"
+      "branch": "issue-667-p1-0-final11-byte-pin-20261117",
+      "expected_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-final11-byte-pin-20261117-9c15a4f0e2cf"
     },
     {
-      "branch": "issue-667-p1-0-417-finalbytes-20261117",
-      "expected_sha": "5c0346dedbe87482abe30e64f5d75409766bfa9e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-417-finalbytes-20261117-5c0346dedbe8"
+      "branch": "issue-667-p1-0-sourcepin-9c15a4f-20261117",
+      "expected_sha": "9f96db79611e469ee25d7b498ce1ee22f26f81d4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-sourcepin-9c15a4f-20261117-9f96db79611e"
     },
     {
-      "branch": "issue-667-p1-0-byte-readback-20261117",
-      "expected_sha": "a335fc35acf1b7de6b9c629320deb9298197e50b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-byte-readback-20261117-a335fc35acf1"
+      "branch": "issue-667-p1-0-s6-byte-census-20261117",
+      "expected_sha": "aa1e414d669c3e0269feb6dce5d31ca0e09924a6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-s6-byte-census-20261117-aa1e414d669c"
     },
     {
-      "branch": "issue-667-p1-0-source-pin-20261117",
-      "expected_sha": "cc6b1c16696e2abdd11a522342e8fb41749d791f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-source-pin-20261117-cc6b1c16696e"
+      "branch": "issue-667-p1-0-exact-s6-inputs-20261117",
+      "expected_sha": "9691f7f7741566fda93e1ee6f3fcb603e6532261",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-exact-s6-inputs-20261117-9691f7f77415"
     },
     {
-      "branch": "issue-667-p1-0-common-pin-20261117",
-      "expected_sha": "7e8aeefcdd93cef9d48e37551a308811e451e57f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-common-pin-20261117-7e8aeefcdd93"
+      "branch": "issue-667-p1-b6-private-rate-hash-20261117",
+      "expected_sha": "aece3c3c2a1f3561fd246a3d22fdbd23f105737e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b6-private-rate-hash-20261117-aece3c3c2a1f"
     }
   ]
 }
