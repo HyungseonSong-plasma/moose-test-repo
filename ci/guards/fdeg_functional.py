@@ -528,8 +528,10 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
             "effective_functor_providers": "UNKNOWN",
             "effective_time_integrator": "UNKNOWN",
             "effective_state_and_face": "UNKNOWN",
-            "equation_term_owner": preservation["equation_term_owner"],
-            "functional_effect_if_removed": preservation["removal_effect"],
+            "equation_term_owner": (preservation["equation_term_owner"]
+                                    if role != "LEXICAL_MENTION_NOT_CONSUMER" else "NOT_ESTABLISHED"),
+            "functional_effect_if_removed": (preservation["removal_effect"]
+                                             if role != "LEXICAL_MENTION_NOT_CONSUMER" else None),
             "applies_only_if_active": True,
             "obligations": sorted(preservation["coupled_guards"] + preservation["explicit_refusals"]),
             "required_discriminators": sorted(profile.get("required_discriminators", [])),
@@ -605,6 +607,10 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         "edges": functional_edges,
         "nodes": [
             {"id": ident, "kind": "CLASS" if ident.startswith("class:")
+             else "INSTANCE" if ident.startswith("instance:")
+             else "FUNCTOR" if ident.startswith("functor:")
+             else "EQUATION" if ident.startswith("equation:")
+             else "ORACLE" if ident.startswith("oracle:")
              else "CAPABILITY" if ident.startswith("capability:")
              else "CONTRACT"}
             for ident in sorted({target_id for edge in functional_edges
