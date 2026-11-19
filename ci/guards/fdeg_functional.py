@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FDEG Functional v0.1: verified source contracts, not an equivalence/deletion gate.
+"""FDEG Functional v0.2: verified source contracts, not an equivalence/deletion gate.
 
 Consumes a Structural v0.2 evidence document and a reviewed, exact-blob-pinned
 semantic contract registry. Source observation is not runtime observation.
@@ -15,7 +15,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fdeg_structural as structural  # noqa: E402
 
-SCHEMA = "fdeg.functional.v0.1"
+SCHEMA = "fdeg.functional.v0.2"
 REGISTRY = Path("ci/baselines/fdeg_functional_contracts.json")
 STRUCTURAL_SCHEMA = "fdeg.structural.v0.3"
 PARAM_DECL = re.compile(
@@ -38,7 +38,7 @@ def safe_path(root: Path, rel: str) -> Path:
 def load_registry(root: Path, registry_path: Path = REGISTRY) -> dict:
     text = safe_path(root, registry_path.as_posix()).read_text(encoding="utf-8")
     doc = json.loads(text)
-    if doc.get("schema") != "fdeg.functional_registry.v0.1" or not isinstance(doc.get("profiles"), dict):
+    if doc.get("schema") != "fdeg.functional_registry.v0.2" or not isinstance(doc.get("profiles"), dict):
         raise ValueError("FUNCTIONAL_REGISTRY_SCHEMA")
     return doc
 
@@ -137,6 +137,19 @@ def verify_structural(root: Path, report: dict, target: str,
             if (not match or match.group(1) != binding.get("name")
                     or match.group(2).strip() != binding.get("raw_value")):
                 raise ValueError("STRUCTURAL_BINDING_WITNESS_MISMATCH")
+
+    # The graph ID alone is not authentication: an attacker could alter a
+    # provider/generator candidate, rehash the report, and invent a dependency.
+    # Source-byte reconstruction is required before trusting v0.3 enrichments.
+    enrichment = report.get("enrichment")
+    if (not isinstance(enrichment, dict) or
+            not all(isinstance(enrichment.get(key), list) for key in (
+                "build_ownership", "shared_translation_units", "generator_routes",
+                "provider_bindings", "workflow_execution_paths", "external_imports"))):
+        raise ValueError("STRUCTURAL_V03_ENRICHMENT_MALFORMED")
+    rebuilt = structural.scan(root, target, expected_head)
+    if rebuilt["graph_id"] != report["graph_id"]:
+        raise ValueError("STRUCTURAL_ENRICHMENT_SOURCE_RECONSTRUCTION_MISMATCH")
 
 
 def function_span(source: str, qualified: str) -> tuple[int, int]:
@@ -287,6 +300,51 @@ def shared_unit_evidence(root: Path, profile: dict) -> dict | None:
     }
 
 
+def validate_candidate_source(root: Path, candidate: dict) -> list[dict]:
+    """Optional candidate source observation, NOT a replacement-equivalence claim."""
+    contract = candidate.get("comparison_contract")
+    if not isinstance(contract, dict) or contract.get("status") != "CANDIDATE_UNVERIFIED":
+        raise ValueError("FUNCTIONAL_REPLACEMENT_DIFF_NOT_UNVERIFIED")
+    if contract.get("decision") != "HOLD" or contract.get("runtime_evidence") != "NOT_OBSERVED":
+        raise ValueError("FUNCTIONAL_REPLACEMENT_DIFF_FALSE_PROMOTION")
+    dimensions = contract.get("dimensions")
+    mandatory = {"representation", "residual_formula", "sign", "units", "time_state",
+                 "face_and_boundary", "interpolation_and_limiter", "ad_jacobian",
+                 "parameters_and_defaults", "source_owner"}
+    if not isinstance(dimensions, dict) or set(dimensions) != mandatory:
+        raise ValueError("FUNCTIONAL_REPLACEMENT_DIMENSIONS_INCOMPLETE")
+    if any(spec.get("parity_status") != "NOT_EVALUATED" for spec in dimensions.values()):
+        raise ValueError("FUNCTIONAL_REPLACEMENT_DIMENSION_FALSE_PASS")
+    source = contract.get("candidate_source", {})
+    if "path" not in source:
+        if source.get("source_status") != "NOT_LOCALLY_SOURCE_VERIFIED":
+            raise ValueError("FUNCTIONAL_CANDIDATE_SOURCE_UNRESOLVED_CONTRACT")
+        return []
+    try:
+        body = safe_path(root, source["path"]).read_bytes()
+        text = body.decode("utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ValueError("FUNCTIONAL_CANDIDATE_SOURCE_UNREADABLE") from exc
+    blob = structural.blob_sha(body)
+    if blob != source.get("blob_sha"):
+        raise ValueError("FUNCTIONAL_CANDIDATE_SOURCE_BLOB_CHANGED")
+    a, b = (0, len(text))
+    if source.get("function_scope"):
+        a, b = function_span(text, source["function_scope"])
+    witnesses = []
+    for anchor in source.get("anchors", []):
+        idx = text.find(anchor, a, b)
+        if idx < 0 or idx + len(anchor) > b:
+            raise ValueError("FUNCTIONAL_CANDIDATE_ANCHOR_MISSING")
+        witnesses.append({"path": source["path"], "blob_sha": blob,
+                          "line_start": text.count("\n", 0, idx) + 1,
+                          "excerpt": anchor[:240],
+                          "support": "CANDIDATE_SOURCE_EXPRESSION_NOT_EQUIVALENCE"})
+    if not witnesses:
+        raise ValueError("FUNCTIONAL_CANDIDATE_ANCHORS_MISSING")
+    return witnesses
+
+
 def validate_registry_profile(profile: dict) -> None:
     ids = [claim.get("id") for claim in profile.get("claims", [])]
     if not ids or len(set(ids)) != len(ids) or any(not isinstance(x, str) or not x for x in ids):
@@ -300,6 +358,16 @@ def validate_registry_profile(profile: dict) -> None:
     for candidate in profile.get("alternatives", []):
         if candidate.get("status") != "CANDIDATE_UNVERIFIED":
             raise ValueError("FUNCTIONAL_ALTERNATIVE_CANNOT_ASSERT_EQUIVALENCE")
+        if (candidate.get("comparison_contract", {}).get("decision") != "HOLD"
+                or candidate["comparison_contract"].get("status") != "CANDIDATE_UNVERIFIED"):
+            raise ValueError("FUNCTIONAL_ALTERNATIVE_DIFF_MISSING_OR_PROMOTED")
+    preservation = profile.get("preservation_contract")
+    if (not isinstance(preservation, dict)
+            or preservation.get("applicability") != "IF_ACTIVATED_ONLY"
+            or preservation.get("effective_runtime_status") != "UNKNOWN"
+            or preservation.get("science_acceptance") != "NOT_EVALUATED"
+            or not preservation.get("removal_effect")):
+        raise ValueError("FUNCTIONAL_PRESERVATION_CONTRACT_MISSING")
 
 
 def consumer_role(edge: dict) -> str | None:
@@ -320,7 +388,7 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
              expected_head: str | None = None) -> dict:
     root = root.resolve()
     verify_structural(root, structural_report, target, expected_head)
-    if registry.get("schema") != "fdeg.functional_registry.v0.1":
+    if registry.get("schema") != "fdeg.functional_registry.v0.2":
         raise ValueError("FUNCTIONAL_REGISTRY_SCHEMA")
     profile = registry.get("profiles", {}).get(target)
     if not isinstance(profile, dict) or profile.get("target") != target:
