@@ -1,9 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-667-p1-d4-rf-joule-20261117",
-      "expected_sha": "d1a1ee56801b0f9c4d3cb9e9ff18e74007de838a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d4-rf-joule-20261117-d1a1ee56801b"
+      "branch": "issue-667-p1-d6-wall-flux-receipt-20261117",
+      "expected_sha": "caf30c458752a3f866d1ea3f8778a11c76d81200",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d6-wall-flux-receipt-20261117-caf30c458752"
+    },
+    {
+      "branch": "issue-667-p1-d7-surface-current-20261117",
+      "expected_sha": "4c0e7ef2f78e146b63379487d6c6abe90c7597da",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d7-surface-current-20261117-4c0e7ef2f78e"
+    },
+    {
+      "branch": "issue-667-p1-d8-diagnostics-20261117",
+      "expected_sha": "01e9a457f30a92a73e7e6f8a7b45a6080bdecf92",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-d8-diagnostics-20261117-01e9a457f30a"
+    },
+    {
+      "branch": "issue-668-maxwell-newonly-stage-20261117",
+      "expected_sha": "a88923d732a45b9b9a84ab1ab28c8c128387fda9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-668-maxwell-newonly-stage-20261117-a88923d732a4"
+    },
+    {
+      "branch": "issue-668-p2-static-guarded-pin-20261117",
+      "expected_sha": "cfe5ea1cf465718b5c08d5b666898655333d2c67",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-668-p2-static-guarded-pin-20261117-cfe5ea1cf465"
     }
   ]
 }
