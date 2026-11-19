@@ -169,18 +169,34 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                           " seconds=" + format(time.perf_counter() - started, ".3f"),
                           file=sys.stderr)
                     return hit
-    files, head = tracked_files(root)
-    if expected_head is not None and (head is None or head != expected_head):
-        raise ValueError("EXACT_HEAD_MISMATCH")
-    contents: dict[str, tuple[str, str]] = {}
-    errors: list[dict] = []
-    for path in files:
-        rel = path.relative_to(root).as_posix()
-        try:
-            data = path.read_bytes()
-            contents[rel] = (data.decode("utf-8"), blob_sha(data))
-        except (OSError, UnicodeError) as exc:
-            errors.append({"path": rel, "reason": type(exc).__name__})
+    implementation = (Path(__file__), Path(route_evidence.__file__),
+                      Path(scan_cache.__file__))
+    source_key = scan_cache.source_index_key(root, git_head, implementation) if cache else None
+    source_payload = scan_cache.load_source_index(source_key) if source_key else None
+    if source_payload is not None:
+        # This is a complete HEAD-pinned set of tracked sources and scan errors,
+        # not a target substring filter. Every target retains the same coverage.
+        contents, errors = source_payload
+        head = git_head
+        print("FDEG_SOURCE_INDEX=HIT files=" + str(len(contents)), file=sys.stderr)
+    else:
+        files, head = tracked_files(root)
+        if expected_head is not None and (head is None or head != expected_head):
+            raise ValueError("EXACT_HEAD_MISMATCH")
+        contents: dict[str, tuple[str, str]] = {}
+        errors: list[dict] = []
+        for path in files:
+            rel = path.relative_to(root).as_posix()
+            try:
+                data = path.read_bytes()
+                contents[rel] = (data.decode("utf-8"), blob_sha(data))
+            except (OSError, UnicodeError) as exc:
+                errors.append({"path": rel, "reason": type(exc).__name__})
+        if source_key is not None:
+            print("FDEG_SOURCE_INDEX=" + ("MISS_STORED" if
+                  scan_cache.save_source_index(source_key, contents, errors)
+                  else "MISS_UNSTORED") +
+                  " files=" + str(len(contents)), file=sys.stderr)
     aliases = {target}
     for text, _ in contents.values():
         for match in REGISTRATION.finditer(text):
