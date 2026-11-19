@@ -15,6 +15,9 @@ decision engine**. Issue [#721](https://github.com/HyungseonSong-plasma/moose-te
 | `providers/git.py` | Tracked source inventory and exact blob bytes from a verified HEAD; no worktree fallback |
 | `providers/workflow.py` | Static GitHub Actions Workflow/Job/Step/needs/event/run/uses source facts |
 | `providers/python_ast.py` | Python syntax-only declaration, import, call-site and name/attribute reference candidates |
+| `providers/cpp.py` | C++ class/include/Factory macro source-declaration candidates |
+| `providers/moose_input.py` | MOOSE HIT `.i` blocks, type reference and unresolved include syntax |
+
 
 ### Core invariants
 
@@ -103,3 +106,24 @@ Collector claims code is unused or safe to delete.
 The default `ScanRequest.collectors` remains `("workflow",)`, so existing
 call sites keep their previous behavior. No Graph model, public field or
 folder was moved.
+
+### C++ and MOOSE source linkage
+
+To inspect a bounded exact-HEAD source set, explicitly request
+`collectors=("cpp", "moose_input")` with matching `.C`, `.h`, and
+`.i` path patterns. The collectors use the same canonical
+`moose_type` Node ID for a literal C++ Factory registration and a
+literal input `type = ...` declaration. GraphAssembler unions the
+independent source Evidence from both files.
+
+Relations are deliberately named `DECLARES_MOOSE_REGISTRATION` and
+`DECLARES_TYPE_USE`, not `RUNTIME_INSTANTIATES` or `SAFE_DELETE`.
+Class inheritance and `#include` are candidate relations. The narrow
+C++ textual extractor cannot prove namespace resolution, macro expansion,
+conditional compilation, include resolution, build linkage, or runtime
+registration. Unsupported/preprocessed registration forms and conditional
+source are `PARTIAL`. The MOOSE HIT collector is a conservative
+block/type/include parser. Dynamic values, includes, duplicate/unclosed
+blocks and unsupported syntax produce `PARTIAL` or `FAILED`, never false
+complete coverage. More complex syntax needs a separate capability test
+before this collector may be used to qualify deletion.
