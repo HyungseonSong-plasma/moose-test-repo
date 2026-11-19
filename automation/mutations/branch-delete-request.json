@@ -1,24 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6-x-three-conditions-final-receipt-20261118",
-      "expected_sha": "b7a51dd570f7d28e4f96d02eb315e71898491cf2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-x-three-conditions-final-receipt-20261118-b7a51dd570f7"
+      "branch": "issue-672-p6-f4-final-receipt-20261118",
+      "expected_sha": "05766486f2cfcdf350c9740aedfa2dd903fec1d1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f4-final-receipt-20261118-05766486f2cf"
     },
     {
-      "branch": "issue-671-d8-rf-closure-3ns-20261118",
-      "expected_sha": "418239b59c4465e308172fb3936503d650a3b253",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-rf-closure-3ns-20261118-418239b59c44"
+      "branch": "issue-671-p5x-520673-d8-full-rf-closure-3ns-20261118",
+      "expected_sha": "894e779a01fd6b57cff25490f69ea98ee9ec47a8",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-520673-d8-full-rf-closure-3ns-20261118-894e779a01fd"
     },
     {
-      "branch": "issue-671-p5x-exact-52067302-p2-acceptance-20261118",
-      "expected_sha": "29b3e28ce0a70fdd81cdb09322d0784bb9c03656",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-52067302-p2-acceptance-20261118-29b3e28ce0a7"
+      "branch": "issue-671-p5x-520673-d8-rf-3ns-acceptance-20261118",
+      "expected_sha": "3701d1f0cd4b134494a126fc33524bfa45083eb5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-520673-d8-rf-3ns-acceptance-20261118-3701d1f0cd4b"
     },
     {
-      "branch": "issue-673-p7-p5x-exact-52067302-evidence-20261118",
-      "expected_sha": "59357bdaa0a811b57a0bc6232884209c2927af36",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-p5x-exact-52067302-evidence-20261118-59357bdaa0a8"
+      "branch": "issue-633-samuel-pin-p0-once-20261118",
+      "expected_sha": "3dde627e0915fa6f1936222c87bcdbc0be9666cc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-samuel-pin-p0-once-20261118-3dde627e0915"
     }
   ]
 }
