@@ -285,8 +285,10 @@ def validate_declared_instance(instance: dict | None, parameters: list[dict]) ->
     unresolved = []
     for name, param in sorted(params.items()):
         if param["required"] and name not in bindings:
-            invalid.append({"name": name, "reason": "REQUIRED_LOCAL_PARAM_NOT_DECLARED",
-                            "source_witness": param["witness"]})
+            # Includes and dynamic overrides may provide it at runtime.
+            # Missing from a source *template* is an OPEN proof gap, not
+            # evidence of a successfully constructed invalid native object.
+            unresolved.append("REQUIRED_LOCAL_PARAM_EFFECTIVE_BINDING_UNKNOWN:" + name)
     mode = bindings.get("state_form")
     mode_status = "UNKNOWN"
     if mode is not None:
@@ -317,6 +319,8 @@ def validate_declared_instance(instance: dict | None, parameters: list[dict]) ->
         "mode": mode_status,
         "invalid": invalid, "unresolved": unresolved,
         "runtime_status": "NOT_OBSERVED",
+        "representation": "NOT_PROVEN_FOR_EFFECTIVE_INPUT",
+        "units": "NOT_PROVEN_FOR_EFFECTIVE_INPUT",
         "support": "LOCAL_VALIDPARAMS_AND_DECLARED_INPUT_ONLY_NOT_CHECK_INPUT"
     }
 
