@@ -128,6 +128,14 @@ def prepare(root: Path, out: Path, head: str) -> dict:
     if git(root, "status", "--porcelain", "--untracked-files=no"):
         raise ValueError("CODE6_AB_TRACKED_WORKTREE_DIRTY")
     mod, raw = source_module()
+    for relpath, expected in (
+        ("physics_app/src/fvkernels/PhysicsFVMassFractionTimeDerivative.C",
+         "09b0f60eb6473ac295a690e463198c370fc2870b"),
+        ("physics_app/src/fvkernels/PhysicsFVConservativeMassFractionTimeDerivative.C",
+         "177a8d74bf9806cf9000f710b6583847ae6c0c58"),
+    ):
+        if git_blob((root / relpath).read_bytes()) != expected:
+            raise ValueError("CODE6_AB_KERNEL_SOURCE_DRIFT:" + relpath)
     old, new = pair_inputs(mod.runtime_input())
     if not hasattr(mod, "RHO") or not math.isfinite(mod.RHO) or mod.RHO <= 0:
         raise ValueError("CODE6_H05_INVALID_DECLARED_RHO")
