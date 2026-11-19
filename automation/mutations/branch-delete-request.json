@@ -1,29 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6-i3-ionfvm-p0-p2-keep-hold-20261118",
-      "expected_sha": "2ea2e52fda0ab81becfa63695599af45b3e914a2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-i3-ionfvm-p0-p2-keep-hold-20261118-2ea2e52fda0a"
+      "branch": "issue-671-p5-0-native-dualcase-74a2b0f-20261118",
+      "expected_sha": "805a86f0955b91879a0e4a0fc63fe7a9e0e59802",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-native-dualcase-74a2b0f-20261118-805a86f0955b"
     },
     {
-      "branch": "issue-672-p6-f3-p05-native-two-track-addendum-20261118",
-      "expected_sha": "1cebc5a83c2dff3bd1ca3a78cc9c05725095e09a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f3-p05-native-two-track-addendum-20261118-1cebc5a83c2d"
+      "branch": "issue-672-p6-d5-public-d-100-vs-42-dual-native-20261118",
+      "expected_sha": "ff9cbb5397c91aac8572a9c711fadddcbb7f6239",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d5-public-d-100-vs-42-dual-native-20261118-ff9cbb5397c9"
     },
     {
-      "branch": "issue-672-p6-d1-chemistry-lookup-authority-analysis-20261118",
-      "expected_sha": "ca487f3067e6b80011982043fd4baf5e5c629e1c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d1-chemistry-lookup-authority-analysis-20261118-ca487f3067e6"
+      "branch": "issue-671-p5x-common-w1-74a2-20261118",
+      "expected_sha": "b5c4cb8e32a5f7036db35962c7a68751505a5d8d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-common-w1-74a2-20261118-b5c4cb8e32a5"
     },
     {
-      "branch": "issue-672-p6-e2-lane-disposition-p7-handoff-20261118",
-      "expected_sha": "6b545d7f1eeba83890184f991ce6d4786d1ea099",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-e2-lane-disposition-p7-handoff-20261118-6b545d7f1eeb"
-    },
-    {
-      "branch": "issue-671-p5-0-singlebuild-74a2b0f-20261118",
-      "expected_sha": "1bd39952d7b05c442e5c5020924c7972ea165ff1",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-singlebuild-74a2b0f-20261118-1bd39952d7b0"
+      "branch": "issue-672-historical-100row-native-p2-custody-20261118",
+      "expected_sha": "ac8afa1a665c1069deb52f9f757fbfb80083b4e9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-historical-100row-native-p2-custody-20261118-ac8afa1a665c"
     }
   ]
 }
