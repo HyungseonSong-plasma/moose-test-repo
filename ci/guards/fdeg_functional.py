@@ -381,6 +381,7 @@ def consumer_role(edge: dict) -> str | None:
         "PYTHON_DECLARES_TYPE": "SOURCE_GENERATOR_DECLARATION_NOT_RUNTIME",
         "JSON_DECLARES_TYPE": "SOURCE_JSON_TYPE_NOT_RUNTIME",
         "MENTIONS_SYMBOL": "LEXICAL_MENTION_NOT_CONSUMER",
+        "GENERATOR_EMITS_OBJECT_CANDIDATE": "STATIC_GENERATOR_TYPE_ROUTE_NOT_RUNTIME",
     }.get(relationship)
 
 
@@ -397,6 +398,8 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
     witnesses, blobs = source_witnesses(root, profile)
     parameters = extract_parameters(root, profile)
     shared_unit = shared_unit_evidence(root, profile)
+    preservation = profile["preservation_contract"]
+    structural_enrichment = structural_report["enrichment"]
     registration = sorted(
         e["edge_id"] for e in structural_report["edges"]
         if e["to"] == "class:" + target and
@@ -426,7 +429,10 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         }
         edge["edge_id"] = structural.stable_id("functional-edge", edge)
         functional_edges.append(edge)
+    semantic_diffs = []
     for candidate in profile.get("alternatives", []):
+        candidate_witnesses = validate_candidate_source(root, candidate)
+        diff = candidate["comparison_contract"]
         edge = {
             "claim_id": "candidate:" + target + ":" + candidate["candidate_type"],
             "from": "class:" + target, "relation": "ALTERNATIVE_CANDIDATE",
@@ -434,12 +440,17 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
             "conditions": candidate.get("conditions", []),
             "counterexamples": candidate.get("semantic_risks", []),
             "required_proof": candidate.get("requires", "INDEPENDENT_PARITY_PROOF"),
+            "semantic_diff": diff,
             "evidence_kind": "REVIEW_REQUIREMENT_NOT_SOURCE_EQUIVALENCE",
             "claim_status": "CANDIDATE_UNVERIFIED",
-            "runtime_status": "NOT_OBSERVED", "witnesses": []
+            "runtime_status": "NOT_OBSERVED", "witnesses": candidate_witnesses
         }
         edge["edge_id"] = structural.stable_id("functional-edge", edge)
         functional_edges.append(edge)
+        semantic_diffs.append({
+            "candidate_type": candidate["candidate_type"], "functional_edge_id": edge["edge_id"],
+            "comparison_contract": diff, "candidate_source_witnesses": candidate_witnesses,
+            "equivalence_verdict": "NOT_PROVEN", "transition_permission": "HOLD"})
     if shared_unit is not None:
         for other in shared_unit["co_registered_classes"]:
             if other == target:
@@ -485,6 +496,11 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
                 or spec.get("status") != "NOT_EVALUATED"):
             raise ValueError("FUNCTIONAL_DISCRIMINATOR_CANNOT_ASSERT_PASS:" + name)
 
+    provider_map: dict[str, list[dict]] = {}
+    for item in structural_enrichment["provider_bindings"]:
+        provider_map.setdefault(item["instance_id"], []).append(item)
+    params_by_name = {p["name"]: p for p in parameters}
+
     consumers = []
     for edge in structural_report["edges"]:
         if edge["to"] != "class:" + target:
@@ -504,11 +520,76 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
                 (item["raw_value"] for item in instance["bindings"]
                  if item["name"] == "state_form"), "NOT_EXPLICITLY_SET")
                 if instance else "UNKNOWN",
-            "effective_runtime_binding": "NOT_OBSERVED",
+            "source_default_mode": (params_by_name["state_form"]["declared_default_expression"]
+                                    if "state_form" in params_by_name else "NOT_DECLARED_LOCALLY"),
+            "effective_runtime_binding": "UNKNOWN",
             "consumer_activation": "NOT_OBSERVED",
+            "provider_bindings": provider_map.get(instance["instance_id"], []) if instance else [],
+            "effective_functor_providers": "UNKNOWN",
+            "effective_time_integrator": "UNKNOWN",
+            "effective_state_and_face": "UNKNOWN",
+            "equation_term_owner": preservation["equation_term_owner"],
+            "functional_effect_if_removed": preservation["removal_effect"],
+            "applies_only_if_active": True,
+            "obligations": sorted(preservation["coupled_guards"] + preservation["explicit_refusals"]),
+            "required_discriminators": sorted(profile.get("required_discriminators", [])),
             "behavior_to_preserve": profile["capability"] if role != "LEXICAL_MENTION_NOT_CONSUMER" else None
         })
     consumers.sort(key=lambda c: (c["source_node"], c["structural_edge_id"]))
+    # Explicit per-input functional ownership; no promotion to executed equation.
+    for consumer in consumers:
+        if not consumer["instance_id"]:
+            continue
+        edge = {
+            "claim_id": "instance-owner:" + target + ":" + consumer["instance_id"],
+            "from": consumer["instance_id"],
+            "relation": "EQUATION_TERM_OWNER_CONDITIONAL",
+            "to": "equation:" + preservation["equation_term_owner"],
+            "source_structural_edge_id": consumer["structural_edge_id"],
+            "functional_claim_ids": preservation["claim_ids"],
+            "effect_if_active_removed": preservation["removal_effect"],
+            "mode": consumer["declared_mode"],
+            "runtime_status": "NOT_OBSERVED",
+            "claim_status": "DECLARED_INPUT_ONLY",
+            "evidence_kind": "STRUCTURAL_INSTANCE_PLUS_SOURCE_CONTRACT",
+            "witnesses": []
+        }
+        edge["edge_id"] = structural.stable_id("functional-edge", edge)
+        functional_edges.append(edge)
+        for binding in consumer["provider_bindings"]:
+            relation = {
+                "claim_id": "provider:" + target + ":" + consumer["instance_id"] +
+                            ":" + binding["parameter"],
+                "from": "functor:" + binding["declared_name"],
+                "relation": "EFFECTIVE_FUNCTIONAL_BINDING_CANDIDATE",
+                "to": consumer["instance_id"],
+                "source_structural_edge_id": consumer["structural_edge_id"],
+                "parameter": binding["parameter"],
+                "candidate_producers": binding["candidate_producers"],
+                "effective_provider": "UNKNOWN",
+                "claim_status": "SOURCE_DECLARATION_ONLY",
+                "runtime_status": "NOT_OBSERVED",
+                "evidence_kind": "STRUCTURAL_PROVIDER_CANDIDATE_NOT_RUNTIME",
+                "witnesses": [binding["evidence"]]
+            }
+            relation["edge_id"] = structural.stable_id("functional-edge", relation)
+            functional_edges.append(relation)
+    for name, spec in sorted(discriminators.items()):
+        item = {
+            "claim_id": "discriminator:" + target + ":" + name,
+            "from": "class:" + target, "relation": "REQUIRED_DISCRIMINATOR",
+            "to": "oracle:" + name,
+            "setup": spec["setup"], "observable": spec["observable"],
+            "expected": spec["expected"],
+            "acceptance_tolerance": spec.get("acceptance_tolerance", "OWNER_UNSPECIFIED"),
+            "claim_status": "NOT_EVALUATED", "runtime_status": "NOT_OBSERVED",
+            "evidence_kind": "REVIEWED_TEST_REQUIREMENT",
+            "witnesses": []
+        }
+        item["edge_id"] = structural.stable_id("functional-edge", item)
+        functional_edges.append(item)
+    functional_edges.sort(key=lambda e: (e["relation"], e["to"], e["claim_id"]))
+
     unresolved = sorted(set(profile.get("unresolved_semantics", [])) |
                         ({"STRUCTURAL_SCAN_INCOMPLETE"} if structural_report["status"] == "INCOMPLETE" else set()))
     report = {
@@ -530,13 +611,29 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
                                  for target_id in (edge["from"], edge["to"])})
         ],
         "shared_translation_unit": shared_unit,
+        "shared_file_retirement_requirement": (
+            "ALL_REGISTERED_CLASSES_MUST_BE_DISCONNECTED"
+            if shared_unit else "SINGLE_CLASS_SOURCE_PENDING_VERIFICATION"),
+        "preservation_contract": preservation,
         "consumer_contracts": consumers,
+        "semantic_replacement_diffs": semantic_diffs,
+        "producer_binding_graph": structural_enrichment["provider_bindings"],
+        "generator_consumer_routes": structural_enrichment["generator_routes"],
+        "build_and_header_ownership": {
+            "build": structural_enrichment["build_ownership"],
+            "translation_units": structural_enrichment["shared_translation_units"]},
+        "workflow_execution_routes": structural_enrichment["workflow_execution_paths"],
+        "external_generator_imports": structural_enrichment["external_imports"],
+        "target_scoped_unresolved": structural_report["target_scoped_unresolved"],
         "required_discriminators": sorted(profile.get("required_discriminators", [])),
         "discriminator_contracts": {key: discriminators[key] for key in sorted(discriminators)},
         "parameter_declarations": parameters,
         "discriminator_evidence_status": "NOT_EVALUATED",
         "historical_guards": sorted(profile.get("historical_guards", [])),
         "unresolved_obligations": unresolved,
+        "consumer_binding_verdict": "DECLARED_ONLY_EFFECTIVE_UNKNOWN",
+        "replacement_verdict": "ALL_CANDIDATES_UNVERIFIED",
+        "discriminator_verdict": "NOT_EVALUATED",
         "runtime_observation": "NOT_OBSERVED",
         "equivalence_verdict": "NOT_PROVEN",
         "status": "FUNCTIONAL_SOURCE_RECORDED_WITH_OPEN_OBLIGATIONS",
