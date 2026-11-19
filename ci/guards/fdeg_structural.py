@@ -476,14 +476,41 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     scoped_unresolved = [
         entry for entry in unresolved
         if (entry["path"], entry["line"]) in evidence_lines]
+    generator_paths = {e["evidence"]["path"] for e in selected
+                       if e["relation"] in {"GENERATOR_EMITS_OBJECT_CANDIDATE",
+                                           "PYTHON_TEMPLATE_INSTANTIATES",
+                                           "PYTHON_DECLARES_TYPE"}}
+    target_input_paths = {item["input_path"] for item in instance_list
+                          if item["input_path"].endswith(".i")}
+    # Same-source unknown writes/includes can be upstream but not directly
+    # mapped to the target node. Preserve them in a separate class rather
+    # than hiding them or treating all workflow diagnostics as target blockers.
+    upstream_unresolved = [
+        entry for entry in unresolved
+        if (entry["path"], entry["line"]) not in evidence_lines
+        and ((entry["path"] in generator_paths
+              and entry["reason"].startswith(("GENERATED_INPUT_NOT_TRACKED",
+                                               "DYNAMIC_PYTHON_TYPE",
+                                               "GENERATED_INPUT_NOT_TRACKED_OR_OBSERVED")))
+             or (entry["path"] in target_input_paths
+                 and entry["reason"].startswith("INCLUDE_UNRESOLVED")))]
+    global_only_unresolved_count = (
+        len(unresolved) - len(scoped_unresolved) - len(upstream_unresolved))
     global_status = "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED"
-    target_status = ("INCOMPLETE" if scoped_unresolved or missing_template_declarations
+    target_status = ("INCOMPLETE" if scoped_unresolved or upstream_unresolved
+                     or missing_template_declarations
                      else "DECLARATIONS_ONLY_RUNTIME_UNVERIFIED")
     report = {"schema": SCHEMA, "target": target, "repository_head": head,
               "global_scan_status": global_status,
               "target_dependency_status": target_status,
               "global_unresolved_count": len(unresolved),
               "target_scoped_unresolved_count": len(scoped_unresolved),
+              "upstream_unresolved_count": len(upstream_unresolved),
+              "global_only_unresolved_count": global_only_unresolved_count,
+              "unresolved_scope_semantics": {
+                  "target": "SAME_SOURCE_WITNESS_LINE",
+                  "upstream": "TARGET_GENERATOR_OR_DECLARED_INPUT_SOURCE_WITH_UNRESOLVED_DEPENDENCY",
+                  "global": "NOT_CAUSALLY_JOINED_TO_TARGET"},
               "source_template_census": {
                   "declared_lines": template_declarations,
                   "mapped_virtual_instances": len(mapped_declarations),
@@ -498,6 +525,7 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
               "nodes": nodes, "edges": selected, "instances": instance_list,
               "enrichment": enrichment,
               "target_scoped_unresolved": sorted(scoped_unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
+              "upstream_unresolved": sorted(upstream_unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
               "unresolved": sorted(unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
               "scan_errors": errors,
               "status": "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED",
