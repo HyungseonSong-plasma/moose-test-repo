@@ -1,15 +1,15 @@
-name: Issue673 100us original Exodus plus HPEM electron profiles S6-417 S6-941
+name: Issue673 New Physics public Boltzmann rates 100us Exodus HPEM S6-417 S6-941
 on:
   push:
     branches:
-      - issue-673-publicd100-exodus-hpem-100us-20261119
+      - issue-673-newphysics-publicboltz-rates-100us-20261119
     paths:
       - .github/workflows/issue673-publicd100-electron-r0-z23-slices-100us-once.yml
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: issue673-exodus-hpem-945-100us
+  group: issue673-publicboltz-rates-945-100us
   cancel-in-progress: false
 jobs:
   exact-head-full-s6-rf:
@@ -32,7 +32,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Fail closed for exact PR665 base and one approved workflow before private EI access
+      - name: Fail closed for exact PR665 base and one approved workflow before verified public Boltzmann staging
         shell: bash
         run: |
           set -euo pipefail
@@ -252,10 +252,8 @@ jobs:
           echo "24f72104a12c087c36ec5107fb4c581276ffe110ee01b7d9fea48ab058eb9ad8  experiments/Issue493_s6_boltzmann/reference/reference_vertical.csv" | sha256sum --check -
           echo "8e6856a46273b00058428874d3bcbe89dadddd0038e803565c8dfab1c220eff8  experiments/Issue493_s6_boltzmann/reference/reference_horizontal.csv" | sha256sum --check -
           echo ISSUE673_NATIVE_NE_R0_Z23_REFERENCE_CHECKER_SELFTEST_PASS
-      - name: P3 Native 100us solver and same-run electron r0/z23 PNG/CSV extraction
+      - name: P3 Native public Boltzmann 100us and same-run electron r0/z23 PNG/CSV extraction
         shell: bash
-        env:
-          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
         run: |
           set -euo pipefail
           umask 077
@@ -265,17 +263,48 @@ jobs:
           import os,sys,re,json,hashlib,tempfile,subprocess,shlex,shutil,csv,math
           staged=Path(sys.argv[1]); repo=Path(sys.argv[2]); pre=Path(sys.argv[3])
           out=Path(sys.argv[4]); head=sys.argv[5]; oci=sys.argv[6]
-          sys.path.insert(0,str(repo/"ci"/"guards"))
-          from issue671_secure_ei_rate_scratch import read_hashed_rows,REQUIRED,EXPECTED,validate_rows
           meta=json.loads(pre.read_text())
           dg=lambda p:hashlib.sha256(Path(p).read_bytes()).hexdigest()
-          orig_meta, original=read_hashed_rows()
-          assert set(original)==set(EXPECTED)
-          assert all(orig_meta[n]["sha256_match"] and orig_meta[n]["numeric_shape_pass"] for n in EXPECTED)
-          os.environ.pop("PROTECTED_ARCHIVE_B64",None)
+          # Public Boltzmann tables: exact same Git blobs as hybrid S6-941/417 baseline.
+          # No protected/private rate input or Actions secret is read by this run.
+          PUBLIC_BOLTZ_GIT_BLOBS={
+              "EI-415_O2_X.txt":"4ece8676cd98d14bab534edbdf1a6fd9c8be7cf6",
+              "EI-401_O2_X.txt":"24df46abe6bf001be650785415446e5be245622a",
+              "EI-417_O2_X.txt":"f005d856b75209fc4e3df0c1904f526907d40fc2",
+              "EI-941_O_3P.txt":"1c85c36afbc9249f79aaff09cdcb564700649b9b",
+              "EI-407_O2_X.txt":"0069d5a506ae85ff5d994049a7de34d25d439918",
+              "EI-2069_O2_a1Delta.txt":"f23a9efc1ee35882734768a1db93057bbf901c63",
+          }
+          REQUIRED_BOLTZ={
+              "417":frozenset(PUBLIC_BOLTZ_GIT_BLOBS)-{"EI-941_O_3P.txt"},
+              "941":frozenset(PUBLIC_BOLTZ_GIT_BLOBS)-{"EI-417_O2_X.txt"},
+          }
+          assert all(len(v)==5 for v in REQUIRED_BOLTZ.values())
+          def verified_public_boltz(name):
+              assert name in PUBLIC_BOLTZ_GIT_BLOBS
+              source=repo/"physics_app"/"data"/"electron_impact"/"boltz"/name
+              assert source.is_file() and not source.is_symlink()
+              git_blob=subprocess.run(
+                  ["git","-C",str(repo),"hash-object","--",str(source)],
+                  check=True,capture_output=True,text=True).stdout.strip()
+              assert git_blob==PUBLIC_BOLTZ_GIT_BLOBS[name],("PUBLIC_BOLTZ_SOURCE_DRIFT",name)
+              content=source.read_bytes()
+              rows=[]
+              for raw in content.decode("ascii").splitlines():
+                  parts=raw.split()
+                  assert len(parts)==2,("PUBLIC_BOLTZ_RATE_SHAPE",name)
+                  energy,rate=map(float,parts)
+                  assert math.isfinite(energy) and math.isfinite(rate) and rate>=0
+                  assert not rows or energy>rows[-1][0]
+                  rows.append((energy,rate))
+              assert len(rows)==100,("PUBLIC_BOLTZ_RATE_ROWS",name,len(rows))
+              return content
           binary=repo/"physics_app"/"physics-opt"
-          receipt={"schema":"issue673.p3p4.public_d_original100_100us.v1",
+          receipt={"schema":"issue673.p3p4.public_d_original100_publicboltz_100us.v1",
                    "source_HEAD":head,"OCI":oci,"binary_sha256":dg(binary),
+                   "rate_mode":"PUBLIC_BOLTZ_100ROW_5EI_PER_CASE",
+                   "rate_baseline_source_HEAD":"af4a9e896328386723e8bbb957f334e1d83fe75e",
+                   "transport_mode":"PUBLIC_D_ORIGINAL_100ROW",
                    "all_11_layer_files_original_post_p4x":True,
                    "rf_enabled":True,"original_TimeSequenceStepper":True,
                    "d8_wall_current_poisson_postprocessors_required":34,
@@ -690,14 +719,19 @@ jobs:
                               rate_dir=chem/"private_rates"
                               assert not rate_dir.exists() and not rate_dir.is_symlink()
                               rate_dir.mkdir(mode=0o700)
-                              for name in sorted(REQUIRED[case]):
-                                  assert validate_rows(original[name])==100
-                                  assert hashlib.sha256(original[name]).hexdigest()==EXPECTED[name]
+                              r["public_boltz_rates"]={}
+                              for name in sorted(REQUIRED_BOLTZ[case]):
+                                  content=verified_public_boltz(name)
                                   target=rate_dir/name
                                   fd=os.open(target,os.O_CREAT|os.O_EXCL|os.O_WRONLY|getattr(os,"O_NOFOLLOW",0),0o600)
-                                  with os.fdopen(fd,"wb") as f: f.write(original[name])
-                                  assert dg(target)==EXPECTED[name] and target.stat().st_mode&0o777==0o600
-                              r["protected_EI_count"]=len(REQUIRED[case])
+                                  with os.fdopen(fd,"wb") as f: f.write(content)
+                                  digest=hashlib.sha256(content).hexdigest()
+                                  assert dg(target)==digest and target.stat().st_mode&0o777==0o600
+                                  r["public_boltz_rates"][name]={
+                                      "sha256":digest,"git_blob":PUBLIC_BOLTZ_GIT_BLOBS[name],"rows":100}
+                              r["public_boltz_ei_count"]=len(REQUIRED_BOLTZ[case])
+                              assert r["public_boltz_ei_count"]==5
+                              print("PUBLIC_BOLTZ_SOURCE_BOUND_FIVE_RATES_PASS",case,flush=True)
                               expected=meta[case]
                               assert len(expected["ordered_inputs"])==11
                               assert all(dg(chem/n)==s for n,s in expected["11_layer_sha256"].items())
@@ -1052,7 +1086,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue673-publicd100-S6-${{ matrix.case }}-P3P4-100us-9457191
+          name: issue673-publicboltz100-S6-${{ matrix.case }}-P3P4-100us-9457191
           path: |
             ${{ runner.temp }}/p05-in/p4_receipt.json
             ${{ runner.temp }}/p05-in/physics-opt.sha256
