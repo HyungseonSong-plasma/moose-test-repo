@@ -48,6 +48,21 @@ def _strings(node) -> tuple[str, ...]:
     raise ValueError("WORKFLOW_EXPECTED_STRING_OR_SEQUENCE")
 
 
+def _literal(node, ancestors: frozenset[int] = frozenset()):
+    """Preserve source-declared YAML structure, not interpreted runtime semantics."""
+    if id(node) in ancestors or len(ancestors) > 32:
+        raise ValueError("WORKFLOW_YAML_RECURSION_OR_DEPTH")
+    parents = ancestors | {id(node)}
+    if isinstance(node, ScalarNode):
+        return node.value
+    if isinstance(node, SequenceNode):
+        return [_literal(item, parents) for item in node.value]
+    if isinstance(node, MappingNode):
+        return {key: _literal(value, parents)
+                for key, value in _mapping(node).items()}
+    raise ValueError("WORKFLOW_UNSUPPORTED_YAML_NODE")
+
+
 class WorkflowCollector:
     name = "workflow"
     version = "github-actions-static-v0.1"
@@ -110,12 +125,13 @@ class WorkflowCollector:
             return uid
 
         def make_edge(src: str, dst: str, relation: str,
-                      eid: str, discriminator: str = "") -> None:
+                      eid: str, discriminator: str = "",
+                      *, attributes=None) -> None:
             edges.append(Edge(
                 id=graph_edge_id(src, dst, relation, discriminator),
                 source_id=src, target_id=dst, relation=relation,
                 discriminator=discriminator or None,
-                evidence_ids=(eid,),
+                attributes=attributes or {}, evidence_ids=(eid,),
             ))
 
         def unresolved_target(kind: str, identity: tuple[str, ...], name: str,
@@ -139,17 +155,26 @@ class WorkflowCollector:
         if events is None:
             unresolved.append("MISSING_WORKFLOW_EVENTS")
         else:
-            if isinstance(events, MappingNode):
-                event_names = tuple(_mapping(events))
-            else:
-                event_names = _strings(events)
-            for event in event_names:
-                line = events.start_mark.line + 1
+            event_configs = (
+                _mapping(events) if isinstance(events, MappingNode)
+                else {event: None for event in _strings(events)}
+            )
+            for event, config_node in event_configs.items():
+                line = (
+                    config_node.start_mark.line + 1
+                    if config_node is not None else events.start_mark.line + 1
+                )
                 eid = witness("event", line, event)
                 event_id = stable_id("node", request.repository, "event", event)
                 nodes.append(Node(id=event_id, kind="workflow_event", name=event,
                                   evidence_ids=(eid,)))
-                make_edge(workflow_id, event_id, "DECLARES_TRIGGER", eid, event)
+                config = _literal(config_node) if config_node is not None else None
+                make_edge(
+                    workflow_id, event_id, "DECLARES_TRIGGER", eid, event,
+                    attributes={"filter_declaration": config},
+                )
+                if config is not None and "${{" in str(config):
+                    unresolved.append(f"DYNAMIC_EVENT_FILTER:{event}")
 
         jobs_node = root.get("jobs")
         if jobs_node is None:
@@ -165,8 +190,13 @@ class WorkflowCollector:
             job_data = _mapping(job_spec)
             line = job_spec.start_mark.line + 1
             job_eid = witness("job", line, job_name)
-            job_id = make_node("workflow_job", (record.path, job_name),
-                               job_name, line, job_eid)
+            job_id = make_node(
+                "workflow_job", (record.path, job_name), job_name, line,
+                job_eid, attributes={"static_config": {
+                    key: _literal(value) for key, value in job_data.items()
+                    if key not in {"steps", "needs"}
+                }},
+            )
             if job_id != job_ids[job_name]:
                 raise ValueError("INTERNAL_JOB_ID_DISAGREEMENT")
             make_edge(workflow_id, job_id, "DECLARES_JOB", job_eid, job_name)
@@ -190,8 +220,10 @@ class WorkflowCollector:
                                   eid, dependency)
 
             if_node = job_data.get("if")
-            if if_node is not None and "${{" in _scalar(if_node):
-                unresolved.append(f"DYNAMIC_JOB_CONDITION:{job_name}")
+            if if_node is not None:
+                unresolved.append(f"DYNAMIC_JOB_CONDITION:{job_name}"
+                                  if "${{" in _scalar(if_node)
+                                  else f"JOB_CONDITION_NOT_EVALUATED:{job_name}")
             strategy = job_data.get("strategy")
             if strategy is not None:
                 if "matrix" in _mapping(strategy):
@@ -228,12 +260,19 @@ class WorkflowCollector:
                 eid = witness("step", step_line, f"{job_name}:{explicit_id}")
                 step_id = make_node(
                     "workflow_step", (record.path, job_name, explicit_id),
-                    step_name, step_line, eid,
+                    step_name, step_line, eid, attributes={"static_config": {
+                        key: _literal(value) for key, value in step_data.items()
+                        if key not in {"run", "uses"}
+                    }},
                 )
                 make_edge(job_id, step_id, "DECLARES_STEP", eid, explicit_id)
                 step_if = step_data.get("if")
-                if step_if is not None and "${{" in _scalar(step_if):
-                    unresolved.append(f"DYNAMIC_STEP_CONDITION:{job_name}:{explicit_id}")
+                if step_if is not None:
+                    unresolved.append(
+                        f"DYNAMIC_STEP_CONDITION:{job_name}:{explicit_id}"
+                        if "${{" in _scalar(step_if)
+                        else f"STEP_CONDITION_NOT_EVALUATED:{job_name}:{explicit_id}"
+                    )
                 for key, relation, kind in (
                     ("run", "DECLARES_RUN_COMMAND", "declared_command"),
                     ("uses", "DECLARES_ACTION_USE", "declared_action"),

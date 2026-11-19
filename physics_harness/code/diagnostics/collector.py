@@ -111,6 +111,8 @@ class CollectionResult:
             raise TypeError("collection batch must be a FactBatch")
         if self.status not in COLLECTION_STATUSES:
             raise ValueError("UNKNOWN_COLLECTION_STATUS")
+        if self.status == "COMPLETE" and (self.batch.unresolved or self.errors):
+            raise ValueError("FALSE_COMPLETE_COLLECTION")
         if not isinstance(self.errors, tuple) or any(
             not isinstance(e, str) or not e for e in self.errors
         ):
@@ -271,6 +273,9 @@ def run_scan(
             except Exception as exc:
                 final_status = "FAILED"
                 all_details.append(f"COLLECTOR_FAILED:{handler.name}:{type(exc).__name__}")
+        if time.monotonic() - started > request.budget.max_seconds:
+            final_status = "UNRESOLVED" if final_status == "SCANNED" else final_status
+            all_details.append("TIME_BUDGET_EXCEEDED")
         receipts.append(FileCoverage(
             record.path, record.blob_sha, final_status,
             collectors=tuple(c.name for c in handlers),
@@ -285,5 +290,7 @@ def run_scan(
     receipt = create_receipt(
         request, scope_id=scope_id, files=receipts,
         collector_versions=versions, unresolved=tuple(unresolved),
+        attempted_files=attempted, read_bytes=read_bytes,
+        elapsed_seconds=time.monotonic() - started,
     )
     return GraphAssembler().assemble(request, tuple(batches), receipt)

@@ -40,6 +40,10 @@ def test_exact_git_head_and_source_blob_provenance(git_factory):
     assert first.receipt == again.receipt
     assert first.status == "COMPLETE"
     assert first.receipt.scanned_count == 1
+    assert first.receipt.attempted_files == 1
+    assert first.receipt.read_bytes == len(SIMPLE.encode("utf-8"))
+    assert first.receipt.elapsed_seconds >= 0.0
+    assert first.receipt.budget == request(head).budget
     assert first.graph.scope.revision == head
     assert first.receipt.collector_versions == (("workflow", "github-actions-static-v0.1"),)
     assert {item.observation_status for item in first.graph.evidence} == {"SOURCE_DECLARED"}

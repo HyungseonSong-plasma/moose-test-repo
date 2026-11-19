@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from ..graph import Edge, Evidence, GraphSnapshot, Node, Scope
-from .collector import FactBatch, scan_scope_id
+from .collector import FactBatch, graph_edge_id, scan_scope_id
 from .receipt import EvidenceReceipt
 from .request import ScanRequest
 
@@ -51,6 +51,12 @@ class GraphAssembler:
             batch_unresolved.update(batch.unresolved)
             unresolved_targets.extend(batch.unresolved_targets)
             for item in batch.evidence:
+                if item.observation_status == "RUNTIME_OBSERVED":
+                    attrs = item.attributes
+                    if attrs.get("source_sha") != request.revision:
+                        raise ValueError("CROSS_HEAD_RUNTIME_EVIDENCE")
+                    if not all(attrs.get(key) for key in ("run_id", "attempt", "url")):
+                        raise ValueError("RUNTIME_RECEIPT_INCOMPLETE")
                 previous = evidence.get(item.id)
                 if previous is not None and previous != item:
                     raise ValueError(f"EVIDENCE_ID_CONFLICT: {item.id}")
@@ -67,6 +73,11 @@ class GraphAssembler:
                     )
                 nodes[item.id] = item
             for item in batch.edges:
+                if item.id != graph_edge_id(
+                    item.source_id, item.target_id, item.relation,
+                    item.discriminator or "",
+                ):
+                    raise ValueError(f"NONCANONICAL_EDGE_ID: {item.id}")
                 if not item.evidence_ids:
                     raise ValueError(f"EDGE_EVIDENCE_REQUIRED: {item.id}")
                 previous = edges.get(item.id)

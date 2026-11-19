@@ -71,7 +71,7 @@ def test_same_identity_conflicting_node_or_evidence_rejected():
 
 def test_assembler_rejects_unproven_edges_and_cross_scope_evidence():
     req, scope, receipt, ev1, ev2 = fixture()
-    missing = Edge("edge:unproven", "node:a", "node:b", "CALLS")
+    missing = Edge(graph_edge_id("node:a", "node:b", "CALLS"), "node:a", "node:b", "CALLS")
     with pytest.raises(ValueError, match="EDGE_EVIDENCE_REQUIRED"):
         GraphAssembler().assemble(
             req, (FactBatch(
@@ -89,7 +89,7 @@ def test_placeholder_creation_requires_explicit_unresolved_evidence():
     req, scope, receipt, ev1, ev2 = fixture()
     observed_missing = replace(ev2, observation_status="UNRESOLVED")
     unresolved = UnresolvedTarget("node:external", "unknown", observed_missing.id)
-    edge = Edge("edge:unknown", "node:a", "node:external", "REFERENCES",
+    edge = Edge(graph_edge_id("node:a", "node:external", "REFERENCES"), "node:a", "node:external", "REFERENCES",
                 evidence_ids=(ev1.id,))
     batch = FactBatch(
         (Node("node:a", "symbol", "A", evidence_ids=(ev1.id,)),),
@@ -115,10 +115,10 @@ def test_multigraph_parallel_edges_cycles_are_preserved():
         Node("node:c", "symbol", "C"),
     )
     edges = (
-        Edge("edge:1", "node:a", "node:b", "CALLS", evidence_ids=("ev:1",)),
-        Edge("edge:2", "node:a", "node:b", "IMPORTS", evidence_ids=("ev:1",)),
-        Edge("edge:3", "node:c", "node:b", "CALLS", evidence_ids=("ev:1",)),
-        Edge("edge:4", "node:b", "node:a", "CALLS", evidence_ids=("ev:2",)),
+        Edge(graph_edge_id("node:a", "node:b", "CALLS"), "node:a", "node:b", "CALLS", evidence_ids=("ev:1",)),
+        Edge(graph_edge_id("node:a", "node:b", "IMPORTS"), "node:a", "node:b", "IMPORTS", evidence_ids=("ev:1",)),
+        Edge(graph_edge_id("node:c", "node:b", "CALLS"), "node:c", "node:b", "CALLS", evidence_ids=("ev:1",)),
+        Edge(graph_edge_id("node:b", "node:a", "CALLS"), "node:b", "node:a", "CALLS", evidence_ids=("ev:2",)),
     )
     graph = GraphAssembler().assemble(
         req, (FactBatch(nodes, edges, (ev1, ev2)),), receipt,
@@ -126,3 +126,38 @@ def test_multigraph_parallel_edges_cycles_are_preserved():
     assert len(graph.edges) == 4
     assert graph.scope.completeness == "COMPLETE"
     assert [edge.target_id for edge in graph.edges].count("node:b") == 3
+
+
+
+def test_runtime_evidence_cannot_be_imported_from_different_head():
+    req, scope, receipt, ev1, ev2 = fixture()
+    run = Evidence(
+        "ev:run", "RUNTIME", "https://github.com/org/repo/actions/runs/1",
+        "GITHUB_ACTIONS_RUN", scope, observation_status="RUNTIME_OBSERVED",
+        attributes={"source_sha": "b" * 40, "run_id": 1,
+                    "attempt": 1, "url": "https://example.invalid/run/1"},
+    )
+    with pytest.raises(ValueError, match="CROSS_HEAD_RUNTIME_EVIDENCE"):
+        GraphAssembler().assemble(req, (FactBatch(evidence=(run,)),), receipt)
+    missing_receipt = replace(
+        run, attributes={"source_sha": req.revision, "run_id": 1},
+    )
+    with pytest.raises(ValueError, match="RUNTIME_RECEIPT_INCOMPLETE"):
+        GraphAssembler().assemble(
+            req, (FactBatch(evidence=(missing_receipt,)),), receipt,
+        )
+
+
+def test_invalid_noncanonical_edge_id_is_rejected():
+    req, scope, receipt, ev1, ev2 = fixture()
+    bad = Edge("edge:made_up", "node:a", "node:b", "CALLS",
+               evidence_ids=(ev1.id,))
+    with pytest.raises(ValueError, match="NONCANONICAL_EDGE_ID"):
+        GraphAssembler().assemble(
+            req,
+            (FactBatch(
+                (Node("node:a", "symbol", "A"), Node("node:b", "symbol", "B")),
+                (bad,), (ev1,),
+            ),),
+            receipt,
+        )

@@ -52,6 +52,9 @@ def test_workflow_job_step_dependency_trigger_and_run_are_declared_only(git_fact
     assert len([n for n in result.graph.nodes if n.kind == "workflow_job"]) == 2
     assert len([n for n in result.graph.nodes if n.kind == "workflow_event"]) == 2
     assert "on" not in [n.name for n in result.graph.nodes if n.kind == "workflow_event"]
+    trigger_edges = [e for e in result.graph.edges if e.relation == "DECLARES_TRIGGER"]
+    assert all(e.attributes["filter_declaration"]["branches"] == ("main",)
+               for e in trigger_edges)
     assert all(e.evidence_ids for e in result.graph.edges)
     assert all(ev.observation_status == "SOURCE_DECLARED" for ev in result.graph.evidence)
     assert not result.graph.claims
@@ -145,3 +148,52 @@ def test_workflow_provider_does_not_accept_non_workflow_yaml(git_factory):
     result = run_scan(req, GitSourceProvider(root))
     assert result.status == "PARTIAL"
     assert result.receipt.files[0].status == "UNSUPPORTED"
+
+
+
+def test_condition_without_braces_is_also_not_executed_evidence(git_factory):
+    content = """\
+on: [push]
+jobs:
+  test:
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: only on branch
+        if: success()
+        run: echo ok
+"""
+    result = scan(git_factory, content)
+    assert result.status == "PARTIAL"
+    assert "JOB_CONDITION_NOT_EVALUATED:test" in result.receipt.files[0].details
+    assert any(x.startswith("STEP_CONDITION_NOT_EVALUATED")
+               for x in result.receipt.files[0].details)
+    assert all(ev.observation_status != "RUNTIME_OBSERVED" for ev in result.graph.evidence)
+
+
+def test_nested_config_yaml_duplicate_key_and_merge_key_fail_closed(git_factory):
+    duplicate = """\
+on:
+  push:
+    branches: [main]
+    branches: [feature]
+jobs:
+  test:
+    steps:
+      - run: echo ok
+"""
+    result = scan(git_factory, duplicate)
+    assert result.status == "PARTIAL"
+    assert result.receipt.files[0].status == "FAILED"
+    merge = """\
+on: [push]
+defaults: &defaults
+  shell: bash
+jobs:
+  test:
+    <<: *defaults
+    steps:
+      - run: echo ok
+"""
+    result = scan(git_factory, merge)
+    assert result.status == "PARTIAL"
+    assert result.receipt.files[0].status == "FAILED"

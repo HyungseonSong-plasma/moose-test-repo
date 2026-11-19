@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from math import isfinite
 from collections.abc import Sequence
 
 from .collector import SourceRecord
-from .request import ScanRequest, normalized_path
+from .request import ScanBudget, ScanRequest, normalized_path
 
 
 FILE_STATUSES = frozenset({
@@ -45,6 +46,10 @@ class EvidenceReceipt:
     files: tuple[FileCoverage, ...]
     completeness: str
     unresolved: tuple[str, ...] = ()
+    budget: ScanBudget | None = None
+    attempted_files: int = 0
+    read_bytes: int = 0
+    elapsed_seconds: float = field(default=0.0, compare=False)
 
     def __post_init__(self) -> None:
         if self.completeness not in {"COMPLETE", "PARTIAL"}:
@@ -55,6 +60,16 @@ class EvidenceReceipt:
             raise ValueError("RECEIPT_DUPLICATE_PATH")
         if not isinstance(self.unresolved, tuple):
             raise TypeError("receipt.unresolved must be a tuple")
+        if self.budget is not None and not isinstance(self.budget, ScanBudget):
+            raise TypeError("receipt.budget must be a ScanBudget")
+        for name in ("attempted_files", "read_bytes"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"INVALID_RECEIPT_COUNTER:{name}")
+        if not isinstance(self.elapsed_seconds, (int, float)) or (
+            not isfinite(self.elapsed_seconds) or self.elapsed_seconds < 0
+        ):
+            raise ValueError("INVALID_RECEIPT_DURATION")
         eligible = [f for f in self.files if f.status != "EXCLUDED"]
         if self.completeness == "COMPLETE" and (
             not eligible or any(f.status != "SCANNED" for f in eligible)
@@ -78,6 +93,9 @@ def create_receipt(
     files: Sequence[FileCoverage],
     collector_versions: tuple[tuple[str, str], ...],
     unresolved: tuple[str, ...] = (),
+    attempted_files: int = 0,
+    read_bytes: int = 0,
+    elapsed_seconds: float = 0.0,
 ) -> EvidenceReceipt:
     records = tuple(sorted(files, key=lambda f: f.path))
     unique_unresolved = tuple(sorted(set(unresolved)))
@@ -96,4 +114,6 @@ def create_receipt(
         files=records,
         completeness="COMPLETE" if complete else "PARTIAL",
         unresolved=unique_unresolved,
+        budget=request.budget, attempted_files=attempted_files,
+        read_bytes=read_bytes, elapsed_seconds=elapsed_seconds,
     )

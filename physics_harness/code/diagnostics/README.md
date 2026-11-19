@@ -11,7 +11,7 @@ decision engine**. Issue [#721](https://github.com/HyungseonSong-plasma/moose-te
 | `request.py` | `ScanRequest`, exact 40-hex Git SHA, include/exclude, roots, file/byte/time budget |
 | `collector.py` | Logical IDs, `SourceProvider`/`Collector` contracts, `FactBatch`, `CollectionResult`, `run_scan` |
 | `assemble.py` | `GraphAssembler`, deterministic merge, collision rejection, unresolved placeholder nodes, `GraphSnapshot` |
-| `receipt.py` | `EvidenceReceipt` with per-file coverage, collector version, unresolved, scope completeness |
+| `receipt.py` | `EvidenceReceipt` with per-file coverage, collector version, file/byte/time budget, attempt count, elapsed time, unresolved and scope completeness |
 | `providers/git.py` | Tracked source inventory and exact blob bytes from a verified HEAD; no worktree fallback |
 | `providers/workflow.py` | Static GitHub Actions Workflow/Job/Step/needs/event/run/uses source facts |
 
