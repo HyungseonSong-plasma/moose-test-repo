@@ -98,6 +98,25 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
       - name: Validate FDEG Transition Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Validate code7 staged-input census negative controls
+        if: github.event_name == 'pull_request'
+        run: python3 -m unittest discover -s tests -p test_code7_s6_final_input_census.py -v
+      - name: Generate code7 exact-HEAD retirement evidence P0
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/code7_retirement_evidence.py \
+            --expected-head "$(git rev-parse HEAD)" \
+            --output-dir "$RUNNER_TEMP/code7-fdeg"
+      - name: Upload code7 three-graph evidence (P0, HOLD)
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code7-fdeg-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/code7-fdeg/*.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
@@ -1461,6 +1480,25 @@ jobs:
           test "$first" -eq 0
           test "$second" -eq 0
           echo ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD
+      - name: G2 code7 exact-HEAD S6-417/941 staged Native input type census
+        if: github.head_ref == 'issue701-code7-retirement-pr-a-evidence'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          python3 -m unittest discover -s tests -p test_code7_s6_final_input_census.py -v
+          python3 ci/guards/code7_s6_final_input_census.py \
+            --expected-head "$EXPECTED_HEAD" \
+            --evidence-root ../issue541_arch_s6_p2_evidence \
+            --output ../issue541_arch_s6_p2_evidence/code7_final_input_census.json
+      - name: Upload code7 G2 S6 final input type census (no raw data)
+        if: always() && github.head_ref == 'issue701-code7-retirement-pr-a-evidence'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code7-g2-s6-${{ github.run_id }}-${{ github.run_attempt }}
+          path: issue541_arch_s6_p2_evidence/code7_final_input_census.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Always upload both S6 P2 diagnostics, no raw scratch or protected archive
         if: always()
         uses: actions/upload-artifact@v4
