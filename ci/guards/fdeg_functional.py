@@ -139,6 +139,26 @@ def verify_structural(root: Path, report: dict, target: str,
                 raise ValueError("STRUCTURAL_BINDING_WITNESS_MISMATCH")
 
 
+def function_span(source: str, qualified: str) -> tuple[int, int]:
+    """Locate a target C++ method's brace-delimited body in pinned source bytes."""
+    name = re.escape(qualified)
+    match = re.search(r'\b' + name + r'\s*\(\s*\)\s*', source)
+    if match is None:
+        raise ValueError("FUNCTIONAL_OWNER_FUNCTION_MISSING:" + qualified)
+    start = source.find("{", match.end())
+    if start < 0:
+        raise ValueError("FUNCTIONAL_OWNER_FUNCTION_BODY_MISSING:" + qualified)
+    depth = 0
+    for offset in range(start, len(source)):
+        if source[offset] == "{":
+            depth += 1
+        elif source[offset] == "}":
+            depth -= 1
+            if depth == 0:
+                return start, offset + 1
+    raise ValueError("FUNCTIONAL_OWNER_FUNCTION_UNBALANCED:" + qualified)
+
+
 def source_witnesses(root: Path, profile: dict) -> tuple[list[dict], dict]:
     """Verify pinned source bytes before accepting any source-supported claim."""
     source = profile.get("source")
@@ -165,9 +185,12 @@ def source_witnesses(root: Path, profile: dict) -> tuple[list[dict], dict]:
         if sha != expected_blob:
             raise ValueError("STALE_FUNCTIONAL_PROFILE_SOURCE_BLOB:" + path)
         blobs[path] = sha
+        start, stop = (0, len(decoded))
+        if claim.get("function_scope"):
+            start, stop = function_span(decoded, claim["function_scope"])
         for anchor in anchors:
-            offset = decoded.find(anchor)
-            if offset < 0:
+            offset = decoded.find(anchor, start, stop)
+            if offset < 0 or offset + len(anchor) > stop:
                 raise ValueError("FUNCTIONAL_SOURCE_ANCHOR_MISSING:" + claim["id"])
             line_start = decoded.count("\n", 0, offset) + 1
             line_end = line_start + anchor.count("\n")
@@ -194,12 +217,15 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
     if blob != source["blob_sha"]:
         raise ValueError("STALE_FUNCTIONAL_PROFILE_SOURCE_BLOB:" + path)
     body = data.decode("utf-8")
+    start, stop = function_span(body, profile["target"] + "::validParams")
+    segment = body[start:stop]
     params = []
-    for match in PARAM_DECL.finditer(body):
-        line = body.count("\n", 0, match.start()) + 1
-        end = body.find(";", match.end())
-        excerpt = body[match.start():end + 1 if end >= 0 else match.end()].strip()[:500]
-        raw_args = body[match.end():end if end >= 0 else match.end()].strip()
+    for match in PARAM_DECL.finditer(segment):
+        pos = start + match.start()
+        line = body.count("\n", 0, pos) + 1
+        end = segment.find(";", match.end())
+        excerpt = segment[match.start():end + 1 if end >= 0 else match.end()].strip()[:500]
+        raw_args = segment[match.end():end if end >= 0 else match.end()].strip()
         required = match.group(1) == "addRequiredParam"
         # A sole quoted argument after the name is a description, not a default.
         has_default = not required and raw_args.lstrip(", ").strip()[:1] != '"'
@@ -212,8 +238,8 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
             "runtime_effective_value": "NOT_OBSERVED",
             "witness": {"path": path, "line": line, "blob_sha": blob, "excerpt": excerpt}
         })
-    for match in PARAM_SET.finditer(body):
-        line = body.count("\n", 0, match.start()) + 1
+    for match in PARAM_SET.finditer(segment):
+        line = body.count("\n", 0, start + match.start()) + 1
         params.append({
             "name": match.group(2), "cpp_type": " ".join(match.group(1).split()),
             "declaration": "set_default", "required": False,
