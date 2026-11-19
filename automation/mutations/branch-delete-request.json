@@ -1,19 +1,19 @@
 {
   "targets": [
     {
-      "branch": "verify-wave1-dd-retired-main-reconciled-20261116",
-      "expected_sha": "0f53a66cae4551fc4198a718c9b4655e737d12c3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/verify-wave1-dd-retired-main-reconciled-20261116-0f53a66cae45"
+      "branch": "issue-541-task3-updated-553-34a3539-20261116",
+      "expected_sha": "c2e65d8f388d354ad434d23618a381d5972ebb94",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-task3-updated-553-34a3539-20261116-c2e65d8f388d"
     },
     {
-      "branch": "ci-only-wave1-s6-required-main-reconciled-20261116",
-      "expected_sha": "47bc954163d78a52fb96b58fba77eaec45a0ccec",
-      "archive_tag": "archive/oxygen-cleanup-20261106/ci-only-wave1-s6-required-main-reconciled-20261116-47bc954163d7"
+      "branch": "issue-541-task3-isolated-integration-20261116",
+      "expected_sha": "e47e045cc1db0c0def482fd91089a768a194bafe",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-task3-isolated-integration-20261116-e47e045cc1db"
     },
     {
-      "branch": "ci-only-wave1-dd-s6-postmerge-721655-20261116",
-      "expected_sha": "6bf62d5e2d6ff9d74bfc016244c0913803d89adf",
-      "archive_tag": "archive/oxygen-cleanup-20261106/ci-only-wave1-dd-s6-postmerge-721655-20261116-6bf62d5e2d6f"
+      "branch": "issue-541-wave1-a-flow-s6-20261116",
+      "expected_sha": "8eadb853b758763df75967c085a626352c8e352f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-wave1-a-flow-s6-20261116-8eadb853b758"
     }
   ]
 }
