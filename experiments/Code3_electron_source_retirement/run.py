@@ -14,8 +14,6 @@ import json
 import math
 from pathlib import Path
 
-from experiments.Issue192_s5r_representative import run as s5r
-from experiments.Issue216_w5_multistep_acceptance import run as w5
 from physics_harness.adapters.moose import parameters as mp
 from physics_harness.adapters.moose.input import MooseInput
 from physics_harness.execution.cases import stage_case, validate_case_references
@@ -89,6 +87,9 @@ def replace_electron_only(text: str, path: str = TARGET) -> tuple[str, dict]:
 
 def build_pair() -> tuple[str, str, dict]:
     """Use exactly one W5 assembly for both branches: one changed block."""
+    # Import W5 only for real generation: the pure P0 contract must run
+    # on Repository CI's minimal Python installation without polars/Native.
+    from experiments.Issue216_w5_multistep_acceptance import run as w5
     custom, meta = w5._build_case(
         dt_s=w5.BASELINE_DT_S, uniform_refine=0)
     standard, change = replace_electron_only(custom)
@@ -100,20 +101,41 @@ def build_pair() -> tuple[str, str, dict]:
 
 
 def self_test() -> dict:
-    custom, standard, meta = build_pair()
+    """Pure input contract: no W5 imports, no solver, no science PASS."""
+    raw = ("[FVKernels]\\n"
+           "  [s5r_electron_source]\\n"
+           "    type = PhysicsFVElectronReactionSource\\n"
+           "    variable = n_e\\n"
+           "    number_source = S_e_s5r\\n"
+           "    n_ref = 4\\n"
+           "    block = plasma\\n"
+           "  []\\n"
+           "  [heavy]\\n"
+           "    type = PhysicsFVSpeciesReactionSource\\n"
+           "  []\\n"
+           "[]\\n")
+    # Literal Python source above must contain \\n escapes, not embedded newline.
+    custom = raw
+    standard, meta = replace_electron_only(custom)
+    physical = custom.replace("    n_ref = 4\\n",
+                              "    state_form = physical\\n")
+    physical_std, physical_meta = replace_electron_only(physical)
     checks = {
         "electron_only": _outside_target(custom) == _outside_target(standard),
         "custom_type": mp.get_parameter(custom, TARGET, "type") == OLD,
         "standard_type": mp.get_parameter(standard, TARGET, "type") == NEW,
         "same_source_functor": mp.get_parameter(standard, TARGET, "v") == "S_e_s5r",
-        "normalized_positive_coefficient": meta["change"]["coefficient"] > 0,
+        "normalized_nonunit_coefficient": meta["coefficient"] == 0.25,
+        "physical_unscaled": physical_meta["coefficient"] == 1.0
+                             and mp.get_parameter(physical_std, TARGET, "coef") == "1",
         "no_custom_parameters": all(
             mp.get_parameter(standard, TARGET, name) is None
             for name in ("number_source", "state_form", "n_ref")),
-        "no_second_custom_electron_projector": OLD not in standard,
+        "heavy_source_preserved": "PhysicsFVSpeciesReactionSource" in standard,
     }
     return {"status": "PASS" if all(checks.values()) else "FAIL",
-            "checks": checks, "native_evidence": "NOT_EXECUTED",
+            "checks": checks, "full_w5_generator": "NOT_EXECUTED",
+            "native_evidence": "NOT_EXECUTED",
             "numeric_equivalence": "NOT_PROVEN", "safe_delete": "HOLD"}
 
 
@@ -122,6 +144,7 @@ def _digest(text: str) -> str:
 
 
 def prepare(out: Path, executable: Path | None = None, timeout: float = 180.0) -> dict:
+    from experiments.Issue192_s5r_representative import run as s5r
     if out.exists():
         raise Code3ParityError("OUTPUT_ROOT_ALREADY_EXISTS")
     custom, standard, meta = build_pair()
