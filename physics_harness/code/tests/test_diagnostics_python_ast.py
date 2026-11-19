@@ -173,7 +173,7 @@ def test_nested_calls_sharing_start_position_get_distinct_canonical_nodes(git_fa
     assert result.status == "PARTIAL"
     calls = [n for n in result.graph.nodes if n.kind == "python_call_site"]
     assert {n.attributes["callee_expression"] for n in calls} == {
-        "getattr(obj, name)", "getattr(obj, name)(4)",
+        "getattr", "getattr(obj, name)",
     }
     assert len({n.id for n in calls}) == 2
     assert all(edge.evidence_ids for edge in result.graph.edges)
