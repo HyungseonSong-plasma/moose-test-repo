@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6-c3-6920d6-ci-readback-20261118",
-      "expected_sha": "04a63cea88e24793355fe82e4aac1b7927487ebb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-c3-6920d6-ci-readback-20261118-04a63cea88e2"
+      "branch": "issue-633-ci-route-final-p0-smoke-20261118",
+      "expected_sha": "921be3b5da79d437cbf10f4e291b467c130bf85d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ci-route-final-p0-smoke-20261118-921be3b5da79"
     },
     {
-      "branch": "issue-672-p1-p6-independent-artifact-audit-20261118",
-      "expected_sha": "2793cb4216242ac16f2279a90f4ace6db9b9be9f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p1-p6-independent-artifact-audit-20261118-2793cb421624"
+      "branch": "issue-671-p5x-520673-w1-warehouse-evidence-20261118",
+      "expected_sha": "46fc58b6251016b48c12829681493fb435a363c4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-520673-w1-warehouse-evidence-20261118-46fc58b62510"
     },
     {
-      "branch": "issue-671-p5x-warehouse-harness-glibc-custody-20261118",
-      "expected_sha": "ba40f2a880f7ee64571fee71fef21e68985c2b8e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-warehouse-harness-glibc-custody-20261118-ba40f2a880f7"
+      "branch": "issue-672-d2d4-public-d-original100-authority-p2-20261118",
+      "expected_sha": "946383b95666dbfbd20283c812a3eff618d9debe",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-d2d4-public-d-original100-authority-p2-20261118-946383b95666"
     },
     {
-      "branch": "issue-671-p5x-typed32-source-ledger-20261118",
-      "expected_sha": "9b7a55240880a178aa102483700746d7cd464db7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-typed32-source-ledger-20261118-9b7a55240880"
+      "branch": "issue-671-p5x-exact-52067302-w1-build-20261118",
+      "expected_sha": "5a75b85ae9a0d5e92140ec97ae710919ac46524b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-52067302-w1-build-20261118-5a75b85ae9a0"
     },
     {
-      "branch": "issue-633-ci-route-e2e-smoke-20261118",
-      "expected_sha": "12d5eb0e527b03cbe5695a08825e3b25a8017f7a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ci-route-e2e-smoke-20261118-12d5eb0e527b"
+      "branch": "issue-673-p7-handoff-c-d-c3-evidence-20261118",
+      "expected_sha": "5dec1d9062d2ebf991067671c3cfe5a3f438e9d7",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-handoff-c-d-c3-evidence-20261118-5dec1d9062d2"
     }
   ]
 }
