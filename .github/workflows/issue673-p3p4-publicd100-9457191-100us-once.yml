@@ -1,6 +1,10 @@
-name: Issue673 P3P4 PublicD original100 9457191 400W 100us staged
+name: Issue673 approved P3P4 417-941 PublicD100 full 100us 400W
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - issue-673-p3p4-publicd100-9457191-20261118
+    paths:
+      - .github/workflows/issue673-p3p4-publicd100-9457191-100us-once.yml
 permissions:
   contents: read
   actions: read
