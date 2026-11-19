@@ -1084,6 +1084,51 @@ jobs:
       - name: P1 - Build PhysicsApp and verify generated and native solver operators
         shell: bash
         run: bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+      - name: Code3 PR-A - paired electron-only W5 Native P2 (no P3)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x physics_app/physics-opt
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" \
+            -v "$RUNNER_TEMP:/code3-temp" "$EXPECTED_BUILD_BASE_REF" -lc '
+            set -euo pipefail
+            source /environment
+            python3 -m experiments.Code3_electron_source_retirement.run \
+              --prepare /code3-temp/code3-electron-ab-p2 \
+              --physics-opt /workspace/physics_app/physics-opt
+          '
+          cp experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json \
+            "$RUNNER_TEMP/code3-electron-ab-p2/p1_identity.json"
+          python3 - "$RUNNER_TEMP/code3-electron-ab-p2" "$(git rev-parse HEAD)" <<'PY'
+          import hashlib, json, pathlib, sys
+          out, head = pathlib.Path(sys.argv[1]), sys.argv[2]
+          a = json.loads((out / "evidence.json").read_text())
+          p1 = json.loads((out / "p1_identity.json").read_text())
+          with pathlib.Path("physics_app/physics-opt").open("rb") as stream:
+              h = hashlib.sha256()
+              for chunk in iter(lambda: stream.read(1 << 20), b""):
+                  h.update(chunk)
+          assert p1["source_sha"] == head
+          assert p1["binary_sha256"] == h.hexdigest()
+          assert a["scope"] == "ELECTRON_SOURCE_ONLY"
+          assert a["safe_delete"] == "HOLD" and a["P3"] == "NOT_EXECUTED"
+          assert a["residual_jacobian_parity"] == "NOT_EVALUATED"
+          assert set(a["cases"]) == {"custom", "standard"}
+          assert all(x["P2"]["returncode"] == 0 for x in a["cases"].values())
+          print("CODE3_SINGLE_ELECTRON_SOURCE_PAIRED_NATIVE_P2=PASS; PARITY=NOT_PROVEN")
+          PY
+      - name: Upload code3 electron-only P2 inputs/logs and binary provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code3-electron-only-p2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/code3-electron-ab-p2/evidence.json
+            ${{ runner.temp }}/code3-electron-ab-p2/*.log
+            ${{ runner.temp }}/code3-electron-ab-p2/p1_identity.json
+          if-no-files-found: warn
+          retention-days: 30
       # Distinct step: an S6 input or cleanup failure cannot erase earlier
       # Native build/small-fixture results. The exact P1 binary is reused.
       - name: P2 - Public S6-417 and S6-941 four-way Native input checks
