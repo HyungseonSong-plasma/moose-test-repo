@@ -1,29 +1,14 @@
 {
   "targets": [
     {
-      "branch": "issue-670-p4-v2-941-source-20261118",
-      "expected_sha": "85a30b36eff5da7ddda236d2feaf7d72c8e67853",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-v2-941-source-20261118-85a30b36eff5"
+      "branch": "issue-402-plasma-gas-state",
+      "expected_sha": "7ddf3e386c42132eac3feff510a44280dcb3a7c9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-plasma-gas-state-7ddf3e386c42"
     },
     {
-      "branch": "issue-670-p4-v3-source-rate-density-negative-20261118",
-      "expected_sha": "3f5779232fb7963f999488ffb05c68511862234a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-v3-source-rate-density-negative-20261118-3f5779232fb7"
-    },
-    {
-      "branch": "issue-670-p4-v4-fvbc-wall-current-20261118",
-      "expected_sha": "a0319a70efda6f99f8911efed9eacadbcf9250b8",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-v4-fvbc-wall-current-20261118-a0319a70efda"
-    },
-    {
-      "branch": "issue-670-p4-w1-o2p-wall-source-20261118",
-      "expected_sha": "d014d48b8fb336579e57429cb5228ae18e0cc915",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w1-o2p-wall-source-20261118-d014d48b8fb3"
-    },
-    {
-      "branch": "issue-670-p4-w2-om-wall-flux-20261118",
-      "expected_sha": "30fbbe2f5dc01ecde0a50890e403d9944cd9f1b8",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w2-om-wall-flux-20261118-30fbbe2f5dc0"
+      "branch": "issue-402-sccm-inlet-flow-conversion",
+      "expected_sha": "afa0c2564c69b377d47d5804e365c9baf13a0d70",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-sccm-inlet-flow-conversion-afa0c2564c69"
     }
   ]
 }
