@@ -11,7 +11,7 @@ Structural builds a tracked-source snapshot and source-evidence graph. Functiona
 When `FDEG_CACHE_DIR` is set to an absolute directory **outside the repository**, `fdeg_structural.scan()` uses two read-through layers:
 
 1. **Per-target graph cache** — one previously built, complete `fdeg.structural.v0.3` report for the same exact `repository_head`, target, source root, Python version and implementation fingerprint. On hit, **no repository file listing, read or AST analysis** is repeated. Cache entries preserve existing graph IDs, edges, errors, blockers, witness lines and safety fields byte-for-byte.
-2. **Shared tracked-source index** — one compressed, full set of decoded tracked file contents, Git Blob SHA values and read errors per exact HEAD and Scanner implementation. A cold *different* target reuses this snapshot instead of doing another complete tracked-file read. That target still computes its own graph, including source-dependent unknowns; this deliberately does not silently restrict the candidate corpus to a lexical substring match.
+2. **Shared tracked-source index** — one compressed, full set of decoded tracked file contents, Git Blob SHA values and read errors per exact HEAD and Scanner implementation. A cold *different* target reuses this snapshot instead of doing another complete tracked-file read. The cached source path set and **every Git Blob SHA** are checked against the current HEAD's `git ls-files --stage` metadata; this is a metadata-only path census, not a re-read or re-parse of the files. That target still computes its own graph, including source-dependent unknowns; this deliberately does not silently restrict the candidate corpus to a lexical substring match.
 
 The first target on a new HEAD performs the normal full scan to populate both layers. A new target with no graph cache still parses the shared source set. **True target-scoped AST preindexing is not claimed or implemented here**; it needs separate source-role/completeness gates to avoid false caller-zero conclusions.
 
@@ -22,7 +22,7 @@ Cache identity includes exact Git HEAD, resolved repository root, target (for gr
 - A requested different `--expected-head`, or modified tracked files with an explicit expected head: **fail closed**.
 - Dirty tracked worktree with no expected head: **do not use cache**, fall back to ordinary source scanning.
 - Scanner implementation change, new Git commit, different repository/target: cache key changes; a new entry is generated.
-- Missing, invalid or corrupt JSON/gzip, wrong envelope, mismatching cache graph ID/SHA: **cache miss**, reconstruct from source. Failure to write the optional cache does not fail a valid scan.
+- Missing, invalid or corrupt JSON/gzip, wrong envelope, mismatching cache graph ID/SHA, or even a rehashed source-index payload with a missing/changed tracked Git blob: **cache miss**, reconstruct from source. Failure to write the optional cache does not fail a valid scan.
 - No `FDEG_CACHE_DIR` or non-Git/synthetic workspace: existing scan path and graph shape preserved.
 
 The cache is **runner-local scratch data**, never a reusable CI evidence artifact and never an authorization or trust substitute for independent physics evidence. Fresh exact-HEAD Git identity, Structural/Functional/Transition P0, Native independent oracle and Coverage gates remain mandatory. The offline pre-retirement S/F/T archive is a separate immutable deliverable and is never sourced from a different HEAD.
