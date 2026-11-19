@@ -25,6 +25,7 @@ def fixture_reports() -> dict:
             "repository_head": head,
             "graph_id": "structural-graph:" + str(index),
             "status": "INCOMPLETE",
+            "edges": [{"evidence": {"path": code5.SHARED_H, "blob_sha": "c" * 40}}],
         }
         f = {
             "target": target,
@@ -116,6 +117,7 @@ class Code5ManifestPureP0(unittest.TestCase):
             m["change_sites"]["rewire_candidates_NOT_APPROVED"],
             ["tests/maintained_case.i"])
         self.assertEqual(m["source_blob_sha"], "b" * 40)
+        self.assertEqual(m["header_blob_sha"], "c" * 40)
         self.assertEqual(
             m["manifest_id"], code5.structural.stable_id(
                 "code5-manifest", {k: v for k, v in m.items() if k != "manifest_id"}))
@@ -145,6 +147,12 @@ class Code5ManifestPureP0(unittest.TestCase):
         f["source_identity"]["source_blobs"][code5.SHARED_C] = "c" * 40
         records[code5.TARGETS[1]] = (records[code5.TARGETS[1]][0], f, records[code5.TARGETS[1]][2])
         with self.assertRaisesRegex(ValueError, "CODE5_SHARED_SOURCE_BLOB_DIVERGED"):
+            code5.build_manifest("a" * 40, records)
+        records = fixture_reports()
+        s = copy.deepcopy(records[code5.TARGETS[2]][0])
+        s["edges"][0]["evidence"]["blob_sha"] = "d" * 40
+        records[code5.TARGETS[2]] = (s, *records[code5.TARGETS[2]][1:])
+        with self.assertRaisesRegex(ValueError, "CODE5_SHARED_HEADER_BLOB_DIVERGED"):
             code5.build_manifest("a" * 40, records)
         records = fixture_reports()
         t = copy.deepcopy(records[code5.TARGETS[2]][2])
