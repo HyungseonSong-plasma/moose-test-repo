@@ -176,7 +176,7 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                         if key is not None and literal(key) in {"type", "object_type", "kernel_type"}:
                             name = literal(value)
                             if name in aliases:
-                                emit(node, "PYTHON_DECLARES_TYPE", class_id, path, n.lineno, name)
+                                emit(node, "PYTHON_DECLARES_TYPE", class_id, path, key.lineno, name)
                             elif name is None:
                                 unknown(path, n.lineno, "DYNAMIC_PYTHON_TYPE")
                 if isinstance(n, ast.Call):
@@ -208,19 +208,14 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
             except json.JSONDecodeError as exc:
                 errors.append({"path": path, "line": exc.lineno, "reason": "JSON_PARSE_ERROR"})
                 continue
-            def visit(value: object, where: str) -> None:
-                if isinstance(value, dict):
-                    for key, item in value.items():
-                        if key in {"type", "object_type", "kernel_type"}:
-                            if isinstance(item, str) and item in aliases:
-                                emit(node, "JSON_DECLARES_TYPE", class_id, path, 1, where + "." + key)
-                            elif not isinstance(item, str) or "$" in item or "{" in item:
-                                unknown(path, 1, "DYNAMIC_JSON_TYPE:" + where + "." + key)
-                        visit(item, where + "." + key)
-                elif isinstance(value, list):
-                    for index, item in enumerate(value):
-                        visit(item, where + "[" + str(index) + "]")
-            visit(doc, "$")
+            for match in re.finditer(
+                    r'"(type|object_type|kernel_type)"\s*:\s*("[^"\n]*"|[^,}\]\n]+)', text):
+                key, token = match.group(1), match.group(2).strip()
+                line = line_of(text, match.start())
+                if token.startswith('"') and token.endswith('"') and token[1:-1] in aliases:
+                    emit(node, "JSON_DECLARES_TYPE", class_id, path, line, key)
+                elif not token.startswith('"') or "$" in token or "{" in token:
+                    unknown(path, line, "DYNAMIC_JSON_TYPE:" + key)
         elif suffix in {".yml", ".yaml"} and (path.startswith(".github/workflows/") or path.startswith("ci/workflow_templates/")):
             for match in WORKFLOW_SCRIPT.finditer(text):
                 script = match.group(1).removeprefix("./")
