@@ -289,6 +289,21 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
             except SyntaxError as exc:
                 errors.append({"path": path, "line": exc.lineno, "reason": "PYTHON_PARSE_ERROR"})
                 continue
+            # Import is source reachability only: the imported generator may
+            # currently be called, but an import never establishes execution.
+            for n in ast.walk(tree):
+                if isinstance(n, ast.ImportFrom) and n.module:
+                    module_path = n.module.replace(".", "/")
+                    for suffix_path in (module_path + ".py", module_path + "/__init__.py"):
+                        if suffix_path in source_names:
+                            emit(node, "PYTHON_IMPORTS_MODULE", "file:" + suffix_path,
+                                 path, n.lineno, n.module, "STATIC_IMPORT_NOT_EXECUTION")
+                elif isinstance(n, ast.Import):
+                    for item in n.names:
+                        module_path = item.name.replace(".", "/") + ".py"
+                        if module_path in source_names:
+                            emit(node, "PYTHON_IMPORTS_MODULE", "file:" + module_path,
+                                 path, n.lineno, item.name, "STATIC_IMPORT_NOT_EXECUTION")
             for n in ast.walk(tree):
                 if isinstance(n, ast.Dict):
                     for key, value in zip(n.keys, n.values):
@@ -299,8 +314,16 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                             elif name is None:
                                 unknown(path, n.lineno, "DYNAMIC_PYTHON_TYPE")
                 if isinstance(n, ast.Call):
+                    call_name = (n.func.attr if isinstance(n.func, ast.Attribute)
+                                 else n.func.id if isinstance(n.func, ast.Name) else "")
+                    # argparse.add_argument(type=Path), Path(type=...), etc. are
+                    # not MOOSE Factory creation or dynamic MOOSE type evidence.
+                    moose_type_call = call_name in {
+                        "upsert_parameter", "_insert_kernel", "add_kernel",
+                        "add_fv_kernel", "addFVKernel", "addKernel",
+                        "add_moose_object", "build_moose_object"}
                     for kw in n.keywords:
-                        if kw.arg == "type":
+                        if kw.arg == "type" and moose_type_call:
                             name = literal(kw.value)
                             if name in aliases:
                                 emit(node, "PYTHON_DECLARES_TYPE", class_id, path, n.lineno, name)
@@ -380,7 +403,8 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
         elif edge["relation"] in {"GENERATOR_EMITS_OBJECT_CANDIDATE", "PYTHON_DECLARES_TYPE",
                                    "PYTHON_WRITES_INPUT"}:
             edge["reference_role"] = "STATIC_GENERATOR_NOT_RUNTIME"
-        elif edge["relation"] in {"WORKFLOW_RUNS_SCRIPT", "WORKFLOW_CALLS", "SHELL_RUNS_SCRIPT"}:
+        elif edge["relation"] in {"WORKFLOW_RUNS_SCRIPT", "WORKFLOW_CALLS", "SHELL_RUNS_SCRIPT",
+                                   "PYTHON_IMPORTS_MODULE"}:
             edge["reference_role"] = "DECLARED_WORKFLOW_PATH_NOT_EXECUTION"
         elif edge["relation"] in {"PRODUCES_FUNCTOR_CANDIDATE", "BINDS_PARAMETER"}:
             edge["reference_role"] = "DECLARED_PROVIDER_OR_BINDING_NOT_EFFECTIVE"
