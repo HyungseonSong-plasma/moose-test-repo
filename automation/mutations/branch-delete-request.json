@@ -1,24 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5-0-common-binary-build-evidence-20261118",
-      "expected_sha": "9e857d11e22308eac4184a49e01ca415835995cc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-common-binary-build-evidence-20261118-9e857d11e223"
+      "branch": "issue-671-p5-c1-s6-941-final-ei941-source-recheck-20261118",
+      "expected_sha": "0706205750974bd1154b3d7d4fc0f94f2fc8b330",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c1-s6-941-final-ei941-source-recheck-20261118-070620575097"
     },
     {
-      "branch": "issue-671-p5-0-single-oci-binary-once-20261118",
-      "expected_sha": "2ccc77d90b97d406275404696e39bc8e8aaeae7a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-single-oci-binary-once-20261118-2ccc77d90b97"
+      "branch": "issue-671-s6-417-final-input-reverify-20261118",
+      "expected_sha": "7f17146e5f0e44468a142536a0956d7bf57901d0",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-s6-417-final-input-reverify-20261118-7f17146e5f0e"
     },
     {
-      "branch": "issue-671-physics-opt-source-only-bundle-20261118",
-      "expected_sha": "3b8cb1f61f41f4178d312e3f4e84ba8d5dbebc6f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-physics-opt-source-only-bundle-20261118-3b8cb1f61f41"
+      "branch": "issue-672-p6-public-flow-arch-ion-fvm-ci-latest-20261118",
+      "expected_sha": "3314fb94e7cedcd5d688a830e424eec076669a7b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-public-flow-arch-ion-fvm-ci-latest-20261118-3314fb94e7ce"
     },
     {
-      "branch": "issue-671-p5-0-binary-app-libs-05d7ce4-20261118",
-      "expected_sha": "db7073b958e94361963fb2b6e81cfbe263554d87",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-binary-app-libs-05d7ce4-20261118-db7073b958e9"
+      "branch": "issue-671-final-evidence-ledger-20261118",
+      "expected_sha": "dee8e357a9adcd2a73e9c631bf3ca42a066ee8d4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-final-evidence-ledger-20261118-dee8e357a9ad"
     }
   ]
 }
