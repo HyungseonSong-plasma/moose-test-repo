@@ -246,8 +246,12 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
         required = match.group(1) == "addRequiredParam"
         # A sole quoted argument after the name is a description, not a default.
         has_default = not required and raw_args.lstrip(", ").strip()[:1] != '"'
+        enum_literal = (re.search(r'MooseEnum\s*\(\s*"([^"]+)"', raw_args)
+                        if "MooseEnum" in match.group(2) else None)
         params.append({
             "name": match.group(3), "cpp_type": " ".join(match.group(2).split()),
+            "allowed_enum_values": (
+                enum_literal.group(1).split() if enum_literal else None),
             "declaration": match.group(1), "required": required,
             "has_explicit_source_default": has_default,
             "declared_default_expression": raw_args[:240] if has_default else None,
@@ -268,6 +272,53 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
                         "excerpt": match.group(0).strip()[:500]}
         })
     return sorted(params, key=lambda p: (p["name"], p["witness"]["line"]))
+
+
+def validate_declared_instance(instance: dict | None, parameters: list[dict]) -> dict:
+    """Source-only local-parameter check, never proof of generated/native input."""
+    if instance is None:
+        return {"status": "UNKNOWN", "mode": "UNKNOWN",
+                "unresolved": ["INSTANCE_NOT_SOURCE_BOUND"], "invalid": []}
+    params = {p["name"]: p for p in parameters}
+    bindings = {b["name"]: b for b in instance["bindings"]}
+    invalid = []
+    unresolved = []
+    for name, param in sorted(params.items()):
+        if param["required"] and name not in bindings:
+            invalid.append({"name": name, "reason": "REQUIRED_LOCAL_PARAM_NOT_DECLARED",
+                            "source_witness": param["witness"]})
+    mode = bindings.get("state_form")
+    mode_status = "UNKNOWN"
+    if mode is not None:
+        declared = mode["raw_value"].strip("'\"")
+        enum = params.get("state_form")
+        if enum and enum.get("allowed_enum_values"):
+            mode_status = ("SUPPORTED_SOURCE_DECLARATION"
+                           if declared in enum["allowed_enum_values"]
+                           else "INVALID_DECLARED_MODE")
+            if mode_status == "INVALID_DECLARED_MODE":
+                invalid.append({
+                    "name": "state_form", "reason": "INVALID_DECLARED_MODE",
+                    "declared_value": declared,
+                    "allowed_values": enum["allowed_enum_values"],
+                    "source_witness": enum["witness"],
+                    "input_witness": {"path": instance["input_path"],
+                                      "line": mode["line"],
+                                      "blob_sha": instance["evidence"]["blob_sha"]}})
+        else:
+            unresolved.append("STATE_FORM_ENUM_NOT_LOCALLY_PROVEN")
+    elif "state_form" in params:
+        mode_status = "UNKNOWN_DEFAULT_OR_INHERITED"
+    if instance.get("instance_kind") == "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED":
+        unresolved.append("GENERATED_INPUT_NOT_OBSERVED")
+    return {
+        "status": "INVALID" if invalid else "UNKNOWN" if unresolved
+                 else "SUPPORTED_SOURCE_ONLY",
+        "mode": mode_status,
+        "invalid": invalid, "unresolved": unresolved,
+        "runtime_status": "NOT_OBSERVED",
+        "support": "LOCAL_VALIDPARAMS_AND_DECLARED_INPUT_ONLY_NOT_CHECK_INPUT"
+    }
 
 
 def shared_unit_evidence(root: Path, profile: dict) -> dict | None:
@@ -523,6 +574,7 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
             "generated_output_path": instance.get("generated_output_path", "NOT_APPLICABLE")
                 if instance else "UNKNOWN",
             "declared_bindings": instance["bindings"] if instance else [],
+            "declared_input_validation": validate_declared_instance(instance, parameters),
             "input_path": instance["input_path"] if instance else edge["evidence"]["path"],
             "block_path": instance["block_path"] if instance else None,
             "declared_mode": next(
