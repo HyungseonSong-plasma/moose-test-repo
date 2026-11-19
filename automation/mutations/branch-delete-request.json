@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-671-arch-ni-time-two-native-receipt-20261118",
-      "expected_sha": "4ac059c4cf9db4ad0f7289888c6d7eca12f16554",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-arch-ni-time-two-native-receipt-20261118-4ac059c4cf9d"
+      "branch": "issue-672-p6-d4-public-d-four-owner-decision-20261118",
+      "expected_sha": "c3bf3713c68d78b56ec5679cdc620b533b12216c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d4-public-d-four-owner-decision-20261118-c3bf3713c68d"
     },
     {
-      "branch": "issue-671-p5-x-native-evidence-integration-20261118",
-      "expected_sha": "576c44dc21c99c1eeb4cf02ef42c65896193d677",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-x-native-evidence-integration-20261118-576c44dc21c9"
+      "branch": "issue-672-p6-f3-flow-ion-owner-decision-20261118",
+      "expected_sha": "49b3e1dc6ca04f5808cd5e447be5dd13f43e57e2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f3-flow-ion-owner-decision-20261118-49b3e1dc6ca0"
     },
     {
-      "branch": "issue-672-p6-b1-public-historical-20261118",
-      "expected_sha": "28920362d985f0b08d16f9325a6b857834ccf90b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-b1-public-historical-20261118-28920362d985"
+      "branch": "issue-672-p6-0-parallel-receipt-integration-20261118",
+      "expected_sha": "007ce61d923f29eed2656fc8e4e66da138aa4427",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-0-parallel-receipt-integration-20261118-007ce61d923f"
     },
     {
-      "branch": "issue-672-p6-i1-ionfvm-retired-chain-20261118",
-      "expected_sha": "dce2d02306377b3c4b056b10cb7e3a0b70ad6f1c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-i1-ionfvm-retired-chain-20261118-dce2d0230637"
+      "branch": "issue-672-p6-d1-integration-review-verdict-20261118",
+      "expected_sha": "e3b44da7e74f469d560ca4b67230640298a083a2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d1-integration-review-verdict-20261118-e3b44da7e74f"
     },
     {
-      "branch": "issue-672-p6-c2-approval-autostart-p05-20261118",
-      "expected_sha": "0b89891cb7915e5c94c4ca6fad559b66aa78abca",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-c2-approval-autostart-p05-20261118-0b89891cb791"
+      "branch": "issue-672-p6-d1-integration-review-native-once-20261118",
+      "expected_sha": "a5f6c3c8f00b5d67defe395da5631c72d18d945d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d1-integration-review-native-once-20261118-a5f6c3c8f00b"
     }
   ]
 }
