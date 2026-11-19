@@ -31,3 +31,11 @@ Do not remove `NVTransportMaterial`, `D_T_<species>` producers, other Functor ow
 4. **G4 isolated delete candidate:** only after G2/G3 owner gates; remove exact C/H/Factory registration on an isolated branch, preserve `NVTransportMaterial` and independent D_T consumers, P1 clean build + P2 final input check + P0 Repository CI + appropriate Native term parity and rollback. No direct merge.
 
 Graph-only P0 is **not** independent scientific or Coverage acceptance. Retirement remains `HOLD` until the required owners review executed evidence.
+
+## G2 executed-final-input census (PR-A extension)
+
+The canonical CI job `issue541_arch_s6_hybrid_native_p2` already builds the exact PR-HEAD Physics binary and runs each 11-layer S6-417/941 hybrid input through `--check-input` using a pinned historical checkout. Code7's **branch-scoped** G2 step, after both P2 checks, invokes `ci/guards/code7_s6_final_input_census.py` on the **same staged scratch_hybrid bytes**. It verifies source HEAD, both `status.json` P2 exits, one shared binary SHA, exact manifest-defined order of 11 layers per case, and all literal `!include` dependencies. It writes only input paths, SHA-256, declared type line locations, unresolved expressions and conservative verdict to `code7_final_input_census.json`; no raw input, mesh, rate table or historical archive is uploaded. The result is published in a 14-day `code7-g2-s6-<run>-<attempt>` artifact.
+
+A zero direct `PhysicsFVThermalDiffusion` type declaration in this **specific successfully checked S6 pair** means `SCOPED_DECLARED_ABSENCE_OBSERVED`, not `caller_zero`, not an observed runtime object census, and never `SAFE_DELETE=PASS`. Any target type, unresolved dynamic type/include, missing layer, mismatched HEAD/binary, or failed P2 yields HOLD. Native P2 verifies accepted inputs, not P3 time advancement or scientific equivalence. Historical `QPXFVThermalDiffusion` remains a distinct registered type.
+
+**G2 pending:** the exact code7 PR HEAD CI G2 job and uploaded receipt must complete before upgrading evidence status. Do not use G1 output from an older HEAD as G2 proof. The active-to-retired lifecycle blocker and external consumer scope remain open.
