@@ -1,9 +1,24 @@
 {
   "targets": [
     {
-      "branch": "refactor/ei-rate-moose-linear-interpolation-20261109",
-      "expected_sha": "1d785cb04adbbaa6f2ddff6b59c8f0b1abdb6a36",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-ei-rate-moose-linear-interpolation-20261109-1d785cb04adb"
+      "branch": "experiment/issue493-public-boltzmann-p3-native-20261110",
+      "expected_sha": "2537465328e0cc9f1d240cc89e1f29899650628a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-issue493-public-boltzmann-p3-native-20261110-2537465328e0"
+    },
+    {
+      "branch": "feat/issue493-c-first-p4-reuse-b-20261111",
+      "expected_sha": "343c74a4dafddc3435e033f56637340490a4cf60",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feat-issue493-c-first-p4-reuse-b-20261111-343c74a4dafd"
+    },
+    {
+      "branch": "issue-541-arch-s6-retention-20261115",
+      "expected_sha": "efd7b40a00122155d0865ee1dc41c2a6fcb88e54",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-arch-s6-retention-20261115-efd7b40a0012"
+    },
+    {
+      "branch": "issue-541-arch-native-oracle-fix-20261115",
+      "expected_sha": "4eac40636fb95d95ca22757efb35427a20928244",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-arch-native-oracle-fix-20261115-4eac40636fb9"
     }
   ]
 }
