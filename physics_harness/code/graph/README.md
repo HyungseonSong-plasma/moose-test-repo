@@ -15,11 +15,46 @@ Never rewrite it into a tree or discard edges to simplify rendering.
 - **Edge:** directed semantic relation with identity, source and destination
   nodes, relation type, and evidence. Relations such as `CALLS`, `CONTAINS`,
   `DEFINES`, `IMPORTS`, `REFERENCES` remain distinct.
-- **Evidence:** source/line/blob or independent observation references and
-  claim strength (declared, inferred, observed, unresolved). Static reachability
-  is never automatically runtime observation.
+- **Evidence:** a source or observation record: what was collected, provenance,
+  method, scope, and observed/inferred/unresolved strength. Evidence is **not**
+  a verdict or proof that a transition was executed.
+- **Claim:** a separately identified, scoped and conditional assertion about
+  graph subject(s). Its evaluation refers to evidence with explicit roles
+  (e.g. `SUPPORTS`, `REFUTES`, `QUALIFIES`) and assessment status. Claims do
+  not modify the graph and an assessment is not automatically execution approval.
 - **Scope:** exact analyzed revision, included/excluded source surfaces, scan
   and observation boundaries, unresolved dependencies, and completeness state.
+
+## Evidence and Claim separation
+
+`evidence.py` owns provenance; `claim.py` owns assertions and their evaluation
+boundary. The relationship is many-to-many. An Evidence record can inform
+multiple Claims, and a Claim can reference supporting, refuting, or qualifying
+Evidence. Opposing evidence must be retained rather than silently collapsed.
+
+Illustrative conceptual fields (not implemented APIs):
+
+- `Evidence(id, kind, source_ref, method, scope_id, attributes)`
+- `Claim(id, predicate, subject_refs, conditions, scope_id, assessment_status)`
+- `ClaimEvidenceRef(claim_id, evidence_id, role)`
+
+Distinguish evidence acquisition (`SOURCE_DECLARED`, `INFERRED`,
+`RUNTIME_OBSERVED`, `UNRESOLVED`) from claim assessment
+(`SUPPORTED`, `REFUTED`, `UNRESOLVED`, `NOT_EVALUATED`).
+A source-backed conditional functional claim is not a native verification
+result; a plan-review PASS is not a retirement or scientific PASS.
+
+This supports existing FDEG families without conflating them:
+
+| FDEG family | Graph role | Evidence/Claim role |
+| --- | --- | --- |
+| Structural | Code entities and declared dependencies | Source-pinned evidence; claims limited by observed scope |
+| Functional | Functional subjects, contracts, candidate relations | Conditional semantic/preservation claims, alternative comparisons, required discriminators |
+| Transition | Proposed change/dependency relations belong to a plan overlay | Proposed options, open obligations, and validation claims; **not** executed changes |
+
+Actual `steps`, `blocking_obligations`, and `candidate_rewiring_options`
+need a change/plan representation rather than silently becoming canonical
+code edges. FDEG report conversion and validation remain future work.
 
 ## Dynamic context
 
@@ -88,7 +123,7 @@ a known relation, runtime activation, coverage, or safe deletion.
 ## Implementation boundaries
 
 `node.py` owns entity identity, `edge.py` semantic relationships,
-`evidence.py` provenance, `scope.py` analysis completeness, and
-`context.py` projection/navigation contracts. None of these modules currently
-provides executable graph traversal or claims that existing FDEG evidence is
-automatically equivalent to this model.
+`evidence.py` provenance, `claim.py` assertions and assessment,
+`scope.py` analysis completeness, and `context.py` projection/navigation.
+None of these modules currently implements graph traversal, evidence evaluation,
+or an assertion that existing FDEG reports automatically match this model.
