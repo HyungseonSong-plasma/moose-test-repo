@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import fnmatch
 import hashlib
 import json
 import posixpath
@@ -23,6 +24,18 @@ REGISTRATION = re.compile(
     r'\bregister(?:AD)?MooseObject(Aliased)?\s*\(\s*"([^"\n]+)"\s*,\s*([A-Za-z_]\w*)\s*(?:,\s*"([^"\n]+)")?\s*\)'
 )
 DECLARATION = re.compile(r'\bclass\s+([A-Za-z_]\w*)\b')
+ACTION_REGISTRATION = re.compile(
+    r'\bregisterMooseAction\s*\(\s*"([^"\n]+)"\s*,\s*([A-Za-z_]\w*)\s*,\s*"([^"\n]+)"\s*\)'
+)
+ACTION_SYNTAX = re.compile(
+    r'\b(?:registerSyntax|registerActionSyntax)\s*\(\s*"([^"\n]+)"\s*,\s*"([^"\n]+)"\s*\)'
+)
+BASE_TASKS = re.compile(r'\bregisterPhysicsBaseTasks\s*\(\s*"([^"\n]+)"\s*,\s*([A-Za-z_]\w*)\s*\)')
+BLOCK = re.compile(r'^\s*\[([^\[\]]*)\]')
+TYPE_BINDING = re.compile(r'\b(?:const\s+)?(?:auto|std::string|MooseObjectName)\s+([A-Za-z_]\w*)\s*=\s*"([^"\n]+)"')
+CXX_CREATE_VAR = re.compile(
+    r'\b(?:addFVKernel|addKernel|addFVBC|addBoundaryCondition|addMaterial|addUserObject|addAuxKernel|addMooseObject)\s*\(\s*([A-Za-z_]\w*)\s*[,)]'
+)
 CXX_CREATE = re.compile(
     r'\b(?:addFVKernel|addKernel|addFVBC|addBoundaryCondition|addMaterial|addUserObject|addAuxKernel|addMooseObject)\s*\(\s*"([^"\n]+)"'
 )
@@ -107,6 +120,11 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
         for match in REGISTRATION.finditer(text):
             if match.group(3) == target and match.group(1) and match.group(4):
                 aliases.add(match.group(4))
+    action_syntax: set[str] = set()
+    for text, _ in contents.values():
+        for match in ACTION_SYNTAX.finditer(text):
+            if match.group(1) == target:
+                action_syntax.add(match.group(2))
     edges: list[dict] = []
     unresolved: list[dict] = []
     class_id = "class:" + target
@@ -132,23 +150,60 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                 if match.group(3) == target:
                     emit(node, "REGISTERS", class_id, path, line_of(text, match.start()),
                          "app=" + match.group(2) + ";factory=" + (match.group(4) or target))
+            for match in ACTION_REGISTRATION.finditer(text):
+                if match.group(2) == target:
+                    emit(node, "REGISTERS_ACTION", class_id, path, line_of(text, match.start()),
+                         "app=" + match.group(1) + ";task=" + match.group(3))
+            for match in BASE_TASKS.finditer(text):
+                if match.group(2) == target:
+                    emit(node, "REGISTERS_PHYSICS_TASKS", class_id, path,
+                         line_of(text, match.start()), match.group(1))
+            for match in ACTION_SYNTAX.finditer(text):
+                if match.group(1) == target:
+                    emit(node, "REGISTERS_ACTION_SYNTAX", class_id, path,
+                         line_of(text, match.start()), match.group(2))
             for match in DECLARATION.finditer(text):
                 if match.group(1) == target:
                     emit(node, "DECLARES", class_id, path, line_of(text, match.start()), target)
             for match in CXX_CREATE.finditer(text):
                 if match.group(1) in aliases:
                     emit(node, "ACTION_CREATES", class_id, path, line_of(text, match.start()), match.group(1))
+            bindings = [(m.start(), m.group(1), m.group(2)) for m in TYPE_BINDING.finditer(text)
+                        if m.group(2) in aliases]
+            for match in CXX_CREATE_VAR.finditer(text):
+                prior = [(position, name) for position, name, _ in bindings
+                         if name == match.group(1) and position < match.start()]
+                if prior:
+                    emit(node, "ACTION_CREATES_VIA_LOCAL_LITERAL", class_id, path,
+                         line_of(text, match.start()), "variable=" + match.group(1),
+                         "LEXICAL_FLOW_CANDIDATE")
             for match in CXX_NEW.finditer(text):
                 if match.group(1) == target:
                     emit(node, "CPP_CONSTRUCTS", class_id, path, line_of(text, match.start()), target)
             for i, line in enumerate(text.splitlines(), 1):
                 inc = CPP_INCLUDE.match(line)
-                if inc and inc.group(1) == target + ".h":
+                if inc and inc.group(1).split("/")[-1] == target + ".h":
                     emit(node, "INCLUDES_TARGET_HEADER", class_id, path, i, inc.group(1))
                 if re.search(r"\b" + re.escape(target) + r"\b", line):
                     emit(node, "MENTIONS_SYMBOL", class_id, path, i, target, "LEXICAL_ONLY")
         elif suffix == ".i":
+            stack: list[str] = []
             for i, line in enumerate(text.splitlines(), 1):
+                block = BLOCK.match(line)
+                if block:
+                    name = block.group(1).strip()
+                    if name in {"", "..", "../"}:
+                        if stack:
+                            stack.pop()
+                    elif name.startswith("./"):
+                        stack.append(name[2:])
+                    else:
+                        stack.append(name)
+                    current = "/".join(stack)
+                    for syntax in sorted(action_syntax):
+                        if fnmatch.fnmatchcase(current, syntax):
+                            emit(node, "INPUT_MATCHES_ACTION_SYNTAX", class_id, path, i,
+                                 "input=" + current + ";syntax=" + syntax, "DECLARED_INPUT_ONLY")
                 m = MOOSE_TYPE.match(line)
                 if m:
                     name = m.group(1).strip().strip("'\"")
