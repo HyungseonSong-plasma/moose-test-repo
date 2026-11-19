@@ -1,6 +1,5 @@
 """D1/D4 P0: exact-HEAD Git inventory and scoped coverage receipts."""
 
-import hashlib
 import subprocess
 
 import pytest
@@ -132,8 +131,8 @@ def test_source_blob_digest_mismatch_fails_closed(git_factory):
         run_scan(request(head), CorruptSource())
 
 
-def test_non_regular_git_symlink_is_not_parsed(git_factory, tmp_path):
-    root, head = git_factory({".github/workflows/check.yml": SIMPLE})
+def test_non_regular_git_symlink_is_not_parsed(git_factory):
+    root, _ = git_factory({".github/workflows/check.yml": SIMPLE})
     link = root / ".github/workflows/redirect.yml"
     link.symlink_to("check.yml")
     subprocess.run(["git", "-C", str(root), "add", "."], check=True)
