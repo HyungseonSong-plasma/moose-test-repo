@@ -194,8 +194,9 @@ class PythonAstCollector:
             def visit_Call(self, item: ast.Call) -> None:
                 name = ast.unparse(item.func)
                 call_id = stable_id(
-                    "node", request.repository, "python_call_site",
-                    record.path, item.lineno, item.col_offset,
+                    "node", request.repository, "python_call_site", record.path,
+                    item.lineno, item.col_offset,
+                    item.end_lineno, item.end_col_offset,
                 )
                 eid = witness(item, "CALLS_CANDIDATE", name)
                 nodes.append(Node(

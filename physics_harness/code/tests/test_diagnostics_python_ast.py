@@ -163,3 +163,17 @@ def test_python_collector_support_does_not_expand_other_source_formats():
     assert not collector.supports(
         SourceRecord("src/code.C", "a" * 40, "100644", 1),
     )
+
+
+
+def test_nested_calls_sharing_start_position_get_distinct_canonical_nodes(git_factory):
+    result = scan(git_factory, {
+        "src/code.py": "def outer(obj, name):\n    return getattr(obj, name)(4)\n",
+    })
+    assert result.status == "PARTIAL"
+    calls = [n for n in result.graph.nodes if n.kind == "python_call_site"]
+    assert {n.attributes["callee_expression"] for n in calls} == {
+        "getattr(obj, name)", "getattr(obj, name)(4)",
+    }
+    assert len({n.id for n in calls}) == 2
+    assert all(edge.evidence_ids for edge in result.graph.edges)
