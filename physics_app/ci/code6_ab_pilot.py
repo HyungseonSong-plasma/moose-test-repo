@@ -220,11 +220,14 @@ def run_native(root: Path, out: Path, executable: Path, receipt: dict,
         raise ValueError("CODE6_AB_EXECUTABLE_NOT_FOUND")
     execution = {"executable_sha256": sha256_bytes(executable.read_bytes()),
                  "build_base_ref": build_base_ref,
-                 "cases": {}, "native_status": "NOT_COMPLETED"}
+                 "cases": {}, "native_status": "RUNNING_NOT_YET_VERIFIED"}
+    receipt["native_evidence"] = execution
+    receipt["native_status"] = "RUNNING_NOT_YET_VERIFIED"
     module, _ = source_module()
     outputs = {}
     for label in ("incumbent", "candidate"):
         work = out / label
+        execution["cases"][label] = {"p2": "NOT_RUN", "p3": "NOT_RUN"}
         for task, cmd in (
             ("p2_check_input", [str(executable), "--check-input", "-i", "stage5_h05_runtime.i"]),
             ("p3_run", [str(executable), "-i", "stage5_h05_runtime.i"]),
@@ -232,25 +235,29 @@ def run_native(root: Path, out: Path, executable: Path, receipt: dict,
             proc = subprocess.run(cmd, cwd=work, text=True, capture_output=True)
             (work / (task + ".stdout.log")).write_text(proc.stdout, encoding="utf-8")
             (work / (task + ".stderr.log")).write_text(proc.stderr, encoding="utf-8")
+            execution["cases"][label]["p2" if task == "p2_check_input" else "p3"] = (
+                "PASS" if proc.returncode == 0 else "FAIL")
             if proc.returncode:
+                execution["native_status"] = "FAILED_AT_" + label.upper() + "_" + task.upper()
+                receipt["native_status"] = execution["native_status"]
                 raise ValueError(f"CODE6_AB_{label}_{task}_FAILED:{proc.returncode}")
         path = work / CSV_NAME
         records = read_csv(path)
         # The pre-existing H05 reference oracle is a limited reaction/species
         # result check, NOT an independent AD Jacobian or parity acceptance.
         module.validate([{key: str(value) for key, value in row.items()} for row in records])
-        execution["cases"][label] = {
+        execution["cases"][label].update({
             "csv_sha256": sha256_bytes(path.read_bytes()),
             "rows": len(records),
-            "h05_reference_checker": "PASSED_LIMITED_MODEL_SCOPE"}
+            "h05_reference_checker": "PASSED_LIMITED_MODEL_SCOPE"})
         outputs[label] = records
     execution["trajectory_comparison"] = compare_rows(outputs["incumbent"], outputs["candidate"])
     execution["native_status"] = "EXPLORATORY_P2_P3_RUNS_COMPLETED"
+    receipt["native_status"] = execution["native_status"]
     execution["effective_time_integrator"] = "NOT_INDEPENDENTLY_PINNED"
     execution["independent_ad_jacobian_parity"] = "NOT_EVALUATED"
     execution["variable_density_native_counterexample"] = "NOT_RUN"
     execution["scientific_acceptance"] = "HOLD"
-    receipt["native_evidence"] = execution
     return receipt
 
 
@@ -264,6 +271,7 @@ def main() -> int:
     p.add_argument("--executable", type=Path)
     p.add_argument("--build-base-ref", default="UNKNOWN")
     args = p.parse_args()
+    receipt = None
     try:
         if args.self_test:
             self_test()
@@ -289,6 +297,14 @@ def main() -> int:
         return 0
     except (OSError, ValueError, KeyError, AssertionError,
             subprocess.CalledProcessError) as exc:
+        if receipt is not None and args.output_dir is not None:
+            receipt["native_status"] = "FAILED_OR_INCOMPLETE"
+            receipt["native_error"] = str(exc)
+            receipt["safe_delete"] = "HOLD"
+            out = args.output_dir.resolve()
+            out.mkdir(parents=True, exist_ok=True)
+            (out / "code6-h05-ab-receipt.json").write_text(
+                json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print("CODE6_AB_PILOT=FAIL:" + str(exc), file=sys.stderr)
         return 1
 
