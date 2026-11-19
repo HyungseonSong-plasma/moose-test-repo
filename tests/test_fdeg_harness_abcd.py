@@ -98,6 +98,33 @@ def render():
         self.assertEqual(g["source_template_census"]["mapped_virtual_instances"], 1)
         self.assertEqual(g["source_template_census"]["unmapped_declarations"], [])
 
+    def test_one_space_indented_s5c_edetach_kernel_is_mapped(self):
+        self.put("physics_app/ci/edetach.py", """
+def render():
+ return f'''[Mesh]
+ [m]
+  type=GeneratedMeshGenerator
+ []
+[]
+[FVKernels]
+ [wt]
+  type=Legacy
+  variable=w_Om
+  rho=rho_const
+ []
+[]
+'''
+""")
+        graph = structural.scan(self.root, "Legacy")
+        found = [i for i in graph["instances"]
+                 if i.get("instance_kind") ==
+                 "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["block_path"], "FVKernels/wt")
+        self.assertEqual(graph["source_template_census"]["mapped_virtual_instances"], 1)
+        self.assertEqual(graph["source_template_census"]["unmapped_declarations"], [])
+        self.assertEqual(found[0]["runtime_activation"], "NOT_OBSERVED")
+
     def test_unmapped_template_declaration_cannot_pass_census(self):
         self.put("physics_app/ci/unmapped.py", '''
 def fake():
