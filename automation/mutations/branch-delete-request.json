@@ -1,24 +1,14 @@
 {
   "targets": [
     {
-      "branch": "issue671-p5-final-gates-independent-audit-20261118",
-      "expected_sha": "d31ae066fc182f58744578b0a8f3d0e5446248a0",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue671-p5-final-gates-independent-audit-20261118-d31ae066fc18"
+      "branch": "issue-672-p6-d1-public-flow-readonly-guard-20261118",
+      "expected_sha": "44cf27387a539503c2f111a103a61248f31a7773",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d1-public-flow-readonly-guard-20261118-44cf27387a53"
     },
     {
-      "branch": "issue-672-p6-f0-p6-d1-exacthead-gates-20261118",
-      "expected_sha": "12e7519dc991f97bf0ef92bdd927130da0ef0b8d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f0-p6-d1-exacthead-gates-20261118-12e7519dc991"
-    },
-    {
-      "branch": "issue-671-p05-negatives-n1-n8-74a2-20261118",
-      "expected_sha": "72320bf2bdc0fe3c6e670df4029a8abb4c92d9dc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p05-negatives-n1-n8-74a2-20261118-72320bf2bdc0"
-    },
-    {
-      "branch": "issue-671-w2-w3-parallel-native-w1-20261118",
-      "expected_sha": "533421f7b4878d180eb5f1b4e48b4eac9424b536",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-w2-w3-parallel-native-w1-20261118-533421f7b487"
+      "branch": "issue-671-d8-wall-face-residual-native-20261118",
+      "expected_sha": "70e23b6d738778e246e8f4ec47ea2917b1ed0704",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-wall-face-residual-native-20261118-70e23b6d7387"
     }
   ]
 }
