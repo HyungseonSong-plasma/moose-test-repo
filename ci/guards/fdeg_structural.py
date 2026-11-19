@@ -395,7 +395,8 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     for item in instance_list:
         item["structural_edge_id"] = edge_ids[item["instance_id"]]
     nodes = [{"id": item, "kind": "CLASS" if item.startswith("class:")
-              else "INSTANCE" if item.startswith("instance:") else "FILE"}
+              else "INSTANCE" if item.startswith("instance:")
+              else "FUNCTOR" if item.startswith("functor:") else "FILE"}
              for item in sorted(reached)]
     scoped_sources = {edge["evidence"]["path"] for edge in selected}
     scoped_unresolved = [entry for entry in unresolved if entry["path"] in scoped_sources]
