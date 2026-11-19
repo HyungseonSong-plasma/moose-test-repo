@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5-e4-exact-head-crosscheck-20261118",
-      "expected_sha": "c81dc2b3b99d286051868a5a2590fcb148483f01",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-e4-exact-head-crosscheck-20261118-c81dc2b3b99d"
+      "branch": "issue671-p5-negative-design-n1-n3-n4-n7-20261118",
+      "expected_sha": "dbd0f1333d3e301f850df252b30efd8afb18d713",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue671-p5-negative-design-n1-n3-n4-n7-20261118-dbd0f1333d3e"
     },
     {
-      "branch": "issue671-p5-e2-941-full-evidence-20261118",
-      "expected_sha": "8abe4b6c06bda88c3b154e2021e60a0b21179409",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue671-p5-e2-941-full-evidence-20261118-8abe4b6c06bd"
+      "branch": "issue-671-p5-a4-current-head-oci-path-audit-20261118",
+      "expected_sha": "72930f9b5f825280091dc9daea725419639847ef",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-a4-current-head-oci-path-audit-20261118-72930f9b5f82"
     },
     {
-      "branch": "issue-671-p5-n8-dynamic-sign-boundary-negative-20261118",
-      "expected_sha": "8924e4b7132794cfe03f3f94acd7e8a42ea52171",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n8-dynamic-sign-boundary-negative-20261118-8924e4b71327"
+      "branch": "issue-671-p5-a1-a2-mesh-public-proof-20261118",
+      "expected_sha": "c2e5dea10f0b4511c3454cfe6c2303dfb16aaaf8",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-a1-a2-mesh-public-proof-20261118-c2e5dea10f0b"
     },
     {
-      "branch": "issue-671-p5-e1-417-full-custody-20261118",
-      "expected_sha": "4333258b2f617bffec63bd70300d3da9ad741db2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-e1-417-full-custody-20261118-4333258b2f61"
+      "branch": "issue-671-s6-parent-plasma-mesh-restore-20261118",
+      "expected_sha": "6647ec6fb23c6c2ee614346c8ed49a27308c09f3",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-s6-parent-plasma-mesh-restore-20261118-6647ec6fb23c"
     },
     {
-      "branch": "issue-672-p6-failure-taxonomy-20261118",
-      "expected_sha": "ad967d51022864762c05c723e081baa95b72f8fb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-failure-taxonomy-20261118-ad967d510228"
+      "branch": "issue-670-p4-x-full-source-consumer-audit-20261118",
+      "expected_sha": "e00dd90d0a92fc0377ec6bbe08a852aee42d1cb4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-x-full-source-consumer-audit-20261118-e00dd90d0a92"
     }
   ]
 }
