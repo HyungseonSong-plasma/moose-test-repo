@@ -203,5 +203,59 @@ class ContextProjectionTests(unittest.TestCase):
         )
 
 
+    def test_iterative_deep_chain_exceeds_python_recursion_limit(self):
+        count = 1250
+        graph = GraphSnapshot(
+            scope=Scope("scope:1", "example/repo", "b" * 40),
+            nodes=tuple(Node(f"node:{i}", "symbol", str(i)) for i in range(count)),
+            edges=tuple(
+                Edge(f"edge:{i}", f"node:{i}", f"node:{i + 1}", "DEPENDS_ON")
+                for i in range(count - 1)
+            ),
+        )
+        ctx = context(
+            roots=("node:0",), selectors=(RelationSelector("DEPENDS_ON"),),
+            max_depth=1500, max_occurrences=1500,
+        )
+        view = unfold_context(graph, ctx)
+        self.assertEqual(len(view.occurrences), count)
+        self.assertFalse(view.truncated)
+        self.assertEqual(view.occurrences[-1].node_id, f"node:{count - 1}")
+        self.assertEqual(len({item.id for item in view.occurrences}), count)
+        self.assertEqual(view, unfold_context(graph, ctx))
+
+    def test_deep_cycle_and_bounded_traversal_are_explicit(self):
+        count = 1150
+        graph = GraphSnapshot(
+            scope=Scope("scope:1", "example/repo", "b" * 40),
+            nodes=tuple(Node(f"node:{i}", "symbol", str(i)) for i in range(count)),
+            edges=tuple(
+                Edge(f"edge:{i}", f"node:{i}", f"node:{i + 1}", "DEPENDS_ON")
+                for i in range(count - 1)
+            ) + (
+                Edge("edge:back", f"node:{count - 1}", "node:600", "DEPENDS_ON"),
+            ),
+        )
+        full = unfold_context(graph, context(
+            roots=("node:0",), selectors=(RelationSelector("DEPENDS_ON"),),
+            max_depth=1500, max_occurrences=1500,
+        ))
+        self.assertFalse(full.truncated)
+        self.assertEqual(len(full.occurrences), count + 1)
+        self.assertEqual(full.occurrences[-1].status, "CYCLE_REF")
+        self.assertEqual(full.occurrences[-1].node_id, "node:600")
+        self.assertTrue(full.occurrences[-1].shared)
+
+        bounded = unfold_context(graph, context(
+            roots=("node:0",), selectors=(RelationSelector("DEPENDS_ON"),),
+            max_depth=1500, max_occurrences=1100,
+        ))
+        self.assertTrue(bounded.truncated)
+        self.assertEqual(len(bounded.occurrences), 1100)
+        self.assertIn("MAX_OCCURRENCES", {
+            item.truncation_reason for item in bounded.occurrences
+        })
+
+
 if __name__ == "__main__":
     unittest.main()
