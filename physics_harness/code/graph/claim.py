@@ -44,8 +44,9 @@ class Claim:
             raise ValueError("claim.subject_refs must not be empty")
         object.__setattr__(self, "conditions", frozen_mapping(self.conditions, "claim.conditions"))
         instance_tuple(self.evidence_refs, ClaimEvidenceRef, "claim.evidence_refs")
-        keys = [(link.evidence_id, link.role) for link in self.evidence_refs]
-        if len(keys) != len(set(keys)):
+        if len({(link.evidence_id, link.role) for link in self.evidence_refs}) != len(
+            self.evidence_refs
+        ):
             raise ValueError("duplicate claim evidence link")
         if self.assessment_status not in CLAIM_STATUSES:
             raise ValueError(f"unknown claim assessment status: {self.assessment_status!r}")
