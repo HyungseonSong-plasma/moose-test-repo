@@ -1,9 +1,34 @@
 {
   "targets": [
     {
-      "branch": "research/physics471-jit-runtime-closure-20261106",
-      "expected_sha": "88b74c90f0e85a3869a1a06a54ef61c7e09c6ef3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/research-physics471-jit-runtime-closure-20261106-88b74c90f0e8"
+      "branch": "issue-493-reference-raw-axis-line-png-20261111",
+      "expected_sha": "a3f8d8bc42132e8e98ae378bfe646b27456a125f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-493-reference-raw-axis-line-png-20261111-a3f8d8bc4213"
+    },
+    {
+      "branch": "refactor/issue402-continuity-eq-retire-gummel-20261111",
+      "expected_sha": "9bde78743bedb3fe7506dc9e135cdc9d2c58a54b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-issue402-continuity-eq-retire-gummel-20261111-9bde78743bed"
+    },
+    {
+      "branch": "fix/issue402-canonical-s6-d-400w-env-20261111",
+      "expected_sha": "677f94fe76677f7ade6864fabc35b73f73e7b860",
+      "archive_tag": "archive/oxygen-cleanup-20261106/fix-issue402-canonical-s6-d-400w-env-20261111-677f94fe7667"
+    },
+    {
+      "branch": "refactor/retire-physical-fem-drift-s6d",
+      "expected_sha": "9e456129b3ea6ee4b6129f174ef3f5c137d21b6d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-retire-physical-fem-drift-s6d-9e456129b3ea"
+    },
+    {
+      "branch": "refactor/retire-plasma-closures-action-s6d",
+      "expected_sha": "0658affe90c5a047e0efc6422fc750fc208846e6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-retire-plasma-closures-action-s6d-0658affe90c5"
+    },
+    {
+      "branch": "fix/issue518-artifact-create-response-probe",
+      "expected_sha": "5bd803409c0f8b48e6b311be5fe2e7d7c010ec3b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/fix-issue518-artifact-create-response-probe-5bd803409c0f"
     }
   ]
 }
