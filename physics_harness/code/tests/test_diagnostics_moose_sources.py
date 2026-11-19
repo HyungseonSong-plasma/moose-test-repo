@@ -156,3 +156,76 @@ def test_source_extensions_select_correct_provider():
     assert not cpp.supports(SourceRecord("src/a.i", sha, "100644", 1))
     assert hit.supports(SourceRecord("inputs/a.i", sha, "100644", 1))
     assert not hit.supports(SourceRecord("src/a.C", sha, "100644", 1))
+
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        "class PhysicsFVElectronEnergyJouleHeating : public FVElementalKernel\n{\n};\n",
+        "class PhysicsFVElectronEnergyJouleHeating\n  : public FVElementalKernel\n{\n};\n",
+        "class PhysicsFVElectronEnergyJouleHeating\n  : public\n    FVElementalKernel\n{\n};\n",
+    ],
+)
+def test_cpp_multiline_inheritance_is_detected_with_provenance(git_factory, header):
+    path = "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h"
+    result = scan(git_factory, {path: header}, ("physics_app/include/fvkernels/*.h",),
+                  collectors=("cpp",))
+    assert result.status == "COMPLETE"
+    assert result.receipt.files[0].status == "SCANNED"
+    cls = [node for node in result.graph.nodes if node.kind == "cpp_class"]
+    assert len(cls) == 1
+    assert cls[0].name == "PhysicsFVElectronEnergyJouleHeating"
+    assert cls[0].qualified_name == f"{path}:{cls[0].name}"
+    assert cls[0].location.start_line == 1
+    inheritance = [edge for edge in result.graph.edges
+                   if edge.relation == "INHERITS_CANDIDATE"]
+    assert len(inheritance) == 1
+    base_node = result.graph.nodes_by_id()[inheritance[0].target_id]
+    assert base_node.name == "FVElementalKernel"
+    assert any(path + ":1@" in ev.source_ref for ev in result.graph.evidence)
+    assert not result.receipt.unresolved
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        "class Complex final : public Kernel {\\n};\\n".replace("\\n", "\n"),
+        "class WithTwo : public Base, public Other {\\n};\\n".replace("\\n", "\n"),
+        "struct Special alignas(16) {\\n};\\n".replace("\\n", "\n"),
+    ],
+)
+def test_cpp_unsupported_class_shapes_fail_closed_as_partial(git_factory, header):
+    result = scan(git_factory, {"src/complex.h": header},
+                  ("src/*.h",), collectors=("cpp",))
+    assert result.status == "PARTIAL"
+    assert result.receipt.files[0].status == "UNRESOLVED"
+    assert "CPP_CLASS_UNPARSED:src/complex.h:1" in result.receipt.unresolved
+    assert not any(node.kind == "cpp_class" for node in result.graph.nodes)
+
+
+def test_cpp_ignored_comment_class_is_not_a_missing_declaration(git_factory):
+    source = (
+        "// class Missing final : public Other {}\n"
+        "/*\nclass AlsoMissing final : public Other {}\n*/\n"
+        "class RealType : public FVElementalKernel\n{\n};\n"
+    )
+    result = scan(git_factory, {"src/code.h": source},
+                  ("src/*.h",), collectors=("cpp",))
+    assert result.status == "COMPLETE"
+    assert [node.name for node in result.graph.nodes
+            if node.kind == "cpp_class"] == ["RealType"]
+
+
+def test_cpp_multiline_layout_does_not_change_logical_class_identity(git_factory):
+    path = "src/obj.h"
+    single = scan(git_factory, {path: "class MyKernel : public Kernel {};\n"},
+                  ("src/*.h",), collectors=("cpp",))
+    multiline = scan(git_factory, {
+        path: "class MyKernel : public Kernel\n{\n};\n",
+    }, ("src/*.h",), collectors=("cpp",))
+    def class_ids(graph):
+        return {node.id for node in graph.nodes if node.kind == "cpp_class"}
+    assert class_ids(single.graph) == class_ids(multiline.graph)
+    assert single.status == multiline.status == "COMPLETE"
+    assert single.graph.scope.revision != multiline.graph.scope.revision

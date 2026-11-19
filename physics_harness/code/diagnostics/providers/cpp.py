@@ -27,9 +27,13 @@ _REGISTER_TOKEN = re.compile(r"\bregister(?:AD)?MooseObject\b")
 _INCLUDE = re.compile(r'(?m)^[ \t]*#[ \t]*include[ \t]*[<"]([^>"\n]+)[>"]')
 _CLASS = re.compile(
     r'(?m)^[ \t]*(?:class|struct)[ \t]+([A-Za-z_]\w*)'
-    r'(?:[ \t]*:[ \t]*public[ \t]+([A-Za-z_]\w*(?:::\w+)*))?'
-    r'[ \t]*(?:\{|;)',
+    r'(?:[ \t\r\n]*:[ \t\r\n]*public[ \t\r\n]+'
+    r'([A-Za-z_]\w*(?:::\w+)*))?'
+    r'[ \t\r\n]*(?:\{|;)',
 )
+# Unhandled class/struct declaration forms must not silently pass as SCANNED.
+# This is intentionally conservative; it is not a general C++ parser.
+_CLASS_START = re.compile(r'(?m)^[ \t]*(?:class|struct)\b')
 _CONDITIONAL = re.compile(r"(?m)^[ \t]*#[ \t]*(?:if|ifdef|ifndef|elif)\b")
 
 
@@ -142,7 +146,9 @@ class CppSourceCollector:
             relation(parent, node_id, "INCLUDES_CANDIDATE", eid,
                      f"{line_of(match.start())}:{name}")
 
+        matched_class_starts: set[int] = set()
         for match in _CLASS.finditer(text):
+            matched_class_starts.add(match.start())
             name, base = match.groups()
             line = line_of(match.start())
             eid = witness("class", match.start(), name)
@@ -166,6 +172,12 @@ class CppSourceCollector:
                 ))
                 relation(class_id, base_id, "INHERITS_CANDIDATE",
                          eid, f"{line}:{base}")
+
+        for match in _CLASS_START.finditer(text):
+            if match.start() not in matched_class_starts:
+                unresolved.add(
+                    f"CPP_CLASS_UNPARSED:{record.path}:{line_of(match.start())}"
+                )
 
         matched_starts = set()
         for match in _REGISTER.finditer(text):
