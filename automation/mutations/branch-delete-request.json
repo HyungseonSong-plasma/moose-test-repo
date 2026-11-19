@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "cleanup-wave1-cd-core-bridge-current-20261116",
-      "expected_sha": "4782f341233c7baa6b381482e04e4b7f1e644a21",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-cd-core-bridge-current-20261116-4782f341233c"
+      "branch": "issue-633-c2-static-contract-20261117",
+      "expected_sha": "5d48e78c986bbca3a5c73b55e31b03aa9c5969fa",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-c2-static-contract-20261117-5d48e78c986b"
     },
     {
-      "branch": "issue-541-wave2-6b-s6-integrated-20261116",
-      "expected_sha": "79a8392f1a4fb34e24b01e2271f25a87d908f5f3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-wave2-6b-s6-integrated-20261116-79a8392f1a4f"
+      "branch": "issue-633-p21-p22-newonly-ci-20261117",
+      "expected_sha": "87777a78a77083f43fb02e4d829f5eae5e8ce916",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p21-p22-newonly-ci-20261117-87777a78a770"
     },
     {
-      "branch": "cleanup-wave2-8a2-flow-evidence-20261116",
-      "expected_sha": "71a61b63836400c44e953d2ec432167f7afb5c61",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave2-8a2-flow-evidence-20261116-71a61b638364"
+      "branch": "issue-633-c2-rebased-ion2-20261117",
+      "expected_sha": "c4faf1c603cc61bd105dfd9c68459a86dc58f233",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-c2-rebased-ion2-20261117-c4faf1c603cc"
     },
     {
-      "branch": "cleanup-wave1-c-a1-caller-closure-20261116",
-      "expected_sha": "8dcec2c195b683d795d162ab6825da1366c932d2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a1-caller-closure-20261116-8dcec2c195b6"
+      "branch": "issue-633-single-integrator-20261117",
+      "expected_sha": "c4d7d41fb912c2718a69e864460ef50eaf378ef3",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-single-integrator-20261117-c4d7d41fb912"
     },
     {
-      "branch": "cleanup-wave1-selective-intake-20261116",
-      "expected_sha": "53fbb935815a337fa5dffa4ff5f206eb515b654b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-selective-intake-20261116-53fbb935815a"
+      "branch": "issue-undefined-fdeg-transition-v01",
+      "expected_sha": "699769c50d8741640f6fd1ce3ddd661c8e704695",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-undefined-fdeg-transition-v01-699769c50d87"
     }
   ]
 }
