@@ -102,7 +102,6 @@ def render(case: dict, implementation: str) -> str:
 [Variables]
   [u]
     type = MooseVariableFVReal
-    initial_condition = 1
   []
 []
 [Functions]
