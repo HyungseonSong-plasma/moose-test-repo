@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-633-ci-route-final-p0-smoke-20261118",
-      "expected_sha": "921be3b5da79d437cbf10f4e291b467c130bf85d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ci-route-final-p0-smoke-20261118-921be3b5da79"
+      "branch": "issue-671-d-typed-warehouse-closure-20261118",
+      "expected_sha": "195b0360dac1877a4c771bd71e7ded0135a01df2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d-typed-warehouse-closure-20261118-195b0360dac1"
     },
     {
-      "branch": "issue-671-p5x-520673-w1-warehouse-evidence-20261118",
-      "expected_sha": "46fc58b6251016b48c12829681493fb435a363c4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-520673-w1-warehouse-evidence-20261118-46fc58b62510"
+      "branch": "issue-672-p6-d4-bc12-original-wall-law-20261118",
+      "expected_sha": "4b2023bef618054f89b037a2e74e7e0b3e71b23f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d4-bc12-original-wall-law-20261118-4b2023bef618"
     },
     {
-      "branch": "issue-672-d2d4-public-d-original100-authority-p2-20261118",
-      "expected_sha": "946383b95666dbfbd20283c812a3eff618d9debe",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-d2d4-public-d-original100-authority-p2-20261118-946383b95666"
+      "branch": "issue-671-p5x-exact-52067302-typed-native-p05-20261118",
+      "expected_sha": "cd62ee6446e3d1947d87e7c0de7354de5e40560b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-52067302-typed-native-p05-20261118-cd62ee6446e3"
     },
     {
-      "branch": "issue-671-p5x-exact-52067302-w1-build-20261118",
-      "expected_sha": "5a75b85ae9a0d5e92140ec97ae710919ac46524b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-52067302-w1-build-20261118-5a75b85ae9a0"
+      "branch": "issue-672-d2d4-original100-native-warehouse-receipt-20261118",
+      "expected_sha": "583000dfb2ed4d57017c5854417c8468dbed3bb0",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-d2d4-original100-native-warehouse-receipt-20261118-583000dfb2ed"
     },
     {
-      "branch": "issue-673-p7-handoff-c-d-c3-evidence-20261118",
-      "expected_sha": "5dec1d9062d2ebf991067671c3cfe5a3f438e9d7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-handoff-c-d-c3-evidence-20261118-5dec1d9062d2"
+      "branch": "issue-671-d8-rf-on-qp-residual-20261118",
+      "expected_sha": "ba6087aa4ae49aff380635bc7fb1fd2fd025bf0a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-rf-on-qp-residual-20261118-ba6087aa4ae4"
     }
   ]
 }
