@@ -1,9 +1,14 @@
 {
   "targets": [
     {
-      "branch": "issue-541-parity-6a-isolated-20261116",
-      "expected_sha": "c6100f3552e6b3333db834c67f1b7e6b5dd7c7bc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-parity-6a-isolated-20261116-c6100f3552e6"
+      "branch": "cleanup-wave1-c-a1-a2-evidence-20261116",
+      "expected_sha": "54c61421fdfe0023b87cd02baa7835f4ef82d1e7",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a1-a2-evidence-20261116-54c61421fdfe"
+    },
+    {
+      "branch": "cleanup-wave1-c-a1-a2-retirement-20261116",
+      "expected_sha": "4a4df622228785797d5817eb37b5010042de06d2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a1-a2-retirement-20261116-4a4df6222287"
     }
   ]
 }
