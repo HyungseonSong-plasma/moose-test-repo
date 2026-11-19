@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-669-p3-n2-gas-state-20261117",
-      "expected_sha": "52a3756018ecfa5100a8e38a69622743e466f81a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-n2-gas-state-20261117-52a3756018ec"
+      "branch": "issue-669-p3-t2-electron-moments-20261117",
+      "expected_sha": "5d5286d40661346623280abb50bc183d07dd4625",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t2-electron-moments-20261117-5d5286d40661"
     },
     {
-      "branch": "issue-669-p3-n4-neutral-pressure-20261117",
-      "expected_sha": "508f829e9ab65449df80fc691979ac4805bf39f9",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-n4-neutral-pressure-20261117-508f829e9ab6"
+      "branch": "issue-669-p3-t3-electron-reduced-gas-20261117",
+      "expected_sha": "0c7ad8ef8b4b4c6f2e1213dd0ab61490bff1c7e7",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t3-electron-reduced-gas-20261117-0c7ad8ef8b4b"
     },
     {
-      "branch": "issue-669-p3-n5-rhiechow-neutral-20261117",
-      "expected_sha": "65c16c64a9514aea9b746bb4e526a4a52c5ea2e7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-n5-rhiechow-neutral-20261117-65c16c64a951"
+      "branch": "issue-669-p3-t4-s6-417-20261117",
+      "expected_sha": "1804211c7bbc845a2eaa541fef9da460def2906c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t4-s6-417-20261117-1804211c7bbc"
     },
     {
-      "branch": "issue-669-p3-n6-alias-audit-20261117",
-      "expected_sha": "9e368246feae366b64e004868aacc4f2e435df16",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-n6-alias-audit-20261117-9e368246feae"
+      "branch": "issue-669-p3-v1-s6-417-static-20261117",
+      "expected_sha": "1f751f8b439ba1f936d8f27c73163f32ad70c879",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-v1-s6-417-static-20261117-1f751f8b439b"
     },
     {
-      "branch": "issue-669-p3-t1-electron-transport-20261117",
-      "expected_sha": "aa8c0e2aa36fad07dc6cb65551a65ffdd6545e82",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t1-electron-transport-20261117-aa8c0e2aa36f"
+      "branch": "issue-669-p3-v2-s6-941-20261117",
+      "expected_sha": "6ad210a34f82a9f342b7a120468bfe981f821388",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-v2-s6-941-20261117-6ad210a34f82"
     }
   ]
 }
