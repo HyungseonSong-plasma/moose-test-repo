@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path, PurePosixPath
 import sys
 
@@ -17,6 +18,13 @@ import fdeg_structural as structural  # noqa: E402
 SCHEMA = "fdeg.functional.v0.1"
 REGISTRY = Path("ci/baselines/fdeg_functional_contracts.json")
 STRUCTURAL_SCHEMA = "fdeg.structural.v0.2"
+PARAM_DECL = re.compile(
+    r'\bparams\.(addRequiredParam|addParam)<([^;]*?)>\s*\(\s*"([^"]+)"', re.S
+)
+PARAM_SET = re.compile(
+    r'\bparams\.set<([^;]*?)>\s*\(\s*"([^"]+)"\s*\)\s*=\s*([^;]+);', re.S
+)
+
 
 
 def safe_path(root: Path, rel: str) -> Path:
@@ -143,6 +151,40 @@ def source_witnesses(root: Path, profile: dict) -> tuple[list[dict], dict]:
     return witnesses, blobs
 
 
+def extract_parameters(root: Path, profile: dict) -> list[dict]:
+    """Extract declarations and literal assignments; do NOT resolve MOOSE defaults."""
+    source = profile["source"]
+    path = source["path"]
+    data = safe_path(root, path).read_bytes()
+    blob = structural.blob_sha(data)
+    if blob != source["blob_sha"]:
+        raise ValueError("STALE_FUNCTIONAL_PROFILE_SOURCE_BLOB:" + path)
+    body = data.decode("utf-8")
+    params = []
+    for match in PARAM_DECL.finditer(body):
+        line = body.count("\n", 0, match.start()) + 1
+        end = body.find(";", match.end())
+        excerpt = body[match.start():end + 1 if end >= 0 else match.end()].strip()[:500]
+        params.append({
+            "name": match.group(3), "cpp_type": " ".join(match.group(2).split()),
+            "declaration": match.group(1), "required": match.group(1) == "addRequiredParam",
+            "declared_default_expression": excerpt.split('"' + match.group(3) + '"', 1)[-1].strip()[:240],
+            "runtime_effective_value": "NOT_OBSERVED",
+            "witness": {"path": path, "line": line, "blob_sha": blob, "excerpt": excerpt}
+        })
+    for match in PARAM_SET.finditer(body):
+        line = body.count("\n", 0, match.start()) + 1
+        params.append({
+            "name": match.group(2), "cpp_type": " ".join(match.group(1).split()),
+            "declaration": "set_default", "required": False,
+            "declared_default_expression": match.group(3).strip(),
+            "runtime_effective_value": "NOT_OBSERVED",
+            "witness": {"path": path, "line": line, "blob_sha": blob,
+                        "excerpt": match.group(0).strip()[:500]}
+        })
+    return sorted(params, key=lambda p: (p["name"], p["witness"]["line"]))
+
+
 def validate_registry_profile(profile: dict) -> None:
     ids = [claim.get("id") for claim in profile.get("claims", [])]
     if not ids or len(set(ids)) != len(ids) or any(not isinstance(x, str) or not x for x in ids):
@@ -183,6 +225,7 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         raise ValueError("FUNCTIONAL_PROFILE_NOT_AVAILABLE:" + target)
     validate_registry_profile(profile)
     witnesses, blobs = source_witnesses(root, profile)
+    parameters = extract_parameters(root, profile)
     registration = sorted(
         e["edge_id"] for e in structural_report["edges"]
         if e["to"] == "class:" + target and
@@ -226,7 +269,31 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         }
         edge["edge_id"] = structural.stable_id("functional-edge", edge)
         functional_edges.append(edge)
+    for param in parameters:
+        edge = {
+            "claim_id": "param:" + target + ":" + param["name"],
+            "from": "class:" + target, "relation": "DECLARES_PARAMETER",
+            "to": "parameter:" + param["name"],
+            "cpp_type": param["cpp_type"], "required": param["required"],
+            "declaration": param["declaration"],
+            "declared_default_expression": param["declared_default_expression"],
+            "runtime_effective_value": "NOT_OBSERVED",
+            "evidence_kind": "STATIC_SOURCE", "claim_status": "SOURCE_SUPPORTED",
+            "witnesses": [param["witness"]]
+        }
+        edge["edge_id"] = structural.stable_id("functional-edge", edge)
+        functional_edges.append(edge)
     functional_edges.sort(key=lambda e: (e["relation"], e["to"], e["claim_id"]))
+
+    discriminators = profile.get("discriminator_contracts", {})
+    required = set(profile.get("required_discriminators", []))
+    if not isinstance(discriminators, dict) or set(discriminators) != required:
+        raise ValueError("FUNCTIONAL_DISCRIMINATOR_CONTRACT_INCOMPLETE")
+    for name, spec in discriminators.items():
+        if (not isinstance(spec, dict) or not spec.get("setup")
+                or not spec.get("observable") or not spec.get("expected")
+                or spec.get("status") != "NOT_EVALUATED"):
+            raise ValueError("FUNCTIONAL_DISCRIMINATOR_CANNOT_ASSERT_PASS:" + name)
 
     consumers = []
     for edge in structural_report["edges"]:
@@ -241,6 +308,12 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
             "role": role, "evidence_strength": edge["strength"],
             "instance_id": instance["instance_id"] if instance else None,
             "declared_bindings": instance["bindings"] if instance else [],
+            "input_path": instance["input_path"] if instance else edge["evidence"]["path"],
+            "block_path": instance["block_path"] if instance else None,
+            "declared_mode": next(
+                (item["raw_value"] for item in instance["bindings"]
+                 if item["name"] == "state_form"), "NOT_EXPLICITLY_SET")
+                if instance else "UNKNOWN",
             "effective_runtime_binding": "NOT_OBSERVED",
             "consumer_activation": "NOT_OBSERVED",
             "behavior_to_preserve": profile["capability"] if role != "LEXICAL_MENTION_NOT_CONSUMER" else None
@@ -261,6 +334,8 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         "edges": functional_edges,
         "consumer_contracts": consumers,
         "required_discriminators": sorted(profile.get("required_discriminators", [])),
+        "discriminator_contracts": {key: discriminators[key] for key in sorted(discriminators)},
+        "parameter_declarations": parameters,
         "discriminator_evidence_status": "NOT_EVALUATED",
         "historical_guards": sorted(profile.get("historical_guards", [])),
         "unresolved_obligations": unresolved,
