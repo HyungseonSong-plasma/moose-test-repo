@@ -456,9 +456,24 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
               else "INSTANCE" if item.startswith("instance:")
               else "FUNCTOR" if item.startswith("functor:") else "FILE"}
              for item in sorted(reached)]
-    scoped_sources = {edge["evidence"]["path"] for edge in selected}
-    scoped_unresolved = [entry for entry in unresolved if entry["path"] in scoped_sources]
+    # A file-level join is not causal reachability: large CI workflow files
+    # contain unrelated unresolved scripts. Limit target blockers to evidenced
+    # relation or input-binding lines; retain full global diagnostics separately.
+    selected_witnesses = {(e["evidence"]["path"], e["evidence"]["line"])
+                          for e in selected}
+    for item in instance_list:
+        selected_witnesses.update(
+            (item["input_path"], b["line"]) for b in item["bindings"])
+    scoped_unresolved = [entry for entry in unresolved
+                         if (entry["path"], entry["line"]) in selected_witnesses]
+    global_status = "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED"
+    target_status = ("INCOMPLETE" if scoped_unresolved
+                     else "DECLARATIONS_ONLY_RUNTIME_UNVERIFIED")
     report = {"schema": SCHEMA, "target": target, "repository_head": head,
+              "global_scan_status": global_status,
+              "target_dependency_status": target_status,
+              "global_unresolved_count": len(unresolved),
+              "target_scoped_unresolved_count": len(scoped_unresolved),
               "scan_scope": {"tracked_only": head is not None, "extensions": sorted(EXTENSIONS),
                              "files_scanned": len(contents),
                              "untracked_generated_inputs_included": head is None},
