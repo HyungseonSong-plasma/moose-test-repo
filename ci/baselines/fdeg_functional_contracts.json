@@ -1320,6 +1320,715 @@
           "acceptance_tolerance": "OWNER_UNSPECIFIED"
         }
       }
+    },
+    "PhysicsFVLogMolarElectronTimeDerivative": {
+      "target": "PhysicsFVLogMolarElectronTimeDerivative",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "blob_sha": "0a7e72d64e6d9f7f059046a9abc1a7607757111f"
+      },
+      "capability": "LOG_MOLAR_CONSERVATIVE_TIME_DIFFERENCE",
+      "equation": "species_log_molar_balance.time",
+      "operator_kind": "FVElementalKernel",
+      "notes": "Reconstruct molar concentration exp(log_c) at new/old states; not a derivative of log-state.",
+      "claims": [
+        {
+          "id": "time_law",
+          "relation": "IMPLEMENTS",
+          "to": "capability:LOG_MOLAR_CONSERVATIVE_TIME_DIFFERENCE",
+          "expression": "R=(exp(log_c_new)-exp(log_c_old))/dt",
+          "anchors": [
+            "return (exp(log_c_new) - exp(log_c_old)) / _dt;"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "mol/(m^3 s)",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "replace with d(log_c)/dt",
+            "forget old-state exponential"
+          ],
+          "function_scope": "PhysicsFVLogMolarElectronTimeDerivative::computeQpResidual"
+        },
+        {
+          "id": "state",
+          "relation": "EVALUATES",
+          "to": "numerical:old_and_current_state",
+          "expression": "new log concentration uses determineState; old uses Moose::oldState",
+          "anchors": [
+            "const ADReal log_c_old = _var(elem, Moose::oldState());"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "reuse current state for old"
+          ],
+          "function_scope": "PhysicsFVLogMolarElectronTimeDerivative::computeQpResidual"
+        },
+        {
+          "id": "positive_dt",
+          "relation": "REQUIRES",
+          "to": "condition:transient_positive_dt",
+          "expression": "transient required and dt>0",
+          "anchors": [
+            "if (!_subproblem.isTransient())",
+            "if (_dt <= 0.0)"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "steady",
+            "dt<=0"
+          ],
+          "function_scope": "PhysicsFVLogMolarElectronTimeDerivative::computeQpResidual"
+        },
+        {
+          "id": "tags",
+          "relation": "REQUIRES",
+          "to": "numerical:time_system_tags",
+          "expression": "vector_tags=time, matrix_tags=system time",
+          "anchors": [
+            "params.set<MultiMooseEnum>(\"vector_tags\") = \"time\";",
+            "params.set<MultiMooseEnum>(\"matrix_tags\") = \"system time\";"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectronTimeDerivative::validParams"
+        }
+      ],
+      "required_discriminators": [
+        "TIME_ZERO_AND_NONZERO",
+        "OLD_STATE",
+        "DT_POSITIVE",
+        "MOLAR_INVENTORY",
+        "JACOBIAN_AD"
+      ],
+      "discriminator_contracts": {
+        "TIME_ZERO_AND_NONZERO": {
+          "setup": "constant and changing log_c over dt>0",
+          "observable": "time residual",
+          "expected": "constant c => zero, changed c => (c_new-c_old)/dt",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "OLD_STATE": {
+          "setup": "perturb only old-state u",
+          "observable": "time residual",
+          "expected": "residual responds through exp(log_c_old)",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "DT_POSITIVE": {
+          "setup": "dt=0 and negative dt, steady execution",
+          "observable": "construction/runtime guard",
+          "expected": "source raises for dt<=0 or nontransient",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "MOLAR_INVENTORY": {
+          "setup": "closed finite-volume molar control volume",
+          "observable": "molar inventory vs time source+flux",
+          "expected": "requires independent conservation oracle, not inferred from static source",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "JACOBIAN_AD": {
+          "setup": "current and old log-state with AD",
+          "observable": "residual Jacobian",
+          "expected": "exp(current) derivative preserved; compare pinned time scheme",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      },
+      "alternatives": [
+        {
+          "candidate_type": "FVLogMolarTimeDerivative",
+          "status": "CANDIDATE_UNVERIFIED",
+          "conditions": [
+            "same exp(log_c) state & old-state time discretization",
+            "same tags, AD and molar units"
+          ],
+          "semantic_risks": [
+            "log derivative vs concentration difference",
+            "nonlinear time-level mismatch"
+          ],
+          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY"
+        }
+      ],
+      "unresolved_semantics": [
+        "PINNED_TIME_INTEGRATOR_SCOPE",
+        "CASE_ROLE_BY_SPECIES",
+        "NATIVE_TIME_PARITY_NOT_OBSERVED"
+      ],
+      "historical_guards": [
+        "ISSUE3_D6_NOT_S6_C0_EQUIVALENCE",
+        "PR665_NEW_ONLY_P2_NOT_HISTORICAL_PARITY",
+        "MULTI_CLASS_FILE_REQUIRES_ALL_OWNERS_MIGRATED"
+      ],
+      "shared_translation_unit": {
+        "source_path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "co_registered_classes": [
+          "PhysicsFVLogMolarElectronTimeDerivative",
+          "PhysicsFVLogMolarElectronDiffusion",
+          "PhysicsFVLogMolarElectrostaticDrift",
+          "PhysicsFVLogMolarElectronReactionSource"
+        ],
+        "retirement_constraint": "KEEP_FILE_UNTIL_ALL_FOUR_FACTORY_OBJECTS_DISCONNECTED_AND_VALIDATED"
+      }
+    },
+    "PhysicsFVLogMolarElectronDiffusion": {
+      "target": "PhysicsFVLogMolarElectronDiffusion",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "blob_sha": "0a7e72d64e6d9f7f059046a9abc1a7607757111f"
+      },
+      "capability": "LOG_MOLAR_FV_DIFFUSION_FLUX",
+      "equation": "species_log_molar_balance.diffusion",
+      "operator_kind": "FVFluxKernel",
+      "notes": "Interior-face orthogonal diffusion of exp(log_c), harmonic/average coefficient interpolation; boundary returns zero.",
+      "claims": [
+        {
+          "id": "diffusion_law",
+          "relation": "IMPLEMENTS",
+          "to": "capability:LOG_MOLAR_FV_DIFFUSION_FLUX",
+          "expression": "F_n=-D_face*(exp(log_c_neighbor)-exp(log_c_elem))/dCN",
+          "anchors": [
+            "return -coeff_face * (c_neighbor - c_elem) / _face_info->dCNMag();"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "mol/(m^2 s)",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "drop exp",
+            "flip sign",
+            "ignore dCN"
+          ],
+          "function_scope": "PhysicsFVLogMolarElectronDiffusion::computeQpResidual"
+        },
+        {
+          "id": "boundary",
+          "relation": "APPLIES_WHEN",
+          "to": "condition:internal_face_only",
+          "expression": "boundary/external face returns zero",
+          "anchors": [
+            "if (!_var.isInternalFace(*_face_info))",
+            "return 0.0;"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectronDiffusion::computeQpResidual"
+        },
+        {
+          "id": "coeff",
+          "relation": "REQUIRES",
+          "to": "parameter:coeff",
+          "expression": "required diffusivity Functor",
+          "anchors": [
+            "\"coeff\", \"Electron diffusion coefficient [m^2/s].\""
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "m^2/s",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectronDiffusion::validParams"
+        },
+        {
+          "id": "interpolation",
+          "relation": "EVALUATES",
+          "to": "numerical:coeff_face_interpolation",
+          "expression": "harmonic default or average via coeff_interp_method",
+          "anchors": [
+            "MooseEnum coeff_interp_method(\"average harmonic\", \"harmonic\");",
+            "params.set<unsigned short>(\"ghost_layers\") = 2;"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectronDiffusion::validParams"
+        }
+      ],
+      "required_discriminators": [
+        "DIFFUSION_ZERO",
+        "UNIFORM_CONCENTRATION",
+        "FACE_INTERNAL_BOUNDARY",
+        "INTERPOLATION_GHOSTING",
+        "AD_JACOBIAN"
+      ],
+      "discriminator_contracts": {
+        "DIFFUSION_ZERO": {
+          "setup": "D_face=0, nonuniform log concentration",
+          "observable": "face flux",
+          "expected": "zero diffusion flux",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "UNIFORM_CONCENTRATION": {
+          "setup": "same exp(log_c) at adjacent cells",
+          "observable": "face flux",
+          "expected": "zero concentration difference yields zero flux",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "FACE_INTERNAL_BOUNDARY": {
+          "setup": "internal face and physical boundary face",
+          "observable": "FV residual",
+          "expected": "boundary path returns zero; internal uses orthogonal gradient",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "INTERPOLATION_GHOSTING": {
+          "setup": "harmonic vs average coefficient, ghosting limits",
+          "observable": "face coeff/flux",
+          "expected": "match selected interpolator and required ghost layers",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AD_JACOBIAN": {
+          "setup": "perturb log-state across face",
+          "observable": "Jacobian coupling",
+          "expected": "exp(log_c) AD Jacobian retained",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      },
+      "alternatives": [
+        {
+          "candidate_type": "FVLogMolarDiffusion",
+          "status": "CANDIDATE_UNVERIFIED",
+          "conditions": [
+            "same face flux and interpolation",
+            "same AD dependence, ghosting and unit basis"
+          ],
+          "semantic_risks": [
+            "different coeff defaults or ghost layers",
+            "boundary behavior"
+          ],
+          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY"
+        }
+      ],
+      "unresolved_semantics": [
+        "PER_SPECIES_COEFF_PROVIDER",
+        "FACE_GRADIENT_ALIGNMENT",
+        "NATIVE_DIFFUSION_PARITY_NOT_OBSERVED"
+      ],
+      "historical_guards": [
+        "ISSUE3_D6_NOT_S6_C0_EQUIVALENCE",
+        "PR665_NEW_ONLY_P2_NOT_HISTORICAL_PARITY",
+        "MULTI_CLASS_FILE_REQUIRES_ALL_OWNERS_MIGRATED"
+      ],
+      "shared_translation_unit": {
+        "source_path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "co_registered_classes": [
+          "PhysicsFVLogMolarElectronTimeDerivative",
+          "PhysicsFVLogMolarElectronDiffusion",
+          "PhysicsFVLogMolarElectrostaticDrift",
+          "PhysicsFVLogMolarElectronReactionSource"
+        ],
+        "retirement_constraint": "KEEP_FILE_UNTIL_ALL_FOUR_FACTORY_OBJECTS_DISCONNECTED_AND_VALIDATED"
+      }
+    },
+    "PhysicsFVLogMolarElectrostaticDrift": {
+      "target": "PhysicsFVLogMolarElectrostaticDrift",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "blob_sha": "0a7e72d64e6d9f7f059046a9abc1a7607757111f"
+      },
+      "capability": "LOG_MOLAR_SIGNED_ELECTROSTATIC_DRIFT",
+      "equation": "species_log_molar_balance.drift",
+      "operator_kind": "FVFluxKernel",
+      "notes": "Drift face flux transports exp(log_c), with optional FEM potential-gradient fallback and limiter reconstruction.",
+      "claims": [
+        {
+          "id": "drift_law",
+          "relation": "IMPLEMENTS",
+          "to": "capability:LOG_MOLAR_SIGNED_ELECTROSTATIC_DRIFT",
+          "expression": "F_n=carrier_f*exp(log_c_face)*z*mu_f*(E·n), E=-grad(phi)",
+          "anchors": [
+            "const ADReal c_face = exp(_var(transported_face, state));",
+            "return carrier_face * c_face * drift_normal;"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "molar flux depends on carrier",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "use raw log state as concentration",
+            "drop charge sign"
+          ],
+          "function_scope": "PhysicsFVLogMolarElectrostaticDrift::computeQpResidual"
+        },
+        {
+          "id": "fem_gradient",
+          "relation": "APPLIES_WHEN",
+          "to": "condition:use_element_gradient_for_potential",
+          "expression": "element-gradient averaging for FEM potential; else face gradient",
+          "anchors": [
+            "if (_use_element_gradient_for_potential)",
+            "electric_field = -0.5 * (grad_elem + grad_neighbor);"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "treat FEM gradient as FaceArg without validation"
+          ],
+          "function_scope": "PhysicsFVLogMolarElectrostaticDrift::computeQpResidual"
+        },
+        {
+          "id": "upwind_time",
+          "relation": "EVALUATES",
+          "to": "numerical:upwind_limiter_state",
+          "expression": "upwind chosen from signed drift_normal; transient previous time and steady previous nonlinear",
+          "anchors": [
+            "Moose::SolutionIterationType::Time",
+            "MetaPhysicL::raw_value(drift_normal) >= 0.0;"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectrostaticDrift::computeQpResidual"
+        },
+        {
+          "id": "log_limiter",
+          "relation": "EVALUATES",
+          "to": "numerical:bounded_log_linear_reconstruction",
+          "expression": "optional bounded linear reconstruction in log state before exponent",
+          "anchors": [
+            "if (_use_limited_linear_reconstruction && _face_info->neighborPtr())",
+            "const ADReal c_face = exp(log_c_face);"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectrostaticDrift::computeQpResidual"
+        },
+        {
+          "id": "required_params",
+          "relation": "REQUIRES",
+          "to": "parameter:potential_mobility_carrier_charge_number",
+          "expression": "four explicit required parameters, charge_number nonzero",
+          "anchors": [
+            "\"charge_number\", \"Signed charge number z.\"",
+            "\"carrier\", \"Multiplicative carrier functor; use 1 for electron molar concentration.\""
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectrostaticDrift::validParams"
+        }
+      ],
+      "required_discriminators": [
+        "E_ZERO",
+        "CHARGE_SIGN_REVERSAL",
+        "UPWIND_LIMITER",
+        "FEM_FV_GRADIENT",
+        "AD_JACOBIAN"
+      ],
+      "discriminator_contracts": {
+        "E_ZERO": {
+          "setup": "E=0, other quantities finite",
+          "observable": "face drift flux",
+          "expected": "zero drift contribution",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "CHARGE_SIGN_REVERSAL": {
+          "setup": "z plus/minus with same fields",
+          "observable": "drift velocity/upwind face",
+          "expected": "normal drift flips sign, upwind selection changes",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "UPWIND_LIMITER": {
+          "setup": "vary drift sign and limiter flag, transient state",
+          "observable": "face concentration/flux",
+          "expected": "selected limiter and previous-state semantics retained",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "FEM_FV_GRADIENT": {
+          "setup": "FEM potential mode vs FV face-gradient mode",
+          "observable": "electric field and flux",
+          "expected": "evaluate appropriate element/face gradient path",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AD_JACOBIAN": {
+          "setup": "state-dependent potential and transported log-state",
+          "observable": "Jacobian",
+          "expected": "AD coupling preserved under exp and gradient interpolation",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      },
+      "alternatives": [
+        {
+          "candidate_type": "FVLogMolarElectrostaticDrift",
+          "status": "CANDIDATE_UNVERIFIED",
+          "conditions": [
+            "same FEM/FV electric-field evaluation",
+            "same upwind, AD and limiter modes"
+          ],
+          "semantic_risks": [
+            "log reconstruction difference",
+            "carrier convention",
+            "boundary/ghosting"
+          ],
+          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY"
+        }
+      ],
+      "unresolved_semantics": [
+        "CARRIER_UNITS_PER_SPECIES",
+        "BOUNDARY_FACE_OWNER",
+        "FEM_POTENTIAL_GRADIENT_PROVIDER",
+        "NATIVE_DRIFT_PARITY_NOT_OBSERVED"
+      ],
+      "historical_guards": [
+        "ISSUE3_D6_NOT_S6_C0_EQUIVALENCE",
+        "PR665_NEW_ONLY_P2_NOT_HISTORICAL_PARITY",
+        "MULTI_CLASS_FILE_REQUIRES_ALL_OWNERS_MIGRATED"
+      ],
+      "shared_translation_unit": {
+        "source_path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "co_registered_classes": [
+          "PhysicsFVLogMolarElectronTimeDerivative",
+          "PhysicsFVLogMolarElectronDiffusion",
+          "PhysicsFVLogMolarElectrostaticDrift",
+          "PhysicsFVLogMolarElectronReactionSource"
+        ],
+        "retirement_constraint": "KEEP_FILE_UNTIL_ALL_FOUR_FACTORY_OBJECTS_DISCONNECTED_AND_VALIDATED"
+      }
+    },
+    "PhysicsFVLogMolarElectronReactionSource": {
+      "target": "PhysicsFVLogMolarElectronReactionSource",
+      "source": {
+        "path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "blob_sha": "0a7e72d64e6d9f7f059046a9abc1a7607757111f"
+      },
+      "capability": "SIGNED_NUMBER_TO_MOLAR_SOURCE_PROJECTION",
+      "equation": "species_log_molar_balance.reaction",
+      "operator_kind": "FVElementalKernel",
+      "notes": "Signed physical electron-number source converted exactly once to molar source by Avogadro constant.",
+      "claims": [
+        {
+          "id": "number_to_molar",
+          "relation": "IMPLEMENTS",
+          "to": "capability:SIGNED_NUMBER_TO_MOLAR_SOURCE_PROJECTION",
+          "expression": "R=-S_number/N_A",
+          "anchors": [
+            "return -physical_number_source / avogadro_per_mol;"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "mol/(m^3 s)",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [
+            "remove N_A",
+            "divide twice",
+            "flip sign"
+          ],
+          "function_scope": "PhysicsFVLogMolarElectronReactionSource::computeQpResidual"
+        },
+        {
+          "id": "number_functor",
+          "relation": "REQUIRES",
+          "to": "parameter:number_source",
+          "expression": "signed particle-number Source AD Functor",
+          "anchors": [
+            "\"number_source\", \"Signed physical electron number source [1/(m^3 s)]. Positive is production.\""
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "1/(m^3 s)",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectronReactionSource::validParams"
+        },
+        {
+          "id": "avogadro",
+          "relation": "EVALUATES",
+          "to": "constant:avogadro_per_mol",
+          "expression": "N_A=6.02214076e23 as one conversion factor",
+          "anchors": [
+            "constexpr Real avogadro_per_mol = 6.02214076e23;"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "1/mol",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": []
+        },
+        {
+          "id": "ad_source",
+          "relation": "EVALUATES",
+          "to": "quantity:signed_source_functor",
+          "expression": "Functor evaluated at element and determineState",
+          "anchors": [
+            "_number_source(makeElemArg(_current_elem), determineState());"
+          ],
+          "evidence_kind": "SOURCE_OBSERVATION",
+          "mode": "all",
+          "conditions": [],
+          "units": "UNSPECIFIED",
+          "applicability": "SOURCE_CLASS_ONLY",
+          "assumptions": [],
+          "counterexamples": [],
+          "function_scope": "PhysicsFVLogMolarElectronReactionSource::computeQpResidual"
+        }
+      ],
+      "required_discriminators": [
+        "SIGNED_POS_NEG_ZERO",
+        "AVOGADRO_MISSING_OR_DUPLICATED",
+        "SOURCE_OWNERSHIP",
+        "AD_JACOBIAN",
+        "ISSUE3_S6_HISTORICAL_SCOPES"
+      ],
+      "discriminator_contracts": {
+        "SIGNED_POS_NEG_ZERO": {
+          "setup": "positive, zero, negative S_number",
+          "observable": "element residual sign",
+          "expected": "positive source -> negative residual, negative -> positive, zero -> zero",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AVOGADRO_MISSING_OR_DUPLICATED": {
+          "setup": "same signed source with converter variants",
+          "observable": "residual magnitude",
+          "expected": "exactly one 1/N_A factor under declared molar units",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "SOURCE_OWNERSHIP": {
+          "setup": "ionization, attachment, detachment reaction progress",
+          "observable": "source projection count",
+          "expected": "do not duplicate or omit electron-number source owner",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AD_JACOBIAN": {
+          "setup": "state-dependent source functor",
+          "observable": "residual derivative",
+          "expected": "AD sensitivity and sign preserved",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "ISSUE3_S6_HISTORICAL_SCOPES": {
+          "setup": "Issue3 D6, S6 C0, PR665 source/binary/input identities",
+          "observable": "particle/charge/Poisson/SEE invariants",
+          "expected": "different historical/new-only scopes cannot be promoted into global equivalence",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      },
+      "alternatives": [
+        {
+          "candidate_type": "FVCoupledForce",
+          "status": "CANDIDATE_UNVERIFIED",
+          "conditions": [
+            "preconvert signed S_number to molar S_number/N_A",
+            "identical AD, element, sign and variable scope"
+          ],
+          "semantic_risks": [
+            "missing/doubled N_A",
+            "shared signed reaction progress",
+            "off-diagonal Jacobian"
+          ],
+          "requires": "EXACT_HEAD_BOUND_RESIDUAL_AND_AD_PARITY"
+        }
+      ],
+      "unresolved_semantics": [
+        "SIGNED_SOURCE_PROVIDER_ROLE",
+        "REACTION_PROGRESS_OWNER",
+        "NATIVE_REACTION_PARITY_NOT_OBSERVED"
+      ],
+      "historical_guards": [
+        "ISSUE3_D6_NOT_S6_C0_EQUIVALENCE",
+        "PR665_NEW_ONLY_P2_NOT_HISTORICAL_PARITY",
+        "MULTI_CLASS_FILE_REQUIRES_ALL_OWNERS_MIGRATED"
+      ],
+      "shared_translation_unit": {
+        "source_path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+        "co_registered_classes": [
+          "PhysicsFVLogMolarElectronTimeDerivative",
+          "PhysicsFVLogMolarElectronDiffusion",
+          "PhysicsFVLogMolarElectrostaticDrift",
+          "PhysicsFVLogMolarElectronReactionSource"
+        ],
+        "retirement_constraint": "KEEP_FILE_UNTIL_ALL_FOUR_FACTORY_OBJECTS_DISCONNECTED_AND_VALIDATED"
+      }
     }
   }
 }
