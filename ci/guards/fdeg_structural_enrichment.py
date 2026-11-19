@@ -121,6 +121,18 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
             continue  # Base scanner owns parse errors
         taken = set()
         for node in ast.walk(tree):
+            if isinstance(node, ast.DictComp) and isinstance(node.value, ast.Constant):
+                if node.value.value in aliases:
+                    line = node.value.lineno
+                    routes.append({"source": path, "line": line,
+                                   "factory_type": node.value.value,
+                                   "block_path_expression": ast.unparse(node.key)[:180],
+                                   "route_kind": "STATIC_COMPREHENSION_TYPE_MAP",
+                                   "generated_input_path": "UNKNOWN",
+                                   "activation": "NOT_OBSERVED",
+                                   "reference_scope": scope(path),
+                                   "evidence": witness(contents, path, line)})
+                    taken.add((node.value.lineno, node.value.col_offset))
             if isinstance(node, ast.Dict):
                 for key, value in zip(node.keys, node.values):
                     if not isinstance(value, ast.Constant) or value.value not in aliases:
