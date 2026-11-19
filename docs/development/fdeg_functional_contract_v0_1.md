@@ -38,7 +38,7 @@ A Structural scan with unrelated unresolved dynamic/generated calls can return e
 - `consumer_contracts`: Structural edges joined to declared input instance bindings, without promoting `MENTIONS_SYMBOL`, `ACTION_CREATES`, static Python/JSON declarations or input syntax matching into observed runtime use.
 - `required_discriminators`, `historical_guards`, `unresolved_obligations`: independent oracles, historical parity constraints and conditions that must remain unproven until separately evidenced.
 - `parameter_declarations` and `DECLARES_PARAMETER` edges: complete matching local `validParams()` declarations, required/optional status, C++ type, **explicit source default vs description-only**, source witness, and unobserved effective runtime value. Inherited base-class parameters are not enumerated here.
-- `discriminator_contracts`: 35 positive/negative control obligations across six profiles, with setup, observable, expected outcome and `status=NOT_EVALUATED`; these are experimental specifications, not executed measurements or accepted tolerances.
+- `discriminator_contracts`: 55 positive/negative control obligations across ten profiles, with setup, observable, expected outcome and `status=NOT_EVALUATED`; these are experimental specifications, not executed measurements or accepted tolerances.
 - `consumer_contracts` also expose input path, block path, raw `state_form` binding and unobserved effective mode. Static parameter binding does not prove runtime selection.
 - `runtime_observation=NOT_OBSERVED`, `equivalence_verdict=NOT_PROVEN`, `safety=NO_CALLER_ZERO_TRANSITION_OR_RETIREMENT_AUTHORIZATION`: invariant P0 boundaries.
 
@@ -50,10 +50,11 @@ A Structural scan with unrelated unresolved dynamic/generated calls can return e
 - code2: `PhysicsFVElectronEnergyJouleHeating`, electric-work sign, two representation modes, **shared helper preservation**
 - code3: `PhysicsFVElectronReactionSource`, signed source, normalized `n_ref`, source ownership and AD discriminator, **FVCoupledForce as unverified candidate**
 - code4: `PhysicsFVElectrostaticDrift`, normal drift, previous-state limiter, upwind, **heavy mass correction coupling**
+- code5: `PhysicsFVLogMolarElectronTransport.C` has **four independently registered classes** (time, diffusion, drift, reaction), each with a distinct Functional Unit. The shared C++ translation unit carries `SHARES_TRANSLATION_UNIT_WITH` edges and a **keep-file-until-all-four-retired** obligation. Claim witnesses and `validParams()` declarations are scoped to each class's own method.
 - code6: `PhysicsFVMassFractionTimeDerivative`, density-weighted `_u_dot`, time-integration uncertainty, **non-conservative/conservative only conditionally comparable**
 - code7: `PhysicsFVThermalDiffusion`, face flux and flag, zero controls, internal/boundary distinction, **unobserved Native contribution**
 
-code5 Functional review was not present on #691 when the scope was fixed. Add that profile after its unique physical/representation contract is reviewed; do not silently infer the four multi-class log-molar operators from one filename.
+code5's reviewed Functional requirements arrived later at #691 and are now integrated as four independent source-pinned profiles. Their generic new-only alternatives remain **CANDIDATE_UNVERIFIED**; Issue3 D6, historical S6 C0, and PR #665 new-only are distinct evidence scopes.
 
 ## P0 acceptance / limits
 
