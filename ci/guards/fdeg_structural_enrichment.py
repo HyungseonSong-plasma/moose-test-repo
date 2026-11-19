@@ -142,6 +142,10 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                 continue
             if not any(name in TOKEN.findall(node.value) for name in aliases):
                 continue
+            # Do not relabel a plain unit-test assertion as a generator.
+            if not (any("type = " + name in node.value for name in aliases)
+                    or "_insert_kernel(" in text or "upsert_parameter(" in text):
+                continue
             routes.append({"source": path, "line": node.lineno,
                            "factory_type": target, "block_path_expression": "UNKNOWN",
                            "route_kind": "STATIC_TEMPLATE_OR_STRING",
@@ -187,8 +191,11 @@ def enrichment(contents: dict, target: str, aliases: set[str], instances: list[d
                                                contents[matches[0]][0]):
                 emit("file:" + path, "INCLUDES_OWNER_HEADER", "file:" + matches[0],
                      path, line, inc.group(1), "SOURCE_INCLUDE_ONLY")
+                declaration = re.search(r'\bclass\s+' + re.escape(target) + r'\b',
+                                        contents[matches[0]][0])
+                header_line = contents[matches[0]][0].count("\n", 0, declaration.start()) + 1
                 emit("file:" + matches[0], "HEADER_DECLARES_TARGET", "class:" + target,
-                     matches[0], 1, target, "HEADER_SOURCE_ONLY")
+                     matches[0], header_line, target, "HEADER_SOURCE_ONLY")
             elif inc.group(1).split("/")[-1] in {target + ".h",
                    path.rsplit("/", 1)[-1].removesuffix(".C") + ".h"}:
                 unknown(path, line, "TARGET_HEADER_OWNER_UNRESOLVED:" + inc.group(1))
@@ -216,13 +223,20 @@ def enrichment(contents: dict, target: str, aliases: set[str], instances: list[d
         if key in seen:
             continue
         seen.add(key)
+        outputs = sorted({e["to"].removeprefix("file:") for e in edges
+                          if e["relation"] == "PYTHON_WRITES_INPUT"
+                          and e["from"] == "file:" + route["source"]})
+        if outputs:
+            route["generated_input_path"] = outputs[0] if len(outputs) == 1 else "MULTIPLE_CANDIDATES"
+            route["output_candidates"] = outputs
+            route["output_evidence"] = "STATIC_WRITE_TARGET_NOT_RUNTIME_OUTPUT"
         result["generator_routes"].append(route)
         emit("file:" + route["source"], "GENERATOR_EMITS_OBJECT_CANDIDATE",
              "class:" + target, route["source"], route["line"],
              route["block_path_expression"] + ";type=" + route["factory_type"],
              "STATIC_TEMPLATE_NOT_EXECUTED")
-        if route["reference_scope"] != "TEST_OR_CHECKER_ONLY":
-            unknown(route["source"], route["line"], "GENERATED_INPUT_NOT_OBSERVED")
+        if not outputs and route["reference_scope"] != "TEST_OR_CHECKER_ONLY":
+            unknown(route["source"], route["line"], "GENERATED_INPUT_NOT_TRACKED_OR_OBSERVED")
 
     # The provider graph is declarative: even one matching producer cannot prove effective resolution.
     producers = declared_providers(contents)
