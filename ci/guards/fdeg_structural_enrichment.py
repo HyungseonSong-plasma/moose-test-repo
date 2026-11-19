@@ -27,8 +27,10 @@ TOKEN = re.compile(r'[A-Za-z_]\w*')
 
 
 def scope(path: str) -> str:
+    # Path alone cannot prove lifecycle: a frozen-looking module may be
+    # imported by current tests; a current-looking path may hold old receipts.
     if "/historical_" in path or path.startswith("archive/"):
-        return "HISTORICAL_SOURCE_NOT_PROVEN_ACTIVE"
+        return "HISTORICAL_LOCATION_ACTIVITY_UNKNOWN"
     if path.startswith("tests/") or path.startswith("physics_app/ci/"):
         return "TEST_OR_CHECKER_ONLY"
     if path.startswith(".github/workflows/") or path.startswith("ci/workflow_templates/"):
@@ -119,6 +121,8 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
             tree = ast.parse(text, filename=path)
         except SyntaxError:
             continue  # Base scanner owns parse errors
+        parents = {child: parent for parent in ast.walk(tree)
+                   for child in ast.iter_child_nodes(parent)}
         taken = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.DictComp) and isinstance(node.value, ast.Constant):
@@ -131,6 +135,7 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                                    "generated_input_path": "UNKNOWN",
                                    "activation": "NOT_OBSERVED",
                                    "reference_scope": scope(path),
+                                   "source_role": "STATIC_SOURCE_NOT_LIFECYCLE",
                                    "evidence": witness(contents, path, line)})
                     taken.add((node.value.lineno, node.value.col_offset))
             if isinstance(node, ast.Dict):
@@ -145,6 +150,7 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                                    "generated_input_path": "UNKNOWN",
                                    "activation": "NOT_OBSERVED",
                                    "reference_scope": scope(path),
+                                   "source_role": "STATIC_SOURCE_NOT_LIFECYCLE",
                                    "evidence": witness(contents, path, line)})
                     taken.add((value.lineno, value.col_offset))
         for node in ast.walk(tree):
@@ -154,16 +160,32 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                 continue
             if not any(name in TOKEN.findall(node.value) for name in aliases):
                 continue
-            # Do not relabel a plain unit-test assertion as a generator.
-            if not (any("type = " + name in node.value for name in aliases)
-                    or "_insert_kernel(" in text or "upsert_parameter(" in text):
+            ancestor = parents.get(node)
+            writer = None
+            blocked = False
+            while ancestor is not None:
+                if isinstance(ancestor, (ast.Assert, ast.Compare, ast.If, ast.While)):
+                    blocked = True
+                    break
+                if isinstance(ancestor, ast.Call):
+                    fun = ancestor.func
+                    name = fun.attr if isinstance(fun, ast.Attribute) else (
+                        fun.id if isinstance(fun, ast.Name) else "")
+                    if name in {"write_text", "write_bytes", "_insert_kernel",
+                                "upsert_parameter", "set_parameter"}:
+                        writer = name
+                ancestor = parents.get(ancestor)
+            # A global "_insert_kernel" string is never sufficient dataflow proof.
+            if blocked or writer is None:
                 continue
             routes.append({"source": path, "line": node.lineno,
                            "factory_type": target, "block_path_expression": "UNKNOWN",
-                           "route_kind": "STATIC_TEMPLATE_OR_STRING",
+                           "route_kind": "STATIC_WRITER_ARGUMENT_CANDIDATE",
+                           "writer": writer,
                            "generated_input_path": "UNKNOWN",
                            "activation": "NOT_OBSERVED",
                            "reference_scope": scope(path),
+                                   "source_role": "STATIC_SOURCE_NOT_LIFECYCLE",
                            "evidence": witness(contents, path, node.lineno)})
     return sorted(routes, key=lambda x: (x["source"], x["line"],
                                           x["route_kind"], x["block_path_expression"]))
