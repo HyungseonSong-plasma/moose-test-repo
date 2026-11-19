@@ -17,7 +17,7 @@ import fdeg_structural as structural  # noqa: E402
 
 SCHEMA = "fdeg.functional.v0.1"
 REGISTRY = Path("ci/baselines/fdeg_functional_contracts.json")
-STRUCTURAL_SCHEMA = "fdeg.structural.v0.2"
+STRUCTURAL_SCHEMA = "fdeg.structural.v0.3"
 PARAM_DECL = re.compile(
     r'\bparams\.(addRequiredParam|addParam)<([^;]*?)>\s*\(\s*"([^"]+)"', re.S
 )

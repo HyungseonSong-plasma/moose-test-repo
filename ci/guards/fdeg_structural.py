@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FDEG Structural Evidence v0.2: read-only, source-bound consumer graph.
+"""FDEG Structural Evidence v0.3: read-only, source-bound consumer graph.
 
 This scanner records syntactic relations, not runtime use, semantic equivalence,
 caller-zero, or permission to retire an object. Every emitted relationship is
@@ -15,10 +15,13 @@ import json
 import posixpath
 import re
 import subprocess
+import sys
 from pathlib import Path
 
-SCHEMA = "fdeg.structural.v0.2"
-EXTENSIONS = {".C", ".cc", ".cpp", ".h", ".hpp", ".py", ".i", ".json", ".yml", ".yaml"}
+SCHEMA = "fdeg.structural.v0.3"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fdeg_structural_enrichment as route_evidence  # noqa: E402
+EXTENSIONS = {".C", ".cc", ".cpp", ".h", ".hpp", ".py", ".i", ".json", ".yml", ".yaml", ".sh"}
 SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache"}
 REGISTRATION = re.compile(
     r'\bregister(?:AD)?MooseObject(Aliased)?\s*\(\s*"([^"\n]+)"\s*,\s*([A-Za-z_]\w*)\s*(?:,\s*"([^"\n]+)")?\s*\)'
@@ -59,9 +62,9 @@ def git(root: Path, *args: str) -> str:
 def tracked_files(root: Path) -> tuple[list[Path], str | None]:
     if (root / ".git").exists():
         names = git(root, "ls-files", "-z").split("\0")
-        return ([root / p for p in sorted(set(names)) if p and Path(p).suffix in EXTENSIONS
+        return ([root / p for p in sorted(set(names)) if p and (Path(p).suffix in EXTENSIONS or Path(p).name == "Makefile")
                  and not (set(Path(p).parts) & SKIP_DIRS)], git(root, "rev-parse", "HEAD"))
-    return (sorted(p for p in root.rglob("*") if p.is_file() and p.suffix in EXTENSIONS
+    return (sorted(p for p in root.rglob("*") if p.is_file() and (p.suffix in EXTENSIONS or p.name == "Makefile")
                    and not (set(p.relative_to(root).parts) & SKIP_DIRS)), None)
 
 
@@ -348,6 +351,11 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                 else:
                     unknown(path, line_of(text, match.start()), "WORKFLOW_CALLEE_UNRESOLVED:" + other)
 
+    # New v0.3 evidence is appended before reachability to include chained
+    # provider and build declarations in the target-rooted graph.
+    enrichment = route_evidence.enrichment(contents, target, aliases, instances,
+                                          edges, emit, unknown)
+
     # The graph contains only incoming paths that can reach the selected class.
     reached = {class_id}
     changed = True
@@ -359,6 +367,25 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     selected.sort(key=lambda e: (e["from"], e["relation"], e["to"], e["evidence"]["path"],
                                  e["evidence"]["line"], e["detail"]))
     for edge in selected:
+        path = edge["evidence"]["path"]
+        edge["source_head"] = head
+        edge["revision_scope"] = route_evidence.scope(path)
+        edge["activation_status"] = "NOT_OBSERVED"
+        if edge["relation"] == "MENTIONS_SYMBOL":
+            source_line = edge["evidence"]["excerpt"]
+            if re.search(r'\b(?:assert|forbidden|must.not|not.in)\b', source_line, re.I):
+                edge["reference_role"] = "ASSERTION_OR_PROHIBITION_NOT_RUNTIME"
+            else:
+                edge["reference_role"] = "LEXICAL_REFERENCE_NOT_CONSUMER"
+        elif edge["relation"] in {"GENERATOR_EMITS_OBJECT_CANDIDATE", "PYTHON_DECLARES_TYPE",
+                                   "PYTHON_WRITES_INPUT"}:
+            edge["reference_role"] = "STATIC_GENERATOR_NOT_RUNTIME"
+        elif edge["relation"] in {"WORKFLOW_RUNS_SCRIPT", "WORKFLOW_CALLS", "SHELL_RUNS_SCRIPT"}:
+            edge["reference_role"] = "DECLARED_WORKFLOW_PATH_NOT_EXECUTION"
+        elif edge["relation"] in {"PRODUCES_FUNCTOR_CANDIDATE", "BINDS_PARAMETER"}:
+            edge["reference_role"] = "DECLARED_PROVIDER_OR_BINDING_NOT_EFFECTIVE"
+        else:
+            edge["reference_role"] = "STRUCTURAL_DECLARATION_NOT_RUNTIME"
         edge["edge_id"] = stable_id("edge", edge)
     instance_list = sorted(
         (item for item in instances if item["instance_id"] in reached),
@@ -368,13 +395,18 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     for item in instance_list:
         item["structural_edge_id"] = edge_ids[item["instance_id"]]
     nodes = [{"id": item, "kind": "CLASS" if item.startswith("class:")
-              else "INSTANCE" if item.startswith("instance:") else "FILE"}
+              else "INSTANCE" if item.startswith("instance:")
+              else "FUNCTOR" if item.startswith("functor:") else "FILE"}
              for item in sorted(reached)]
+    scoped_sources = {edge["evidence"]["path"] for edge in selected}
+    scoped_unresolved = [entry for entry in unresolved if entry["path"] in scoped_sources]
     report = {"schema": SCHEMA, "target": target, "repository_head": head,
               "scan_scope": {"tracked_only": head is not None, "extensions": sorted(EXTENSIONS),
                              "files_scanned": len(contents),
                              "untracked_generated_inputs_included": head is None},
               "nodes": nodes, "edges": selected, "instances": instance_list,
+              "enrichment": enrichment,
+              "target_scoped_unresolved": sorted(scoped_unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
               "unresolved": sorted(unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
               "scan_errors": errors,
               "status": "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED",

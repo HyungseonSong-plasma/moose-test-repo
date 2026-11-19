@@ -124,7 +124,7 @@ class StructuralEvidenceTest(unittest.TestCase):
         self.put("tests/case.i", "[Kernels]\n  [./one]\n    type = Legacy\n    variable = n_e\n    state_form = physical\n    block = 'bulk'\n  [../]\n[]\n")
         first = fdeg.scan(self.root, "Legacy")
         second = fdeg.scan(self.root, "Legacy")
-        self.assertEqual(first["schema"], "fdeg.structural.v0.2")
+        self.assertEqual(first["schema"], "fdeg.structural.v0.3")
         self.assertEqual(first["graph_id"], second["graph_id"])
         self.assertTrue(first["graph_id"].startswith("graph:"))
         ids = [edge["edge_id"] for edge in first["edges"]]
@@ -157,6 +157,96 @@ class StructuralEvidenceTest(unittest.TestCase):
         self.assertNotEqual(
             self.edges(first, "INPUT_INSTANTIATES")[0]["edge_id"],
             self.edges(second, "INPUT_INSTANTIATES")[0]["edge_id"])
+
+    def test_v03_shared_header_build_ownership_and_coowners(self):
+        self.put("physics_app/Makefile",
+                 "APPLICATION_NAME := physics\ninclude $(FRAMEWORK_DIR)/app.mk\n")
+        self.put("physics_app/src/fvkernels/Shared.C",
+                 '#include "Shared.h"\n'
+                 'registerMooseObject("PhysicsApp", Legacy);\n'
+                 'registerMooseObject("PhysicsApp", AlsoShared);\n')
+        self.put("physics_app/include/fvkernels/Shared.h",
+                 "class Legacy : public FVKernel {};\nclass AlsoShared : public FVKernel {};\n")
+        graph = fdeg.scan(self.root, "Legacy")
+        self.assertEqual(graph["schema"], "fdeg.structural.v0.3")
+        self.assertEqual(len(self.edges(graph, "BUILD_OWNS_SOURCE")), 1)
+        self.assertEqual(len(self.edges(graph, "INCLUDES_OWNER_HEADER")), 1)
+        self.assertEqual(len(self.edges(graph, "HEADER_DECLARES_TARGET")), 1)
+        unit = graph["enrichment"]["shared_translation_units"][0]
+        self.assertEqual(unit["registered_classes"], ["AlsoShared", "Legacy"])
+        self.assertIn("REQUIRES_ALL_REGISTERED", unit["whole_file_retirement"])
+        self.assertTrue(all(e["source_head"] is None and e["activation_status"] == "NOT_OBSERVED"
+                            for e in graph["edges"]))
+
+    def test_v03_declared_functor_producer_and_instance_join(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        self.put("cases/runtime.i",
+                 "[FunctorMaterials]\n"
+                 "  [rho]\n    type = ADGenericFunctorMaterial\n"
+                 "    prop_names = 'rho_const'\n  []\n[]\n"
+                 "[FVKernels]\n  [t_O2p]\n    type = Legacy\n"
+                 "    variable = w_O2p\n    rho = rho_const\n  []\n[]\n")
+        graph = fdeg.scan(self.root, "Legacy")
+        self.assertEqual(len(self.edges(graph, "BINDS_PARAMETER")), 1)
+        self.assertEqual(len(self.edges(graph, "PRODUCES_FUNCTOR_CANDIDATE")), 1)
+        evidence = graph["enrichment"]["provider_bindings"]
+        self.assertEqual(len(evidence), 1)
+        self.assertEqual(evidence[0]["declared_name"], "rho_const")
+        self.assertEqual(evidence[0]["status"], "SAME_FILE_DECLARED_CANDIDATE")
+        self.assertEqual(evidence[0]["effective_provider"], "UNKNOWN")
+        self.assertEqual(graph["status"], "STRUCTURAL_RECORDED")
+        self.assertIn("functor:rho_const", {n["id"] for n in graph["nodes"]})
+
+    def test_v03_generator_map_workflow_and_unobserved_input(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        self.put("scripts/build_input.py",
+                 'OBJECT_TYPES = {f"FVKernels/{species}_time": "Legacy" for species in ["O2p"]}\n')
+        self.put(".github/workflows/verify.yml",
+                 "on: pull_request\njobs:\n  fdeg:\n    steps:\n"
+                 "      - run: python3 scripts/build_input.py --static\n")
+        graph = fdeg.scan(self.root, "Legacy")
+        edges = self.edges(graph, "GENERATOR_EMITS_OBJECT_CANDIDATE")
+        self.assertTrue(edges)
+        self.assertEqual(graph["status"], "INCOMPLETE")
+        self.assertTrue(any("GENERATED_INPUT_NOT_TRACKED" in x["reason"]
+                            for x in graph["target_scoped_unresolved"]))
+        workflow = self.edges(graph, "WORKFLOW_RUNS_SCRIPT")[0]
+        self.assertEqual(workflow["workflow_context"]["job"], "fdeg")
+        self.assertEqual(workflow["activation_status"], "NOT_OBSERVED")
+        self.assertEqual(graph["enrichment"]["generator_routes"][0]["activation"],
+                         "NOT_OBSERVED")
+
+    def test_v03_unknown_functor_and_role_cannot_be_runtime_promoted(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        self.put("tests/test_rule.py", 'def test():\n    assert "Legacy" not in "Forbidden"\n')
+        self.put("cases/test.i", "[FVKernels]\n  [t]\n"
+                 "    type = Legacy\n    rho = absent_rho\n  []\n[]\n")
+        report = fdeg.scan(self.root, "Legacy")
+        self.assertEqual(report["status"], "INCOMPLETE")
+        self.assertTrue(any(e["reason"].startswith("FUNCTOR_PROVIDER_NOT_PROVEN")
+                            for e in report["target_scoped_unresolved"]))
+        binding = report["enrichment"]["provider_bindings"][0]
+        self.assertEqual(binding["status"], "UNKNOWN")
+        self.assertEqual(binding["effective_provider"], "UNKNOWN")
+        lexical = [e for e in report["edges"] if e["relation"] == "MENTIONS_SYMBOL"
+                   and e["evidence"]["path"] == "tests/test_rule.py"]
+        self.assertTrue(lexical)
+        self.assertTrue(all(e["reference_role"] == "ASSERTION_OR_PROHIBITION_NOT_RUNTIME"
+                            for e in lexical))
+
+    def test_v03_tracked_static_writer_is_not_executed_observation(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        self.put("cases/input.i", "type = Legacy\n")
+        self.put("scripts/build_input.py",
+                 'from pathlib import Path\n'
+                 'OBJECT_TYPES = {"FVKernels/test": "Legacy"}\n'
+                 'Path("cases/input.i").write_text("type = Legacy")\n')
+        graph = fdeg.scan(self.root, "Legacy")
+        routes = graph["enrichment"]["generator_routes"]
+        self.assertTrue(any(x["generated_input_path"] == "cases/input.i"
+                            for x in routes))
+        self.assertTrue(all(x["activation"] == "NOT_OBSERVED" for x in routes))
+        self.assertEqual(graph["status"], "STRUCTURAL_RECORDED")
 
     def test_json_stability_and_git_blob_hash(self):
         path = self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
