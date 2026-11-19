@@ -1,24 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6-e1-crosslane-artifact-custody-20261118",
-      "expected_sha": "c54ad7fccf6357ceded8d2af28dfebc54d55e31f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-e1-crosslane-artifact-custody-20261118-c54ad7fccf63"
+      "branch": "issue-671-arch-ni-time-two-native-receipt-20261118",
+      "expected_sha": "4ac059c4cf9db4ad0f7289888c6d7eca12f16554",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-arch-ni-time-two-native-receipt-20261118-4ac059c4cf9d"
     },
     {
-      "branch": "issue-672-p6-d3-public-d-transport-origin-sha-20261118",
-      "expected_sha": "ec619f93ca1da9e5c25c365ad89bba4e5f8d4879",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d3-public-d-transport-origin-sha-20261118-ec619f93ca1d"
+      "branch": "issue-671-p5-x-native-evidence-integration-20261118",
+      "expected_sha": "576c44dc21c99c1eeb4cf02ef42c65896193d677",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-x-native-evidence-integration-20261118-576c44dc21c9"
     },
     {
-      "branch": "issue-671-p05-arch-ni-time-two-real-native-20261118",
-      "expected_sha": "07cbfd869b984fc783d3f351ed523e7a78a81403",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p05-arch-ni-time-two-real-native-20261118-07cbfd869b98"
+      "branch": "issue-672-p6-b1-public-historical-20261118",
+      "expected_sha": "28920362d985f0b08d16f9325a6b857834ccf90b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-b1-public-historical-20261118-28920362d985"
     },
     {
-      "branch": "issue-672-p6-h3-pinned-arch-p2-20261118",
-      "expected_sha": "d1eee0be6c16859ff20ee7e2ac0fe5b54c44f4ce",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-h3-pinned-arch-p2-20261118-d1eee0be6c16"
+      "branch": "issue-672-p6-i1-ionfvm-retired-chain-20261118",
+      "expected_sha": "dce2d02306377b3c4b056b10cb7e3a0b70ad6f1c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-i1-ionfvm-retired-chain-20261118-dce2d0230637"
+    },
+    {
+      "branch": "issue-672-p6-c2-approval-autostart-p05-20261118",
+      "expected_sha": "0b89891cb7915e5c94c4ca6fad559b66aa78abca",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-c2-approval-autostart-p05-20261118-0b89891cb791"
     }
   ]
 }
