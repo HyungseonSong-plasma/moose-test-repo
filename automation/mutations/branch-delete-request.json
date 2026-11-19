@@ -1,29 +1,24 @@
 {
   "targets": [
     {
-      "branch": "archive-issue541-dd-s6-precutover-20261116",
-      "expected_sha": "632aa2376cad03faa271bad2986c664086842225",
-      "archive_tag": "archive/oxygen-cleanup-20261106/archive-issue541-dd-s6-precutover-20261116-632aa2376cad"
+      "branch": "issue-667-p1-0-417-archive26-20261117",
+      "expected_sha": "4aad40904c112eb2f8626476cf4924d3ef46e13d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-417-archive26-20261117-4aad40904c11"
     },
     {
-      "branch": "issue535-s6-p3-dispatch-once-20261117",
-      "expected_sha": "a39ee535c3dafba90a6f6107020ad04a61a16ca8",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue535-s6-p3-dispatch-once-20261117-a39ee535c3da"
+      "branch": "issue-667-p1-0-archive-pin-20261117",
+      "expected_sha": "21695c76fedd74c311008a5b92cc0d246b9a5955",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-archive-pin-20261117-21695c76fedd"
     },
     {
-      "branch": "issue-633-c2-auto-wall-bc-20261117",
-      "expected_sha": "4d2f1e854a907159f3c3c5c568b52956b2521707",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-c2-auto-wall-bc-20261117-4d2f1e854a90"
+      "branch": "issue-667-p1-a1-2-om-final11-20261117",
+      "expected_sha": "6bb30d80d86648beef107e5aeef42d28558bb430",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-a1-2-om-final11-20261117-6bb30d80d866"
     },
     {
-      "branch": "issue-691-fdeg-structural-evidence",
-      "expected_sha": "5490c037be8e874688eb461e59667320a236d911",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-691-fdeg-structural-evidence-5490c037be8e"
-    },
-    {
-      "branch": "issue-693-fdeg-functional-contract",
-      "expected_sha": "cd46f2c3c9e52f259594bdc12a64d801fc2b8b65",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-693-fdeg-functional-contract-cd46f2c3c9e5"
+      "branch": "issue-668-maxwell-child-closure-20261117",
+      "expected_sha": "09006070f192da7edcbd053c659a74f6bd85f54e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-668-maxwell-child-closure-20261117-09006070f192"
     }
   ]
 }
