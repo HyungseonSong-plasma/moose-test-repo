@@ -7,6 +7,7 @@ a fresh scan; the persisted result never promotes scope or SAFE_DELETE.
 """
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import os
@@ -116,3 +117,75 @@ def save(key: CacheKey, report: dict) -> bool:
     finally:
         if tmp and os.path.exists(tmp):
             os.unlink(tmp)
+
+
+SOURCE_SCHEMA = "fdeg.tracked_source_index.v0.1"
+
+
+def source_index_key(root: Path, head: str | None,
+                     implementation_files: tuple[Path, ...]) -> CacheKey | None:
+    key = cache_key(root, head, "__TRACKED_SOURCES__", implementation_files)
+    if key is None:
+        return None
+    return CacheKey(key.path.with_name(
+        key.path.name.replace("structural-", "sources-") + ".gz"), key.identity)
+
+
+def load_source_index(key: CacheKey) -> tuple[dict[str, tuple[str, str]], list[dict]] | None:
+    """Load one complete source snapshot for *all* target-specific cold scans.
+
+    No subset of paths is silently dropped: the first scan must have enumerated
+    the entire tracked input set and persisted its errors alongside source data.
+    """
+    try:
+        if key.path.is_symlink() or not key.path.is_file():
+            return None
+        if key.path.stat().st_size > MAX_CACHE_BYTES:
+            return None
+        raw = gzip.decompress(key.path.read_bytes())
+        if len(raw) > 4 * MAX_CACHE_BYTES:
+            return None
+        record = json.loads(raw)
+        if (record.get("schema") != SOURCE_SCHEMA
+                or record.get("key") != key.identity):
+            return None
+        payload = record.get("payload")
+        if (not isinstance(payload, dict)
+                or not isinstance(payload.get("contents"), dict)
+                or not isinstance(payload.get("errors"), list)
+                or digest(canonical(payload)) != record.get("payload_sha256")):
+            return None
+        contents = {}
+        for name, value in payload["contents"].items():
+            if (not isinstance(name, str) or not isinstance(value, list)
+                    or len(value) != 2 or not all(isinstance(x, str) for x in value)):
+                return None
+            contents[name] = (value[0], value[1])
+        return contents, payload["errors"]
+    except (OSError, ValueError, TypeError, KeyError, EOFError):
+        return None
+
+
+def save_source_index(key: CacheKey, contents: dict[str, tuple[str, str]],
+                      errors: list[dict]) -> bool:
+    temp_name: str | None = None
+    try:
+        key.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        payload = {"contents": contents, "errors": errors}
+        doc = {"schema": SOURCE_SCHEMA, "key": key.identity,
+               "payload": payload, "payload_sha256": digest(canonical(payload))}
+        compressed = gzip.compress(canonical(doc) + b"\n", compresslevel=3, mtime=0)
+        if len(compressed) > MAX_CACHE_BYTES:
+            return False
+        with tempfile.NamedTemporaryFile(prefix=".fdeg-source-",
+                                        suffix=".tmp", dir=key.path.parent,
+                                        delete=False) as writer:
+            temp_name = writer.name
+            writer.write(compressed)
+        os.replace(temp_name, key.path)
+        return True
+    except (OSError, ValueError, TypeError):
+        return False
+    finally:
+        if temp_name and os.path.exists(temp_name):
+            os.unlink(temp_name)
