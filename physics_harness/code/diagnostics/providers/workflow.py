@@ -159,11 +159,14 @@ class WorkflowCollector:
                 _mapping(events) if isinstance(events, MappingNode)
                 else {event: None for event in _strings(events)}
             )
+            event_key_lines = (
+                {key.value: key.start_mark.line + 1 for key, _ in events.value}
+                if isinstance(events, MappingNode) else {}
+            )
+            if not event_configs:
+                unresolved.append("NO_DECLARED_WORKFLOW_EVENTS")
             for event, config_node in event_configs.items():
-                line = (
-                    config_node.start_mark.line + 1
-                    if config_node is not None else events.start_mark.line + 1
-                )
+                line = event_key_lines.get(event, events.start_mark.line + 1)
                 eid = witness("event", line, event)
                 event_id = stable_id("node", request.repository, "event", event)
                 nodes.append(Node(id=event_id, kind="workflow_event", name=event,
@@ -182,13 +185,19 @@ class WorkflowCollector:
             jobs = {}
         else:
             jobs = _mapping(jobs_node)
+            if not jobs:
+                unresolved.append("NO_DECLARED_WORKFLOW_JOBS")
+        job_key_lines = (
+            {key.value: key.start_mark.line + 1 for key, _ in jobs_node.value}
+            if isinstance(jobs_node, MappingNode) else {}
+        )
         job_ids = {
             key: stable_id("node", request.repository, "workflow_job", record.path, key)
             for key in jobs
         }
         for job_name, job_spec in jobs.items():
             job_data = _mapping(job_spec)
-            line = job_spec.start_mark.line + 1
+            line = job_key_lines[job_name]
             job_eid = witness("job", line, job_name)
             job_id = make_node(
                 "workflow_job", (record.path, job_name), job_name, line,

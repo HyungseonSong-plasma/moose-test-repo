@@ -197,3 +197,32 @@ jobs:
     result = scan(git_factory, merge)
     assert result.status == "PARTIAL"
     assert result.receipt.files[0].status == "FAILED"
+
+
+
+def test_exact_source_lines_anchor_event_and_job_declarations(git_factory):
+    content = """\
+on:
+  push:
+jobs:
+  check:
+    steps:
+      - run: echo hi
+"""
+    result = scan(git_factory, content)
+    assert result.status == "COMPLETE"
+    check = next(n for n in result.graph.nodes if n.kind == "workflow_job")
+    assert check.location.start_line == 4
+    event_evidence = [
+        e for e in result.graph.evidence
+        if e.method == "github-actions-static-v0.1" and
+        e.source_ref.startswith(".github/workflows/check.yml:2@")
+    ]
+    assert event_evidence
+
+
+def test_empty_jobs_or_events_are_not_reported_complete(git_factory):
+    missing_events = "on: []\njobs:\n  check:\n    steps:\n      - run: echo ok\n"
+    assert scan(git_factory, missing_events).status == "PARTIAL"
+    missing_jobs = "on: [push]\njobs: {}\n"
+    assert scan(git_factory, missing_jobs).status == "PARTIAL"
