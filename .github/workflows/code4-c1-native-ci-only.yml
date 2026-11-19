@@ -1,0 +1,118 @@
+# CI-only, never-merge source-bound Native comparison for #713.
+name: Code4 C1 zero-field smoke Native A-B (CI ONLY NEVER MERGE)
+
+on:
+  push:
+    branches:
+      - issue-713-code4-c1-native-evidence-ci-only
+    paths:
+      - .github/workflows/code4-c1-native-ci-only.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  code4-c1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact evidence-only HEAD
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: P0 - original blobs and negative mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m unittest discover -s tests -p test_code4_zero_field_smoke_rewire.py -v
+
+      - name: Stage four inputs using exact original git blobs and current smoke inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/code4_zero_field_smoke_native_ab.py \
+            --prepare --output code4-c1-native --expected-head "$GITHUB_SHA"
+
+      - name: P1 - build exact-source native PhysicsApp in pinned OCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash \
+            --user 0:0 --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee code4-c1-native/native_build.log
+          sha256sum physics_app/physics-opt | awk '{print $1}' > code4-c1-native/binary_sha256.txt
+          docker image inspect "$OCI" --format '{{json .RepoDigests}}' > code4-c1-native/oci_repodigests.json
+          echo CODE4_C1_P1=PASS
+
+      - name: P2 - check-input exact two before and after smoke cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint /bin/bash \
+            --user 0:0 --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              cd code4-c1-native
+              for f in *.i; do
+                echo "P2_CHECK:$f"
+                if ! /workspace/physics_app/physics-opt --check-input -i "$f" > "${f%.i}_p2.log" 2>&1; then
+                  echo "P2_FAIL:$f"
+                  tail -n 100 "${f%.i}_p2.log"
+                  exit 1
+                fi
+              done
+            '
+          echo CODE4_C1_P2=PASS_4_INPUTS
+
+      - name: P3 - compare real transient output on the same binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint /bin/bash \
+            --user 0:0 --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              cd code4-c1-native
+              for f in *.i; do
+                echo "P3_RUN:$f"
+                if ! /workspace/physics_app/physics-opt -i "$f" > "${f%.i}_p3.log" 2>&1; then
+                  echo "P3_FAIL:$f"
+                  tail -n 120 "${f%.i}_p3.log"
+                  exit 1
+                fi
+              done
+            '
+          echo CODE4_C1_P3=PASS_4_EXECUTED
+
+      - name: Fail-closed numeric old/new timeline and observables
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/code4_zero_field_smoke_native_ab.py \
+            --analyze --output code4-c1-native \
+            --expected-head "$GITHUB_SHA" \
+            --binary-sha256 "$(cat code4-c1-native/binary_sha256.txt)"
+          cat code4-c1-native/result.json
+
+      - name: Preserve source/binary/input/log/CSV evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code4-c1-zero-field-native-${{ github.sha }}
+          path: code4-c1-native/
+          if-no-files-found: warn
+          retention-days: 30
