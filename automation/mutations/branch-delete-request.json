@@ -1,19 +1,24 @@
 {
   "targets": [
     {
-      "branch": "cleanup-issue541-core-four-20261115",
-      "expected_sha": "a7f83b8a65249d91422f809fcee6cb319feb7941",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-core-four-20261115-a7f83b8a6524"
+      "branch": "experiment/refactor-blind-20261023",
+      "expected_sha": "44bed71f3bb898c099650afa011e8485fa59cb18",
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-refactor-blind-20261023-44bed71f3bb8"
     },
     {
-      "branch": "cleanup-issue541-integrate-core-flow-arch-20261115",
-      "expected_sha": "d18a802e41cf3c5b152f21ff13374cd622fe9c5a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-integrate-core-flow-arch-20261115-d18a802e41cf"
+      "branch": "experiment/refactor-codeqa-20261023",
+      "expected_sha": "4f4f4bc935615811ebbb6f9dc37faadc04ca6e79",
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-refactor-codeqa-20261023-4f4f4bc93561"
     },
     {
-      "branch": "issue-541-ci-template-sync-20261115",
-      "expected_sha": "34a3539477071d56027c60b1f19d0b502b2e9733",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-ci-template-sync-20261115-34a353947707"
+      "branch": "experiment/production-field-blind-20261023",
+      "expected_sha": "9343dfd8a62f51886b1bf80e73f9887076fcd8d9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-production-field-blind-20261023-9343dfd8a62f"
+    },
+    {
+      "branch": "experiment/production-field-codeqa-20261023",
+      "expected_sha": "d8e8d5e2d5154d907953699644263b1dba681be6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-production-field-codeqa-20261023-d8e8d5e2d515"
     }
   ]
 }
