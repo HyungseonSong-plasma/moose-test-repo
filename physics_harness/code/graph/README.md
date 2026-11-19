@@ -1,8 +1,10 @@
-# Code Graph v0.1 — Contextual Directed Multigraph (design contract)
+# Code Graph v0.1 — Contextual Directed Multigraph
 
-**Status:** approved conceptual contract; interfaces, parsers, traversal, and
-execution are **not implemented**. Applies across languages and file types in
-`moose-test-repo`; not a FDEG migration or retirement authorization.
+**Status:** immutable Python data records, snapshot reference validation, and
+bounded context unfolding implemented. Language parsers, native execution,
+semantic claim assessment, FDEG adapters, and code mutation are **not**
+implemented. Applies across languages and file types in `moose-test-repo`;
+not a FDEG migration or retirement authorization.
 
 ## Canonical graph
 
@@ -32,11 +34,12 @@ boundary. The relationship is many-to-many. An Evidence record can inform
 multiple Claims, and a Claim can reference supporting, refuting, or qualifying
 Evidence. Opposing evidence must be retained rather than silently collapsed.
 
-Illustrative conceptual fields (not implemented APIs):
+Implemented, frozen Python model constructors (shown with core fields):
 
-- `Evidence(id, kind, source_ref, method, scope_id, attributes)`
-- `Claim(id, predicate, subject_refs, conditions, scope_id, assessment_status)`
-- `ClaimEvidenceRef(claim_id, evidence_id, role)`
+- `Evidence(id, kind, source_ref, method, scope_id, observation_status, attributes)`
+- `Claim(id, predicate, subject_refs, scope_id, conditions, evidence_refs, assessment_status)`
+- `ClaimEvidenceRef(evidence_id, role)`, nested under its owning Claim
+- `GraphSnapshot(scope, nodes, edges, evidence, claims)` validates all references
 
 Distinguish evidence acquisition (`SOURCE_DECLARED`, `INFERRED`,
 `RUNTIME_OBSERVED`, `UNRESOLVED`) from claim assessment
@@ -97,7 +100,7 @@ kinds or replacements for semantic edges. Repeated appearances do not create
 new code entities. Analysis and deletion checks may deduplicate by canonical
 node identity while still inspecting **all in-scope edge/path obligations**.
 
-## Minimal context specification (illustrative, not an implemented API)
+## Minimal context specification (illustrative JSON)
 
 ```json
 {
@@ -125,5 +128,41 @@ a known relation, runtime activation, coverage, or safe deletion.
 `node.py` owns entity identity, `edge.py` semantic relationships,
 `evidence.py` provenance, `claim.py` assertions and assessment,
 `scope.py` analysis completeness, and `context.py` projection/navigation.
-None of these modules currently implements graph traversal, evidence evaluation,
-or an assertion that existing FDEG reports automatically match this model.
+`GraphSnapshot` validates subject, endpoint, evidence, and scope references;
+`unfold_context` implements bounded, path-local cycle-safe hierarchy display.
+No parser, claim evaluator, automatic graph-ID match, native observation,
+transition-plan execution, or FDEG report adapter is implemented.
+
+
+## Implemented Python interfaces and boundaries
+
+Import from `physics_harness.code.graph`:
+
+- `SourceLocation`, `Node`, `RelationSpec`, `Edge`
+- `Evidence`, `ClaimEvidenceRef`, `Claim`
+- `Scope`, `GraphSnapshot`
+- `RelationSelector`, `Context`, `NodeOccurrence`, `HierarchyView`,
+  `unfold_context(snapshot, context)`
+
+The data classes are frozen and their JSON-shaped attributes/conditions
+recursively converted to immutable mappings and tuples. Snapshot endpoints
+must resolve to canonical Nodes; missing/external targets need an explicit
+`Node(kind="unresolved", ...)`. Duplicate IDs, missing Evidence/Claim subjects,
+cross-scope records, and contradictory COMPLETE+unresolved scope are rejected.
+
+Scope currently accepts an exact 40-character Git SHA-1; it does not fetch or
+attest the repository itself. `COMPLETE` is a supplied scan assertion, **not**
+independently verified by `GraphSnapshot`. Context evidence filters are
+observation-status filters; they never promote static records to runtime facts.
+
+`unfold_context` keeps the canonical graph unchanged, makes a distinct
+occurrence for each traversed edge path, returns `CYCLE_REF` on path-local
+cycles, annotates cross-path nodes as shared, and explicitly marks
+`TRUNCATED` on a depth/occurrence budget boundary. No SCC consolidation or
+semantic equivalence decision is performed.
+
+P0 tests live under `physics_harness/code/tests/` and run with:
+
+```bash
+python3 -m unittest discover -s physics_harness/code/tests -p 'test_graph_*.py' -v
+```

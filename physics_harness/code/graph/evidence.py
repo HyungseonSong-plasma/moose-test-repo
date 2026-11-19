@@ -1,13 +1,34 @@
-"""Source and observation provenance for graph facts (design boundary).
+"""Evidence provenance: observations are not verdicts or semantic claims."""
 
-Evidence records *what was obtained*, how, where, and within which source or
-runtime scope. The evidence item does not itself assert semantic equivalence,
-approval, or a PASS/FAIL conclusion: those are scoped Claim assessments.
+from __future__ import annotations
 
-Keep distinct source-declared, inferred, observed, and unresolved provenance.
-Multiple claims may cite one piece of evidence; a claim may use many evidence
-items with different roles (supports, refutes, qualifies). Changing the
-context view must never upgrade a static declaration into runtime observation.
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from typing import Any
 
-No Evidence data class, collector, or validator is implemented here.
-"""
+from ._validation import frozen_mapping, nonempty
+
+
+OBSERVATION_STATUSES = frozenset({
+    "SOURCE_DECLARED", "INFERRED", "RUNTIME_OBSERVED", "UNRESOLVED",
+})
+
+
+@dataclass(frozen=True, slots=True)
+class Evidence:
+    id: str
+    kind: str
+    source_ref: str
+    method: str
+    scope_id: str
+    observation_status: str = "SOURCE_DECLARED"
+    attributes: Mapping[str, Any] = field(default_factory=dict, hash=False)
+
+    def __post_init__(self) -> None:
+        for name in ("id", "kind", "source_ref", "method", "scope_id"):
+            nonempty(getattr(self, name), f"evidence.{name}")
+        if self.observation_status not in OBSERVATION_STATUSES:
+            raise ValueError(f"unknown observation status: {self.observation_status!r}")
+        object.__setattr__(
+            self, "attributes", frozen_mapping(self.attributes, "evidence.attributes")
+        )

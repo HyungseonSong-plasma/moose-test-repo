@@ -1,7 +1,21 @@
-"""Language-agnostic code graph namespace.
+"""Language-agnostic Code Graph v0.1 model and bounded hierarchy projection."""
 
-Graph definitions live here; analyzers, reviewers, and mutators consume the
-same graph without owning its core model. Implementation is deferred.
-"""
+from .claim import Claim, ClaimEvidenceRef
+from .context import (
+    Context,
+    HierarchyView,
+    NodeOccurrence,
+    RelationSelector,
+    unfold_context,
+)
+from .edge import Edge, RelationSpec
+from .evidence import Evidence
+from .node import Node, SourceLocation
+from .scope import GraphSnapshot, Scope
 
-__all__: list[str] = []
+__all__ = [
+    "Claim", "ClaimEvidenceRef", "Context", "Edge", "Evidence",
+    "GraphSnapshot", "HierarchyView", "Node", "NodeOccurrence",
+    "RelationSelector", "RelationSpec", "Scope", "SourceLocation",
+    "unfold_context",
+]

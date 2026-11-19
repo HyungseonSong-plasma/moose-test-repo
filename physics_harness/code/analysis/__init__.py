@@ -1,3 +1,3 @@
-"""Language-agnostic code understanding and evidence analysis namespace."""
+"""Language-agnostic code analysis, review findings, and impact assessment."""
 
 __all__: list[str] = []
