@@ -136,5 +136,150 @@ class LiveCode6CensusP0Test(unittest.TestCase):
         self.assertEqual(census["runtime_coverage"], "NOT_PROVEN")
 
 
+class FunctionalAndTransitionCP0Test(unittest.TestCase):
+    def test_code2_invalid_molar_ev_mode_is_not_supported(self):
+        import fdeg_functional as functional
+        registry = functional.load_registry(ROOT)
+        profile = registry["profiles"]["PhysicsFVElectronEnergyJouleHeating"]
+        params = functional.extract_parameters(ROOT, profile)
+        mode = next(p for p in params if p["name"] == "state_form")
+        self.assertEqual(mode["allowed_enum_values"], ["normalized", "physical_eV"])
+        sample = {
+            "input_path": "experiments/fem_fvm_plasma_discriminator/prepare_cases.py",
+            "evidence": {"blob_sha": mode["witness"]["blob_sha"]},
+            "bindings": [
+                {"name": "state_form", "raw_value": "molar_eV", "line": 420},
+                {"name": "electron_density", "raw_value": "n_e", "line": 1},
+                {"name": "potential", "raw_value": "phi", "line": 2},
+                {"name": "mobility", "raw_value": "mu", "line": 3},
+                {"name": "diffusion", "raw_value": "D", "line": 4}]}
+        validation = functional.validate_declared_instance(sample, params)
+        self.assertEqual(validation["status"], "INVALID")
+        self.assertEqual(validation["mode"], "INVALID_DECLARED_MODE")
+        self.assertEqual(validation["invalid"][-1]["allowed_values"],
+                         ["normalized", "physical_eV"])
+        sample["bindings"][0]["raw_value"] = "physical_eV"
+        self.assertNotEqual(functional.validate_declared_instance(sample, params)["status"],
+                            "INVALID")
+
+    def test_transition_retain_vs_compatibility_retirement_and_no_edit(self):
+        import test_fdeg_transition
+        fixture = test_fdeg_transition.PureTransitionGraphP0Test()
+        fixture.setUp()
+        target = "PhysicsFVElectronEnergyJouleHeating"
+        fixture.s["target"] = fixture.f["target"] = target
+        for e in fixture.s["edges"]:
+            e["to"] = "class:" + target
+        fixture.f["edges"][0]["claim_id"] = "claim:" + target + ":time_term"
+        fixture.f["semantic_replacement_diffs"] = []
+        import fdeg_transition as transition
+        result = transition.compose(fixture.s, fixture.f, fixture.policy, fixture.policy_sha)
+        current = next(x for x in result["consumer_dispositions"] if x["instance_id"])
+        self.assertIn("RETIRE_UNSUPPORTED_CONSUMER_WITH_EXPLICIT_APPROVAL",
+                      current["disposition_options"])
+        self.assertEqual(result["safe_delete"], "HOLD")
+        self.assertFalse(result["change_sites"]["declared_input_and_other_consumer_paths"])
+        self.assertIn("history.i", result["change_sites"]["protected_or_reference_no_edit_paths"])
+        self.assertTrue(any(b["kind"] == "COMPATIBILITY_TERMINATION_NOT_APPROVED"
+                            for b in result["blocking_obligations"]))
+        self.assertFalse(any(step["operation"] == "REWIRE_CONSUMER_CANDIDATE"
+                             for step in result["steps"]))
+
+    def test_shared_code5_reports_file_level_four_owner_hold(self):
+        import fdeg_functional as functional
+        import fdeg_transition as transition
+        target = "PhysicsFVLogMolarElectronReactionSource"
+        s = structural.scan(ROOT, target)
+        f = functional.assemble(ROOT, s, target, functional.load_registry(ROOT))
+        p, sha = transition.load_policy(ROOT)
+        report = transition.compose(s, f, p, sha)
+        aggregate = report["shared_owner_aggregate_requirement"]
+        self.assertEqual(len(aggregate["registered_classes"]), 4)
+        self.assertEqual(aggregate["whole_file_safe_delete"], "HOLD")
+        self.assertEqual(aggregate["required_external_manifest"],
+                         "FOUR_S_F_T_REPORTS_SAME_EXACT_HEAD")
+
+
+class RetirementEvidenceDP0Test(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import fdeg_retirement_evidence as retire
+        cls.retire = retire
+
+    def synthetic_receipt(self, root):
+        retire = self.retire
+        receipt = {
+            "schema": retire.SCHEMA, "lifecycle": "PRE_RETIREMENT",
+            "target": "Legacy", "baseline_head": "b" * 40,
+            "source_blobs": {"src/Legacy.C": "old-blob"},
+            "registered_owners": ["Legacy"],
+            "graph_sha256": {n: "0" * 64 for n in retire.GRAPH_NAMES},
+        }
+        receipt["manifest_sha256"] = retire.sha256(retire.canonical(receipt))
+        review = {"schema": retire.RETIRED_SCHEMA, "state": "RETIRED",
+                  "target": "Legacy",
+                  "baseline_manifest_sha256": receipt["manifest_sha256"],
+                  "retirement_head": "c" * 40,
+                  "discharged_registered_owners": ["Legacy"],
+                  "external_and_generated_scope": "INDEPENDENTLY_ATTESTED",
+                  "historical_protected_paths": []}
+        for name in ("owner_approval_ref", "independent_native_receipt_ref",
+                     "independent_coverage_receipt_ref",
+                     "current_binary_compatibility_decision_ref",
+                     "historical_archive_ref", "rollback_review_ref"):
+            review[name] = "receipt:" + name
+        return receipt, review
+
+    def test_retired_review_cannot_skip_owner_coverage_or_prior_snapshot(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            receipt, review = self.synthetic_receipt(root)
+            review["independent_native_receipt_ref"] = "UNKNOWN"
+            with self.assertRaisesRegex(ValueError,
+                                        "RETIREMENT_MISSING_INDEPENDENT_APPROVAL_RECEIPT"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+            review["independent_native_receipt_ref"] = "receipt:native"
+            receipt["target"] = "forged"
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_PRE_CUT_RECEIPT_TAMPERED"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+
+    def test_retired_guard_rejects_source_present_and_symbol_reintroduction(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            receipt, review = self.synthetic_receipt(root)
+            source = root / "src/Legacy.C"
+            source.parent.mkdir(parents=True)
+            source.write_text('registerMooseObject("PhysicsApp", Legacy);\n')
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_SOURCE_STILL_PRESENT"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+            source.unlink()
+            inp = root / "cases/kept.i"
+            inp.parent.mkdir(parents=True)
+            inp.write_text("type = Legacy\n")
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_SOURCE_SYMBOL_REINTRODUCED"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+
+    def test_static_retired_guard_never_returns_safe_delete_pass(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            receipt, review = self.synthetic_receipt(root)
+            result = self.retire.verify_retired(root, receipt, review, "c" * 40)
+            self.assertEqual(result["safe_delete"], "HOLD")
+            self.assertEqual(result["caller_zero_reverified_here"],
+                             "NOT_PROVEN_BY_THIS_STATIC_GUARD")
+
+    def test_exact_head_code7_capture_archive_has_valid_graph_joins(self):
+        head = structural.git(ROOT, "rev-parse", "HEAD")
+        receipt, docs = self.retire.capture(ROOT, "PhysicsFVThermalDiffusion", head)
+        self.retire.verify_snapshot(receipt, docs)
+        self.assertEqual(receipt["safe_delete"], "HOLD")
+        self.assertEqual(receipt["baseline_head"], head)
+        self.assertIn("physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+                      receipt["source_blobs"])
+        docs["transition"]["safe_delete"] = "PASS"
+        with self.assertRaisesRegex(ValueError, "RETIREMENT_GRAPH_CONTENT_MISMATCH"):
+            self.retire.verify_snapshot(receipt, docs)
+
+
 if __name__ == "__main__":
     unittest.main()
