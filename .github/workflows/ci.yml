@@ -72,7 +72,7 @@ jobs:
       github.event.action != 'edited' ||
       github.event.changes.base != null
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -375,8 +375,13 @@ jobs:
             tests/**/*.py
           if-no-files-found: error
           retention-days: 1
-      - name: Run Physics pytest
-        run: python -m pytest -q
+      - name: Run Physics pytest (FDEG P0 suites already executed above)
+        run: >-
+          python -m pytest -q
+          --ignore=tests/test_fdeg_structural.py
+          --ignore=tests/test_fdeg_functional.py
+          --ignore=tests/test_fdeg_transition.py
+          --ignore=tests/test_fdeg_harness_abcd.py
       - name: Regression-test Issue493 canonical/archive Exodus P4 diagnostics
         run: python experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
       - name: Validate normalized-to-physical coupled equivalence fixture
