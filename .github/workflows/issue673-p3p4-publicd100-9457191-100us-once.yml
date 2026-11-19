@@ -9,12 +9,19 @@ concurrency:
   cancel-in-progress: false
 jobs:
   exact-head-full-s6-rf:
+    name: Full100us S6-${{ matrix.case }} P3/P4
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: ['417', '941']
     if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 360
     env:
       OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
       BASE_HEAD: 9457191f4c0693ae886586edd961965867ccd5c0
+      CASE: ${{ matrix.case }}
     steps:
       - name: Checkout exact source without writing authentication credentials
         uses: actions/checkout@v4
@@ -109,7 +116,7 @@ jobs:
           assert len(hits)==3,('G1_UNEXPECTED_PYTHON_BLOCKS',hits)
           print('G1_EMBEDDED_PYTHON_AST_ALL_PASS',len(hits))
           PY_G1_SELFTEST
-      - name: G1 stage original 11-layer and P4X then Public D original100 physics
+      - name: P3/P4 stage full 11-layer and PublicD100 Chemistry JSON
         shell: bash
         run: |
           set -euo pipefail
@@ -233,7 +240,7 @@ jobs:
           printf '%s  %s\n' b327aea7f496809779dd233336d8c62d15ab021accdb13e552efe1a750c72e18 physics_app/physics-opt > "$RUNNER_TEMP/p05-in/physics-opt.sha256"
           echo P5X_REUSED_EXACT_HEAD_ONE_BINARY_FOR_BOTH_CASES_AND_ALL_NEGATIVES
 
-      - name: G1 actual PublicD original100 417 and 941 protected RF 3-step cost pilot
+      - name: P3 native 100us full RF and P4 checkpoint diagnostics
         shell: bash
         env:
           PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
