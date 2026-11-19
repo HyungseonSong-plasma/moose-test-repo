@@ -1,15 +1,15 @@
-name: Issue673 electron Ne RZ slices 100us PublicD100 S6-417 S6-941
+name: Issue673 100us original Exodus plus HPEM electron profiles S6-417 S6-941
 on:
   push:
     branches:
-      - issue-673-publicd100-electron-slices-100us-20261119
+      - issue-673-publicd100-exodus-hpem-100us-20261119
     paths:
       - .github/workflows/issue673-publicd100-electron-r0-z23-slices-100us-once.yml
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: issue673-electron-ne-slice-945-100us
+  group: issue673-exodus-hpem-945-100us
   cancel-in-progress: false
 jobs:
   exact-head-full-s6-rf:
@@ -728,7 +728,8 @@ jobs:
                                   r["maxwell_solver_message_seen"]=("Solve Converged!" in log and "maxwell" in log.lower())
                                   (out/f"{case}_native_excerpt.txt").write_text(limit_log(log))
                                   r["P3_private_log_sha256"]=dg(work/"p3_private_solver.log") if (work/"p3_private_solver.log").exists() else None
-                                  # No raw private-rate, solver, Exodus, or checkpoint bytes are published.
+                                  # Publish only the verified original parent plasma Exodus per explicit user request.
+                                  # Never publish private EI rate inputs, solver logs, child files or checkpoints.
                                   r["P4_exodus_manifest"]=[{"name":p.name,"sha256":dg(p),"bytes":p.stat().st_size}
                                       for p in sorted(work.rglob("*.e")) if p.is_file()]
                                   r["P4_checkpoint_manifest"]=[{"name":p.name,"sha256":dg(p),"bytes":p.stat().st_size}
@@ -965,11 +966,33 @@ jobs:
                                           "native_axis_nodes":len(raw_axis[0]),"horizontal_finite_points":valid_h,
                                           "exodus_sha256":sha256(exodus),
                                           "reference_source_timestamp":"UNKNOWN",
+                                          "reference_origin":"HPEM_400W_PUBLIC_CSV_TIMESTAMP_UNVERIFIED",
                                           "vertical_png_sha256":sha256(vpng),
                                           "horizontal_png_sha256":sha256(hpng),
                                           "reference_vertical_sha256":sha256(vertical_csv),
                                           "reference_horizontal_sha256":sha256(horizontal_csv),
                                           "science":"SCIENCE_HOLD"}
+                                      # Copy only the exact original parent Exodus before private Scratch cleanup.
+                                      # The output destination is the already published evidence directory.
+                                      exodus_copy=out/f"{case}_rf_full_plasma_100us.e"
+                                      if exodus_copy.exists():
+                                          raise ValueError("ORIGINAL_EXODUS_DESTINATION_ALREADY_EXISTS")
+                                      exodus_digest=sha256(exodus)
+                                      matched=[entry for entry in r["P4_exodus_manifest"]
+                                               if entry["name"]==exodus.name]
+                                      if (len(matched)!=1 or matched[0]["sha256"]!=exodus_digest
+                                              or matched[0]["bytes"]!=exodus.stat().st_size
+                                              or exodus.stat().st_size<=1_000_000):
+                                          raise ValueError("ORIGINAL_EXODUS_SOURCE_IDENTITY_UNVERIFIED")
+                                      shutil.copyfile(exodus,exodus_copy)
+                                      if (exodus_copy.stat().st_size!=exodus.stat().st_size
+                                              or sha256(exodus_copy)!=exodus_digest):
+                                          raise ValueError("ORIGINAL_EXODUS_COPY_SHA256_MISMATCH")
+                                      r["electron_slices"]["raw_exodus_artifact_filename"]=exodus_copy.name
+                                      r["electron_slices"]["raw_exodus_artifact_bytes"]=exodus_copy.stat().st_size
+                                      r["electron_slices"]["raw_exodus_artifact_sha256"]=exodus_digest
+                                      r["electron_slices"]["raw_exodus_published_sha_verified"]=True
+                                      print("FULL_ORIGINAL_PLASMA_EXODUS_SHA_STAGED",case,exodus_digest,flush=True)
                                       (out/f"{case}_electron_slice_manifest.json").write_text(
                                           json.dumps(r["electron_slices"],sort_keys=True,indent=2)+"\n")
                                       print("NATIVE_NE_R0_Z23_TWO_PNG_TWO_CSV_PASS",case,
@@ -1011,6 +1034,7 @@ jobs:
                   len(receipt["cases"])==1 and
                   all(r["full_100us_rc"]==0 and r["P3_timegrid_pass"] and r["seven_transfers_numeric_observed"] and r.get("d8_coupled_functor_numeric_pass",False) and r.get("d8_four_boundary_consistency_pass",False)
                       and r["electron_slices"]["status"]=="PASS_SOURCE_BOUND_NATIVE_EXODUS"
+                      and r["electron_slices"].get("raw_exodus_published_sha_verified",False)
                       and r["P4_diagnostic_only"] and r["full_S6_original_11_layers_unchanged"]
                       for r in receipt["cases"].values()))
               (out/"rf_full_s6_receipt.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
@@ -1024,7 +1048,7 @@ jobs:
               sys.exit(0 if receipt["RF_FULL_S6_CASES_PASS"] else 1)
           PY
 
-      - name: Archive only sanitized numeric output, SHA receipts and actual binary
+      - name: Publish exact-SHA original parent Exodus plus HPEM PNG CSV numeric receipts and binary
         if: always()
         uses: actions/upload-artifact@v4
         with:
