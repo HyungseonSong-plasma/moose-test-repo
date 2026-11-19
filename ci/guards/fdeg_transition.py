@@ -164,6 +164,11 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
                   fact["reason"] + " at " + fact["path"] + ":" + str(fact["line"]),
                   "STRUCTURAL_RUNTIME_SCOPE", consumer=None,
                   origin=structural.stable_id("unresolved", fact))
+    for fact in structural_report.get("upstream_unresolved", []):
+        add_block("UPSTREAM_GENERATOR_OR_INPUT_UNRESOLVED",
+                  fact["reason"] + " at " + fact["path"] + ":" + str(fact["line"]),
+                  "UPSTREAM_GENERATOR_OR_INPUT_COVERAGE",
+                  origin=structural.stable_id("upstream-unresolved", fact))
     if structural_report["status"] == "INCOMPLETE" or structural_report.get("scan_errors"):
         add_block("INCOMPLETE_SCANNER", "Structural global scan incomplete; cannot assert coverage",
                   "STRUCTURAL_SCOPE")
@@ -304,6 +309,10 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
             current["blocking_obligation_ids"] = [bid]
         else:
             current["blocking_obligation_ids"] = []
+        current["blocking_obligation_ids"] = sorted(set(
+            current["blocking_obligation_ids"] +
+            [b["obligation_id"] for b in blockers
+             if b.get("consumer") == current["consumer_id"]]))
         consumers.append(current)
         edges.append(edge(incident, "HAS_DISPOSITION", current["consumer_id"], {
             "disposition": disposition, "status": "PLANNED_ONLY",
