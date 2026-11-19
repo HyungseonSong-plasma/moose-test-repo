@@ -1,19 +1,29 @@
 {
   "targets": [
     {
-      "branch": "cleanup-wave1-cd-evidence-integration-20261116",
-      "expected_sha": "907573533b1523b42ba668332aa54ee03ceeb81c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-cd-evidence-integration-20261116-907573533b15"
+      "branch": "issue-633-ion-fvm-newonly-p0-20261118",
+      "expected_sha": "531871cee0fe3311f4987f9bf5ecb8530b095b18",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ion-fvm-newonly-p0-20261118-531871cee0fe"
     },
     {
-      "branch": "cleanup-wave1-dd-p3-20261116",
-      "expected_sha": "ad1285b9e32be7467c07c5b09d56d6e9309211d0",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-p3-20261116-ad1285b9e32b"
+      "branch": "issue-633-ion-wall-single-factory-20261118",
+      "expected_sha": "06cb86515b6d8bfd3509da2776678e66c673f36b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ion-wall-single-factory-20261118-06cb86515b6d"
     },
     {
-      "branch": "cleanup-wave1-s6-retirement-guard-contract-20261116",
-      "expected_sha": "24b4c89720909397c55577c9aec4267d639074bd",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-retirement-guard-contract-20261116-24b4c8972090"
+      "branch": "issue-633-validate-pytest-pin-fixtures-20261118",
+      "expected_sha": "a13269393e480fd95c641bf456ceb5aeda6b60e9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-validate-pytest-pin-fixtures-20261118-a13269393e48"
+    },
+    {
+      "branch": "issue-668-p2-production-newonly-stage-20261117",
+      "expected_sha": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-668-p2-production-newonly-stage-20261117-baef9bd3447b"
+    },
+    {
+      "branch": "issue-669-p3-x-electron-source-cutover-20261118",
+      "expected_sha": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-x-electron-source-cutover-20261118-c965e69cc964"
     }
   ]
 }
