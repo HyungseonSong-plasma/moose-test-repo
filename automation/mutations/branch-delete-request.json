@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "refactor/electron-impact-rate-native-linear-interpolation-20261109",
-      "expected_sha": "76b4f25c8d874acb8bfda5846d32d9031e0f7aa5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-electron-impact-rate-native-linear-interpolation-20261109-76b4f25c8d87"
+      "branch": "archive-issue541-dd-s6-precutover-20261116",
+      "expected_sha": "632aa2376cad03faa271bad2986c664086842225",
+      "archive_tag": "archive/oxygen-cleanup-20261106/archive-issue541-dd-s6-precutover-20261116-632aa2376cad"
     },
     {
-      "branch": "experiment/issue402-merged-main-p3-bd-probe-20261110",
-      "expected_sha": "d22a995a7098bfbd766c837f4f4ecc1fd05f8b48",
-      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-issue402-merged-main-p3-bd-probe-20261110-d22a995a7098"
+      "branch": "issue535-s6-p3-dispatch-once-20261117",
+      "expected_sha": "a39ee535c3dafba90a6f6107020ad04a61a16ca8",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue535-s6-p3-dispatch-once-20261117-a39ee535c3da"
     },
     {
-      "branch": "cleanup-wave1-dd-retire-ci-contract-fixes-20261116",
-      "expected_sha": "a75feee713597e7bd09281455dee53df6e88b44b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-retire-ci-contract-fixes-20261116-a75feee71359"
+      "branch": "issue-633-c2-auto-wall-bc-20261117",
+      "expected_sha": "4d2f1e854a907159f3c3c5c568b52956b2521707",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-c2-auto-wall-bc-20261117-4d2f1e854a90"
     },
     {
-      "branch": "cleanup-wave1-dd-retire-combined-required-20261116",
-      "expected_sha": "d9718bf26e230a9bd8e23f8de4e2c091bac6f90f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-retire-combined-required-20261116-d9718bf26e23"
+      "branch": "issue-691-fdeg-structural-evidence",
+      "expected_sha": "5490c037be8e874688eb461e59667320a236d911",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-691-fdeg-structural-evidence-5490c037be8e"
     },
     {
-      "branch": "cleanup-wave1-s6-3step-core-20261116",
-      "expected_sha": "f08ad67219ed57213fe5af6b79c58f789b6feecf",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-3step-core-20261116-f08ad67219ed"
+      "branch": "issue-693-fdeg-functional-contract",
+      "expected_sha": "cd46f2c3c9e52f259594bdc12a64d801fc2b8b65",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-693-fdeg-functional-contract-cd46f2c3c9e5"
     }
   ]
 }
