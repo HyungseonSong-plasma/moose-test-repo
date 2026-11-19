@@ -38,6 +38,8 @@
         [Continuity]
           fem_species = e
           fvm_species = O2p
+          # P2-only binding/JSON coefficient fixture, not a full FV equation.
+          dont_create_kernels = true
           fem_potential = potential
         []
         [Energy]

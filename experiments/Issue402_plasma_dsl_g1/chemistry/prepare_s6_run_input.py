@@ -204,12 +204,15 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
                 owners[old] = canonical
             # The old total-flux class was retired upstream (#523). Its
             # surface+migration total number/mass law and all input parameters
-            # are implemented by PhysicsIonWallFluxMaterial. This is only a
+            # are implemented by the sole IonWallFluxMaterial class. This is
             # staged *type/identity* migration, never a new wall equation.
             # Validate the known old factory before installing its replacement.
-            if material_type == "PhysicsIonWallTotalFluxMaterial":
+            if material_type in {"PhysicsIonWallFluxMaterial",
+                                 "PhysicsIonWallTotalFluxMaterial"}:
+                # Only historical immutable inputs may use these factory names.
+                # Never expose either retired name to the active PhysicsApp.
                 body, converted = _WALL_TYPE.subn(
-                    "    type = PhysicsIonWallFluxMaterial", body, count=1)
+                    "    type = IonWallFluxMaterial", body, count=1)
                 if converted != 1:
                     raise ValueError("S6_WALL_RETIRED_TYPE_CUTOVER_FAILED")
             elif material_type in {
@@ -240,9 +243,7 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
             owner_records.append({
                 "source_layer": path.name, "block": m.group("name"),
                 "source_type": material_type,
-                "type": "PhysicsIonWallFluxMaterial"
-                if material_type == "PhysicsIonWallTotalFluxMaterial" else (
-                    "ESWallFluxMaterial" if species == "e" else material_type),
+                "type": "ESWallFluxMaterial" if species == "e" else "IonWallFluxMaterial",
                 "species_id": species,
                 "outputs": dict(sorted(pairs.items())),
             })
@@ -628,9 +629,25 @@ def main() -> int:
                         help="JSON list of 10 S6 layer paths + migrated_continuity.i")
     parser.add_argument("--variant", choices=("417", "941"), required=True)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--newonly", action="store_true",
+                        help="Stage exact #668 New-only JSON/layer11 after pinned 26-owner Scratch retirement")
+    parser.add_argument("--case-manifest", type=Path,
+                        help="P1-0 exact-source 11-layer case manifest, mandatory for --newonly")
+    parser.add_argument("--moments-source", type=Path,
+                        help="Historical SHA-pinned 42-row electron table, mandatory for --newonly")
     args = parser.parse_args()
     ordered = json.loads(args.ordered_file.read_text())
-    report = prepare(args.staged_chem_dir, ordered, args.variant)
+    if args.newonly:
+        if args.case_manifest is None or args.moments_source is None:
+            parser.error("--newonly requires --case-manifest and --moments-source")
+        from prepare_s6_newonly import prepare_newonly
+        report = prepare_newonly(
+            args.staged_chem_dir, ordered, args.variant,
+            json.loads(args.case_manifest.read_text(encoding="utf-8")),
+            args.moments_source
+        )
+    else:
+        report = prepare(args.staged_chem_dir, ordered, args.variant)
     args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps(report, sort_keys=True))
     return 0

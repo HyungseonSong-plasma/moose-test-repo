@@ -91,6 +91,38 @@ native() {
   ' -- "$@"
 }
 
+# Issue #633: narrow positive P2 before broad legacy/surface/Poisson checks.
+# This is synthetic three-ion FV Continuity only: JSON owns initial densities,
+# transport and reaction sources; no Native ion Kernels/BCs, wall or Poisson.
+# Reuse this job's freshly compiled exact-HEAD physics-opt, never a cached binary.
+native --check-input -i "$PILOT/issue633_ion_continuity_newonly_p2.i" \
+  2>&1 | tee "$EVIDENCE/issue633_ion_continuity_newonly_p2.log"
+echo "ISSUE633_ION_CONTINUITY_NEW_ONLY_P2_PASS"
+
+# C2 combined P2: synthetic 2D sidesets with actual 3 species x 4 FV kernels,
+# 3 new wall-flux Materials, 12 JSON-generated FV BCs, and three surface
+# current functors. No Native ion operators and no Poisson or time integration.
+# Never treat synthetic P2 as full S6-417/941 replacement/science acceptance.
+native --check-input -i "$PILOT/issue633_ion_continuity_wall_bc_newonly_p2.i" \
+  2>&1 | tee "$EVIDENCE/issue633_ion_continuity_wall_bc_newonly_p2.log"
+echo "ISSUE633_ION_CONTINUITY_WALL_BC_NEW_ONLY_P2_PASS"
+
+# Exact-HEAD negative P2: Om lacks a volume source, so the otherwise valid
+# JSON + .i selection must fail before accepting a partial FV equation.
+set +e
+native --check-input -i "$PILOT/issue633_ion_continuity_missing_om_source_p2.i" \
+  > "$EVIDENCE/issue633_ion_continuity_missing_om_source_p2.log" 2>&1
+issue633_missing_om_status=$?
+set -e
+if [[ "$issue633_missing_om_status" -eq 0 ]] || \
+   ! grep -Fq "requires a nonzero volume reaction source" \
+       "$EVIDENCE/issue633_ion_continuity_missing_om_source_p2.log"; then
+  echo "::error::Issue633 omitted Om source was accepted or failed for the wrong reason" >&2
+  cat "$EVIDENCE/issue633_ion_continuity_missing_om_source_p2.log" >&2
+  exit 41
+fi
+echo "ISSUE633_ION_CONTINUITY_MISSING_SOURCE_NEGATIVE_P2_PASS"
+
 # Canonical replacement for the historical JSON-rate one-shot Native P2 cases.
 # Use the exact same physics-opt binary and immutable OCI as P1 and later S6 P2.
 # H01-H04, H05 and the actual JSON surface-rate input do not execute timesteps.
@@ -248,7 +280,7 @@ echo "PLASMA_JSON_SPECIES_INITIAL_P2_PASS"
 native --check-input -i "$PILOT/auto_energy_potential_p2.i" \
   2>&1 | tee "$EVIDENCE/auto_energy_potential_p2.log"
 echo "PLASMA_AUTO_ENERGY_POTENTIAL_P2_PASS"
-for entry in "invalid_auto_energy_missing_initial_p2:requires an explicit positive initial molar" \
+for entry in "invalid_auto_energy_missing_initial_p2:requires either explicit .i initial_molar_energy_density_eV or species.e initial_number_density and positive temperature_eV in JSON" \
              "invalid_auto_energy_zero_initial_p2:must be finite and strictly positive" \
              "invalid_auto_poisson_nan_initial_p2:invalid syntax for double parameter"; do
   item="${entry%%:*}"
@@ -312,6 +344,29 @@ for channel in 417 941; do
     2>&1 | tee "$EVIDENCE/chemistry_s6_${channel}_catalogue_p2.log"
   echo "PLASMA_CHEMISTRY_S6_${channel}_CATALOGUE_P2_PASS"
 done
+
+# Issue #633 P14: actual source-bound 3-ion FV Kernel generation P2.
+# These are synthetic, deliberately nonphysical Rate values; --check-input
+# exercises Factory + TheWarehouse 12/12 uniqueness, NOT P3 science.
+native --check-input -i "$PILOT/chemistry_s6_417_three_ion_fv_generated_p2.i" \
+  2>&1 | tee "$EVIDENCE/issue633_fv12_generated_p2.log"
+echo "ISSUE633_FV_KERNEL_12_NATIVE_P2_PASS_NOT_SCIENCE"
+
+# P05: the same Physics generation must reject a competing Native Kernel.
+set +e
+native --check-input -i "$PILOT/chemistry_s6_417_three_ion_fv_generated_p2.i" \
+  "$PILOT/chemistry_s6_417_three_ion_fv_duplicate_p2.i" \
+  > "$EVIDENCE/issue633_native_duplicate_negative_p2.log" 2>&1
+issue633_duplicate_rc=$?
+set -e
+if [[ "$issue633_duplicate_rc" -eq 0 ]] ||
+   ! grep -Fq "P05 FV Native/Physics duplicate or unexpected owner" \
+     "$EVIDENCE/issue633_native_duplicate_negative_p2.log"; then
+  echo "::error::Issue633 P05 accepted Native/Physics duplicate or failed before P05" >&2
+  cat "$EVIDENCE/issue633_native_duplicate_negative_p2.log" >&2
+  exit 42
+fi
+echo "ISSUE633_FV_NATIVE_DUPLICATE_REJECTED_P2_PASS"
 
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.

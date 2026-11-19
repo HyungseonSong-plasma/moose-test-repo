@@ -1,0 +1,263 @@
+{
+  "schema": "issue669.p3_x.source_only.inventory.v4",
+  "source_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "status": "PASS_417_941_P3_X_PRODUCTION_EIGHT_E_BC_TWO_FUNCTOR_RETIREMENT_SOURCE_ONLY",
+  "input_artifacts": {
+    "p1_final_hybrid": {
+      "ci_run": 44180190753,
+      "artifact_id": 14372315897,
+      "zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620"
+    },
+    "p2_source_only_retirement": {
+      "ci_run": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    }
+  },
+  "cases": {
+    "417": {
+      "actual_p1_input_files": 11,
+      "actual_post_p2_input_files": 11,
+      "changed_input_files": 5,
+      "unchanged_input_files": 6,
+      "retired_native_ion_FVKernels": 14,
+      "retired_native_ion_FVBCs": 12,
+      "remaining_old_native_ion_owner_count": 0,
+      "electron_FEM_BCs_preserved": 8,
+      "newonly_overlay_bound": false,
+      "active_overlay": "migrated_continuity.i",
+      "C0_post_p2_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "historical_P2_stage": {
+        "electron_FEM_BCs_preserved": 8,
+        "newonly_overlay_bound": false
+      },
+      "after_p3x_source_stage": {
+        "native_ion_owners": 0,
+        "native_electron_FEM_BCs": 0,
+        "old_n_e_physical_FunctorMaterial_owners": 0,
+        "old_e_wall_number_flux_FunctorMaterial_owners": 0,
+        "removed_electron_BCs": 8,
+        "removed_old_electron_materials": 2,
+        "changed_layers_vs_original_P1": 6,
+        "unchanged_layers_vs_original_P1": 5,
+        "overlay_bound": true,
+        "original_42_row_electron_table_sha": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+        "C0_after_p3x_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "native_warehouse": "NOT_RUN"
+      }
+    },
+    "941": {
+      "actual_p1_input_files": 11,
+      "actual_post_p2_input_files": 11,
+      "changed_input_files": 5,
+      "unchanged_input_files": 6,
+      "retired_native_ion_FVKernels": 14,
+      "retired_native_ion_FVBCs": 12,
+      "remaining_old_native_ion_owner_count": 0,
+      "electron_FEM_BCs_preserved": 8,
+      "newonly_overlay_bound": false,
+      "active_overlay": "migrated_continuity.i",
+      "C0_post_p2_sha256": "39826e1e95372d226cca4036b520a7f13dfd79c8b6ef0ca2d7c0ca49f904e17e",
+      "historical_P2_stage": {
+        "electron_FEM_BCs_preserved": 8,
+        "newonly_overlay_bound": false
+      },
+      "after_p3x_source_stage": {
+        "native_ion_owners": 0,
+        "native_electron_FEM_BCs": 0,
+        "old_n_e_physical_FunctorMaterial_owners": 0,
+        "old_e_wall_number_flux_FunctorMaterial_owners": 0,
+        "removed_electron_BCs": 8,
+        "removed_old_electron_materials": 2,
+        "changed_layers_vs_original_P1": 6,
+        "unchanged_layers_vs_original_P1": 5,
+        "overlay_bound": true,
+        "original_42_row_electron_table_sha": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+        "C0_after_p3x_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+        "native_warehouse": "NOT_RUN"
+      }
+    }
+  },
+  "electron_fem_bcs": [
+    {
+      "name": "electron_sheath",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "d9ab87b8365ba483414939b7e3a7a30f39f4acd8b43b1c70a62ecf521c62ca79",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_electrode plasma_metal plasma_right",
+      "factory": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux"
+    },
+    {
+      "name": "electron_cover_dielectric",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "1872e9cb7910fa7a746aa2ac0312a2a62f68931f17d61d411887e6312f5e0c04",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_cover",
+      "factory": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux"
+    },
+    {
+      "name": "electron_wafer_dielectric",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "0f12b97314b9a0c2da88f9caa0c0512d67b9d0d7dc4ed6d664e0d51da905fe74",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_wafer",
+      "factory": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux"
+    },
+    {
+      "name": "electron_focus_ring_dielectric",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "9e99d69205b7051a10394cba48f927e4aaca92e1936bc51ea678028c9028dbaa",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_focus_ring",
+      "factory": "FEMElectronSheathBC",
+      "variable": "log_e",
+      "wall_number_flux": "e_wall_number_flux"
+    },
+    {
+      "name": "electron_energy_sheath",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "9df1e4b83ffe87735dc753ac9c7f1772eda6e7e7e3701e81cd60f9c7b959d891",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_electrode plasma_metal plasma_right",
+      "factory": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV"
+    },
+    {
+      "name": "electron_energy_cover",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "5e3c9b1853568945d1e99bc25cc7eb028f39d59b60b64824d4091a81b65b3f98",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_cover",
+      "factory": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV"
+    },
+    {
+      "name": "electron_energy_wafer",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "fedc129efca3c592e13edb2c4a0d402693a02195029ee9cf86bd94bccc839884",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_wafer",
+      "factory": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV"
+    },
+    {
+      "name": "electron_energy_focus_ring",
+      "section": "BCs",
+      "original_to_p2_block_sha256_pinned": "b8007959a82a5e5f45980de34f5208356166f22d9bcd995a90fc4ba883ca5138",
+      "source_layer": "C0 (1/11)",
+      "boundary": "plasma_focus_ring",
+      "factory": "FEMElectronEnergySheathBC",
+      "variable": "log_e_energy",
+      "wall_number_flux": "e_wall_number_flux",
+      "mean_energy": "e_energy_eV"
+    }
+  ],
+  "newonly_json_source": {
+    "417": {
+      "sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef"
+    },
+    "941": {
+      "sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde"
+    },
+    "electron_transport": {
+      "type": "lookup",
+      "unit": "reduced",
+      "bounds_policy": "clamp",
+      "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+    },
+    "newonly_electron_bc_entries": 8
+  },
+  "full_independent_local_sha_inventory_sha256": "4966a472145ea7cde3c53235f5d26278257d1f3f216aaca88594c97356c91ce2",
+  "case_input_hashes": "P1 and P2 ZIP embedded manifests/retirement_receipt.json contain each exact 11-file SHA; full 22-file before/after rehash independently verified in local full inventory.",
+  "safe_scope": "Exact actual P2+P3-X disposable source-stage integrated: 26 old ion + 10 old electron blocks retired per case; New-only 8 electron BCs and two Functor properties expected to be generated by Physics, but no Native C++ instantiation asserted. All original source archives and PR665 main remain untouched.",
+  "source_branch_stages": {
+    "P2_668_historical_hybrid_retired_ion": {
+      "artifact_id": 14379920938,
+      "recorded_originally_in_this_inventory": true
+    },
+    "P2_668_production_newonly": {
+      "pr": 674,
+      "pr_head": "4185d04ccded7fe1f6b6da8a5ecc2d0cdf339d75",
+      "run_id": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "cases": [
+        "417",
+        "941"
+      ],
+      "newonly_overlay_bound": true,
+      "electron_42row_table_staged_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "both_json_sha_match": true
+    },
+    "P3_X_disposable_shadow": {
+      "source_run": 44199587771,
+      "legacy_bc_blocks_removed": 8,
+      "legacy_functor_blocks_removed": 2,
+      "changed_stage_file_count_per_case": 1,
+      "unchanged_stage_file_count_per_case": 10,
+      "resulting_c0_sha256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "receipt_file": "reports/issue669/p3-x/shadow_cutover_10owners.json",
+      "native_runtime": "NOT_RUN"
+    },
+    "P3_X_PRODUCTION_RUNNER": {
+      "run": 44256823392,
+      "head_sha": "556f104d62cce635dcf7b59bf6966400b0b1fa18",
+      "conclusion": "SUCCESS",
+      "artifact_id": 14405784430,
+      "artifact_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+      "source_only": true,
+      "artifact_file_count": 179,
+      "negative_ion_preflight_rejected": 8,
+      "negative_electron_owner_json_pressure_rejected": 28,
+      "independently_recomputed_file_hashes": 22,
+      "independently_recomputed_removed_block_sha": 72,
+      "non_target_bytes_preserved": true
+    }
+  },
+  "source_only_collision_candidates": [
+    {
+      "section": "FunctorMaterials",
+      "name": "electron_physical_density",
+      "original_block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "old_output_functor": "n_e_physical",
+      "target_newonly_owner": "DDEnergyEq generated ADParsedFunctorMaterial"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "electron_wall_flux",
+      "original_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "old_output_functor": "e_wall_number_flux",
+      "target_newonly_owner": "DDEnergyEq generated ESWallFluxMaterial"
+    }
+  ],
+  "historical_archived_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "source_only_collision_candidates_before_p3x": [
+    {
+      "section": "FunctorMaterials",
+      "name": "electron_physical_density",
+      "original_block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "old_output_functor": "n_e_physical",
+      "target_newonly_owner": "DDEnergyEq generated ADParsedFunctorMaterial"
+    },
+    {
+      "section": "FunctorMaterials",
+      "name": "electron_wall_flux",
+      "original_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "old_output_functor": "e_wall_number_flux",
+      "target_newonly_owner": "DDEnergyEq generated ESWallFluxMaterial"
+    }
+  ],
+  "source_only_collision_candidates_after_p3x": []
+}

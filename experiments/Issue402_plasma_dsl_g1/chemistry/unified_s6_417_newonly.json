@@ -1,0 +1,350 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1,
+      "molar_mass": 5.485799096195737e-7,
+      "temperature_eV": 2.6666666666666665,
+      "sticking_coefficient": 1,
+      "initial_number_density": 1000000000000001.6,
+      "transport_coef": {
+        "type": "lookup",
+        "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+        "unit": "reduced",
+        "bounds_policy": "clamp"
+      }
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0,
+      "molar_mass": 0.032,
+      "temperature_eV": null,
+      "sticking_coefficient": 0,
+      "initial_number_density": null,
+      "transport_coef": {
+        "type": "none",
+        "file": "none",
+        "unit": "none"
+      }
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0,
+      "molar_mass": 0.016,
+      "temperature_eV": null,
+      "sticking_coefficient": 0,
+      "initial_number_density": null,
+      "transport_coef": {
+        "type": "none",
+        "file": "none",
+        "unit": "none"
+      }
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1,
+      "molar_mass": 0.032,
+      "temperature_eV": null,
+      "sticking_coefficient": 1,
+      "initial_number_density": 1000000000000001.6,
+      "transport_coef": {
+        "type": "constant",
+        "file": "none",
+        "unit": "physical",
+        "mobility": 10,
+        "diffusivity": 0.25851999786435537
+      }
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1,
+      "molar_mass": 0.016,
+      "temperature_eV": null,
+      "sticking_coefficient": 1,
+      "initial_number_density": 999999999999.9983,
+      "transport_coef": {
+        "type": "constant",
+        "file": "none",
+        "unit": "physical",
+        "mobility": 10,
+        "diffusivity": 0.25851999786435537
+      }
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1,
+      "molar_mass": 0.016,
+      "temperature_eV": null,
+      "sticking_coefficient": 1,
+      "initial_number_density": 999999999999.9983,
+      "transport_coef": {
+        "type": "constant",
+        "file": "none",
+        "unit": "physical",
+        "mobility": 10,
+        "diffusivity": 0.25851999786435537
+      }
+    },
+    "O2a": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0,
+      "molar_mass": 0.032,
+      "temperature_eV": null,
+      "sticking_coefficient": 0,
+      "initial_number_density": null,
+      "transport_coef": {
+        "type": "none",
+        "file": "none",
+        "unit": "none"
+      }
+    }
+  },
+  "equations": {
+    "EI-02": "e + O2 -> e + O2",
+    "EI-17": "e + O -> e + O",
+    "EI-415": "e + O2 -> 2e + O2p",
+    "EI-401": "e + O2 -> Om + O",
+    "EI-407": "e + O2 -> e + O2a",
+    "EI-2069": "e + O2a -> e + 2O",
+    "H25": "Op + O2 -> O + O2p",
+    "EI-417": "e + O2 -> 2e + Op + O"
+  },
+  "reactions": [
+    {
+      "id": "EI-02",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 1,
+        "O2": 1
+      },
+      "provenance": {
+        "archive_layer": "o2_elastic_400w_100us_dt1000ns_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "functor",
+        "name": "delta_epsilon_EI02_eV"
+      }
+    },
+    {
+      "id": "EI-17",
+      "reactants": {
+        "e": 1,
+        "O": 1
+      },
+      "products": {
+        "e": 1,
+        "O": 1
+      },
+      "provenance": {
+        "archive_layer": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "functor",
+        "name": "delta_epsilon_EI17_eV"
+      }
+    },
+    {
+      "id": "EI-415",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "O2p": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S2-415_generation_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 12.06
+    },
+    {
+      "id": "EI-401",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "Om": 1,
+        "O": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S3-415-401_extra_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 0
+    },
+    {
+      "id": "EI-407",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 1,
+        "O2a": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S5-417-407_o2_consumer_overlay.i",
+        "alternate_archive_layer": "issue477_S5-941-407_o2_consumer_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 0.977
+    },
+    {
+      "id": "EI-2069",
+      "reactants": {
+        "e": 1,
+        "O2a": 1
+      },
+      "products": {
+        "e": 1,
+        "O": 2
+      },
+      "provenance": {
+        "archive_layer": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_EI2069_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 5.02
+    },
+    {
+      "id": "H25",
+      "reactants": {
+        "Op": 1,
+        "O2": 1
+      },
+      "products": {
+        "O": 1,
+        "O2p": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_H25_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      }
+    },
+    {
+      "id": "EI-417",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "Op": 1,
+        "O": 1
+      },
+      "provenance": {
+        "archive_layer": "issue477_S4-401-417_op_ionization_overlay.i"
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 17
+    }
+  ],
+  "ion_surface_current": {
+    "electron_wall_number_flux": "e_wall_number_flux"
+  },
+  "drift_diffusion_boundaries": {
+    "inlet outlet": {
+      "O2p_wall": {
+        "type": "FVFunctorNeumannBC"
+      },
+      "Om_wall": {
+        "type": "FVFunctorNeumannBC"
+      },
+      "Op_wall": {
+        "type": "FVFunctorNeumannBC"
+      }
+    },
+    "plasma_electrode plasma_metal plasma_right": {
+      "e_wall": {
+        "type": "FEMElectronSheathBC"
+      },
+      "e_energy_wall": {
+        "type": "FEMElectronEnergySheathBC"
+      },
+      "O2p_wall": {
+        "type": "FVFunctorNeumannBC"
+      },
+      "Om_wall": {
+        "type": "FVFunctorNeumannBC"
+      },
+      "Op_wall": {
+        "type": "FVFunctorNeumannBC"
+      }
+    },
+    "plasma_cover": {
+      "e_cover_dielectric": {
+        "type": "FEMElectronSheathBC"
+      },
+      "e_energy_cover_dielectric": {
+        "type": "FEMElectronEnergySheathBC"
+      },
+      "O2p_cover_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      },
+      "Om_cover_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      },
+      "Op_cover_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      }
+    },
+    "plasma_wafer": {
+      "e_wafer_dielectric": {
+        "type": "FEMElectronSheathBC"
+      },
+      "e_energy_wafer_dielectric": {
+        "type": "FEMElectronEnergySheathBC"
+      },
+      "O2p_wafer_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      },
+      "Om_wafer_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      },
+      "Op_wafer_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      }
+    },
+    "plasma_focus_ring": {
+      "e_focus_ring_dielectric": {
+        "type": "FEMElectronSheathBC"
+      },
+      "e_energy_focus_ring_dielectric": {
+        "type": "FEMElectronEnergySheathBC"
+      },
+      "O2p_focus_ring_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      },
+      "Om_focus_ring_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      },
+      "Op_focus_ring_dielectric": {
+        "type": "FVLogMolarDielectricFluxBC"
+      }
+    }
+  }
+}

@@ -1,0 +1,421 @@
+#!/usr/bin/env python3
+"""P6-C3: deterministic CI/template trigger, artifact and P05 fail-closed gate.
+
+Source-only guard. Never launches a Native solve, P3/P4 replay, GitHub
+workflow dispatch, or modifies protected historical input. All checks apply
+to the current checkout; previous run/artifact PASS is not promoted.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+WORKFLOW = ROOT / ".github/workflows/ci.yml"
+TEMPLATE = ROOT / "ci/workflow_templates/general-ci.yml"
+DD = ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C"
+
+NATIVE = {
+    "issue402_core_four_native_p2": "issue541-core-four-native-",
+    "plasma_native_regression": "plasma-native-regression-",
+    "issue541_arch_dd_native_p2": "issue541-arch-dd-p1-p2-",
+    "issue541_arch_s6_hybrid_native_p2": "issue541-arch-s6-hybrid-p2-",
+}
+LEGACY_ARTIFACT_NAMES = {
+    "issue402_core_four_native_p2": "issue541-core-four-native-${{ github.run_id }}",
+    "plasma_native_regression": "plasma-native-regression-${{ github.event.pull_request.head.sha }}",
+    "issue541_arch_dd_native_p2": "issue541-arch-dd-p1-p2-${{ github.event.pull_request.head.sha }}",
+    "issue541_arch_s6_hybrid_native_p2": "issue541-arch-s6-hybrid-p2-${{ github.event.pull_request.head.sha }}",
+}
+PR_GUARD = (
+    "github.event_name == 'pull_request' &&\n"
+    "      (github.event.action != 'edited' || "
+    "github.event.changes.base != null) &&\n"
+    "      github.event.pull_request.head.repo.full_name == "
+    "'HyungseonSong-plasma/moose-test-repo'"
+)
+P05_MESSAGES = (
+    "P05 FV Native/Physics duplicate or unexpected owner",
+    "P05 missing or duplicate FV Kernel",
+    "P05 legacy, duplicate or unexpected FV BC",
+    "P05 partial or duplicate FV BC owner",
+)
+BANNED_NATIVE = (
+    "continue-on-error: true",
+    "dont_create_kernels = true",
+    "dont_create_kernels=true",
+    "--authorize-p3",
+    "run_chemistry_s6_p3_once.py",
+    "run_canonical_s6_p3_once.py",
+    "|| true",
+)
+
+
+def need(ok: bool, name: str) -> None:
+    if not ok:
+        raise ValueError("P6_CI_" + name)
+
+
+def job_block(workflow: str, name: str) -> str:
+    start = re.search(r"(?m)^  " + re.escape(name) + r":\n", workflow)
+    need(start is not None, "MISSING_JOB_" + name)
+    tail = workflow[start.end():]
+    next_job = re.search(r"(?m)^  [A-Za-z][A-Za-z0-9_-]*:\n", tail)
+    return tail[:next_job.start()] if next_job else tail
+
+
+def edit_job(workflow: str, name: str, old: str, new: str) -> str:
+    job = job_block(workflow, name)
+    need(job.count(old) == 1, "MUTATION_SOURCE_" + name)
+    return workflow.replace(job, job.replace(old, new, 1), 1)
+
+
+def validate(workflow: str, template: str, dd_source: str) -> None:
+    need(workflow == template, "TEMPLATE_BYTE_PARITY")
+    need(workflow.startswith(
+        "name: Repository CI\n\non:\n  push:\n    branches: [main]\n"
+        "  pull_request:\n    branches: [main]\n"
+        "    types: [opened, synchronize, reopened, edited]\n"
+    ), "CI_MAIN_ONLY_TRIGGER")
+    header = workflow.split("\njobs:\n", 1)
+    need(len(header) == 2, "CI_JOBS")
+    need("workflow_dispatch:" not in header[0] and
+         "workflow_run:" not in header[0] and
+         "schedule:" not in header[0], "NO_AUTOMATIC_P3_SCENARIO")
+
+    validate_job = job_block(workflow, "validate")
+    need(
+        "github.event_name != 'pull_request' ||\n"
+        "      github.event.action != 'edited' ||\n"
+        "      github.event.changes.base != null" in validate_job,
+        "VALIDATE_EDITED_BASE_GUARD"
+    )
+    need(
+        "python3 ci/workflow_harness.py --self-test" in validate_job and
+        "python3 ci/workflow_harness.py --check" in validate_job and
+        "python3 ci/guards/workflow_surface_guard.py --check" in validate_job and
+        "python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check"
+        in validate_job,
+        "GOVERNED_VALIDATION_GUARDS"
+    )
+
+    for name, artifact_prefix in NATIVE.items():
+        block = job_block(workflow, name)
+        condition = block.split("    runs-on:", 1)[0]
+        need(PR_GUARD in condition, "NATIVE_EDIT_TRIGGER_" + name)
+        need("github.event.pull_request.head.sha" in block,
+             "NATIVE_EXACT_HEAD_" + name)
+        for banned in BANNED_NATIVE:
+            need(banned not in block, "NATIVE_BYPASS_" + name + "_" +
+                 banned.replace(" ", "_"))
+        # Never silently promote an absent full S6 source/runner to a green job.
+        if name == "plasma_native_regression":
+            need(
+                "P6 FAIL_CLOSED: required Public S6 option preflight is missing"
+                in block and
+                "P6 FAIL_CLOSED: required S6-417/941 input gate is missing"
+                in block and block.count("            exit 1") >= 2,
+                "NO_OPTIONAL_S6_GATE"
+            )
+        if name == "issue541_arch_s6_hybrid_native_p2":
+            need(
+                'test "$first" -eq 3' in block and
+                'test "$second" -eq 3' in block and
+                '--case 417' in block and '--case 941' in block and
+                "P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD"
+                in block,
+                "TWO_CASES_P2_AND_P05_FAIL_CLOSED"
+            )
+            need("migrated_continuity.i" not in block, "NO_S6_HYBRID_EDIT")
+
+        artifact_name = re.search(
+            r"(?m)^          name: (" + re.escape(artifact_prefix) +
+            r"[^\n]+)$", block)
+        need(artifact_name is not None, "ARTIFACT_NAME_" + name)
+        value = artifact_name.group(1)
+        need(
+            all(key in value for key in
+                ("github.run_id", "github.run_attempt",
+                 "github.event.pull_request.head.sha")),
+            "ARTIFACT_RUN_ATTEMPT_HEAD_" + name
+        )
+        step_start = block.rfind("      - name:", 0, artifact_name.start())
+        need(step_start >= 0, "ARTIFACT_STEP_START_" + name)
+        proof = block[step_start:block.rfind("      - name: Upload first-attempt legacy artifact alias (compatibility only)")]
+        need(
+            "if: always()" in proof and
+            "uses: actions/upload-artifact@v4" in proof and
+            "if-no-files-found: error" in proof and
+            "retention-days: 30" in proof,
+            "ARTIFACT_FAIL_CLOSED_" + name
+        )
+        # Preserve old artifact name only on attempt 1; no overwriting on reruns.
+        legacy_marker = "          name: " + LEGACY_ARTIFACT_NAMES[name] + "\n"
+        need(block.count(legacy_marker) == 1, "LEGACY_ALIAS_IDENTITY_" + name)
+        legacy_pos = block.index(legacy_marker)
+        legacy_start = block.rfind("      - name:", 0, legacy_pos)
+        need(legacy_start >= 0 and legacy_start > step_start,
+             "LEGACY_ALIAS_ORDER_" + name)
+        canonical_step = block[step_start:legacy_start]
+        legacy_step = block[legacy_start:].split("\n      - name:", 1)[0]
+        need(
+            "Upload first-attempt legacy artifact alias (compatibility only)"
+            in legacy_step and
+            "if: ${{ always() && github.run_attempt == 1 }}" in legacy_step and
+            "uses: actions/upload-artifact@v4" in legacy_step and
+            "if-no-files-found: error" in legacy_step and
+            "retention-days: 30" in legacy_step,
+            "LEGACY_ALIAS_FAIL_CLOSED_" + name
+        )
+        def payload(step: str) -> str:
+            need(step.count("          path:") == 1 and
+                 step.count("          if-no-files-found:") == 1,
+                 "ARTIFACT_PATH_STRUCTURE_" + name)
+            return step.split("          path:", 1)[1].split(
+                "          if-no-files-found:", 1)[0]
+        need(payload(canonical_step) == payload(legacy_step),
+             "LEGACY_ALIAS_SAME_BOUNDED_PROOF_" + name)
+
+        if name == "issue541_arch_s6_hybrid_native_p2":
+            need(
+                "issue541_arch_s6_p2_evidence/*/status.json" in proof and
+                "issue541_arch_s6_p2_evidence/*/native_P2.log" in proof and
+                "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json" in proof,
+                "ARCH_BOTH_CASES_PROVENANCE"
+            )
+
+
+    one_build=job_block(workflow,"p6_newonly_s6_build")
+    one_native=job_block(workflow,"p6_newonly_s6_native_p2")
+    need("github.event.pull_request.head.sha" in one_build and
+         "build_count" in one_build and "physics-opt-and-app-libs.tar.gz" in one_build and
+         "if-no-files-found: error" in one_build,
+         "REQUIRED_NEWONLY_EXACT_HEAD_SINGLE_BUILD")
+    need("needs: p6_newonly_s6_build" in one_native and
+         "actions/download-artifact@v4" in one_native and
+         "P6_NEWONLY_EXACT_HEAD_ONE_W1_THREE_BINARY_BYTES_VERIFIED" in one_native and
+         "PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}" in one_native and
+         "PASS_16_INTENDED_NATIVE_REJECTIONS" in one_native and
+         "assert len(expected_kernels)==12 and len(expected_bc)==12 and len(expected_e)==8" in one_native and
+         "if-no-files-found: error" in one_native,
+         "REQUIRED_NEWONLY_NATIVE_TYPED_32_N1_N8_16")
+    need("P6_PUBLIC_B_PASS_D_KEEP_HOLD_EVIDENCE_NOT_NATIVE_D_PASS" in
+         job_block(workflow,"plasma_native_regression"),
+         "PUBLIC_D_MUST_KEEP_HOLD")
+    public_d=job_block(workflow,"p6_public_d_100row_native_p2")
+    need(PR_GUARD in public_d.split("    runs-on:",1)[0],
+         "PUBLIC_D_REQUIRED_INTERNAL_PR_TRIGGER")
+    for token in (
+        "needs: p6_newonly_s6_build",
+        "actions/download-artifact@v4",
+        "P6_NEWONLY_EXACT_HEAD_ONE_W1_THREE_BINARY_BYTES_VERIFIED",
+        "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+        "stage_public_d_physics",
+        "PUBLIC_D_100ROW_TWO_CASES_STAGED_EXACT_PHYSICS_NO_REBUILD_PASS",
+        "PASS_16_INTENDED_NATIVE_REJECTIONS",
+        "assert len(expected_kernels)==12 and len(expected_bc)==12 and len(expected_e)==8",
+        "tmpfs_cleanup_verified",
+        "source_restoration",
+        "if-no-files-found: error",
+        "retention-days: 14",
+        "if: always()",
+        "p6-public-d-original100-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}",
+    ):
+        need(token in public_d, "PUBLIC_D_REQUIRED_NATIVE_MISSING_"+token[:30])
+    need("make -C physics_app" not in public_d, "PUBLIC_D_MUST_REUSE_ONE_W1")
+    for bypass in BANNED_NATIVE:
+        need(bypass not in public_d, "PUBLIC_D_NO_NATIVE_BYPASS_"+bypass[:24])
+    need("P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD" in
+         job_block(workflow,"issue541_arch_s6_hybrid_native_p2"),
+         "ARCH_HYBRID_MUST_KEEP_HOLD")
+    for name,source in (("build",one_build),("native",one_native)):
+        for bypass in BANNED_NATIVE:
+            need(bypass not in source,"NEWONLY_BYPASS_"+name)
+        need("num_steps = 150" not in source and "num_steps = 200" not in source,
+             "NEWONLY_AUTO_P3_P4_"+name)
+
+    for message in P05_MESSAGES:
+        need(message in dd_source, "P05_SOURCE_GUARD_" +
+             message.split()[1].upper())
+    need("getProblem().theWarehouse()" in dd_source and
+         'registerMooseAction("PhysicsApp", DDContinuityEq, "check_integrity")'
+         in dd_source, "P05_REGISTERED_WAREHOUSE")
+
+    # Explicit manual P3/P4 lane is a separate registered workflow, never
+    # inferred from this ordinary PR CI; Python unit tests may mention P3.
+    for name in NATIVE:
+        block = job_block(workflow, name)
+        need("num_steps = 150" not in block and
+             "num_steps = 200" not in block and
+             "--full-24" not in block,
+             "NO_LONG_SCIENCE_IN_NATIVE_P2_" + name)
+
+
+def self_test(workflow: str, template: str, dd_source: str) -> int:
+    validate(workflow, template, dd_source)
+    cases: list[tuple[str, str, str, str]] = []
+
+    def add(name: str, candidate: str, *, cpp: str | None = None) -> None:
+        cases.append((name, candidate, candidate, dd_source if cpp is None else cpp))
+
+    def mutate_canonical(name: str, old: str, new: str) -> str:
+        """Mutate only the run/attempt/HEAD upload, preserving the legacy alias."""
+        job = job_block(workflow, name)
+        delim = "      - name: Upload first-attempt legacy artifact alias (compatibility only)"
+        need(job.count(delim) == 1, "CANONICAL_MUTATION_SCOPE_" + name)
+        before, after = job.split(delim, 1)
+        need(before.count(old) == 1, "CANONICAL_MUTATION_TARGET_" + name)
+        return workflow.replace(job, before.replace(old, new, 1) + delim + after, 1)
+
+    cases.append(("template_drift", workflow, template + "\n# drift\n", dd_source))
+    add("push_nonmain", workflow.replace("branches: [main]", "branches: [testing]", 1))
+    add("unapproved_workflow_dispatch", workflow.replace(
+        "\njobs:\n", "  workflow_dispatch:\n\njobs:\n", 1))
+    add("removed_metadata_trigger", edit_job(
+        workflow, "plasma_native_regression",
+        "(github.event.action != 'edited' || github.event.changes.base != null)",
+        "github.event.action != 'edited'"
+    ))
+    add("removed_internal_pr_scope", edit_job(
+        workflow, "issue541_arch_s6_hybrid_native_p2",
+        "github.event.pull_request.head.repo.full_name",
+        "github.event.pull_request.base.repo.full_name"
+    ))
+    add("artifact_attempt_missing", mutate_canonical( "issue541_arch_s6_hybrid_native_p2",
+        "github.run_attempt", "run_attempt_removed"
+    ))
+    add("artifact_became_optional", mutate_canonical( "issue541_arch_dd_native_p2",
+        "if-no-files-found: error", "if-no-files-found: warn"
+    ))
+    add("artifact_on_success_only", edit_job(
+        workflow, "plasma_native_regression",
+        "if: always()", "if: success()"
+    ))
+    add("weakened_native_check", edit_job(
+        workflow, "issue541_arch_s6_hybrid_native_p2",
+        'test "$second" -eq 3', 'echo "ignore 941 exit"'
+    ))
+    add("skipped_second_case", edit_job(
+        workflow, "issue541_arch_s6_hybrid_native_p2",
+        "--case 941", "--case 417"
+    ))
+    add("p05_bypass", edit_job(
+        workflow, "issue541_arch_s6_hybrid_native_p2",
+        "echo ISSUE541_ARCH_S6_HISTORICAL_400W_PUBLIC_MESH_P0_PASS",
+        "echo ISSUE541_ARCH_S6_HISTORICAL_400W_PUBLIC_MESH_P0_PASS\n"
+        "          dont_create_kernels = true"
+    ))
+    add("p3_auto_launch", edit_job(
+        workflow, "issue541_arch_s6_hybrid_native_p2",
+        "echo P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD",
+        "run_chemistry_s6_p3_once.py --authorize-p3"
+    ))
+    add("continue_on_error", edit_job(
+        workflow, "plasma_native_regression",
+        "      - name: P1 - Build PhysicsApp",
+        "      - name: P1 - Build PhysicsApp"
+        "\n        continue-on-error: true"
+    ))
+    add("drop_guard", workflow.replace(
+        "python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check",
+        "echo P6_VALIDATOR_REMOVED", 1))
+    add("missing_source_gate", edit_job(
+        workflow, "plasma_native_regression",
+        "P6 FAIL_CLOSED: required S6-417/941 input gate is missing",
+        "optional S6 input gate"
+    ))
+    add("weaken_p05", workflow, cpp=dd_source.replace(
+        "P05 FV Native/Physics duplicate or unexpected owner", "P05_BYPASS", 1
+    ))
+    add("undeclared_provenance", mutate_canonical( "issue541_arch_s6_hybrid_native_p2",
+        "control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json",
+        "control/experiments/Issue402_plasma_dsl_g1/evidence/identity_omitted.json"
+    ))
+
+    def mutate_legacy(name: str, old: str, new: str) -> str:
+        """Change only the legacy alias step, never canonical receipt."""
+        job = job_block(workflow, name)
+        suffix = "      - name: Upload first-attempt legacy artifact alias (compatibility only)"
+        need(job.count(suffix) == 1, "LEGACY_MUTATION_SCOPE_" + name)
+        before, after = job.split(suffix, 1)
+        need(after.count(old) == 1, "LEGACY_MUTATION_TARGET_" + name)
+        return workflow.replace(job, before + suffix + after.replace(old, new, 1), 1)
+
+    add("legacy_name_drift", mutate_legacy(
+        "issue402_core_four_native_p2",
+        "issue541-core-four-native-${{ github.run_id }}",
+        "issue541-core-four-native-silent-rename"
+    ))
+    add("legacy_alias_unconditional_on_rerun", mutate_legacy(
+        "issue541_arch_s6_hybrid_native_p2",
+        "if: ${{ always() && github.run_attempt == 1 }}",
+        "if: always()"
+    ))
+    add("legacy_alias_evidence_optional", mutate_legacy(
+        "issue541_arch_dd_native_p2",
+        "if-no-files-found: error", "if-no-files-found: warn"
+    ))
+    add("legacy_alias_proof_path_drift", mutate_legacy(
+        "plasma_native_regression",
+        "          path: experiments/Issue402_plasma_dsl_g1/evidence/**",
+        "          path: experiments/Issue402_plasma_dsl_g1/chemistry/**"
+    ))
+
+    add("missing_public_d_native_job",workflow.replace(
+        "  p6_public_d_100row_native_p2:","  disabled_public_d_100row_native_p2:",1))
+    add("public_d_no_shared_w1",edit_job(
+        workflow,"p6_public_d_100row_native_p2",
+        "needs: p6_newonly_s6_build","needs: validate"))
+    add("public_d_falsified_100row_stage",edit_job(
+        workflow,"p6_public_d_100row_native_p2",
+        "PUBLIC_D_100ROW_TWO_CASES_STAGED_EXACT_PHYSICS_NO_REBUILD_PASS",
+        "PUBLIC_D_100ROW_SOURCE_HOLD"))
+    add("public_d_evidence_upload_optional",edit_job(
+        workflow,"p6_public_d_100row_native_p2",
+        "if-no-files-found: error","if-no-files-found: warn"))
+    add("missing_mandatory_newonly_build",workflow.replace(
+        "  p6_newonly_s6_build:","  disabled_p6_newonly_s6_build:",1))
+    add("missing_mandatory_newonly_native",workflow.replace(
+        "  p6_newonly_s6_native_p2:","  disabled_p6_newonly_s6_native_p2:",1))
+    add("missing_mandatory_newonly_artifact",edit_job(
+        workflow,"p6_newonly_s6_build","if-no-files-found: error","if-no-files-found: warn"))
+    add("historical_false_positive_label",edit_job(
+        workflow,"issue541_arch_s6_hybrid_native_p2",
+        "P6_ARCH_HYBRID_EXPECTED_P05_BOTH_CASES_KEEP_HOLD",
+        "ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD"))
+
+    for name, w, t, c in cases:
+        try:
+            validate(w, t, c)
+        except ValueError:
+            continue
+        raise ValueError("P6_CI_NEGATIVE_UNREJECTED_" + name)
+    print("P6_CI_SAFETY_NEGATIVES_REJECTED", len(cases))
+    return len(cases)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("--self-test", action="store_true")
+    args = parser.parse_args()
+    try:
+        workflow = WORKFLOW.read_text()
+        template = TEMPLATE.read_text()
+        dd = DD.read_text()
+        if args.self_test:
+            self_test(workflow, template, dd)
+        if args.check or not args.self_test:
+            validate(workflow, template, dd)
+            print("P6_CI_TRIGGER_ARTIFACT_P05_FAIL_CLOSED_SOURCE_PASS",
+                  hashlib.sha256(workflow.encode()).hexdigest())
+    except (OSError, ValueError) as exc:
+        print("P6_CI_SAFETY_FAIL", exc)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
