@@ -66,6 +66,7 @@ def capture(root: Path, target: str, expected_head: str) -> tuple[dict, dict[str
         "blocking_obligation_ids": sorted(b["obligation_id"]
                                           for b in t["blocking_obligations"]),
         "historical_receipt_policy": "PRESERVE_IMMUTABLY_SEPARATE_FROM_CURRENT_BINARY",
+        "historical_protected_blobs": {},  # Only explicitly pre-pinned paths may be exempted.
         "actual_runtime_activation": "NOT_OBSERVED",
         "actual_caller_zero": "NOT_PROVEN",
         "discriminator_acceptance": "NOT_EVALUATED",
@@ -146,8 +147,24 @@ def verify_retired(root: Path, receipt: dict, review: dict, expected_head: str) 
     if review.get("external_and_generated_scope") != "INDEPENDENTLY_ATTESTED":
         raise ValueError("RETIREMENT_EXTERNAL_GENERATED_SCOPE_UNVERIFIED")
     protected = set(review.get("historical_protected_paths", []))
+    pinned_historical = receipt.get("historical_protected_blobs", {})
+    if not isinstance(pinned_historical, dict) or not protected <= set(pinned_historical):
+        raise ValueError("RETIREMENT_HISTORICAL_PATH_NOT_PREPINNED")
     for path in protected:
-        functional.safe_path(root, path)  # Reject path traversal or invalid source.
+        resolved = functional.safe_path(root, path)
+        if not path.startswith(("archive/", "experiments/")):
+            raise ValueError("RETIREMENT_HISTORICAL_EXEMPTION_UNSAFE")
+        if not resolved.is_file() or structural.blob_sha(resolved.read_bytes()) != pinned_historical[path]:
+            raise ValueError("RETIREMENT_HISTORICAL_BYTES_CHANGED")
+    # Do not permit an old *active* registry entry to survive simply because
+    # the scanner excludes immutable metadata from the current-consumer census.
+    for registry_rel in ("ci/baselines/fdeg_functional_contracts.json",
+                         "ci/baselines/fdeg_transition_contracts.json"):
+        registry_file = functional.safe_path(root, registry_rel)
+        if registry_file.exists():
+            registry = json.loads(registry_file.read_text(encoding="utf-8"))
+            if receipt["target"] in registry.get("profiles", {}):
+                raise ValueError("RETIREMENT_ACTIVE_PROFILE_NOT_ARCHIVED:" + registry_rel)
     detected = []
     token = re.compile(r"\b" + re.escape(receipt["target"]) + r"\b")
     for file in structural.tracked_files(root)[0]:
