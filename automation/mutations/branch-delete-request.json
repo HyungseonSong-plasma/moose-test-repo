@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-402-dd-plasma-boundary-action",
-      "expected_sha": "75879be2465ba4b81970391bccf471bcb1eb5083",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-dd-plasma-boundary-action-75879be2465b"
+      "branch": "issue-670-p4-w3-op-wall-20261118",
+      "expected_sha": "af2e1c2ecc50d7e4d84acdd9de8a8a40e021fa47",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w3-op-wall-20261118-af2e1c2ecc50"
     },
     {
-      "branch": "p1-p04-p05-newonly-preflight-20261117",
-      "expected_sha": "b2e3f22d904f224d7d9fc33650c26e67b13b70b3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/p1-p04-p05-newonly-preflight-20261117-b2e3f22d904f"
+      "branch": "issue-670-p4-d5-diagnostics-alias-20261118",
+      "expected_sha": "6968140b69a7371ffe1950ca1f4a7073bf4726fa",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-d5-diagnostics-alias-20261118-6968140b69a7"
     },
     {
-      "branch": "issue-633-c2-on-ion2-20261117",
-      "expected_sha": "974adaf799c78ef21fbdb835c947e631cffd01f6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-c2-on-ion2-20261117-974adaf799c7"
+      "branch": "issue670-p4-d4-poisson-sha-20261118",
+      "expected_sha": "2fd0533ec0cd0241aecfd9a82d9211ca91171c45",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue670-p4-d4-poisson-sha-20261118-2fd0533ec0cd"
     },
     {
-      "branch": "issue-670-p4-d1-o2p-density-alias-20261118",
-      "expected_sha": "5e913615fb0987421746b6b46984d95bcdc164c5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-d1-o2p-density-alias-20261118-5e913615fb09"
+      "branch": "issue-670-p4-d2-om-density-20261118",
+      "expected_sha": "df61610a113ba1c2b0c45dd5b7c921395e156d0e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-d2-om-density-20261118-df61610a113b"
     },
     {
-      "branch": "issue-670-p4-d3-op-density-20261118",
-      "expected_sha": "e200014299235ad43b6e1d90657789962974f69b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-d3-op-density-20261118-e20001429923"
+      "branch": "issue-670-p4-c2-wafer-surface-current-20261118",
+      "expected_sha": "897e7e41769f30e9b3525d0623929a4f9b823c9f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-c2-wafer-surface-current-20261118-897e7e41769f"
     }
   ]
 }
