@@ -70,6 +70,30 @@ class StructuralEvidenceTest(unittest.TestCase):
         self.assertEqual(self.edges(result, "INPUT_INSTANTIATES")[0]["detail"], "OldLegacy")
         self.assertIn("factory=OldLegacy", self.edges(result, "REGISTERS")[0]["detail"])
 
+    def test_physics_action_registration_syntax_and_input_block(self):
+        self.put("physics_app/include/physics/LegacyAction.h", "class LegacyAction : public Action {};\n")
+        self.put("physics_app/src/physics/LegacyAction.C",
+                 'registerPhysicsBaseTasks("PhysicsApp", LegacyAction);\n'
+                 'registerMooseAction("PhysicsApp", LegacyAction, "add_kernel");\n')
+        self.put("physics_app/src/base/PhysicsApp.C",
+                 'registerSyntax("LegacyAction", "Physics/Plasmas/Legacy");\n')
+        self.put("tests/action.i", "[Physics]\n  [./Plasmas]\n    [./Legacy]\n    [../]\n  [../]\n[]\n")
+        result = fdeg.scan(self.root, "LegacyAction")
+        self.assertEqual(len(self.edges(result, "REGISTERS_ACTION")), 1)
+        self.assertEqual(len(self.edges(result, "REGISTERS_PHYSICS_TASKS")), 1)
+        self.assertEqual(len(self.edges(result, "REGISTERS_ACTION_SYNTAX")), 1)
+        self.assertEqual(len(self.edges(result, "INPUT_MATCHES_ACTION_SYNTAX")), 1)
+        self.assertEqual(self.edges(result, "INPUT_INSTANTIATES"), [])
+
+    def test_action_type_local_literal_is_candidate_not_direct(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        self.put("src/Action.C", 'const auto type = "Legacy";\ngetProblem().addKernel(type, "k", params);\n')
+        result = fdeg.scan(self.root, "Legacy")
+        candidate = self.edges(result, "ACTION_CREATES_VIA_LOCAL_LITERAL")
+        self.assertEqual(len(candidate), 1)
+        self.assertEqual(candidate[0]["strength"], "LEXICAL_FLOW_CANDIDATE")
+        self.assertEqual(self.edges(result, "ACTION_CREATES"), [])
+
     def test_dynamic_type_and_missing_include_are_not_silent_caller_zero(self):
         self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
         self.put("input/use.i", "type = $kernel_type\n!include missing.i\n")
