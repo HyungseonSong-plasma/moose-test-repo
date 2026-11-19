@@ -1,14 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5-d8-newonly-native-diagnostic-20261118",
-      "expected_sha": "41ab61e442a497db2388c025075237bd24cfd025",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-d8-newonly-native-diagnostic-20261118-41ab61e442a4"
+      "branch": "issue-671-p5-0-common-binary-build-evidence-20261118",
+      "expected_sha": "9e857d11e22308eac4184a49e01ca415835995cc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-common-binary-build-evidence-20261118-9e857d11e223"
     },
     {
-      "branch": "issue-671-p5-p05-real-warehouse-20261118",
-      "expected_sha": "8165990596b3a8c836102376608eb609ff1e03f5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-p05-real-warehouse-20261118-8165990596b3"
+      "branch": "issue-671-p5-0-single-oci-binary-once-20261118",
+      "expected_sha": "2ccc77d90b97d406275404696e39bc8e8aaeae7a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-single-oci-binary-once-20261118-2ccc77d90b97"
+    },
+    {
+      "branch": "issue-671-physics-opt-source-only-bundle-20261118",
+      "expected_sha": "3b8cb1f61f41f4178d312e3f4e84ba8d5dbebc6f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-physics-opt-source-only-bundle-20261118-3b8cb1f61f41"
+    },
+    {
+      "branch": "issue-671-p5-0-binary-app-libs-05d7ce4-20261118",
+      "expected_sha": "db7073b958e94361963fb2b6e81cfbe263554d87",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-binary-app-libs-05d7ce4-20261118-db7073b958e9"
     }
   ]
 }
