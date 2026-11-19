@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6-d4-public-d-four-owner-decision-20261118",
-      "expected_sha": "c3bf3713c68d78b56ec5679cdc620b533b12216c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d4-public-d-four-owner-decision-20261118-c3bf3713c68d"
+      "branch": "issue-672-p6-i3-ionfvm-p0-p2-keep-hold-20261118",
+      "expected_sha": "2ea2e52fda0ab81becfa63695599af45b3e914a2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-i3-ionfvm-p0-p2-keep-hold-20261118-2ea2e52fda0a"
     },
     {
-      "branch": "issue-672-p6-f3-flow-ion-owner-decision-20261118",
-      "expected_sha": "49b3e1dc6ca04f5808cd5e447be5dd13f43e57e2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f3-flow-ion-owner-decision-20261118-49b3e1dc6ca0"
+      "branch": "issue-672-p6-f3-p05-native-two-track-addendum-20261118",
+      "expected_sha": "1cebc5a83c2dff3bd1ca3a78cc9c05725095e09a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f3-p05-native-two-track-addendum-20261118-1cebc5a83c2d"
     },
     {
-      "branch": "issue-672-p6-0-parallel-receipt-integration-20261118",
-      "expected_sha": "007ce61d923f29eed2656fc8e4e66da138aa4427",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-0-parallel-receipt-integration-20261118-007ce61d923f"
+      "branch": "issue-672-p6-d1-chemistry-lookup-authority-analysis-20261118",
+      "expected_sha": "ca487f3067e6b80011982043fd4baf5e5c629e1c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d1-chemistry-lookup-authority-analysis-20261118-ca487f3067e6"
     },
     {
-      "branch": "issue-672-p6-d1-integration-review-verdict-20261118",
-      "expected_sha": "e3b44da7e74f469d560ca4b67230640298a083a2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d1-integration-review-verdict-20261118-e3b44da7e74f"
+      "branch": "issue-672-p6-e2-lane-disposition-p7-handoff-20261118",
+      "expected_sha": "6b545d7f1eeba83890184f991ce6d4786d1ea099",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-e2-lane-disposition-p7-handoff-20261118-6b545d7f1eeb"
     },
     {
-      "branch": "issue-672-p6-d1-integration-review-native-once-20261118",
-      "expected_sha": "a5f6c3c8f00b5d67defe395da5631c72d18d945d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d1-integration-review-native-once-20261118-a5f6c3c8f00b"
+      "branch": "issue-671-p5-0-singlebuild-74a2b0f-20261118",
+      "expected_sha": "1bd39952d7b05c442e5c5020924c7972ea165ff1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-0-singlebuild-74a2b0f-20261118-1bd39952d7b0"
     }
   ]
 }
