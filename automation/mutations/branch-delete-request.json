@@ -1,29 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-671-d-typed-warehouse-closure-20261118",
-      "expected_sha": "195b0360dac1877a4c771bd71e7ded0135a01df2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d-typed-warehouse-closure-20261118-195b0360dac1"
+      "branch": "issue-672-p6-x-three-conditions-final-receipt-20261118",
+      "expected_sha": "b7a51dd570f7d28e4f96d02eb315e71898491cf2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-x-three-conditions-final-receipt-20261118-b7a51dd570f7"
     },
     {
-      "branch": "issue-672-p6-d4-bc12-original-wall-law-20261118",
-      "expected_sha": "4b2023bef618054f89b037a2e74e7e0b3e71b23f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d4-bc12-original-wall-law-20261118-4b2023bef618"
+      "branch": "issue-671-d8-rf-closure-3ns-20261118",
+      "expected_sha": "418239b59c4465e308172fb3936503d650a3b253",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-rf-closure-3ns-20261118-418239b59c44"
     },
     {
-      "branch": "issue-671-p5x-exact-52067302-typed-native-p05-20261118",
-      "expected_sha": "cd62ee6446e3d1947d87e7c0de7354de5e40560b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-52067302-typed-native-p05-20261118-cd62ee6446e3"
+      "branch": "issue-671-p5x-exact-52067302-p2-acceptance-20261118",
+      "expected_sha": "29b3e28ce0a70fdd81cdb09322d0784bb9c03656",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-52067302-p2-acceptance-20261118-29b3e28ce0a7"
     },
     {
-      "branch": "issue-672-d2d4-original100-native-warehouse-receipt-20261118",
-      "expected_sha": "583000dfb2ed4d57017c5854417c8468dbed3bb0",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-d2d4-original100-native-warehouse-receipt-20261118-583000dfb2ed"
-    },
-    {
-      "branch": "issue-671-d8-rf-on-qp-residual-20261118",
-      "expected_sha": "ba6087aa4ae49aff380635bc7fb1fd2fd025bf0a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-rf-on-qp-residual-20261118-ba6087aa4ae4"
+      "branch": "issue-673-p7-p5x-exact-52067302-evidence-20261118",
+      "expected_sha": "59357bdaa0a811b57a0bc6232884209c2927af36",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-p5x-exact-52067302-evidence-20261118-59357bdaa0a8"
     }
   ]
 }
