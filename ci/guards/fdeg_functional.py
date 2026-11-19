@@ -165,10 +165,16 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
         line = body.count("\n", 0, match.start()) + 1
         end = body.find(";", match.end())
         excerpt = body[match.start():end + 1 if end >= 0 else match.end()].strip()[:500]
+        raw_args = body[match.end():end if end >= 0 else match.end()].strip()
+        required = match.group(1) == "addRequiredParam"
+        # A sole quoted argument after the name is a description, not a default.
+        has_default = not required and raw_args.lstrip(", ").strip()[:1] != '"'
         params.append({
             "name": match.group(3), "cpp_type": " ".join(match.group(2).split()),
-            "declaration": match.group(1), "required": match.group(1) == "addRequiredParam",
-            "declared_default_expression": excerpt.split('"' + match.group(3) + '"', 1)[-1].strip()[:240],
+            "declaration": match.group(1), "required": required,
+            "has_explicit_source_default": has_default,
+            "declared_default_expression": raw_args[:240] if has_default else None,
+            "raw_arguments_after_name": raw_args[:300],
             "runtime_effective_value": "NOT_OBSERVED",
             "witness": {"path": path, "line": line, "blob_sha": blob, "excerpt": excerpt}
         })
@@ -177,6 +183,8 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
         params.append({
             "name": match.group(2), "cpp_type": " ".join(match.group(1).split()),
             "declaration": "set_default", "required": False,
+            "has_explicit_source_default": True,
+            "raw_arguments_after_name": match.group(3).strip(),
             "declared_default_expression": match.group(3).strip(),
             "runtime_effective_value": "NOT_OBSERVED",
             "witness": {"path": path, "line": line, "blob_sha": blob,
@@ -277,6 +285,7 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
             "cpp_type": param["cpp_type"], "required": param["required"],
             "declaration": param["declaration"],
             "declared_default_expression": param["declared_default_expression"],
+            "has_explicit_source_default": param["has_explicit_source_default"],
             "runtime_effective_value": "NOT_OBSERVED",
             "evidence_kind": "STATIC_SOURCE", "claim_status": "SOURCE_SUPPORTED",
             "witnesses": [param["witness"]]
