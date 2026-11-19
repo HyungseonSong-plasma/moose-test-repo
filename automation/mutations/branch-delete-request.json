@@ -1,14 +1,19 @@
 {
   "targets": [
     {
-      "branch": "cleanup-wave1-dd-faceinfo-20261116",
-      "expected_sha": "641d7b0b1dedff4451f2b239442957d26b22525e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-faceinfo-20261116-641d7b0b1ded"
+      "branch": "issue-541-task4-json-negative-routing-20261116",
+      "expected_sha": "dcb327d311a9a67ab4401160de4d08f4aa357314",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-task4-json-negative-routing-20261116-dcb327d311a9"
     },
     {
-      "branch": "wave1-s6-p2-closure-20261116",
-      "expected_sha": "11a49b6aa207196cc034a1f609246b7150966cbe",
-      "archive_tag": "archive/oxygen-cleanup-20261106/wave1-s6-p2-closure-20261116-11a49b6aa207"
+      "branch": "issue-541-workflow-allowlist-20261116",
+      "expected_sha": "62e1400f1e8ffabb6f3c45345689e0cca15a7d91",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-workflow-allowlist-20261116-62e1400f1e8f"
+    },
+    {
+      "branch": "cleanup-wave1-s6-legacy-retirement-20261116",
+      "expected_sha": "41696556caa3c72be4592940d56569b95f081a05",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-legacy-retirement-20261116-41696556caa3"
     }
   ]
 }
