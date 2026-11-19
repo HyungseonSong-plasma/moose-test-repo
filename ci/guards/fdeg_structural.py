@@ -292,10 +292,14 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
             # Imported module is a static route, not execution.
             for n in ast.walk(tree):
                 if isinstance(n, ast.ImportFrom) and n.module:
-                    module = n.module.replace(".", "/") + ".py"
-                    if module in source_names:
-                        emit(node, "PYTHON_IMPORTS_MODULE", "file:" + module,
-                             path, n.lineno, n.module, "STATIC_IMPORT_NOT_EXECUTION")
+                    module_base = n.module.replace(".", "/")
+                    candidates = [module_base + ".py"]
+                    candidates.extend(module_base + "/" + alias.name + ".py"
+                                      for alias in n.names if alias.name != "*")
+                    for module in sorted(set(candidates)):
+                        if module in source_names:
+                            emit(node, "PYTHON_IMPORTS_MODULE", "file:" + module,
+                                 path, n.lineno, n.module, "STATIC_IMPORT_NOT_EXECUTION")
                 elif isinstance(n, ast.Import):
                     for alias in n.names:
                         module = alias.name.replace(".", "/") + ".py"
