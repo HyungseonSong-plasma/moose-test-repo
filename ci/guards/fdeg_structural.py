@@ -344,6 +344,33 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                 if isinstance(n, ast.Constant) and isinstance(n.value, str):
                     if target in SYMBOL.findall(n.value):
                         emit(node, "MENTIONS_SYMBOL", class_id, path, n.lineno, target, "LEXICAL_ONLY")
+            for candidate in route_evidence.python_template_instances(text, target, aliases):
+                line_no = candidate["type_line"]
+                instance_id = "instance:" + stable_id(
+                    "input-template", [path, candidate["block_path"], line_no,
+                                       candidate["factory_type"]])
+                if instance_id in {entry["instance_id"] for entry in instances}:
+                    continue
+                record = {
+                    "instance_id": instance_id, "input_path": path,
+                    "block_path": candidate["block_path"],
+                    "factory_type": candidate["factory_type"],
+                    "type_line": line_no,
+                    "bindings": sorted(candidate["bindings"],
+                                       key=lambda b: (b["line"], b["name"])),
+                    "instance_kind": candidate["source_kind"],
+                    "runtime_activation": "NOT_OBSERVED",
+                    "generated_output_path": "UNKNOWN",
+                    "evidence": {"path": path, "line": line_no,
+                                 "blob_sha": contents[path][1]},
+                }
+                instances.append(record)
+                emit(node, "PYTHON_DECLARES_TEMPLATE_INSTANCE", instance_id,
+                     path, line_no, candidate["block_path"],
+                     "SOURCE_TEMPLATE_NOT_GENERATED")
+                emit(instance_id, "PYTHON_TEMPLATE_INSTANTIATES", class_id,
+                     path, line_no, candidate["factory_type"],
+                     "SOURCE_TEMPLATE_NOT_RUNTIME")
         elif suffix == ".json":
             try:
                 doc = json.loads(text)
@@ -394,6 +421,11 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
         edge["source_head"] = head
         edge["revision_scope"] = route_evidence.scope(path)
         edge["activation_status"] = "NOT_OBSERVED"
+        edge["source_role"] = (
+            "STATIC_TEMPLATE_CANDIDATE_NOT_RUNTIME"
+            if edge["relation"] in {"PYTHON_TEMPLATE_INSTANTIATES",
+                                   "PYTHON_DECLARES_TEMPLATE_INSTANCE"}
+            else "SOURCE_RELATION_NOT_RUNTIME")
         if edge["relation"] == "MENTIONS_SYMBOL":
             source_line = edge["evidence"]["excerpt"]
             if re.search(r'\b(?:assert|forbidden|must.not|not.in)\b', source_line, re.I):
@@ -401,7 +433,8 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
             else:
                 edge["reference_role"] = "LEXICAL_REFERENCE_NOT_CONSUMER"
         elif edge["relation"] in {"GENERATOR_EMITS_OBJECT_CANDIDATE", "PYTHON_DECLARES_TYPE",
-                                   "PYTHON_WRITES_INPUT"}:
+                                   "PYTHON_WRITES_INPUT", "PYTHON_TEMPLATE_INSTANTIATES",
+                                   "PYTHON_DECLARES_TEMPLATE_INSTANCE"}:
             edge["reference_role"] = "STATIC_GENERATOR_NOT_RUNTIME"
         elif edge["relation"] in {"WORKFLOW_RUNS_SCRIPT", "WORKFLOW_CALLS", "SHELL_RUNS_SCRIPT",
                                    "PYTHON_IMPORTS_MODULE"}:
@@ -415,7 +448,8 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
         (item for item in instances if item["instance_id"] in reached),
         key=lambda item: item["instance_id"])
     edge_ids = {edge["from"]: edge["edge_id"] for edge in selected
-                if edge["relation"] == "INPUT_INSTANTIATES"}
+                if edge["relation"] in {"INPUT_INSTANTIATES",
+                                        "PYTHON_TEMPLATE_INSTANTIATES"}}
     for item in instance_list:
         item["structural_edge_id"] = edge_ids[item["instance_id"]]
     nodes = [{"id": item, "kind": "CLASS" if item.startswith("class:")
