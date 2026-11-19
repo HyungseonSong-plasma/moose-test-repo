@@ -1,29 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-633-ion-fvm-newonly-p0-20261118",
-      "expected_sha": "531871cee0fe3311f4987f9bf5ecb8530b095b18",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ion-fvm-newonly-p0-20261118-531871cee0fe"
+      "branch": "issue-670-p4-x-owner-runner-integration-20261118",
+      "expected_sha": "a685ab348af43e9429871b1cf93b20552d75ba03",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-x-owner-runner-integration-20261118-a685ab348af4"
     },
     {
-      "branch": "issue-633-ion-wall-single-factory-20261118",
-      "expected_sha": "06cb86515b6d8bfd3509da2776678e66c673f36b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ion-wall-single-factory-20261118-06cb86515b6d"
+      "branch": "issue-671-secure-original-ei-scratch-handoff-20261118",
+      "expected_sha": "cf6960bfe1905415f7789280f11f1383b8da7ecd",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-secure-original-ei-scratch-handoff-20261118-cf6960bfe190"
     },
     {
-      "branch": "issue-633-validate-pytest-pin-fixtures-20261118",
-      "expected_sha": "a13269393e480fd95c641bf456ceb5aeda6b60e9",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-validate-pytest-pin-fixtures-20261118-a13269393e48"
+      "branch": "issue-672-p6-d5-public-d-100row-physics-integrate-20261118",
+      "expected_sha": "47de15f603111cd94b94238534bf821d4be04167",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d5-public-d-100row-physics-integrate-20261118-47de15f60311"
     },
     {
-      "branch": "issue-668-p2-production-newonly-stage-20261117",
-      "expected_sha": "baef9bd3447b73aea8d1aea9e8aac60f2720022c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-668-p2-production-newonly-stage-20261117-baef9bd3447b"
-    },
-    {
-      "branch": "issue-669-p3-x-electron-source-cutover-20261118",
-      "expected_sha": "c965e69cc9648a16c86cbbc194b730f18f9d95aa",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-x-electron-source-cutover-20261118-c965e69cc964"
+      "branch": "issue-672-p6-public-d-100row-required-ci-20261118",
+      "expected_sha": "a7f51b10f9c76389bb2ba968ca9f50161762f7eb",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-public-d-100row-required-ci-20261118-a7f51b10f9c7"
     }
   ]
 }
