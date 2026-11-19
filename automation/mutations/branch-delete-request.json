@@ -1,9 +1,9 @@
 {
   "targets": [
     {
-      "branch": "cleanup-issue541-flow-native-20261115",
-      "expected_sha": "6ea01083eac9773f64e35e029da3ac488e7fdb02",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-flow-native-20261115-6ea01083eac9"
+      "branch": "issue-471-runtime-architecture-20261109",
+      "expected_sha": "350f7edbb1af80404fa2177ae8a31e77ff1a060d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-471-runtime-architecture-20261109-350f7edbb1af"
     }
   ]
 }
