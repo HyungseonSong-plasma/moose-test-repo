@@ -1,34 +1,34 @@
 {
   "targets": [
     {
-      "branch": "integration-issue541-wave1-abcd-20261116",
-      "expected_sha": "f964931f2223704b8ba6bf3a33e369ed61c7e5be",
-      "archive_tag": "archive/oxygen-cleanup-20261106/integration-issue541-wave1-abcd-20261116-f964931f2223"
+      "branch": "cleanup-wave1-int-s6-archive-intake-20261116",
+      "expected_sha": "8cc81e2706cb83faac3fa87e929582c8f25ba7fe",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-int-s6-archive-intake-20261116-8cc81e2706cb"
     },
     {
-      "branch": "issue-541-wave1ab-staged-validation-20261116",
-      "expected_sha": "79a2709d36b092b4409f43015bbbdacb95d4da1e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-wave1ab-staged-validation-20261116-79a2709d36b0"
+      "branch": "cleanup-wave1-dd-p3-registration-20261116",
+      "expected_sha": "def01751269879dbd10106294cf6b974b7640fb9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-p3-registration-20261116-def017512698"
     },
     {
-      "branch": "cleanup-issue541-wave1c-a2-integration-staged-20261116",
-      "expected_sha": "752989897adc45ad7c2866d0db34053b65a80276",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-wave1c-a2-integration-staged-20261116-752989897adc"
+      "branch": "cleanup-wave1-dd-manual-required-20261116",
+      "expected_sha": "b1e66428f6d1389d186515ce1f43b90b5cd51f17",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-manual-required-20261116-b1e66428f6d1"
     },
     {
-      "branch": "cleanup-wave2-6b-probe-port-20261116",
-      "expected_sha": "3e0571f011bb3b8a9141cecec3956d4987801a09",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave2-6b-probe-port-20261116-3e0571f011bb"
+      "branch": "cleanup-wave1-dd-original-retirement-archive-20261116",
+      "expected_sha": "090d3b1d8dd358ba33698edd9a0a1a4bab668d96",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-original-retirement-archive-20261116-090d3b1d8dd3"
     },
     {
-      "branch": "cleanup-wave1-c-a1-staged-retirement-20261116",
-      "expected_sha": "4c25cf031b33fcec8d54a28fd7a0cff9d1da6e32",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a1-staged-retirement-20261116-4c25cf031b33"
+      "branch": "cleanup-wave1-s6-manual-register-20261116",
+      "expected_sha": "c258d7ff483d8656ec8eb68e23e12c2b0c96c218",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-manual-register-20261116-c258d7ff483d"
     },
     {
-      "branch": "cleanup-wave1-int-s6-dd-closure-combined-20261116",
-      "expected_sha": "30638e0e2d3003576d6cdf292e447f29dfae4918",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-int-s6-dd-closure-combined-20261116-30638e0e2d30"
+      "branch": "cleanup-wave1-main-dd-original-retirement-20261116",
+      "expected_sha": "8e1ab9c0ece72193b8fb7b44b327260d8eb69f68",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-main-dd-original-retirement-20261116-8e1ab9c0ece7"
     }
   ]
 }
