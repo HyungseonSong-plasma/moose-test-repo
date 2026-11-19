@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5-a5-fv24-expected-owner-contract-20261118",
-      "expected_sha": "d09b800beb65931d15e8187e0909ed660647f836",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-a5-fv24-expected-owner-contract-20261118-d09b800beb65"
+      "branch": "issue-671-p5-b6-417-native-log-archive-audit-20261118",
+      "expected_sha": "40d5aa52baef1ee1eced3612e95ba3b04ce7448b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-b6-417-native-log-archive-audit-20261118-40d5aa52baef"
     },
     {
-      "branch": "issue-671-p5-a4-oci-recipe-20261118",
-      "expected_sha": "833ca695d549ca1aef8f7986720866d1f1491c4f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-a4-oci-recipe-20261118-833ca695d549"
+      "branch": "issue-671-p5-c6-s6-941-log-artifact-20261118",
+      "expected_sha": "06524062998f7f74c8b4780b9dc5d7815ff66ddc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c6-s6-941-log-artifact-20261118-06524062998f"
     },
     {
-      "branch": "issue-670-p4-x-stage1-source-only-20261118",
-      "expected_sha": "cf51de8ed71e34f62e14e12e46ae9c30c023708f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-x-stage1-source-only-20261118-cf51de8ed71e"
+      "branch": "issue-671-p5-c5-941-late-bound-20261118",
+      "expected_sha": "ddeb84597cca43c6f5b747b67ce58262aa592168",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c5-941-late-bound-20261118-ddeb84597cca"
     },
     {
-      "branch": "issue-671-p5-c3-941-kernel-20261118",
-      "expected_sha": "959609f2795850813b977dc3a05d1205737b89b6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c3-941-kernel-20261118-959609f27958"
+      "branch": "issue-671-p5-c1-941-input-p0-preflight-20261118",
+      "expected_sha": "2c3b32beec72b4a248de9aa902c2e534787ba083",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c1-941-input-p0-preflight-20261118-2c3b32beec72"
     },
     {
-      "branch": "issue-671-p5-c2-941-check-input-hold-20261118",
-      "expected_sha": "a9ddbe092dfd969bbed2304cdebfe0e5e4768a09",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c2-941-check-input-hold-20261118-a9ddbe092dfd"
+      "branch": "issue-671-p5-e3-p05-negative-suite-20261118",
+      "expected_sha": "9bb9a413d4e6e508b7bd4845953c91cd0d69ba00",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-e3-p05-negative-suite-20261118-9bb9a413d4e6"
     }
   ]
 }
