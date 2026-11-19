@@ -1,9 +1,29 @@
 {
   "targets": [
     {
-      "branch": "integration-issue541-3-7-6a-8a1-8a2-8b-20261116",
-      "expected_sha": "1efdd922096df10239cff8adc132e8f3811c1a63",
-      "archive_tag": "archive/oxygen-cleanup-20261106/integration-issue541-3-7-6a-8a1-8a2-8b-20261116-1efdd922096d"
+      "branch": "issue671-p5-a2-941-input-manifest-20261118",
+      "expected_sha": "f0ba842e502fa3dc718d300678450839903e3d28",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue671-p5-a2-941-input-manifest-20261118-f0ba842e502f"
+    },
+    {
+      "branch": "issue-671-p5-n2-ion-fv-diffusion-drift-negative-20261118",
+      "expected_sha": "952fae05516a528f10b40424cf39c196f6dca751",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n2-ion-fv-diffusion-drift-negative-20261118-952fae05516a"
+    },
+    {
+      "branch": "issue671-p5-c4-941-fvbc-audit-20261118",
+      "expected_sha": "91514a28227fbdafdd793dba2505cb667f26088d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue671-p5-c4-941-fvbc-audit-20261118-91514a28227f"
+    },
+    {
+      "branch": "issue-671-p5-n1-legacy-time-reinsertion-20261118",
+      "expected_sha": "8c880f1a0958b726e7ab529f6b53710550ad8a25",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n1-legacy-time-reinsertion-20261118-8c880f1a0958"
+    },
+    {
+      "branch": "issue-671-p5-n4-generated-kernel-20261118",
+      "expected_sha": "1a3a547121d6b98ef6d9d478633a43ec280995b4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-n4-generated-kernel-20261118-1a3a547121d6"
     }
   ]
 }
