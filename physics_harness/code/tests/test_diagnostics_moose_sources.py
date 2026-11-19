@@ -369,3 +369,137 @@ def test_parameter_values_and_enum_evidence_bound_to_original_sources(git_factor
             assert ev.observation_status == "SOURCE_DECLARED"
     assert any("inputs/joule.i:" in ev.source_ref
                for ev in result.graph.evidence)
+
+
+
+def test_repository_oxygen_joule_exact_head_read_only_dryrun():
+    """Real checked-out C++/HIT/Python sources; no compiled/native execution."""
+    import json
+    import os
+    from pathlib import Path
+    import subprocess
+
+    from physics_harness.code.analysis import (
+        analyze_impact, analyze_target_coverage, assess_input_parameter_contract,
+    )
+    from physics_harness.code.diagnostics import ScanBudget
+
+    root = Path(__file__).resolve().parents[3]
+    revision = subprocess.check_output(
+        ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+        text=True,
+    ).strip()
+    expected_paths = (
+        "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+        "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h",
+        "physics_app/ci/electron_energy_joule_smoke.i",
+        "experiments/fem_fvm_plasma_discriminator/prepare_cases.py",
+    )
+    request = ScanRequest(
+        repository="HyungseonSong-plasma/moose-test-repo",
+        revision=revision,
+        includes=expected_paths,
+        collectors=("cpp", "moose_input", "python_ast"),
+        budget=ScanBudget(max_files=10, max_bytes=1_000_000, max_seconds=120),
+    )
+    result = run_scan(request, GitSourceProvider(root))
+    graph = result.graph
+    target = next(
+        node for node in graph.nodes
+        if node.kind == "moose_type"
+        and node.name == "PhysicsFVElectronEnergyJouleHeating"
+    )
+    usage = [edge for edge in graph.edges
+             if edge.target_id == target.id
+             and edge.relation == "DECLARES_TYPE_USE"]
+    reg = [edge for edge in graph.edges
+           if edge.target_id == target.id
+           and edge.relation == "DECLARES_MOOSE_REGISTRATION"]
+    generators = [edge for edge in graph.edges
+                  if edge.target_id == target.id
+                  and edge.relation in (
+                      "MAY_GENERATE_INPUT",
+                      "DECLARES_GENERATOR_TEMPLATE_CANDIDATE",
+                  )]
+    cls = [node for node in graph.nodes
+           if node.kind == "cpp_class"
+           and node.name == target.name]
+    contracts = [node for node in graph.nodes
+                 if node.kind == "moose_param_contract"
+                 and node.name == "state_form"]
+    coverage = analyze_target_coverage(
+        graph, result.receipt, target.id,
+        required_paths=expected_paths,
+        unverified_surfaces=(
+            "native_build_link",
+            "generated_input_execution",
+            "external_consumers",
+            "physics_equivalence",
+        ),
+    )
+    assessment = assess_input_parameter_contract(graph, target.id)
+    impact = analyze_impact(
+        graph, (target.id,),
+        (
+            "DECLARES_TYPE_USE", "DECLARES_MOOSE_REGISTRATION",
+            "MAY_GENERATE_INPUT", "DECLARES_GENERATOR_TEMPLATE_CANDIDATE",
+            "HISTORICAL_ASSERTS_TYPE",
+        ),
+    )
+    summary = {
+        "exact_head": revision,
+        "scan_status": result.status,
+        "scanned_files": {
+            item.path: item.status for item in result.receipt.files
+        },
+        "target": target.name,
+        "target_evidence_count": len(target.evidence_ids),
+        "registration_count": len(reg),
+        "input_usage_count": len(usage),
+        "python_candidate_count": len(generators),
+        "cpp_class_declarations": len(cls),
+        "state_form_options": list(
+            contracts[0].attributes["enum_options"] if contracts else (),
+        ),
+        "parameter_assessment": assessment.disposition,
+        "parameter_blocks": [
+            {
+                "block": check.block_id,
+                "invalid_enum_values": check.invalid_enum_values,
+                "unknown": check.unknown,
+            } for check in assessment.blocks
+        ],
+        "target_scope_complete": coverage.complete_within_requested_scope,
+        "global_consumer_closed": coverage.global_consumer_closed,
+        "retirement_disposition": coverage.retirement_disposition,
+        "related_source_paths": coverage.related_source_paths,
+        "impact_nodes": len(impact.visited_nodes),
+        "unresolved": result.receipt.unresolved[:30],
+    }
+
+    if os.environ.get("GITHUB_STEP_SUMMARY"):
+        with Path(os.environ["GITHUB_STEP_SUMMARY"]).open(
+            "a", encoding="utf-8",
+        ) as handle:
+            handle.write(
+                "### Harness Code — Real-source MOOSE dry-run (read-only)\n\n"
+                "Exact HEAD, source-only candidates; no native run or safe-deletion proof.\n\n"
+                "~~~json\n" + json.dumps(summary, ensure_ascii=False, indent=2)
+                + "\n~~~\n\n"
+            )
+
+    assert tuple(sorted(summary["scanned_files"])) == tuple(sorted(expected_paths))
+    assert len(reg) >= 1, summary
+    assert len(usage) >= 3, summary
+    assert len(generators) >= 1, summary
+    assert cls, summary
+    assert contracts and contracts[0].attributes["enum_options"] == (
+        "normalized", "physical_eV",
+    ), summary
+    assert not any(check.invalid_enum_values for check in assessment.blocks), summary
+    assert assessment.disposition != "BLOCKED", summary
+    assert all(item.status not in ("FAILED", "SKIPPED_BUDGET", "UNSUPPORTED")
+               for item in result.receipt.files), summary
+    assert not coverage.global_consumer_closed
+    assert coverage.retirement_disposition == "HOLD"
+    assert not any(e.relation == "RUNTIME_INSTANTIATES" for e in graph.edges)
