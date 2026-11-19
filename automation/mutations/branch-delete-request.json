@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-670-p4-w4-general-neumann-20261118",
-      "expected_sha": "77b2d3d900fc5adede8a0789f23183bed6291ecc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w4-general-neumann-20261118-77b2d3d900fc"
+      "branch": "issue670-p4-c5-electron-current-20261118",
+      "expected_sha": "13268868df93c692b5d6b9be6384dfe2f3ee357a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue670-p4-c5-electron-current-20261118-13268868df93"
     },
     {
-      "branch": "issue-670-p4-w6-wafer-20261118",
-      "expected_sha": "217f2ec368e716f9dedd455c92f80e70b1a8bc27",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w6-wafer-20261118-217f2ec368e7"
+      "branch": "issue-670-p4-c4-lowerd-sigma-20261118",
+      "expected_sha": "aa7b80ccce37b829863eeae66683b6fcb1146bcf",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-c4-lowerd-sigma-20261118-aa7b80ccce37"
     },
     {
-      "branch": "issue-670-p4-w5-cover-dielectric-20261118",
-      "expected_sha": "3ef0858dc1756fb09a33f797b6ec90c5b0ceda50",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w5-cover-dielectric-20261118-3ef0858dc175"
+      "branch": "issue-670-p4-c3-focus-ring-current-20261118",
+      "expected_sha": "8328534446a2468cdbe59dde7feed1c360e6bd28",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-c3-focus-ring-current-20261118-8328534446a2"
     },
     {
-      "branch": "issue-670-p4-c1-cover-current-20261118",
-      "expected_sha": "ef6cbd27ff8e047cbf0e792b188f6ad5d38c1989",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-c1-cover-current-20261118-ef6cbd27ff8e"
+      "branch": "issue-671-p5-a1-417-20261118",
+      "expected_sha": "bf2d8326fc9f53b186d824b8c158a870255ff4a3",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-a1-417-20261118-bf2d8326fc9f"
     },
     {
-      "branch": "issue-670-p4-w7-focus-ring-20261118",
-      "expected_sha": "51939a237ab59d1ecf0e5ff9d0cfd18834af95a4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-w7-focus-ring-20261118-51939a237ab5"
+      "branch": "issue-671-p5-b1-p0-preflight-20261118",
+      "expected_sha": "802c37e2f94f74bc1eeb5d17b65cc8fc0aa8fa7b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-b1-p0-preflight-20261118-802c37e2f94f"
     }
   ]
 }
