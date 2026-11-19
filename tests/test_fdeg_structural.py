@@ -249,11 +249,11 @@ class StructuralEvidenceTest(unittest.TestCase):
         self.assertEqual(graph["status"], "STRUCTURAL_RECORDED")
 
     def test_v03_historical_generator_imported_by_current_experiment_is_migration_candidate(self):
-        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\\n')
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
         history = "experiments/historical_recipe_support/legacy.py"
-        self.put(history, 'def build():\\n    return "type = Legacy"\\n')
+        self.put(history, 'def build():\n    return "type = Legacy"\n')
         self.put("experiments/Issue100_case/run.py",
-                 "from experiments.historical_recipe_support.legacy import build\\n")
+                 "from experiments.historical_recipe_support.legacy import build\n")
         graph = fdeg.scan(self.root, "Legacy")
         imports = self.edges(graph, "IMPORTS_HISTORICAL_GENERATOR_CANDIDATE")
         self.assertEqual(len(imports), 1)
@@ -275,11 +275,11 @@ class StructuralEvidenceTest(unittest.TestCase):
         self.assertNotEqual(graph["safety"], "SAFE_DELETE")
 
     def test_v03_historical_generator_test_only_import_remains_historical(self):
-        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\\n')
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
         history = "experiments/historical_recipe_support/legacy.py"
-        self.put(history, 'def build():\\n    return "type = Legacy"\\n')
+        self.put(history, 'def build():\n    return "type = Legacy"\n')
         self.put("tests/test_legacy.py",
-                 "from experiments.historical_recipe_support.legacy import build\\n")
+                 "from experiments.historical_recipe_support.legacy import build\n")
         graph = fdeg.scan(self.root, "Legacy")
         self.assertFalse(self.edges(graph, "IMPORTS_HISTORICAL_GENERATOR_CANDIDATE"))
         routes = [r for r in graph["enrichment"]["generator_routes"]
