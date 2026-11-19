@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-667-p1-a2-4-focus-ring-20261117",
-      "expected_sha": "9fb1f1610e80486b4a137b2e18487c4ad99470b7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-a2-4-focus-ring-20261117-9fb1f1610e80"
+      "branch": "issue-667-p1-c1-941-o2p-ei415-20261117",
+      "expected_sha": "7729273bc83d91bdf9aef9db01ae65726257d23c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c1-941-o2p-ei415-20261117-7729273bc83d"
     },
     {
-      "branch": "issue-667-p1-b1-s6-417-ei415-9c15a4f-20261117",
-      "expected_sha": "832d2265a5129c6e1b820d3d4aa0a58a5a509e26",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b1-s6-417-ei415-9c15a4f-20261117-832d2265a512"
+      "branch": "issue-667-p1-c3-941-om-source-20261117",
+      "expected_sha": "66a6203b7a30f781021ac16cea28484228d7e042",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c3-941-om-source-20261117-66a6203b7a30"
     },
     {
-      "branch": "issue-667-p1-b2-417-o2p-h25-20261117",
-      "expected_sha": "603b7db93d2df2ebf386ba35ca688a39c6841823",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b2-417-o2p-h25-20261117-603b7db93d2d"
+      "branch": "issue-667-p1-c4-s6-941-op-source-20261117",
+      "expected_sha": "1427f02dc0e63f8e32a18ba4e04554beec38ee8d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c4-s6-941-op-source-20261117-1427f02dc0e6"
     },
     {
-      "branch": "issue-667-p1-b6-ei-rate-20261117",
-      "expected_sha": "9d8d7b98b4c163a365c93ad69067f34eaaf16f86",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b6-ei-rate-20261117-9d8d7b98b4c1"
+      "branch": "issue-667-p1-c5-op-h25-941-20261117",
+      "expected_sha": "987a60fd2cc333500f548aca4cba704ffcd2a8fe",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c5-op-h25-941-20261117-987a60fd2cc3"
     },
     {
-      "branch": "issue-667-p1-b7-417-h25-final11-20261117",
-      "expected_sha": "d2b903ab5bca91f4b8ec12c4aab0d3ba3b43725c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b7-417-h25-final11-20261117-d2b903ab5bca"
+      "branch": "issue-667-p1-c6-s6-941-ei-provenance-9c15a4f-20261117",
+      "expected_sha": "3461ad2da1586505135d38a941f2eac49f0ab84b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-c6-s6-941-ei-provenance-9c15a4f-20261117-3461ad2da158"
     }
   ]
 }
