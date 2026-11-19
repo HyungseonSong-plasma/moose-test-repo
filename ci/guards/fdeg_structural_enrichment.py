@@ -324,8 +324,11 @@ def enrichment(contents: dict, target: str, aliases: set[str], instances: list[d
                      m.group(1), "STATIC_COMMAND_ONLY")
 
     # Imported external generator sources are named explicitly, but never equated with tracked .i.
+    linked_generator_sources = {route["source"] for route in routes}
     for path, (text, _) in sorted(contents.items()):
         if not path.endswith(".py") or not path.startswith("experiments/"):
+            continue
+        if path not in linked_generator_sources and target not in text:
             continue
         if not ("generator" in text or "g337" in text):
             continue
