@@ -17,6 +17,7 @@ decision engine**. Issue [#721](https://github.com/HyungseonSong-plasma/moose-te
 | `providers/python_ast.py` | Python syntax-only declaration, import, call-site and name/attribute reference candidates |
 | `providers/cpp.py` | C++ class/include/Factory macro source-declaration candidates |
 | `providers/moose_input.py` | MOOSE HIT `.i` blocks, type reference and unresolved include syntax |
+| `providers/github_actions.py` | Read-only external Run/Attempt/Job/Step observation with exact source SHA and pagination controls |
 
 
 ### Core invariants
@@ -127,3 +128,45 @@ block/type/include parser. Dynamic values, includes, duplicate/unclosed
 blocks and unsupported syntax produce `PARTIAL` or `FAILED`, never false
 complete coverage. More complex syntax needs a separate capability test
 before this collector may be used to qualify deletion.
+
+### External GitHub Actions runtime observations
+
+`GitHubActionsRunProvider(fetch_json)` reads actual REST Run/Attempt and
+paginated Job/Step payloads using an **injected read-only GET callable**
+(which may use a GitHub App or a token-authorized REST client).
+It intentionally does **not** implement file `Collector` or inject fake
+Git blobs into `SourceProvider`. Its `collect_run(request, run_id, attempt)`
+returns a `CollectionResult(FactBatch, status)` that can be assembled with
+source facts using the existing `GraphAssembler`. The caller must pin
+`request.revision` to the exact run's source SHA. A mismatch raises and
+cannot be relabelled as a successful observation.
+
+```python
+from physics_harness.code.diagnostics import (
+    FactBatch, GitHubActionsRunProvider, GraphAssembler,
+)
+
+# source_result = run_scan(request, GitSourceProvider(...))
+# fetch_json(url) must perform an authenticated, read-only REST GET.
+observed = GitHubActionsRunProvider(fetch_json).collect_run(request, run_id, 1)
+combined = GraphAssembler().assemble(
+    request,
+    (
+        FactBatch(nodes=source_result.graph.nodes,
+                  edges=source_result.graph.edges,
+                  evidence=source_result.graph.evidence),
+        observed.batch,
+    ),
+    source_result.receipt,
+)
+```
+
+Run, Job and Step conclusions are independently preserved as
+`RUNTIME_OBSERVED` source attributes; the Workflow-level `success`
+status cannot turn a `skipped` Job into PASS. API page gaps, mutation
+during retrieval, in-progress status and missing metadata produce
+`PARTIAL`/unresolved, including in the combined Graph scope. A failed
+Run fetch returns `FAILED` without invented runtime Evidence.
+This provider does not discover changeset diffs, checkout SHA from logs,
+Required Checks, actual build/test identity, external artifact custody or
+time cost. Those remain separate follow-on obligations.

@@ -12,6 +12,7 @@ from .providers.workflow import WorkflowCollector
 from .providers.python_ast import PythonAstCollector
 from .providers.cpp import CppSourceCollector
 from .providers.moose_input import MooseInputCollector
+from .providers.github_actions import GitHubActionsRunProvider
 
 __all__ = [
     "ScanBudget", "ScanRequest", "CollectionResult", "FactBatch", "SourceInput",
@@ -19,4 +20,5 @@ __all__ = [
     "run_scan", "scan_scope_id", "stable_id", "DiagnosticResult", "GraphAssembler",
     "EvidenceReceipt", "FileCoverage", "GitSourceProvider", "WorkflowCollector",
     "PythonAstCollector", "CppSourceCollector", "MooseInputCollector",
+    "GitHubActionsRunProvider",
 ]
