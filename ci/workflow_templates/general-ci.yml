@@ -98,6 +98,19 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
       - name: Validate FDEG Transition Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Prepare code6 H05 original/candidate input pair P0 (no Native)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 physics_app/ci/code6_ab_pilot.py --self-test
+          python3 physics_app/ci/code6_ab_pilot.py --mode prepare --expected-head "$(git rev-parse HEAD)" --output-dir code6-h05-pilot
+      - name: Upload code6 H05 A-B prepared inputs and HOLD receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: code6-h05-ab-${{ github.run_id }}-${{ github.run_attempt }}
+          path: code6-h05-pilot/**
+          if-no-files-found: error
+          retention-days: 14
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
