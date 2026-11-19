@@ -1,29 +1,9 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5-b6-417-native-log-archive-audit-20261118",
-      "expected_sha": "40d5aa52baef1ee1eced3612e95ba3b04ce7448b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-b6-417-native-log-archive-audit-20261118-40d5aa52baef"
-    },
-    {
-      "branch": "issue-671-p5-c6-s6-941-log-artifact-20261118",
-      "expected_sha": "06524062998f7f74c8b4780b9dc5d7815ff66ddc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c6-s6-941-log-artifact-20261118-06524062998f"
-    },
-    {
-      "branch": "issue-671-p5-c5-941-late-bound-20261118",
-      "expected_sha": "ddeb84597cca43c6f5b747b67ce58262aa592168",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c5-941-late-bound-20261118-ddeb84597cca"
-    },
-    {
-      "branch": "issue-671-p5-c1-941-input-p0-preflight-20261118",
-      "expected_sha": "2c3b32beec72b4a248de9aa902c2e534787ba083",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-c1-941-input-p0-preflight-20261118-2c3b32beec72"
-    },
-    {
-      "branch": "issue-671-p5-e3-p05-negative-suite-20261118",
-      "expected_sha": "9bb9a413d4e6e508b7bd4845953c91cd0d69ba00",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-e3-p05-negative-suite-20261118-9bb9a413d4e6"
+      "branch": "integration-issue541-3-7-6a-8a1-8a2-8b-20261116",
+      "expected_sha": "1efdd922096df10239cff8adc132e8f3811c1a63",
+      "archive_tag": "archive/oxygen-cleanup-20261106/integration-issue541-3-7-6a-8a1-8a2-8b-20261116-1efdd922096d"
     }
   ]
 }
