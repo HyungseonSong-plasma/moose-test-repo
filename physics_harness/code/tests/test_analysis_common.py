@@ -64,7 +64,7 @@ def test_reverse_impact_reuses_context_and_retains_cycles_and_shared_paths():
     assert len(result.visited_edges) == 3
     assert any(o.status == "CYCLE_REF" for o in result.view.occurrences)
     assert not result.view.truncated
-    repeat = analyze_impact(graph, ("node:target",), ("USES",))
+    repeat = analyze_impact(graph, ("node:target",), ("USES",), max_depth=5)
     assert result.view == repeat.view
 
 
