@@ -30,6 +30,8 @@ def validate(root: Path = ROOT, meta: dict | None = None,
     existing_meta, existing_archive = load(root)
     meta = copy.deepcopy(existing_meta if meta is None else meta)
     archive = copy.deepcopy(existing_archive if archive is None else archive)
+    if archive != existing_archive:
+        raise ValueError("LIFECYCLE_ARCHIVE_CONTENT_MISMATCH")
     if (meta.get("schema") != "fdeg.profile_lifecycle.v0.1"
             or archive.get("schema") != "fdeg.historical_profiles.v0.1"):
         raise ValueError("LIFECYCLE_SCHEMA_INVALID")

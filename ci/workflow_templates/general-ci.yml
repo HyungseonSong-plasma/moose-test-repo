@@ -113,7 +113,7 @@ jobs:
         if: github.event_name == 'pull_request' && github.head_ref == 'issue-701-code1-retirement-evidence-prep'
         uses: actions/upload-artifact@v4
         with:
-          name: fdeg-code1-baseline-${{ github.sha }}
+          name: fdeg-code1-baseline-${{ github.event.pull_request.head.sha }}
           path: fdeg-code1-evidence/**
           if-no-files-found: error
           retention-days: 90
