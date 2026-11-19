@@ -170,8 +170,11 @@ jobs:
     assert all(ev.observation_status != "RUNTIME_OBSERVED" for ev in result.graph.evidence)
 
 
-def test_nested_config_yaml_duplicate_key_and_merge_key_fail_closed(git_factory):
-    duplicate = """\
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param(
+            """\
 on:
   push:
     branches: [main]
@@ -180,11 +183,11 @@ jobs:
   test:
     steps:
       - run: echo ok
-"""
-    result = scan(git_factory, duplicate)
-    assert result.status == "PARTIAL"
-    assert result.receipt.files[0].status == "FAILED"
-    merge = """\
+""",
+            id="duplicate-nested-key",
+        ),
+        pytest.param(
+            """\
 on: [push]
 defaults: &defaults
   shell: bash
@@ -193,8 +196,13 @@ jobs:
     <<: *defaults
     steps:
       - run: echo ok
-"""
-    result = scan(git_factory, merge)
+""",
+            id="yaml-merge-key",
+        ),
+    ],
+)
+def test_nested_config_yaml_duplicate_key_and_merge_key_fail_closed(git_factory, source):
+    result = scan(git_factory, source)
     assert result.status == "PARTIAL"
     assert result.receipt.files[0].status == "FAILED"
 

@@ -6,7 +6,7 @@ import pytest
 
 from physics_harness.code.graph import Edge, Evidence, Node
 from physics_harness.code.diagnostics import (
-    EvidenceReceipt, FactBatch, FileCoverage, GraphAssembler, ScanRequest,
+    FactBatch, FileCoverage, GraphAssembler, ScanRequest,
     UnresolvedTarget, graph_edge_id, scan_scope_id,
 )
 from physics_harness.code.diagnostics.receipt import create_receipt
