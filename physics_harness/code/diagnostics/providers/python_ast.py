@@ -8,6 +8,7 @@ It records syntax with exact blob/line Evidence. Consumers must not treat
 from __future__ import annotations
 
 import ast
+import re
 from collections import Counter
 from io import BytesIO
 import tokenize
@@ -23,6 +24,8 @@ from ..request import ScanRequest
 _DEFINITIONS = (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
 _BRANCHES = (ast.If, ast.IfExp, ast.For, ast.AsyncFor, ast.While,
              ast.Try, ast.ExceptHandler, ast.Match)
+_MOOSE_TYPE_LINE = re.compile(r"(?m)^[ \t]*type[ \t]*=[ \t]*([^\n#]*)")
+_MOOSE_IDENTIFIER = re.compile(r"[A-Za-z_]\w*(?:::\w+)*\Z")
 
 
 def _body_metrics(node: ast.AST) -> tuple[int, int]:
@@ -69,10 +72,19 @@ class PythonAstCollector:
         unresolved: set[str] = set()
         unresolved_targets: list[UnresolvedTarget] = []
         occurrences: Counter[tuple[str, str]] = Counter()
+        docstrings = {
+            id(statement.body[0].value)
+            for statement in ast.walk(root)
+            if isinstance(statement, (ast.Module, *_DEFINITIONS))
+            and statement.body
+            and isinstance(statement.body[0], ast.Expr)
+            and isinstance(statement.body[0].value, ast.Constant)
+            and isinstance(statement.body[0].value.value, str)
+        }
 
         def witness(node: ast.AST, kind: str, statement: str,
-                    *, unknown: bool = False) -> str:
-            line = getattr(node, "lineno", 1)
+                    *, unknown: bool = False, line_override: int | None = None) -> str:
+            line = line_override or getattr(node, "lineno", 1)
             column = getattr(node, "col_offset", 0)
             eid = stable_id(
                 "evidence", request.repository, request.revision,
@@ -103,6 +115,7 @@ class PythonAstCollector:
         class SyntaxVisitor(ast.NodeVisitor):
             def __init__(self) -> None:
                 self.owners = [(file_node_id(request.repository, record.path), "")]
+                self.literal_context = "template"
 
             @property
             def owner(self) -> str:
@@ -226,6 +239,85 @@ class PythonAstCollector:
                          unknown_eid, discriminator)
                     unresolved.add(f"DYNAMIC_PYTHON_REFERENCE:{record.path}:{item.lineno}")
                 self.generic_visit(item)
+
+            def visit_Assert(self, item: ast.Assert) -> None:
+                previous = self.literal_context
+                self.literal_context = "historical_assertion"
+                self.generic_visit(item)
+                self.literal_context = previous
+
+            def visit_Return(self, item: ast.Return) -> None:
+                previous = self.literal_context
+                self.literal_context = "possible_generator"
+                self.generic_visit(item)
+                self.literal_context = previous
+
+            def collect_moose_literal(self, item: ast.AST, value: str) -> None:
+                for match in _MOOSE_TYPE_LINE.finditer(value):
+                    raw_type = match.group(1).strip()
+                    name = raw_type.strip("'\"")
+                    line = min(
+                        getattr(item, "lineno", 1) + value.count("\n", 0, match.start()),
+                        getattr(item, "end_lineno", getattr(item, "lineno", 1)),
+                    )
+                    offset = f"{line}:{getattr(item, 'col_offset', 0)}:{match.start()}"
+                    if _MOOSE_IDENTIFIER.fullmatch(name):
+                        relation = {
+                            "historical_assertion": "HISTORICAL_ASSERTS_TYPE",
+                            "possible_generator": "MAY_GENERATE_INPUT",
+                        }.get(self.literal_context, "DECLARES_GENERATOR_TEMPLATE_CANDIDATE")
+                        eid = witness(item, relation, f"{name}:{offset}",
+                                      line_override=line)
+                        target_id = stable_id(
+                            "node", request.repository, "moose_type", name,
+                        )
+                        nodes.append(Node(
+                            id=target_id, kind="moose_type", name=name,
+                            evidence_ids=(eid,),
+                        ))
+                        link(self.owner, target_id, relation, eid, offset)
+                    else:
+                        eid = witness(
+                            item, "DYNAMIC_MOOSE_TYPE_TEMPLATE", offset,
+                            unknown=True, line_override=line,
+                        )
+                        target_id = stable_id(
+                            "node", request.repository, "python_dynamic_moose_type",
+                            record.path, offset,
+                        )
+                        unresolved_targets.append(UnresolvedTarget(
+                            target_id, "dynamic_moose_type", eid,
+                        ))
+                        link(self.owner, target_id, "MOOSE_TYPE_TEMPLATE_UNRESOLVED",
+                             eid, offset)
+                        unresolved.add(
+                            f"PYTHON_MOOSE_TYPE_TEMPLATE_UNRESOLVED:{record.path}:{line}"
+                        )
+
+            def visit_Constant(self, item: ast.Constant) -> None:
+                if isinstance(item.value, str) and id(item) not in docstrings:
+                    self.collect_moose_literal(item, item.value)
+
+            def visit_JoinedStr(self, item: ast.JoinedStr) -> None:
+                # Formatted values remain dynamic; retain the literal fragments
+                # but do not evaluate the Python expression or generated input.
+                parts = []
+                dynamic = False
+                for part in item.values:
+                    if isinstance(part, ast.Constant) and isinstance(part.value, str):
+                        parts.append(part.value)
+                    elif isinstance(part, ast.FormattedValue):
+                        dynamic = True
+                        parts.append("__PYTHON_DYNAMIC_EXPRESSION__")
+                        self.visit(part.value)
+                        if part.format_spec is not None:
+                            self.visit(part.format_spec)
+                literal = "".join(parts)
+                self.collect_moose_literal(item, literal)
+                if dynamic and _MOOSE_TYPE_LINE.search(literal):
+                    unresolved.add(
+                        f"PYTHON_GENERATOR_RENDER_UNVERIFIED:{record.path}:{item.lineno}"
+                    )
 
             def visit_Name(self, item: ast.Name) -> None:
                 if isinstance(item.ctx, ast.Load):

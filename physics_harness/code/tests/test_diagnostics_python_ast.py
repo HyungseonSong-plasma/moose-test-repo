@@ -177,3 +177,118 @@ def test_nested_calls_sharing_start_position_get_distinct_canonical_nodes(git_fa
     }
     assert len({n.id for n in calls}) == 2
     assert all(edge.evidence_ids for edge in result.graph.edges)
+
+
+
+def test_python_literal_moose_type_joins_cpp_and_input_candidate_identity(git_factory):
+    python_code = """\
+def make_input():
+    return '''[FVKernels]
+  [energy_joule]
+    type = PhysicsFVElectronEnergyJouleHeating
+  []
+[]
+'''
+"""
+    cpp_code = 'registerMooseObject("PhysicsApp", PhysicsFVElectronEnergyJouleHeating);\n'
+    input_code = "[FVKernels]\n  [energy_joule]\n    type = PhysicsFVElectronEnergyJouleHeating\n  []\n[]\n"
+    result = scan(
+        git_factory,
+        {
+            "scripts/generate.py": python_code, "src/kernel.C": cpp_code,
+            "inputs/case.i": input_code,
+        },
+        includes=("scripts/*.py", "src/*.C", "inputs/*.i"),
+        collectors=("cpp", "moose_input", "python_ast"),
+    )
+    assert result.status == "COMPLETE"
+    target = [n for n in result.graph.nodes
+              if n.kind == "moose_type" and n.name == "PhysicsFVElectronEnergyJouleHeating"]
+    assert len(target) == 1
+    kinds = {e.relation for e in result.graph.edges if e.target_id == target[0].id}
+    assert {"MAY_GENERATE_INPUT", "DECLARES_TYPE_USE",
+            "DECLARES_MOOSE_REGISTRATION"}.issubset(kinds)
+    assert len(target[0].evidence_ids) == 3
+    assert not result.graph.claims
+    assert "RUNTIME_INSTANTIATES" not in kinds
+
+
+def test_python_history_assertion_is_not_active_generator(git_factory):
+    text = '''\
+def verify(contents):
+    assert "type = PhysicsFVElectronEnergyJouleHeating" in contents
+'''
+    result = scan(git_factory, {"src/verify.py": text})
+    assert result.status == "COMPLETE"
+    relevant = [e for e in result.graph.edges
+                if e.relation == "HISTORICAL_ASSERTS_TYPE"]
+    assert len(relevant) == 1
+    assert relevant[0].target_id in result.graph.nodes_by_id()
+    assert not any(e.relation == "MAY_GENERATE_INPUT" for e in result.graph.edges)
+
+
+def test_fstring_literal_type_is_candidate_but_render_unverified(git_factory):
+    source = """\
+def make_input(species):
+    return f'''[FVKernels]
+  [energy_{species}]
+    type = PhysicsFVElectronEnergyJouleHeating
+    variable = {species}
+  []
+[]
+'''
+"""
+    result = scan(git_factory, {"src/make.py": source})
+    assert result.status == "PARTIAL"
+    assert any(e.relation == "MAY_GENERATE_INPUT" for e in result.graph.edges)
+    assert any(u.startswith("PYTHON_GENERATOR_RENDER_UNVERIFIED:")
+               for u in result.receipt.unresolved)
+    assert not any(e.relation == "RUNTIME_INSTANTIATES"
+                   for e in result.graph.edges)
+
+
+def test_dynamic_fstring_type_is_unresolved_not_literal_type(git_factory):
+    source = """\
+def make_input(kernel):
+    return f'''[FVKernels]
+  [joule]
+    type = {kernel}
+  []
+[]
+'''
+"""
+    result = scan(git_factory, {"src/generate.py": source})
+    assert result.status == "PARTIAL"
+    assert any(e.relation == "MOOSE_TYPE_TEMPLATE_UNRESOLVED"
+               for e in result.graph.edges)
+    assert any(n.kind == "unresolved" for n in result.graph.nodes)
+    assert not any(n.kind == "moose_type" for n in result.graph.nodes)
+
+
+def test_docstring_is_not_treated_as_generator_consumer(git_factory):
+    source = """\
+def explain():
+    '''Example input:
+    type = PhysicsFVElectronEnergyJouleHeating
+    '''
+    return None
+"""
+    result = scan(git_factory, {"src/docs.py": source})
+    assert result.status == "COMPLETE"
+    assert not any(n.kind == "moose_type" for n in result.graph.nodes)
+
+
+def test_static_generator_source_evidence_is_revision_bound(git_factory):
+    first = scan(git_factory, {
+        "src/generated.py": "DECK = 'type = MyKernel'\n",
+    })
+    second = scan(git_factory, {
+        "src/generated.py": "DECK = 'type = MyKernel' # changed\n",
+    })
+    rel = "DECLARES_GENERATOR_TEMPLATE_CANDIDATE"
+    assert {e.relation for e in first.graph.edges} >= {rel}
+    assert first.status == second.status == "COMPLETE"
+    first_node = next(n for n in first.graph.nodes if n.kind == "moose_type")
+    second_node = next(n for n in second.graph.nodes if n.kind == "moose_type")
+    assert first_node.id == second_node.id
+    assert set(first_node.evidence_ids) != set(second_node.evidence_ids)
