@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..diagnostics.collector import stable_id
+from ..diagnostics.receipt import EvidenceReceipt
+from ..diagnostics.request import normalized_path
 from ..graph import Context, GraphSnapshot, HierarchyView, RelationSelector, unfold_context
 
 
@@ -70,4 +72,147 @@ def analyze_impact(
     )
 
 
-__all__ = ["ImpactResult", "analyze_impact"]
+@dataclass(frozen=True, slots=True)
+class TargetCoverage:
+    """Read-only target report; never proof of a closed consumer universe."""
+
+    target_id: str
+    scope_id: str
+    revision: str
+    related_evidence_ids: tuple[str, ...]
+    related_source_paths: tuple[str, ...]
+    required_paths: tuple[str, ...]
+    missing_required_paths: tuple[str, ...]
+    incomplete_paths: tuple[str, ...]
+    related_incomplete_paths: tuple[str, ...]
+    scope_unresolved: tuple[str, ...]
+    unverified_surfaces: tuple[str, ...]
+    local_blockers: tuple[str, ...]
+
+    @property
+    def complete_within_requested_scope(self) -> bool:
+        """Complete only within explicitly requested files and capabilities."""
+        return not self.local_blockers
+
+    @property
+    def global_consumer_closed(self) -> bool:
+        """Local source scans cannot prove global consumer closure."""
+        return False
+
+    @property
+    def retirement_disposition(self) -> str:
+        """Never authorize deletion from bounded source evidence alone."""
+        return "HOLD"
+
+
+def analyze_target_coverage(
+    graph: GraphSnapshot,
+    receipt: EvidenceReceipt,
+    target_id: str,
+    *,
+    required_paths: tuple[str, ...] = (),
+    unverified_surfaces: tuple[str, ...] = (),
+) -> TargetCoverage:
+    """Attribute target evidence to scanned files, without inventing closure.
+
+    Callers enumerate required paths and unverified consumer surfaces such as
+    generators, generated inputs, native runtime and external users. Unknown
+    source-scope findings are retained rather than assumed unrelated.
+    """
+    if not isinstance(graph, GraphSnapshot):
+        raise TypeError("graph must be a GraphSnapshot")
+    if not isinstance(receipt, EvidenceReceipt):
+        raise TypeError("receipt must be an EvidenceReceipt")
+    if (graph.scope.id != receipt.scope_id
+            or graph.scope.repository != receipt.repository
+            or graph.scope.revision != receipt.revision):
+        raise ValueError("TARGET_COVERAGE_SCOPE_MISMATCH")
+    if not isinstance(required_paths, tuple):
+        raise TypeError("required_paths must be a tuple")
+    if not isinstance(unverified_surfaces, tuple):
+        raise TypeError("unverified_surfaces must be a tuple")
+    for path in required_paths:
+        normalized_path(path)
+    if any(not isinstance(s, str) or not s.strip() for s in unverified_surfaces):
+        raise ValueError("INVALID_TARGET_SURFACE")
+    if len(set(required_paths)) != len(required_paths):
+        raise ValueError("DUPLICATE_TARGET_REQUIRED_PATH")
+    if len(set(unverified_surfaces)) != len(unverified_surfaces):
+        raise ValueError("DUPLICATE_TARGET_SURFACE")
+
+    nodes = graph.nodes_by_id()
+    if not isinstance(target_id, str) or target_id not in nodes:
+        raise ValueError("UNKNOWN_TARGET_COVERAGE_NODE")
+
+    listed = {file.path: file for file in receipt.files}
+    included = tuple(sorted(
+        path for path, file in listed.items() if file.status != "EXCLUDED"
+    ))
+    excluded = tuple(sorted(
+        path for path, file in listed.items() if file.status == "EXCLUDED"
+    ))
+    if (graph.scope.included_paths != included
+            or graph.scope.excluded_paths != excluded):
+        raise ValueError("TARGET_COVERAGE_RECEIPT_GRAPH_PATH_MISMATCH")
+
+    related_ids = set(nodes[target_id].evidence_ids)
+    for edge in graph.edges:
+        if edge.source_id == target_id or edge.target_id == target_id:
+            related_ids.update(edge.evidence_ids)
+
+    by_id = graph.evidence_by_id()
+    related_sources = set()
+    for evidence_id in related_ids:
+        ev = by_id[evidence_id]
+        for path in listed:
+            if ev.source_ref.startswith((path + ":", path + "@")):
+                related_sources.add(path)
+
+    missing = tuple(sorted(
+        path for path in required_paths
+        if path not in listed or listed[path].status == "EXCLUDED"
+    ))
+    incomplete = tuple(sorted(
+        path for path, file in listed.items()
+        if file.status not in {"SCANNED", "EXCLUDED"}
+    ))
+    related_incomplete = tuple(sorted(related_sources.intersection(incomplete)))
+    unresolved = tuple(sorted(
+        set(graph.scope.unresolved) | set(receipt.unresolved)
+    ))
+    blockers: set[str] = set()
+    if not required_paths:
+        blockers.add("TARGET_REQUIRED_PATHS_UNDECLARED")
+    if missing:
+        blockers.add("TARGET_REQUIRED_PATHS_NOT_SCANNED")
+    if incomplete:
+        blockers.add("INCOMPLETE_REQUESTED_FILES")
+    if unresolved:
+        blockers.add("UNRESOLVED_REQUESTED_SCOPE")
+    if graph.scope.completeness != "COMPLETE" or receipt.completeness != "COMPLETE":
+        blockers.add("INCOMPLETE_REQUESTED_SCOPE")
+    if not related_ids:
+        blockers.add("TARGET_EVIDENCE_ABSENT")
+    if any(by_id[evidence_id].observation_status == "UNRESOLVED"
+           for evidence_id in related_ids):
+        blockers.add("UNRESOLVED_TARGET_EVIDENCE")
+
+    return TargetCoverage(
+        target_id=target_id, scope_id=graph.scope.id,
+        revision=graph.scope.revision,
+        related_evidence_ids=tuple(sorted(related_ids)),
+        related_source_paths=tuple(sorted(related_sources)),
+        required_paths=tuple(sorted(required_paths)),
+        missing_required_paths=missing,
+        incomplete_paths=incomplete,
+        related_incomplete_paths=related_incomplete,
+        scope_unresolved=unresolved,
+        unverified_surfaces=tuple(sorted(unverified_surfaces)),
+        local_blockers=tuple(sorted(blockers)),
+    )
+
+
+__all__ = [
+    "ImpactResult", "analyze_impact",
+    "TargetCoverage", "analyze_target_coverage",
+]
