@@ -1,0 +1,262 @@
+{
+  "schema": "fdeg.transition_policy.v0.1",
+  "purpose": "Curated migration planning requirements ONLY; never observed execution or deletion approval",
+  "source_issue": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691",
+  "controls": {
+    "safety": "SAFE_DELETE_ALWAYS_HOLD",
+    "non_semantic_engine": "The deterministic assembler must not choose which physics functionality to remove",
+    "allowed_strategies": [
+      "RETAIN_NO_APPROVED_REPLACEMENT",
+      "REWIRE_ONLY_IF_PARITY_PROVEN",
+      "RETAIN_OR_CONDITIONALLY_REWIRE",
+      "SHARED_FILE_INDEPENDENT_OWNER_GATES"
+    ],
+    "required_review_status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+  },
+  "profiles": {
+    "FVElectronResponseBandedCorrection": {
+      "target": "FVElectronResponseBandedCorrection",
+      "review_comment_id": 7009744383,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009744383",
+      "historical": [
+        "PINNED_337_351_REPLAY_PRESERVE_IMMUTABLY",
+        "CURRENT_BINARY_LEGACY_INPUT_COMPATIBILITY_SEPARATE_APPROVAL"
+      ],
+      "protected": [
+        "PINNED_HISTORICAL_SOURCES_INPUTS_ARTIFACTS",
+        "POISSON_SOLVER_AND_OTHER_OWNERS",
+        "ANCHOR_BETA_MATRIX_FUNCTORS"
+      ],
+      "required": [
+        "GENERATED_POISSON_SUB_I_EFFECTIVE_BINDING",
+        "PHI_EQUALS_ANCHOR_BETA_ZERO_ROW_SUM_POSITIVE_NEGATIVE",
+        "BAND_GHOST_AND_ROW_MAP",
+        "INDEPENDENT_ON_OFF_RESIDUAL_JACOBIAN_FIELD_PARITY"
+      ],
+      "strategy": "RETAIN_NO_APPROVED_REPLACEMENT",
+      "rule": "Historical AB/BA both-with-kernel comparisons cannot show removal parity.",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVElectronEnergyJouleHeating": {
+      "target": "PhysicsFVElectronEnergyJouleHeating",
+      "review_comment_id": 7009738832,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009738832",
+      "historical": [
+        "NORMALIZED_VS_PHYSICAL_EV_MODE_REPLAY"
+      ],
+      "protected": [
+        "PHYSICS_ELECTRON_FLUX_MODEL_SHARED_HELPER",
+        "ELECTRON_ENERGY_EQUATION"
+      ],
+      "required": [
+        "APPROVED_ELECTRIC_WORK_REPLACEMENT_OWNER",
+        "ELECTRIC_FIELD_DRIFT_DIFFUSION_NONZERO",
+        "NORMALIZED_EPSILON_REFERENCE",
+        "AD_OFF_DIAGONAL_JACOBIAN_AND_DOUBLE_OWNER"
+      ],
+      "strategy": "RETAIN_NO_APPROVED_REPLACEMENT",
+      "rule": "Do not delete the PhysicsElectronFluxModel helper while any independent consumer needs it.",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVElectronReactionSource": {
+      "target": "PhysicsFVElectronReactionSource",
+      "review_comment_id": 7009740105,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009740105",
+      "historical": [
+        "EI18_EI19_NO_ELECTRON_NUMBER_SOURCE",
+        "HISTORICAL_REACTION_FIXTURE_PRESERVATION"
+      ],
+      "protected": [
+        "SIGNED_REACTION_PROGRESS_OWNER",
+        "AVOGADRO_SINGLE_CONVERSION",
+        "EI18_EI19_ZERO_SOURCE_ASSERTIONS"
+      ],
+      "required": [
+        "FVCoupledForce_SOURCE_AND_COEFFICIENT_PARITY",
+        "PHYSICAL_COEF_ONE_NORMALIZED_COEF_ONE_OVER_N_REF",
+        "NUMBER_SOURCE_TO_V_REBINDING",
+        "POS_ZERO_NEG_SIGN_AD_AND_CHARGE_CONSERVATION"
+      ],
+      "candidate_bindings": {
+        "FVCoupledForce": {
+          "number_source": "v",
+          "state_form": "REMOVE_ONLY_AFTER_MODE_NORMALIZATION_PROOF",
+          "n_ref": "externalized positive n_ref validation",
+          "coef": "physical:1; normalized:1/n_ref (unverified)"
+        }
+      },
+      "strategy": "REWIRE_ONLY_IF_PARITY_PROVEN",
+      "rule": "Do not add a second source term; EI18/EI19 negative assertions must retain their physics meaning.",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVElectrostaticDrift": {
+      "target": "PhysicsFVElectrostaticDrift",
+      "review_comment_id": 7009741152,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009741152",
+      "historical": [
+        "STAGE5_WALL_DRIFT_COMPATIBILITY_SEPARATE"
+      ],
+      "protected": [
+        "HEAVY_MASS_ELECTROMIGRATION_CORRECTION",
+        "WALL_BC_OWNER",
+        "CHARGED_SPECIES_CHARGE_MASS_BALANCE"
+      ],
+      "required": [
+        "SIGNED_Z_NORMAL_FACE_FLUX",
+        "RAW_VERSUS_LOG_MOLAR_REPRESENTATION",
+        "FEM_VS_FV_PHI_GRADIENT",
+        "UPWIND_LIMITER_TIME_STATE",
+        "CHARGED_HEAVY_MASS_FLUX_CANCELLATION"
+      ],
+      "strategy": "REWIRE_ONLY_IF_PARITY_PROVEN",
+      "rule": "Log-molar drift is not an approved drop-in replacement for a different carrier/state basis.",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVMassFractionTimeDerivative": {
+      "target": "PhysicsFVMassFractionTimeDerivative",
+      "review_comment_id": 7009739482,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009739482",
+      "historical": [
+        "STAGE5_HISTORICAL_MASS_FRACTION_INPUT_PRESERVATION"
+      ],
+      "protected": [
+        "SPECIES_AND_MIXTURE_MASS_INVENTORY",
+        "RHO_FUNCTOR_MATERIAL_PROVIDER",
+        "TIME_INTEGRATOR_AND_STATE_OWNER"
+      ],
+      "required": [
+        "RHO_U_DOT_NOT_CONSERVATIVE_WHEN_RHO_VARIES",
+        "PINNED_MOOSE_TIME_INTEGRATOR",
+        "SAME_VARIABLE_STATE_AND_BLOCK",
+        "MASS_AND_AD_JACOBIAN_PARITY",
+        "CONSERVATIVE_CANDIDATE_INDEPENDENT_ORACLE"
+      ],
+      "strategy": "RETAIN_OR_CONDITIONALLY_REWIRE",
+      "rule": "rho*dw/dt differs from d(rho*w)/dt for variable rho; must not auto-substitute.",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVThermalDiffusion": {
+      "target": "PhysicsFVThermalDiffusion",
+      "review_comment_id": 7009743331,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009743331",
+      "historical": [
+        "QPX_ISSUE20_HISTORICAL_COMPATIBILITY_SEPARATE"
+      ],
+      "protected": [
+        "NVTRANSPORTMATERIAL_D_T_PRODUCER",
+        "TEMPERATURE_FUNCTOR",
+        "OTHER_D_T_CONSUMERS"
+      ],
+      "required": [
+        "NONZERO_GRAD_T_AND_D_T_ON_OFF_PARITY",
+        "INTERNAL_BOUNDARY_FACE_NORMAL_FLUX",
+        "FLAG_AND_ZERO_GRADIENT_NEGATIVES",
+        "D_T_PROVIDER_INDEPENDENT_OWNERSHIP",
+        "AD_JACOBIAN_CONSERVATION"
+      ],
+      "strategy": "RETAIN_NO_APPROVED_REPLACEMENT",
+      "rule": "Removing this consumer does not authorize removal of shared D_T Material producer.",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVLogMolarElectronTimeDerivative": {
+      "target": "PhysicsFVLogMolarElectronTimeDerivative",
+      "review_comment_id": 7009734225,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009734225",
+      "historical": [
+        "ISSUE3_D6_VS_NEW_ONLY_S6_VS_FLOW_ARCH_HISTORY_SEPARATE"
+      ],
+      "protected": [
+        "FOUR_CLASS_TRANSLATION_UNIT_GROUP",
+        "ORIGINAL_HISTORICAL_ARTIFACTS_AND_INPUTS",
+        "SIGNED_CHEMISTRY_SOURCE_OWNER"
+      ],
+      "required": [
+        "FOUR_OF_FOUR_FACTORY_OWNERS_MIGRATED",
+        "SAME_LOG_MOLAR_REPRESENTATION_UNITS_AND_AD",
+        "INDIVIDUAL_RESIDUAL_FLUX_JACOBIAN_DISCRIMINATORS",
+        "NO_DOUBLE_REACTION_SOURCE_OR_MISSING_TIME_FLUX",
+        "DELTA_EXP_LOG_C_OVER_DT",
+        "OLD_CURRENT_STATE_AND_TIME_TAGS"
+      ],
+      "strategy": "SHARED_FILE_INDEPENDENT_OWNER_GATES",
+      "rule": "A .C/.h translation unit with four registered Factory classes cannot be retired after a partial migration. DELTA_EXP_LOG_C_OVER_DT; OLD_CURRENT_STATE_AND_TIME_TAGS",
+      "shared_owner_group": "PhysicsFVLogMolarElectronTransport.C",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVLogMolarElectronDiffusion": {
+      "target": "PhysicsFVLogMolarElectronDiffusion",
+      "review_comment_id": 7009734225,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009734225",
+      "historical": [
+        "ISSUE3_D6_VS_NEW_ONLY_S6_VS_FLOW_ARCH_HISTORY_SEPARATE"
+      ],
+      "protected": [
+        "FOUR_CLASS_TRANSLATION_UNIT_GROUP",
+        "ORIGINAL_HISTORICAL_ARTIFACTS_AND_INPUTS",
+        "SIGNED_CHEMISTRY_SOURCE_OWNER"
+      ],
+      "required": [
+        "FOUR_OF_FOUR_FACTORY_OWNERS_MIGRATED",
+        "SAME_LOG_MOLAR_REPRESENTATION_UNITS_AND_AD",
+        "INDIVIDUAL_RESIDUAL_FLUX_JACOBIAN_DISCRIMINATORS",
+        "NO_DOUBLE_REACTION_SOURCE_OR_MISSING_TIME_FLUX",
+        "MINUS_D_FACE_DELTA_EXP_LOG_C_OVER_DCN",
+        "HARMONIC_AVERAGE_GHOST_AND_BOUNDARY"
+      ],
+      "strategy": "SHARED_FILE_INDEPENDENT_OWNER_GATES",
+      "rule": "A .C/.h translation unit with four registered Factory classes cannot be retired after a partial migration. MINUS_D_FACE_DELTA_EXP_LOG_C_OVER_DCN; HARMONIC_AVERAGE_GHOST_AND_BOUNDARY",
+      "shared_owner_group": "PhysicsFVLogMolarElectronTransport.C",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVLogMolarElectrostaticDrift": {
+      "target": "PhysicsFVLogMolarElectrostaticDrift",
+      "review_comment_id": 7009734225,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009734225",
+      "historical": [
+        "ISSUE3_D6_VS_NEW_ONLY_S6_VS_FLOW_ARCH_HISTORY_SEPARATE"
+      ],
+      "protected": [
+        "FOUR_CLASS_TRANSLATION_UNIT_GROUP",
+        "ORIGINAL_HISTORICAL_ARTIFACTS_AND_INPUTS",
+        "SIGNED_CHEMISTRY_SOURCE_OWNER"
+      ],
+      "required": [
+        "FOUR_OF_FOUR_FACTORY_OWNERS_MIGRATED",
+        "SAME_LOG_MOLAR_REPRESENTATION_UNITS_AND_AD",
+        "INDIVIDUAL_RESIDUAL_FLUX_JACOBIAN_DISCRIMINATORS",
+        "NO_DOUBLE_REACTION_SOURCE_OR_MISSING_TIME_FLUX",
+        "FEM_FV_POTENTIAL_GRADIENT_AND_LIMITER",
+        "SIGNED_CHARGE_EXP_LOG_C_CARRIER"
+      ],
+      "strategy": "SHARED_FILE_INDEPENDENT_OWNER_GATES",
+      "rule": "A .C/.h translation unit with four registered Factory classes cannot be retired after a partial migration. FEM_FV_POTENTIAL_GRADIENT_AND_LIMITER; SIGNED_CHARGE_EXP_LOG_C_CARRIER",
+      "shared_owner_group": "PhysicsFVLogMolarElectronTransport.C",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    },
+    "PhysicsFVLogMolarElectronReactionSource": {
+      "target": "PhysicsFVLogMolarElectronReactionSource",
+      "review_comment_id": 7009734225,
+      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009734225",
+      "historical": [
+        "ISSUE3_D6_VS_NEW_ONLY_S6_VS_FLOW_ARCH_HISTORY_SEPARATE"
+      ],
+      "protected": [
+        "FOUR_CLASS_TRANSLATION_UNIT_GROUP",
+        "ORIGINAL_HISTORICAL_ARTIFACTS_AND_INPUTS",
+        "SIGNED_CHEMISTRY_SOURCE_OWNER"
+      ],
+      "required": [
+        "FOUR_OF_FOUR_FACTORY_OWNERS_MIGRATED",
+        "SAME_LOG_MOLAR_REPRESENTATION_UNITS_AND_AD",
+        "INDIVIDUAL_RESIDUAL_FLUX_JACOBIAN_DISCRIMINATORS",
+        "NO_DOUBLE_REACTION_SOURCE_OR_MISSING_TIME_FLUX",
+        "MINUS_SIGNED_NUMBER_SOURCE_OVER_N_A_ONCE",
+        "SOURCE_AND_AD_JACOBIAN_OWNER"
+      ],
+      "strategy": "SHARED_FILE_INDEPENDENT_OWNER_GATES",
+      "rule": "A .C/.h translation unit with four registered Factory classes cannot be retired after a partial migration. MINUS_SIGNED_NUMBER_SOURCE_OVER_N_A_ONCE; SOURCE_AND_AD_JACOBIAN_OWNER",
+      "shared_owner_group": "PhysicsFVLogMolarElectronTransport.C",
+      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+    }
+  }
+}
