@@ -66,6 +66,26 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  code_graph_p0:
+    name: Code Graph v0.1 model P0 (no Native)
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      github.event.changes.base != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Assert exact code graph source HEAD
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+      - name: Run Code Graph P0 self-tests
+        run: python3 -m unittest discover -s physics_harness/code/tests -p 'test_graph_*.py' -v
   validate:
     if: >-
       github.event_name != 'pull_request' ||
