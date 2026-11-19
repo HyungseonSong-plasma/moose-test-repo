@@ -109,7 +109,7 @@ def unfold_context(graph: GraphSnapshot, context: Context) -> HierarchyView:
         raise TypeError("unfold_context requires GraphSnapshot and Context")
     if graph.scope.id != context.scope_id:
         raise ValueError("context scope does not match graph snapshot")
-    node_ids = set(graph.nodes_by_id())
+    node_ids = {node.id for node in graph.nodes}
     for root in context.roots:
         if root not in node_ids:
             raise ValueError(f"context root not present in graph: {root}")
@@ -123,15 +123,14 @@ def unfold_context(graph: GraphSnapshot, context: Context) -> HierarchyView:
             for evidence_id in edge.evidence_ids
         ):
             continue
-        for relation, direction in selectors:
-            if edge.relation != relation:
-                continue
-            parent, child = (
-                (edge.source_id, edge.target_id)
-                if direction == "FORWARD"
-                else (edge.target_id, edge.source_id)
+        if (edge.relation, "FORWARD") in selectors:
+            adjacency[edge.source_id].append(
+                (edge.id, edge.target_id, "FORWARD")
             )
-            adjacency[parent].append((edge.id, child, direction))
+        if (edge.relation, "REVERSE") in selectors:
+            adjacency[edge.target_id].append(
+                (edge.id, edge.source_id, "REVERSE")
+            )
     for neighbors in adjacency.values():
         neighbors.sort()
 

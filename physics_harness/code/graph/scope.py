@@ -67,6 +67,7 @@ class GraphSnapshot:
             instance_tuple(getattr(self, field_name), item_type, f"graph.{field_name}")
         node_ids = _unique_ids(self.nodes, "node")
         edge_ids = _unique_ids(self.edges, "edge")
+        subject_ids = node_ids | edge_ids
         evidence_ids = _unique_ids(self.evidence, "evidence")
         claim_ids = _unique_ids(self.claims, "claim")
         groups = (node_ids, edge_ids, evidence_ids, claim_ids, {self.scope.id})
@@ -87,7 +88,7 @@ class GraphSnapshot:
             if claim.scope_id != self.scope.id:
                 raise ValueError(f"{claim.id}: claim belongs to another scope")
             for subject in claim.subject_refs:
-                if subject not in node_ids and subject not in edge_ids:
+                if subject not in subject_ids:
                     raise ValueError(f"{claim.id}: unknown subject {subject}")
             for link in claim.evidence_refs:
                 if link.evidence_id not in evidence_ids:
@@ -105,6 +106,7 @@ class GraphSnapshot:
 
 def _unique_ids(items: tuple, label: str) -> set[str]:
     ids = [item.id for item in items]
-    if len(ids) != len(set(ids)):
+    unique = set(ids)
+    if len(ids) != len(unique):
         raise ValueError(f"duplicate {label} ID")
-    return set(ids)
+    return unique

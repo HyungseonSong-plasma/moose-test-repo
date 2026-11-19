@@ -164,6 +164,44 @@ class ContextProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown observation states"):
             context(evidence_filter=("MADE_UP_RUNTIME_PASS",))
 
+    def test_both_directions_multiple_roots_preserve_full_view_identity(self):
+        graph = GraphSnapshot(
+            scope=Scope("scope:1", "example/repo", "b" * 40),
+            nodes=(Node("node:A", "symbol", "A"), Node("node:B", "symbol", "B")),
+            edges=(Edge("edge:AB", "node:A", "node:B", "CALLS"),),
+        )
+        selectors = (RelationSelector("CALLS"), RelationSelector("CALLS", "REVERSE"))
+        ctx = context(roots=("node:A", "node:B"), selectors=selectors)
+        view = unfold_context(graph, ctx)
+        reverse_order = unfold_context(graph, context(
+            roots=ctx.roots, selectors=selectors[::-1],
+        ))
+
+        self.assertEqual(view, reverse_order)
+        self.assertEqual(
+            [o.node_id for o in view.occurrences],
+            ["node:A", "node:B", "node:A", "node:B", "node:A", "node:B"],
+        )
+        self.assertEqual(
+            [o.status for o in view.occurrences],
+            ["NORMAL", "NORMAL", "CYCLE_REF", "NORMAL", "NORMAL", "CYCLE_REF"],
+        )
+        self.assertEqual(
+            [o.shared for o in view.occurrences],
+            [False, False, True, True, True, True],
+        )
+        self.assertFalse(view.truncated)
+        self.assertEqual(len({o.id for o in view.occurrences}), 6)
+
+        bounded = unfold_context(graph, context(
+            roots=ctx.roots, selectors=selectors, max_occurrences=2,
+        ))
+        self.assertTrue(bounded.truncated)
+        self.assertEqual(
+            [o.truncation_reason for o in bounded.occurrences],
+            [None, "MAX_OCCURRENCES"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
