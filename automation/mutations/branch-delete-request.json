@@ -1,9 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-471-runtime-architecture-20261109",
-      "expected_sha": "350f7edbb1af80404fa2177ae8a31e77ff1a060d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-471-runtime-architecture-20261109-350f7edbb1af"
+      "branch": "issue-402-dd-plasma-boundary-action",
+      "expected_sha": "75879be2465ba4b81970391bccf471bcb1eb5083",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-dd-plasma-boundary-action-75879be2465b"
+    },
+    {
+      "branch": "p1-p04-p05-newonly-preflight-20261117",
+      "expected_sha": "b2e3f22d904f224d7d9fc33650c26e67b13b70b3",
+      "archive_tag": "archive/oxygen-cleanup-20261106/p1-p04-p05-newonly-preflight-20261117-b2e3f22d904f"
+    },
+    {
+      "branch": "issue-633-c2-on-ion2-20261117",
+      "expected_sha": "974adaf799c78ef21fbdb835c947e631cffd01f6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-c2-on-ion2-20261117-974adaf799c7"
+    },
+    {
+      "branch": "issue-670-p4-d1-o2p-density-alias-20261118",
+      "expected_sha": "5e913615fb0987421746b6b46984d95bcdc164c5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-d1-o2p-density-alias-20261118-5e913615fb09"
+    },
+    {
+      "branch": "issue-670-p4-d3-op-density-20261118",
+      "expected_sha": "e200014299235ad43b6e1d90657789962974f69b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-d3-op-density-20261118-e20001429923"
     }
   ]
 }
