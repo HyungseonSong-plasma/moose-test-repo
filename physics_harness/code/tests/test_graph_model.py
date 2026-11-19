@@ -202,5 +202,22 @@ class GraphModelTests(unittest.TestCase):
             )
 
 
+    def test_same_evidence_multiple_roles_preserves_existing_contract(self):
+        links = (
+            ClaimEvidenceRef("ev:1", "SUPPORTS"),
+            ClaimEvidenceRef("ev:1", "QUALIFIES"),
+        )
+        claim = Claim(
+            "claim:role-distinct", "REFERENCES", ("node:a",), "scope:1",
+            evidence_refs=links,
+        )
+        self.assertEqual(claim.evidence_refs, links)
+        with self.assertRaisesRegex(ValueError, "duplicate claim evidence link"):
+            Claim(
+                "claim:role-duplicate", "REFERENCES", ("node:a",), "scope:1",
+                evidence_refs=links + links[:1],
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
