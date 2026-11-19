@@ -98,6 +98,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
       - name: Validate FDEG Transition Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Validate FDEG Harness A-D P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
