@@ -401,6 +401,144 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                 else:
                     unknown(path, line_of(text, match.start()), "WORKFLOW_CALLEE_UNRESOLVED:" + other)
 
+    # Source-line census is independent of AST template extraction: a missing
+    # type declaration must be reported, never interpreted as caller-zero.
+    template_declarations = []
+    for source_path, (source_text, source_sha) in sorted(contents.items()):
+        if not source_path.endswith(".py"):
+            continue
+        for source_line, raw in enumerate(source_text.splitlines(), 1):
+            if re.match(r'^\s{2,}type\s*=\s*' + re.escape(target) + r'\s*    enrichment = route_evidence.enrichment(contents, target, aliases, instances,
+                                          edges, emit, unknown)
+
+    # The graph contains only incoming paths that can reach the selected class.
+    reached = {class_id}
+    changed = True
+    while changed:
+        previous = len(reached)
+        reached.update(e["from"] for e in edges if e["to"] in reached)
+        changed = len(reached) != previous
+    selected = [e for e in edges if e["from"] in reached and e["to"] in reached]
+    selected.sort(key=lambda e: (e["from"], e["relation"], e["to"], e["evidence"]["path"],
+                                 e["evidence"]["line"], e["detail"]))
+    for edge in selected:
+        path = edge["evidence"]["path"]
+        edge["source_head"] = head
+        edge["revision_scope"] = route_evidence.scope(path)
+        edge["activation_status"] = "NOT_OBSERVED"
+        edge["source_role"] = (
+            "STATIC_TEMPLATE_CANDIDATE_NOT_RUNTIME"
+            if edge["relation"] in {"PYTHON_TEMPLATE_INSTANTIATES",
+                                   "PYTHON_DECLARES_TEMPLATE_INSTANCE"}
+            else "SOURCE_RELATION_NOT_RUNTIME")
+        if edge["relation"] == "MENTIONS_SYMBOL":
+            source_line = edge["evidence"]["excerpt"]
+            if re.search(r'\b(?:assert|forbidden|must.not|not.in)\b', source_line, re.I):
+                edge["reference_role"] = "ASSERTION_OR_PROHIBITION_NOT_RUNTIME"
+            else:
+                edge["reference_role"] = "LEXICAL_REFERENCE_NOT_CONSUMER"
+        elif edge["relation"] in {"GENERATOR_EMITS_OBJECT_CANDIDATE", "PYTHON_DECLARES_TYPE",
+                                   "PYTHON_WRITES_INPUT", "PYTHON_TEMPLATE_INSTANTIATES",
+                                   "PYTHON_DECLARES_TEMPLATE_INSTANCE"}:
+            edge["reference_role"] = "STATIC_GENERATOR_NOT_RUNTIME"
+        elif edge["relation"] in {"WORKFLOW_RUNS_SCRIPT", "WORKFLOW_CALLS", "SHELL_RUNS_SCRIPT",
+                                   "PYTHON_IMPORTS_MODULE"}:
+            edge["reference_role"] = "DECLARED_WORKFLOW_PATH_NOT_EXECUTION"
+        elif edge["relation"] in {"PRODUCES_FUNCTOR_CANDIDATE", "BINDS_PARAMETER"}:
+            edge["reference_role"] = "DECLARED_PROVIDER_OR_BINDING_NOT_EFFECTIVE"
+        else:
+            edge["reference_role"] = "STRUCTURAL_DECLARATION_NOT_RUNTIME"
+        edge["edge_id"] = stable_id("edge", edge)
+    instance_list = sorted(
+        (item for item in instances if item["instance_id"] in reached),
+        key=lambda item: item["instance_id"])
+    edge_ids = {edge["from"]: edge["edge_id"] for edge in selected
+                if edge["relation"] in {"INPUT_INSTANTIATES",
+                                        "PYTHON_TEMPLATE_INSTANTIATES"}}
+    for item in instance_list:
+        item["structural_edge_id"] = edge_ids[item["instance_id"]]
+    nodes = [{"id": item, "kind": "CLASS" if item.startswith("class:")
+              else "INSTANCE" if item.startswith("instance:")
+              else "FUNCTOR" if item.startswith("functor:") else "FILE"}
+             for item in sorted(reached)]
+    # A file-level join is not causal reachability: large CI workflow files
+    # contain unrelated unresolved scripts. Limit target blockers to evidenced
+    # relation or input-binding lines; retain full global diagnostics separately.
+    selected_witnesses = {(e["evidence"]["path"], e["evidence"]["line"])
+                          for e in selected}
+    for item in instance_list:
+        selected_witnesses.update(
+            (item["input_path"], b["line"]) for b in item["bindings"])
+    scoped_unresolved = [entry for entry in unresolved
+                         if (entry["path"], entry["line"]) in selected_witnesses]
+    global_status = "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED"
+    target_status = ("INCOMPLETE" if scoped_unresolved or missing_template_declarations
+                     else "DECLARATIONS_ONLY_RUNTIME_UNVERIFIED")
+    report = {"schema": SCHEMA, "target": target, "repository_head": head,
+              "global_scan_status": global_status,
+              "target_dependency_status": target_status,
+              "global_unresolved_count": len(unresolved),
+              "target_scoped_unresolved_count": len(scoped_unresolved),
+              "source_template_census": {
+                  "declared_lines": template_declarations,
+                  "mapped_virtual_instances": len(mapped_declarations),
+                  "unmapped_declarations": missing_template_declarations,
+                  "status": ("SOURCE_TEMPLATE_GAP" if missing_template_declarations
+                             else "SOURCE_TEMPLATE_DECLARATIONS_MAPPED_NOT_EXECUTED"),
+                  "runtime_coverage": "NOT_PROVEN",
+                  "external_consumer_coverage": "NOT_PROVEN"},
+              "scan_scope": {"tracked_only": head is not None, "extensions": sorted(EXTENSIONS),
+                             "files_scanned": len(contents),
+                             "untracked_generated_inputs_included": head is None},
+              "nodes": nodes, "edges": selected, "instances": instance_list,
+              "enrichment": enrichment,
+              "target_scoped_unresolved": sorted(scoped_unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
+              "unresolved": sorted(unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
+              "scan_errors": errors,
+              "status": "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED",
+              "safety": "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT"}
+    report["graph_id"] = stable_id("graph", report)
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", required=True, help="Exact C++ class name")
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
+    parser.add_argument("--expected-head", help="Require this exact Git HEAD and clean tracked worktree")
+    parser.add_argument("--output", type=Path, help="Optional JSON report path")
+    args = parser.parse_args()
+    try:
+        result = scan(args.root, args.target, args.expected_head)
+    except (ValueError, OSError) as exc:
+        print("FDEG_STRUCTURAL_P0=FAIL: " + str(exc))
+        return 1
+    data = json.dumps(result, indent=2, sort_keys=True) + "\n"
+    if args.output:
+        args.output.write_text(data, encoding="utf-8")
+        print("FDEG_STRUCTURAL_REPORT=" + str(args.output))
+    else:
+        print(data, end="")
+    print("FDEG_STRUCTURAL_P0=" + ("HOLD" if result["status"] == "INCOMPLETE" else "PASS"))
+    return 2 if result["status"] == "INCOMPLETE" else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+, raw):
+                template_declarations.append({
+                    "path": source_path, "line": source_line, "blob_sha": source_sha})
+    mapped_declarations = {(item["input_path"], item["type_line"])
+                           for item in instances
+                           if item.get("instance_kind") ==
+                           "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"}
+    missing_template_declarations = [
+        row for row in template_declarations
+        if (row["path"], row["line"]) not in mapped_declarations]
+    for row in missing_template_declarations:
+        unknown(row["path"], row["line"],
+                "PYTHON_TEMPLATE_TYPE_DECLARATION_NOT_MAPPED:" + target)
+
     # New v0.3 evidence is appended before reachability to include chained
     # provider and build declarations in the target-rooted graph.
     enrichment = route_evidence.enrichment(contents, target, aliases, instances,
