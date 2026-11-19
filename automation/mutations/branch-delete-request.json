@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-669-p3-v3-electron-transport-energy-negative-20261117",
-      "expected_sha": "b2e4e89008082414982f1bc34887452ea7050eac",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-v3-electron-transport-energy-negative-20261117-b2e4e8900808"
+      "branch": "issue-669-p3-g6-electron-material-receipt-20261118",
+      "expected_sha": "72e317974d472461bd12b5e837df5d7c08df473b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g6-electron-material-receipt-20261118-72e317974d47"
     },
     {
-      "branch": "issue-669-p3-v4-pressure-ic-fembc-negatives-20261117",
-      "expected_sha": "86316fa98096bc734c4605d8a2e4da82f15d9204",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-v4-pressure-ic-fembc-negatives-20261117-86316fa98096"
+      "branch": "issue-669-p3-g6-functor-provenance-b5c1de7-20261118",
+      "expected_sha": "c18dfca492741b37c7ecac973f1081e650a3c606",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g6-functor-provenance-b5c1de7-20261118-c18dfca49274"
     },
     {
-      "branch": "issue-669-p3-x-source-preintegration-9c15a4f-20261117",
-      "expected_sha": "f7f6189f72ba72b895d3b6a9ffdcf877ec7bf6f4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-x-source-preintegration-9c15a4f-20261117-f7f6189f72ba"
+      "branch": "issue-669-p3-n3-pressure-outlet-receipt-20261118",
+      "expected_sha": "edc03a09dced43b12592d94991f3a0875b8100a5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-n3-pressure-outlet-receipt-20261118-edc03a09dced"
     },
     {
-      "branch": "issue-669-p3-g2-electron-kernel-receipt-20261118",
-      "expected_sha": "1021806631fb13706b21f94e935601f55751a8bd",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g2-electron-kernel-receipt-20261118-1021806631fb"
+      "branch": "issue-669-p3-t5-941-electron-json-ic-lookup-20261118",
+      "expected_sha": "d10adeb30610ab6544da39e5437e10742b97f491",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t5-941-electron-json-ic-lookup-20261118-d10adeb30610"
     },
     {
-      "branch": "issue-669-p3-g2-electron-time-owner-20261118",
-      "expected_sha": "6991a9f2b1ad5085f67e083ed3fd79028b051828",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g2-electron-time-owner-20261118-6991a9f2b1ad"
+      "branch": "issue-669-p3-t5-941-receipt-20261118",
+      "expected_sha": "cfedbfd5750cea2d42341488ed53f4d08e1554b4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t5-941-receipt-20261118-cfedbfd5750c"
     }
   ]
 }
