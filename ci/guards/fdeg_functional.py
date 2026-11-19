@@ -602,7 +602,10 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
     functional_edges.sort(key=lambda e: (e["relation"], e["to"], e["claim_id"]))
 
     unresolved = sorted(set(profile.get("unresolved_semantics", [])) |
-                        ({"STRUCTURAL_SCAN_INCOMPLETE"} if structural_report["status"] == "INCOMPLETE" else set()))
+                        ({"STRUCTURAL_TARGET_DEPENDENCIES_INCOMPLETE"}
+                         if structural_report.get("target_dependency_status",
+                                                  structural_report["status"]) == "INCOMPLETE"
+                         else set()))
     report = {
         "schema": SCHEMA, "target": target,
         "source_identity": {
