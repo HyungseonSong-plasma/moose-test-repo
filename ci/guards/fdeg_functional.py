@@ -666,6 +666,11 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
                          if structural_report.get("upstream_unresolved") else set()))
     report = {
         "schema": SCHEMA, "target": target,
+        "global_scan_status": structural_report["status"],
+        "target_dependency_status": structural_report.get("target_dependency_status",
+                                                          structural_report["status"]),
+        "global_unresolved_count": structural_report.get("global_unresolved_count",
+                                                         len(structural_report["unresolved"])),
         "source_identity": {
             "repository_head": structural_report["repository_head"],
             "structural_schema": structural_report["schema"],
