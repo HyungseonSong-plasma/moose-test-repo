@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FDEG Structural Evidence v0.1: read-only, source-bound consumer graph.
+"""FDEG Structural Evidence v0.2: read-only, source-bound consumer graph.
 
 This scanner records syntactic relations, not runtime use, semantic equivalence,
 caller-zero, or permission to retire an object. Every emitted relationship is
@@ -17,7 +17,7 @@ import re
 import subprocess
 from pathlib import Path
 
-SCHEMA = "fdeg.structural.v0.1"
+SCHEMA = "fdeg.structural.v0.2"
 EXTENSIONS = {".C", ".cc", ".cpp", ".h", ".hpp", ".py", ".i", ".json", ".yml", ".yaml"}
 SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache"}
 REGISTRATION = re.compile(
@@ -32,6 +32,7 @@ ACTION_SYNTAX = re.compile(
 )
 BASE_TASKS = re.compile(r'\bregisterPhysicsBaseTasks\s*\(\s*"([^"\n]+)"\s*,\s*([A-Za-z_]\w*)\s*\)')
 BLOCK = re.compile(r'^\s*\[([^\[\]]*)\]')
+MOOSE_ASSIGN = re.compile(r'^\s*([A-Za-z_][\w.-]*)\s*=\s*(.*?)\s*(?:#.*)?$')
 TYPE_BINDING = re.compile(r'\b(?:const\s+)?(?:auto|std::string|MooseObjectName)\s+([A-Za-z_]\w*)\s*=\s*"([^"\n]+)"')
 CXX_CREATE_VAR = re.compile(
     r'\b(?:addFVKernel|addKernel|addFVBC|addBoundaryCondition|addMaterial|addUserObject|addAuxKernel|addMooseObject)\s*\(\s*([A-Za-z_]\w*)\s*[,)]'
@@ -97,6 +98,41 @@ def python_output_path(node: ast.AST) -> str | None:
     return None
 
 
+
+def stable_id(prefix: str, payload: object) -> str:
+    """Canonical IDs are content-addressed, not tied to traversal ordering."""
+    body = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return prefix + ":" + hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def input_blocks(text: str) -> list[dict]:
+    """Collect declarative MOOSE input blocks and explicit bindings, not effective runtime values."""
+    root = {"path": "", "open_line": 1, "bindings": []}
+    frames = [root]
+    blocks = [root]
+    for line_no, raw in enumerate(text.splitlines(), 1):
+        block = BLOCK.match(raw)
+        if block:
+            name = block.group(1).strip()
+            if name in {"", "..", "../"}:
+                if len(frames) > 1:
+                    frames.pop()
+            else:
+                component = name[2:] if name.startswith("./") else name
+                parent = frames[-1]["path"]
+                context = {"path": parent + "/" + component if parent else component,
+                           "open_line": line_no, "bindings": []}
+                blocks.append(context)
+                frames.append(context)
+            continue
+        match = MOOSE_ASSIGN.match(raw)
+        if match and not raw.lstrip().startswith("#"):
+            frames[-1]["bindings"].append(
+                {"name": match.group(1), "raw_value": match.group(2).strip(),
+                 "line": line_no})
+    return blocks
+
+
 def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     root = root.resolve()
     if not SYMBOL.fullmatch(target):
@@ -126,6 +162,7 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
             if match.group(1) == target:
                 action_syntax.add(match.group(2))
     edges: list[dict] = []
+    instances: list[dict] = []
     unresolved: list[dict] = []
     class_id = "class:" + target
     source_names = set(contents)
@@ -207,9 +244,7 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                 m = MOOSE_TYPE.match(line)
                 if m:
                     name = m.group(1).strip().strip("'\"")
-                    if name in aliases:
-                        emit(node, "INPUT_INSTANTIATES", class_id, path, i, name)
-                    elif "$" in name or "{" in name:
+                    if name not in aliases and ("$" in name or "{" in name):
                         unknown(path, i, "DYNAMIC_MOOSE_TYPE")
                 m = MOOSE_INCLUDE.match(line)
                 if m:
@@ -219,6 +254,32 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                         emit(node, "INCLUDES_INPUT", "file:" + dest, path, i, name)
                     else:
                         unknown(path, i, "INCLUDE_UNRESOLVED:" + name)
+            for context in input_blocks(text):
+                bindings = context["bindings"]
+                for assignment in bindings:
+                    if assignment["name"] != "type":
+                        continue
+                    factory = assignment["raw_value"].strip("'\"")
+                    if factory not in aliases:
+                        continue
+                    line_no = assignment["line"]
+                    instance_id = "instance:" + stable_id(
+                        "input", [path, context["path"], line_no, factory])
+                    record = {
+                        "instance_id": instance_id,
+                        "input_path": path,
+                        "block_path": context["path"],
+                        "factory_type": factory,
+                        "type_line": line_no,
+                        "bindings": sorted(bindings, key=lambda b: (b["line"], b["name"])),
+                        "evidence": {"path": path, "line": line_no,
+                                     "blob_sha": contents[path][1]}
+                    }
+                    instances.append(record)
+                    emit(node, "DECLARES_INSTANCE", instance_id, path, line_no,
+                         "block=" + context["path"])
+                    emit(instance_id, "INPUT_INSTANTIATES", class_id, path,
+                         line_no, factory)
         elif suffix == ".py":
             try:
                 tree = ast.parse(text, filename=path)
@@ -297,16 +358,29 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     selected = [e for e in edges if e["from"] in reached and e["to"] in reached]
     selected.sort(key=lambda e: (e["from"], e["relation"], e["to"], e["evidence"]["path"],
                                  e["evidence"]["line"], e["detail"]))
-    nodes = [{"id": item, "kind": "CLASS" if item.startswith("class:") else "FILE"}
+    for edge in selected:
+        edge["edge_id"] = stable_id("edge", edge)
+    instance_list = sorted(
+        (item for item in instances if item["instance_id"] in reached),
+        key=lambda item: item["instance_id"])
+    edge_ids = {edge["from"]: edge["edge_id"] for edge in selected
+                if edge["relation"] == "INPUT_INSTANTIATES"}
+    for item in instance_list:
+        item["structural_edge_id"] = edge_ids[item["instance_id"]]
+    nodes = [{"id": item, "kind": "CLASS" if item.startswith("class:")
+              else "INSTANCE" if item.startswith("instance:") else "FILE"}
              for item in sorted(reached)]
-    return {"schema": SCHEMA, "target": target, "repository_head": head,
-            "scan_scope": {"tracked_only": head is not None, "extensions": sorted(EXTENSIONS),
-                           "files_scanned": len(contents), "untracked_generated_inputs_included": head is None},
-            "nodes": nodes, "edges": selected,
-            "unresolved": sorted(unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
-            "scan_errors": errors,
-            "status": "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED",
-            "safety": "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT"}
+    report = {"schema": SCHEMA, "target": target, "repository_head": head,
+              "scan_scope": {"tracked_only": head is not None, "extensions": sorted(EXTENSIONS),
+                             "files_scanned": len(contents),
+                             "untracked_generated_inputs_included": head is None},
+              "nodes": nodes, "edges": selected, "instances": instance_list,
+              "unresolved": sorted(unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
+              "scan_errors": errors,
+              "status": "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED",
+              "safety": "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT"}
+    report["graph_id"] = stable_id("graph", report)
+    return report
 
 
 def main() -> int:
