@@ -19,8 +19,8 @@ HISTORICAL = "QPXFVThermalDiffusion"
 DECKS = "experiments/Issue493_s6_boltzmann/public_p2_decks/manifest.json"
 CHEM = Path("experiments/Issue395_powered_chemistry_ladder")
 CASES = ("417", "941")
-TYPE = re.compile(r"(?m)^\s*type\s*=\s*([^#\n]+?)\s*(?:#.*)?$")
-INCLUDE = re.compile(r"(?m)^\s*!include\s+([^\n#]+)")
+TYPE = re.compile(r"(?m)^[ \t]*type\s*=\s*([^#\n]+?)\s*(?:#.*)?$")
+INCLUDE = re.compile(r"(?m)^[ \t]*!include\s+([^\n#]+)")
 SIMPLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
