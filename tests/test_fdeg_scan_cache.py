@@ -66,6 +66,31 @@ class ScanCacheP0Test(unittest.TestCase):
         self.assertEqual(initial, again)
         self.assertEqual(initial["graph_id"], again["graph_id"])
 
+    def test_second_target_uses_full_head_source_index_without_file_rescan(self):
+        original, first_log = self.scan(self.head)
+        self.assertIn("FDEG_SOURCE_INDEX=MISS_STORED", first_log)
+        sources = list(self.cache_dir.glob("sources-*.json.gz"))
+        self.assertEqual(len(sources), 1)
+        with mock.patch.object(structural, "tracked_files",
+                               side_effect=AssertionError("full file listing forbidden")):
+            with contextlib.redirect_stderr(io.StringIO()) as output:
+                other = structural.scan(self.root, "Other", self.head)
+        self.assertIn("FDEG_SOURCE_INDEX=HIT", output.getvalue())
+        self.assertIn("FDEG_STRUCTURAL_CACHE=MISS_STORED", output.getvalue())
+        self.assertEqual(other["scan_scope"]["files_scanned"],
+                         original["scan_scope"]["files_scanned"])
+        self.assertEqual(other["safety"], "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT")
+
+    def test_broken_shared_source_index_rescans_instead_of_silently_skipping(self):
+        self.scan(self.head)
+        index, = list(self.cache_dir.glob("sources-*.json.gz"))
+        index.write_bytes(b"corrupt gzip content")
+        with contextlib.redirect_stderr(io.StringIO()) as output:
+            other = structural.scan(self.root, "Other", self.head)
+        self.assertIn("FDEG_SOURCE_INDEX=MISS_STORED", output.getvalue())
+        self.assertEqual(other["scan_scope"]["files_scanned"], 2)
+        self.assertEqual(other["safety"], "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT")
+
     def test_dirty_tracked_source_rejects_exact_head_and_never_reads_cache(self):
         self.scan(self.head)
         with (self.root / "cases" / "input.i").open("a") as stream:
