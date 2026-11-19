@@ -1,24 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6-f4-final-receipt-20261118",
-      "expected_sha": "05766486f2cfcdf350c9740aedfa2dd903fec1d1",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-f4-final-receipt-20261118-05766486f2cf"
+      "branch": "issue-671-p5x-exact-3b447b67-typed-native-p05-20261118",
+      "expected_sha": "24853a9ddc640265fdce9c683786400fb13c0e94",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-3b447b67-typed-native-p05-20261118-24853a9ddc64"
     },
     {
-      "branch": "issue-671-p5x-520673-d8-full-rf-closure-3ns-20261118",
-      "expected_sha": "894e779a01fd6b57cff25490f69ea98ee9ec47a8",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-520673-d8-full-rf-closure-3ns-20261118-894e779a01fd"
+      "branch": "issue-672-p6-d4-public-d-100row-newphysics-20261118",
+      "expected_sha": "5c7c64e6d089815f7c747ddf9d8774756ad4d106",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d4-public-d-100row-newphysics-20261118-5c7c64e6d089"
     },
     {
-      "branch": "issue-671-p5x-520673-d8-rf-3ns-acceptance-20261118",
-      "expected_sha": "3701d1f0cd4b134494a126fc33524bfa45083eb5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-520673-d8-rf-3ns-acceptance-20261118-3701d1f0cd4b"
+      "branch": "issue-671-p5x-exact-3b447b67-w1-build-20261118",
+      "expected_sha": "1021b1cea09dd427b4230878287d1534879730d6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-3b447b67-w1-build-20261118-1021b1cea09d"
     },
     {
-      "branch": "issue-633-samuel-pin-p0-once-20261118",
-      "expected_sha": "3dde627e0915fa6f1936222c87bcdbc0be9666cc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-samuel-pin-p0-once-20261118-3dde627e0915"
+      "branch": "issue-672-p6x-c3-runner-owner-contract-20261118",
+      "expected_sha": "f7298f40b5a5865d4ac649e7dc176c08b411b014",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6x-c3-runner-owner-contract-20261118-f7298f40b5a5"
+    },
+    {
+      "branch": "issue-671-p5x-negative-firsterror-verifier-20261118",
+      "expected_sha": "3431d2758441d173fe61714495df750436a4d804",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-negative-firsterror-verifier-20261118-3431d2758441"
     }
   ]
 }
