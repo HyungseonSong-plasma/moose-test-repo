@@ -72,7 +72,7 @@ jobs:
       github.event.action != 'edited' ||
       github.event.changes.base != null
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       FDEG_CACHE_DIR: /tmp/fdeg-index-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
