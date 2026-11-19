@@ -14,6 +14,7 @@ decision engine**. Issue [#721](https://github.com/HyungseonSong-plasma/moose-te
 | `receipt.py` | `EvidenceReceipt` with per-file coverage, collector version, file/byte/time budget, attempt count, elapsed time, unresolved and scope completeness |
 | `providers/git.py` | Tracked source inventory and exact blob bytes from a verified HEAD; no worktree fallback |
 | `providers/workflow.py` | Static GitHub Actions Workflow/Job/Step/needs/event/run/uses source facts |
+| `providers/python_ast.py` | Python syntax-only declaration, import, call-site and name/attribute reference candidates |
 
 ### Core invariants
 
@@ -76,3 +77,29 @@ Physics workflows are unchanged. Future external GitHub Actions Run providers
 must record `run_id`, `attempt`, source revision and artifact identities
 separately, then connect to Claims in `../analysis/` without cross-HEAD
 promotion or automatic deletion.
+
+### Python AST source facts (P1/P2)
+
+Select `collectors=("python_ast",)` and `includes=("src/*.py",)` to
+scan tracked Python files at the exact local HEAD. The built-in registry now
+includes `python_ast`, alongside the existing `workflow` collector.
+
+The Python AST collector emits `DEFINES`, `IMPORTS_CANDIDATE`,
+`CALLS_CANDIDATE`, and `REFERENCES_CANDIDATE` edges with source-line/blob
+Evidence. `python_function`/`python_class` declarations include LOC,
+branch count and maximum branch nesting, with nested definitions excluded
+from the containing declaration's metrics. Python's AST parser is used
+directly; no source module is imported or executed.
+
+**Static candidate != resolved target or runtime call.** No import or
+name binding resolution is promised. The identifiers of candidate
+specifier nodes describe *syntactic names*, not a confirmed repository
+or external function identity. Dynamic reflective calls such as
+`getattr`, `__import__`, `eval`, and `importlib.import_module`
+surface an explicit unresolved target and `PARTIAL`. Unsupported syntax
+and invalid source encoding fail closed as `FAILED` coverage. Neither
+Collector claims code is unused or safe to delete.
+
+The default `ScanRequest.collectors` remains `("workflow",)`, so existing
+call sites keep their previous behavior. No Graph model, public field or
+folder was moved.

@@ -158,8 +158,12 @@ def run_scan(
     if not isinstance(request, ScanRequest):
         raise TypeError("request must be a ScanRequest")
     if registry is None:
+        from .providers.python_ast import PythonAstCollector
         from .providers.workflow import WorkflowCollector
-        registry = {"workflow": WorkflowCollector()}
+        registry = {
+            "workflow": WorkflowCollector(),
+            "python_ast": PythonAstCollector(),
+        }
     selected_collectors = []
     for key in request.collectors:
         item = registry.get(key)
