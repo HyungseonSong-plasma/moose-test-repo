@@ -119,6 +119,45 @@ class StructuralEvidenceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "EXACT_HEAD_MISMATCH"):
             fdeg.scan(self.root, "Legacy", "a" * 40)
 
+    def test_v02_graph_and_edge_ids_are_repeatable(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        self.put("tests/case.i", "[Kernels]\n  [./one]\n    type = Legacy\n    variable = n_e\n    state_form = physical\n    block = 'bulk'\n  [../]\n[]\n")
+        first = fdeg.scan(self.root, "Legacy")
+        second = fdeg.scan(self.root, "Legacy")
+        self.assertEqual(first["schema"], "fdeg.structural.v0.2")
+        self.assertEqual(first["graph_id"], second["graph_id"])
+        self.assertTrue(first["graph_id"].startswith("graph:"))
+        ids = [edge["edge_id"] for edge in first["edges"]]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertTrue(all(eid.startswith("edge:") for eid in ids))
+        self.assertEqual(len(first["instances"]), 1)
+        inst = first["instances"][0]
+        self.assertEqual(inst["block_path"], "Kernels/one")
+        self.assertEqual(inst["factory_type"], "Legacy")
+        self.assertEqual(inst["structural_edge_id"],
+                         self.edges(first, "INPUT_INSTANTIATES")[0]["edge_id"])
+        self.assertEqual(
+            {p["name"]: p["raw_value"] for p in inst["bindings"]}["state_form"],
+            "physical")
+        self.assertEqual(
+            {p["name"]: p["raw_value"] for p in inst["bindings"]}["variable"],
+            "n_e")
+        self.assertIn(inst["instance_id"], [n["id"] for n in first["nodes"]])
+        self.assertEqual(len(self.edges(first, "DECLARES_INSTANCE")), 1)
+
+    def test_v02_identity_changes_on_input_binding_mutation(self):
+        self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
+        path = self.put("tests/case.i", "[./k]\n  type = Legacy\n  variable = n_e\n[]\n")
+        first = fdeg.scan(self.root, "Legacy")
+        path.write_text("[./k]\n  type = Legacy\n  variable = n_i\n[]\n", encoding="utf-8")
+        second = fdeg.scan(self.root, "Legacy")
+        self.assertNotEqual(first["graph_id"], second["graph_id"])
+        self.assertNotEqual(first["instances"][0]["evidence"]["blob_sha"],
+                            second["instances"][0]["evidence"]["blob_sha"])
+        self.assertNotEqual(
+            self.edges(first, "INPUT_INSTANTIATES")[0]["edge_id"],
+            self.edges(second, "INPUT_INSTANTIATES")[0]["edge_id"])
+
     def test_json_stability_and_git_blob_hash(self):
         path = self.put("src/Legacy.C", 'registerMooseObject("PhysicsApp", Legacy);\n')
         first, second = fdeg.scan(self.root, "Legacy"), fdeg.scan(self.root, "Legacy")
