@@ -70,6 +70,23 @@ def tracked_files(root: Path) -> tuple[list[Path], str | None]:
                    and not (set(p.relative_to(root).parts) & SKIP_DIRS)), None)
 
 
+def tracked_blob_manifest(root: Path) -> dict[str, str]:
+    """Complete tracked path/blob identities from the Git index, without file IO."""
+    result = {}
+    for row in git(root, "ls-files", "--stage", "-z").split("\0"):
+        if not row:
+            continue
+        metadata, rel = row.split("\t", 1)
+        fields = metadata.split()
+        if len(fields) != 3 or fields[2] != "0":
+            raise ValueError("FDEG_GIT_INDEX_NOT_NORMALIZED")
+        path = Path(rel)
+        if ((path.suffix in EXTENSIONS or path.name == "Makefile")
+                and not (set(path.parts) & SKIP_DIRS)):
+            result[rel] = fields[1]
+    return result
+
+
 def blob_sha(data: bytes) -> str:
     return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
 
@@ -172,7 +189,8 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     implementation = (Path(__file__), Path(route_evidence.__file__),
                       Path(scan_cache.__file__))
     source_key = scan_cache.source_index_key(root, git_head, implementation) if cache else None
-    source_payload = scan_cache.load_source_index(source_key) if source_key else None
+    source_payload = (scan_cache.load_source_index(
+        source_key, tracked_blob_manifest(root)) if source_key else None)
     if source_payload is not None:
         # This is a complete HEAD-pinned set of tracked sources and scan errors,
         # not a target substring filter. Every target retains the same coverage.
