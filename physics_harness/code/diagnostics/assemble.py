@@ -91,18 +91,39 @@ class GraphAssembler:
                     )
                 edges[item.id] = item
 
-        for target in sorted(unresolved_targets, key=lambda item: (
-            item.node_id, item.name, item.evidence_id
-        )):
+        # Multiple collectors can report the same unresolved identity. The
+        # placeholder name must agree; all witnesses are preserved.
+        targets: dict[str, tuple[str, set[str]]] = {}
+        for target in unresolved_targets:
             witness = evidence.get(target.evidence_id)
             if witness is None or witness.observation_status != "UNRESOLVED":
                 raise ValueError(f"UNRESOLVED_PROVENANCE_REQUIRED: {target.node_id}")
-            if target.node_id not in nodes:
-                nodes[target.node_id] = Node(
-                    id=target.node_id, kind="unresolved", name=target.name,
-                    evidence_ids=(target.evidence_id,),
+            prior = targets.get(target.node_id)
+            if prior is None:
+                targets[target.node_id] = (target.name, {target.evidence_id})
+            else:
+                if prior[0] != target.name:
+                    raise ValueError(f"UNRESOLVED_TARGET_CONFLICT: {target.node_id}")
+                prior[1].add(target.evidence_id)
+
+        for node_id in sorted(targets):
+            name, witnesses = targets[node_id]
+            existing = nodes.get(node_id)
+            if existing is not None and (
+                existing.kind != "unresolved" or existing.name != name
+            ):
+                raise ValueError(f"UNRESOLVED_CANONICAL_NODE_CONFLICT: {node_id}")
+            nodes[node_id] = (
+                Node(id=node_id, kind="unresolved", name=name,
+                     evidence_ids=tuple(sorted(witnesses)))
+                if existing is None else replace(
+                    existing,
+                    evidence_ids=_combine_evidence_refs(
+                        existing.evidence_ids, tuple(sorted(witnesses))
+                    ),
                 )
-                batch_unresolved.add(f"UNRESOLVED_REFERENCE:{target.node_id}")
+            )
+            batch_unresolved.add(f"UNRESOLVED_REFERENCE:{node_id}")
         # Do not silently invent absent endpoints: only declared unresolved
         # targets may create placeholders. GraphSnapshot checks all refs.
         unresolved = tuple(sorted(batch_unresolved))

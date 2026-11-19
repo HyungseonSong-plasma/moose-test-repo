@@ -61,3 +61,22 @@ def test_stable_logical_ids_do_not_embed_revision():
     assert stable_id("node", "logical", "symbol") == stable_id(
         "node", "logical", "symbol"
     )
+
+
+
+@pytest.mark.parametrize(("name", "value", "error"), [
+    ("includes", (["src/*.py"],), "INVALID_SOURCE_PATH"),
+    ("excludes", ({"src/*.py"},), "INVALID_SOURCE_PATH"),
+    ("roots", (["node:one"],), "values must be nonempty strings"),
+    ("collectors", ({"python_ast": True},), "values must be nonempty strings"),
+    ("includes", ("src/*.py", "src/*.py"), "duplicate-free tuple"),
+    ("roots", ("node:one", "node:one"), "duplicate-free tuple"),
+])
+def test_request_reports_invalid_values_before_duplicate_hashing(name, value, error):
+    with pytest.raises(ValueError, match=error):
+        request(**{name: value})
+
+
+def test_non_tuple_request_field_stays_rejected():
+    with pytest.raises(ValueError, match="duplicate-free tuple"):
+        request(includes=["src/*.py"])

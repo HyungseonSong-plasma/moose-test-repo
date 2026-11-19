@@ -161,3 +161,82 @@ def test_invalid_noncanonical_edge_id_is_rejected():
             ),),
             receipt,
         )
+
+
+
+def test_complete_collection_rejects_unresolved_target_even_without_unresolved_text():
+    from physics_harness.code.diagnostics import CollectionResult
+
+    unknown = UnresolvedTarget("node:missing", "missing", "ev:unresolved")
+    with pytest.raises(ValueError, match="FALSE_COMPLETE_COLLECTION"):
+        CollectionResult(FactBatch(unresolved_targets=(unknown,)), status="COMPLETE")
+    partial = CollectionResult(FactBatch(unresolved_targets=(unknown,)), status="PARTIAL")
+    assert partial.status == "PARTIAL"
+
+
+def test_duplicate_unresolved_targets_union_distinct_source_witnesses():
+    req, scope, receipt, ev1, ev2 = fixture()
+    one = replace(ev1, observation_status="UNRESOLVED")
+    two = replace(ev2, observation_status="UNRESOLVED")
+    target_one = UnresolvedTarget("node:external", "external", one.id)
+    target_two = UnresolvedTarget("node:external", "external", two.id)
+    assembler = GraphAssembler()
+    batches = (
+        FactBatch(evidence=(one,), unresolved_targets=(target_one,)),
+        FactBatch(evidence=(two,), unresolved_targets=(target_two,)),
+    )
+    first = assembler.assemble(req, batches, receipt)
+    second = assembler.assemble(req, batches[::-1], receipt)
+    assert first.graph == second.graph
+    placeholder = first.graph.nodes_by_id()["node:external"]
+    assert placeholder.kind == "unresolved"
+    assert placeholder.evidence_ids == ("ev:1", "ev:2")
+    assert first.receipt.unresolved == ("UNRESOLVED_REFERENCE:node:external",)
+
+
+def test_duplicate_unresolved_target_name_conflict_is_rejected():
+    req, scope, receipt, ev1, ev2 = fixture()
+    one = replace(ev1, observation_status="UNRESOLVED")
+    two = replace(ev2, observation_status="UNRESOLVED")
+    batch = FactBatch(
+        evidence=(one, two),
+        unresolved_targets=(
+            UnresolvedTarget("node:external", "first", one.id),
+            UnresolvedTarget("node:external", "second", two.id),
+        ),
+    )
+    with pytest.raises(ValueError, match="UNRESOLVED_TARGET_CONFLICT"):
+        GraphAssembler().assemble(req, (batch,), receipt)
+
+
+def test_unresolved_placeholder_cannot_override_canonical_node():
+    req, scope, receipt, ev1, ev2 = fixture()
+    witness = replace(ev1, observation_status="UNRESOLVED")
+    batch = FactBatch(
+        nodes=(Node("node:external", "symbol", "external"),),
+        evidence=(witness,),
+        unresolved_targets=(
+            UnresolvedTarget("node:external", "external", witness.id),
+        ),
+    )
+    with pytest.raises(ValueError, match="UNRESOLVED_CANONICAL_NODE_CONFLICT"):
+        GraphAssembler().assemble(req, (batch,), receipt)
+
+
+def test_existing_unresolved_placeholder_merges_additional_witnesses():
+    req, scope, receipt, ev1, ev2 = fixture()
+    one = replace(ev1, observation_status="UNRESOLVED")
+    two = replace(ev2, observation_status="UNRESOLVED")
+    batch = FactBatch(
+        nodes=(Node("node:external", "unresolved", "external",
+                    evidence_ids=(one.id,)),),
+        evidence=(one, two),
+        unresolved_targets=(
+            UnresolvedTarget("node:external", "external", two.id),
+        ),
+    )
+    result = GraphAssembler().assemble(req, (batch,), receipt)
+    assert result.status == "PARTIAL"
+    assert result.graph.nodes_by_id()["node:external"].evidence_ids == (
+        one.id, two.id,
+    )

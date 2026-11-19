@@ -26,7 +26,8 @@ class FileCoverage:
 
     def __post_init__(self) -> None:
         normalized_path(self.path)
-        if not isinstance(self.blob_sha, str) or len(self.blob_sha) != 40:
+        if (not isinstance(self.blob_sha, str) or len(self.blob_sha) != 40
+                or any(ch not in "0123456789abcdef" for ch in self.blob_sha)):
             raise ValueError("FILE_RECEIPT_BLOB_REQUIRED")
         if self.status not in FILE_STATUSES:
             raise ValueError("UNKNOWN_FILE_COVERAGE_STATUS")
