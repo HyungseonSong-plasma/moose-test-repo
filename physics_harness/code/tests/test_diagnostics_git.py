@@ -146,3 +146,66 @@ def test_non_regular_git_symlink_is_not_parsed(git_factory):
     status_by_path = {f.path: f.status for f in result.receipt.files}
     assert status_by_path[".github/workflows/redirect.yml"] == "UNSUPPORTED"
     assert result.status == "PARTIAL"
+
+
+
+@pytest.mark.parametrize(
+    ("outcomes", "expected"),
+    [
+        (("PARTIAL", "UNSUPPORTED"), "UNRESOLVED"),
+        (("FAILED", "PARTIAL"), "FAILED"),
+        (("COMPLETE", "UNSUPPORTED"), "UNSUPPORTED"),
+        (("COMPLETE", "COMPLETE"), "SCANNED"),
+    ],
+)
+def test_multiple_collector_coverage_is_order_independent(git_factory, outcomes, expected):
+    from physics_harness.code.diagnostics import (
+        CollectionResult, FactBatch, scan_scope_id,
+    )
+
+    root, sha = git_factory({".github/workflows/check.yml": SIMPLE})
+
+    class FakeCollector:
+        version = "v1"
+
+        def __init__(self, name, status):
+            self.name = name
+            self.status = status
+
+        def supports(self, record):
+            return True
+
+        def collect(self, source, request, scope_id):
+            findings = (
+                (f"STATIC_UNKNOWN:{self.name}",)
+                if self.status == "PARTIAL" else ()
+            )
+            return CollectionResult(
+                FactBatch(unresolved=findings), status=self.status,
+            )
+
+    registry = {
+        "a": FakeCollector("a", outcomes[0]),
+        "b": FakeCollector("b", outcomes[1]),
+    }
+    left = ScanRequest(
+        repository="example/repo", revision=sha,
+        includes=(".github/workflows/check.yml",),
+        collectors=("a", "b"),
+    )
+    right = ScanRequest(
+        repository="example/repo", revision=sha,
+        includes=(".github/workflows/check.yml",),
+        collectors=("b", "a"),
+    )
+    assert scan_scope_id(left) == scan_scope_id(right)
+    first = run_scan(left, GitSourceProvider(root), registry=registry)
+    second = run_scan(right, GitSourceProvider(root), registry=registry)
+    assert first.graph == second.graph
+    assert first.receipt == second.receipt
+    assert first.receipt.files[0].status == expected
+    assert first.receipt.files[0].collectors == ("a", "b")
+    for index, status in enumerate(outcomes):
+        if status != "COMPLETE":
+            assert f"COLLECTOR_{status}:{'ab'[index]}" in first.receipt.files[0].details
+    assert first.status == ("COMPLETE" if expected == "SCANNED" else "PARTIAL")
