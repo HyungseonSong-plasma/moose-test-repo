@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import gzip
 import io
 import json
 import os
@@ -91,6 +92,22 @@ class ScanCacheP0Test(unittest.TestCase):
         index.write_bytes(b"corrupt gzip content")
         with contextlib.redirect_stderr(io.StringIO()) as output:
             other = structural.scan(self.root, "Other", self.head)
+        self.assertIn("FDEG_SOURCE_INDEX=MISS_STORED", output.getvalue())
+        self.assertEqual(other["scan_scope"]["files_scanned"], 2)
+        self.assertEqual(other["safety"], "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT")
+
+    def test_rehashed_source_index_missing_one_file_is_not_complete(self):
+        self.scan(self.head)
+        index, = list(self.cache_dir.glob("sources-*.json.gz"))
+        record = json.loads(gzip.decompress(index.read_bytes()))
+        record["payload"]["contents"].pop("cases/input.i")
+        record["payload_sha256"] = cache.digest(
+            cache.canonical(record["payload"]))
+        index.write_bytes(gzip.compress(cache.canonical(record), mtime=0))
+        with contextlib.redirect_stderr(io.StringIO()) as output:
+            other = structural.scan(self.root, "Other", self.head)
+        # An attacker rehashed the JSON but cannot make a missing Git source
+        # pass the HEAD's tracked-file/blob completeness check.
         self.assertIn("FDEG_SOURCE_INDEX=MISS_STORED", output.getvalue())
         self.assertEqual(other["scan_scope"]["files_scanned"], 2)
         self.assertEqual(other["safety"], "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT")
