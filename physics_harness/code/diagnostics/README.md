@@ -170,25 +170,3 @@ Run fetch returns `FAILED` without invented runtime Evidence.
 This provider does not discover changeset diffs, checkout SHA from logs,
 Required Checks, actual build/test identity, external artifact custody or
 time cost. Those remain separate follow-on obligations.
-
-### Source-only MOOSE parameter contract comparison (P1-B)
-
-The C++ provider extracts simple `Class::validParams()` `addParam<T>`
-and `addRequiredParam<T>` declarations. `MooseEnum` literal choices
-and source defaults are recorded as `moose_param_contract` nodes,
-linked via `DECLARES_PARAM_CONTRACT` to the canonical `moose_type`.
-The MOOSE `.i` provider records raw, unevaluated `parameter_values`
-on each input block while preserving its existing `parameter_names`.
-
-The common Analysis function `assess_input_parameter_contract(graph, type_id)`
-compares direct source declarations. An enum value not in the literal
-allowed choices yields `INVALID_DECLARED_ENUM` / `BLOCKED`.
-Missing explicitly required parameters, dynamic values, incomplete
-source coverage or unavailable C++ contracts yield `HOLD`.
-Source agreement only yields `CANDIDATE_FOR_VERIFICATION`,
-**never safe deletion, runtime accepted parameters, or unit equivalence**.
-
-C++ macros, templated/nonnliteral enum choices, input variable
-substitution, inherited `validParams`, default injection, actual
-generated input files and Native runtime values require separate
-verification. Unsupported declarations must remain `PARTIAL`.
