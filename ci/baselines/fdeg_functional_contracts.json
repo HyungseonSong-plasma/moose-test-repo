@@ -162,7 +162,57 @@
       "historical_guards": [
         "EI18_EI19_NO_ELECTRON_NUMBER_SOURCE",
         "S5R_SIGNED_PROGRESS_AVOGADRO_OWNERSHIP"
-      ]
+      ],
+      "discriminator_contracts": {
+        "SIGNED_SOURCE_POS_NEG_ZERO": {
+          "setup": "physical + normalized, S_e positive/zero/negative",
+          "observable": "element residual sign and magnitude",
+          "expected": "S_e>0 -> negative residual; S_e<0 -> positive; S_e=0 -> zero",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "NORMALIZED_N_REF_NOT_ONE": {
+          "setup": "same S_e; normalized n_ref positive != 1 and physical mode",
+          "observable": "residual ratio",
+          "expected": "normalized -S_e/n_ref; physical -S_e; invalid/missing normalized n_ref rejected",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AD_JACOBIAN": {
+          "setup": "signed Functor depends on solved and coupled states",
+          "observable": "residual and off-diagonal Jacobian",
+          "expected": "retain derivative of supplied AD Functor and exactly one normalization factor",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "REACTION_OWNERSHIP": {
+          "setup": "EI01,EI16,EI20,EDetach,H05 with canonical progress producer",
+          "observable": "per-reaction electron source contribution",
+          "expected": "signed stoichiometric production/loss once; no duplicated projection or N_A factor",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "EI18_EI19_NO_SOURCE": {
+          "setup": "electron-neutral processes declared no particle-number source",
+          "observable": "electron-number residual contribution",
+          "expected": "zero electron-number reaction source; unexpected projector must be detected",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "CONSERVATION": {
+          "setup": "bounded electron-density control volume, charged species and boundary fluxes",
+          "observable": "particle and charge inventory source/flux budget",
+          "expected": "compare integral source minus outflow against time inventory; not inferred from P0",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      }
     },
     "PhysicsFVElectrostaticDrift": {
       "target": "PhysicsFVElectrostaticDrift",
@@ -421,7 +471,57 @@
         "MASS_CORRECTION_PARITY",
         "NATIVE_CONTRIBUTION_NOT_OBSERVED"
       ],
-      "historical_guards": []
+      "historical_guards": [],
+      "discriminator_contracts": {
+        "CHARGE_SIGN_REVERSAL": {
+          "setup": "same potential, mobility and carrier with z positive/negative",
+          "observable": "drift_normal and face flux with upwind selection",
+          "expected": "signed normal drift changes sign; upwind side must be recomputed",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "E_ZERO_AND_MOBILITY_ZERO": {
+          "setup": "E=0 or mobility=0 with valid nonzero charge",
+          "observable": "face drift contribution",
+          "expected": "drift_normal=0 and drift flux=0, subject to finite inputs",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "UPWIND_DIRECTION": {
+          "setup": "face orientation and drift sign alternated",
+          "observable": "selected upwind stencil and face flux",
+          "expected": "upwind chosen by raw_value(drift_normal)>=0 and configured limiter",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "LIMITER_TIME_STATE": {
+          "setup": "transient vs steady mode under changing nonlinear iterate",
+          "observable": "limiter state and face reconstruction",
+          "expected": "transient previous time state; steady previous nonlinear state",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "MASS_CORRECTION_CANCELLATION": {
+          "setup": "charged-heavy components and correction with same face/upwind/limiter; sum(w_i)=1",
+          "observable": "sum charged-heavy mass flux plus correction",
+          "expected": "cancellation only when declared coupling and variable representation assumptions hold",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AD_JACOBIAN": {
+          "setup": "state-dependent potential, mobility, carrier and solved variable",
+          "observable": "face residual and off-diagonal Jacobian",
+          "expected": "AD derivatives preserved; changing gradient evaluation or limiter history cannot auto-pass",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      }
     },
     "PhysicsFVMassFractionTimeDerivative": {
       "target": "PhysicsFVMassFractionTimeDerivative",
@@ -537,7 +637,49 @@
       ],
       "historical_guards": [
         "QPX_ALIAS_NOT_PROVEN_EQUIVALENT"
-      ]
+      ],
+      "discriminator_contracts": {
+        "VARIABLE_DENSITY_COUNTEREXAMPLE": {
+          "setup": "Backward Euler conditional model with rho_n != rho_old and w_old != 0",
+          "observable": "difference candidate conservative minus legacy residual",
+          "expected": "(rho_n-rho_old)*w_old/dt != 0; unconditional equivalence fails",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "TIME_INTEGRATOR_IDENTITY": {
+          "setup": "same source and pinned actual FVTimeKernel+Executioner",
+          "observable": "time levels and _u_dot definition",
+          "expected": "report effective integrator from independent source; do not infer BE from C++ class",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "STATE_REPRESENTATION": {
+          "setup": "mass fraction vs log molar and number-density cases",
+          "observable": "state units, variable transformation and time derivative",
+          "expected": "different representations cannot be assumed equivalent without mapping",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AD_JACOBIAN": {
+          "setup": "density rho depends on state and variable varies",
+          "observable": "residual and Jacobian derivatives",
+          "expected": "rho*_u_dot contribution and coupling retained; not just scalar residual value",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "SPECIES_MASS_INVENTORY": {
+          "setup": "heavy-species control volume, boundary fluxes and reaction balance",
+          "observable": "species and mixture mass inventory, sum(w_k)",
+          "expected": "requires independent conservation/oracle and actual time observations",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      }
     },
     "PhysicsFVElectronEnergyJouleHeating": {
       "target": "PhysicsFVElectronEnergyJouleHeating",
@@ -748,7 +890,57 @@
       ],
       "historical_guards": [
         "NORMALIZED_HISTORICAL_INPUT_REQUIRES_OWN_PARITY"
-      ]
+      ],
+      "discriminator_contracts": {
+        "JOULE_DRIFT_DIFFUSION_SPLIT": {
+          "setup": "D=0 vs finite D and grad(n_e) nonzero",
+          "observable": "electric work residual drift/cross terms",
+          "expected": "drift term quadratic in E, diffusion cross term changes sign with E",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "E_ZERO_CONTROL": {
+          "setup": "E=-grad(phi)=0 with valid n, mobility, D",
+          "observable": "electron electric-work residual",
+          "expected": "zero residual electric work",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "MOBILITY_DIFFUSION_ZERO": {
+          "setup": "mu=0 and D=0 with other fields valid",
+          "observable": "electron electric-work residual",
+          "expected": "zero residual electric work",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "NORMALIZED_VS_PHYSICAL_EV": {
+          "setup": "same physical state, normalized and physical_eV with epsilon_ref>0",
+          "observable": "residual scaling and invalid parameter handling",
+          "expected": "normalized residual is physical_eV residual / epsilon_ref; missing or nonpositive epsilon_ref rejected only for normalized",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AD_COUPLING": {
+          "setup": "electron density, potential and transport coefficients AD-dependent",
+          "observable": "residual and off-diagonal Jacobian",
+          "expected": "shared helper derivatives preserved with outer residual sign",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "SHARED_HELPER_PRESERVATION": {
+          "setup": "remove only Joule Kernel with another owner using PhysicsElectronFluxModel",
+          "observable": "helper references and independent consumer outcomes",
+          "expected": "helper retained until all independent consumers proven migrated",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      }
     },
     "PhysicsFVThermalDiffusion": {
       "target": "PhysicsFVThermalDiffusion",
@@ -892,7 +1084,57 @@
       ],
       "historical_guards": [
         "QPX_THERMAL_DIFFUSION_ALIAS_NOT_AUTO_MAPPED"
-      ]
+      ],
+      "discriminator_contracts": {
+        "FLAG_ON_OFF": {
+          "setup": "same case and binary, thermal flag ON vs OFF",
+          "observable": "thermal face flux/residual/Jacobian delta",
+          "expected": "OFF contributes zero; ON contribution depends on nonzero D_T grad(T), no global dead-code inference",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "ZERO_GRADIENT": {
+          "setup": "grad(T)=0 with nonzero positive T and finite D_T",
+          "observable": "thermal face normal flux",
+          "expected": "thermal component zero in observed scope",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "ZERO_D_T": {
+          "setup": "D_T=0 with valid T gradient",
+          "observable": "thermal face normal flux",
+          "expected": "thermal component zero without removing D_T producer globally",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "INTERNAL_VS_BOUNDARY_FACE": {
+          "setup": "internal and one-sided boundary faces with matched normals",
+          "observable": "face T, D_T, dT/dn and flux",
+          "expected": "internal averages and boundary single-sided evaluation follow distinct source branches",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "AD_JACOBIAN": {
+          "setup": "T and D_T depend on solved state",
+          "observable": "flux and Jacobian",
+          "expected": "AD derivative coupling preserved when flag ON",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "NATIVE_INSTANTIATION": {
+          "setup": "representative real physics-opt input and object inventory",
+          "observable": "instantiated object name, equation/variable, block, state and output",
+          "expected": "class registration not enough; classified NOT_OBSERVED until native run evidence is attached",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      }
     },
     "FVElectronResponseBandedCorrection": {
       "target": "FVElectronResponseBandedCorrection",
@@ -1027,7 +1269,57 @@
       ],
       "historical_guards": [
         "HISTORICAL_GUMMEL_CLOSURE_PARITY_NOT_REMOVAL_PARITY"
-      ]
+      ],
+      "discriminator_contracts": {
+        "PHI_EQUALS_ANCHOR": {
+          "setup": "valid N,b,mesh,ghost; all sampled phi_j=anchor_j",
+          "observable": "element Poisson banded correction residual",
+          "expected": "R_i=0; independent from unproven global row-sum assumption",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "BETA_ZERO": {
+          "setup": "valid matrix and mesh, beta=0",
+          "observable": "element Poisson correction residual",
+          "expected": "R_i=0",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "ROW_SUM_ZERO_ASSUMPTION": {
+          "setup": "row-sum-zero W verified per row and uniform phi-anchor shift",
+          "observable": "change in residual under uniform shift",
+          "expected": "invariant only if sum_j W_ij=0, which constructor does not verify",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "ROW_SUM_NONZERO_COUNTEREXAMPLE": {
+          "setup": "row-sum-nonzero W and uniform phi-anchor shift",
+          "observable": "residual delta",
+          "expected": "generally nonzero; must not claim unconditional invariance",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "BAND_AND_GHOST_BOUNDARY": {
+          "setup": "N=0, dx<=0, b=0, b>=N, wrong matrix length, ghost_layers<b+1",
+          "observable": "parameter rejection and stencil availability",
+          "expected": "constructor rejects invalid numeric bounds; missing neighbor raises runtime error",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        },
+        "ON_OFF_NATIVE_COMPARISON": {
+          "setup": "same executable/mesh/time/inputs with legacy correction enabled vs disabled",
+          "observable": "residual, Jacobian, phi fields and time trace delta",
+          "expected": "historical two-arm-with-kernel parity does not establish deletion parity",
+          "status": "NOT_EVALUATED",
+          "measured_run_id": null,
+          "acceptance_tolerance": "OWNER_UNSPECIFIED"
+        }
+      }
     }
   }
 }
