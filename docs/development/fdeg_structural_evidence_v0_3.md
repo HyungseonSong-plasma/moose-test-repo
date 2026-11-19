@@ -36,4 +36,4 @@ python3 ci/guards/fdeg_structural.py \
 
 ## Cross-module migration
 
-Functional v0.1 expects Structural v0.2 and cannot join a v0.3 graph; Functional v0.2 in #697 must explicitly verify v0.3 schema/IDs and source-bound producer/generation evidence. The two upgrades are dependent and must be validated in order.
+Functional v0.1 has a narrow compatibility shim to accept Structural v0.3 source identity while keeping its original claim semantics; Functional v0.2 in #697 must additionally validate producer/generation evidence and expose the new consumer contracts. The two upgrades are dependent and must be validated in order.
