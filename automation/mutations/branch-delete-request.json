@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-669-p3-t2-electron-moments-20261117",
-      "expected_sha": "5d5286d40661346623280abb50bc183d07dd4625",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t2-electron-moments-20261117-5d5286d40661"
+      "branch": "issue-669-p3-v3-electron-transport-energy-negative-20261117",
+      "expected_sha": "b2e4e89008082414982f1bc34887452ea7050eac",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-v3-electron-transport-energy-negative-20261117-b2e4e8900808"
     },
     {
-      "branch": "issue-669-p3-t3-electron-reduced-gas-20261117",
-      "expected_sha": "0c7ad8ef8b4b4c6f2e1213dd0ab61490bff1c7e7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t3-electron-reduced-gas-20261117-0c7ad8ef8b4b"
+      "branch": "issue-669-p3-v4-pressure-ic-fembc-negatives-20261117",
+      "expected_sha": "86316fa98096bc734c4605d8a2e4da82f15d9204",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-v4-pressure-ic-fembc-negatives-20261117-86316fa98096"
     },
     {
-      "branch": "issue-669-p3-t4-s6-417-20261117",
-      "expected_sha": "1804211c7bbc845a2eaa541fef9da460def2906c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-t4-s6-417-20261117-1804211c7bbc"
+      "branch": "issue-669-p3-x-source-preintegration-9c15a4f-20261117",
+      "expected_sha": "f7f6189f72ba72b895d3b6a9ffdcf877ec7bf6f4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-x-source-preintegration-9c15a4f-20261117-f7f6189f72ba"
     },
     {
-      "branch": "issue-669-p3-v1-s6-417-static-20261117",
-      "expected_sha": "1f751f8b439ba1f936d8f27c73163f32ad70c879",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-v1-s6-417-static-20261117-1f751f8b439b"
+      "branch": "issue-669-p3-g2-electron-kernel-receipt-20261118",
+      "expected_sha": "1021806631fb13706b21f94e935601f55751a8bd",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g2-electron-kernel-receipt-20261118-1021806631fb"
     },
     {
-      "branch": "issue-669-p3-v2-s6-941-20261117",
-      "expected_sha": "6ad210a34f82a9f342b7a120468bfe981f821388",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-v2-s6-941-20261117-6ad210a34f82"
+      "branch": "issue-669-p3-g2-electron-time-owner-20261118",
+      "expected_sha": "6991a9f2b1ad5085f67e083ed3fd79028b051828",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g2-electron-time-owner-20261118-6991a9f2b1ad"
     }
   ]
 }
