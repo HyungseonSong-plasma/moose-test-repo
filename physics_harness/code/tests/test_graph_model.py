@@ -160,6 +160,47 @@ class GraphModelTests(unittest.TestCase):
             graph.evidence[1].observation_status,
         )
 
+    def test_duplicate_and_cross_scope_identifiers_keep_exact_errors(self):
+        graph = sample()
+        with self.assertRaisesRegex(ValueError, "^duplicate evidence ID$"):
+            GraphSnapshot(
+                graph.scope, graph.nodes, graph.edges,
+                graph.evidence + (graph.evidence[0],), graph.claims,
+            )
+        with self.assertRaisesRegex(ValueError, "^duplicate claim ID$"):
+            GraphSnapshot(
+                graph.scope, graph.nodes, graph.edges,
+                graph.evidence, graph.claims + graph.claims,
+            )
+        with self.assertRaisesRegex(ValueError, "globally distinct"):
+            GraphSnapshot(
+                scope(id="node:a"), graph.nodes, graph.edges, graph.evidence,
+                graph.claims,
+            )
+        cross_scope = Claim("claim:other", "REFERENCES", ("node:a",), "other:scope")
+        with self.assertRaisesRegex(ValueError, "claim belongs to another scope"):
+            GraphSnapshot(
+                graph.scope, graph.nodes, graph.edges, graph.evidence,
+                (cross_scope,),
+            )
+        missing_witness = Claim(
+            "claim:missing", "REFERENCES", ("node:a",), graph.scope.id,
+            evidence_refs=(ClaimEvidenceRef("ev:missing", "SUPPORTS"),),
+        )
+        with self.assertRaisesRegex(ValueError, "^claim:missing: unknown evidence ev:missing$"):
+            GraphSnapshot(
+                graph.scope, graph.nodes, graph.edges, graph.evidence,
+                (missing_witness,),
+            )
+
+    def test_duplicate_claim_links_remain_rejected(self):
+        link = ClaimEvidenceRef("ev:1", "SUPPORTS")
+        with self.assertRaisesRegex(ValueError, "duplicate claim evidence link"):
+            Claim(
+                "claim:duplicate-links", "REFERENCES", ("node:a",), "scope:1",
+                evidence_refs=(link, link),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
