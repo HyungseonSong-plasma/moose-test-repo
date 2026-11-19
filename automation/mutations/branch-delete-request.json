@@ -1,24 +1,9 @@
 {
   "targets": [
     {
-      "branch": "issue-471-codeqa-architecture-pilot-20261109",
-      "expected_sha": "625702fa325a0a62243786b5a752c548ba54100f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-471-codeqa-architecture-pilot-20261109-625702fa325a"
-    },
-    {
-      "branch": "p1-p04a-fvm-ownership-failclosed-20261117",
-      "expected_sha": "9afb80aa9e441d63d140107801ce920891409c33",
-      "archive_tag": "archive/oxygen-cleanup-20261106/p1-p04a-fvm-ownership-failclosed-20261117-9afb80aa9e44"
-    },
-    {
-      "branch": "issue-672-p6-c3-rebase-5206730-ci-20261118",
-      "expected_sha": "6920d6b025200815b721fc8b08eebbf10e735253",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-c3-rebase-5206730-ci-20261118-6920d6b02520"
-    },
-    {
-      "branch": "issue-672-p6-c3-artifact-compat-20261118",
-      "expected_sha": "20f89959567a472180032683b38af5c920089825",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-c3-artifact-compat-20261118-20f89959567a"
+      "branch": "issue-693-fdeg-functional-recovery-292ae68625",
+      "expected_sha": "1af90fdf88c54f38e7c9ffad02291aa9c737c5de",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-693-fdeg-functional-recovery-292ae68625-1af90fdf88c5"
     }
   ]
 }
