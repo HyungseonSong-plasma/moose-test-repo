@@ -1,34 +1,19 @@
 {
   "targets": [
     {
-      "branch": "issue-493-reference-raw-axis-line-png-20261111",
-      "expected_sha": "a3f8d8bc42132e8e98ae378bfe646b27456a125f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-493-reference-raw-axis-line-png-20261111-a3f8d8bc4213"
+      "branch": "validation/issue518-replay-after-513-516-517-519-20261111",
+      "expected_sha": "64fbf29495067f2289f9e723d991fc0f167d75bb",
+      "archive_tag": "archive/oxygen-cleanup-20261106/validation-issue518-replay-after-513-516-517-519-20261111-64fbf2949506"
     },
     {
-      "branch": "refactor/issue402-continuity-eq-retire-gummel-20261111",
-      "expected_sha": "9bde78743bedb3fe7506dc9e135cdc9d2c58a54b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-issue402-continuity-eq-retire-gummel-20261111-9bde78743bed"
+      "branch": "test/physics402-s6d-joule-rf-owners",
+      "expected_sha": "c171dfd465a4318390b9b799531fff65c27123f1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/test-physics402-s6d-joule-rf-owners-c171dfd465a4"
     },
     {
-      "branch": "fix/issue402-canonical-s6-d-400w-env-20261111",
-      "expected_sha": "677f94fe76677f7ade6864fabc35b73f73e7b860",
-      "archive_tag": "archive/oxygen-cleanup-20261106/fix-issue402-canonical-s6-d-400w-env-20261111-677f94fe7667"
-    },
-    {
-      "branch": "refactor/retire-physical-fem-drift-s6d",
-      "expected_sha": "9e456129b3ea6ee4b6129f174ef3f5c137d21b6d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-retire-physical-fem-drift-s6d-9e456129b3ea"
-    },
-    {
-      "branch": "refactor/retire-plasma-closures-action-s6d",
-      "expected_sha": "0658affe90c5a047e0efc6422fc750fc208846e6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-retire-plasma-closures-action-s6d-0658affe90c5"
-    },
-    {
-      "branch": "fix/issue518-artifact-create-response-probe",
-      "expected_sha": "5bd803409c0f8b48e6b311be5fe2e7d7c010ec3b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/fix-issue518-artifact-create-response-probe-5bd803409c0f"
+      "branch": "issue-402-continuity-e-time",
+      "expected_sha": "00dc1ae28ddb4cda42b19d1abc9eeb77af2d28c0",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-continuity-e-time-00dc1ae28ddb"
     }
   ]
 }
