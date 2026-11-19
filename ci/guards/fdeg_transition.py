@@ -241,17 +241,17 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
                        "runtime_activation": "NOT_OBSERVED"},
             "after_proposal": {"candidate_options": [c["candidate_type"] for c in candidate_records],
                                "binding_status": "NOT_SPECIFIED_UNTIL_REPLACEMENT_PROOF",
-                               "expected_removed_structural_edge_id": sid if not lexical and not historical else None},
+                               "expected_removed_structural_edge_id": sid if candidate_records and not lexical and not historical else None},
             "disposition": disposition,
             "disposition_proposal": proposal,
             "proposed_only": True,
             "affected_paths": [item["input_path"]],
-            "function_to_preserve_if_active": item.get("functional_effect_if_removed"),
-            "functional_claim_ids": functional_report["preservation_contract"]["claim_ids"],
+            "function_to_preserve_if_active": None if lexical else item.get("functional_effect_if_removed"),
+            "functional_claim_ids": ([] if lexical else functional_report["preservation_contract"]["claim_ids"]),
             "evidence_status": "STATIC_DECLARATION_NOT_EXECUTION",
             "execution_status": "NOT_EXECUTED",
         }
-        if iid and not lexical and not historical:
+        if iid and candidate_records and not lexical and not historical:
             proposed_removed.append(sid)
         if not lexical and not historical:
             bid = add_block("CONSUMER_ACTIVATION_UNVERIFIED",
@@ -345,13 +345,17 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
                 if consumer["disposition"] not in {"HOLD_UNKNOWN", "PRESERVE_HISTORICAL"}:
                     continue
                 is_history = consumer["disposition"] == "PRESERVE_HISTORICAL"
-                verb = "PRESERVE_HISTORICAL_CONSUMER" if is_history else "REWIRE_CONSUMER_CANDIDATE"
+                verb = ("PRESERVE_HISTORICAL_CONSUMER" if is_history else
+                        "REWIRE_CONSUMER_CANDIDATE" if candidate_records else
+                        "RETAIN_CONSUMER_UNTIL_APPROVAL")
                 task_id = "step:" + verb + ":" + consumer["structural_edge_id"]
                 parents = (["step:RESOLVE_CONSUMER_SCOPE"] if is_history else
                            ["step:QUALIFY_REPLACEMENT"])
-                paths = [] if is_history else [consumer["input_path"]]
+                paths = [] if is_history or not candidate_records else [consumer["input_path"]]
                 gates = (["PINNED_HISTORICAL_REPLAY_SEPARATE",
                           "CURRENT_BINARY_COMPATIBILITY_INDEPENDENT"] if is_history else
+                         ["APPROVED_REPLACEMENT_OR_EXPLICIT_REMOVAL_OWNER",
+                          "CONSUMER_ACTIVATION_AND_EFFECTIVE_BINDING"] if not candidate_records else
                          ["CONSUMER_ACTIVATION_AND_EFFECTIVE_BINDING",
                           "APPROVED_REPLACEMENT_SEMANTIC_PARITY",
                           "DIRECT_INPUT_GENERATOR_AND_CHECKER_P0"])
@@ -371,7 +375,7 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
                     "expected_graph_delta": {
                         "kind": "PROPOSED_NOT_MEASURED",
                         "may_remove_structural_edge_ids":
-                            [] if is_history else [consumer["structural_edge_id"]],
+                            [] if is_history or not candidate_records else [consumer["structural_edge_id"]],
                         "preserve_functional_claim_ids": sorted(
                             functional_report["preservation_contract"]["claim_ids"]),
                         "observed_removed_edges": []},
@@ -396,8 +400,8 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
                     history_step_ids.append(task_id)
                 else:
                     consumer_step_ids.append(task_id)
-                edges.append(edge(task_id, "REWIRE_STEP" if not is_history else
-                                  "PRESERVES", consumer["consumer_id"],
+                edges.append(edge(task_id, "PRESERVES" if is_history or not candidate_records else
+                                  "REWIRE_STEP", consumer["consumer_id"],
                                   {"status": "PROPOSED_ONLY", "structural_edge_id":
                                    consumer["structural_edge_id"]}))
                 for parent in parents:
