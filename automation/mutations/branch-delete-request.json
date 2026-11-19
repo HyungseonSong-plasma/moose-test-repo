@@ -1,24 +1,19 @@
 {
   "targets": [
     {
-      "branch": "cleanup-issue541-integration-flow-ab-20261116",
-      "expected_sha": "703658eba271962bf2047359ad03d766b25a937a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-integration-flow-ab-20261116-703658eba271"
+      "branch": "cleanup-wave1-c-legacy-ref-sunset-20261116",
+      "expected_sha": "85d6968f5155e25eabfca8b503828979d9509506",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-legacy-ref-sunset-20261116-85d6968f5155"
     },
     {
-      "branch": "cleanup-wave1-release-20261116",
-      "expected_sha": "aedb1509859d5a9e64817f1d7ab1dbf7aea77b6a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-release-20261116-aedb1509859d"
+      "branch": "cleanup-wave1-dd-historical-selfpath-retire-20261116",
+      "expected_sha": "4f8763083b598ffb7bde77e4e2dd130a0f1e7619",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-historical-selfpath-retire-20261116-4f8763083b59"
     },
     {
-      "branch": "cleanup-wave1-s6-retirement-ci-count-20261116",
-      "expected_sha": "631e020ca134ea22bef4aa84a4f1189eebde664b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-retirement-ci-count-20261116-631e020ca134"
-    },
-    {
-      "branch": "cleanup-wave1-s6-retirement-template-sync-20261116",
-      "expected_sha": "2fbca011a0431b3496d1133babb0ef97e7e7f4cc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-retirement-template-sync-20261116-2fbca011a043"
+      "branch": "cleanup-wave1-s6-historical-one-shot-cutover-20261116",
+      "expected_sha": "f1fb952cabecc6e11804119ac6047821276d0d6f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-historical-one-shot-cutover-20261116-f1fb952cabec"
     }
   ]
 }
