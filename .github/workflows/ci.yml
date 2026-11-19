@@ -98,6 +98,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
       - name: Validate FDEG Transition Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Validate code3 electron-only source migration P0
+        run: python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
