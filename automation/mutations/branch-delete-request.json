@@ -1,14 +1,9 @@
 {
   "targets": [
     {
-      "branch": "issue-402-plasma-gas-state",
-      "expected_sha": "7ddf3e386c42132eac3feff510a44280dcb3a7c9",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-plasma-gas-state-7ddf3e386c42"
-    },
-    {
-      "branch": "issue-402-sccm-inlet-flow-conversion",
-      "expected_sha": "afa0c2564c69b377d47d5804e365c9baf13a0d70",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-sccm-inlet-flow-conversion-afa0c2564c69"
+      "branch": "cleanup-issue541-flow-native-20261115",
+      "expected_sha": "6ea01083eac9773f64e35e029da3ac488e7fdb02",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue541-flow-native-20261115-6ea01083eac9"
     }
   ]
 }
