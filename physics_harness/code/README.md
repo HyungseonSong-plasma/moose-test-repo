@@ -7,7 +7,7 @@ workflow definitions, and other supported sources.
 | Package | Responsibility |
 | --- | --- |
 | \`graph/\` | Shared graph records: node, edge, evidence, claim, scope, context |
-| \`diagnostics/\` | Evidence collection and code fact extraction (reserved) |
+| [diagnostics/](diagnostics/README.md) | Source-bound fact extraction and incomplete-coverage reporting (D1–D5) |
 | \`analysis/\` | Code review, findings, quality/impact analysis (reserved) |
 | \`refactor/\` | Approved refactoring plans and changes (reserved) |
 | \`delete/\` | Approved code-retirement and deletion (reserved) |
@@ -43,3 +43,10 @@ python -m pytest -q physics_harness/code/tests
 The general Repository CI ignores harness-code-only changes; the SOL
 Integration workflow is restricted to ontology/runtime-integration changes.
 Mixed-scope pull requests still receive the applicable broader validation.
+
+## Diagnostics v0.1
+
+The read-only [Diagnostics core](diagnostics/README.md) connects exact Git
+source/blob provenance, pluggable collectors, deterministic GraphSnapshot
+assembly and scoped completeness receipts. The first collector reads Workflow
+YAML as static declarations, **not** actual GitHub Actions executions.
