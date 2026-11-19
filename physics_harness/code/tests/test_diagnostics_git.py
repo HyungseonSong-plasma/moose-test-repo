@@ -209,3 +209,87 @@ def test_multiple_collector_coverage_is_order_independent(git_factory, outcomes,
         if status != "COMPLETE":
             assert f"COLLECTOR_{status}:{'ab'[index]}" in first.receipt.files[0].details
     assert first.status == ("COMPLETE" if expected == "SCANNED" else "PARTIAL")
+
+
+
+def test_supports_failure_is_file_failure_not_whole_scan_failure(git_factory):
+    from physics_harness.code.diagnostics import CollectionResult, FactBatch
+
+    root, sha = git_factory({".github/workflows/check.yml": SIMPLE})
+
+    class BrokenSupport:
+        name = "broken"
+        version = "v1"
+
+        def supports(self, record):
+            raise RuntimeError("broken probe")
+
+        def collect(self, source, request, scope_id):
+            raise AssertionError("unreachable")
+
+    class WorkingCollector:
+        name = "working"
+        version = "v1"
+
+        def supports(self, record):
+            return True
+
+        def collect(self, source, request, scope_id):
+            return CollectionResult(FactBatch(), status="COMPLETE")
+
+    registry = {"broken": BrokenSupport(), "working": WorkingCollector()}
+    req = request(sha, collectors=("working", "broken"))
+    result = run_scan(req, GitSourceProvider(root), registry=registry)
+    assert result.status == "PARTIAL"
+    assert result.receipt.files[0].status == "FAILED"
+    assert "COLLECTOR_SUPPORTS_FAILED:broken:RuntimeError" in (
+        result.receipt.files[0].details
+    )
+    assert result.receipt.files[0].collectors == ("working",)
+    assert result.receipt.attempted_files == 1
+    assert result.receipt.scanned_count == 0
+    assert any(node.kind == "file" for node in result.graph.nodes)
+
+
+def test_only_supports_failure_is_reported_without_reading_source(git_factory):
+    root, sha = git_factory({".github/workflows/check.yml": SIMPLE})
+
+    class BrokenSupport:
+        name = "broken"
+        version = "v1"
+
+        def supports(self, record):
+            raise LookupError("unsupported external parser")
+
+        def collect(self, source, request, scope_id):
+            raise AssertionError("unreachable")
+
+    class NoReadProvider:
+        def __init__(self):
+            self.backend = GitSourceProvider(root)
+
+        def inventory(self, req):
+            return self.backend.inventory(req)
+
+        def read(self, record):
+            raise AssertionError("should not read when support check fails")
+
+    result = run_scan(
+        request(sha, collectors=("broken",)), NoReadProvider(),
+        registry={"broken": BrokenSupport()},
+    )
+    assert result.status == "PARTIAL"
+    assert result.receipt.files[0].status == "FAILED"
+    assert result.receipt.attempted_files == 0
+    assert "COLLECTOR_SUPPORTS_FAILED:broken:LookupError" in (
+        result.receipt.files[0].details
+    )
+
+
+def test_receipt_rejects_non_hex_and_noncanonical_sha():
+    from physics_harness.code.diagnostics import FileCoverage
+
+    for bad in ("z" * 40, "A" * 40, "1" * 39, "1" * 41, "a" * 39 + "g"):
+        with pytest.raises(ValueError, match="FILE_RECEIPT_BLOB_REQUIRED"):
+            FileCoverage("src/file.py", bad, "SCANNED")
+    assert FileCoverage("src/file.py", "a" * 40, "SCANNED").blob_sha == "a" * 40

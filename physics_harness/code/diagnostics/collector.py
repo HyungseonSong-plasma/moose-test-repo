@@ -112,7 +112,9 @@ class CollectionResult:
             raise TypeError("collection batch must be a FactBatch")
         if self.status not in COLLECTION_STATUSES:
             raise ValueError("UNKNOWN_COLLECTION_STATUS")
-        if self.status == "COMPLETE" and (self.batch.unresolved or self.errors):
+        if self.status == "COMPLETE" and (
+            self.batch.unresolved or self.batch.unresolved_targets or self.errors
+        ):
             raise ValueError("FALSE_COMPLETE_COLLECTION")
         if not isinstance(self.errors, tuple) or any(
             not isinstance(e, str) or not e for e in self.errors
@@ -241,11 +243,29 @@ def run_scan(
                                          details=("NON_REGULAR_GIT_SOURCE",)))
             unresolved.append(f"NON_REGULAR_GIT_SOURCE:{record.path}")
             continue
-        handlers = [c for c in selected_collectors if c.supports(record)]
+        handlers = []
+        support_errors = []
+        for handler in selected_collectors:
+            try:
+                if handler.supports(record):
+                    handlers.append(handler)
+            except Exception as exc:
+                support_errors.append(
+                    f"COLLECTOR_SUPPORTS_FAILED:{handler.name}:{type(exc).__name__}"
+                )
         if not handlers:
-            receipts.append(FileCoverage(record.path, record.blob_sha, "UNSUPPORTED",
-                                         details=("NO_COLLECTOR",)))
-            unresolved.append(f"NO_COLLECTOR:{record.path}")
+            if support_errors:
+                receipts.append(FileCoverage(
+                    record.path, record.blob_sha, "FAILED",
+                    details=tuple(sorted(support_errors)),
+                ))
+                unresolved.append(f"FAILED:{record.path}")
+            else:
+                receipts.append(FileCoverage(
+                    record.path, record.blob_sha, "UNSUPPORTED",
+                    details=("NO_COLLECTOR",),
+                ))
+                unresolved.append(f"NO_COLLECTOR:{record.path}")
             continue
         if (attempted >= request.budget.max_files
                 or read_bytes + record.size > request.budget.max_bytes
@@ -269,8 +289,8 @@ def run_scan(
         ).hexdigest() != record.blob_sha:
             raise ValueError(f"SOURCE_BLOB_IDENTITY_MISMATCH:{record.path}")
 
-        all_details: list[str] = []
-        statuses: set[str] = set()
+        all_details: list[str] = list(support_errors)
+        statuses: set[str] = {"FAILED"} if support_errors else set()
         for handler in handlers:
             try:
                 output = handler.collect(SourceInput(record, data), request, scope_id)

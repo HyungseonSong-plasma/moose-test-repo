@@ -57,7 +57,7 @@ class ScanRequest:
         object.__setattr__(self, "revision", self.revision.lower())
         for name in ("includes", "excludes", "roots", "collectors"):
             values = getattr(self, name)
-            if not isinstance(values, tuple) or len(values) != len(set(values)):
+            if not isinstance(values, tuple):
                 raise ValueError(f"{name} must be a duplicate-free tuple")
             if name in ("includes", "excludes"):
                 for value in values:
@@ -66,6 +66,8 @@ class ScanRequest:
                 for value in values:
                     if not isinstance(value, str) or not value.strip():
                         raise ValueError(f"{name} values must be nonempty strings")
+            if len(values) != len(set(values)):
+                raise ValueError(f"{name} must be a duplicate-free tuple")
         if not self.includes:
             raise ValueError("includes must not be empty")
         if not self.collectors:
