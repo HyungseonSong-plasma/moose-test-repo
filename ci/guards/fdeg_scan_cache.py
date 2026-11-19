@@ -131,7 +131,8 @@ def source_index_key(root: Path, head: str | None,
         key.path.name.replace("structural-", "sources-") + ".gz"), key.identity)
 
 
-def load_source_index(key: CacheKey) -> tuple[dict[str, tuple[str, str]], list[dict]] | None:
+def load_source_index(key: CacheKey, git_blob_manifest: dict[str, str]
+                      ) -> tuple[dict[str, tuple[str, str]], list[dict]] | None:
     """Load one complete source snapshot for *all* target-specific cold scans.
 
     No subset of paths is silently dropped: the first scan must have enumerated
@@ -161,6 +162,19 @@ def load_source_index(key: CacheKey) -> tuple[dict[str, tuple[str, str]], list[d
                     or len(value) != 2 or not all(isinstance(x, str) for x in value)):
                 return None
             contents[name] = (value[0], value[1])
+        # The cache's own SHA-256 is not a completeness oracle. Cross-check
+        # *every* expected tracked path/blob against the HEAD's Git index;
+        # this rejects a rehashed-but-omitted file or forged source value.
+        failed_paths = {e.get("path") for e in payload["errors"]}
+        if (set(contents) & failed_paths
+                or set(contents) | failed_paths != set(git_blob_manifest)):
+            return None
+        for path, (text, sha) in contents.items():
+            encoded = text.encode("utf-8")
+            actual_sha = hashlib.sha1(
+                b"blob " + str(len(encoded)).encode() + b"\0" + encoded).hexdigest()
+            if sha != actual_sha or sha != git_blob_manifest[path]:
+                return None
         return contents, payload["errors"]
     except (OSError, ValueError, TypeError, KeyError, EOFError):
         return None
