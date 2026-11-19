@@ -1,34 +1,19 @@
 {
   "targets": [
     {
-      "branch": "cleanup-wave1-main-s6-original-retirement-after-dd-20261116",
-      "expected_sha": "dc8e3bbe71140203d9530f9ccd22a0acf647a3b2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-main-s6-original-retirement-after-dd-20261116-dc8e3bbe7114"
+      "branch": "integration-issue541-completed-1-2-4-5-9-20261116",
+      "expected_sha": "ac8f8133b9a8e59a6a3ae8316abfb701b2b4a3cf",
+      "archive_tag": "archive/oxygen-cleanup-20261106/integration-issue541-completed-1-2-4-5-9-20261116-ac8f8133b9a8"
     },
     {
-      "branch": "int-issue541-s6-manual-required-after-main-reg-20261116",
-      "expected_sha": "b0adfcb5ea7d19d5c51c60540b1b852317e7362d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/int-issue541-s6-manual-required-after-main-reg-20261116-b0adfcb5ea7d"
+      "branch": "cleanup-wave1-dd-retire-postmerge-ci-20261116",
+      "expected_sha": "2eb53900011439b7d5780e7b32102ccaf5d134b6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-retire-postmerge-ci-20261116-2eb539000114"
     },
     {
-      "branch": "cleanup-wave1e-postmerge-event-scope-20261116",
-      "expected_sha": "abad66091645c12bd1a632adc56655d86218b143",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1e-postmerge-event-scope-20261116-abad66091645"
-    },
-    {
-      "branch": "cleanup-issue535-wave1-postrelease-audit-20261116",
-      "expected_sha": "1d7c2f193a0983281769867d07107a0932623433",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue535-wave1-postrelease-audit-20261116-1d7c2f193a09"
-    },
-    {
-      "branch": "cleanup-issue535-eight-hold-failclosed-20261116",
-      "expected_sha": "792469ca634a94227626da67631cfa21627db3c4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue535-eight-hold-failclosed-20261116-792469ca634a"
-    },
-    {
-      "branch": "issue535-arch-dd-retirement-s6-manual-p3-authorization-20261117",
-      "expected_sha": "849105fd8ddcb9820e146b5bdcf8a0485fd73d25",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue535-arch-dd-retirement-s6-manual-p3-authorization-20261117-849105fd8ddc"
+      "branch": "issue-535-s6-full-p3-retirement-20261117",
+      "expected_sha": "0c09fe07aa6ebff70d2c30bfc50dcdee8fe49815",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-535-s6-full-p3-retirement-20261117-0c09fe07aa6e"
     }
   ]
 }
