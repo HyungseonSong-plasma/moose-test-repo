@@ -488,6 +488,18 @@ def test_repository_oxygen_joule_exact_head_read_only_dryrun():
                 + "\n~~~\n\n"
             )
 
+    # The one-time CI job needs a machine-readable report in its logs even
+    # when unauthenticated viewers cannot open GitHub's Job Summary tab.
+    import atexit
+    atexit.register(
+        lambda: print(
+            "HARNESS_DRYRUN_JSON=" + json.dumps(
+                summary, ensure_ascii=False, sort_keys=True,
+            ),
+            flush=True,
+        )
+    )
+
     assert tuple(sorted(summary["scanned_files"])) == tuple(sorted(expected_paths))
     assert len(reg) >= 1, summary
     assert len(usage) >= 3, summary
