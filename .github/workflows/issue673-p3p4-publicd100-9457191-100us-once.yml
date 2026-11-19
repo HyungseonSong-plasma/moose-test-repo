@@ -715,6 +715,53 @@ jobs:
                                   r["native_full_log_sha256"]=hashlib.sha256(log.encode()).hexdigest()
                                   r["maxwell_solver_message_seen"]=("Solve Converged!" in log and "maxwell" in log.lower())
                                   (out/f"{case}_native_excerpt.txt").write_text(limit_log(log))
+                                  r["P3_private_log_sha256"]=dg(work/"p3_private_solver.log") if (work/"p3_private_solver.log").exists() else None
+                                  # No raw private-rate, solver, Exodus, or checkpoint bytes are published.
+                                  r["P4_exodus_manifest"]=[{"name":p.name,"sha256":dg(p),"bytes":p.stat().st_size}
+                                      for p in sorted(work.rglob("*.e")) if p.is_file()]
+                                  r["P4_checkpoint_manifest"]=[{"name":p.name,"sha256":dg(p),"bytes":p.stat().st_size}
+                                      for p in sorted(work.rglob("*.cpr")) if p.is_file()]
+                                  r["P4_rd_directories"]=[{"name":p.name,"members":sorted(q.name for q in p.iterdir())}
+                                      for p in sorted(work.rglob("*.rd")) if p.is_dir()]
+                                  r["P4_exodus_observed"]=bool(r["P4_exodus_manifest"])
+                                  r["P4_checkpoint_observed"]=bool(r["P4_checkpoint_manifest"] or r["P4_rd_directories"])
+                                  r["P4_series_invariant_pass"]=False
+                                  parent_csv=work/"rf_full_plasma.csv"
+                                  if rc==0 and parent_csv.is_file():
+                                      with parent_csv.open(newline="") as f:
+                                          rows=list(csv.DictReader(f))
+                                      times=[float(row["time"]) for row in rows]
+                                      intervals=[b-a for a,b in zip(times,times[1:])]
+                                      r["P3_timegrid_pass"]=bool(len(times)==461 and abs(times[0])<1e-15
+                                          and abs(times[-1]-1e-4)<1e-9 and all(math.isfinite(t) for t in times)
+                                          and all(dt>0 for dt in intervals))
+                                      r["P3_temporal_summary"]={"rows":len(times),"physical_steps":len(intervals),
+                                          "t0_s":times[0] if times else None,
+                                          "tfinal_s":times[-1] if times else None,
+                                          "min_dt_s":min(intervals) if intervals else None,
+                                          "max_dt_s":max(intervals) if intervals else None,
+                                          "raw_parent_csv_sha256":dg(parent_csv)}
+                                      required=("ne_max","ne_min","mean_energy_max","mean_energy_min",
+                                          "P_abs_maxwell_t6","rf_d8_cover_current","rf_d8_wafer_current",
+                                          "rf_d8_focus_current","rf_d8_poisson_charge_C")
+                                      checked=0
+                                      bad_row=None
+                                      for i,row in enumerate(rows[1:],start=1):
+                                          try:
+                                              values={k:float(row[k]) for k in required}
+                                              ok=all(math.isfinite(v) for v in values.values())
+                                              ok=(ok and values["ne_min"]>0 and values["ne_max"]>=values["ne_min"]
+                                                  and values["mean_energy_min"]>0 and
+                                                  values["mean_energy_max"]>=values["mean_energy_min"]
+                                                  and values["P_abs_maxwell_t6"]>0)
+                                              if not ok: bad_row=i;break
+                                              checked+=1
+                                          except (KeyError,ValueError,TypeError):
+                                              bad_row=i;break
+                                      r["P4_series_invariant_pass"]=bool(r["P3_timegrid_pass"] and checked==460)
+                                      r["P4_timeseries_diagnostic"]={"checked_physical_rows":checked,
+                                          "first_bad_row":bad_row,"finite_positive_power":r["P4_series_invariant_pass"]}
+                                  print("P3_100US_TEMPORAL_GATE",os.environ["CASE"],r["P3_timegrid_pass"],flush=True)
                                   csvs=[]
                                   for f in sorted(work.rglob("*.csv")):
                                       try:
@@ -857,6 +904,12 @@ jobs:
                                           and r["actual_evolving_physical_state_observed"])
                               else:
                                   r["first_blocker"]="P2_CONSTRUCTION_FAILED"
+                              r["P4_diagnostic_only"]=bool(r["P3_timegrid_pass"] and
+                                  r.get("P4_exodus_observed",False) and
+                                  r.get("P4_checkpoint_observed",False) and
+                                  r.get("P4_series_invariant_pass",False) and
+                                  r.get("d8_four_boundary_consistency_pass",False))
+                              r["P4_science_equivalence"]="SCIENCE_HOLD_NO_OWNER_APPROVED_INDEPENDENT_ORACLE"
                               r["full_S6_original_11_layers_unchanged"]=all(
                                   dg(chem/n)==s for n,s in before.items())
                           except Exception as e:
@@ -881,7 +934,7 @@ jobs:
                   receipt["protected_scratch_removed_on_exit"] and
                   len(receipt["cases"])==1 and
                   all(r["full_100us_rc"]==0 and r["P3_timegrid_pass"] and r["seven_transfers_numeric_observed"] and r.get("d8_coupled_functor_numeric_pass",False) and r.get("d8_four_boundary_consistency_pass",False)
-                      and r["full_S6_original_11_layers_unchanged"]
+                      and r["P4_diagnostic_only"] and r["full_S6_original_11_layers_unchanged"]
                       for r in receipt["cases"].values()))
               (out/"rf_full_s6_receipt.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
               print("RF_AND_D8_FULL_S6_REAL_NATIVE_VERDICT",
