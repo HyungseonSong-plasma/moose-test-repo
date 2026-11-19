@@ -1,14 +1,24 @@
 {
   "targets": [
     {
-      "branch": "cleanup-wave1-c-a1-a2-evidence-20261116",
-      "expected_sha": "54c61421fdfe0023b87cd02baa7835f4ef82d1e7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a1-a2-evidence-20261116-54c61421fdfe"
+      "branch": "cleanup-wave1-c-a1-legacy-selfpath-cutover-20261116",
+      "expected_sha": "08086bd563f76d1b6bd86d4274679791f801136d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a1-legacy-selfpath-cutover-20261116-08086bd563f7"
     },
     {
-      "branch": "cleanup-wave1-c-a1-a2-retirement-20261116",
-      "expected_sha": "4a4df622228785797d5817eb37b5010042de06d2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a1-a2-retirement-20261116-4a4df6222287"
+      "branch": "cleanup-wave1-c-a2-symbol-only-20261116",
+      "expected_sha": "b3f3b6e09b83828343fc0bc097f5a4edce9207e7",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-c-a2-symbol-only-20261116-b3f3b6e09b83"
+    },
+    {
+      "branch": "cleanup-wave1-dd-historical-one-shot-cutover-20261116",
+      "expected_sha": "4b379936fd5f32c383816718bbf03cc71b0600f0",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-dd-historical-one-shot-cutover-20261116-4b379936fd5f"
+    },
+    {
+      "branch": "cleanup-wave1-s6-historical-cutover-after-dd-20261116",
+      "expected_sha": "1da16053a33f69dc11589a5cdb094de3920a3b33",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-historical-cutover-after-dd-20261116-1da16053a33f"
     }
   ]
 }
