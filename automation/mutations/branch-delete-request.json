@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-670-p4-s6-941-om-source-20261117",
-      "expected_sha": "f0393df24165142ad6c6ccf708a208ce329d93d5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-s6-941-om-source-20261117-f0393df24165"
+      "branch": "issue-670-p4-t3-op-transport-20261117",
+      "expected_sha": "9657429261b0bf6dbab58397c9e4c4342fb32f7e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-t3-op-transport-20261117-9657429261b0"
     },
     {
-      "branch": "issue-670-p4-s7-s6-941-op-20261117",
-      "expected_sha": "25ebb70a333dda3a5cc717d6145cc8addf989af6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-s7-s6-941-op-20261117-25ebb70a333d"
+      "branch": "issue-670-p4-t4-carrier-field-20261117",
+      "expected_sha": "cfa76c8d9a9c6a4b53d1b48efd05bcc37e6b36e3",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-t4-carrier-field-20261117-cfa76c8d9a9c"
     },
     {
-      "branch": "issue-670-p4-s8-941-rate-20261117",
-      "expected_sha": "23aedb6178683d7b3b0f5c61d5277c4b3f2212fc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-s8-941-rate-20261117-23aedb617868"
+      "branch": "issue-670-p4-t5-ion-initial-20261117",
+      "expected_sha": "bbd1840454d09910cd2fc2914bdf0f3244b4d359",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-t5-ion-initial-20261117-bbd1840454d0"
     },
     {
-      "branch": "issue-670-p4-t1-o2p-coeff-audit-20261117",
-      "expected_sha": "3cb60a5a7515589aa615686a8f9f179833cee7f0",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-t1-o2p-coeff-audit-20261117-3cb60a5a7515"
+      "branch": "issue-670-p4-t6-drift-input-20261118",
+      "expected_sha": "67d5926b92f545b0437f5a81c52cf59141044100",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-t6-drift-input-20261118-67d5926b92f5"
     },
     {
-      "branch": "issue-670-p4-t2-om-transport-20261117",
-      "expected_sha": "b37a5db6fea83c430390016d3217dd5d9b3a260b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-t2-om-transport-20261117-b37a5db6fea8"
+      "branch": "issue-670-p4-v1-s6-417-static-handoff-20261118",
+      "expected_sha": "4840e27dc686205ab928528e7c103791d69c14fe",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-670-p4-v1-s6-417-static-handoff-20261118-4840e27dc686"
     }
   ]
 }
