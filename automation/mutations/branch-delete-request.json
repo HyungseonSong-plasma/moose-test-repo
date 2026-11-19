@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-669-p3-f1-electron-sheath-20261117",
-      "expected_sha": "02aa05d656d0f4155a717683bf056ad5a293337f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-f1-electron-sheath-20261117-02aa05d656d0"
+      "branch": "issue-669-p3-f6-cover-energy-bc-20261117",
+      "expected_sha": "0a35da75c02122b9d71663a78d808b5e78d237a4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-f6-cover-energy-bc-20261117-0a35da75c021"
     },
     {
-      "branch": "issue-669-p3-f2-electron-cover-source-evidence-20261117",
-      "expected_sha": "74f7f060bd86fe63dc25d843cfcc730e01790981",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-f2-electron-cover-source-evidence-20261117-74f7f060bd86"
+      "branch": "issue-669-p3-f7-electron-energy-wafer-readonly-9c15a4f-20261117",
+      "expected_sha": "35e7f5f3a27feabb5a2c6c840540bfede89f0788",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-f7-electron-energy-wafer-readonly-9c15a4f-20261117-35e7f5f3a27f"
     },
     {
-      "branch": "issue-669-p3-f3-electron-wafer-bc-20261117",
-      "expected_sha": "4857d67c1077d0a9c5430474c04add2811a37882",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-f3-electron-wafer-bc-20261117-4857d67c1077"
+      "branch": "issue-669-p3-f8-energy-focus-ring-preflight-20261117",
+      "expected_sha": "d6a10129a6a5de391f7c4cb54b2359edd728d376",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-f8-energy-focus-ring-preflight-20261117-d6a10129a6a5"
     },
     {
-      "branch": "issue-669-p3-f4-electron-focus-ring-source-evidence-20261117",
-      "expected_sha": "36361b56ad05382e8a0b4d8de2daeb570a77ad93",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-f4-electron-focus-ring-source-evidence-20261117-36361b56ad05"
+      "branch": "issue-669-p3-g1-electron-ic-readonly-9c15a4f-20261117",
+      "expected_sha": "8fdb0d15d6458b2fe5b64785db238e9f75aab97d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g1-electron-ic-readonly-9c15a4f-20261117-8fdb0d15d645"
     },
     {
-      "branch": "issue-669-p3-f5-electron-energy-sheath-20261117",
-      "expected_sha": "0aefb8604b035352c6ea10949fd1df3be8ec7cf7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-f5-electron-energy-sheath-20261117-0aefb8604b03"
+      "branch": "issue-669-p3-g1-electron-state-ic-preflight-20261117",
+      "expected_sha": "20485ea051a7305126faa3f09d653bbdfb96d029",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-669-p3-g1-electron-state-ic-preflight-20261117-20485ea051a7"
     }
   ]
 }
