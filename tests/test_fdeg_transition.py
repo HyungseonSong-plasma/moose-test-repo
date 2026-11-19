@@ -181,6 +181,7 @@ class PureTransitionGraphP0Test(unittest.TestCase):
         self.assertEqual(old["disposition_proposal"], "PRESERVE_HISTORY")
         self.assertIsNone(old["after_proposal"]["expected_removed_structural_edge_id"])
         self.assertEqual(old["function_to_preserve_if_active"], None)
+        self.assertEqual(old["functional_claim_ids"], [])
 
     def test_determinism_including_edge_hashes(self):
         a, b = self.compose(), self.compose()
@@ -263,6 +264,12 @@ class PureTransitionGraphP0Test(unittest.TestCase):
         self.assertIn("RETAIN_UNTIL_APPROVED_OWNER", current["disposition_proposal"])
         self.assertTrue(any(b["kind"] == "NO_APPROVED_REPLACEMENT"
                             for b in result["blocking_obligations"]))
+        self.assertTrue(any(step["operation"] == "RETAIN_CONSUMER_UNTIL_APPROVAL"
+                            and not step["affected_paths"]
+                            and not step["expected_graph_delta"]["may_remove_structural_edge_ids"]
+                            for step in result["steps"]))
+        self.assertFalse(any(step["operation"] == "REWIRE_CONSUMER_CANDIDATE"
+                             for step in result["steps"]))
 
     def test_partial_shared_four_class_remains_hold(self):
         target = "PhysicsFVLogMolarElectronReactionSource"
