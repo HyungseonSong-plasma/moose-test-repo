@@ -140,7 +140,7 @@ def python_template_instances(text: str, target: str, aliases: set[str]) -> list
         inside, block = False, None
         for i, line in enumerate(lines):
             cleaned = line.strip()
-            if cleaned == "[FVKernels]":
+            if cleaned == "[FVKernels]" or cleaned.endswith('"""[FVKernels]') or cleaned.endswith("'''[FVKernels]"):
                 inside, block = True, None
                 continue
             if not inside:
