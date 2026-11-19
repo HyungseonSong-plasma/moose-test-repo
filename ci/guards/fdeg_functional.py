@@ -104,7 +104,11 @@ def verify_structural(root: Path, report: dict, target: str,
         if instance.get("structural_edge_id") not in edge_ids:
             raise ValueError("STRUCTURAL_INSTANCE_EDGE_MISSING")
         edge = id_to_edge[instance["structural_edge_id"]]
-        if (edge["from"] != instance_id or edge["relation"] != "INPUT_INSTANTIATES"
+        allowed_relation = ("PYTHON_TEMPLATE_INSTANTIATES"
+                            if instance.get("instance_kind") ==
+                            "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"
+                            else "INPUT_INSTANTIATES")
+        if (edge["from"] != instance_id or edge["relation"] != allowed_relation
                 or edge["to"] != "class:" + target):
             raise ValueError("STRUCTURAL_INSTANCE_EDGE_NOT_BOUND")
         if not isinstance(instance.get("bindings"), list):
@@ -242,8 +246,12 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
         required = match.group(1) == "addRequiredParam"
         # A sole quoted argument after the name is a description, not a default.
         has_default = not required and raw_args.lstrip(", ").strip()[:1] != '"'
+        enum_literal = (re.search(r'MooseEnum\s*\(\s*"([^"]+)"', raw_args)
+                        if "MooseEnum" in match.group(2) else None)
         params.append({
             "name": match.group(3), "cpp_type": " ".join(match.group(2).split()),
+            "allowed_enum_values": (
+                enum_literal.group(1).split() if enum_literal else None),
             "declaration": match.group(1), "required": required,
             "has_explicit_source_default": has_default,
             "declared_default_expression": raw_args[:240] if has_default else None,
@@ -264,6 +272,57 @@ def extract_parameters(root: Path, profile: dict) -> list[dict]:
                         "excerpt": match.group(0).strip()[:500]}
         })
     return sorted(params, key=lambda p: (p["name"], p["witness"]["line"]))
+
+
+def validate_declared_instance(instance: dict | None, parameters: list[dict]) -> dict:
+    """Source-only local-parameter check, never proof of generated/native input."""
+    if instance is None:
+        return {"status": "UNKNOWN", "mode": "UNKNOWN",
+                "unresolved": ["INSTANCE_NOT_SOURCE_BOUND"], "invalid": []}
+    params = {p["name"]: p for p in parameters}
+    bindings = {b["name"]: b for b in instance["bindings"]}
+    invalid = []
+    unresolved = []
+    for name, param in sorted(params.items()):
+        if param["required"] and name not in bindings:
+            # Includes and dynamic overrides may provide it at runtime.
+            # Missing from a source *template* is an OPEN proof gap, not
+            # evidence of a successfully constructed invalid native object.
+            unresolved.append("REQUIRED_LOCAL_PARAM_EFFECTIVE_BINDING_UNKNOWN:" + name)
+    mode = bindings.get("state_form")
+    mode_status = "UNKNOWN"
+    if mode is not None:
+        declared = mode["raw_value"].strip("'\"")
+        enum = params.get("state_form")
+        if enum and enum.get("allowed_enum_values"):
+            mode_status = ("SUPPORTED_SOURCE_DECLARATION"
+                           if declared in enum["allowed_enum_values"]
+                           else "INVALID_DECLARED_MODE")
+            if mode_status == "INVALID_DECLARED_MODE":
+                invalid.append({
+                    "name": "state_form", "reason": "INVALID_DECLARED_MODE",
+                    "declared_value": declared,
+                    "allowed_values": enum["allowed_enum_values"],
+                    "source_witness": enum["witness"],
+                    "input_witness": {"path": instance["input_path"],
+                                      "line": mode["line"],
+                                      "blob_sha": instance["evidence"]["blob_sha"]}})
+        else:
+            unresolved.append("STATE_FORM_ENUM_NOT_LOCALLY_PROVEN")
+    elif "state_form" in params:
+        mode_status = "UNKNOWN_DEFAULT_OR_INHERITED"
+    if instance.get("instance_kind") == "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED":
+        unresolved.append("GENERATED_INPUT_NOT_OBSERVED")
+    return {
+        "status": "INVALID" if invalid else "UNKNOWN" if unresolved
+                 else "SUPPORTED_SOURCE_ONLY",
+        "mode": mode_status,
+        "invalid": invalid, "unresolved": unresolved,
+        "runtime_status": "NOT_OBSERVED",
+        "representation": "NOT_PROVEN_FOR_EFFECTIVE_INPUT",
+        "units": "NOT_PROVEN_FOR_EFFECTIVE_INPUT",
+        "support": "LOCAL_VALIDPARAMS_AND_DECLARED_INPUT_ONLY_NOT_CHECK_INPUT"
+    }
 
 
 def shared_unit_evidence(root: Path, profile: dict) -> dict | None:
@@ -374,6 +433,7 @@ def consumer_role(edge: dict) -> str | None:
     relationship = edge["relation"]
     return {
         "INPUT_INSTANTIATES": "DECLARED_INPUT_NOT_RUNTIME",
+        "PYTHON_TEMPLATE_INSTANTIATES": "DECLARED_PYTHON_TEMPLATE_NOT_GENERATED_OR_RUNTIME",
         "INPUT_MATCHES_ACTION_SYNTAX": "DECLARED_ACTION_INPUT_NOT_RUNTIME",
         "ACTION_CREATES": "SOURCE_ACTION_FACTORY_CALL_NOT_RUNTIME",
         "ACTION_CREATES_VIA_LOCAL_LITERAL": "SOURCE_LEXICAL_FLOW_CANDIDATE",
@@ -513,7 +573,12 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
             "structural_edge_id": edge["edge_id"], "source_node": edge["from"],
             "role": role, "evidence_strength": edge["strength"],
             "instance_id": instance["instance_id"] if instance else None,
+            "instance_kind": instance.get("instance_kind", "TRACKED_MOOSE_INPUT")
+                if instance else "NO_INSTANCE",
+            "generated_output_path": instance.get("generated_output_path", "NOT_APPLICABLE")
+                if instance else "UNKNOWN",
             "declared_bindings": instance["bindings"] if instance else [],
+            "declared_input_validation": validate_declared_instance(instance, parameters),
             "input_path": instance["input_path"] if instance else edge["evidence"]["path"],
             "block_path": instance["block_path"] if instance else None,
             "declared_mode": next(
@@ -593,9 +658,19 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
     functional_edges.sort(key=lambda e: (e["relation"], e["to"], e["claim_id"]))
 
     unresolved = sorted(set(profile.get("unresolved_semantics", [])) |
-                        ({"STRUCTURAL_SCAN_INCOMPLETE"} if structural_report["status"] == "INCOMPLETE" else set()))
+                        ({"STRUCTURAL_TARGET_DEPENDENCIES_INCOMPLETE"}
+                         if structural_report.get("target_dependency_status",
+                                                  structural_report["status"]) == "INCOMPLETE"
+                         else set()) |
+                        ({"STRUCTURAL_UPSTREAM_GENERATOR_OR_INPUT_UNRESOLVED"}
+                         if structural_report.get("upstream_unresolved") else set()))
     report = {
         "schema": SCHEMA, "target": target,
+        "global_scan_status": structural_report["status"],
+        "target_dependency_status": structural_report.get("target_dependency_status",
+                                                          structural_report["status"]),
+        "global_unresolved_count": structural_report.get("global_unresolved_count",
+                                                         len(structural_report["unresolved"])),
         "source_identity": {
             "repository_head": structural_report["repository_head"],
             "structural_schema": structural_report["schema"],
@@ -631,6 +706,8 @@ def assemble(root: Path, structural_report: dict, target: str, registry: dict,
         "workflow_execution_routes": structural_enrichment["workflow_execution_paths"],
         "external_generator_imports": structural_enrichment["external_imports"],
         "target_scoped_unresolved": structural_report["target_scoped_unresolved"],
+        "upstream_unresolved": structural_report.get("upstream_unresolved", []),
+        "source_template_census": structural_report.get("source_template_census"),
         "required_discriminators": sorted(profile.get("required_discriminators", [])),
         "discriminator_contracts": {key: discriminators[key] for key in sorted(discriminators)},
         "parameter_declarations": parameters,

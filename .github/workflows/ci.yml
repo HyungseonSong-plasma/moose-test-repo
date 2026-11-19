@@ -72,7 +72,9 @@ jobs:
       github.event.action != 'edited' ||
       github.event.changes.base != null
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
+    env:
+      FDEG_CACHE_DIR: /tmp/fdeg-index-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -98,6 +100,22 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
       - name: Validate FDEG Transition Evidence P0
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Validate FDEG Harness A-D P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v
+      - name: Validate FDEG Scan Cache P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_scan_cache.py -v
+      - name: Capture FDEG exact-HEAD retirement evidence (code7 P0 only)
+        run: |
+          head="$(git rev-parse HEAD)"
+          python3 ci/guards/fdeg_retirement_evidence.py --mode capture --target PhysicsFVThermalDiffusion --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7"
+          python3 ci/guards/fdeg_retirement_evidence.py --mode verify-archive --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7"
+      - name: Upload exact-HEAD FDEG retirement snapshot
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fdeg-retirement-code7-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fdeg-retirement-code7/
+          retention-days: 14
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
@@ -361,8 +379,14 @@ jobs:
             tests/**/*.py
           if-no-files-found: error
           retention-days: 1
-      - name: Run Physics pytest
-        run: python -m pytest -q
+      - name: Run Physics pytest (FDEG P0 suites already executed above)
+        run: >-
+          python -m pytest -q
+          --ignore=tests/test_fdeg_structural.py
+          --ignore=tests/test_fdeg_functional.py
+          --ignore=tests/test_fdeg_transition.py
+          --ignore=tests/test_fdeg_harness_abcd.py
+          --ignore=tests/test_fdeg_scan_cache.py
       - name: Regression-test Issue493 canonical/archive Exodus P4 diagnostics
         run: python experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
       - name: Validate normalized-to-physical coupled equivalence fixture

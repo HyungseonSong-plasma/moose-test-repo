@@ -244,8 +244,16 @@ class FunctionalP0Test(unittest.TestCase):
 
     def test_incomplete_structural_scan_is_not_caller_zero(self):
         self.put("cases/unknown.i", "type = $dynamic_type\n")
-        result = self.assemble(graph=structural.scan(self.root, "Legacy"))
-        self.assertIn("STRUCTURAL_SCAN_INCOMPLETE", result["unresolved_obligations"])
+        graph = structural.scan(self.root, "Legacy")
+        self.assertEqual(graph["status"], "INCOMPLETE")
+        self.assertEqual(graph["target_dependency_status"],
+                         "DECLARATIONS_ONLY_RUNTIME_UNVERIFIED")
+        result = self.assemble(graph=graph)
+        self.assertEqual(result["global_scan_status"], "INCOMPLETE")
+        self.assertEqual(result["target_dependency_status"],
+                         "DECLARATIONS_ONLY_RUNTIME_UNVERIFIED")
+        self.assertNotIn("STRUCTURAL_TARGET_DEPENDENCIES_INCOMPLETE",
+                         result["unresolved_obligations"])
         self.assertEqual(result["equivalence_verdict"], "NOT_PROVEN")
         self.assertEqual(result["safety"],
                          "NO_CALLER_ZERO_TRANSITION_OR_RETIREMENT_AUTHORIZATION")

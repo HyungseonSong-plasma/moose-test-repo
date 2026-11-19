@@ -12,6 +12,7 @@ import ast
 import fnmatch
 import hashlib
 import json
+import time
 import posixpath
 import re
 import subprocess
@@ -21,6 +22,7 @@ from pathlib import Path
 SCHEMA = "fdeg.structural.v0.3"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fdeg_structural_enrichment as route_evidence  # noqa: E402
+import fdeg_scan_cache as scan_cache  # noqa: E402
 EXTENSIONS = {".C", ".cc", ".cpp", ".h", ".hpp", ".py", ".i", ".json", ".yml", ".yaml", ".sh"}
 SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache"}
 REGISTRATION = re.compile(
@@ -66,6 +68,23 @@ def tracked_files(root: Path) -> tuple[list[Path], str | None]:
                  and not (set(Path(p).parts) & SKIP_DIRS)], git(root, "rev-parse", "HEAD"))
     return (sorted(p for p in root.rglob("*") if p.is_file() and (p.suffix in EXTENSIONS or p.name == "Makefile")
                    and not (set(p.relative_to(root).parts) & SKIP_DIRS)), None)
+
+
+def tracked_blob_manifest(root: Path) -> dict[str, str]:
+    """Complete tracked path/blob identities from the Git index, without file IO."""
+    result = {}
+    for row in git(root, "ls-files", "--stage", "-z").split("\0"):
+        if not row:
+            continue
+        metadata, rel = row.split("\t", 1)
+        fields = metadata.split()
+        if len(fields) != 3 or fields[2] != "0":
+            raise ValueError("FDEG_GIT_INDEX_NOT_NORMALIZED")
+        path = Path(rel)
+        if ((path.suffix in EXTENSIONS or path.name == "Makefile")
+                and not (set(path.parts) & SKIP_DIRS)):
+            result[rel] = fields[1]
+    return result
 
 
 def blob_sha(data: bytes) -> str:
@@ -138,22 +157,64 @@ def input_blocks(text: str) -> list[dict]:
 
 def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
     root = root.resolve()
+    started = time.perf_counter()
     if not SYMBOL.fullmatch(target):
         raise ValueError("INVALID_CXX_CLASS_NAME")
-    files, head = tracked_files(root)
-    if expected_head is not None and (head is None or head != expected_head):
+    # Verify the HEAD and the tracked worktree *before* loading a cached graph.
+    # A cached graph is strictly a performance shortcut for an earlier complete
+    # source scan; caller-zero, runtime and retirement verdicts never change.
+    git_head = git(root, "rev-parse", "HEAD") if (root / ".git").exists() else None
+    if expected_head is not None and git_head != expected_head:
         raise ValueError("EXACT_HEAD_MISMATCH")
-    if expected_head is not None and git(root, "status", "--porcelain", "--untracked-files=no"):
-        raise ValueError("TRACKED_WORKTREE_DIRTY")
-    contents: dict[str, tuple[str, str]] = {}
-    errors: list[dict] = []
-    for path in files:
-        rel = path.relative_to(root).as_posix()
-        try:
-            data = path.read_bytes()
-            contents[rel] = (data.decode("utf-8"), blob_sha(data))
-        except (OSError, UnicodeError) as exc:
-            errors.append({"path": rel, "reason": type(exc).__name__})
+    cache = None
+    if git_head is not None:
+        dirty = bool(git(root, "status", "--porcelain", "--untracked-files=no"))
+        if expected_head is not None and dirty:
+            raise ValueError("TRACKED_WORKTREE_DIRTY")
+        if not dirty:
+            try:
+                cache = scan_cache.cache_key(
+                    root, git_head, target,
+                    (Path(__file__), Path(route_evidence.__file__),
+                     Path(scan_cache.__file__)))
+            except OSError:
+                cache = None
+            if cache is not None:
+                hit = scan_cache.load(cache, target, git_head, SCHEMA, stable_id)
+                if hit is not None:
+                    print("FDEG_STRUCTURAL_CACHE=HIT target=" + target +
+                          " seconds=" + format(time.perf_counter() - started, ".3f"),
+                          file=sys.stderr)
+                    return hit
+    implementation = (Path(__file__), Path(route_evidence.__file__),
+                      Path(scan_cache.__file__))
+    source_key = scan_cache.source_index_key(root, git_head, implementation) if cache else None
+    source_payload = (scan_cache.load_source_index(
+        source_key, tracked_blob_manifest(root)) if source_key else None)
+    if source_payload is not None:
+        # This is a complete HEAD-pinned set of tracked sources and scan errors,
+        # not a target substring filter. Every target retains the same coverage.
+        contents, errors = source_payload
+        head = git_head
+        print("FDEG_SOURCE_INDEX=HIT files=" + str(len(contents)), file=sys.stderr)
+    else:
+        files, head = tracked_files(root)
+        if expected_head is not None and (head is None or head != expected_head):
+            raise ValueError("EXACT_HEAD_MISMATCH")
+        contents: dict[str, tuple[str, str]] = {}
+        errors: list[dict] = []
+        for path in files:
+            rel = path.relative_to(root).as_posix()
+            try:
+                data = path.read_bytes()
+                contents[rel] = (data.decode("utf-8"), blob_sha(data))
+            except (OSError, UnicodeError) as exc:
+                errors.append({"path": rel, "reason": type(exc).__name__})
+        if source_key is not None:
+            print("FDEG_SOURCE_INDEX=" + ("MISS_STORED" if
+                  scan_cache.save_source_index(source_key, contents, errors)
+                  else "MISS_UNSTORED") +
+                  " files=" + str(len(contents)), file=sys.stderr)
     aliases = {target}
     for text, _ in contents.values():
         for match in REGISTRATION.finditer(text):
@@ -289,6 +350,23 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
             except SyntaxError as exc:
                 errors.append({"path": path, "line": exc.lineno, "reason": "PYTHON_PARSE_ERROR"})
                 continue
+            # Imported module is a static route, not execution.
+            for n in ast.walk(tree):
+                if isinstance(n, ast.ImportFrom) and n.module:
+                    module_base = n.module.replace(".", "/")
+                    candidates = [module_base + ".py"]
+                    candidates.extend(module_base + "/" + alias.name + ".py"
+                                      for alias in n.names if alias.name != "*")
+                    for module in sorted(set(candidates)):
+                        if module in source_names:
+                            emit(node, "PYTHON_IMPORTS_MODULE", "file:" + module,
+                                 path, n.lineno, n.module, "STATIC_IMPORT_NOT_EXECUTION")
+                elif isinstance(n, ast.Import):
+                    for alias in n.names:
+                        module = alias.name.replace(".", "/") + ".py"
+                        if module in source_names:
+                            emit(node, "PYTHON_IMPORTS_MODULE", "file:" + module,
+                                 path, n.lineno, alias.name, "STATIC_IMPORT_NOT_EXECUTION")
             for n in ast.walk(tree):
                 if isinstance(n, ast.Dict):
                     for key, value in zip(n.keys, n.values):
@@ -299,8 +377,14 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                             elif name is None:
                                 unknown(path, n.lineno, "DYNAMIC_PYTHON_TYPE")
                 if isinstance(n, ast.Call):
+                    call_name = (n.func.attr if isinstance(n.func, ast.Attribute)
+                                 else n.func.id if isinstance(n.func, ast.Name) else "")
+                    moose_type_call = call_name in {
+                        "upsert_parameter", "_insert_kernel", "add_kernel",
+                        "add_fv_kernel", "addFVKernel", "addKernel",
+                        "add_moose_object", "build_moose_object"}
                     for kw in n.keywords:
-                        if kw.arg == "type":
+                        if kw.arg == "type" and moose_type_call:
                             name = literal(kw.value)
                             if name in aliases:
                                 emit(node, "PYTHON_DECLARES_TYPE", class_id, path, n.lineno, name)
@@ -321,6 +405,28 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                 if isinstance(n, ast.Constant) and isinstance(n.value, str):
                     if target in SYMBOL.findall(n.value):
                         emit(node, "MENTIONS_SYMBOL", class_id, path, n.lineno, target, "LEXICAL_ONLY")
+            for candidate in route_evidence.python_template_instances(text, target, aliases):
+                line_no = candidate["type_line"]
+                instance_id = "instance:" + stable_id(
+                    "input-template", [path, candidate["block_path"], line_no,
+                                       candidate["factory_type"]])
+                if instance_id in {item["instance_id"] for item in instances}:
+                    continue
+                instances.append({
+                    "instance_id": instance_id,
+                    "input_path": path, "block_path": candidate["block_path"],
+                    "factory_type": candidate["factory_type"],
+                    "type_line": line_no,
+                    "bindings": sorted(candidate["bindings"], key=lambda b: (b["line"], b["name"])),
+                    "instance_kind": candidate["source_kind"],
+                    "runtime_activation": "NOT_OBSERVED",
+                    "generated_output_path": "UNKNOWN",
+                    "evidence": {"path": path, "line": line_no, "blob_sha": contents[path][1]},
+                })
+                emit(node, "PYTHON_DECLARES_TEMPLATE_INSTANCE", instance_id,
+                     path, line_no, candidate["block_path"], "SOURCE_TEMPLATE_NOT_GENERATED")
+                emit(instance_id, "PYTHON_TEMPLATE_INSTANTIATES", class_id,
+                     path, line_no, candidate["factory_type"], "SOURCE_TEMPLATE_NOT_RUNTIME")
         elif suffix == ".json":
             try:
                 doc = json.loads(text)
@@ -351,6 +457,26 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
                 else:
                     unknown(path, line_of(text, match.start()), "WORKFLOW_CALLEE_UNRESOLVED:" + other)
 
+    # Independent source-line census. Missing mapped template blocks remain HOLD.
+    template_declarations = []
+    for source_path, (source_text, source_sha) in sorted(contents.items()):
+        if not source_path.endswith(".py"):
+            continue
+        for source_line, raw in enumerate(source_text.splitlines(), 1):
+            if re.match(r'^\s{2,}type\s*=\s*' + re.escape(target) + r'\s*$', raw):
+                template_declarations.append({
+                    "path": source_path, "line": source_line, "blob_sha": source_sha})
+    mapped_declarations = {(item["input_path"], item["type_line"])
+                           for item in instances
+                           if item.get("instance_kind") ==
+                           "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"}
+    missing_template_declarations = [
+        item for item in template_declarations
+        if (item["path"], item["line"]) not in mapped_declarations]
+    for item in missing_template_declarations:
+        unknown(item["path"], item["line"],
+                "PYTHON_TEMPLATE_TYPE_DECLARATION_NOT_MAPPED:" + target)
+
     # New v0.3 evidence is appended before reachability to include chained
     # provider and build declarations in the target-rooted graph.
     enrichment = route_evidence.enrichment(contents, target, aliases, instances,
@@ -371,6 +497,11 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
         edge["source_head"] = head
         edge["revision_scope"] = route_evidence.scope(path)
         edge["activation_status"] = "NOT_OBSERVED"
+        edge["source_role"] = (
+            "STATIC_TEMPLATE_CANDIDATE_NOT_RUNTIME"
+            if edge["relation"] in {"PYTHON_TEMPLATE_INSTANTIATES",
+                                   "PYTHON_DECLARES_TEMPLATE_INSTANCE"}
+            else "SOURCE_RELATION_NOT_RUNTIME")
         if edge["relation"] == "MENTIONS_SYMBOL":
             source_line = edge["evidence"]["excerpt"]
             if re.search(r'\b(?:assert|forbidden|must.not|not.in)\b', source_line, re.I):
@@ -378,9 +509,11 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
             else:
                 edge["reference_role"] = "LEXICAL_REFERENCE_NOT_CONSUMER"
         elif edge["relation"] in {"GENERATOR_EMITS_OBJECT_CANDIDATE", "PYTHON_DECLARES_TYPE",
-                                   "PYTHON_WRITES_INPUT"}:
+                                   "PYTHON_WRITES_INPUT", "PYTHON_TEMPLATE_INSTANTIATES",
+                                   "PYTHON_DECLARES_TEMPLATE_INSTANCE"}:
             edge["reference_role"] = "STATIC_GENERATOR_NOT_RUNTIME"
-        elif edge["relation"] in {"WORKFLOW_RUNS_SCRIPT", "WORKFLOW_CALLS", "SHELL_RUNS_SCRIPT"}:
+        elif edge["relation"] in {"WORKFLOW_RUNS_SCRIPT", "WORKFLOW_CALLS", "SHELL_RUNS_SCRIPT",
+                                   "PYTHON_IMPORTS_MODULE"}:
             edge["reference_role"] = "DECLARED_WORKFLOW_PATH_NOT_EXECUTION"
         elif edge["relation"] in {"PRODUCES_FUNCTOR_CANDIDATE", "BINDS_PARAMETER"}:
             edge["reference_role"] = "DECLARED_PROVIDER_OR_BINDING_NOT_EFFECTIVE"
@@ -391,27 +524,84 @@ def scan(root: Path, target: str, expected_head: str | None = None) -> dict:
         (item for item in instances if item["instance_id"] in reached),
         key=lambda item: item["instance_id"])
     edge_ids = {edge["from"]: edge["edge_id"] for edge in selected
-                if edge["relation"] == "INPUT_INSTANTIATES"}
+                if edge["relation"] in {"INPUT_INSTANTIATES",
+                                        "PYTHON_TEMPLATE_INSTANTIATES"}}
     for item in instance_list:
         item["structural_edge_id"] = edge_ids[item["instance_id"]]
     nodes = [{"id": item, "kind": "CLASS" if item.startswith("class:")
               else "INSTANCE" if item.startswith("instance:")
               else "FUNCTOR" if item.startswith("functor:") else "FILE"}
              for item in sorted(reached)]
-    scoped_sources = {edge["evidence"]["path"] for edge in selected}
-    scoped_unresolved = [entry for entry in unresolved if entry["path"] in scoped_sources]
+    # A large workflow file is not a causal join for unrelated diagnostics.
+    evidence_lines = {(e["evidence"]["path"], e["evidence"]["line"])
+                      for e in selected}
+    for item in instance_list:
+        evidence_lines.update((item["input_path"], b["line"])
+                              for b in item["bindings"])
+    scoped_unresolved = [
+        entry for entry in unresolved
+        if (entry["path"], entry["line"]) in evidence_lines]
+    generator_paths = {e["evidence"]["path"] for e in selected
+                       if e["relation"] in {"GENERATOR_EMITS_OBJECT_CANDIDATE",
+                                           "PYTHON_TEMPLATE_INSTANTIATES",
+                                           "PYTHON_DECLARES_TYPE"}}
+    target_input_paths = {item["input_path"] for item in instance_list
+                          if item["input_path"].endswith(".i")}
+    # Same-source unknown writes/includes can be upstream but not directly
+    # mapped to the target node. Preserve them in a separate class rather
+    # than hiding them or treating all workflow diagnostics as target blockers.
+    upstream_unresolved = [
+        entry for entry in unresolved
+        if (entry["path"], entry["line"]) not in evidence_lines
+        and ((entry["path"] in generator_paths
+              and entry["reason"].startswith(("GENERATED_INPUT_NOT_TRACKED",
+                                               "DYNAMIC_PYTHON_TYPE",
+                                               "GENERATED_INPUT_NOT_TRACKED_OR_OBSERVED")))
+             or (entry["path"] in target_input_paths
+                 and entry["reason"].startswith("INCLUDE_UNRESOLVED")))]
+    global_only_unresolved_count = (
+        len(unresolved) - len(scoped_unresolved) - len(upstream_unresolved))
+    global_status = "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED"
+    target_status = ("INCOMPLETE" if scoped_unresolved or upstream_unresolved
+                     or missing_template_declarations
+                     else "DECLARATIONS_ONLY_RUNTIME_UNVERIFIED")
     report = {"schema": SCHEMA, "target": target, "repository_head": head,
+              "global_scan_status": global_status,
+              "target_dependency_status": target_status,
+              "global_unresolved_count": len(unresolved),
+              "target_scoped_unresolved_count": len(scoped_unresolved),
+              "upstream_unresolved_count": len(upstream_unresolved),
+              "global_only_unresolved_count": global_only_unresolved_count,
+              "unresolved_scope_semantics": {
+                  "target": "SAME_SOURCE_WITNESS_LINE",
+                  "upstream": "TARGET_GENERATOR_OR_DECLARED_INPUT_SOURCE_WITH_UNRESOLVED_DEPENDENCY",
+                  "global": "NOT_CAUSALLY_JOINED_TO_TARGET"},
+              "source_template_census": {
+                  "declared_lines": template_declarations,
+                  "mapped_virtual_instances": len(mapped_declarations),
+                  "unmapped_declarations": missing_template_declarations,
+                  "status": ("SOURCE_TEMPLATE_GAP" if missing_template_declarations
+                             else "SOURCE_TEMPLATE_DECLARATIONS_MAPPED_NOT_EXECUTED"),
+                  "runtime_coverage": "NOT_PROVEN",
+                  "external_consumer_coverage": "NOT_PROVEN"},
               "scan_scope": {"tracked_only": head is not None, "extensions": sorted(EXTENSIONS),
                              "files_scanned": len(contents),
                              "untracked_generated_inputs_included": head is None},
               "nodes": nodes, "edges": selected, "instances": instance_list,
               "enrichment": enrichment,
               "target_scoped_unresolved": sorted(scoped_unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
+              "upstream_unresolved": sorted(upstream_unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
               "unresolved": sorted(unresolved, key=lambda x: (x["path"], x["line"], x["reason"])),
               "scan_errors": errors,
               "status": "INCOMPLETE" if errors or unresolved else "STRUCTURAL_RECORDED",
               "safety": "NO_CALLER_ZERO_OR_RETIREMENT_VERDICT"}
     report["graph_id"] = stable_id("graph", report)
+    if cache is not None:
+        saved = scan_cache.save(cache, report)
+        print("FDEG_STRUCTURAL_CACHE=" + ("MISS_STORED" if saved else "MISS_UNSTORED") +
+              " target=" + target +
+              " seconds=" + format(time.perf_counter() - started, ".3f"),
+              file=sys.stderr)
     return report
 
 
