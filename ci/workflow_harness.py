@@ -233,9 +233,13 @@ def self_test() -> None:
         special = route("special", issue=493, variant=selected, records=entries)
         assert special["activation"] in {"deferred", "active"}
         assert (ROOT / special["output"] in outputs()) == (special["activation"] == "active")
-    # Regression: preserve the new required Physics PR native validation gate.
-    assert re.search(r"^  plasma_native_regression:\s*$",
-                     render(ROOT, route("general", records=entries)), re.MULTILINE)
+    # Repository CI now owns only unconditional integration validation.
+    general = render(ROOT, route("general", records=entries))
+    assert JOB.findall(general.split("\njobs:\n", 1)[1]) == ["validate"]
+    native = (ROOT / ".github/workflows/physics-native-ci.yml").read_text(
+        encoding="utf-8"
+    )
+    assert re.search(r"^  plasma_native_regression:\s*$", native, re.MULTILINE)
     # Reject path escape and noncanonical path spellings before writing YAML.
     for unsafe in ("ci/workflow_templates/../workflow.yml",
                    "ci/workflow_templates/sub//workflow.yml"):
