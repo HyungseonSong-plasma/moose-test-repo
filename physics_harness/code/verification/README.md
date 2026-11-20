@@ -37,3 +37,15 @@ Verifier works on Graph source Evidence and actual before/after changes.
 Its dependency/call candidates produce verification obligations rather than
 blocking unfamiliar directories. Other repository checks remain independent
 and are not implicitly declared replaced by Verification v0.1.
+
+## Source dependency verification (#743)
+
+`dependencies.py` retains `plan_change_verification` and provides
+`verify_dependencies` / `verify_dependency_repository`. The latter uses an
+exact-HEAD source provider to verify all tracked Python package files.
+Repository-specific package rules are supplied as `DependencyContract`
+inputs, not embedded in this module. Findings retain category, file, source
+line and Git blob SHA. Missing/invalid source coverage yields UNVERIFIED;
+known static violations yield FAIL. A PASS proves only the configured static
+absolute-import and source-reference checks, not dynamic resolution, native
+runtime evidence, or semantic equivalence. No result approves mutation.
