@@ -49,3 +49,9 @@ line and Git blob SHA. Missing/invalid source coverage yields UNVERIFIED;
 known static violations yield FAIL. A PASS proves only the configured static
 absolute-import and source-reference checks, not dynamic resolution, native
 runtime evidence, or semantic equivalence. No result approves mutation.
+
+The former `physics_dependency_guard.py` CI gate was replaced only after
+legacy/Harness verdict equivalence and an exact-HEAD repository source audit
+passed together in the same Repository CI run. The Harness source verifier
+retains static absolute-import, repository-tool reference and package cycle
+checks; separate Physics/runtime boundary guards remain independent.
