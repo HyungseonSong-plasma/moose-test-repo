@@ -44,40 +44,29 @@ impact and energy implementation guards remain separate active steps.
 - `workflow_surface_guard.py` requires the new audit workflow to be manual.
 - No P3/P4 run or science acceptance is authorized.
 
-## Gradual migration to code-derived contracts (proposal)
+## Corrected contract terminology — lifecycle over discovery
 
-`repository_ci_scope_v1.json` is a transitional **static inventory**, not
-a permanent architectural authority. It duplicates job and step names, and
-must change whenever CI structure changes.
+The authoritative definitions and complete job-by-job reclassification are in
+[Contract Lifecycle v0.1](CONTRACT_LIFECYCLE_V01.md), issue #754.
 
-A follow-up should introduce providers attached to the verification code:
+- **Static Contract**: a permanent repository invariant independent of which
+  development Issue or PR is currently active. It never expires with task
+  completion.
+- **Dynamic Contract**: a temporary verification and acceptance gate needed
+  for a **specific development task**. It is active only until that task has
+  completed its required verification, scoped acceptance and evidence custody.
+  It must then be removed from the active CI/contracts.
+- **Regression tests and evidence receipts** are not themselves separate
+  contract lifetimes. Keep valuable behavior tests; archive accepted receipts.
 
-```python
-@dataclass(frozen=True)
-class ContractProvider:
-    capability: str
-    source_selectors: tuple[str, ...]
-    required_evidence: tuple[str, ...]
-    verifier: Callable[..., Verification]
-    scope: str
-    version: int
-```
+This supersedes the earlier wording that equated "dynamic contracts" with
+auto-discovered `ContractProvider` declarations. An optional code-discovery
+mechanism may implement either type, but **does not determine the type**.
+Likewise, `repository_ci_scope_v1.json` is a temporary migration inventory,
+not a permanent list of mandatory historical jobs.
 
-The Harness can discover these providers, compute changed source/consumers,
-derive per-HEAD applicability, execute verifiers and emit a small signed-or-
-hashed receipt with `PASS / FAIL / HOLD / N/A`. The receipt must distinguish
-a dynamic *coverage discovery* result from a verified semantic compatibility
-claim. Discovery gaps, ambiguous ownership and missing evidence fail closed
-as `HOLD`.
-
-To prevent unchecked self-declaration, a **minimal fixed safety kernel**
-remains independent of providers: exact HEAD, authorized workflow/event
-surface, stable source provenance, P3/P4 operator authorization, and the
-rule that no known necessary verifier may be skipped. Providers must be
-validated with negative controls (deleted implementation, missing provider,
-modified dependency graph, wrong SHA, hidden triggering path, and false
-positive on scientific equivalence).
-
-Do not remove the static inventory until these negative tests and actual
-static-vs-discovered parity have succeeded on exact candidate HEADs. Historical
-metadata then becomes immutable evidence, not an always-run CI contract.
+The seven `Physics Legacy Audit` jobs moved by this PR are an *intermediate
+containment step*, not completion of Dynamic Contract retirement. Do not
+perpetually retain obsolete one-shot Guards in manual CI after their accepted
+scope is verified and archived. Retire those contracts separately, preserving
+useful generic tests and historical evidence.
