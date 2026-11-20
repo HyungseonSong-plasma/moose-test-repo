@@ -12,7 +12,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "ci/baselines/issue541_core_four_retirement.json"
-CI = ROOT / ".github/workflows/ci.yml"
+CI = ROOT / ".github/workflows/physics-code-ci.yml"
+NATIVE_CI = ROOT / ".github/workflows/physics-native-ci.yml"
 GROUP_A = ROOT / "ci/baselines/issue541_group_a_retirement.json"
 
 REQUIRED_P0 = (
@@ -63,6 +64,16 @@ ORIGINALS = (
 "issue402-species-initial-composition-native-once.yml",
 "issue402-species-live-ic-inlet-native-once.yml",
 )
+
+def scoped_job(workflow: str, name: str) -> str:
+    """Limit ownership proof to one actual Job, not neighboring test targets."""
+    marker = "  " + name + ":"
+    if workflow.count(marker) != 1:
+        return ""
+    tail = workflow.split(marker, 1)[1]
+    end = re.search(r"(?m)^  [A-Za-z][A-Za-z0-9_-]*:\s*$", tail)
+    return marker + (tail[:end.start()] if end else tail)
+
 
 def check(manifest: dict, ci: str, native: str) -> None:
     assert manifest["schema"] == "issue541.core_four.retirement_contract.v1"
@@ -171,9 +182,9 @@ def check(manifest: dict, ci: str, native: str) -> None:
     assert sum(x["branch_present_at_2026_11_15"] for x in owners) == 1
     assert ci.count("  issue402_core_four_p0:") == 1
     assert ci.count("  issue402_core_four_native_p2:") == 1
-    start = ci.index("  issue402_core_four_p0:")
-    end = ci.index("  issue402_core_four_native_p2:")
-    p0, p2 = ci[start:end], ci[end:]
+    p0 = scoped_job(ci, "issue402_core_four_p0")
+    p2 = scoped_job(ci, "issue402_core_four_native_p2")
+    assert p0 and p2, "CORE_FOUR_DOMAIN_JOB_MISSING"
     for path in REQUIRED_P0:
         assert path in p0, "P0_TARGET_MISSING:" + path
     for command in P0_CHECKERS:
@@ -264,7 +275,7 @@ def main():
     if not args.check and not args.self_test:
         parser.error("--check or --self-test required")
     m = json.loads(MANIFEST.read_text())
-    ci = CI.read_text()
+    ci = CI.read_text() + "\n" + NATIVE_CI.read_text()
     native = (ROOT / m["replacement"]["native_runner"]).read_text()
     if args.self_test:
         self_test(m, ci, native)

@@ -40,9 +40,10 @@ changes to `physics_harness/code/**` (or its workflow file) and executes:
 python -m pytest -q physics_harness/code/tests
 ```
 
-The general Repository CI ignores harness-code-only changes; the SOL
-Integration workflow is restricted to ontology/runtime-integration changes.
-Mixed-scope pull requests still receive the applicable broader validation.
+Repository CI verifies the shared integration contract for every PR,
+including Harness-only changes. `Harness Code CI` owns these local pytest
+tests; domain Physics/Native workflows run only for their declared affected
+source scopes. SOL Integration retains its separate runtime-integration scope.
 
 ## Diagnostics v0.1
 

@@ -1,0 +1,610 @@
+name: Physics Native CI
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'physics_app/**'
+      - 'physics_harness/analysis/**'
+      - 'physics_harness/application/**'
+      - 'physics_harness/execution/**'
+      - 'experiments/**'
+      - 'tests/boltzmann/**'
+      - 'ci/guards/issue541_artifact_evidence_guard.py'
+      - 'ci/guards/issue402_*'
+      - '.github/workflows/physics-native-ci.yml'
+
+permissions:
+  contents: read
+
+env:
+  PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
+
+concurrency:
+  group: physics-native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runtime-smoke:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      github.event.changes.base != null
+    name: Public immutable Physics runtime smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate accepted immutable runtime ref
+        shell: bash
+        run: |
+          set -euxo pipefail
+          [[ "$PHYSICS_RUNTIME_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-runtime@sha256:[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_BUILD_BASE_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-build-base@sha256:[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_RUNTIME_REVISION" =~ ^[0-9a-f]{40}$ ]]
+      - name: Pull accepted public Physics runtime without package credentials
+        id: pull
+        shell: bash
+        run: |
+          set -euxo pipefail
+          start="$(date +%s)"
+          docker pull "$PHYSICS_RUNTIME_REF"
+          end="$(date +%s)"
+          echo "pull_seconds=$((end - start))" >> "$GITHUB_OUTPUT"
+          echo "size_bytes=$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{.Size}}')" >> "$GITHUB_OUTPUT"
+      - name: Verify accepted runtime provenance
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$EXPECTED_RUNTIME_REVISION"
+          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$EXPECTED_BUILD_BASE_REF"
+          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
+      - name: Run Physics check-input smoke
+        shell: bash
+        run: docker run --rm "$PHYSICS_RUNTIME_REF" --check-input -i /opt/physics/ci/smoke.i
+      - name: Run bounded real Physics smoke
+        shell: bash
+        run: docker run --rm "$PHYSICS_RUNTIME_REF" -i /opt/physics/ci/smoke.i
+      - name: Run normalized-to-physical coupled field equivalence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          work="$PWD/.physical-state-equivalence"
+          python physics_app/ci/check_physical_state_coupled_equivalence.py --prepare "$work"
+          for mode in normalized physical; do
+            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" --check-input -i input.i
+            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" -i input.i
+          done
+          python physics_app/ci/check_physical_state_coupled_equivalence.py --compare "$work"
+      - name: Run n_epsilon-to-mean_en symbol equivalence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          work="$PWD/.mean-en-symbol-equivalence"
+          python physics_app/ci/check_mean_en_symbol_equivalence.py --prepare "$work"
+          for mode in old new; do
+            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" --check-input -i input.i
+            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" -i input.i
+          done
+          python physics_app/ci/check_mean_en_symbol_equivalence.py --compare "$work"
+      - name: Record ordinary CI runtime evidence
+        shell: bash
+        run: |
+          {
+            echo "PHYSICS_RUNTIME_REF=$PHYSICS_RUNTIME_REF"
+            echo "RUNTIME_PULL_SECONDS=${{ steps.pull.outputs.pull_seconds }}"
+            echo "RUNTIME_LOCAL_SIZE_BYTES=${{ steps.pull.outputs.size_bytes }}"
+            echo "ORDINARY_CI_USES_PHYSICS_RUNTIME=true"
+            echo "ORDINARY_CI_USES_RETIRED_RUNTIME=false"
+            echo "ORDINARY_CI_PULLS_MOOSE_DEV=false"
+            echo "ORDINARY_CI_PULLS_PHYSICS_BUILD_BASE=false"
+            echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
+            echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
+          }
+  boltzmann-eepf-controls:
+    name: Native Boltzmann EEPF development controls
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      github.event.changes.base != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check BOLSIG-format EFFECTIVE momentum / excitation contracts (synthetic P0/P1)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannCrossSections.C \
+            tests/boltzmann/cross_section_import_test.C \
+            -o /tmp/boltzmann-cross-section-import-test
+          /tmp/boltzmann-cross-section-import-test
+      - name: P0-1 independent energy-ceiling convergence, threshold and actual C++ elastic re-solves
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            tests/boltzmann/energy_ceiling_controller_test.C \
+            -o /tmp/boltzmann-energy-ceiling-test
+          /tmp/boltzmann-energy-ceiling-test
+      - name: P0-1 actual C++ coupled temporal-growth Emax re-solves (synthetic cross sections)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/growth_energy_ceiling_test.C \
+            -o /tmp/boltzmann-growth-energy-ceiling-test
+          /tmp/boltzmann-growth-energy-ceiling-test
+      - name: P0-2 threshold-aware nonuniform FV mesh and actual C++ M6b eigen/rates (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/threshold_mesh_growth_test.C \
+            -o /tmp/boltzmann-threshold-mesh-growth-test
+          /tmp/boltzmann-threshold-mesh-growth-test
+      - name: P0-1/P0-2 integrated adaptive Emax + threshold mesh M6b eigen/rates (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/adaptive_growth_ceiling_test.C \
+            -o /tmp/boltzmann-adaptive-growth-ceiling-test
+          /tmp/boltzmann-adaptive-growth-ceiling-test
+      - name: P0-2 fixed-Emax independent M6b mesh refinement, EEPF L1 and rate convergence (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/fixed_emax_mesh_convergence_test.C \
+            -o /tmp/boltzmann-fixed-emax-mesh-test
+          /tmp/boltzmann-fixed-emax-mesh-test
+      - name: P0-1/P0-2 joint Emax and independent mesh convergence gate (synthetic M6b)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/joint_emax_mesh_convergence_test.C \
+            -o /tmp/boltzmann-joint-emax-mesh-test
+          /tmp/boltzmann-joint-emax-mesh-test
+      - name: P0-3 conservative reconstructed growth operator and actual M6b Picard eigen re-solves (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/reconstructed_growth_picard_test.C \
+            -o /tmp/boltzmann-reconstructed-growth-picard-test
+          /tmp/boltzmann-reconstructed-growth-picard-test
+      - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
+        run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
+      - name: Upload C++ EEPF data, explicitly marked not real-gas parity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boltzmann-native-eepf-synthetic-controls
+          path: boltzmann-ci-eepf/*.json
+          if-no-files-found: error
+          retention-days: 30
+      # Developer binary only: no LXCat rows, no native BOLSIG+ reference
+      # and no selected third-party collision files are copied to CI.
+      # Download the binary and run it with privately held files locally.
+      - name: Build standalone native Boltzmann candidate for private-source local comparison
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTransport.C \
+            physics_app/src/utils/PhysicsBoltzmannCrossSections.C \
+            physics_app/ci/boltzmann_candidate_export.C \
+            -o /tmp/boltzmann-candidate-example4
+          mkdir -p boltzmann-candidate-bin
+          cp /tmp/boltzmann-candidate-example4 boltzmann-candidate-bin/boltzmann-candidate-example4
+          (cd boltzmann-candidate-bin && sha256sum boltzmann-candidate-example4 > SHA256SUMS)
+          echo 'PRIVATE INPUT REQUIRED; THIS ARTIFACT CONTAINS NO LXCat/BOLSIG+ INPUT OR OUTPUT DATA' > boltzmann-candidate-bin/README.txt
+      - name: Upload development-only C++ candidate binary without collision data
+        uses: actions/upload-artifact@v4
+        with:
+          name: boltzmann-candidate-local-private-input
+          path: boltzmann-candidate-bin/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Canonical P0 owner for retired issue402-json-rate-native-once.yml.
+  # Native H01-H05 P2 runs on the single built binary in plasma_native_regression.
+  issue402_core_four_native_p2:
+    name: Issue541 CORE four native source-bound P1 P2 (no P3)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      PINNED_OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact source and assert pinned OCI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify source and exact build image
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          grep -Fq 'sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008' physics_app/dependencies.lock
+          docker --version
+          mkdir -p experiments/Issue402_plasma_dsl_g1/evidence/core_four
+      - name: P1 - build one exact-head Physics binary for all four
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$PINNED_OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$PINNED_OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/core_four/p1.log
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          binary = Path("physics_app/physics-opt")
+          assert binary.is_file()
+          data = {
+            "source_sha": os.environ["EXPECTED_HEAD"],
+            "oci_image": os.environ["PINNED_OCI"],
+            "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+            "P1": "PASS",
+          }
+          Path("experiments/Issue402_plasma_dsl_g1/evidence/core_four/p1_identity.json").write_text(
+            json.dumps(data, sort_keys=True, indent=2) + "\n"
+          )
+          print("ISSUE541_CORE_FOUR_NATIVE_P1_PASS", data["source_sha"])
+          PY
+      - name: P2 - run four full original Native checks and fail-closed mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e EXPECTED_HEAD -e PINNED_OCI \
+            -v "$PWD:/workspace" "$PINNED_OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              python3 physics_app/ci/run_issue541_core_four_native_p2.py \
+                --executable /workspace/physics_app/physics-opt \
+                --source "$EXPECTED_HEAD" \
+                --oci "$PINNED_OCI" \
+                --identity /workspace/experiments/Issue402_plasma_dsl_g1/evidence/core_four/p1_identity.json
+              echo "P3=NOT_RUN; SCIENCE_HOLD"
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/core_four/p2.log
+      - name: Require source-bound CORE Native P1/P2 artifact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-core-native \
+            --expected-head "$EXPECTED_HEAD" --pinned-oci "$PINNED_OCI"
+      - name: Publish exact-head P1/P2 source-bound evidence (no P3)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-core-four-native-${{ github.run_id }}
+          path: experiments/Issue402_plasma_dsl_g1/evidence/core_four/**
+          if-no-files-found: error
+          retention-days: 30
+  plasma_native_regression:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact pull request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Confirm source and pinned build container
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -f experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+          grep -Fq 'sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008' physics_app/dependencies.lock
+          docker --version
+      - name: Set up Python for numerical comparisons
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install numerical comparison packages
+        run: python3 -m pip install 'numpy>=1.26,<3' 'scipy>=1.14,<2'
+      # Fast, independent gate: fail configuration/data/mount/scratch checks
+      # BEFORE rebuilding the expensive solver, without changing global CI.
+      - name: P0 - Public S6 environment and scratch-permission preflight
+        shell: bash
+        env:
+          EXPECTED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if test -f experiments/Issue402_plasma_dsl_g1/preflight_public_option_s6.sh; then
+            bash experiments/Issue402_plasma_dsl_g1/preflight_public_option_s6.sh
+          else
+            echo 'Public S6 option preflight is not present on this PR head (legacy smoke scope)'
+          fi
+      - name: P1 - Build PhysicsApp and verify generated and native solver operators
+        shell: bash
+        run: bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+      # Distinct step: an S6 input or cleanup failure cannot erase earlier
+      # Native build/small-fixture results. The exact P1 binary is reused.
+      - name: P2 - Public S6-417 and S6-941 four-way Native input checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh; then
+            bash experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh
+          else
+            echo 'Public S6 full-input gate is not present on this PR head (legacy smoke scope)'
+          fi
+      - name: Require actual native regression evidence before success
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-regression
+      - name: Upload native regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasma-native-regression-${{ github.event.pull_request.head.sha }}
+          path: experiments/Issue402_plasma_dsl_g1/evidence/**
+          if-no-files-found: error
+          retention-days: 30
+  issue541_arch_dd_native_p2:
+    name: Issue541 ARCH DD JSON sheath exact-source Native P1/P2 (no P3)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact ARCH package source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Prepare valid and deliberately missing-density JSON fixtures
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          grep -Fq "$OCI" physics_app/dependencies.lock
+          test ! -e issue541_arch_p2_scratch
+          mkdir issue541_arch_p2_scratch issue541_arch_p2_logs
+          python3 - <<'PY'
+          import json, pathlib, shutil
+          scratch=pathlib.Path('issue541_arch_p2_scratch')
+          original=pathlib.Path('physics_app/ci/dd_plasma_boundary_json_p2.json')
+          d=json.loads(original.read_text())
+          assert d['species']['e']['initial_number_density'] > 0
+          assert d['species']['e']['energy_transport_coef'] == 'fluid'
+          assert d['boundaries']['left']['bcs'] and d['boundaries']['bottom']['bcs']
+          del d['species']['e']['initial_number_density']
+          (scratch/'dd_plasma_boundary_json_p2.json').write_text(json.dumps(d,indent=2,sort_keys=True)+'\n')
+          shutil.copyfile('physics_app/ci/dd_plasma_boundary_json_p3_smoke.i',scratch/'input.i')
+          assert 'num_steps = 2' in (scratch/'input.i').read_text()
+          PY
+          echo ISSUE541_ARCH_DD_P2_FIXTURE_PREPARED
+      - name: Build pinned exact-source Native and assert both DD P2 outcomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+              sha256sum physics_app/physics-opt > issue541_arch_p2_logs/binary_sha256.txt
+              cd physics_app/ci
+              /workspace/physics_app/physics-opt --check-input -i dd_plasma_boundary_json_p3_smoke.i > /workspace/issue541_arch_p2_logs/dd_valid.log 2>&1
+              grep -Fq "Syntax OK" /workspace/issue541_arch_p2_logs/dd_valid.log
+              cd /workspace/issue541_arch_p2_scratch
+              set +e
+              /workspace/physics_app/physics-opt --check-input -i input.i > /workspace/issue541_arch_p2_logs/dd_missing_ic.log 2>&1
+              exit_code=$?
+              set -e
+              test "$exit_code" -ne 0
+              grep -Fq "requires species.e.initial_number_density" /workspace/issue541_arch_p2_logs/dd_missing_ic.log
+              echo ISSUE541_ARCH_DD_NATIVE_P1_P2_VALID_AND_NEGATIVE_PASS_NO_P3
+            ' 2>&1 | tee issue541_arch_p2_logs/native_build_and_check.log
+      - name: Upload bounded P1/P2 logs on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-arch-dd-p1-p2-${{ github.event.pull_request.head.sha }}
+          path: issue541_arch_p2_logs/**
+          if-no-files-found: warn
+          retention-days: 30
+  issue541_arch_s6_hybrid_native_p2:
+    name: Issue541 ARCH S6 417+941 hybrid native P1/P2 exact-source (no P3)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact ARCH source for both S6 variants
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: control
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout public original 400W data with immutable historical commit
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Source and no-private-rate guard for S6 P2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C control rev-parse HEAD)" = "$EXPECTED_HEAD"
+          test "$(git -C historical rev-parse HEAD)" = "$HISTORICAL_SHA"
+          test ! -e "historical/$CHEM/private_rates"
+          grep -Fq "$OCI" control/physics_app/dependencies.lock
+          test -f control/ci/guards/issue541_arch_s6_native_p2_only.py
+          python3 -m py_compile control/ci/guards/issue541_arch_s6_native_p2_only.py
+          mkdir -p control/experiments/Issue402_plasma_dsl_g1/evidence
+          echo ISSUE541_ARCH_S6_SOURCE_PIN_AND_NO_PRIVATE_RATES_P0_PASS
+      - name: Set up public 400W Python dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned numerical preprocessing dependencies
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+      - name: Prepare original 400W public mesh (no private rates)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd historical
+          src=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          dst=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$src" | cut -d ' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$src" "$dst"
+          export CHATGPT_WORK_BASE_SHA="$HISTORICAL_SHA"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          test ! -e "$CHEM/private_rates"
+          echo ISSUE541_ARCH_S6_HISTORICAL_400W_PUBLIC_MESH_P0_PASS
+      - name: P1 build exact-source Native once for both S6-417 and S6-941
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+            ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
+          EXPECTED_HEAD="$EXPECTED_HEAD" OCI="$OCI" python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path("experiments/Issue402_plasma_dsl_g1/evidence")
+          def sha(p):
+              h=hashlib.sha256()
+              with open(p,'rb') as f:
+                  for block in iter(lambda:f.read(1048576), b''): h.update(block)
+              return h.hexdigest()
+          binary=pathlib.Path("physics_app/physics-opt")
+          receipt={"schema":"issue402.native_p1.job_local.v1",
+                   "reusable_scope":"same_exact_head_ci_job_only",
+                   "source_sha":os.environ["EXPECTED_HEAD"],
+                   "oci_image":os.environ["OCI"],
+                   "binary_sha256":sha(binary),
+                   "build_log_sha256":sha(root/"native_build.log"),
+                   "P1":"PASS","P3":"NOT_RUN","science":"SCIENCE_HOLD"}
+          (root/"native_p1_identity.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
+          print("ISSUE541_ARCH_S6_NATIVE_P1_SHA="+receipt["binary_sha256"])
+          PY
+      - name: P2 real hybrid JSON+Native check-input for both distinct S6 cases (no timestep)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          test ! -e ../issue541_arch_s6_p2_evidence
+          mkdir -p ../issue541_arch_s6_p2_evidence
+          set +e
+          python3 ci/guards/issue541_arch_s6_native_p2_only.py \
+            --case 417 --historical ../historical \
+            --expected-head "$EXPECTED_HEAD" \
+            --output ../issue541_arch_s6_p2_evidence/S6-417
+          first=$?
+          python3 ci/guards/issue541_arch_s6_native_p2_only.py \
+            --case 941 --historical ../historical \
+            --expected-head "$EXPECTED_HEAD" \
+            --output ../issue541_arch_s6_p2_evidence/S6-941
+          second=$?
+          set -e
+          test "$first" -eq 0
+          test "$second" -eq 0
+          echo ISSUE541_ARCH_S6_BOTH_NATIVE_P2_PASS_P3_NOT_RUN_SCIENCE_HOLD
+      - name: Always upload both S6 P2 diagnostics, no raw scratch or protected archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-arch-s6-hybrid-p2-${{ github.event.pull_request.head.sha }}
+          path: |
+            issue541_arch_s6_p2_evidence/*/status.json
+            issue541_arch_s6_p2_evidence/*/native_P2.log
+            control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
+            control/experiments/Issue402_plasma_dsl_g1/evidence/native_build.log
+          if-no-files-found: warn
+          retention-days: 30

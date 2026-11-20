@@ -19,11 +19,12 @@ class HarnessCodeCITests(unittest.TestCase):
         self.assertNotIn("physics-opt", source)
         self.assertNotIn("cargo ", source)
 
-    def test_path_filters_keep_general_and_sol_out_of_code_only_changes(self):
+    def test_repository_integration_runs_for_harness_only_and_sol_is_scoped(self):
         general = GENERAL.read_text(encoding="utf-8")
         sol = SOL.read_text(encoding="utf-8")
-        self.assertEqual(general.count("      - 'physics_harness/code/**'"), 2)
-        self.assertEqual(general.count("      - '.github/workflows/harness-code.yml'"), 2)
+        self.assertNotIn("paths-ignore:", general)
+        self.assertIn("  validate:\n", general)
+        self.assertNotIn("  plasma_native_regression:\n", general)
         self.assertIn("      - 'physics_harness/ontology/**'", sol)
         self.assertIn("      - '.github/workflows/sol-runtime-integration.yml'", sol)
 
