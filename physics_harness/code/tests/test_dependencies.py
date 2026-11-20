@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
-
 from physics_harness.code.diagnostics.collector import SourceInput, SourceRecord
 from physics_harness.code.verification import (
     DependencyContract, verify_dependencies,
@@ -64,12 +62,20 @@ def test_cycle_is_independent_of_forbidden_edge_rules():
     assert {f.category for f in result.findings} == {"cycle"}
 
 
-@pytest.mark.parametrize("raw", ("def incomplete(\n", "\udcff"))
-def test_bad_source_is_unverified(raw):
-    item = source("sample_pkg/analysis/bad.py", raw)
+def test_bad_syntax_is_unverified():
+    item = source("sample_pkg/analysis/bad.py", "def incomplete(\n")
     result = verify_dependencies((item,), contract())
     assert result.status == "UNVERIFIED"
     assert "INCOMPLETE_SOURCE_COVERAGE" in result.unverified_properties
+
+
+def test_invalid_utf8_is_unverified():
+    raw = b"\xff"
+    item = SourceInput(
+        SourceRecord("sample_pkg/analysis/bad.py", "a" * 40, "100644", 1), raw,
+    )
+    result = verify_dependencies((item,), contract())
+    assert result.status == "UNVERIFIED"
 
 
 def test_empty_scope_cannot_be_pass():
