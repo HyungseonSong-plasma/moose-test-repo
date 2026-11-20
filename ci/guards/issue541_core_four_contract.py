@@ -71,7 +71,7 @@ def scoped_job(workflow: str, name: str) -> str:
     if workflow.count(marker) != 1:
         return ""
     tail = workflow.split(marker, 1)[1]
-    end = re.search(r"(?m)^  [A-Za-z][A-Za-z0-9_-]*:\\s*$", tail)
+    end = re.search(r"(?m)^  [A-Za-z][A-Za-z0-9_-]*:\s*$", tail)
     return marker + (tail[:end.start()] if end else tail)
 
 
