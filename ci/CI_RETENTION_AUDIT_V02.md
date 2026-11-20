@@ -32,6 +32,28 @@ step, which checks Stage5 reaction ownership, JSON-rate negative controls,
 energy projection and initial-composition legacy absence. Existing electron
 impact and energy implementation guards remain separate active steps.
 
+## Retirement cycle 1 (Contract Lifecycle #754)
+
+After moving the seven prior automatic jobs to an interim manual lane,
+**two accepted, historical-only dynamic gates have been retired completely
+from active CI registration and the owner inventory**:
+
+- `issue402_legacy_p0_inventory`: its original A2 one-shot contract is
+  `RETIRED_VERIFIED`; the special Job/dispatch selector and its required
+  Group A live-owner check are removed. The inventory script is now merely
+  an optional reporting tool; existing full pytest retains the regression
+  tests.
+- `issue541_evidence_identity_p0`: its fixed merged-main CI/ZIP check was
+  accepted for the #578/#655 engineering release; the Job and selector are
+  removed. Historical receipts and the offline provenance verification
+  script remain available. Unresolved WORM/science/workflow retirement
+  conditions remain `HOLD`.
+
+**Current manual inventory: five Jobs**, not seven. The five are still
+temporary, case-specific acceptance/reproduction gates, not Static
+Contracts. Their deletion needs scoped approval and current coverage proof.
+See [Contract Lifecycle v0.1](CONTRACT_LIFECYCLE_V01.md).
+
 ## Guarantees
 
 - No deliberate test source deletion or modification.
@@ -65,7 +87,7 @@ mechanism may implement either type, but **does not determine the type**.
 Likewise, `repository_ci_scope_v1.json` is a temporary migration inventory,
 not a permanent list of mandatory historical jobs.
 
-The seven `Physics Legacy Audit` jobs moved by this PR are an *intermediate
+The remaining five `Physics Legacy Audit` jobs in this PR are an *intermediate
 containment step*, not completion of Dynamic Contract retirement. Do not
 perpetually retain obsolete one-shot Guards in manual CI after their accepted
 scope is verified and archived. Retire those contracts separately, preserving
