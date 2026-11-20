@@ -118,10 +118,11 @@ def render(root: Path, profile: dict) -> str:
         if ("  push:\n    branches: [main]" not in template or
                 "  pull_request:\n    branches: [main]" not in template):
             raise WorkflowContractError("GENERAL_TRIGGER_CONTRACT")
-        for name in ("validate", "runtime-smoke", "boltzmann-eepf-controls", "plasma_native_regression"):
-            if not re.search(r"^  " + re.escape(name) + r":\s*$", template,
-                             re.MULTILINE):
-                raise WorkflowContractError("GENERAL_REQUIRED_JOB_MISSING")
+        job_names = JOB.findall(template)
+        if job_names != ["validate"]:
+            raise WorkflowContractError(
+                "GENERAL_MUST_ONLY_OWN_INTEGRATION_VALIDATE:" + repr(job_names)
+            )
         if ISSUE_JOB.search(template) or re.search(
                 r"github\.event\.pull_request\.number\s*==", template):
             raise WorkflowContractError("GENERAL_CONTAINS_PR_SPECIFIC_JOB")
