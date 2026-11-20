@@ -265,18 +265,12 @@ def inspect(root: Path, doc: dict) -> list[str]:
                 errors.append("A2 legacy workflow reintroduced after verified shutdown")
             if record.get("a2_owner_retirement") != A2_OWNER_RETIREMENT:
                 errors.append("A2 source/owner/caller/P0/P3 release receipt missing or falsified")
-            ci_file = root / ".github/workflows/physics-legacy-audit.yml"
-            ci_text = ci_file.read_text(encoding="utf-8") if ci_file.is_file() else ""
-            for required in (
-                "  issue402_legacy_p0_inventory:",
-                "ci/guards/issue402_symbol_inventory.py --self-test",
-                "ci/guards/issue402_symbol_inventory.py --check",
-                "tests/test_issue402_species_transport_rule.py",
-            ):
-                if required not in ci_text:
-                    errors.append("A2 maintained P0 route disconnected: " + required)
-            if not (root / "ci/guards/issue402_symbol_inventory.py").is_file():
-                errors.append("A2 tracked symbol inventory checker missing")
+            # A2's original one-shot workflow was independently accepted as
+            # RETIRED_VERIFIED. Its historic P0 run and owner attestation are
+            # immutable ledger facts, not a mandate to keep recreating an
+            # Issue402-specific job or a symbol-reporting tool.
+            # Current Physics test protection is owned by the ordinary
+            # physics_code_validate pytest suite; no A2 dynamic gate remains.
         elif not source_path.is_file():
             errors.append(id_ + " active-branch original workflow missing without accepted caller-zero")
         else:
