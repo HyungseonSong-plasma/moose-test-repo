@@ -3,6 +3,13 @@
 Verification is the third stage after Diagnostics and Analysis. It has no
 directory-role policy, package allowlist, or automatic mutation approval.
 
+The implementation has two explicit responsibilities:
+
+- `consistency.py` validates scoped Graph/EvidenceReceipt source-metadata consistency.
+- `post_change.py` derives follow-up verification obligations from GraphDiff.
+
+Both functions remain available from `physics_harness.code.verification`.
+
 - Every Diagnostics assembly emits a VerificationReceipt alongside Graph and
   EvidenceReceipt. VERIFIED attests consistency of scoped source provenance:
   SHA/Blob/line references, Scope and file status. The result explicitly
