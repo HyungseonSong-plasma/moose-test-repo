@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "feature/code-harness-packages-20261119",
-      "expected_sha": "f9544cea31d329b4ede88454226772f6d25a44b1",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-code-harness-packages-20261119-f9544cea31d3"
+      "branch": "fix/harness-code-collector-order-determinism-20261119",
+      "expected_sha": "b1979affb0f34e6e45e25361af68f0d53e56b8ec",
+      "archive_tag": "archive/oxygen-cleanup-20261106/fix-harness-code-collector-order-determinism-20261119-b1979affb0f3"
     },
     {
-      "branch": "feature/harness-code-diagnostics-scaffold-20261119",
-      "expected_sha": "f79c5ab446bc8f68be4f5d36e6fce650645ad069",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-diagnostics-scaffold-20261119-f79c5ab446bc"
+      "branch": "feature/harness-code-actions-runtime-observer-20261119",
+      "expected_sha": "9fa47cefb8f22ed5cdf8edf6306d3f84d8e12a17",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-actions-runtime-observer-20261119-9fa47cefb8f2"
     },
     {
-      "branch": "feature/harness-code-graph-simplify-20261119",
-      "expected_sha": "2c6d3cae7e5dac45df6a7dc7918402250d64e569",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-graph-simplify-20261119-2c6d3cae7e5d"
+      "branch": "feature/harness-code-common-analysis-20261119",
+      "expected_sha": "83f9fd80847259b8766e44c18f9e3c850fe8470a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-common-analysis-20261119-83f9fd808472"
     },
     {
-      "branch": "feature/harness-code-python-ast-provider-20261119",
-      "expected_sha": "950a949b087273924c30869787bf46f29fbdaf81",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-python-ast-provider-20261119-950a949b0872"
+      "branch": "feature/harness-code-cpp-multiline-coverage-20261119",
+      "expected_sha": "9e0b0b4a748569c2fa5182c395f3366484a6ba1e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-cpp-multiline-coverage-20261119-9e0b0b4a7485"
     },
     {
-      "branch": "feature/harness-code-moose-source-providers-20261119",
-      "expected_sha": "52e1e0864fe0343364e7d6967d1852847cb9a429",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-moose-source-providers-20261119-52e1e0864fe0"
+      "branch": "feature/harness-code-target-coverage-20261119",
+      "expected_sha": "2174a3976325280cbe5c60f16fc544262191a3ca",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-target-coverage-20261119-2174a3976325"
     }
   ]
 }
