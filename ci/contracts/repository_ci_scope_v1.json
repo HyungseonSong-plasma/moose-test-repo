@@ -40,7 +40,9 @@
         "physics_code_validate"
       ],
       "required_steps": [
+        "Assert exact validation source HEAD",
         "Capture FDEG exact-HEAD retirement evidence (code7 P0 only)",
+        "Install validation dependencies",
         "Regression-test Issue493 canonical/archive Exodus P4 diagnostics",
         "Regression-test scoped Native P1 harness and Issue493 delegation",
         "Run Physics pytest (FDEG P0 suites already executed above)",
@@ -73,7 +75,9 @@
         "Validate normalized-to-physical coupled equivalence fixture",
         "Validate numerical-method ownership",
         "Validate plasma semantic ownership",
-        "Validate retired Gummel Action is absent"
+        "Validate retired Gummel Action is absent",
+        "actions/checkout@v4",
+        "actions/setup-python@v5"
       ]
     },
     ".github/workflows/physics-native-ci.yml": {
