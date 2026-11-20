@@ -27,7 +27,6 @@ P0_FILES = (
 NATIVE_FILES = ("p1_identity.json", "p1.log", "p2.log")
 REGRESSION_FILES = ("numerical_parity.json", "native_parity_negative_controls.json")
 MANDATORY_UPLOADS = (
-    "Upload directory-role audit",
     "Upload architecture census",
     "Upload migration source snapshot",
     "Upload C++ EEPF data, explicitly marked not real-gas parity",

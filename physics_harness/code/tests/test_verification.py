@@ -128,3 +128,34 @@ def test_partial_after_head_requires_coverage_resolution(git_factory):
     assert "RESOLVE_SOURCE_PROVENANCE_AND_COVERAGE" in plan.required_checks
     assert "VERIFY_SCOPE_AND_UNRESOLVED_DELTA" in plan.required_checks
     assert not plan.mutation_approved
+
+
+
+def test_new_cross_package_import_derives_checks_not_a_role_policy(git_factory):
+    before = scan(git_factory, "def use():\n    return 1\n",
+                  path="physics_harness/ontology/new.py", collector="python_ast")
+    after = scan(git_factory,
+                 "from physics_harness.adapters.moose import create\n"
+                 "def use():\n    return create\n",
+                 path="physics_harness/ontology/new.py", collector="python_ast")
+    plan = plan_change_verification(
+        before.graph, after.graph, before.receipt, after.receipt)
+    assert "VERIFY_DEPENDENCY_AND_CALL_IMPACT" in plan.required_checks
+    assert "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD" in plan.required_checks
+    assert not plan.mutation_approved
+    assert not any(x.startswith("FORBIDDEN_ROLE") for x in plan.findings)
+
+
+def test_new_subprocess_use_generates_evidence_obligation_not_path_rejection(git_factory):
+    before = scan(git_factory, "def invoke():\n    return 1\n",
+                  path="physics_harness/ontology/new.py", collector="python_ast")
+    after = scan(git_factory,
+                 "import subprocess\n"
+                 "def invoke():\n    return subprocess.run(['true'])\n",
+                 path="physics_harness/ontology/new.py", collector="python_ast")
+    plan = plan_change_verification(
+        before.graph, after.graph, before.receipt, after.receipt)
+    assert "VERIFY_DEPENDENCY_AND_CALL_IMPACT" in plan.required_checks
+    assert "VERIFY_BEHAVIORAL_COMPATIBILITY" in plan.required_checks
+    assert plan.disposition == "UNVERIFIED"
+    assert not plan.mutation_approved
