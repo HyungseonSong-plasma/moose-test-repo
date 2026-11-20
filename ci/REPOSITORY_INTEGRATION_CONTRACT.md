@@ -69,8 +69,12 @@ objects; temporary contracts must have a provable retirement gate.
 
 The transitional migration inventory
 [`ci/contracts/repository_ci_scope_v1.json`](contracts/repository_ci_scope_v1.json)
-enumerates all 17 original jobs and their migrated owners. Its step-name and
-historical Job-name lists are **not** permanent Static Contracts.
+records the migration lineage of the original 17 jobs and the current
+owners of still-active gates. Two already-accepted temporary gates (A2 symbol
+inventory and Wave1-E code-release evidence) have now been removed from the
+active Job/owner inventory, with their historical evidence retained.
+Its step-name and historical Job-name lists are **not** permanent Static
+Contracts.
 `ci/guards/repository_ci_scope.py` currently enforces owner completeness and
 prevents required `validate` from silently skipping checks; that
 implementation guard must be reduced as per-task Dynamic Contracts are
