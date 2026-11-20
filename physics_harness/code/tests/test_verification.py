@@ -7,7 +7,16 @@ import pytest
 from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
 from physics_harness.code.graph import Evidence, GraphSnapshot
 from physics_harness.code.verification import (
+    ChangeVerificationPlan, VerificationReceipt,
     plan_change_verification, verify_generated_artifact,
+)
+from physics_harness.code.verification.consistency import (
+    VerificationReceipt as ConsistencyReceipt,
+    verify_generated_artifact as verify_consistency,
+)
+from physics_harness.code.verification.post_change import (
+    ChangeVerificationPlan as PostChangePlan,
+    plan_change_verification as plan_post_change,
 )
 
 
@@ -18,6 +27,13 @@ def scan(git_factory, content, *, path="src/kernel.C", collector="cpp"):
         includes=(path,), collectors=(collector,),
     )
     return run_scan(req, GitSourceProvider(root))
+
+
+def test_verification_module_owners_preserve_package_api():
+    assert VerificationReceipt is ConsistencyReceipt
+    assert verify_generated_artifact is verify_consistency
+    assert ChangeVerificationPlan is PostChangePlan
+    assert plan_change_verification is plan_post_change
 
 
 def test_every_diagnostic_scan_attaches_scope_limited_verified_receipt(git_factory):
