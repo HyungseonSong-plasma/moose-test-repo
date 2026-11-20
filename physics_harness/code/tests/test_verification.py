@@ -14,7 +14,7 @@ from physics_harness.code.verification.consistency import (
     VerificationReceipt as ConsistencyReceipt,
     verify_generated_artifact as verify_consistency,
 )
-from physics_harness.code.verification.post_change import (
+from physics_harness.code.verification.dependencies import (
     ChangeVerificationPlan as PostChangePlan,
     plan_change_verification as plan_post_change,
 )
