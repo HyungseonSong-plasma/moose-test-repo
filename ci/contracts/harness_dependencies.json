@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "package_root": "physics_harness",
+  "canonical_packages": [
+    "evidence",
+    "evaluation",
+    "analysis",
+    "execution",
+    "application",
+    "cli",
+    "validation",
+    "provenance"
+  ],
+  "legacy_packages": [
+    "diagnose",
+    "inventory",
+    "dmix"
+  ],
+  "repository_tool": "ci",
+  "forbidden_edges": [
+    {
+      "source": "evidence",
+      "target": "diagnose",
+      "category": "evidence",
+      "reason": "Evidence must not depend on Diagnose"
+    },
+    {
+      "source": "evidence",
+      "target": "analysis",
+      "category": "evidence",
+      "reason": "Evidence must not depend on Analysis"
+    },
+    {
+      "source": "analysis",
+      "target": "cli",
+      "category": "analysis",
+      "reason": "Analysis must not depend on CLI/Validation"
+    },
+    {
+      "source": "analysis",
+      "target": "validation",
+      "category": "analysis",
+      "reason": "Analysis must not depend on CLI/Validation"
+    },
+    {
+      "source": "execution",
+      "target": "inventory",
+      "category": "execution",
+      "reason": "Execution must not depend on domain science"
+    },
+    {
+      "source": "execution",
+      "target": "dmix",
+      "category": "execution",
+      "reason": "Execution must not depend on domain science"
+    },
+    {
+      "source": "*",
+      "target": "cli",
+      "category": "presentation",
+      "reason": "Production subsystems must not depend on CLI",
+      "except_source": "cli"
+    },
+    {
+      "source": "*",
+      "target": "validation",
+      "category": "presentation",
+      "reason": "Production subsystems must not depend on Validation",
+      "except_source": "validation"
+    }
+  ]
+}

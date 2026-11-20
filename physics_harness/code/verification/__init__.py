@@ -4,9 +4,16 @@ Source-snapshot verification is not evidence of runtime or semantic parity.
 """
 
 from .consistency import VerificationReceipt, verify_generated_artifact
-from .post_change import ChangeVerificationPlan, plan_change_verification
+from .dependencies import (
+    ChangeVerificationPlan, DependencyContract, DependencyFinding,
+    DependencyRule, DependencyVerification, plan_change_verification,
+    verify_dependencies, verify_dependency_repository,
+)
 
 __all__ = [
     "ChangeVerificationPlan", "VerificationReceipt",
     "plan_change_verification", "verify_generated_artifact",
+    "DependencyContract", "DependencyFinding", "DependencyRule",
+    "DependencyVerification", "verify_dependencies",
+    "verify_dependency_repository",
 ]
