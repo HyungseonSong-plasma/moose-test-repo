@@ -14,6 +14,7 @@ from .request import ScanRequest
 class DiagnosticResult:
     graph: GraphSnapshot
     receipt: EvidenceReceipt
+    verification: object | None = None
 
     @property
     def status(self) -> str:
@@ -153,4 +154,9 @@ class GraphAssembler:
             receipt = replace(
                 receipt, completeness=completeness, unresolved=unresolved
             )
-        return DiagnosticResult(graph=graph, receipt=receipt)
+        # Verify every generated graph/receipt as part of assembly.
+        from ..verification import verify_generated_artifact
+        verification = verify_generated_artifact(graph, receipt)
+        return DiagnosticResult(
+            graph=graph, receipt=receipt, verification=verification,
+        )

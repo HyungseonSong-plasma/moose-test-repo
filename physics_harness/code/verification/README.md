@@ -1,0 +1,21 @@
+# Verification v0.1 — facts before policy
+
+Verification is the third stage after Diagnostics and Analysis. It has no
+directory-role policy, package allowlist, or automatic mutation approval.
+
+- Every Diagnostics assembly emits a VerificationReceipt alongside Graph and
+  EvidenceReceipt. VERIFIED attests consistency of scoped source provenance:
+  SHA/Blob/line references, Scope and file status. The result explicitly
+  retains unverified runtime, semantic equivalence and global consumer closure.
+- Failed integrity findings are FAILED. Partial scans or unresolved dynamic
+  source facts are UNVERIFIED, not green. A source-only VERIFIED result never
+  approves removing code or altering production CI.
+- plan_change_verification compares two exact-HEAD Graph/Receipt pairs and
+  derives checks for removed references, changed interfaces, new dependency
+  candidates, Scope gaps and required test replay. It is not a policy migration.
+- Explicit runtime/semantic evidence from separately executed verification is
+  required to close those obligations in a later version.
+
+Deprecated repository-specific directory-role Guards are retired separately
+only after consumers and Workflow registrations are audited. Historical static
+adversarial cases remain as risk examples, not hard-coded role rules.
