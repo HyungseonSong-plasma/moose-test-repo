@@ -324,18 +324,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Validate Evidence dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check evidence
-      - name: Validate Analysis dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check analysis
-      - name: Validate Execution dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check execution
-      - name: Validate presentation dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check presentation
-      - name: Validate repository-tool dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check repository
-      - name: Validate canonical package cycles
-        run: python ci/guards/physics_dependency_guard.py --check cycle
+      - name: Regression-test dependency Guard selectors
+        run: python -m pytest -q ci/guards/tests/test_physics_dependency_guard.py
+      - name: Validate dependency directions, repository isolation and cycles
+        run: python ci/guards/physics_dependency_guard.py --check all
       - name: Validate declarative experiment gateway
         run: python ci/guards/physics_experiment_gateway_guard.py
       - name: Validate plasma semantic ownership
