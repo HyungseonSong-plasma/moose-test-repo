@@ -1,24 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-673-p7-exact-9457191-duallane-ci-intake-20261118",
-      "expected_sha": "654852560b7548205ef7ade4cb555fff3e4139c2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-exact-9457191-duallane-ci-intake-20261118-654852560b75"
+      "branch": "issue-673-g1-publicd100-3ns-pilot-20261118",
+      "expected_sha": "a30cbf5c47a877c562f0821f3f359534970478f8",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-g1-publicd100-3ns-pilot-20261118-a30cbf5c47a8"
     },
     {
-      "branch": "issue-671-p5x-exact-9457191-d8-full-rf-3ns-20261118",
-      "expected_sha": "29b5a9622b6530065781dfd1330f6b5431b39957",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-9457191-d8-full-rf-3ns-20261118-29b5a9622b65"
+      "branch": "issue-673-p3p4-publicd100-9457191-20261118",
+      "expected_sha": "126351c053334607568e7d856f9fba1e690687dd",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p3p4-publicd100-9457191-20261118-126351c05333"
     },
     {
-      "branch": "issue-671-p5x-exact945-d8-rf-3ns-receipt-20261118",
-      "expected_sha": "a159182d47ad308e2f982a31a011ca81d33d158a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact945-d8-rf-3ns-receipt-20261118-a159182d47ad"
+      "branch": "issue-673-publicd100-electron-slices-100us-20261119",
+      "expected_sha": "d4620df783796d20e55b344281520ad009e69fb6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-publicd100-electron-slices-100us-20261119-d4620df78379"
     },
     {
-      "branch": "issue-673-p7-final-scoped-9457191-review-20261118",
-      "expected_sha": "c94ad081e156139614b06d84ad6c2ced75040ba5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-final-scoped-9457191-review-20261118-c94ad081e156"
+      "branch": "issue-673-p7-independent-s6-8ch-3ns-quantitative-20261119",
+      "expected_sha": "fd0eb02744c2e50166f5e1195055c71e3c1c3d8a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-independent-s6-8ch-3ns-quantitative-20261119-fd0eb02744c2"
     }
   ]
 }
