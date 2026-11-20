@@ -1,24 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-673-g1-publicd100-3ns-pilot-20261118",
-      "expected_sha": "a30cbf5c47a877c562f0821f3f359534970478f8",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-g1-publicd100-3ns-pilot-20261118-a30cbf5c47a8"
+      "branch": "feature/code-harness-packages-20261119",
+      "expected_sha": "f9544cea31d329b4ede88454226772f6d25a44b1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-code-harness-packages-20261119-f9544cea31d3"
     },
     {
-      "branch": "issue-673-p3p4-publicd100-9457191-20261118",
-      "expected_sha": "126351c053334607568e7d856f9fba1e690687dd",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p3p4-publicd100-9457191-20261118-126351c05333"
+      "branch": "feature/harness-code-diagnostics-scaffold-20261119",
+      "expected_sha": "f79c5ab446bc8f68be4f5d36e6fce650645ad069",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-diagnostics-scaffold-20261119-f79c5ab446bc"
     },
     {
-      "branch": "issue-673-publicd100-electron-slices-100us-20261119",
-      "expected_sha": "d4620df783796d20e55b344281520ad009e69fb6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-publicd100-electron-slices-100us-20261119-d4620df78379"
+      "branch": "feature/harness-code-graph-simplify-20261119",
+      "expected_sha": "2c6d3cae7e5dac45df6a7dc7918402250d64e569",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-graph-simplify-20261119-2c6d3cae7e5d"
     },
     {
-      "branch": "issue-673-p7-independent-s6-8ch-3ns-quantitative-20261119",
-      "expected_sha": "fd0eb02744c2e50166f5e1195055c71e3c1c3d8a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-independent-s6-8ch-3ns-quantitative-20261119-fd0eb02744c2"
+      "branch": "feature/harness-code-python-ast-provider-20261119",
+      "expected_sha": "950a949b087273924c30869787bf46f29fbdaf81",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-python-ast-provider-20261119-950a949b0872"
+    },
+    {
+      "branch": "feature/harness-code-moose-source-providers-20261119",
+      "expected_sha": "52e1e0864fe0343364e7d6967d1852847cb9a429",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-moose-source-providers-20261119-52e1e0864fe0"
     }
   ]
 }
