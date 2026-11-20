@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "fix/harness-code-collector-order-determinism-20261119",
-      "expected_sha": "b1979affb0f34e6e45e25361af68f0d53e56b8ec",
-      "archive_tag": "archive/oxygen-cleanup-20261106/fix-harness-code-collector-order-determinism-20261119-b1979affb0f3"
+      "branch": "issue-718-fdeg-harness-abcd",
+      "expected_sha": "da02e49dfcc9da2a8ca756beedeee4e116545f87",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-718-fdeg-harness-abcd-da02e49dfcc9"
     },
     {
-      "branch": "feature/harness-code-actions-runtime-observer-20261119",
-      "expected_sha": "9fa47cefb8f22ed5cdf8edf6306d3f84d8e12a17",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-actions-runtime-observer-20261119-9fa47cefb8f2"
+      "branch": "refactor/harness-code-tests-compact-20261119",
+      "expected_sha": "4fe9328ebfe2f8c0e12063e6d3074df0e21f7a89",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-harness-code-tests-compact-20261119-4fe9328ebfe2"
     },
     {
-      "branch": "feature/harness-code-common-analysis-20261119",
-      "expected_sha": "83f9fd80847259b8766e44c18f9e3c850fe8470a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-common-analysis-20261119-83f9fd808472"
+      "branch": "refactor/harness-code-727-r1-correctness-20261119",
+      "expected_sha": "d4baef677791eb6859ddceddc43752f03bd36984",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-harness-code-727-r1-correctness-20261119-d4baef677791"
     },
     {
-      "branch": "feature/harness-code-cpp-multiline-coverage-20261119",
-      "expected_sha": "9e0b0b4a748569c2fa5182c395f3366484a6ba1e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-cpp-multiline-coverage-20261119-9e0b0b4a7485"
+      "branch": "refactor/harness-code-727-r2-iterative-context-20261119",
+      "expected_sha": "aaf52276436b957e85ffc8d9c1551d2af2df4dcc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-harness-code-727-r2-iterative-context-20261119-aaf52276436b"
     },
     {
-      "branch": "feature/harness-code-target-coverage-20261119",
-      "expected_sha": "2174a3976325280cbe5c60f16fc544262191a3ca",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-code-target-coverage-20261119-2174a3976325"
+      "branch": "refactor/harness-code-727-r3-claim-compact-20261119",
+      "expected_sha": "461bd522191a7c2c37f88b2c74fbf81120cb7f08",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-harness-code-727-r3-claim-compact-20261119-461bd522191a"
     }
   ]
 }
