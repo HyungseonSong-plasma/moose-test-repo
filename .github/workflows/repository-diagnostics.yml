@@ -1,0 +1,71 @@
+name: Repository Diagnostics
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
+
+jobs:
+  artifact-api-probe:
+    name: Artifact CreateArtifact API probe (1 day, no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Prepare minimal public artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/issue518-artifact-probe"
+          {
+            printf 'schema=issue518.artifact_api_probe.v1\n'
+            printf 'repo=%s\n' "$GITHUB_REPOSITORY"
+            printf 'run_id=%s\n' "$GITHUB_RUN_ID"
+            printf 'revision=%s\n' "${{ github.sha }}"
+          } > "$RUNNER_TEMP/issue518-artifact-probe/probe.txt"
+          test -s "$RUNNER_TEMP/issue518-artifact-probe/probe.txt"
+      - name: Probe Artifact creation and upload
+        id: probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue518-artifact-api-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/issue518-artifact-probe/probe.txt
+          if-no-files-found: error
+          retention-days: 1
+      - name: Verify Artifact ID is visible in GitHub REST
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_ID: ${{ steps.probe.outputs.artifact-id }}
+          EXPECTED_NAME: issue518-artifact-api-probe-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_ID" =~ ^[0-9]+$ ]]
+          for n in $(seq 1 12); do
+            response="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100")"
+            if printf '%s' "$response" | python3 -c '
+          import json, os, sys
+          r=json.load(sys.stdin)
+          exp_id=int(os.environ["EXPECTED_ID"])
+          exp_name=os.environ["EXPECTED_NAME"]
+          assert any(a["id"] == exp_id and a["name"] == exp_name and not a["expired"]
+                     for a in r["artifacts"])
+          '; then
+              echo "ISSUE518_ARTIFACT_CREATE_REST_VERIFIED id=$EXPECTED_ID"
+              echo "Artifact CreateArtifact probe: PASS; id=$EXPECTED_ID" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Artifact CreateArtifact returned id but REST did not expose it"
+          exit 1
+
+  # Read-only Group A retirement audit; global workflow_surface_guard remains authoritative.
