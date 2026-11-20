@@ -87,7 +87,7 @@ failed verification: `HOLD` (no automatic retirement).
 | Physics Native / `issue541_arch_dd_native_p2` | DYNAMIC — DD acceptance | Retire once scope accepted; keep relevant native fixture regression |
 | Physics Native / `issue541_arch_s6_hybrid_native_p2` | DYNAMIC — S6-417/941 acceptance | Retire once accepted; preserve needed native case regressions |
 | Former Wave1-E release audit / `issue541_evidence_identity_p0` | DYNAMIC_COMPLETED / HISTORICAL EVIDENCE | **RETIRED from CI owner/dispatch** after accepted engineering release; historical verifier retained as forensics-only tool |
-| Physics Legacy Audit / `issue402_s6_reference_receipt` | HISTORICAL EVIDENCE / retired Dynamic candidate | Preserve archive receipt; no always-on verification |
+| Former S6 reference manifest re-check / `issue402_s6_reference_receipt` | HISTORICAL EVIDENCE (non-runtime) | **RETIRED from active CI/dispatch**; archive verifier and evidence preserved, scientific replay/HOLD still outstanding |
 | Former A2 inventory / `issue402_legacy_p0_inventory` | DYNAMIC_COMPLETED + AUDIT TOOL | **RETIRED from CI owner/dispatch**; independent symbol inventory script remains optional and baseline regressions stay in default pytest |
 | Physics Legacy Audit / `issue402_json_rate_p0` | DYNAMIC — prior task replacement | Manual reproduction while acceptance history confirmed; maintain reusable regression separately |
 | Physics Legacy Audit / `issue402_ideal_gas_p0` | DYNAMIC — prior task replacement | Same: verify acceptance before deleting temporary gate |
@@ -122,6 +122,34 @@ No other Dynamic Job is approved for removal by this cycle. The five
 remaining manual Issue402 P0/reference jobs are pending per-contract
 acceptance and distinct-coverage review; the Group A/ARCH and Native P1/P2
 jobs remain active.
+
+## Retirement cycle 2 — assessment of the five remaining temporary jobs
+
+The latest exact-HEAD PR #753 CI (prior to this change) succeeded:
+Repository CI, Physics Code CI, Physics Native CI, and Issue402 FLOW
+Native P2 all **PASS**. This establishes the refactor baseline only;
+it does not approve unfinished per-Issue scientific/retirement obligations.
+
+| Candidate | What the Job actually checks | Distinct active value / acceptance status | Decision |
+| --- | --- | --- | --- |
+| `issue402_s6_reference_receipt` | `--manifest-check --self-test` of frozen 2026-11-14 P3/P4 receipt; no real ZIP readback and no solver | Historic two-case ZIP readback is documented; durable WORM `NOT_PROVEN`, independent maintained 100-us P3/P4 replay `KEEP_HOLD`, science `SCIENCE_HOLD`. Offline script supports full ZIP verification when artifacts supplied. | **REMOVE redundant CI wrapper**; retain source receipt, offline verifier and separate active acceptance/HOLD |
+| `issue402_json_rate_p0` | Historical JSON-rate one-shot P0, duplicated pytest and unique source/Stage5 checks | Main Physics pytest and promoted current-source checker cover repeated P0 assertions, but Issue402 cutover/acceptance is not globally closed | **HOLD task-specific retirement**; interim manual reproduction |
+| `issue402_ideal_gas_p0` | Historical ideal-gas one-shot P0, duplicate tests and retired-source/factory checks | Reusable tests and current-source Stage5 checks remain; original native/P2 and legacy-workflow disposition require independent acceptance | **HOLD task-specific retirement**; interim manual reproduction |
+| `issue402_core_four_p0` | Four original cutover P0, Group A staged retirement + evidence artifact | Core-four retirement receipt records A1 as `STAGED_DELETE_KEEP_HOLD_INTEGRATION`, not final acceptance; Native P1/P2 remains separately applicable | **HOLD**, keep manual contract and Native checks |
+| `issue402_reaction_material_p0` | Original reaction/material cutover P0 and temporary owner checks | Current pytest plus production-source checkers cover recurring behavior; FLOW A3/A4 and final acceptance remain staged | **HOLD task-specific retirement**; interim manual reproduction |
+
+**What was actually deleted in cycle 2:** one manual CI Job,
+`workflow_dispatch.inputs.audit` choice, and matching transitional
+`repository_ci_scope_v1.json` owner entry. No scientific acceptance
+condition, P3/P4 replay, material/Native verification, historic artifact,
+or offline ZIP verifier was deleted. This is removal of a redundant
+**historical receipt-checking CI wrapper**, not acceptance/retirement
+of the unresolved S6 P3/P4 development contract.
+
+Remaining manual temporary P0 Jobs: **four**. To delete each, obtain
+explicit per-source retirement evidence for the old workflow and verify
+no unique current-code regression disappears; preserve valuable tests
+without task-specific required Job names.
 
 ## Retire/keep decision procedure
 
