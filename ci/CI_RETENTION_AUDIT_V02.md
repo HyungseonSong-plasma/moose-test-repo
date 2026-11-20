@@ -32,6 +32,27 @@ step, which checks Stage5 reaction ownership, JSON-rate negative controls,
 energy projection and initial-composition legacy absence. Existing electron
 impact and energy implementation guards remain separate active steps.
 
+## Retirement cycle 2 — historical S6 manifest wrapper
+
+Among the five remaining manual Jobs, `issue402_s6_reference_receipt`
+only re-ran `verify_issue402_s6_hybrid_baseline.py --manifest-check
+--self-test`, with **no input ZIPs** and no Native/scientific replay. This
+wrapper is now deleted from the manual Workflow, its dispatch choices and
+the current Job owner inventory.
+
+The frozen S6-417/941 metadata and verified source hashes are preserved
+in `ci/baselines/issue402_s6_hybrid_20261114.json`; the actual
+archive readback utility `ci/guards/verify_issue402_s6_hybrid_baseline.py`
+remains available for explicit use with both downloaded archives.
+**S6 `KEEP_HOLD`, maintenance-free WORM `NOT_PROVEN`, and
+`SCIENCE_HOLD` remain unchanged.** Removing a static receipt-only CI
+wrapper is not acceptance of a scientific replay, or permission to delete
+the original data.
+
+Four temporary one-shot P0 Jobs (JSON-rate, ideal-gas, CORE four and
+reaction-material) remain manual and in `HOLD` pending task-level
+retirement review; see `CONTRACT_LIFECYCLE_V01.md`.
+
 ## Retirement cycle 1 (Contract Lifecycle #754)
 
 After moving the seven prior automatic jobs to an interim manual lane,
@@ -49,7 +70,7 @@ from active CI registration and the owner inventory**:
   script remain available. Unresolved WORM/science/workflow retirement
   conditions remain `HOLD`.
 
-**Current manual inventory: five Jobs**, not seven. The five are still
+**Manual inventory after cycle 1: five Jobs; after cycle 2: four Jobs.** The five are still
 temporary, case-specific acceptance/reproduction gates, not Static
 Contracts. Their deletion needs scoped approval and current coverage proof.
 See [Contract Lifecycle v0.1](CONTRACT_LIFECYCLE_V01.md).
@@ -87,7 +108,7 @@ mechanism may implement either type, but **does not determine the type**.
 Likewise, `repository_ci_scope_v1.json` is a temporary migration inventory,
 not a permanent list of mandatory historical jobs.
 
-The remaining five `Physics Legacy Audit` jobs in this PR are an *intermediate
+The remaining four `Physics Legacy Audit` jobs in this PR are an *intermediate
 containment step*, not completion of Dynamic Contract retirement. Do not
 perpetually retain obsolete one-shot Guards in manual CI after their accepted
 scope is verified and archived. Retire those contracts separately, preserving
