@@ -1,24 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-672-p6x-final-3b447b67-20261118",
-      "expected_sha": "5f05726ca25f946142f5122d7f10213657a37f05",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6x-final-3b447b67-20261118-5f05726ca25f"
+      "branch": "issue-673-p7-exact-9457191-duallane-ci-intake-20261118",
+      "expected_sha": "654852560b7548205ef7ade4cb555fff3e4139c2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-exact-9457191-duallane-ci-intake-20261118-654852560b75"
     },
     {
-      "branch": "issue-633-p6c3-newonly-route-p0-once-20261118",
-      "expected_sha": "128d71d98162ecfb4f0174227150ae24e027ef61",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p6c3-newonly-route-p0-once-20261118-128d71d98162"
+      "branch": "issue-671-p5x-exact-9457191-d8-full-rf-3ns-20261118",
+      "expected_sha": "29b5a9622b6530065781dfd1330f6b5431b39957",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-9457191-d8-full-rf-3ns-20261118-29b5a9622b65"
     },
     {
-      "branch": "issue-672-p6x-final-fd21e2e3-20261118",
-      "expected_sha": "69d03169037312044f5d1459e035710b9f639bc5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6x-final-fd21e2e3-20261118-69d031690373"
+      "branch": "issue-671-p5x-exact945-d8-rf-3ns-receipt-20261118",
+      "expected_sha": "a159182d47ad308e2f982a31a011ca81d33d158a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact945-d8-rf-3ns-receipt-20261118-a159182d47ad"
     },
     {
-      "branch": "issue-672-public-d-100row-typed-p05-source-3b447b-20261118",
-      "expected_sha": "488e10b37b64cfe10285b26e5012faec8589bcbf",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-public-d-100row-typed-p05-source-3b447b-20261118-488e10b37b64"
+      "branch": "issue-673-p7-final-scoped-9457191-review-20261118",
+      "expected_sha": "c94ad081e156139614b06d84ad6c2ced75040ba5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p7-final-scoped-9457191-review-20261118-c94ad081e156"
     }
   ]
 }
