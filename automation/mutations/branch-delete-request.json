@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-718-fdeg-harness-abcd",
-      "expected_sha": "da02e49dfcc9da2a8ca756beedeee4e116545f87",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-718-fdeg-harness-abcd-da02e49dfcc9"
+      "branch": "feature/harness-python-moose-template-evidence-20261119",
+      "expected_sha": "711b254f7b17c6718308ae83ce7c96e4a4f2a340",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-python-moose-template-evidence-20261119-711b254f7b17"
     },
     {
-      "branch": "refactor/harness-code-tests-compact-20261119",
-      "expected_sha": "4fe9328ebfe2f8c0e12063e6d3074df0e21f7a89",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-harness-code-tests-compact-20261119-4fe9328ebfe2"
+      "branch": "feature/harness-moose-param-contract-20261119",
+      "expected_sha": "7c5305128aba32e0f8e793d463d05a47e678545d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-moose-param-contract-20261119-7c5305128aba"
     },
     {
-      "branch": "refactor/harness-code-727-r1-correctness-20261119",
-      "expected_sha": "d4baef677791eb6859ddceddc43752f03bd36984",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-harness-code-727-r1-correctness-20261119-d4baef677791"
+      "branch": "feature/harness-verification-v01-20261120",
+      "expected_sha": "61defb3feba88a7f22620f36a0b65fe700eddbab",
+      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-verification-v01-20261120-61defb3feba8"
     },
     {
-      "branch": "refactor/harness-code-727-r2-iterative-context-20261119",
-      "expected_sha": "aaf52276436b957e85ffc8d9c1551d2af2df4dcc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-harness-code-727-r2-iterative-context-20261119-aaf52276436b"
+      "branch": "refactor/retire-directory-role-guard-v01-20261120",
+      "expected_sha": "261d2491281b0c65f10b0a9f11fe8fb65ba23cc5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-retire-directory-role-guard-v01-20261120-261d2491281b"
     },
     {
-      "branch": "refactor/harness-code-727-r3-claim-compact-20261119",
-      "expected_sha": "461bd522191a7c2c37f88b2c74fbf81120cb7f08",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-harness-code-727-r3-claim-compact-20261119-461bd522191a"
+      "branch": "issue-743-verification-module-split",
+      "expected_sha": "9ddfbf9a1979f98c78ee1288458667168311cfa4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-743-verification-module-split-9ddfbf9a1979"
     }
   ]
 }
