@@ -7,6 +7,9 @@ from pathlib import Path
 ENTRYPOINTS = {
     "ci.yml": {"push", "pull_request"},
     "harness-code.yml": {"push", "pull_request"},
+    "physics-code-ci.yml": {"push", "pull_request"},
+    "physics-native-ci.yml": {"pull_request"},
+    "repository-diagnostics.yml": {"workflow_dispatch"},
     "experiment.yml": {"workflow_dispatch"},
     "refactor.yml": {"workflow_dispatch"},
     "sol-runtime-integration.yml": {"push", "pull_request"},
@@ -35,7 +38,8 @@ FORBIDDEN_EVENTS = {
     "pull_request_review_comment",
 }
 REQUIRED_CI_PULL_REQUEST_TYPES = {"opened", "synchronize", "reopened", "edited"}
-REQUIRED_CI_EDIT_FILTER_JOBS = {"validate", "runtime-smoke"}
+REQUIRED_CI_EDIT_FILTER_JOBS: set[str] = set()
+REQUIRED_CI_UNCONDITIONAL_JOBS = {"validate"}
 REQUIRED_CI_JOB_IF = (
     "github.event_name != 'pull_request' || "
     "github.event.action != 'edited' || "
@@ -163,14 +167,14 @@ def check(root: Path) -> list[str]:
             pr_types = pull_request_types(workflow_text)
             if pr_types != REQUIRED_CI_PULL_REQUEST_TYPES:
                 errors.append("ci.yml: pull_request types=" f"{sorted(pr_types)} expected=" f"{sorted(REQUIRED_CI_PULL_REQUEST_TYPES)}")
-            for job in sorted(REQUIRED_CI_EDIT_FILTER_JOBS):
+            for job in sorted(REQUIRED_CI_UNCONDITIONAL_JOBS):
                 block = job_block(workflow_text, job)
                 if not block:
                     errors.append(f"ci.yml: required job missing: {job}")
                     continue
                 condition = job_if_condition(workflow_text, job)
-                if condition != REQUIRED_CI_JOB_IF:
-                    errors.append(f"ci.yml: {job} job-level if={condition!r} expected={REQUIRED_CI_JOB_IF!r}")
+                if condition:
+                    errors.append(f"ci.yml: {job} must not have job-level if={condition!r}")
     experiment = ((workflow_dir / "experiment.yml").read_text(encoding="utf-8") if (workflow_dir / "experiment.yml").is_file() else "")
     refactor = ((workflow_dir / "refactor.yml").read_text(encoding="utf-8") if (workflow_dir / "refactor.yml").is_file() else "")
     if "Issue_${{ inputs.issue }}_experiments${{ inputs.sequence }}" not in experiment:
@@ -196,8 +200,8 @@ def self_test() -> int:
                     body += f"  {event}:\n"
             if name == "ci.yml":
                 body += "jobs:\n"
-                for job in sorted(REQUIRED_CI_EDIT_FILTER_JOBS):
-                    body += f"  {job}:\n    if: >-\n      github.event_name != 'pull_request' ||\n      github.event.action != 'edited' ||\n      github.event.changes.base != null\n    runs-on: ubuntu-latest\n    steps: []\n"
+                for job in sorted(REQUIRED_CI_UNCONDITIONAL_JOBS):
+                    body += f"  {job}:\n    runs-on: ubuntu-latest\n    steps: []\n"
             else:
                 body += "jobs:\n  x:\n    runs-on: ubuntu-latest\n    steps: []\n"
             (workflow_dir / name).write_text(body)
@@ -237,9 +241,13 @@ def self_test() -> int:
         assert any("pull_request types=" in error for error in check(root))
         ci_path.write_text(valid_ci, encoding="utf-8")
         assert not check(root), check(root)
-        invalid_filter_ci = valid_ci.replace("    if: >-\n      github.event_name != 'pull_request' ||\n      github.event.action != 'edited' ||\n      github.event.changes.base != null\n", "    if: true\n    # github.event_name != 'pull_request' ||\n    # github.event.action != 'edited' ||\n    # github.event.changes.base != null\n", 1)
+        invalid_filter_ci = valid_ci.replace(
+            "  validate:\n    runs-on: ubuntu-latest\n",
+            "  validate:\n    if: false\n    runs-on: ubuntu-latest\n",
+            1,
+        )
         ci_path.write_text(invalid_filter_ci, encoding="utf-8")
-        filter_errors = [error for error in check(root) if "job-level if=" in error]
+        filter_errors = [error for error in check(root) if "must not have job-level if=" in error]
         assert len(filter_errors) == 1, filter_errors
         ci_path.write_text(valid_ci, encoding="utf-8")
         assert not check(root), check(root)
