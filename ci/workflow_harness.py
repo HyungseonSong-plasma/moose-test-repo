@@ -118,7 +118,7 @@ def render(root: Path, profile: dict) -> str:
         if ("  push:\n    branches: [main]" not in template or
                 "  pull_request:\n    branches: [main]" not in template):
             raise WorkflowContractError("GENERAL_TRIGGER_CONTRACT")
-        job_names = JOB.findall(template)
+        job_names = JOB.findall(template.split("\njobs:\n", 1)[1])
         if job_names != ["validate"]:
             raise WorkflowContractError(
                 "GENERAL_MUST_ONLY_OWN_INTEGRATION_VALIDATE:" + repr(job_names)
