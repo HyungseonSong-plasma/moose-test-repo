@@ -8,6 +8,7 @@ ENTRYPOINTS = {
     "ci.yml": {"push", "pull_request"},
     "harness-code.yml": {"push", "pull_request"},
     "physics-code-ci.yml": {"push", "pull_request"},
+    "physics-legacy-audit.yml": {"workflow_dispatch"},
     "physics-native-ci.yml": {"pull_request"},
     "repository-diagnostics.yml": {"workflow_dispatch"},
     "experiment.yml": {"workflow_dispatch"},

@@ -10,7 +10,7 @@ import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-CI = ROOT / ".github/workflows/physics-code-ci.yml"
+CI = ROOT / ".github/workflows/physics-legacy-audit.yml"
 JOB = "issue402_ideal_gas_p0"
 
 PYTEST_TARGETS = (

@@ -52,14 +52,34 @@ check.** Required status-check/ruleset enforcement for specialized workflows
 must be reviewed separately; do not infer branch-protection semantics from
 GitHub's overall Workflow conclusion.
 
+## Contract lifetime vs CI implementation
+
+The governing definition is [Contract Lifecycle v0.1](CONTRACT_LIFECYCLE_V01.md).
+Repository CI's **permanent, Issue-independent integration invariants** are
+Static Contracts. A particular code migration, historical PR receipt,
+retirement snapshot or case-specific acceptance gate is a **temporary Dynamic
+Contract**, even if its check currently runs in a general CI workflow.
+
+An always-run job does not make its every step a Static Contract. Conversely,
+an optimized selective test run does not change the permanent nature of a
+Static Contract. Regression tests and historical evidence are different
+objects; temporary contracts must have a provable retirement gate.
+
 ## Exact validation inventory and retirement evidence
 
-The machine-readable contract
+The transitional migration inventory
 [`ci/contracts/repository_ci_scope_v1.json`](contracts/repository_ci_scope_v1.json)
-enumerates all 17 original jobs and all 50 `validate` steps with their new
-owners. `ci/guards/repository_ci_scope.py` fails on an extra/missing Job,
-changed core or Physics Code step ownership, missing native path coverage,
-or a conditional/skipped required `validate`.
+records the migration lineage of the original 17 jobs and the current
+owners of still-active gates. Two already-accepted temporary gates (A2 symbol
+inventory and Wave1-E code-release evidence) have now been removed from the
+active Job/owner inventory, with their historical evidence retained.
+Its step-name and historical Job-name lists are **not** permanent Static
+Contracts.
+`ci/guards/repository_ci_scope.py` currently enforces owner completeness and
+prevents required `validate` from silently skipping checks; that
+implementation guard must be reduced as per-task Dynamic Contracts are
+accepted and retired, while retaining the real permanent repository
+integration invariants.
 
 Migration intent: **move existing checks, not silently delete them**. Existing
 source-mutation negative tests, exact-HEAD identity, pinned OCI, P1/P2 evidence

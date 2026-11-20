@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER = Path("ci/baselines/issue541_group_a2_flow_retirement.json")
 NATIVE = Path(".github/workflows/issue402-flow-native-p2-regression.yml")
-CI = Path(".github/workflows/physics-code-ci.yml")
+CI = Path(".github/workflows/physics-legacy-audit.yml")
 HISTORICAL_CI = Path(".github/workflows/ci.yml")
 GUARD = Path("ci/guards/workflow_surface_guard.py")
 PIN = "71e112eb05d4645c82aab8861b99d6952ac4ac3e"
