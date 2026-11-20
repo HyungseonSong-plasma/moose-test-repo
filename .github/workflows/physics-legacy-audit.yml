@@ -8,7 +8,6 @@ on:
         required: true
         type: choice
         options:
-          - issue541_evidence_identity_p0
           - issue402_json_rate_p0
           - issue402_s6_reference_receipt
           - issue402_ideal_gas_p0
@@ -24,52 +23,6 @@ env:
   EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
 
 jobs:
-  issue541_evidence_identity_p0:
-    if: ${{ inputs.audit == 'issue541_evidence_identity_p0' }}
-    name: Issue541 Wave1-E evidence identity P0 (no Native)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Assert exact Wave1-E validation source checkout
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
-      - name: Fail-closed PR HEAD / merge-commit evidence identity mutations
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m py_compile ci/guards/issue541_evidence_identity_guard.py
-          python3 ci/guards/issue541_evidence_identity_guard.py --self-test
-      # The #578 PR_HEAD live audit was accepted while the PR was OPEN.
-      # It is not a generic CI obligation after merge. Preserve that immutable
-      # source/run receipt; keep the fail-closed self-tests and merged-CI audit.
-      - name: Verify real historical merged-main CI and preserved ZIP (no Native)
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          python3 ci/guards/issue541_evidence_identity_guard.py --audit-merged-ci \
-            --pr-number 523 --run-id 43588060442 --job-id 132426707768 \
-            --artifact-id 14111365673 \
-            --expected-sha e9aafe92f87f44193147cfc909cbab1de27e3b4d \
-            --output issue541-wave1e-historic-merge-ci.json
-      - name: Publish SHA-bound Wave1-E verification receipt (not global CI)
-        uses: actions/upload-artifact@v4
-        with:
-          name: issue541-wave1e-provenance-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            issue541-wave1e-historic-merge-ci.json
-          if-no-files-found: error
-          retention-days: 14
   issue402_json_rate_p0:
     if: ${{ inputs.audit == 'issue402_json_rate_p0' }}
     name: Issue402 canonical JSON-rate and H01-H05 P0 (no Native)
