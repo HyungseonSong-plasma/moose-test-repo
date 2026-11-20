@@ -92,7 +92,6 @@
     ".github/workflows/physics-legacy-audit.yml": {
       "jobs": [
         "issue402_json_rate_p0",
-        "issue402_s6_reference_receipt",
         "issue402_ideal_gas_p0",
         "issue402_core_four_p0",
         "issue402_reaction_material_p0"
