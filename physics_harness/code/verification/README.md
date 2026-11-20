@@ -6,7 +6,9 @@ directory-role policy, package allowlist, or automatic mutation approval.
 The implementation has two explicit responsibilities:
 
 - `consistency.py` validates scoped Graph/EvidenceReceipt source-metadata consistency.
-- `post_change.py` derives follow-up verification obligations from GraphDiff.
+- `dependencies.py` derives follow-up verification obligations from GraphDiff
+  and provides configurable, source-bound Python dependency verification.
+  Repository-specific constraints are supplied from outside Harness Code.
 
 Both functions remain available from `physics_harness.code.verification`.
 
