@@ -98,6 +98,18 @@ def inspect(sources: dict[str, str], contract: dict) -> list[str]:
             or re.search(r"^  (?:push|pull_request|workflow_run|schedule):",
                          legacy, re.MULTILINE)):
         problems.append("LEGACY_AUDIT_NOT_MANUAL_ONLY")
+    # Reject orphaned manual selectors after a temporary contract is retired.
+    options = re.search(
+        r"(?m)^        options:\\n((?:          - [a-z][a-z0-9_-]*\\n)+)",
+        legacy,
+    )
+    choices = (
+        re.findall(r"(?m)^          - ([a-z][a-z0-9_-]*)$", options.group(1))
+        if options else []
+    )
+    active_manual_jobs = owners[legacy_path]["jobs"]
+    if len(choices) != len(set(choices)) or set(choices) != set(active_manual_jobs):
+        problems.append("LEGACY_AUDIT_SELECTOR_OWNER_DIVERGENCE")
     for job in owners[legacy_path]["jobs"]:
         block = job_block(legacy, job)
         expected = "    if: $" + "{{ inputs.audit == '" + job + "' }}"
@@ -165,6 +177,10 @@ def self_test(sources: dict[str, str], contract: dict) -> None:
         "  workflow_dispatch:\n", "  push:\n", 1
     )
     assert "LEGACY_AUDIT_NOT_MANUAL_ONLY" in inspect(mutated, contract)
+    mutated[legacy] = sources[legacy].replace(
+        "        options:\\n", "        options:\\n          - issue402_s6_reference_receipt\\n", 1
+    )
+    assert "LEGACY_AUDIT_SELECTOR_OWNER_DIVERGENCE" in inspect(mutated, contract)
     chosen = contract["workflow_owners"][legacy]["jobs"][0]
     mutated[legacy] = sources[legacy].replace(
         "    if: $" + "{{ inputs.audit == '" + chosen + "' }}",
