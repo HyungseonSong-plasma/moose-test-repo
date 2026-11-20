@@ -19,3 +19,12 @@ directory-role policy, package allowlist, or automatic mutation approval.
 Deprecated repository-specific directory-role Guards are retired separately
 only after consumers and Workflow registrations are audited. Historical static
 adversarial cases remain as risk examples, not hard-coded role rules.
+
+## First retired Guard (issue #743)
+
+The historical static `physics_directory_role_guard.py` and its
+`physics_directory_roles_v1.json` role allowlist are retired. The generalized
+Verifier works on Graph source Evidence and actual before/after changes.
+Its dependency/call candidates produce verification obligations rather than
+blocking unfamiliar directories. Other repository checks remain independent
+and are not implicitly declared replaced by Verification v0.1.
