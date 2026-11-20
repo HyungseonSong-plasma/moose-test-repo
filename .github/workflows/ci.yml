@@ -324,6 +324,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Test old Guard versus Harness dependency parity
+        run: python -m pytest -q ci/guards/tests/test_dependency_parity.py
+      - name: Verify Harness dependency contract on exact HEAD
+        run: python ci/guards/verify_harness_dependencies.py
       - name: Validate Evidence dependency direction
         run: python ci/guards/physics_dependency_guard.py --check evidence
       - name: Validate Analysis dependency direction
