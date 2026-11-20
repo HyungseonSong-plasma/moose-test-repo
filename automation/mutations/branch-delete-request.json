@@ -1,29 +1,24 @@
 {
   "targets": [
     {
-      "branch": "issue-671-p5x-exact-3b447b67-typed-native-p05-20261118",
-      "expected_sha": "24853a9ddc640265fdce9c683786400fb13c0e94",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-3b447b67-typed-native-p05-20261118-24853a9ddc64"
+      "branch": "issue-672-p6x-final-3b447b67-20261118",
+      "expected_sha": "5f05726ca25f946142f5122d7f10213657a37f05",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6x-final-3b447b67-20261118-5f05726ca25f"
     },
     {
-      "branch": "issue-672-p6-d4-public-d-100row-newphysics-20261118",
-      "expected_sha": "5c7c64e6d089815f7c747ddf9d8774756ad4d106",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-d4-public-d-100row-newphysics-20261118-5c7c64e6d089"
+      "branch": "issue-633-p6c3-newonly-route-p0-once-20261118",
+      "expected_sha": "128d71d98162ecfb4f0174227150ae24e027ef61",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p6c3-newonly-route-p0-once-20261118-128d71d98162"
     },
     {
-      "branch": "issue-671-p5x-exact-3b447b67-w1-build-20261118",
-      "expected_sha": "1021b1cea09dd427b4230878287d1534879730d6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-exact-3b447b67-w1-build-20261118-1021b1cea09d"
+      "branch": "issue-672-p6x-final-fd21e2e3-20261118",
+      "expected_sha": "69d03169037312044f5d1459e035710b9f639bc5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6x-final-fd21e2e3-20261118-69d031690373"
     },
     {
-      "branch": "issue-672-p6x-c3-runner-owner-contract-20261118",
-      "expected_sha": "f7298f40b5a5865d4ac649e7dc176c08b411b014",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6x-c3-runner-owner-contract-20261118-f7298f40b5a5"
-    },
-    {
-      "branch": "issue-671-p5x-negative-firsterror-verifier-20261118",
-      "expected_sha": "3431d2758441d173fe61714495df750436a4d804",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5x-negative-firsterror-verifier-20261118-3431d2758441"
+      "branch": "issue-672-public-d-100row-typed-p05-source-3b447b-20261118",
+      "expected_sha": "488e10b37b64cfe10285b26e5012faec8589bcbf",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-public-d-100row-typed-p05-source-3b447b-20261118-488e10b37b64"
     }
   ]
 }
