@@ -86,9 +86,9 @@ failed verification: `HOLD` (no automatic retirement).
 | Physics Native / `plasma_native_regression` | REGRESSION TEST | Keep current-source Native integration tests, not an Issue-defined permanent contract |
 | Physics Native / `issue541_arch_dd_native_p2` | DYNAMIC — DD acceptance | Retire once scope accepted; keep relevant native fixture regression |
 | Physics Native / `issue541_arch_s6_hybrid_native_p2` | DYNAMIC — S6-417/941 acceptance | Retire once accepted; preserve needed native case regressions |
-| Physics Legacy Audit / `issue541_evidence_identity_p0` | HISTORICAL EVIDENCE / retired Dynamic candidate | Preserve historical receipt; manual interim lane, then remove obsolete task contract |
+| Former Wave1-E release audit / `issue541_evidence_identity_p0` | DYNAMIC_COMPLETED / HISTORICAL EVIDENCE | **RETIRED from CI owner/dispatch** after accepted engineering release; historical verifier retained as forensics-only tool |
 | Physics Legacy Audit / `issue402_s6_reference_receipt` | HISTORICAL EVIDENCE / retired Dynamic candidate | Preserve archive receipt; no always-on verification |
-| Physics Legacy Audit / `issue402_legacy_p0_inventory` | AUDIT TOOL | Only run on request; not a pass/fail source-usage contract |
+| Former A2 inventory / `issue402_legacy_p0_inventory` | DYNAMIC_COMPLETED + AUDIT TOOL | **RETIRED from CI owner/dispatch**; independent symbol inventory script remains optional and baseline regressions stay in default pytest |
 | Physics Legacy Audit / `issue402_json_rate_p0` | DYNAMIC — prior task replacement | Manual reproduction while acceptance history confirmed; maintain reusable regression separately |
 | Physics Legacy Audit / `issue402_ideal_gas_p0` | DYNAMIC — prior task replacement | Same: verify acceptance before deleting temporary gate |
 | Physics Legacy Audit / `issue402_core_four_p0` | DYNAMIC — prior task replacement | Same: its history/negative controls do not become universal requirements |
@@ -100,6 +100,28 @@ failed verification: `HOLD` (no automatic retirement).
 **No unverified acceptance is inferred from the presence of a successful
 historical job.** Rows labeled `DYNAMIC` are candidates for scoped review,
 not preauthorized deletion.
+
+## Retirement cycle 1 — applied in PR #753
+
+Two task-specific Jobs have now been removed from the manual selection
+Workflow *and* from `repository_ci_scope_v1.json`. These are actual CI
+contract retirements, beyond merely disabling automatic triggers.
+
+| Former task gate | Accepted evidence / reason | Removed | Preserved |
+| --- | --- | --- | --- |
+| `issue402_legacy_p0_inventory` (A2) | Group A `A2_OWNER_RETIREMENT` contains owner/no-external-caller attestation and `RETIRED_VERIFIED` historical closure; the original one-shot no longer exists and its current Job only re-ran generic pytest plus a reporting inventory | Manual Job, dispatch option, owner inventory entry, Group A requirement for an A2-only current job/checker | Immutable A2 receipt, original disappearance check, full Physics pytest including species transport, optional `issue402_symbol_inventory.py` report |
+| `issue541_evidence_identity_p0` (Wave1-E code release) | Issue #578 final engineering release and #655 exact-head postmerge CI accepted; this recurring audit only revalidated a **fixed historical** merged SHA/run/ZIP, not ongoing Physics behavior or formal workflow retirement | Manual Job, dispatch option and owner inventory entry | GitHub release/CI history, `issue541_wave1e_evidence_contract.json`, offline `issue541_evidence_identity_guard.py` verifier, all remaining science/WORM/formal-retirement HOLD |
+
+The original **A2 one-shot workflow retirement** and the **Wave1-E code
+release** are the exact accepted scopes. Neither is a claim that the
+remaining Group A or S6 Native/P3 contracts have completed. In particular,
+issue #402 remains OPEN with `SCIENCE_HOLD`, and the full formal retirement
+and WORM custody restrictions in #535/#541 are unchanged.
+
+No other Dynamic Job is approved for removal by this cycle. The five
+remaining manual Issue402 P0/reference jobs are pending per-contract
+acceptance and distinct-coverage review; the Group A/ARCH and Native P1/P2
+jobs remain active.
 
 ## Retire/keep decision procedure
 
