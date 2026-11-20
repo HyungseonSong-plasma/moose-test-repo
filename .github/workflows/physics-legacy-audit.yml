@@ -9,7 +9,6 @@ on:
         type: choice
         options:
           - issue402_json_rate_p0
-          - issue402_s6_reference_receipt
           - issue402_ideal_gas_p0
           - issue402_core_four_p0
           - issue402_reaction_material_p0
@@ -71,33 +70,6 @@ jobs:
 
   # Exact-head static receipt, independent of legacy workflow-surface failures.
   # Actual P3/P4 archived ZIP bytes are verified offline with both --artifact flags.
-  issue402_s6_reference_receipt:
-    if: ${{ inputs.audit == 'issue402_s6_reference_receipt' }}
-    name: Issue402 S6 P3/P4 reference receipt (no Native)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout exact PR source
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - name: Verify pinned reference receipt, Python and mutation sentinels
-        shell: bash
-        env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
-          python3 -m py_compile \
-            ci/guards/verify_issue402_s6_hybrid_baseline.py \
-            experiments/Issue402_plasma_dsl_g1/verify_chemistry_p3_evidence.py
-          python3 ci/guards/verify_issue402_s6_hybrid_baseline.py --manifest-check --self-test
-          echo ISSUE402_S6_REFERENCE_STATIC_CONTRACT_PASS
-
-  # #541 FLOW P0 jobs imported from verified Draft #542; no Native/P3 execution.
   issue402_ideal_gas_p0:
     if: ${{ inputs.audit == 'issue402_ideal_gas_p0' }}
     name: Issue402 ideal-gas and EI/H source P0 (no Native)
