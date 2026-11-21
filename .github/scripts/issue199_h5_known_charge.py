@@ -13,7 +13,7 @@ ROOT = Path('/workspace')
 OUT = ROOT / 'issue199-h5-results'
 CASES = OUT / 'cases'
 LOGS = OUT / 'logs'
-SOURCE = ROOT / 'experiments/Issue1_reactor_o2plus_integration/poisson_analytic'
+SOURCE = ROOT / 'experiments/historical_issue1_diagnostic_replays/issue199_h5'
 EXE = ROOT / 'physics_app/physics-opt'
 CASES.mkdir(parents=True, exist_ok=True)
 LOGS.mkdir(parents=True, exist_ok=True)

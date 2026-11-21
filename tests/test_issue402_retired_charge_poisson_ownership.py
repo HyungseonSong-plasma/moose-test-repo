@@ -46,12 +46,13 @@ def test_poisson_fem_functor_and_legacy_property_are_distinct_rhs_modes():
     assert "getProblem().addFunctorMaterial(" not in eq
 
 
-def test_legacy_fv_poisson_source_is_wired_independently_of_old_assembler():
-    legacy = (ROOT / "experiments/Issue1_reactor_o2plus_integration/"
-              "self_consistent_2d/self_consistent_2d.i").read_text()
-    assert "type = QPXPlasmaChargeDensityMaterial" in legacy
-    assert "type = FVCoupledForce" in legacy
-    assert "v = poisson_charge_source" in legacy
+def test_current_fv_drift_and_charge_source_have_independent_owners():
+    # The historical FV FVCoupledForce input is preserved as Issue #1 evidence,
+    # not a dependency of current Issue #402 source-ownership CI.
+    # This static test does not establish FV Poisson numerical parity.
+    charge = (APP / "src/materials/PhysicsPlasmaChargeDensityMaterial.C").read_text()
+    assert 'registerMooseObject("PhysicsApp", PhysicsPlasmaChargeDensityMaterial);' in charge
+    assert 'addFunctorProperty<ADReal>(\n      "poisson_charge_source"' in charge
     source = (APP / "src/fvkernels/PhysicsFVElectrostaticDrift.C").read_text()
     assert "-_potential.gradient(centered_face, state)" in source
     assert "electric_field_magnitude" not in source
