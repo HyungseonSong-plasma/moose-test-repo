@@ -7,6 +7,8 @@ from pathlib import Path
 ENTRYPOINTS = {
     "ci.yml": {"push", "pull_request"},
     "harness-code.yml": {"push", "pull_request"},
+    # Opt-in source scan: registered only for human workflow_dispatch.
+    "harness-code-scan.yml": {"workflow_dispatch"},
     "physics-code-ci.yml": {"push", "pull_request"},
     "physics-native-ci.yml": {"pull_request"},
     "repository-diagnostics.yml": {"workflow_dispatch"},
@@ -211,6 +213,20 @@ def self_test() -> int:
         assert not check(root), check(root)
         # DD registration on default main is binding: absence, disabling or
         # adding push to its maintained manual trigger is a policy failure.
+        # A manual diagnostics workflow must remain registered and never auto-run.
+        scan_manual = workflow_dir / "harness-code-scan.yml"
+        scan_bytes = scan_manual.read_text(encoding="utf-8")
+        scan_manual.unlink()
+        assert any("missing canonical workflow files:" in error and
+                   "harness-code-scan.yml" in error for error in check(root))
+        scan_manual.write_text(
+            scan_bytes.replace("  workflow_dispatch:", "  push:", 1),
+            encoding="utf-8",
+        )
+        assert any("harness-code-scan.yml: events=" in error
+                   for error in check(root))
+        scan_manual.write_text(scan_bytes, encoding="utf-8")
+        assert not check(root), check(root)
         dd_manual = workflow_dir / "issue541-arch-dd-p3-replay.yml"
         dd_bytes = dd_manual.read_text(encoding="utf-8")
         dd_manual.unlink()
