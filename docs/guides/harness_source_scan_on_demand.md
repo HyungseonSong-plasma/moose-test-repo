@@ -36,14 +36,17 @@ No other branch or changed path matches. This push is an explicit scan request
 submitted by ChatGPT, **not** an automatic check on code changes. The workflow
 uses `contents: read`, verifies the exact source SHA and never commits back.
 
-**First use:** after the workflow is merged into `main`, use the GitHub
-connector to create `issue-758-harness-scan-dispatch` at that current `main` commit.
-Create the request file on **that branch only**, using the following schema:
+**Initial provisioning:** the dedicated `issue-758-harness-scan-dispatch`
+branch and its request file were already created during the successful
+[ChatGPT end-to-end test](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/44958694044).
+Reuse this existing branch for subsequent requests. If the branch is ever
+absent, provision it only under the repository mutation policy using the
+currently approved workflow revision. The request schema is:
 
 ```json
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue758-g0-001",
+  "request_id": "issue758-g0-002",
   "source_sha": "<exact-40-hex-main-commit-sha>",
   "includes": ["physics_harness/code/*.py", "libs/hu/*.py"],
   "excludes": [],
