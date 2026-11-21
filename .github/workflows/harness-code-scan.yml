@@ -6,7 +6,7 @@ on:
   # ChatGPT can deliberately submit one request on the dedicated control branch.
   # This branch/path pair is NOT triggered by regular main/PR commits.
   push:
-    branches: [harness-scan-dispatch]
+    branches: [issue-758-harness-scan-dispatch]
     paths: [automation/harness-scan/request.json]
   workflow_dispatch:
     inputs:
@@ -107,7 +107,7 @@ jobs:
               return str(integer)
 
           if os.environ["GITHUB_EVENT_NAME"] == "push":
-              if os.environ["GITHUB_REF"] != "refs/heads/harness-scan-dispatch":
+              if os.environ["GITHUB_REF"] != "refs/heads/issue-758-harness-scan-dispatch":
                   raise ValueError("UNAUTHORIZED_SCAN_REQUEST_REF")
               path = Path("scan-control/automation/harness-scan/request.json")
               payload = json.loads(path.read_text(encoding="utf-8"))
