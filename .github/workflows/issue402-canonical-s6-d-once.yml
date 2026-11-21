@@ -6,6 +6,7 @@ on:
     paths: [.github/workflows/issue402-canonical-s6-d-once.yml]
 permissions:
   contents: read
+  actions: read
 jobs:
   canonical-s6-d:
     runs-on: ubuntu-24.04
@@ -83,6 +84,7 @@ jobs:
           cd control
           bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
       - name: Run one real 100 us canonical S6 D P3 and public Reference P4
+        id: native_p3
         shell: bash
         run: |
           set -euo pipefail
@@ -93,11 +95,137 @@ jobs:
             --expected-head "${{ github.sha }}" \
             --output "$RUNNER_TEMP/canonical_s6_D_${{ matrix.case }}" \
             --timeout-seconds 19800
-      - name: Upload source-bound public D Native and diagnostic evidence
+      # This is metadata-only and independent of GitHub Artifact storage.
+      # The ephemeral Exodus/CSV data are NOT recoverable from a job summary.
+      - name: Record status and source-bound hashes in job summary
+        id: evidence
         if: always()
+        shell: bash
+        env:
+          RESULTS_DIR: ${{ runner.temp }}/canonical_s6_D_${{ matrix.case }}/results
+        run: |
+          set -euo pipefail
+          if [[ -f "$RESULTS_DIR/status.json" ]]; then
+            echo "has_results=true" >> "$GITHUB_OUTPUT"
+            python3 - "$RESULTS_DIR/status.json" "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          status = json.loads(Path(sys.argv[1]).read_text())
+          lines = [
+              "## Issue 402 canonical S6 D Native P3 evidence (metadata only)",
+              "",
+              f"Case: `{status.get('case', 'UNKNOWN')}`",
+              f"P0: `{status.get('P0', 'UNKNOWN')}`",
+              f"P1: `{status.get('P1', 'UNKNOWN')}`",
+              f"P2: `{status.get('P2', 'UNKNOWN')}`",
+              f"P3: `{status.get('P3', 'UNKNOWN')}`",
+              f"P4: `{status.get('P4', 'UNKNOWN')}`",
+              f"Science: `{status.get('science', 'SCIENCE_HOLD')}`",
+              f"Runner status: `{status.get('status', 'UNKNOWN')}`",
+          ]
+          for key in ("source_sha", "binary_sha256", "sidecar_sha256",
+                      "p2_log_sha256", "p3_log_sha256",
+                      "native_exodus_sha256", "native_csv_sha256",
+                      "reference_status", "blocker"):
+              if key in status:
+                  lines.append(f"{key}: `{status[key]}`")
+          lines.append("Native fields and numerical comparison require the uploaded artifacts.")
+          Path(sys.argv[2]).open("a").write("\n".join(lines) + "\n")
+          PY
+          else
+            echo "has_results=false" >> "$GITHUB_OUTPUT"
+            echo "Issue402: no status.json produced by earlier stages" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Individual retries are separate action steps, NEVER a re-run of Native P3.
+      # Different names prevent v4 immutable Artifact naming conflicts.
+      - name: Publish P3 evidence (artifact attempt 1)
+        id: upload_1
+        if: always() && steps.evidence.outputs.has_results == 'true'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: issue402-canonical-S6-${{ matrix.case }}-D-${{ github.sha }}
+          name: issue402-canonical-S6-${{ matrix.case }}-D-${{ github.sha }}-r1
           path: ${{ runner.temp }}/canonical_s6_D_${{ matrix.case }}/results/**
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
+      - name: Verify P3 evidence receipt (attempt 1)
+        id: receipt_1
+        if: always() && steps.upload_1.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 control/ci/guards/verify_issue518_artifact_receipt.py \
+            --artifact-id "${{ steps.upload_1.outputs.artifact-id }}" \
+            --name "issue402-canonical-S6-${{ matrix.case }}-D-${{ github.sha }}-r1"
+
+      - name: Publish P3 evidence (artifact attempt 2)
+        id: upload_2
+        if: always() && steps.evidence.outputs.has_results == 'true' && steps.receipt_1.outcome != 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-canonical-S6-${{ matrix.case }}-D-${{ github.sha }}-r2
+          path: ${{ runner.temp }}/canonical_s6_D_${{ matrix.case }}/results/**
+          if-no-files-found: error
+          retention-days: 14
+      - name: Verify P3 evidence receipt (attempt 2)
+        id: receipt_2
+        if: always() && steps.upload_2.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 control/ci/guards/verify_issue518_artifact_receipt.py \
+            --artifact-id "${{ steps.upload_2.outputs.artifact-id }}" \
+            --name "issue402-canonical-S6-${{ matrix.case }}-D-${{ github.sha }}-r2"
+
+      - name: Publish P3 evidence (artifact attempt 3)
+        id: upload_3
+        if: always() && steps.evidence.outputs.has_results == 'true' && steps.receipt_1.outcome != 'success' && steps.receipt_2.outcome != 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-canonical-S6-${{ matrix.case }}-D-${{ github.sha }}-r3
+          path: ${{ runner.temp }}/canonical_s6_D_${{ matrix.case }}/results/**
+          if-no-files-found: error
+          retention-days: 14
+      - name: Verify P3 evidence receipt (attempt 3)
+        id: receipt_3
+        if: always() && steps.upload_3.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 control/ci/guards/verify_issue518_artifact_receipt.py \
+            --artifact-id "${{ steps.upload_3.outputs.artifact-id }}" \
+            --name "issue402-canonical-S6-${{ matrix.case }}-D-${{ github.sha }}-r3"
+
+      - name: Require durable Artifact receipt on Native P3 completion
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.native_p3.outcome }}" == 'success' &&
+                "${{ steps.evidence.outputs.has_results }}" != 'true' ]]; then
+            echo "::error::Native P3 returned success but status.json is missing"
+            exit 1
+          fi
+          if [[ "${{ steps.evidence.outputs.has_results }}" == 'true' ]]; then
+            if [[ "${{ steps.receipt_1.outcome }}" == 'success' ||
+                  "${{ steps.receipt_2.outcome }}" == 'success' ||
+                  "${{ steps.receipt_3.outcome }}" == 'success' ]]; then
+              echo "Issue402: public evidence archived and REST receipt verified"
+              echo "Issue402 Artifact receipt: PASS" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Native P3 evidence could not be archived after 3 independent action attempts"
+              echo "Issue402 Artifact receipt: FAIL (Native results were ephemeral)" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          fi
