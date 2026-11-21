@@ -1,0 +1,324 @@
+name: Harness Code Source Scan
+run-name: Harness source scan @ ${{ github.sha }}
+
+# On-demand only: manual dispatch or an explicit request-file push on the control branch.
+# No regular source push, pull_request, schedule, or repository mutation by this job.
+on:
+  # ChatGPT can deliberately submit one request on the dedicated control branch.
+  # This branch/path pair is NOT triggered by regular main/PR commits.
+  push:
+    branches: [issue-758-harness-scan-dispatch]
+    paths: [automation/harness-scan/request.json]
+  workflow_dispatch:
+    inputs:
+      includes:
+        description: 'Comma-separated tracked-source globs'
+        type: string
+        required: true
+        default: 'physics_harness/code/*.py,libs/hu/*.py'
+      excludes:
+        description: 'Optional comma-separated exclusion globs'
+        type: string
+        required: false
+        default: ''
+      collectors:
+        description: 'Comma-separated built-in collector names'
+        type: string
+        required: true
+        default: 'python_ast'
+      max_files:
+        description: 'Source-file scan budget (1..1500)'
+        type: number
+        required: true
+        default: 500
+      max_bytes:
+        description: 'Tracked-source byte budget (1..100000000)'
+        type: number
+        required: true
+        default: 20000000
+      max_seconds:
+        description: 'Elapsed scan budget (1..600)'
+        type: number
+        required: true
+        default: 240
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harness-source-scan-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-scan:
+    name: Exact-HEAD Harness Diagnostics (read-only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout ChatGPT request commit
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: scan-control
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Resolve bounded scan request
+        id: request
+        shell: bash
+        env:
+          SCAN_UI_INCLUDES: ${{ inputs.includes }}
+          SCAN_UI_EXCLUDES: ${{ inputs.excludes }}
+          SCAN_UI_COLLECTORS: ${{ inputs.collectors }}
+          SCAN_UI_MAX_FILES: ${{ inputs.max_files }}
+          SCAN_UI_MAX_BYTES: ${{ inputs.max_bytes }}
+          SCAN_UI_MAX_SECONDS: ${{ inputs.max_seconds }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          def safe_csv(value, field, *, required):
+              if isinstance(value, list):
+                  if any(not isinstance(item, str) for item in value):
+                      raise ValueError(f"{field}: expected strings")
+                  value = ",".join(value)
+              if not isinstance(value, str):
+                  raise ValueError(f"{field}: expected text")
+              parts = tuple(part.strip() for part in value.split(",") if part.strip())
+              if (len(parts) > 16 or len(set(parts)) != len(parts)
+                      or any("\r" in part or "\n" in part for part in parts)
+                      or (required and not parts)):
+                  raise ValueError(f"{field}: invalid list")
+              return ",".join(parts)
+
+          def safe_int(value, field, maximum):
+              if type(value) is bool:
+                  raise ValueError(f"{field}: invalid integer")
+              try:
+                  integer = int(value)
+              except (TypeError, ValueError) as exc:
+                  raise ValueError(f"{field}: invalid integer") from exc
+              if str(value) != str(integer) or not 1 <= integer <= maximum:
+                  raise ValueError(f"{field}: outside 1..{maximum}")
+              return str(integer)
+
+          if os.environ["GITHUB_EVENT_NAME"] == "push":
+              if os.environ["GITHUB_REF"] != "refs/heads/issue-758-harness-scan-dispatch":
+                  raise ValueError("UNAUTHORIZED_SCAN_REQUEST_REF")
+              path = Path("scan-control/automation/harness-scan/request.json")
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              expected = {"schema", "request_id", "source_sha", "includes", "excludes",
+                          "collectors", "max_files", "max_bytes", "max_seconds"}
+              if set(payload) != expected or payload["schema"] != "harness.source_scan.v1":
+                  raise ValueError("INVALID_SCAN_REQUEST_SCHEMA")
+              source_sha = payload["source_sha"]
+              request_id = payload["request_id"]
+              params = payload
+          elif os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch":
+              source_sha = os.environ["GITHUB_SHA"]
+              request_id = os.environ["GITHUB_RUN_ID"]
+              params = {
+                  "includes": os.environ["SCAN_UI_INCLUDES"],
+                  "excludes": os.environ["SCAN_UI_EXCLUDES"],
+                  "collectors": os.environ["SCAN_UI_COLLECTORS"],
+                  "max_files": os.environ["SCAN_UI_MAX_FILES"],
+                  "max_bytes": os.environ["SCAN_UI_MAX_BYTES"],
+                  "max_seconds": os.environ["SCAN_UI_MAX_SECONDS"],
+              }
+          else:
+              raise ValueError("UNSUPPORTED_SCAN_TRIGGER")
+
+          if not isinstance(source_sha, str) or re.fullmatch("[0-9a-f]{40}", source_sha) is None:
+              raise ValueError("INVALID_EXACT_SOURCE_SHA")
+          if not isinstance(request_id, str) or re.fullmatch(r"[A-Za-z0-9._-]{1,80}", request_id) is None:
+              raise ValueError("INVALID_SCAN_REQUEST_ID")
+
+          values = {
+              "SCAN_REQUEST_ID": request_id,
+              "SCAN_SOURCE_SHA": source_sha,
+              "SCAN_INCLUDES": safe_csv(params["includes"], "includes", required=True),
+              "SCAN_EXCLUDES": safe_csv(params["excludes"], "excludes", required=False),
+              "SCAN_COLLECTORS": safe_csv(params["collectors"], "collectors", required=True),
+              "SCAN_MAX_FILES": safe_int(params["max_files"], "max_files", 1500),
+              "SCAN_MAX_BYTES": safe_int(params["max_bytes"], "max_bytes", 100000000),
+              "SCAN_MAX_SECONDS": safe_int(params["max_seconds"], "max_seconds", 600),
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              for key, value in values.items():
+                  stream.write(f"{key}={value}\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+              stream.write(f"source_sha={source_sha}\n")
+          print(f"SCAN_SOURCE_SHA={source_sha}")
+          print(f"SCAN_REQUEST_EVENT={os.environ['GITHUB_EVENT_NAME']}")
+          PY
+
+      - name: Checkout selected exact source revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.request.outputs.source_sha }}
+          path: scan-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Assert exact scanned-source HEAD
+        shell: bash
+        run: test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Harness scan dependencies
+        run: python -m pip install -r scan-source/physics_harness/code/requirements.txt
+
+      - name: Run scoped source scan and export evidence
+        shell: bash
+        working-directory: scan-source
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from collections import Counter
+          from collections.abc import Mapping
+          from dataclasses import fields, is_dataclass
+          import json
+          import os
+          from pathlib import Path
+
+          from physics_harness.code.diagnostics import (
+              GitSourceProvider, ScanBudget, ScanRequest, run_scan,
+          )
+
+          output = Path("../harness-scan-output")
+          output.mkdir(exist_ok=True)
+
+          def json_value(value):
+              if is_dataclass(value) and not isinstance(value, type):
+                  return {item.name: json_value(getattr(value, item.name))
+                          for item in fields(value)}
+              if isinstance(value, Mapping):
+                  return {str(key): json_value(item) for key, item in value.items()}
+              if isinstance(value, (tuple, list)):
+                  return [json_value(item) for item in value]
+              if isinstance(value, (set, frozenset)):
+                  return [json_value(item) for item in sorted(value, key=repr)]
+              if value is None or isinstance(value, (str, bool, int, float)):
+                  return value
+              raise TypeError(f"unsupported scan result value: {type(value).__name__}")
+
+          def save(name, value):
+              (output / name).write_text(
+                  json.dumps(json_value(value), sort_keys=True, indent=2,
+                             ensure_ascii=False, allow_nan=False) + "\n",
+                  encoding="utf-8",
+              )
+
+          def tokens(name, *, required):
+              result = tuple(part.strip() for part in os.environ[name].split(",")
+                             if part.strip())
+              if len(result) > 16 or len(result) != len(set(result)):
+                  raise ValueError(f"{name}: duplicate or excessive entries")
+              if required and not result:
+                  raise ValueError(f"{name}: no entries")
+              return result
+
+          def bounded(name, maximum):
+              value = int(os.environ[name])
+              if not 1 <= value <= maximum:
+                  raise ValueError(f"{name}: outside 1..{maximum}")
+              return value
+
+          try:
+              collectors = tokens("SCAN_COLLECTORS", required=True)
+              valid_collectors = {"python_ast", "workflow", "cpp", "moose_input"}
+              if not set(collectors) <= valid_collectors:
+                  raise ValueError("unknown or unsupported collector")
+              request = ScanRequest(
+                  repository=os.environ["GITHUB_REPOSITORY"],
+                  revision=os.environ["SCAN_SOURCE_SHA"],
+                  includes=tokens("SCAN_INCLUDES", required=True),
+                  excludes=tokens("SCAN_EXCLUDES", required=False),
+                  collectors=collectors,
+                  budget=ScanBudget(
+                      max_files=bounded("SCAN_MAX_FILES", 1500),
+                      max_bytes=bounded("SCAN_MAX_BYTES", 100000000),
+                      max_seconds=bounded("SCAN_MAX_SECONDS", 600),
+                  ),
+              )
+              save("request.json", request)
+              result = run_scan(request, GitSourceProvider(Path.cwd()))
+              verification = result.verification
+              if verification is None:
+                  raise ValueError("MISSING_VERIFICATION_RECEIPT")
+
+              save("graph.json", result.graph)
+              save("evidence-receipt.json", result.receipt)
+              save("verification-receipt.json", verification)
+              summary = {
+                  "repository": request.repository,
+                  "revision": request.revision,
+                  "run_id": os.environ["GITHUB_RUN_ID"],
+                  "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "request_id": os.environ["SCAN_REQUEST_ID"],
+                  "request_event": os.environ["GITHUB_EVENT_NAME"],
+                  "request_revision": os.environ["GITHUB_SHA"],
+                  "scope_id": result.receipt.scope_id,
+                  "scan_status": result.status,
+                  "verification_status": verification.status,
+                  "files_by_status": dict(sorted(Counter(
+                      item.status for item in result.receipt.files
+                  ).items())),
+                  "nodes": len(result.graph.nodes),
+                  "edges": len(result.graph.edges),
+                  "evidence": len(result.graph.evidence),
+                  "unresolved_count": len(result.receipt.unresolved),
+                  "unresolved": list(result.receipt.unresolved),
+                  "verification_failures": list(verification.failures),
+                  "unverified_properties": list(verification.unverified_properties),
+                  "semantic_compatibility_proven": False,
+                  "global_consumer_closure_proven": False,
+                  "safe_delete_authorized": False,
+              }
+              save("summary.json", summary)
+              print(json.dumps(summary, sort_keys=True, indent=2))
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as report:
+                  report.write(
+                      "## Exact-HEAD Harness source scan\n\n"
+                      f"- Revision: `{request.revision}`\n"
+                      f"- Scope: `{result.receipt.scope_id}`\n"
+                      f"- Scan coverage: **{result.status}**\n"
+                      f"- Source verification: **{verification.status}**\n"
+                      f"- Files: {result.receipt.included_count}; "
+                      f"scanned: {result.receipt.scanned_count}\n"
+                      f"- Nodes: {len(result.graph.nodes)}; "
+                      f"edges: {len(result.graph.edges)}; "
+                      f"evidence: {len(result.graph.evidence)}\n"
+                      f"- Unresolved facts: {len(result.receipt.unresolved)}\n\n"
+                      "**Scope completion is not runtime equivalence, "
+                      "global consumer closure, or deletion permission.**\n"
+                  )
+              if verification.status == "FAILED":
+                  raise ValueError("SOURCE_VERIFICATION_FAILED")
+              if result.status != "COMPLETE" or verification.status != "VERIFIED":
+                  print("::warning::Scoped scan is PARTIAL/UNVERIFIED; review receipts.")
+          except Exception as error:
+              save("execution-error.json", {
+                  "type": type(error).__name__, "message": str(error),
+                  "revision": os.environ.get("SCAN_SOURCE_SHA", ""),
+              })
+              raise
+          PY
+
+      - name: Upload Graph and provenance receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-source-scan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: harness-scan-output/
+          if-no-files-found: warn
+          retention-days: 30
