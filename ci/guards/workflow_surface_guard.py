@@ -8,7 +8,7 @@ ENTRYPOINTS = {
     "ci.yml": {"push", "pull_request"},
     "harness-code.yml": {"push", "pull_request"},
     # Opt-in source scan: registered only for human workflow_dispatch.
-    "harness-code-scan.yml": {"workflow_dispatch"},
+    "harness-code-scan.yml": {"push", "workflow_dispatch"},
     "physics-code-ci.yml": {"push", "pull_request"},
     "physics-native-ci.yml": {"pull_request"},
     "repository-diagnostics.yml": {"workflow_dispatch"},
@@ -164,6 +164,14 @@ def check(root: Path) -> list[str]:
         forbidden = observed & FORBIDDEN_EVENTS
         if forbidden:
             errors.append(f"{name}: forbidden conversational events={sorted(forbidden)}")
+        if name == "harness-code-scan.yml":
+            # The only push route is a deliberate request-file write on a
+            # dedicated branch. Ordinary source pushes/PRs cannot trigger.
+            workflow_text = path.read_text(encoding="utf-8")
+            if "    branches: [harness-scan-dispatch]" not in workflow_text:
+                errors.append("harness-code-scan.yml: unauthorized request branch")
+            if "    paths: [automation/harness-scan/request.json]" not in workflow_text:
+                errors.append("harness-code-scan.yml: unauthorized request path")
         if name == "ci.yml":
             workflow_text = path.read_text(encoding="utf-8")
             pr_types = pull_request_types(workflow_text)
@@ -198,6 +206,8 @@ def self_test() -> int:
             for event in sorted(allowed_events):
                 if name == "ci.yml" and event == "pull_request":
                     body += "  pull_request:\n    branches: [main]\n    types: [" + ", ".join(sorted(REQUIRED_CI_PULL_REQUEST_TYPES)) + "]\n"
+                elif name == "harness-code-scan.yml" and event == "push":
+                    body += "  push:\n    branches: [harness-scan-dispatch]\n    paths: [automation/harness-scan/request.json]\n"
                 else:
                     body += f"  {event}:\n"
             if name == "ci.yml":
@@ -213,7 +223,7 @@ def self_test() -> int:
         assert not check(root), check(root)
         # DD registration on default main is binding: absence, disabling or
         # adding push to its maintained manual trigger is a policy failure.
-        # A manual diagnostics workflow must remain registered and never auto-run.
+        # Dedicated request branch is the only allowed automated entrypoint.
         scan_manual = workflow_dir / "harness-code-scan.yml"
         scan_bytes = scan_manual.read_text(encoding="utf-8")
         scan_manual.unlink()
@@ -225,6 +235,18 @@ def self_test() -> int:
         )
         assert any("harness-code-scan.yml: events=" in error
                    for error in check(root))
+        scan_manual.write_text(
+            scan_bytes.replace("    branches: [harness-scan-dispatch]",
+                               "    branches: [main]", 1),
+            encoding="utf-8",
+        )
+        assert any("unauthorized request branch" in error for error in check(root))
+        scan_manual.write_text(
+            scan_bytes.replace("    paths: [automation/harness-scan/request.json]",
+                               "    paths: [README.md]", 1),
+            encoding="utf-8",
+        )
+        assert any("unauthorized request path" in error for error in check(root))
         scan_manual.write_text(scan_bytes, encoding="utf-8")
         assert not check(root), check(root)
         dd_manual = workflow_dir / "issue541-arch-dd-p3-replay.yml"
