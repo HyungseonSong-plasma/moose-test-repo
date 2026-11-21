@@ -111,14 +111,16 @@ jobs:
                   raise ValueError("UNAUTHORIZED_SCAN_REQUEST_REF")
               path = Path("scan-control/automation/harness-scan/request.json")
               payload = json.loads(path.read_text(encoding="utf-8"))
-              expected = {"schema", "source_sha", "includes", "excludes",
+              expected = {"schema", "request_id", "source_sha", "includes", "excludes",
                           "collectors", "max_files", "max_bytes", "max_seconds"}
               if set(payload) != expected or payload["schema"] != "harness.source_scan.v1":
                   raise ValueError("INVALID_SCAN_REQUEST_SCHEMA")
               source_sha = payload["source_sha"]
+              request_id = payload["request_id"]
               params = payload
           elif os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch":
               source_sha = os.environ["GITHUB_SHA"]
+              request_id = os.environ["GITHUB_RUN_ID"]
               params = {
                   "includes": os.environ["SCAN_UI_INCLUDES"],
                   "excludes": os.environ["SCAN_UI_EXCLUDES"],
@@ -132,8 +134,11 @@ jobs:
 
           if not isinstance(source_sha, str) or re.fullmatch("[0-9a-f]{40}", source_sha) is None:
               raise ValueError("INVALID_EXACT_SOURCE_SHA")
+          if not isinstance(request_id, str) or re.fullmatch(r"[A-Za-z0-9._-]{1,80}", request_id) is None:
+              raise ValueError("INVALID_SCAN_REQUEST_ID")
 
           values = {
+              "SCAN_REQUEST_ID": request_id,
               "SCAN_SOURCE_SHA": source_sha,
               "SCAN_INCLUDES": safe_csv(params["includes"], "includes", required=True),
               "SCAN_EXCLUDES": safe_csv(params["excludes"], "excludes", required=False),
@@ -258,6 +263,7 @@ jobs:
                   "revision": request.revision,
                   "run_id": os.environ["GITHUB_RUN_ID"],
                   "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "request_id": os.environ["SCAN_REQUEST_ID"],
                   "request_event": os.environ["GITHUB_EVENT_NAME"],
                   "request_revision": os.environ["GITHUB_SHA"],
                   "scope_id": result.receipt.scope_id,
