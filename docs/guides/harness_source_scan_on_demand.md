@@ -29,7 +29,7 @@ expose GitHub's `workflow_dispatch` POST API. To let ChatGPT execute the
 same workflow without credentials, browser login or a persistent external
 controller, the workflow additionally accepts **only** a push to:
 
-- **Branch:** `harness-scan-dispatch`
+- **Branch:** `issue-758-harness-scan-dispatch`
 - **Changed file:** `automation/harness-scan/request.json`
 
 No other branch or changed path matches. This push is an explicit scan request
@@ -37,7 +37,7 @@ submitted by ChatGPT, **not** an automatic check on code changes. The workflow
 uses `contents: read`, verifies the exact source SHA and never commits back.
 
 **First use:** after the workflow is merged into `main`, use the GitHub
-connector to create `harness-scan-dispatch` at that current `main` commit.
+connector to create `issue-758-harness-scan-dispatch` at that current `main` commit.
 Create the request file on **that branch only**, using the following schema:
 
 ```json
@@ -54,7 +54,7 @@ Create the request file on **that branch only**, using the following schema:
 }
 ```
 
-For later runs, retrieve `request.json` from `harness-scan-dispatch` and
+For later runs, retrieve `request.json` from `issue-758-harness-scan-dispatch` and
 update that same file with its **current blob SHA**. Use a new `request_id`
 on every deliberately requested run (including a repeat of an older source
 SHA). Do not add new branches or tags per run. Fetch the desired source SHA
