@@ -32,6 +32,8 @@
         [Continuity]
           fem_species = e
           fvm_species = 'O2p Om Op'
+          # Synthetic P2: binding/JSON schema negative, no FV equation.
+          dont_create_kernels = true
           fem_potential = potential
         []
       []

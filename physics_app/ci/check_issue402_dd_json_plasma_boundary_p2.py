@@ -54,6 +54,9 @@ def main(exe: Path):
               PHYSICS_AUTO_INPUT, DATA, True)
         # JSON owns continuity initial number density for FEM AND FVM.
         # The .i selectors contain only species IDs (no positional values).
+        # This synthetic branch verifies IC/variable binding, NOT generated FV
+        # equations. Use the standard MOOSE PhysicsBase dont_create_kernels flag
+        # explicitly; full new-only S6 inputs MUST omit it and need Chemistry.
         assert "fem_species = e" in PHYSICS_AUTO_INPUT
         assert "fem_species = 'e 1e15'" not in PHYSICS_AUTO_INPUT
         assert DATA["species"]["e"]["initial_number_density"] == 1e15
@@ -69,7 +72,8 @@ def main(exe: Path):
         )
         fvm_input = PHYSICS_AUTO_INPUT.replace(
             "fem_species = e\n          fem_potential = potential",
-            "fem_species = e\n          fvm_species = O2p\n          fem_potential = potential",
+            "fem_species = e\n          fvm_species = O2p\n"
+            "          dont_create_kernels = true\n          fem_potential = potential",
             1
         )
         assert fvm_input != PHYSICS_AUTO_INPUT

@@ -27,6 +27,8 @@
       [DriftDiffusion]
         [Continuity]
           fvm_species = O2p
+          # Synthetic P2: binding/JSON schema negative, no FV equation.
+          dont_create_kernels = true
         []
       []
     []
