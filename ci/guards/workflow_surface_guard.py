@@ -170,7 +170,7 @@ def check(root: Path) -> list[str]:
             workflow_text = path.read_text(encoding="utf-8")
             expected_push = (
                 "  push:\n"
-                "    branches: [harness-scan-dispatch]\n"
+                "    branches: [issue-758-harness-scan-dispatch]\n"
                 "    paths: [automation/harness-scan/request.json]\n"
             )
             if expected_push not in workflow_text:
@@ -210,7 +210,7 @@ def self_test() -> int:
                 if name == "ci.yml" and event == "pull_request":
                     body += "  pull_request:\n    branches: [main]\n    types: [" + ", ".join(sorted(REQUIRED_CI_PULL_REQUEST_TYPES)) + "]\n"
                 elif name == "harness-code-scan.yml" and event == "push":
-                    body += "  push:\n    branches: [harness-scan-dispatch]\n    paths: [automation/harness-scan/request.json]\n"
+                    body += "  push:\n    branches: [issue-758-harness-scan-dispatch]\n    paths: [automation/harness-scan/request.json]\n"
                 else:
                     body += f"  {event}:\n"
             if name == "ci.yml":
@@ -239,7 +239,7 @@ def self_test() -> int:
         assert any("harness-code-scan.yml: events=" in error
                    for error in check(root))
         scan_manual.write_text(
-            scan_bytes.replace("    branches: [harness-scan-dispatch]",
+            scan_bytes.replace("    branches: [issue-758-harness-scan-dispatch]",
                                "    branches: [main]", 1),
             encoding="utf-8",
         )
