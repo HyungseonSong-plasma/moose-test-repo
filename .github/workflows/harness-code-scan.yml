@@ -1,7 +1,8 @@
 name: Harness Code Source Scan
 run-name: Harness source scan @ ${{ github.sha }}
 
-# On-demand only. No push, pull_request, schedule, or repository mutation.
+# On-demand only: manual dispatch or an explicit request-file push on the control branch.
+# No regular source push, pull_request, schedule, or repository mutation by this job.
 on:
   # ChatGPT can deliberately submit one request on the dedicated control branch.
   # This branch/path pair is NOT triggered by regular main/PR commits.
