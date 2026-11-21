@@ -3,7 +3,7 @@
 **Status:** Samuel consumer binding  
 **Consumer:** `HyungseonSong-plasma/moose-test-repo`  
 **Canonical OS repository:** `HyungseonSong-plasma/chatgpt-operation`  
-**Pinned central revision:** `9b335e3fbb9c5e8e323e382daeec56fa25336822`  
+**Pinned central revision:** `972d3151527adb944f09f123a184cf791292ff36`  
 **Expected OS:** Samuel
 
 ## Central authority
@@ -12,7 +12,7 @@ Resolve exactly:
 
 ```text
 repository          = HyungseonSong-plasma/chatgpt-operation
-revision            = 9b335e3fbb9c5e8e323e382daeec56fa25336822
+revision            = 972d3151527adb944f09f123a184cf791292ff36
 OS index            = docs/operating_system/README.md
 essential rules     = docs/operating_system/ESSENTIAL_RULES.md
 session bootstrap   = skills/session-bootstrap/README.md
@@ -53,10 +53,10 @@ Central Samuel rules/skills/controller mechanics do not establish scientific PAS
 ```text
 1. verify this exact Samuel binding;
 2. verify/read the Samuel OS index and ESSENTIAL_RULES;
-3. load session-bootstrap + state-refresh from the same revision;
+3. load session-bootstrap, state-refresh, and mandatory problem-oriented-response from the same revision;
 4. verify/read skills/catalog.json and skills/capability-registry.json from the exact pinned revision; report GITHUB_CAPABILITY_ROUTING=READY|BLOCKED independently from provider visibility;
 5. restore the Physics-local operating core and current STATE;
-6. resolve immediate-obligation trigger(s) and load matching central skill plus registry-ordered providers, including GITHUB_BRANCH_DELETE and GITHUB_MUTATION_CAPABILITY_VERDICT when triggered;
+6. resolve immediate-obligation trigger(s) and load matching central skills plus registry-ordered providers, including GITHUB_PR_CREATE (pull-request-create), GITHUB_BRANCH_DELETE, and GITHUB_MUTATION_CAPABILITY_VERDICT when triggered;
 7. report OS = Samuel, exact revision, restored state, GITHUB_MUTATION_PREFLIGHT=TRIGGER_REQUIRED and the first real gate;
 8. stop read-only.
 ```
