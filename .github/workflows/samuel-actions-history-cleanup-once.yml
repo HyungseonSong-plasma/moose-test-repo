@@ -1,0 +1,127 @@
+name: Samuel one-time Actions history cleanup (artifact-safe)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/samuel-actions-history-cleanup-once.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: samuel-actions-history-cleanup-once
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Audit and delete only terminal cancelled/skipped runs without artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          from urllib.error import HTTPError
+          from urllib.request import Request, urlopen
+
+          repository = os.environ["REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          self_id = int(os.environ["CURRENT_RUN_ID"])
+          accepted = {"cancelled", "skipped"}
+          base = f"https://api.github.com/repos/{repository}"
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2026-03-10",
+              "Authorization": f"Bearer {token}",
+          }
+
+          def api(method, path, *, allow_404=False):
+              request = Request(base + path, method=method, headers=headers)
+              try:
+                  with urlopen(request, timeout=40) as response:
+                      data = response.read()
+                      return json.loads(data) if data else None
+              except HTTPError as err:
+                  if allow_404 and err.code == 404:
+                      return None
+                  raise
+
+          # Snapshot the complete collection, not only the latest 100.
+          runs = {}
+          for conclusion in sorted(accepted):
+              page = 1
+              while True:
+                  payload = api("GET", f"/actions/runs?status={conclusion}&per_page=100&page={page}")
+                  rows = payload.get("workflow_runs")
+                  if not isinstance(rows, list):
+                      raise RuntimeError("ACTIONS_RUN_INVENTORY_INCOMPLETE")
+                  for row in rows:
+                      if row.get("status") == "completed" and row.get("conclusion") == conclusion:
+                          runs[row["id"]] = conclusion
+                  if len(rows) < 100:
+                      break
+                  page += 1
+                  if page > 100:
+                      raise RuntimeError("ACTIONS_RUN_PAGINATION_BUDGET_EXCEEDED")
+
+          removed = []
+          preserved = []
+          vanished_or_changed = []
+          for run_id, expected in sorted(runs.items()):
+              if run_id == self_id:
+                  raise RuntimeError("CANNOT_DELETE_CURRENT_RUN")
+              run = api("GET", f"/actions/runs/{run_id}", allow_404=True)
+              if run is None or run.get("id") != run_id or run.get("status") != "completed" or run.get("conclusion") != expected:
+                  vanished_or_changed.append(run_id)
+                  continue
+              artifacts = api("GET", f"/actions/runs/{run_id}/artifacts?per_page=1")
+              count = artifacts.get("total_count")
+              if type(count) is not int or count < 0:
+                  raise RuntimeError(f"ARTIFACT_INVENTORY_INCOMPLETE:{run_id}")
+              if count:
+                  preserved.append({"run_id": run_id, "artifacts": count})
+                  continue
+              # Last identity and artifact guard immediately before destructive API call.
+              check = api("GET", f"/actions/runs/{run_id}", allow_404=True)
+              if check is None or check.get("status") != "completed" or check.get("conclusion") != expected:
+                  vanished_or_changed.append(run_id)
+                  continue
+              check_artifacts = api("GET", f"/actions/runs/{run_id}/artifacts?per_page=1")
+              if check_artifacts.get("total_count") != 0:
+                  preserved.append({"run_id": run_id, "artifacts": check_artifacts.get("total_count")})
+                  continue
+              api("DELETE", f"/actions/runs/{run_id}")
+              for attempt in range(6):
+                  if api("GET", f"/actions/runs/{run_id}", allow_404=True) is None:
+                      break
+                  if attempt == 5:
+                      raise RuntimeError(f"RUN_DELETION_POSTCONDITION_FAILED:{run_id}")
+                  time.sleep(2)
+              removed.append(run_id)
+
+          outcome = {
+              "snapshot_count": len(runs),
+              "deleted_count": len(removed),
+              "deleted_ids": removed,
+              "preserved_artifact_runs": preserved,
+              "vanished_or_changed_ids": vanished_or_changed,
+          }
+          print("SAMUEL_ACTIONS_HISTORY_CLEANUP=" + json.dumps(outcome, sort_keys=True))
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## Actions history cleanup (artifact-safe)\n\n")
+              summary.write(f"- Snapshot: {len(runs)} completed cancelled/skipped runs\n")
+              summary.write(f"- Deleted, confirmed 404: {len(removed)}\n")
+              summary.write(f"- Preserved due to artifacts: {len(preserved)}\n")
+              summary.write(f"- Changed or already absent: {len(vanished_or_changed)}\n")
+              summary.write("\nArtifact-bearing run IDs: " + ", ".join(str(x["run_id"]) for x in preserved) + "\n")
+          PY
