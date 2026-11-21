@@ -1,0 +1,16 @@
+{
+  "schema": "harness.source_scan.v1",
+  "request_id": "issue758-g0-001",
+  "source_sha": "e5ffc4535b9b89218acef11fbfb24e3921b43f8f",
+  "includes": [
+    "physics_harness/code/*.py",
+    "libs/hu/*.py"
+  ],
+  "excludes": [],
+  "collectors": [
+    "python_ast"
+  ],
+  "max_files": 500,
+  "max_bytes": 20000000,
+  "max_seconds": 240
+}
