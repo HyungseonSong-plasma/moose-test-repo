@@ -3,6 +3,11 @@ run-name: Harness source scan @ ${{ github.sha }}
 
 # On-demand only. No push, pull_request, schedule, or repository mutation.
 on:
+  # ChatGPT can deliberately submit one request on the dedicated control branch.
+  # This branch/path pair is NOT triggered by regular main/PR commits.
+  push:
+    branches: [harness-scan-dispatch]
+    paths: [automation/harness-scan/request.json]
   workflow_dispatch:
     inputs:
       includes:
@@ -49,16 +54,114 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout selected exact revision
+      - name: Checkout ChatGPT request commit
+        if: github.event_name == 'push'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+          path: scan-control
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Assert exact source HEAD
+      - name: Resolve bounded scan request
+        id: request
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+        env:
+          SCAN_UI_INCLUDES: ${{ inputs.includes }}
+          SCAN_UI_EXCLUDES: ${{ inputs.excludes }}
+          SCAN_UI_COLLECTORS: ${{ inputs.collectors }}
+          SCAN_UI_MAX_FILES: ${{ inputs.max_files }}
+          SCAN_UI_MAX_BYTES: ${{ inputs.max_bytes }}
+          SCAN_UI_MAX_SECONDS: ${{ inputs.max_seconds }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          def safe_csv(value, field, *, required):
+              if isinstance(value, list):
+                  if any(not isinstance(item, str) for item in value):
+                      raise ValueError(f"{field}: expected strings")
+                  value = ",".join(value)
+              if not isinstance(value, str):
+                  raise ValueError(f"{field}: expected text")
+              parts = tuple(part.strip() for part in value.split(",") if part.strip())
+              if (len(parts) > 16 or len(set(parts)) != len(parts)
+                      or any("\r" in part or "\n" in part for part in parts)
+                      or (required and not parts)):
+                  raise ValueError(f"{field}: invalid list")
+              return ",".join(parts)
+
+          def safe_int(value, field, maximum):
+              if type(value) is bool:
+                  raise ValueError(f"{field}: invalid integer")
+              try:
+                  integer = int(value)
+              except (TypeError, ValueError) as exc:
+                  raise ValueError(f"{field}: invalid integer") from exc
+              if str(value) != str(integer) or not 1 <= integer <= maximum:
+                  raise ValueError(f"{field}: outside 1..{maximum}")
+              return str(integer)
+
+          if os.environ["GITHUB_EVENT_NAME"] == "push":
+              if os.environ["GITHUB_REF"] != "refs/heads/harness-scan-dispatch":
+                  raise ValueError("UNAUTHORIZED_SCAN_REQUEST_REF")
+              path = Path("scan-control/automation/harness-scan/request.json")
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              expected = {"schema", "source_sha", "includes", "excludes",
+                          "collectors", "max_files", "max_bytes", "max_seconds"}
+              if set(payload) != expected or payload["schema"] != "harness.source_scan.v1":
+                  raise ValueError("INVALID_SCAN_REQUEST_SCHEMA")
+              source_sha = payload["source_sha"]
+              params = payload
+          elif os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch":
+              source_sha = os.environ["GITHUB_SHA"]
+              params = {
+                  "includes": os.environ["SCAN_UI_INCLUDES"],
+                  "excludes": os.environ["SCAN_UI_EXCLUDES"],
+                  "collectors": os.environ["SCAN_UI_COLLECTORS"],
+                  "max_files": os.environ["SCAN_UI_MAX_FILES"],
+                  "max_bytes": os.environ["SCAN_UI_MAX_BYTES"],
+                  "max_seconds": os.environ["SCAN_UI_MAX_SECONDS"],
+              }
+          else:
+              raise ValueError("UNSUPPORTED_SCAN_TRIGGER")
+
+          if not isinstance(source_sha, str) or re.fullmatch("[0-9a-f]{40}", source_sha) is None:
+              raise ValueError("INVALID_EXACT_SOURCE_SHA")
+
+          values = {
+              "SCAN_SOURCE_SHA": source_sha,
+              "SCAN_INCLUDES": safe_csv(params["includes"], "includes", required=True),
+              "SCAN_EXCLUDES": safe_csv(params["excludes"], "excludes", required=False),
+              "SCAN_COLLECTORS": safe_csv(params["collectors"], "collectors", required=True),
+              "SCAN_MAX_FILES": safe_int(params["max_files"], "max_files", 1500),
+              "SCAN_MAX_BYTES": safe_int(params["max_bytes"], "max_bytes", 100000000),
+              "SCAN_MAX_SECONDS": safe_int(params["max_seconds"], "max_seconds", 600),
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              for key, value in values.items():
+                  stream.write(f"{key}={value}\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+              stream.write(f"source_sha={source_sha}\n")
+          print(f"SCAN_SOURCE_SHA={source_sha}")
+          print(f"SCAN_REQUEST_EVENT={os.environ['GITHUB_EVENT_NAME']}")
+          PY
+
+      - name: Checkout selected exact source revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.request.outputs.source_sha }}
+          path: scan-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Assert exact scanned-source HEAD
+        shell: bash
+        run: test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -66,17 +169,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install Harness scan dependencies
-        run: python -m pip install -r physics_harness/code/requirements.txt
+        run: python -m pip install -r scan-source/physics_harness/code/requirements.txt
 
       - name: Run scoped source scan and export evidence
         shell: bash
-        env:
-          SCAN_INCLUDES: ${{ inputs.includes }}
-          SCAN_EXCLUDES: ${{ inputs.excludes }}
-          SCAN_COLLECTORS: ${{ inputs.collectors }}
-          SCAN_MAX_FILES: ${{ inputs.max_files }}
-          SCAN_MAX_BYTES: ${{ inputs.max_bytes }}
-          SCAN_MAX_SECONDS: ${{ inputs.max_seconds }}
+        working-directory: scan-source
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -91,7 +188,7 @@ jobs:
               GitSourceProvider, ScanBudget, ScanRequest, run_scan,
           )
 
-          output = Path("harness-scan-output")
+          output = Path("../harness-scan-output")
           output.mkdir(exist_ok=True)
 
           def json_value(value):
@@ -137,7 +234,7 @@ jobs:
                   raise ValueError("unknown or unsupported collector")
               request = ScanRequest(
                   repository=os.environ["GITHUB_REPOSITORY"],
-                  revision=os.environ["GITHUB_SHA"],
+                  revision=os.environ["SCAN_SOURCE_SHA"],
                   includes=tokens("SCAN_INCLUDES", required=True),
                   excludes=tokens("SCAN_EXCLUDES", required=False),
                   collectors=collectors,
@@ -161,6 +258,8 @@ jobs:
                   "revision": request.revision,
                   "run_id": os.environ["GITHUB_RUN_ID"],
                   "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "request_event": os.environ["GITHUB_EVENT_NAME"],
+                  "request_revision": os.environ["GITHUB_SHA"],
                   "scope_id": result.receipt.scope_id,
                   "scan_status": result.status,
                   "verification_status": verification.status,
@@ -203,7 +302,7 @@ jobs:
           except Exception as error:
               save("execution-error.json", {
                   "type": type(error).__name__, "message": str(error),
-                  "revision": os.environ.get("GITHUB_SHA", ""),
+                  "revision": os.environ.get("SCAN_SOURCE_SHA", ""),
               })
               raise
           PY
