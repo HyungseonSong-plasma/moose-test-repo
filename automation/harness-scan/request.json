@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue758-g0-001",
-  "source_sha": "e5ffc4535b9b89218acef11fbfb24e3921b43f8f",
+  "request_id": "issue758-postmerge-002",
+  "source_sha": "13c2b1e8747f698dff765fa9fb8a2d8c56dafff6",
   "includes": [
     "physics_harness/code/*.py",
     "libs/hu/*.py"
