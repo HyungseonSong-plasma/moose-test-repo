@@ -55,6 +55,11 @@ def verify_generated_artifact(
         verified.add("SCOPE_IDENTITY")
 
     paths = {item.path: item for item in receipt.files}
+    # Index by exact blob identity; the same blob can belong to multiple paths.
+    # Keep all path candidates so ambiguous source references still fail closed.
+    paths_by_blob: dict[str, list[tuple[str, object]]] = {}
+    for path, item in paths.items():
+        paths_by_blob.setdefault(item.blob_sha, []).append((path, item))
     included = tuple(sorted(
         item.path for item in receipt.files if item.status != "EXCLUDED"
     ))
@@ -94,7 +99,10 @@ def verify_generated_artifact(
 
         ref = evidence.source_ref
         matches = []
-        for path, item in paths.items():
+        # Only receipt entries with the final @blob can match the old strict
+        # path[@blob] / path:decimal_line@blob predicate.
+        ref_blob = ref.rpartition("@")[2]
+        for path, item in paths_by_blob.get(ref_blob, ()):
             if ref == path + "@" + item.blob_sha:
                 matches.append((path, item, None))
             elif ref.startswith(path + ":") and ref.endswith("@" + item.blob_sha):

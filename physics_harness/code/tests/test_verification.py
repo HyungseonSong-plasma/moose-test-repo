@@ -175,3 +175,66 @@ def test_new_subprocess_use_generates_evidence_obligation_not_path_rejection(git
     assert "VERIFY_BEHAVIORAL_COMPATIBILITY" in plan.required_checks
     assert plan.disposition == "UNVERIFIED"
     assert not plan.mutation_approved
+
+
+@pytest.mark.parametrize("source_ref_suffix", [
+    ":0@", ":-1@", ":1.5@", ":1@", "x:1@", ":1@",
+])
+def test_source_reference_lookup_rejects_invalid_line_blob_and_prefix(
+    git_factory, source_ref_suffix,
+):
+    result = scan(git_factory, 'registerMooseObject("App", A);\n')
+    source = next(e for e in result.graph.evidence if e.method != "GIT_TREE")
+    path = result.receipt.files[0].path
+    blob = result.receipt.files[0].blob_sha
+    if source_ref_suffix == ":1@":
+        ref = path + source_ref_suffix + ("a" * 40 if blob != "a" * 40 else "b" * 40)
+    elif source_ref_suffix == "x:1@":
+        ref = path + source_ref_suffix + blob
+    else:
+        ref = path + source_ref_suffix + blob
+    changed = replace(source, source_ref=ref)
+    graph = replace(result.graph, evidence=tuple(
+        changed if item.id == source.id else item for item in result.graph.evidence
+    ))
+    report = verify_generated_artifact(graph, result.receipt)
+    assert report.status == "FAILED"
+    assert f"SOURCE_REFERENCE_NOT_BOUND_TO_RECEIPT:{source.id}" in report.failures
+
+
+def test_shared_blob_across_distinct_source_paths_remains_verified(git_factory):
+    text = 'registerMooseObject("App", A);\n'
+    root, revision = git_factory({"src/first.C": text, "src/second.C": text})
+    request = ScanRequest(
+        repository="example/repo", revision=revision,
+        includes=("src/*.C",), collectors=("cpp",),
+    )
+    diagnostic = run_scan(request, GitSourceProvider(root))
+    assert len(diagnostic.receipt.files) == 2
+    assert diagnostic.receipt.files[0].blob_sha == diagnostic.receipt.files[1].blob_sha
+    assert diagnostic.verification.status == "VERIFIED"
+    again = verify_generated_artifact(diagnostic.graph, diagnostic.receipt)
+    assert again.status == "VERIFIED"
+    assert not again.failures
+
+
+def test_line_reference_must_match_evidence_attributes_with_shared_blob(git_factory):
+    source_text = 'registerMooseObject("App", A);\n'
+    root, revision = git_factory({
+        "src/first.C": source_text, "src/second.C": source_text,
+    })
+    diagnostic = run_scan(
+        ScanRequest(repository="example/repo", revision=revision,
+                    includes=("src/*.C",), collectors=("cpp",)),
+        GitSourceProvider(root),
+    )
+    evidence = next(x for x in diagnostic.graph.evidence
+                    if x.method != "GIT_TREE" and x.attributes.get("line") == 1)
+    path, _, blob = evidence.source_ref.partition(":1@")
+    corrupted = replace(evidence, source_ref=f"{path}:2@{blob}")
+    graph = replace(diagnostic.graph, evidence=tuple(
+        corrupted if x.id == evidence.id else x for x in diagnostic.graph.evidence
+    ))
+    verification = verify_generated_artifact(graph, diagnostic.receipt)
+    assert verification.status == "FAILED"
+    assert f"SOURCE_LINE_MISMATCH:{evidence.id}" in verification.failures
