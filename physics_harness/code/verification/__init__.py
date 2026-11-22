@@ -51,3 +51,18 @@ __all__ += [
 
 from .naming_replay import ReplayArtifact, ReplayComparison, compare_replay_artifacts, compare_candidate_replay
 __all__ += ["ReplayArtifact", "ReplayComparison", "compare_replay_artifacts", "compare_candidate_replay"]
+
+from .naming_replay_execution import (
+    NamingReplayRun, NamingReplayReceipt, run_naming_test_replay,
+    build_executed_replay_artifact_pair,
+)
+from .naming_review_authority import (
+    NamingReviewAuthorityReceipt, naming_review_context_sha256,
+    verify_github_naming_review,
+)
+__all__ += [
+    "NamingReplayRun", "NamingReplayReceipt", "run_naming_test_replay",
+    "build_executed_replay_artifact_pair",
+    "NamingReviewAuthorityReceipt", "naming_review_context_sha256",
+    "verify_github_naming_review",
+]

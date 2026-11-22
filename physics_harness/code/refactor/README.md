@@ -307,3 +307,45 @@ Detailed contract: `docs/development/evolutionary-naming-semantic-gates-v05.md`.
 `verification/naming_replay.py` compares immutable **raw JUnit XML bytes** and stable testcase identities for baseline/candidate SHA pairs. It blocks digest mismatches, invalid XML, missing tests, duplicate IDs, candidate failures, wrong revisions and malformed inputs; skipped tests, new tests and missing producer evidence remain unresolved. The naming safety orchestrator recomputes this receipt from optional `replay_baseline` / `replay_candidate` artifacts; missing artifacts are explicitly unresolved.
 
 **This does not run tests or authenticate CI.** Caller-supplied digests and run URLs are not independent attestation. A green before/after JUnit comparison can never authorize a Rename/Extraction. CI provenance, toolchain, semantic reviewer independence, external consumers, post-integration validation and rollback remain separate gates. The v0.6 interface is a replay evidence *falsifier*, not an executor.
+
+## v0.6: independent execution evidence and GitHub review identity (still read-only naming policy)
+
+Two independent *verification-capability* adapters are now available, separate
+from the GPT planning and structural source reviewers:
+
+1. `verification/naming_replay_execution.py` exposes `run_naming_test_replay(...)` for
+   **explicit trusted-runner execution** of the *same tracked pytest modules*
+   on detached baseline/candidate Git worktrees. The source Git object
+   ancestry, test-file blob, pytest configuration, and ancestor `conftest.py`
+   blobs are checked first; changes or missing tests prevent replay. Each
+   exact-SHA run records interpreter, suite SHA, return code, collected PASS
+   count, stream hashes, timeout and observed worktree edits. An injected
+   same-signature behavior regression fails the replay. `PASS_WITH_GAPS` is
+   bounded test evidence, **not** semantic equivalence proof. Test relevance,
+   imported dependency closure, dynamic/external consumers, CI runner
+   authentication and operating-system/network sandboxing remain unproven.
+   The helper `build_executed_replay_artifact_pair` converts these actual
+   worktree-produced JUnit bytes to the existing canonical read-only
+   `ReplayArtifact` comparator, so the same exact-candidate checks apply.
+   The executor can run untrusted Python and MUST NOT be called by a GPT
+   recommendation without user-approved trusted CI operation; it is never
+   invoked automatically by `evaluate_naming_safety_gates`.
+
+2. `verification/naming_review_authority.py` accepts only fresh GitHub HTTPS
+   REST pulls/reviews, never a caller's asserted review payload or URL. It
+   requires a review of the **exact candidate commit**, `APPROVED` state,
+   reviewer distinct from PR author, explicitly configured account allowlist,
+   optional explicit bot allowance, and a stand-alone
+   `Naming-Audit-Context: <sha256>` binding the source packet, chosen naming
+   option and candidate commit. It re-reads the PR after the review to reject
+   a stale head, refuses redirects and does not send tokens elsewhere.
+   `AUTHENTICATED_REVIEW_ONLY` proves the approved GitHub *account + target*,
+   not that its reviewer was the independent semantic reasoner, observed
+   candidate-blind first pass, or established actual behavior preservation.
+
+Neither adapter changes the existing `BLOCKED/HOLD` safety decision or
+`mutation_approved=False`. To implement the requested validation-gated
+automatic rename, next require controlled independently authorized review
+workflow, exact-commit execution/contract coverage attestations, external
+consumer closure, transactional mutation executor, rollback and verified
+post-integration HEAD. A passing CI run in the same PR is insufficient.
