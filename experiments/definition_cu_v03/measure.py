@@ -50,7 +50,7 @@ def measure_repository(root: Path, *, expected_revision: str | None = None) -> d
         # The byte identity is verified once more inside the AST extractor.
         scan = extract_behavior_witnesses(path, content.decode("utf-8"), blob_sha, revision)
         inferred = infer_from_behavior((scan,), required_paths=(path,))
-        folder = str(Path(path).parent)
+        folder = "physics_harness/code/" + label  # public package, not nested sample provider
         result = {
             "target": label,
             "target_kind": "FOLDER_SAMPLE_FROM_PYTHON_FILE",

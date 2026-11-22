@@ -38,9 +38,9 @@ def run(manifest:dict)->dict:
                            'DEB_denominator':v.total_concepts,
                            'MRC_extra_cues':v.minimum_required_context,
                            'MRC_tier':v.minimum_context_tier,
-                           'MRC_cues':v.selected_context_cues,
-                           'unpredicted_baseline':v.unpredicted_concepts,
-                           'not_recoverable_in_scope':v.still_unrecoverable}})
+                           'MRC_cues':list(v.selected_context_cues),
+                           'unpredicted_baseline':list(v.unpredicted_concepts),
+                           'not_recoverable_in_scope':list(v.still_unrecoverable)}})
         results.append(result)
     return {'schema_version':'0.3-baseline-proxy','baseline':BASELINE,
             'input_kind':'pinned_source_anchored_role_hypotheses_and_frozen_api_cues',
