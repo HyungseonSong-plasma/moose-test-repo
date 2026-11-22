@@ -1,10 +1,7 @@
 """v0.4 exact HEAD Git-object inventory integration, no Physics execution."""
 from __future__ import annotations
 
-import json
-import os
 from pathlib import Path
-import warnings
 
 from experiments.definition_cu_v04.measure import measure_repository, TARGETS
 
@@ -36,17 +33,3 @@ def test_full_python_source_inventory_and_context_discrimination():
         else:
             assert row["metrics"]["MRC_extra_cues"] is None or row["metrics"]["MRC_extra_cues"] >= 0
             assert row["name_contrast"]["semantic_name_alignment_proven"] is False
-
-    # Pilot-only machine receipt in the standard pytest warning summary. It
-    # must not be interpreted as a human-CU or full-repository coverage verdict.
-    if os.environ.get("GITHUB_ACTIONS") == "true":
-        snapshot = [{"target": r["target"],
-                     "files": r["scanned_files"],
-                     "role": r["definition"],
-                     "candidates": r["candidates"],
-                     "DEB": r["metrics"]["DEB"] if r["metrics"] else None,
-                     "MRC": r["metrics"]["MRC_extra_cues"] if r["metrics"] else None,
-                     "name_discrimination": r["name_contrast"]["result"] if r["name_contrast"] else None}
-                    for r in report["results"]]
-        warnings.warn("DEFINITION_CU_V04_PILOT=" + json.dumps(snapshot, separators=(",", ":")),
-                      UserWarning, stacklevel=1)

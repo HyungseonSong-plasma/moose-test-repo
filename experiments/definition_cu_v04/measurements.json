@@ -1,0 +1,28 @@
+{
+  "schema_version": "0.4-pilot-receipt",
+  "source_revision": "3e5486ae257cda0aa36065c692d8f32f68e319d9",
+  "source_scope": "all tracked production Python .py under six physics_harness/code child packages",
+  "evidence_run": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45064377034",
+  "validation": { "harness_code_ci": "SUCCESS", "pytest": "296 passed, 1 pilot-report warning" },
+  "definition_inference": "static Python AST behavior signatures; no target name or README input",
+  "cue_model": "definition-lexicon-v0.2; target+parent name, direct module name, declared API cue",
+  "source_provider": "GitSourceProvider, exact HEAD Git tree and verified blobs",
+  "total_scanned_python_files": 37,
+  "human_comprehension_calibrated": false,
+  "semantic_naming_proven": false,
+  "covers_non_python_sources": false,
+  "results": [
+    {"target":"graph","files":8,"role":"GRAPH_MODEL","role_candidates":[],"DEB":3,"DEB_denominator":3,"MRC":null,"name_discrimination":"NOT_LEXICALLY_DISTINCT"},
+    {"target":"diagnostics","files":12,"role":"SOURCE_FACT_COLLECTION","role_candidates":[],"DEB":3,"DEB_denominator":3,"MRC":null,"name_discrimination":"NOT_LEXICALLY_DISTINCT"},
+    {"target":"analysis","files":10,"role":"GRAPH_ANALYSIS","role_candidates":[],"DEB":2,"DEB_denominator":3,"MRC":2,"name_discrimination":"NOT_LEXICALLY_DISTINCT"},
+    {"target":"refactor","files":3,"role":"CHANGE_PLANNING","role_candidates":[],"DEB":3,"DEB_denominator":3,"MRC":null,"name_discrimination":"NOT_LEXICALLY_DISTINCT"},
+    {"target":"verification","files":3,"role":"SOURCE_VERIFICATION","role_candidates":[],"DEB":2,"DEB_denominator":3,"MRC":null,"name_discrimination":"LEXICALLY_DISTINCT"},
+    {"target":"delete","files":1,"role":null,"role_candidates":[],"DEB":null,"DEB_denominator":null,"MRC":null,"name_discrimination":null}
+  ],
+  "limits": [
+    "MRC null means unrecoverable under the current lexical cue universe, not zero extra context",
+    "Name discrimination is a matched sibling lexical control, not human semantic understandability",
+    "Graph model and code folder ownership are bounded static hypotheses, not globally proven",
+    "No runtime/native semantics, entire external consumer universe, C++ or MOOSE input inspected"
+  ]
+}
