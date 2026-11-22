@@ -66,3 +66,12 @@ __all__ += [
     "NamingReviewAuthorityReceipt", "naming_review_context_sha256",
     "verify_github_naming_review",
 ]
+
+from .naming_actions import (
+    GitHubActionsRestReader, ActionsArtifactReceipt, ActionsReplayGate,
+    verify_actions_junit_artifact, compare_actions_junit_replays, audit_actions_replay,
+)
+__all__ += [
+    "GitHubActionsRestReader", "ActionsArtifactReceipt", "ActionsReplayGate",
+    "verify_actions_junit_artifact", "compare_actions_junit_replays", "audit_actions_replay",
+]

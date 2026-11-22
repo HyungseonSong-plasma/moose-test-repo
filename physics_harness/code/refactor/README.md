@@ -349,3 +349,7 @@ automatic rename, next require controlled independently authorized review
 workflow, exact-commit execution/contract coverage attestations, external
 consumer closure, transactional mutation executor, rollback and verified
 post-integration HEAD. A passing CI run in the same PR is insufficient.
+
+### v0.7 — GitHub Actions artifact provenance (read-only)
+
+`verification/naming_actions.py` reads official GitHub HTTPS run/job/artifact metadata and raw archive bytes, checks exact repository/SHA/attempt/workflow/job/step/Artifact ownership, then compares JUnit test identities through the canonical `naming_replay` module. It checks a run twice for concurrent reruns, strips bearer credentials on artifact redirects, and fails closed on invalid ZIP/XML/pagination. It never dispatches or edits workflows. A missing JUnit artifact is **HOLD**, not success. Current Harness Code CI run `45081041451` has no JUnit artifact; Repository CI's `physics-architecture-census` must not be substituted. See `docs/development/evolutionary-naming-actions-provenance-v07.md`. Authenticated GitHub metadata does not attest the runner/toolchain, semantic parity, external consumers or mutation permission.
