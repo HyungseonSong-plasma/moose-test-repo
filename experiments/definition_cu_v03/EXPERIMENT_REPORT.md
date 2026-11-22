@@ -25,3 +25,28 @@ The CLI fails on source/blob identity mismatch; `--expected-revision` can requir
 3. Follow-on: characterize false positives on misleading imported interfaces and broaden coverage/consumer closure independently before CU calibration or `COMPRESS`/`REMOVE` decisions.
 
 No documentation is compressed or deleted, and no human-understandability conclusion is made.
+
+## Exact-baseline cue replay (separate from full-source AST execution)
+
+`measure_frozen_baseline.py` consumes the existing exact-blob v0.2 exported-API
+snapshot at `main@4f873e71f8503943c9fce2dd30fcc96c28d6f631` and behavior
+role hypotheses supported by specific source lines. It does **not** claim to
+have executed v0.3 AST extraction over full source files. Results are in
+`frozen_baseline_measurements.json`.
+
+| Directory | Hypothesized behavior role | DEB | MRC extra cues |
+|---|---|---:|---:|
+| graph | GRAPH_MODEL | 3/3 | null |
+| diagnostics | SOURCE_FACT_COLLECTION | 3/3 | null |
+| analysis | GRAPH_ANALYSIS | 2/3 | 2 |
+| refactor | CHANGE_PLANNING | 3/3 | null |
+| verification | SOURCE_VERIFICATION | 2/3 | null |
+| delete | unresolved | N/A | N/A |
+
+These numbers reflect the **un-calibrated v0.2 lexical cue protocol** and a
+role-specific vocabulary, not a cross-folder ranking of actual CU. In fact,
+the many `null` values demonstrate a metric limitation: sufficient context
+cannot be assumed absent solely because its semantic meaning does not appear
+as an exact lexical entailment. This must be addressed before naming/structure
+change recommendations. The v0.3 real-repository test exercises AST evidence
+on checked-out source independently from this frozen cue replay.

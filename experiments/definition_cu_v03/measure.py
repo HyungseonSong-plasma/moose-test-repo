@@ -31,6 +31,12 @@ def git_blob(data: bytes) -> str:
     return hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
 
 
+def public_module_cues(folder: Path) -> tuple[str, ...]:
+    """Only public, direct Python modules; private plumbing is not default CU context."""
+    return tuple(sorted(p.stem for p in folder.glob("*.py")
+                        if p.name != "__init__.py" and not p.stem.startswith("_")))
+
+
 def measure_repository(root: Path, *, expected_revision: str | None = None) -> dict:
     root = root.resolve()
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
@@ -62,8 +68,7 @@ def measure_repository(root: Path, *, expected_revision: str | None = None) -> d
         }
         if inferred.clauses:
             symbols = extract_public_symbols_from_folder(root, folder)
-            direct = tuple(p.stem for p in (root / folder).glob("*.py")
-                           if p.name != "__init__.py")
+            direct = public_module_cues(root / folder)
             cues = make_folder_cues(folder, symbols, direct)
             numbers = measure_definition(inferred.clauses, cues)
             result["metrics"] = {

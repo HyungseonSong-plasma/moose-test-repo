@@ -1,0 +1,127 @@
+{
+  "schema_version": "0.3-baseline-proxy",
+  "baseline": "4f873e71f8503943c9fce2dd30fcc96c28d6f631",
+  "input_kind": "pinned_source_anchored_role_hypotheses_and_frozen_api_cues",
+  "full_source_ast_scanned": false,
+  "human_cu_calibrated": false,
+  "results": [
+    {
+      "target": "graph",
+      "path": "physics_harness/code/graph",
+      "role": "GRAPH_MODEL",
+      "status": "SOURCE_ANCHORED_PROXY_REPLAY",
+      "metrics": {
+        "DEB": 3,
+        "DEB_denominator": 3,
+        "MRC_extra_cues": null,
+        "MRC_tier": null,
+        "MRC_cues": [],
+        "unpredicted_baseline": [
+          "record",
+          "relation",
+          "invariant"
+        ],
+        "not_recoverable_in_scope": [
+          "record",
+          "invariant"
+        ]
+      },
+      "role_source_ref": "physics_harness/code/graph/edge.py:25@a3cf19f4d416cae10d604284d78cce995164466c"
+    },
+    {
+      "target": "diagnostics",
+      "path": "physics_harness/code/diagnostics",
+      "role": "SOURCE_FACT_COLLECTION",
+      "status": "SOURCE_ANCHORED_PROXY_REPLAY",
+      "metrics": {
+        "DEB": 3,
+        "DEB_denominator": 3,
+        "MRC_extra_cues": null,
+        "MRC_tier": null,
+        "MRC_cues": [],
+        "unpredicted_baseline": [
+          "source",
+          "parse",
+          "evidence"
+        ],
+        "not_recoverable_in_scope": [
+          "parse"
+        ]
+      },
+      "role_source_ref": "physics_harness/code/diagnostics/providers/python_ast.py:68@8a4de081c3b3f722ca3d651e84b6e01dc14c7978"
+    },
+    {
+      "target": "analysis",
+      "path": "physics_harness/code/analysis",
+      "role": "GRAPH_ANALYSIS",
+      "status": "SOURCE_ANCHORED_PROXY_REPLAY",
+      "metrics": {
+        "DEB": 2,
+        "DEB_denominator": 3,
+        "MRC_extra_cues": 2,
+        "MRC_tier": 3,
+        "MRC_cues": [
+          "api:GraphDiff",
+          "api:ImpactResult"
+        ],
+        "unpredicted_baseline": [
+          "graph",
+          "result"
+        ],
+        "not_recoverable_in_scope": []
+      },
+      "role_source_ref": "physics_harness/code/analysis/impact.py:53@6772dbef8a19813fbcb288e4195ea1631189e019"
+    },
+    {
+      "target": "refactor",
+      "path": "physics_harness/code/refactor",
+      "role": "CHANGE_PLANNING",
+      "status": "SOURCE_ANCHORED_PROXY_REPLAY",
+      "metrics": {
+        "DEB": 3,
+        "DEB_denominator": 3,
+        "MRC_extra_cues": null,
+        "MRC_tier": null,
+        "MRC_cues": [],
+        "unpredicted_baseline": [
+          "option",
+          "constraint",
+          "review"
+        ],
+        "not_recoverable_in_scope": [
+          "option"
+        ]
+      },
+      "role_source_ref": "physics_harness/code/refactor/alternatives.py:48@0c0986dee3e7cb6b3dd07d8a69636830b81bcea3"
+    },
+    {
+      "target": "verification",
+      "path": "physics_harness/code/verification",
+      "role": "SOURCE_VERIFICATION",
+      "status": "SOURCE_ANCHORED_PROXY_REPLAY",
+      "metrics": {
+        "DEB": 2,
+        "DEB_denominator": 3,
+        "MRC_extra_cues": null,
+        "MRC_tier": null,
+        "MRC_cues": [],
+        "unpredicted_baseline": [
+          "source",
+          "provenance"
+        ],
+        "not_recoverable_in_scope": [
+          "source",
+          "provenance"
+        ]
+      },
+      "role_source_ref": "physics_harness/code/verification/consistency.py:149@42e8caa55d8289b6c2b1005d744702c11ba54770"
+    },
+    {
+      "target": "delete",
+      "path": "physics_harness/code/delete",
+      "role": null,
+      "status": "UNRESOLVED",
+      "metrics": null
+    }
+  ]
+}
