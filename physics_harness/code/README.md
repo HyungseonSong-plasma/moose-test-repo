@@ -1,53 +1,69 @@
-# Code lifecycle namespace
+# Code lifecycle — source evidence, analysis and planning
 
-This package provides language-agnostic foundations for code across the entire
-`moose-test-repo\` repository, including C++, Python, Fortran, MOOSE inputs,
-workflow definitions, and other supported sources.
+`physics_harness/code/` provides reusable, read-only foundations for inspecting
+source code and repository automation. Its collectors currently cover selected
+Python, C++, MOOSE input and GitHub Actions Workflow forms; the architecture
+can support other languages, but **unimplemented collectors are not claimed**.
 
-| Package | Responsibility |
+| Component | Implemented responsibility |
 | --- | --- |
-| \`graph/\` | Shared graph records: node, edge, evidence, claim, scope, context |
-| [diagnostics/](diagnostics/README.md) | Source-bound fact extraction and incomplete-coverage reporting (D1–D5) |
-| \`analysis/\` | Code review, findings, quality/impact analysis (reserved) |
-| \`refactor/\` | Approved refactoring plans and changes (reserved) |
-| \`delete/\` | Approved code-retirement and deletion (reserved) |
-| \`verification/\` | Pre/post-change structural and semantic verification (reserved) |
-| \`tests/\` | Local graph and lifecycle P0 self-tests |
+| [`graph/`](graph/README.md) | Revision-independent Node/Edge identity, source-bound Evidence and Claim, Scope, deterministic context traversal |
+| [`diagnostics/`](diagnostics/README.md) | Exact Git revision/Blob source scanning, bounded collectors, source Graph/Evidence receipts and partial-coverage reporting |
+| [`analysis/`](analysis/README.md) | Source-bound findings, impact and coverage analysis; interpreting HU indicators; MOOSE parameter-contract analysis |
+| [`refactor/`](refactor/README.md) | Strategy-neutral KEEP/CHANGE alternatives, evidence/constraint checks and explicit follow-up verification obligations |
+| [`verification/`](verification/README.md) | Graph/receipt consistency, configurable source dependency checks and before/after verification planning |
+| `delete/` | Reserved: no automatic source-retirement or deletion engine is implemented |
+| `tests/` | Local regression tests for implemented Code lifecycle components |
 
-The approved [Code Graph v0.1](graph/README.md) is a directed multigraph:
-canonical nodes and edges have identities independent of contexts. A context
-creates a parent-child hierarchy view, allowing multiple parents, cycles,
-parallel edges, and deterministic bounded traversal with cycle references.
+The separate [`libs/hu/`](../../../libs/hu/README.md) defines and **calculates**
+numeric traits associated with human code understandability. The
+`analysis/hu_adapter.py` transports Diagnostics inputs and HU outputs;
+`analysis/hu_interpretation.py` interprets values and uncertainty. HU does
+not interpret refactoring options, while Planning does not redefine metrics.
 
-Evidence and Claim are separate, many-to-many concepts. Evidence stores
-provenance and observation status; a Claim asserts a conditional predicate,
-references evidence with a support/refute/qualify role, and retains an explicit
-assessment status. Assessments are not permissions for code mutation.
+## Scope and evidence guarantees
 
-The implemented v0.1 surface is the **graph data model, snapshot referential
-integrity validation, and context hierarchy unfolding only**. No language
-parsers, FDEG report adapters, automated refactoring/deletion, native runtime
-evidence, or physics acceptance were added. Existing FDEG and Physics
-implementations and the existing \`physics_harness/analysis/\` remain unchanged.
+The [Code Graph](graph/README.md) is a directed multigraph whose stable logical
+nodes and edges can have multiple parents, parallel relations and cycles.
+Evidence records *where* source and runtime observations came from; Claims
+link evidence with support/refute/qualify roles and remain conditional.
 
-## Harness Code CI
+`diagnostics.run_scan()` selects bounded source inputs and collectors.
+Built-in source collectors include `workflow`, `python_ast`, `cpp` and
+`moose_input`. The injected read-only `GitHubActionsRunProvider` records
+external Run/Attempt observations separately; it does not invent execution
+from static Workflow declarations. Candidate import, call, and MOOSE type
+edges are **syntactic candidates**, not resolved runtime dependencies.
 
-Only `physics_harness/code/tests/` is in the `Harness Code CI` scope.
-The dedicated workflow `.github/workflows/harness-code.yml` runs on
-changes to `physics_harness/code/**` (or its workflow file) and executes:
+A `COMPLETE`/source-`VERIFIED` result means only that the requested scope
+was collected and its metadata is consistent. Unsupported constructs,
+dynamic references and missing source retain `PARTIAL` or `UNVERIFIED`
+states. Source integrity does not establish global consumer closure,
+semantic equivalence, native runtime compatibility or safe deletion.
+
+## Data flow
+
+```text
+Diagnostics -> Graph and source evidence
+            -> HU metrics (via Adapter) -> Analysis interpretation
+            -> Refactor Planning (KEEP / CHANGE and verification obligations)
+            -> Verification after an approved code change
+```
+
+Analysis and Planning are **read-only**. They do not execute edits, approve
+mutations, remove old code, or rank changes using a hard-coded universal
+refactoring strategy.
+
+## Tests and CI ownership
+
+`Harness Code CI` runs the Code self-tests when files under
+`physics_harness/code/**` or the dedicated Workflow change:
 
 ```bash
 python -m pytest -q physics_harness/code/tests
 ```
 
-Repository CI verifies the shared integration contract for every PR,
-including Harness-only changes. `Harness Code CI` owns these local pytest
-tests; domain Physics/Native workflows run only for their declared affected
-source scopes. SOL Integration retains its separate runtime-integration scope.
-
-## Diagnostics v0.1
-
-The read-only [Diagnostics core](diagnostics/README.md) connects exact Git
-source/blob provenance, pluggable collectors, deterministic GraphSnapshot
-assembly and scoped completeness receipts. The first collector reads Workflow
-YAML as static declarations, **not** actual GitHub Actions executions.
+A change solely under `libs/hu/**` does **not** currently trigger this
+path-filtered Harness Code workflow. Repository CI owns its shared integration
+checks on pull requests. Changes to CI routing or trigger ownership are
+separate decisions; documenting current behavior does not modify them.
