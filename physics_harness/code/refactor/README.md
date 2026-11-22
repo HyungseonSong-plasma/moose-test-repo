@@ -11,8 +11,8 @@ transformation, edit the repository, or authorize a change.
 | `code/diagnostics/` | Exact-source graph, evidence, receipt and collection completeness |
 | `libs/code_understandability/` | Numeric code-understandability features from existing source facts and observations, no interpretation or refactor decision |
 | `code/analysis/result.py` | Generic revision-bound analysis records and measurements |
-| `code/analysis/understandability_adapter.py` | Diagnostics↔HU input/output mapping and Evidence transport only |
-| `code/analysis/understandability_interpretation.py` | Interpret calculated HU features, caveats and trade-offs for Planning |
+| `code/analysis/understandability_adapter.py` | Diagnostics↔metric engine data mapping and Evidence transport only |
+| `code/analysis/understandability_interpretation.py` | Interpret calculated code-understandability indicators, caveats and trade-offs for Planning |
 | `code/refactor/planning.py` | Source-bound context and constraint validation |
 | `code/refactor/alternatives.py` | Apply the same checks to alternative proposals; no ranking |
 | `code/verification/` | Independent source/contract checks, post-change obligations |
@@ -120,8 +120,8 @@ New self-tests reside under `physics_harness/code/tests/`.
 python -m pytest -q physics_harness/code/tests
 ```
 
-`test_hu_run_scan_integration.py` tests the real collector → HU → Analysis →
+`test_hu_run_scan_integration.py` (legacy) and `test_code_understandability.py` test the real collector → code-understandability metrics → Analysis →
 Planning flow using the existing `git_factory` fixture. engine-only changes in
-`libs/hu/**` do not currently trigger the existing path-filtered Harness Code
+`libs/code_understandability/**` do not currently trigger the existing path-filtered Harness Code
 workflow by themselves; test ownership and scheduling need a separate scoped
 policy decision rather than broadening CI implicitly.
