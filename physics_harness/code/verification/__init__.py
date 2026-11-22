@@ -48,3 +48,6 @@ __all__ += [
     "build_blinded_semantic_packet", "review_semantic_challenge",
     "NamingSafetyGateReport", "evaluate_naming_safety_gates",
 ]
+
+from .naming_replay import ReplayArtifact, ReplayComparison, compare_replay_artifacts, compare_candidate_replay
+__all__ += ["ReplayArtifact", "ReplayComparison", "compare_replay_artifacts", "compare_candidate_replay"]

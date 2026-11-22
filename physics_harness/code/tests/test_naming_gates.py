@@ -62,3 +62,35 @@ def test_repo_consumer_scan_budget_holds_even_if_no_imports(history):
     r=pipeline(history,max_consumer_files=1)
     assert r.status=="HOLD"
     assert "REPOSITORY_CONSUMER_FILE_BUDGET_EXCEEDED" in r.unresolved
+
+
+from hashlib import sha256
+from physics_harness.code.verification.naming_replay import ReplayArtifact
+
+
+def _replay_artifact(revision: str, xml: bytes) -> ReplayArtifact:
+    return ReplayArtifact(revision, xml, sha256(xml).hexdigest(), "test-fixture")
+
+
+def test_candidate_replay_receipt_still_does_not_authorize_mutation(history):
+    root, before, baseline = history
+    candidate = third_commit(history)
+    xml = b'<testsuite><testcase classname="contract" name="public_api"/></testsuite>'
+    r = pipeline(history, candidate=candidate,
+        replay_baseline=_replay_artifact(before, xml),
+        replay_candidate=_replay_artifact(candidate, xml))
+    assert r.replay is not None and r.replay.status == "HOLD"
+    assert r.status in {"HOLD", "BLOCKED"}
+    assert not r.mutation_approved
+    assert "AUTHENTICATE_CI_PRODUCER_AND_ARTIFACT_ORIGIN" in r.unresolved
+
+
+def test_candidate_replay_wrong_revision_blocks(history):
+    root, before, baseline = history
+    candidate = third_commit(history)
+    xml = b'<testsuite><testcase name="public_api"/></testsuite>'
+    r = pipeline(history, candidate=candidate,
+        replay_baseline=_replay_artifact(before, xml),
+        replay_candidate=_replay_artifact("c" * 40, xml))
+    assert r.status == "BLOCKED"
+    assert "REPLAY_REVISION_DOES_NOT_MATCH_NAMING_CANDIDATE" in r.blockers

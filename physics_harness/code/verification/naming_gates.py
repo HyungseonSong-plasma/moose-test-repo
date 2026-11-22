@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from ..diagnostics.providers.git import GitSourceProvider
 from ..refactor.naming import NamingCase, NamingOption
+from .naming_replay import ReplayArtifact, ReplayComparison, compare_candidate_replay
 from .naming_boundary import ResponsibilityBinding
 from .naming_candidate import CandidatePlacement, NamingCandidateReceipt, verify_naming_candidate
 from .naming_behavior import NamingBehaviorReceipt, verify_naming_behavior_projection
@@ -36,6 +37,7 @@ class NamingSafetyGateReport:
     blockers: tuple[str, ...]
     unresolved: tuple[str, ...]
     required_checks: tuple[str, ...]
+    replay: ReplayComparison | None = None
 
     @property
     def mutation_approved(self) -> bool:
@@ -54,6 +56,8 @@ def evaluate_naming_safety_gates(
     reviewer_challenge: SecondPassSemanticChallenge | None = None,
     max_consumer_files: int = 3000,
     max_consumer_bytes: int = 20_000_000,
+    replay_baseline: ReplayArtifact | None = None,
+    replay_candidate: ReplayArtifact | None = None,
 ) -> NamingSafetyGateReport:
     """One revision-bound result, recomputed without trusting model assertions.
 
@@ -86,12 +90,24 @@ def evaluate_naming_safety_gates(
         checks.update(semantic.required_checks)
     else:
         unresolved.add("INDEPENDENT_TWO_PASS_SEMANTIC_REVIEW_MISSING")
+    replay = None
+    if (replay_baseline is None) != (replay_candidate is None):
+        unresolved.add("INCOMPLETE_EXACT_REVISION_TEST_REPLAY")
+    elif replay_baseline is not None and replay_candidate is not None:
+        replay = compare_candidate_replay(case.revision, candidate_revision,
+                                          replay_baseline, replay_candidate)
+        blocked.update(replay.blockers)
+        unresolved.update(replay.unresolved)
+    else:
+        unresolved.add("EXACT_REVISION_TEST_REPLAY_NOT_PROVIDED")
+    checks.update({"AUTHENTICATE_TEST_ARTIFACT_PRODUCER",
+                   "VERIFY_TEST_ARTIFACT_EXACT_CHECKOUT_AND_TOOLCHAIN"})
     # The branch is intentionally no stronger than BLOCKED/HOLD: semantic
     # evaluation and authenticated behavioral execution are not implemented here.
     return NamingSafetyGateReport(case.revision, candidate_revision, option.id,
         "BLOCKED" if blocked else "HOLD", structural, behavior, consumers,
         blind, semantic, tuple(sorted(blocked)), tuple(sorted(unresolved)),
-        tuple(sorted(checks)))
+        tuple(sorted(checks)), replay)
 
 
 __all__ = ["NamingSafetyGateReport", "evaluate_naming_safety_gates"]

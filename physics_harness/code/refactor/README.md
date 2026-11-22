@@ -301,3 +301,9 @@ revision, exposing a single `NamingSafetyGateReport`. Its result is always
 `BLOCKED` or `HOLD`; `mutation_approved` is always false. **No actual code
 rename, extraction, merge or automatic mutation is performed by this layer.**
 Detailed contract: `docs/development/evolutionary-naming-semantic-gates-v05.md`.
+
+### v0.6 — Exact-revision JUnit replay comparison (read-only)
+
+`verification/naming_replay.py` compares immutable **raw JUnit XML bytes** and stable testcase identities for baseline/candidate SHA pairs. It blocks digest mismatches, invalid XML, missing tests, duplicate IDs, candidate failures, wrong revisions and malformed inputs; skipped tests, new tests and missing producer evidence remain unresolved. The naming safety orchestrator recomputes this receipt from optional `replay_baseline` / `replay_candidate` artifacts; missing artifacts are explicitly unresolved.
+
+**This does not run tests or authenticate CI.** Caller-supplied digests and run URLs are not independent attestation. A green before/after JUnit comparison can never authorize a Rename/Extraction. CI provenance, toolchain, semantic reviewer independence, external consumers, post-integration validation and rollback remain separate gates. The v0.6 interface is a replay evidence *falsifier*, not an executor.
