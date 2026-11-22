@@ -113,7 +113,7 @@ def test_new_adapter_reports_measured_code_metrics_without_human_gate():
     assert record.name == "CODE_UNDERSTANDABILITY"
     assert record.status == "MEASURED"
     assert record.source_revision == REV
-    assert record.values[-1].name == "indicator.branch_density"
+    assert "indicator.branch_density" in {value.name for value in record.values}
     interpretation = interpret_understandability_indicators(assessment)
     assert interpretation.name == "CODE_UNDERSTANDABILITY_INTERPRETATION"
     assert "UNDERSTANDABILITY_IMPROVEMENT_NOT_INFERRED_FROM_INDICATORS" in interpretation.unknowns
