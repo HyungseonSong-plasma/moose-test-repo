@@ -77,7 +77,7 @@ def test_candidate_replay_receipt_still_does_not_authorize_mutation(history):
     candidate = third_commit(history)
     xml = b'<testsuite><testcase classname="contract" name="public_api"/></testsuite>'
     r = pipeline(history, candidate=candidate,
-        replay_baseline=_replay_artifact(before, xml),
+        replay_baseline=_replay_artifact(baseline, xml),
         replay_candidate=_replay_artifact(candidate, xml))
     assert r.replay is not None and r.replay.status == "HOLD"
     assert r.status in {"HOLD", "BLOCKED"}
@@ -90,7 +90,7 @@ def test_candidate_replay_wrong_revision_blocks(history):
     candidate = third_commit(history)
     xml = b'<testsuite><testcase name="public_api"/></testsuite>'
     r = pipeline(history, candidate=candidate,
-        replay_baseline=_replay_artifact(before, xml),
+        replay_baseline=_replay_artifact(baseline, xml),
         replay_candidate=_replay_artifact("c" * 40, xml))
     assert r.status == "BLOCKED"
     assert "REPLAY_REVISION_DOES_NOT_MATCH_NAMING_CANDIDATE" in r.blockers
