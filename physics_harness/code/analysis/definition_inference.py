@@ -212,6 +212,7 @@ class BehaviorDefinition:
     missing: tuple[str, ...]
     unknowns: tuple[str, ...]
     rule_version: str = BEHAVIOR_RULE_VERSION
+    role_candidates: tuple[str, ...] = ()
 
 
 def _call_name(expr: ast.expr) -> str:
@@ -272,8 +273,11 @@ def extract_behavior_witnesses(path: str, source: str, blob_sha: str,
                       and isinstance(v.target, ast.Name)}
             if fields:
                 add("FROZEN_RECORD", node, "immutable annotated record declaration")
-            if len(fields.intersection({"source_id", "target_id", "evidence_ids", "subject_refs", "scope_id", "relation"})) >= 2:
-                add("RELATIONAL_FIELDS", node, "multiple relationship/provenance fields declared")
+            # A target_id+scope_id result/receipt does not own a graph relation.
+            # Require the relation endpoints or an explicit claim-evidence pair.
+            if ({"source_id", "target_id"} <= fields or
+                    {"subject_refs", "evidence_refs"} <= fields):
+                add("RELATIONAL_FIELDS", node, "relation endpoints or claim-to-evidence pair declared")
         elif isinstance(node, ast.Call):
             call = _call_name(node.func)
             terminal = call.split(".")[-1]
@@ -340,7 +344,8 @@ def infer_from_behavior(scans: tuple[BehaviorFileScan, ...],
         problems.add("EXTERNAL_EFFECTS_REQUIRE_REVIEW")
     if len(matches) != 1:
         problems.add("NO_BEHAVIOR_ROLE" if not matches else "MULTIPLE_BEHAVIOR_ROLES")
-        return BehaviorDefinition(None, (), "UNRESOLVED", evidence, missing, tuple(sorted(problems)))
+        return BehaviorDefinition(None, (), "UNRESOLVED", evidence, missing, tuple(sorted(problems)),
+                                  role_candidates=tuple(role for role, _ in matches))
     role, concepts = matches[0]
     selected = next(needed for label, needed, _ in BEHAVIOR_RULES if role == label)
     refs = tuple(sorted({w.source_ref for k in selected for w in by_kind[k]}))

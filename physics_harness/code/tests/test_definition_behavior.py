@@ -157,3 +157,29 @@ def arbitrary(source, obj):
     r = infer(src)
     assert r.role == "SOURCE_FACT_COLLECTION"
     assert "EXTERNAL_EFFECTS_REQUIRE_REVIEW" not in r.unknowns
+
+
+def test_analysis_result_ids_do_not_imply_graph_relation_ownership():
+    src = """from dataclasses import dataclass
+@dataclass(frozen=True)
+class TargetReport:
+    target_id: str
+    scope_id: str
+
+def analyze(graph, context):
+    view = unfold_context(graph, context)
+    return ImpactResult(view=view)
+"""
+    r = infer(src)
+    assert r.role == "GRAPH_ANALYSIS"
+    assert "RELATIONAL_FIELDS" not in {w.kind for w in r.evidence}
+
+
+def test_explicit_claim_evidence_pair_is_relation_model():
+    src = """from dataclasses import dataclass
+@dataclass(frozen=True)
+class NameDoesNotMatter:
+    subject_refs: tuple[str, ...]
+    evidence_refs: tuple[str, ...]
+"""
+    assert infer(src).role == "GRAPH_MODEL"
