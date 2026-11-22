@@ -1,4 +1,7 @@
-"""Human Understandability measurement primitives, independent of the harness."""
+"""Compatibility namespace for historical Human Understandability consumers.
+
+New integrations should import from libs.code_understandability.
+"""
 
 from .evaluation import HUComparison, MetricDifference, compare_hu, evaluate_hu
 from .metrics import derive_hu_indicators, from_python_ast
