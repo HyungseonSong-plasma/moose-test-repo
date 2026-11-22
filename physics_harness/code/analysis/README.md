@@ -9,6 +9,7 @@ diagnostic source collectors. It uses the existing immutable `GraphSnapshot`,
 | `impact.py` | Bounded forward/reverse dependency paths using `unfold_context`, with Scope/unresolved/truncation blockers |
 | `findings.py` | Build unevaluated `Claim` objects with `SUPPORTS/REFUTES/QUALIFIES` Evidence links; validate references |
 | `assessment.py` | Evidence-typed, fail-closed conditional review disposition and explicit verification obligations |
+| `parameter_contract.py` | MOOSE input-to-C++ parameter comparison, separately scoped with unchanged source-only verdicts; original `assessment` exports retained |
 | `diff.py` | Compare stable Node/Edge semantics, source-bound Evidence changes, and Scope/coverage changes |
 | `hu_adapter.py` | Transport/normalize Diagnostics source facts to HU input and computed indicators to Analysis records |
 | `hu_interpretation.py` | Interpret computed HU feature meaning and limits; no metric formulas or automatic refactor verdict |

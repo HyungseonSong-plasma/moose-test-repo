@@ -4,9 +4,10 @@ from .impact import (
     ImpactResult, TargetCoverage, analyze_impact, analyze_target_coverage,
 )
 from .findings import propose_finding
-from .assessment import (
-    Assessment, ParameterBlockAssessment, ParameterContractAssessment,
-    assess_finding, assess_input_parameter_contract,
+from .assessment import Assessment, assess_finding
+from .parameter_contract import (
+    ParameterBlockAssessment, ParameterContractAssessment,
+    assess_input_parameter_contract,
 )
 from .diff import GraphDiff, compare_graphs
 from .hu_interpretation import interpret_hu_indicators
