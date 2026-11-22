@@ -104,7 +104,7 @@ def test_different_human_criteria_are_not_conflated_by_name():
         HUObservation("e2", "c", "a.b", False, REV, BLOB),
     )
     result = summarize_hu(assess_code_hu(diagnostic(), "n:f", observations=observations))
-    assert len(result.values) == 3 + 6  # structural + 3 measurements per distinct question
+    assert len(result.values) == 3 + 1 + 6  # structural + derived indicator + observations
 
 
 def test_adapter_transports_candidate_call_facts_without_resolving_dependencies():
