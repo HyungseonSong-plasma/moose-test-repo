@@ -243,3 +243,33 @@ both evidence interpretations and the choice. Consequently, even
 semantic correctness independently, ideally with held-out reviewers and real
 consumers, *before* building an automatic executor. A clone without old Git
 objects yields HOLD rather than silently comparing to current worktree bytes.
+
+## Evolutionary Naming Audit v0.4 — independent boundary and candidate-Git checks
+
+`code/verification/naming_boundary.py` is an **independent, exact-Git-source
+structural gate** for naming/extraction recommendations. An assessor must map
+observed responsibility IDs to precise declarations, e.g.
+`path.py::class:Collector`, `path.py::function:run_scan`, or
+`path.py::method:Collector.collect`, grounded by the current responsibility's
+*declaration-line* `path:line@blob` witness. It checks folder/file/class/function
+scope, stale or invented symbols, split ownership, actual existing destination
+vs claimed new path, and source completeness budgets. It reuses the canonical
+GitSourceProvider and independent source-anchor verifier.
+
+`code/verification/naming_candidate.py` checks a **distinct descendant Git
+commit** resulting from an *isolated proposed* rename/extract change. A complete
+`CandidatePlacement` map must account for the before symbols: original vs
+extracted owner, expected after symbol/path, declaration signature consistency,
+missing or duplicated symbols, wrong destination, and original name retention
+for `EXTRACT_KEEP`. The verifier **never creates commits, executes changes,
+validates external imports/runtime behavior, or approves mutation**.
+
+`STRUCTURE_WITNESSED` and `STRUCTURAL_DELTA_VERIFIED` are syntactic structural
+claims, **not semantic truth or behavioral compatibility**. They are not equivalent
+to the earlier `REVIEWABLE` decision, nor enough for automatic changes. Even with
+both receipts, the executor must obtain an **independent semantic name/ownership
+review**, public/dynamic consumer closure, before/after behavioral regressions,
+exact candidate and post-integration HEAD tests, provenance receipt and rollback
+boundary. Unverified mandatory properties produce `HOLD` rather than implicitly
+passing. No hardcoded domain vocabulary, destination `libs/` path, or universal
+naming score is introduced.

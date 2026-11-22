@@ -13,7 +13,12 @@ from .naming_provenance import (
     NamingSourceVerification, verify_naming_evidence_sources,
 )
 
+from .naming_boundary import OwnedSymbol, ResponsibilityBinding, NamingBoundaryReceipt, verify_naming_boundary
+from .naming_candidate import CandidatePlacement, NamingCandidateReceipt, verify_naming_candidate
+
 __all__ = [
+    "OwnedSymbol", "ResponsibilityBinding", "NamingBoundaryReceipt", "verify_naming_boundary",
+    "CandidatePlacement", "NamingCandidateReceipt", "verify_naming_candidate",
     "ChangeVerificationPlan", "VerificationReceipt",
     "plan_change_verification", "verify_generated_artifact",
     "DependencyContract", "DependencyFinding", "DependencyRule",
