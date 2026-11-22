@@ -1,19 +1,15 @@
-"""Canonical metric-engine behavior and legacy Human Understandability compatibility."""
+"""Canonical code-understandability metrics and Analysis/Planning integration."""
 
-from dataclasses import replace
 from types import SimpleNamespace as Obj
 
 from libs.code_understandability import (
     HumanObservation, UnderstandabilityAssessment, UnderstandabilityInput,
     compare_understandability, evaluate_understandability, from_python_ast,
 )
-from libs.hu import HUAssessment, HUInput, HUObservation, compare_hu, evaluate_hu
 from physics_harness.code.analysis import (
     assess_code_understandability, interpret_understandability_indicators,
     summarize_understandability,
 )
-from physics_harness.code.analysis.hu_adapter import assess_code_hu, summarize_hu
-from physics_harness.code.analysis.hu_interpretation import interpret_hu_indicators
 from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
 from physics_harness.code.refactor import (
     PlanningAlternative, build_planning_context, review_alternatives,
@@ -66,7 +62,6 @@ def test_metrics_do_not_require_human_rating():
     assert result.indicators[0].value == 0.2
     assert result.predicted_score is None
     assert result.observed == ()
-    assert "HUMAN_UNDERSTANDABILITY_NOT_OBSERVED" not in result.unknowns
 
 
 def test_human_judgments_are_optional_evidence_not_a_score():
@@ -79,18 +74,6 @@ def test_human_judgments_are_optional_evidence_not_a_score():
     assert result.predicted_score is None
 
 
-def test_legacy_models_are_identity_aliases_and_keep_historical_missingness():
-    assert HUInput is UnderstandabilityInput
-    assert HUAssessment is UnderstandabilityAssessment
-    assert HUObservation is HumanObservation
-    old = evaluate_hu(sample())
-    current = evaluate_understandability(sample())
-    assert old.indicators == current.indicators
-    assert "HUMAN_UNDERSTANDABILITY_NOT_OBSERVED" in old.unknowns
-    assert "HUMAN_UNDERSTANDABILITY_NOT_OBSERVED" not in current.unknowns
-    assert isinstance(replace(old, unknowns=("UNKNOWN_SCOPE",)), UnderstandabilityAssessment)
-
-
 def test_comparisons_preserve_measurement_deltas_and_unknowns():
     a = sample()
     b = sample(attrs={"loc": 20, "branches": 2})
@@ -100,15 +83,11 @@ def test_comparisons_preserve_measurement_deltas_and_unknowns():
     assert comparison.indicator_differences[0].difference == -0.1
     assert "STRUCTURAL_DELTA_NOT_UNDERSTANDABILITY_IMPROVEMENT_PROOF" in comparison.unknowns
     assert not comparison.improvement_proven
-    legacy = compare_hu(evaluate_hu(a), evaluate_hu(b))
-    assert "STRUCTURAL_DELTA_NOT_HU_IMPROVEMENT_PROOF" in legacy.unknowns
-    assert legacy.indicator_differences == comparison.indicator_differences
 
 
-def test_new_adapter_reports_measured_code_metrics_without_human_gate():
+def test_adapter_reports_measured_code_metrics_without_human_gate():
     scan = diagnostic()
     assessment = assess_code_understandability(scan, "node:target")
-    assert "HUMAN_UNDERSTANDABILITY_NOT_OBSERVED" not in assessment.unknowns
     record = summarize_understandability(assessment)
     assert record.name == "CODE_UNDERSTANDABILITY"
     assert record.status == "MEASURED"
@@ -119,24 +98,12 @@ def test_new_adapter_reports_measured_code_metrics_without_human_gate():
     assert "UNDERSTANDABILITY_IMPROVEMENT_NOT_INFERRED_FROM_INDICATORS" in interpretation.unknowns
 
 
-def test_legacy_adapter_output_keys_and_status_are_preserved():
-    scan = diagnostic()
-    legacy = assess_code_hu(scan, "node:target")
-    record = summarize_hu(legacy)
-    assert record.name == "HU"
-    assert record.status == "REVIEW_REQUIRED"
-    assert "HUMAN_UNDERSTANDABILITY_NOT_OBSERVED" in record.unknowns
-    interpreted = interpret_hu_indicators(legacy)
-    assert interpreted.name == "HU_INTERPRETATION"
-    assert "HU_IMPROVEMENT_NOT_INFERRED_FROM_INDICATORS" in interpreted.unknowns
-
-
 def test_missing_code_facts_remain_unknown_and_not_measured():
     result = assess_code_understandability(diagnostic(attributes={}), "node:target")
     record = summarize_understandability(result)
     assert record.status == "REVIEW_REQUIRED"
     assert not record.values
-    assert "HU_STRUCTURAL_METRICS_UNAVAILABLE" in record.unknowns
+    assert "UNDERSTANDABILITY_STRUCTURAL_METRICS_UNAVAILABLE" in record.unknowns
 
 
 def test_real_scan_metrics_flow_into_planning_without_human_raters(git_factory):

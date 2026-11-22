@@ -24,7 +24,7 @@ def evaluate_understandability(sample: UnderstandabilityInput) -> Understandabil
     for (criterion, question_id), values in sorted(groups.items()):
         evaluators = {value.evaluator_id for value in values}
         if len(evaluators) != len(values):
-            raise ValueError("DUPLICATE_HU_EVALUATOR_FOR_QUESTION")
+            raise ValueError("DUPLICATE_HUMAN_EVALUATOR_FOR_QUESTION")
         positive = sum(value.positive for value in values)
         observed.append(ObservedHumanResponse(
             question_id=question_id, criterion=criterion,

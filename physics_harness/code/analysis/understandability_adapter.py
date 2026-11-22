@@ -32,36 +32,36 @@ def assess_code_understandability(
     scope = graph.scope
     if (scope.repository != receipt.repository or scope.revision != receipt.revision
             or scope.id != receipt.scope_id):
-        raise ValueError("HU_ADAPTER_SCOPE_MISMATCH")
+        raise ValueError("UNDERSTANDABILITY_ADAPTER_SCOPE_MISMATCH")
     nodes = graph.nodes_by_id()
     if target_id not in nodes:
-        raise ValueError("HU_ADAPTER_UNKNOWN_TARGET")
+        raise ValueError("UNDERSTANDABILITY_ADAPTER_UNKNOWN_TARGET")
     target = nodes[target_id]
     path = target.location.path if target.location else None
     record = next((f for f in receipt.files if f.path == path), None)
     if record is None:
-        raise ValueError("HU_ADAPTER_TARGET_SOURCE_MISSING")
+        raise ValueError("UNDERSTANDABILITY_ADAPTER_TARGET_SOURCE_MISSING")
     verification = diagnostic.verification
     if verification is not None:
         if (verification.scope_id != scope.id
                 or verification.repository != scope.repository
                 or verification.revision != scope.revision):
-            raise ValueError("HU_ADAPTER_VERIFICATION_SCOPE_MISMATCH")
+            raise ValueError("UNDERSTANDABILITY_ADAPTER_VERIFICATION_SCOPE_MISMATCH")
         if verification.status == "FAILED":
-            raise ValueError("HU_ADAPTER_PROVENANCE_FAILED")
+            raise ValueError("UNDERSTANDABILITY_ADAPTER_PROVENANCE_FAILED")
 
     unknowns = set(scope.unresolved) | set(receipt.unresolved)
     if record.status != "SCANNED":
-        unknowns.add(f"HU_SOURCE_NOT_SCANNED:{record.status}")
+        unknowns.add(f"UNDERSTANDABILITY_SOURCE_NOT_SCANNED:{record.status}")
     if verification is None:
-        unknowns.add("HU_SOURCE_PROVENANCE_UNVERIFIED")
+        unknowns.add("UNDERSTANDABILITY_SOURCE_PROVENANCE_UNVERIFIED")
     else:
         if verification.status != "VERIFIED":
-            unknowns.add(f"HU_SOURCE_PROVENANCE_{verification.status}")
+            unknowns.add(f"UNDERSTANDABILITY_SOURCE_PROVENANCE_{verification.status}")
         unknowns.update(verification.unverified_properties)
     structural = from_python_ast(target.attributes, evidence_ids=target.evidence_ids)
     if not structural:
-        unknowns.add("HU_STRUCTURAL_METRICS_UNAVAILABLE")
+        unknowns.add("UNDERSTANDABILITY_STRUCTURAL_METRICS_UNAVAILABLE")
 
     # The adapter transports source facts; only the metrics engine computes indicators.
     # Candidate calls are syntax, never resolved dependencies or navigation cost.

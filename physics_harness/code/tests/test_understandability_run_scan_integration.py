@@ -1,18 +1,18 @@
-"""Repository integration: actual run_scan -> HU adapter -> planning context.
+"""Repository integration: actual run_scan -> code-understandability Adapter -> planning context.
 
 Runs in moose-test-repo with the existing Diagnostics/Graph infrastructure.
 """
 
 from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
-from physics_harness.code.analysis.hu_adapter import assess_code_hu, summarize_hu
-from physics_harness.code.analysis.hu_interpretation import interpret_hu_indicators
+from physics_harness.code.analysis.understandability_adapter import assess_code_understandability, summarize_understandability
+from physics_harness.code.analysis.understandability_interpretation import interpret_understandability_indicators
 from physics_harness.code.refactor import (
     PlanningAlternative, build_planning_context,
     review_alternatives,
 )
 
 
-def test_actual_run_scan_data_flows_into_hu_and_planning(git_factory):
+def test_actual_run_scan_data_flows_into_metrics_and_planning(git_factory):
     root, revision = git_factory({
         "src/example.py": (
             "def choose(value):\n"
@@ -29,20 +29,20 @@ def test_actual_run_scan_data_flows_into_hu_and_planning(git_factory):
     assert scan.status == "COMPLETE"
     target = next(n for n in scan.graph.nodes
                   if n.kind == "python_function" and n.name == "choose")
-    hu = assess_code_hu(scan, target.id)
-    assert hu.revision == revision
-    assert {m.name: m.value for m in hu.structural_metrics}["branches"] == 1
-    assert hu.predicted_score is None
-    summary = summarize_hu(hu)
+    assessment = assess_code_understandability(scan, target.id)
+    assert assessment.revision == revision
+    assert {m.name: m.value for m in assessment.structural_metrics}["branches"] == 1
+    assert assessment.predicted_score is None
+    summary = summarize_understandability(assessment)
     assert {v.name: v.value for v in summary.values}["structural.branches"] == 1
     computed = {v.name: v.value for v in summary.values}
     assert computed["indicator.branch_density"] == 0.25
     assert computed["indicator.candidate_call_density"] == 0.25
-    interpretation = interpret_hu_indicators(hu)
-    assert interpretation.name == "HU_INTERPRETATION"
+    interpretation = interpret_understandability_indicators(assessment)
+    assert interpretation.name == "CODE_UNDERSTANDABILITY_INTERPRETATION"
     assert "not a count of independent responsibilities" in interpretation.summary
     assert "not resolved callees" in interpretation.summary
-    assert "HU_IMPROVEMENT_NOT_INFERRED_FROM_INDICATORS" in interpretation.unknowns
+    assert "UNDERSTANDABILITY_IMPROVEMENT_NOT_INFERRED_FROM_INDICATORS" in interpretation.unknowns
     context = build_planning_context(
         scan, target.id, objectives=("Clarity",),
         assessments=(summary, interpretation),

@@ -43,7 +43,7 @@ def derive_indicators(
             or not all(isinstance(x, StructuralMetric) for x in structural_metrics)
             or not isinstance(source_facts, tuple)
             or not all(isinstance(x, StructuralMetric) for x in source_facts)):
-        raise TypeError("HU_INDICATOR_FACTS_REQUIRED")
+        raise TypeError("UNDERSTANDABILITY_INDICATOR_FACTS_REQUIRED")
 
     structural = {x.name: x for x in structural_metrics}
     facts = {x.name: x for x in source_facts}
