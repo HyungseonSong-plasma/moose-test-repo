@@ -120,7 +120,7 @@ New self-tests reside under `physics_harness/code/tests/`.
 python -m pytest -q physics_harness/code/tests
 ```
 
-`test_hu_run_scan_integration.py` (legacy) and `test_code_understandability.py` test the real collector → code-understandability metrics → Analysis →
+`test_understandability_run_scan_integration.py` and `test_code_understandability.py` test the real collector → code-understandability metrics → Analysis →
 Planning flow using the existing `git_factory` fixture. engine-only changes in
 `libs/code_understandability/**` do not currently trigger the existing path-filtered Harness Code
 workflow by themselves; test ownership and scheduling need a separate scoped

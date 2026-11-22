@@ -47,7 +47,8 @@ indicators; `analysis/understandability_adapter.py` transports data and
 `analysis/understandability_interpretation.py` evaluates contextual meaning;
 Refactor Planning compares alternatives and Verification checks preservation.
 
-The historical `libs.hu` and `analysis.hu_*` imports remain as
-compatibility facades. The persisted `hu_density_v1` method identifier and
-some legacy error identifiers stay unchanged to preserve data comparisons.
-Migration does not alter what those methods measured or claim new metrics.
+The retired `libs.hu` and `analysis.hu_*` import paths are not supported.
+Use `libs.code_understandability` and the canonical Analysis entry points.
+The persisted `hu_density_v1` measurement-method identifier remains unchanged
+only as **historical data identity** for comparing earlier measurements. Its
+spelling does not imply human evaluation is required.

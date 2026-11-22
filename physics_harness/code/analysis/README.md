@@ -13,7 +13,6 @@ diagnostic source collectors. It uses the existing immutable `GraphSnapshot`,
 | `diff.py` | Compare stable Node/Edge semantics, source-bound Evidence changes, and Scope/coverage changes |
 | `understandability_adapter.py` | Transport Diagnostics data and optional human observations into the general metrics engine |
 | `understandability_interpretation.py` | Interpret code-understandability indicators and caveats; no metric formulas or auto-refactor verdict |
-| `hu_adapter.py`, `hu_interpretation.py` | Compatibility APIs for existing HU consumers |
 
 ## Reuse
 

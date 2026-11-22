@@ -75,7 +75,7 @@ class HumanObservation:
         for name in ("evaluator_id", "question_id", "criterion"):
             _text(getattr(self, name), name)
         if type(self.positive) is not bool:
-            raise TypeError("HU_OBSERVATION_MUST_BE_BINARY")
+            raise TypeError("HUMAN_OBSERVATION_MUST_BE_BINARY")
         _sha(self.revision, "observation_revision")
         _sha(self.blob_sha, "observation_blob_sha")
 
@@ -103,17 +103,17 @@ class UnderstandabilityInput:
         if not isinstance(self.observations, tuple) or not all(
             isinstance(o, HumanObservation) for o in self.observations
         ):
-            raise TypeError("INVALID_HU_OBSERVATIONS")
+            raise TypeError("INVALID_HUMAN_OBSERVATIONS")
         _references(self.unknowns, "unknowns")
         if not isinstance(self.source_facts, tuple) or not all(
             isinstance(fact, StructuralMetric) for fact in self.source_facts
         ):
-            raise TypeError("INVALID_HU_SOURCE_FACTS")
+            raise TypeError("INVALID_UNDERSTANDABILITY_SOURCE_FACTS")
         if len({fact.name for fact in self.source_facts}) != len(self.source_facts):
-            raise ValueError("DUPLICATE_HU_SOURCE_FACT")
+            raise ValueError("DUPLICATE_UNDERSTANDABILITY_SOURCE_FACT")
         for observation in self.observations:
             if observation.revision != self.revision or observation.blob_sha != self.blob_sha:
-                raise ValueError("HU_OBSERVATION_SOURCE_MISMATCH")
+                raise ValueError("HUMAN_OBSERVATION_SOURCE_MISMATCH")
 
 
 @dataclass(frozen=True, slots=True)

@@ -21,7 +21,7 @@ Human evaluations are optional evidence, not a metric prerequisite.
 `analysis/understandability_adapter.py` transports source facts and results;
 `analysis/understandability_interpretation.py` interprets their meaning.
 Planning, not the engine, decides how to compare refactor options.
-Historical `libs/hu/` imports remain compatible.
+Obsolete `libs/hu/` and `analysis/hu_*` compatibility modules have been removed.
 
 ## Scope and evidence guarantees
 
