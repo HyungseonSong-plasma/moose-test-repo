@@ -165,3 +165,186 @@ def measure_folder(path: str, symbols: tuple[SourceSymbol, ...],
                 "unpredicted_baseline": result.unpredicted_concepts,
                 "not_recoverable_in_scope": result.still_unrecoverable,
             }}
+
+
+# v0.3: independently observed Python AST behavior (not lexical API role names)
+# The source extractor is conservative: calls are syntactic, never runtime proof.
+import hashlib
+from pathlib import PurePosixPath
+
+BEHAVIOR_RULE_VERSION = "definition-behavior-v0.3"
+BEHAVIOR_RULES = (
+    ("GRAPH_MODEL", ("FROZEN_RECORD", "RELATIONAL_FIELDS"),
+     ("record", "relation", "invariant")),
+    ("SOURCE_FACT_COLLECTION", ("SOURCE_PARSE", "GRAPH_FACT_CONSTRUCTION"),
+     ("source", "parse", "evidence")),
+    ("GRAPH_ANALYSIS", ("GRAPH_TRAVERSAL", "ANALYSIS_RESULT"),
+     ("graph", "analysis", "result")),
+    ("CHANGE_PLANNING", ("OPTIONS_ITERATION", "OPTION_VALIDATION"),
+     ("option", "constraint", "review")),
+    ("SOURCE_VERIFICATION", ("PROVENANCE_COMPARISON", "VERIFICATION_RESULT"),
+     ("source", "provenance", "verification")),
+)
+
+
+@dataclass(frozen=True)
+class BehaviorWitness:
+    kind: str
+    source_ref: str  # path:line@exact-git-blob
+    observation: str  # syntactic statement; no semantic-completeness assertion
+
+
+@dataclass(frozen=True)
+class BehaviorFileScan:
+    path: str
+    revision: str
+    blob_sha: str
+    witnesses: tuple[BehaviorWitness, ...]
+    unknowns: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class BehaviorDefinition:
+    role: str | None
+    clauses: tuple[DefinitionClause, ...]
+    status: str
+    evidence: tuple[BehaviorWitness, ...]
+    missing: tuple[str, ...]
+    unknowns: tuple[str, ...]
+    rule_version: str = BEHAVIOR_RULE_VERSION
+
+
+def _call_name(expr: ast.expr) -> str:
+    if isinstance(expr, ast.Name):
+        return expr.id
+    if isinstance(expr, ast.Attribute):
+        root = _call_name(expr.value)
+        return root + "." + expr.attr if root else expr.attr
+    return ""
+
+
+def _is_frozen_dataclass(node: ast.ClassDef) -> bool:
+    return any(isinstance(d, ast.Call) and _call_name(d.func).endswith("dataclass")
+               and any(k.arg == "frozen" and isinstance(k.value, ast.Constant)
+                       and k.value.value is True for k in d.keywords)
+               for d in node.decorator_list)
+
+
+def _relative_python_path(value: str) -> str:
+    if not isinstance(value, str) or not value or "\\" in value:
+        raise ValueError("BEHAVIOR_INVALID_PATH")
+    p = PurePosixPath(value)
+    if p.is_absolute() or ".." in p.parts or p.as_posix() != value or not value.endswith(".py"):
+        raise ValueError("BEHAVIOR_INVALID_PATH")
+    return value
+
+
+def extract_behavior_witnesses(path: str, source: str, blob_sha: str,
+                               revision: str) -> BehaviorFileScan:
+    """Inspect trusted, UTF-8 tracked Python source with Git-blob verification.
+
+    Names of the *target* folder, class and function are never used as role
+    classification features. Typed field names, called interfaces, and
+    observed control/data flow are explicit evidence, not hidden semantics.
+    """
+    _relative_python_path(path)
+    if not isinstance(source, str) or not isinstance(blob_sha, str) or not isinstance(revision, str):
+        raise TypeError("BEHAVIOR_SOURCE_IDENTITY_REQUIRED")
+    if not re.fullmatch(r"[0-9a-f]{40}", revision) or not re.fullmatch(r"[0-9a-f]{40}", blob_sha):
+        raise ValueError("BEHAVIOR_EXACT_SHA_REQUIRED")
+    payload = source.encode("utf-8")
+    actual_blob = hashlib.sha1(f"blob {len(payload)}\0".encode() + payload).hexdigest()
+    if actual_blob != blob_sha:
+        raise ValueError("BEHAVIOR_SOURCE_BLOB_MISMATCH")
+    tree = ast.parse(source, filename=path, type_comments=True)
+    facts: dict[tuple[str, int], BehaviorWitness] = {}
+    unknowns = set()
+
+    def add(kind: str, node: ast.AST, observation: str) -> None:
+        line = getattr(node, "lineno", None)
+        if line is None:
+            return
+        facts[(kind, line)] = BehaviorWitness(kind, f"{path}:{line}@{blob_sha}", observation)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and _is_frozen_dataclass(node):
+            fields = {v.target.id for v in node.body if isinstance(v, ast.AnnAssign)
+                      and isinstance(v.target, ast.Name)}
+            if fields:
+                add("FROZEN_RECORD", node, "immutable annotated record declaration")
+            if len(fields.intersection({"source_id", "target_id", "evidence_ids", "subject_refs", "scope_id", "relation"})) >= 2:
+                add("RELATIONAL_FIELDS", node, "multiple relationship/provenance fields declared")
+        elif isinstance(node, ast.Call):
+            call = _call_name(node.func)
+            terminal = call.split(".")[-1]
+            if call in {"ast.parse", "tokenize.detect_encoding", "json.loads", "yaml.safe_load"}:
+                add("SOURCE_PARSE", node, "recognized source decode/parse API")
+            if terminal in {"FactBatch", "Node", "Edge", "Evidence"}:
+                add("GRAPH_FACT_CONSTRUCTION", node, "graph/evidence fact constructor candidate")
+            if terminal in {"unfold_context", "nodes_by_id", "evidence_by_id", "edges_by_id"}:
+                add("GRAPH_TRAVERSAL", node, "graph/context traversal call candidate")
+            if terminal in {"ImpactResult", "Assessment", "AnalysisRecord", "Claim"}:
+                add("ANALYSIS_RESULT", node, "analysis/report constructor candidate")
+            if terminal == "validate_alternative":
+                add("OPTION_VALIDATION", node, "independent alternative validation call candidate")
+            if terminal in {"VerificationReceipt", "DependencyVerification"}:
+                add("VERIFICATION_RESULT", node, "verification result constructor candidate")
+            if terminal in {"write_text", "write_bytes", "unlink", "rmtree", "delete_file"} or call in {"os.remove", "os.system", "subprocess.Popen", "subprocess.run"}:
+                add("EXTERNAL_SINK_CANDIDATE", node, "possible external write/process side effect")
+            if terminal in {"getattr", "eval", "exec", "__import__", "import_module"}:
+                unknowns.add(f"DYNAMIC_OR_INDIRECT_CALL:{path}:{node.lineno}")
+        elif isinstance(node, (ast.For, ast.AsyncFor)) and isinstance(node.iter, ast.Name) and node.iter.id == "alternatives":
+            add("OPTIONS_ITERATION", node, "iterates explicitly supplied alternatives")
+        elif isinstance(node, (ast.GeneratorExp, ast.ListComp, ast.SetComp)):
+            if any(isinstance(comp.iter, ast.Name) and comp.iter.id == "alternatives" for comp in node.generators):
+                add("OPTIONS_ITERATION", node, "comprehension iterates explicitly supplied alternatives")
+        elif isinstance(node, ast.Compare):
+            attributes = {n.attr for n in ast.walk(node) if isinstance(n, ast.Attribute)}
+            if attributes.intersection({"revision", "scope_id", "blob_sha", "source_sha"}):
+                add("PROVENANCE_COMPARISON", node, "source/scope identity compared")
+        elif isinstance(node, ast.Raise):
+            add("REJECTION_PATH", node, "explicit rejection/exception path")
+    return BehaviorFileScan(path, revision, blob_sha,
+                            tuple(facts[k] for k in sorted(facts, key=lambda x: (x[1], x[0]))),
+                            tuple(sorted(unknowns)))
+
+
+def infer_from_behavior(scans: tuple[BehaviorFileScan, ...],
+                        *, required_paths: tuple[str, ...]) -> BehaviorDefinition:
+    """Bounded role hypotheses; never certify all consumers or semantic behavior."""
+    if not isinstance(scans, tuple) or not all(isinstance(s, BehaviorFileScan) for s in scans):
+        raise TypeError("BEHAVIOR_SCANS_REQUIRED")
+    if not isinstance(required_paths, tuple) or not required_paths:
+        raise ValueError("BEHAVIOR_REQUIRED_PATHS_MISSING")
+    required = {_relative_python_path(p) for p in required_paths}
+    if len(required) != len(required_paths):
+        raise ValueError("BEHAVIOR_DUPLICATE_REQUIRED_PATH")
+    paths = {s.path for s in scans}
+    if len(paths) != len(scans):
+        raise ValueError("BEHAVIOR_DUPLICATE_SCAN")
+    if paths - required:
+        raise ValueError("BEHAVIOR_UNDECLARED_SOURCE")
+    if len({s.revision for s in scans}) > 1:
+        raise ValueError("BEHAVIOR_CROSS_REVISION")
+    missing = tuple(sorted(required - paths))
+    evidence = tuple(w for s in scans for w in s.witnesses)
+    by_kind: dict[str, list[BehaviorWitness]] = {}
+    for w in evidence:
+        by_kind.setdefault(w.kind, []).append(w)
+    matches = tuple((role, concepts) for role, needed, concepts in BEHAVIOR_RULES
+                    if all(by_kind.get(k) for k in needed))
+    problems = set(u for s in scans for u in s.unknowns)
+    if missing:
+        problems.add("MISSING_REQUIRED_SOURCE")
+    if any(w.kind == "EXTERNAL_SINK_CANDIDATE" for w in evidence):
+        problems.add("EXTERNAL_EFFECTS_REQUIRE_REVIEW")
+    if len(matches) != 1:
+        problems.add("NO_BEHAVIOR_ROLE" if not matches else "MULTIPLE_BEHAVIOR_ROLES")
+        return BehaviorDefinition(None, (), "UNRESOLVED", evidence, missing, tuple(sorted(problems)))
+    role, concepts = matches[0]
+    selected = next(needed for label, needed, _ in BEHAVIOR_RULES if role == label)
+    refs = tuple(sorted({w.source_ref for k in selected for w in by_kind[k]}))
+    clauses = tuple(DefinitionClause(word, refs) for word in concepts)
+    return BehaviorDefinition(role, clauses,
+                              "CANDIDATE_WITH_GAPS" if problems else "CANDIDATE_WITHIN_SCOPE",
+                              evidence, missing, tuple(sorted(problems)))
