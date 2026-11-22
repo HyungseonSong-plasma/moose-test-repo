@@ -125,3 +125,45 @@ Planning flow using the existing `git_factory` fixture. engine-only changes in
 `libs/code_understandability/**` do not currently trigger the existing path-filtered Harness Code
 workflow by themselves; test ownership and scheduling need a separate scoped
 policy decision rather than broadening CI implicitly.
+
+## Evolutionary Naming Audit: candidate policy (v0.1)
+
+`refactor/naming.py` handles the *naming-specific* question without changing
+the generic `PlanningAlternative` contract or authorizing a repository edit.
+Its evidence is a declared, source/commit-anchored hypothesis; this policy
+can validate **completeness and contradictions**, not independently establish
+that GPT's interpretation is true.
+
+- `KEEP` (default): current short/general name covers the actual core duty.
+- `RENAME`: observed name-scope mismatch and coherent duty; no extraction.
+- `EXTRACT_KEEP`: independently warranted responsibility delegation, with the
+  original name still appropriate **after** extraction.
+- `EXTRACT_RENAME`: proven extraction seam with an appropriate name for both
+  the residual owner and extracted implementation owner.
+- `HOLD`: missing identity, meaning, ownership, boundary, destination or checks.
+
+Required option evidence: **observed responsibility, evolution, name mismatch
+(when renaming), negative boundary, repository context**, and extraction seam
+(when extracting). GPT must explain positive coverage, excluded duties and
+contextual interpretation; it cannot claim a future implementation as evidence.
+Both name changes and structural extraction must preserve the declared set of
+responsibilities; delegation may leave the top-level owner accountable for the
+service. Avoid a hardcoded `libs/` destination: first reuse an actual current
+semantic owner (e.g., existing providers).
+
+`review_naming_option` rejects wrong-scope proposals and reports independent
+checks; `to_planning_alternative` maps reviewable candidates back to the
+existing strategy-neutral planning and validation path. **REVIEWABLE is not a
+mutation authorization.** An independent runner must bind source evidence to
+exact Git blobs, verify before/after candidate SHA, dynamic/external consumers,
+public contracts, behavior, idempotence, and rollback before automatic mutation.
+
+Concrete baseline at `main@4f873e71f8503943c9fce2dd30fcc96c28d6f631`:
+`diagnostics/collector.py` already owns `Collector`/`SourceProvider` contracts
+and `run_scan` (lines 125–140); Python, C++ and MOOSE Input implementations are
+already isolated in `diagnostics/providers/`. This existing separation is a
+reason to consider **KEEP** rather than invent another `libs/` hierarchy. It is
+not evidence of whole-repository semantic equivalence.
+
+See `docs/development/evolutionary-naming-audit-contract.md` for the detailed
+recommendation, extraction and verification obligations.
