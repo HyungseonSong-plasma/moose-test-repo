@@ -4,8 +4,8 @@ import unittest
 from dataclasses import replace
 
 from libs.hu import (
-    HUInput, HUObservation, StructuralMetric, compare_hu, evaluate_hu,
-    from_python_ast,
+    HUIndicator, HUInput, HUObservation, StructuralMetric, compare_hu,
+    derive_hu_indicators, evaluate_hu, from_python_ast,
 )
 
 REV = "a" * 40
@@ -103,3 +103,62 @@ class HULibraryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_model_indicators_use_measured_facts_without_a_hu_score():
+    metrics = from_python_ast({"loc": 20, "branches": 4}, evidence_ids=("ev:decl",))
+    calls = StructuralMetric("candidate_call_sites", 5, "python_ast_call_site_v1",
+                             ("ev:calls",))
+    hu = evaluate_hu(HUInput("node:func", REV, BLOB, metrics,
+                              source_facts=(calls,)))
+    by_name = {metric.name: metric for metric in hu.indicators}
+    assert set(by_name) == {"branch_density", "candidate_call_density"}
+    assert by_name["branch_density"].value == 0.2
+    assert by_name["candidate_call_density"].value == 0.25
+    assert by_name["candidate_call_density"].evidence_ids == ("ev:calls", "ev:decl")
+    assert hu.predicted_score is None
+    assert "HUMAN_UNDERSTANDABILITY_NOT_OBSERVED" in hu.unknowns
+
+
+def test_model_indicators_preserve_missing_sources_and_zero_loc():
+    assert derive_hu_indicators(()) == ()
+    zero = from_python_ast({"loc": 0, "branches": 2})
+    assert derive_hu_indicators(zero) == ()
+    missing = from_python_ast({"loc": 10})
+    assert derive_hu_indicators(missing) == ()
+    assert len(derive_hu_indicators(
+        from_python_ast({"loc": 4, "branches": 0})
+    )) == 1
+
+
+def test_model_indicator_input_validation_and_provenance():
+    with unittest.TestCase().assertRaises(ValueError):
+        HUIndicator("branch_density", float("inf"), "hu_density_v1")
+    with unittest.TestCase().assertRaisesRegex(ValueError, "DUPLICATE_HU_SOURCE_FACT"):
+        HUInput("node:func", REV, BLOB, source_facts=(
+            StructuralMetric("x", 1, "m"), StructuralMetric("x", 2, "m"),
+        ))
+    with unittest.TestCase().assertRaisesRegex(TypeError, "HU_INDICATOR_FACTS_REQUIRED"):
+        derive_hu_indicators([], source_facts=())
+
+
+def test_comparison_calculates_numeric_indicators_but_never_picks_a_refactor():
+    before = evaluate_hu(sample())
+    after = evaluate_hu(sample(attributes={"loc": 20, "branches": 6,
+                                             "max_branch_nesting": 3}))
+    comparison = compare_hu(before, after)
+    assert [(x.name, x.difference) for x in comparison.indicator_differences] == [
+        ("branch_density", 0.15),
+    ]
+    assert not comparison.improvement_proven
+    assert "STRUCTURAL_DELTA_NOT_HU_IMPROVEMENT_PROOF" in comparison.unknowns
+
+
+def test_incomparable_indicator_method_remains_unknown():
+    before = evaluate_hu(sample())
+    after = replace(before, indicators=(
+        replace(before.indicators[0], method="another_measurement"),
+    ))
+    comparison = compare_hu(before, after)
+    assert not comparison.indicator_differences
+    assert "INCOMPARABLE_HU_INDICATOR:branch_density" in comparison.unknowns

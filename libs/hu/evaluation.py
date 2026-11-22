@@ -1,10 +1,15 @@
-"""Aggregate actual HU observations; structural counts do not predict HU."""
+"""HU observations, computed model indicators, and numeric comparisons.
+
+HU calculates: contextual interpretation and refactor choice belong to Analysis
+and Planning. No outcome claims are inferred from structural indicators.
+"""
 
 from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
 
+from .metrics import derive_hu_indicators
 from .model import HUAssessment, HUInput, ObservedHU
 
 
@@ -35,12 +40,15 @@ def evaluate_hu(sample: HUInput) -> HUAssessment:
         target_id=sample.target_id, revision=sample.revision,
         blob_sha=sample.blob_sha, structural_metrics=sample.structural_metrics,
         observed=tuple(observed), unknowns=tuple(sorted(unknowns)),
+        indicators=derive_hu_indicators(
+            sample.structural_metrics, source_facts=sample.source_facts,
+        ),
     )
 
 
 @dataclass(frozen=True, slots=True)
 class MetricDifference:
-    """Observed change in a comparable structural metric."""
+    """Difference between source-comparable numeric measurements."""
 
     name: str
     before: int | float
@@ -50,33 +58,49 @@ class MetricDifference:
 
 @dataclass(frozen=True, slots=True)
 class HUComparison:
-    """Descriptive before/after change, never proof of improved comprehension."""
+    """Descriptive differences; never evidence of improved comprehension."""
 
     before_revision: str
     after_revision: str
     metric_differences: tuple[MetricDifference, ...]
     unknowns: tuple[str, ...]
     improvement_proven: bool = False
+    indicator_differences: tuple[MetricDifference, ...] = ()
+
+
+def _numeric_differences(left, right, *, kind: str):
+    before = {metric.name: metric for metric in left}
+    after = {metric.name: metric for metric in right}
+    differences = []
+    unknowns = set()
+    for name in sorted(before.keys() | after.keys()):
+        a, b = before.get(name), after.get(name)
+        if a is None or b is None or a.method != b.method:
+            unknowns.add(f"INCOMPARABLE_HU_{kind}:{name}")
+            continue
+        differences.append(MetricDifference(name, a.value, b.value, b.value - a.value))
+    return tuple(differences), unknowns
 
 
 def compare_hu(before: HUAssessment, after: HUAssessment) -> HUComparison:
-    """Compare matching structural measurements without inferring HU improvement."""
+    """Compare numeric measurements. Analysis decides their significance."""
     if not isinstance(before, HUAssessment) or not isinstance(after, HUAssessment):
         raise TypeError("HU_ASSESSMENTS_REQUIRED")
     if before.target_id != after.target_id:
         raise ValueError("HU_TARGET_MISMATCH")
-    left = {metric.name: metric for metric in before.structural_metrics}
-    right = {metric.name: metric for metric in after.structural_metrics}
-    differences = []
+
+    structural, unknown_metrics = _numeric_differences(
+        before.structural_metrics, after.structural_metrics, kind="METRIC",
+    )
+    indicators, unknown_indicators = _numeric_differences(
+        before.indicators, after.indicators, kind="INDICATOR",
+    )
     unknowns = set(before.unknowns + after.unknowns)
-    for name in sorted(left.keys() | right.keys()):
-        a, b = left.get(name), right.get(name)
-        if a is None or b is None or a.method != b.method:
-            unknowns.add(f"INCOMPARABLE_HU_METRIC:{name}")
-            continue
-        differences.append(MetricDifference(name, a.value, b.value, b.value - a.value))
+    unknowns.update(unknown_metrics)
+    unknowns.update(unknown_indicators)
     unknowns.add("STRUCTURAL_DELTA_NOT_HU_IMPROVEMENT_PROOF")
     return HUComparison(
         before_revision=before.revision, after_revision=after.revision,
-        metric_differences=tuple(differences), unknowns=tuple(sorted(unknowns)),
+        metric_differences=structural, unknowns=tuple(sorted(unknowns)),
+        indicator_differences=indicators,
     )
