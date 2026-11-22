@@ -1,16 +1,20 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue758-g4-postmerge-full-005",
+  "request_id": "issue758-g4-postmerge-key-files-006",
   "source_sha": "9ce912ce0aa3ecb5ba97537dc1ed40c967c6fe11",
   "includes": [
-    "physics_harness/code/*.py",
-    "libs/hu/*.py"
+    "physics_harness/code/verification/dependencies.py",
+    "physics_harness/code/verification/consistency.py",
+    "physics_harness/code/analysis/assessment.py",
+    "physics_harness/code/analysis/parameter_contract.py",
+    "physics_harness/code/analysis/hu_interpretation.py",
+    "libs/hu/evaluation.py"
   ],
   "excludes": [],
   "collectors": [
     "python_ast"
   ],
-  "max_files": 500,
-  "max_bytes": 20000000,
-  "max_seconds": 240
+  "max_files": 100,
+  "max_bytes": 5000000,
+  "max_seconds": 120
 }
