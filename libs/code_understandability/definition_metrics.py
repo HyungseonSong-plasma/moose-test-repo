@@ -149,3 +149,49 @@ def measure_definition(
         selected_context_cues=tuple(x.label for x in chosen or ()),
         still_unrecoverable=tuple(word for i,word in enumerate(uncovered) if not (resolved_bits & (1 << i))),
     )
+
+
+@dataclass(frozen=True)
+class ContextTierCoverage:
+    """Cumulative lexical clauses visible at a fixed disclosure tier."""
+
+    tier: int
+    covered: tuple[str, ...]
+    gained: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DefinitionContextProfile:
+    """Evidence-preserving disclosure profile, NOT semantic CU calibration."""
+
+    tiers: tuple[ContextTierCoverage, ...]
+    still_uncovered: tuple[str, ...]
+    evidence_protocol: str = LEXICON_VERSION
+    semantic_comprehension_proven: bool = False
+
+
+def profile_definition_context(
+    clauses: tuple[DefinitionClause, ...], cues: tuple[NameCue, ...],
+) -> DefinitionContextProfile:
+    """Separate name, parent, module and API gains without assigning CU quality.
+
+    The same lexical entailment protocol as DEB/MRC is used. A zero gain can
+    indicate an inadequate lexicon, not an uninformative name. No README input.
+    """
+    measure_definition(clauses, cues)  # canonical input contract & evidence validation
+    concepts = tuple(c.concept for c in clauses)
+    seen: set[str] = set()
+    levels = []
+    for tier in range(4):
+        words = set().union(*(lexical_tokens(c.text) for c in cues if c.tier <= tier))
+        observed = {x for x in concepts if x in words}
+        levels.append(ContextTierCoverage(
+            tier=tier,
+            covered=tuple(x for x in concepts if x in observed),
+            gained=tuple(x for x in concepts if x in observed and x not in seen),
+        ))
+        seen = observed
+    return DefinitionContextProfile(
+        tiers=tuple(levels),
+        still_uncovered=tuple(x for x in concepts if x not in seen),
+    )
