@@ -339,5 +339,227 @@ def to_planning_alternative(case: NamingCase, option: NamingOption):
     )
 
 
+@dataclass(frozen=True, slots=True)
+class RejectedNamingCandidate:
+    """A comparative argument, not a machine-verified semantic judgement."""
+
+    option_id: str
+    reason: str
+    evidence_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        _nonempty(self.option_id, "REJECTED_OPTION_ID")
+        _nonempty(self.reason, "REJECTION_REASON")
+        _names(self.evidence_ids, "REJECTION_EVIDENCE")
+        if not self.evidence_ids:
+            raise ValueError("REJECTION_WITHOUT_EVIDENCE")
+
+
+@dataclass(frozen=True, slots=True)
+class NamingRecommendation:
+    """GPT suggestion. Independent source and semantic checks still required."""
+
+    selected_option_id: str
+    why_not_keep: str
+    keep_counterevidence_ids: tuple[str, ...]
+    rejected_candidates: tuple[RejectedNamingCandidate, ...]
+    rationale: str
+    unresolved_questions: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _nonempty(self.selected_option_id, "SELECTED_OPTION_ID")
+        _nonempty(self.rationale, "RECOMMENDATION_RATIONALE")
+        _names(self.keep_counterevidence_ids, "KEEP_COUNTEREVIDENCE")
+        _names(self.unresolved_questions, "UNRESOLVED_QUESTIONS")
+        if not isinstance(self.rejected_candidates, tuple) or any(
+                not isinstance(c, RejectedNamingCandidate) for c in self.rejected_candidates):
+            raise TypeError("INVALID_REJECTED_CANDIDATES")
+        _names(tuple(c.option_id for c in self.rejected_candidates),
+               "REJECTED_CANDIDATE_IDS")
+
+
+@dataclass(frozen=True, slots=True)
+class NamingDecisionReceipt:
+    """Only a bounded review disposition; NEVER a Git mutation permission."""
+
+    recommended_option_id: str | None
+    disposition: str  # KEEP / RECOMMEND_FOR_VERIFICATION / HOLD
+    blockers: tuple[str, ...]
+    unresolved: tuple[str, ...]
+    required_checks: tuple[str, ...]
+    provenance: str
+
+    @property
+    def mutation_approved(self) -> bool:
+        return False
+
+
+def build_naming_recommendation_brief(
+        case: NamingCase, options: tuple[NamingOption, ...]) -> dict:
+    """A bounded input protocol for GPT, not a prompt to manufacture evidence.
+
+    The source evidence and the candidate proposals must originate outside this
+    function; the model is *not* entrusted with validating its own citations.
+    """
+    if not isinstance(case, NamingCase):
+        raise TypeError("NAMING_CASE_REQUIRED")
+    if not isinstance(options, tuple) or any(not isinstance(o, NamingOption) for o in options):
+        raise TypeError("NAMING_OPTIONS_REQUIRED")
+    _names(tuple(o.id for o in options), "OPTION_IDS")
+    if sum(o.variant == "KEEP" for o in options) != 1:
+        raise ValueError("EXACTLY_ONE_KEEP_BASELINE_REQUIRED")
+    return {
+        "revision": case.revision,
+        "target": {"kind": case.target_kind, "id": case.target_id,
+                   "path": case.current_path, "name": case.current_name},
+        "source_claims": [
+            {"id": e.id, "kind": e.kind, "statement": e.statement,
+             "revision": e.source_revision, "refs": list(e.source_refs)}
+            for e in case.evidence
+        ],
+        "assessments_not_verified": {
+            "name_fit": case.name_fit,
+            "coherence": case.coherence,
+            "identity": case.identity_status,
+        },
+        "options": [
+            {"id": o.id, "variant": o.variant, "name": o.proposed_name,
+             "rationale": o.rationale, "evidence_ids": list(o.evidence_ids),
+             "coverage": o.coverage_rationale, "excluded_boundary": o.boundary_rationale,
+             "context": o.context_rationale,
+             "extracted_owners": [p.owner_id for p in o.extracted_units]}
+            for o in options
+        ],
+        "rules": [
+            "Keep the existing name when it still covers the observed coherent responsibility.",
+            "Do not use speculative future functionality to justify any change.",
+            "Compare KEEP against every non-KEEP candidate and cite observed evidence IDs.",
+            "Distinguish name-only defects from responsibility mixing or duplicated owners.",
+            "For extraction, distinguish what stays from what moves and reuse the current owner.",
+            "Propose the least sufficient abstraction covering observed positive responsibilities",
+            "without implying excluded responsibilities or creating ambiguous sibling names.",
+            "If there is no unique supported winner, choose HOLD; do not force a name.",
+            "Source refs and your semantic assertions will be checked independently.",
+        ],
+        "output_contract": {
+            "selected_option_id": "exact option ID",
+            "why_not_keep": "concrete counterexample to keeping the current name, if change",
+            "keep_counterevidence_ids": "source-linked mismatch IDs, if change",
+            "rejected_candidates": "each non-selected alternative with reason and evidence IDs",
+            "unresolved_questions": "all remaining blockers; cannot be silently dropped",
+        },
+    }
+
+
+def adjudicate_naming_recommendation(
+        case: NamingCase, options: tuple[NamingOption, ...],
+        suggestion: NamingRecommendation, provider) -> NamingDecisionReceipt:
+    """Verify source anchors, then check comparative completeness; no execution.
+
+    IMPORTANT: caller-provided name-fit and responsibility statements are still
+    interpretive hypotheses. The verifier authenticates lines, NOT their meaning.
+    """
+    from ..verification.naming_provenance import verify_naming_evidence_sources
+    if not isinstance(case, NamingCase) or not isinstance(suggestion, NamingRecommendation):
+        raise TypeError("NAMING_RECOMMENDATION_INPUT_REQUIRED")
+    build_naming_recommendation_brief(case, options)
+    refs = {e.id: e for e in case.evidence}
+    candidates = {o.id: o for o in options}
+    provenance = verify_naming_evidence_sources(case, provider)
+    blockers: set[str] = set(provenance.failures)
+    unknown: set[str] = set(case.unknowns) | set(provenance.unresolved)
+    required: set[str] = set()
+    if suggestion.selected_option_id not in candidates:
+        blockers.add("UNKNOWN_RECOMMENDED_OPTION")
+    unknown_rejections = {r.option_id for r in suggestion.rejected_candidates} - set(candidates)
+    if unknown_rejections:
+        blockers.add("REJECTS_UNKNOWN_OPTION")
+    for rejected in suggestion.rejected_candidates:
+        if set(rejected.evidence_ids) - set(refs):
+            blockers.add("REJECTION_WITH_UNKNOWN_EVIDENCE")
+    if set(suggestion.keep_counterevidence_ids) - set(refs):
+        blockers.add("KEEP_REBUTTAL_WITH_UNKNOWN_EVIDENCE")
+    if suggestion.selected_option_id in {r.option_id for r in suggestion.rejected_candidates}:
+        blockers.add("SELECTED_OPTION_ALSO_REJECTED")
+    expected_rejections = set(candidates) - {suggestion.selected_option_id}
+    if expected_rejections != {r.option_id for r in suggestion.rejected_candidates}:
+        unknown.add("COMPETING_OPTIONS_NOT_ALL_COMPARED")
+    if provenance.status != "SOURCE_ANCHORS_VERIFIED":
+        unknown.add("SOURCE_PROVENANCE_NOT_COMPLETE")
+    if case.identity_status != "RESOLVED":
+        unknown.add("LOGICAL_IDENTITY_UNRESOLVED")
+    if any(refs[rid].source_revision != case.revision
+           for rid in case.responsibility_ids if rid in refs):
+        unknown.add("CURRENT_RESPONSIBILITY_WITNESS_MISSING")
+    if case.name_fit == "UNKNOWN" or case.coherence == "UNKNOWN":
+        unknown.add("RESPONSIBILITY_OR_NAME_FIT_UNRESOLVED")
+    selected = candidates.get(suggestion.selected_option_id)
+    if selected is not None:
+        review = review_naming_option(case, selected)
+        blockers.update(review.blockers)
+        unknown.update(review.unknowns)
+        required.update(review.required_checks)
+        if review.disposition in {"HOLD", "REJECTED"}:
+            unknown.add("SELECTED_OPTION_NOT_REVIEWABLE")
+        if selected.variant == "HOLD":
+            unknown.add("GPT_SELECTED_HOLD")
+        elif selected.variant == "KEEP":
+            if case.name_fit != "VALID":
+                unknown.add("KEEP_NOT_INDEPENDENTLY_JUSTIFIED")
+        else:
+            if case.name_fit == "VALID" and selected.variant in {"RENAME", "EXTRACT_RENAME"}:
+                blockers.add("STABLE_VALID_NAME_MUST_BE_KEPT")
+            if not suggestion.why_not_keep.strip():
+                unknown.add("WHY_NOT_KEEP_MISSING")
+            if not suggestion.keep_counterevidence_ids:
+                unknown.add("KEEP_COUNTEREVIDENCE_MISSING")
+            if selected.variant in {"RENAME", "EXTRACT_RENAME"}:
+                if not any(refs[i].kind == "NAME_MISMATCH"
+                           for i in suggestion.keep_counterevidence_ids if i in refs):
+                    unknown.add("KEEP_NOT_REFUTED_BY_NAME_MISMATCH")
+            elif selected.variant == "EXTRACT_KEEP":
+                if not any(refs[i].kind == "EXTRACTION_SEAM"
+                           for i in suggestion.keep_counterevidence_ids if i in refs):
+                    unknown.add("KEEP_NOT_REFUTED_BY_EXTRACTION_SEAM")
+            if not any(refs[i].kind == "EVOLUTION"
+                       for i in selected.evidence_ids if i in refs):
+                unknown.add("EVOLUTION_BASIS_MISSING")
+            if not any(refs[i].kind == "EVOLUTION" and
+                       refs[i].source_revision != case.revision
+                       for i in selected.evidence_ids if i in refs):
+                unknown.add("HISTORICAL_EVOLUTION_WITNESS_MISSING")
+            if selected.variant in {"RENAME", "EXTRACT_RENAME"}:
+                if not any(refs[i].kind == "NAME_MISMATCH" and
+                           refs[i].source_revision == case.revision
+                           for i in suggestion.keep_counterevidence_ids if i in refs):
+                    unknown.add("CURRENT_NAME_MISMATCH_WITNESS_MISSING")
+            required.update(("INDEPENDENT_SEMANTIC_NAME_AND_BOUNDARY_REVIEW",
+                             "VERIFY_NAME_STABILITY_ON_REAUDIT"))
+    # If any reviewable alternative is left unexplained, the model did not
+    # establish why this choice is preferable. Arguments alone are not proof.
+    for o in options:
+        if o.id == suggestion.selected_option_id:
+            continue
+        review = review_naming_option(case, o)
+        if review.disposition in {"REVIEWABLE", "BASELINE"} and not any(
+                r.option_id == o.id for r in suggestion.rejected_candidates):
+            unknown.add("UNADDRESSED_VIABLE_COMPETITOR:" + o.id)
+    if suggestion.unresolved_questions:
+        unknown.add("GPT_DISCLOSED_UNRESOLVED_QUESTIONS")
+    if blockers or unknown:
+        disposition = "HOLD"
+        selected_id = None
+    elif selected is not None and selected.variant == "KEEP":
+        disposition = "KEEP"
+        selected_id = selected.id
+    else:
+        disposition = "RECOMMEND_FOR_VERIFICATION"
+        selected_id = selected.id if selected else None
+    return NamingDecisionReceipt(selected_id, disposition,
+                                 tuple(sorted(blockers)), tuple(sorted(unknown)),
+                                 tuple(sorted(required)), provenance.status)
+
 __all__ = ["NamingEvidence", "NamingCase", "ExtractionUnit", "NamingOption",
-           "NamingOptionReview", "review_naming_option", "to_planning_alternative"]
+           "NamingOptionReview", "review_naming_option", "to_planning_alternative",
+           "RejectedNamingCandidate", "NamingRecommendation", "NamingDecisionReceipt",
+           "build_naming_recommendation_brief", "adjudicate_naming_recommendation"]

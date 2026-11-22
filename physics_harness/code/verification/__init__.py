@@ -9,6 +9,9 @@ from .dependencies import (
     DependencyRule, DependencyVerification, plan_change_verification,
     verify_dependencies, verify_dependency_repository,
 )
+from .naming_provenance import (
+    NamingSourceVerification, verify_naming_evidence_sources,
+)
 
 __all__ = [
     "ChangeVerificationPlan", "VerificationReceipt",
@@ -16,4 +19,5 @@ __all__ = [
     "DependencyContract", "DependencyFinding", "DependencyRule",
     "DependencyVerification", "verify_dependencies",
     "verify_dependency_repository",
+    "NamingSourceVerification", "verify_naming_evidence_sources",
 ]

@@ -4,6 +4,8 @@ from .alternatives import AlternativeReview, review_alternatives
 from .naming import (
     ExtractionUnit, NamingCase, NamingEvidence, NamingOption, NamingOptionReview,
     review_naming_option, to_planning_alternative,
+    NamingRecommendation, RejectedNamingCandidate, NamingDecisionReceipt,
+    build_naming_recommendation_brief, adjudicate_naming_recommendation,
 )
 from .evolution import (
     DeclaredClass, DeclaredFunction, ImportedSymbol, SourceStructure,
@@ -27,4 +29,6 @@ __all__ = [
     "audit_source_evolution", "audit_git_history",
     "NamingEvidence", "NamingCase", "ExtractionUnit", "NamingOption",
     "NamingOptionReview", "review_naming_option", "to_planning_alternative",
+    "NamingRecommendation", "RejectedNamingCandidate", "NamingDecisionReceipt",
+    "build_naming_recommendation_brief", "adjudicate_naming_recommendation",
 ]

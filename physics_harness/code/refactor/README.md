@@ -209,3 +209,37 @@ GitHub objects were inspected when the fixture was recorded; shallow CI
 only replays its own self-contained two-commit Git test and validates the
 current HEAD source. The frozen older-commit summary alone is not a CI
 semantic-evidence proof.
+
+## Evolutionary naming — v0.3 comparative GPT recommendation gate
+
+**New, read-only stage; no automatic executor or mutation permission.** After
+source-backed historical structure evidence and reviewable `NamingOption`s exist:
+
+1. Use `build_naming_recommendation_brief(case, options)` to pass a bounded,
+   revision-specific evidence/option inventory to GPT. Include **exactly one
+   KEEP baseline**. GPT must compare every alternative rather than generate an
+   arbitrary "best-sounding" name. Keep existing stable responsibilities by
+   default, and do not guess future functionality.
+2. Ask GPT for a `NamingRecommendation`: selected option, explicit reason not to
+   KEEP (if change), current mismatch evidence IDs, a reason for rejecting
+   **every** alternative, and unresolved questions. A recommendation is only a
+   proposed argument; it does not authenticate cited facts.
+3. Run `adjudicate_naming_recommendation(case, options, suggestion, provider)`.
+   This calls independent `verification/naming_provenance.py`, reading exact Git
+   object bytes for **every** path:line@blob claim, including ancestral history.
+   Missing commits, stale observations or contradictions cause HOLD.
+4. Only `KEEP`, `RECOMMEND_FOR_VERIFICATION`, or `HOLD` may emerge. A change
+   recommendation must have a concrete historical witness, a **current**
+   responsibility and mismatch witness, KEEP rebuttal, complete competitor
+   comparisons, and a structurally reviewable NamingOption. It still requires
+   semantic role/name review, all consumer/contract checks, candidate staging,
+   behavioral regression, idempotence and post-HEAD verification.
+
+**Important limitations:** an exact source line is not a machine-verifiable
+proof of the natural-language `NamingEvidence.statement`, responsibility
+coherence, name fit, change need or safety. The same GPT may have produced
+both evidence interpretations and the choice. Consequently, even
+`RECOMMEND_FOR_VERIFICATION` always has `mutation_approved=False`. Verify
+semantic correctness independently, ideally with held-out reviewers and real
+consumers, *before* building an automatic executor. A clone without old Git
+objects yields HOLD rather than silently comparing to current worktree bytes.
