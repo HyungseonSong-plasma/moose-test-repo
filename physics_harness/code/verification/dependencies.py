@@ -193,6 +193,13 @@ def _cycle(graph: dict[str, set[str]]) -> tuple[str, ...]:
     return ()
 
 
+def _record_earliest_line(lines: dict[str, int], target: str, line: int) -> None:
+    """Keep the earliest *source* line, not the first breadth-first AST visit."""
+    previous = lines.get(target)
+    if previous is None or line < previous:
+        lines[target] = line
+
+
 def verify_dependencies(
     sources: tuple[SourceInput, ...], contract: DependencyContract,
 ) -> DependencyVerification:
@@ -236,22 +243,22 @@ def verify_dependencies(
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    imports.setdefault(alias.name, node.lineno)
+                    _record_earliest_line(imports, alias.name, node.lineno)
                     if alias.name == contract.repository_tool or alias.name.startswith(
                         contract.repository_tool + "."
                     ):
-                        repository_refs.setdefault(alias.name, node.lineno)
+                        _record_earliest_line(repository_refs, alias.name, node.lineno)
             elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                imports.setdefault(node.module, node.lineno)
+                _record_earliest_line(imports, node.module, node.lineno)
                 if node.module == contract.repository_tool or node.module.startswith(
                     contract.repository_tool + "."
                 ):
-                    repository_refs.setdefault(node.module, node.lineno)
+                    _record_earliest_line(repository_refs, node.module, node.lineno)
             elif isinstance(node, ast.Constant) and isinstance(node.value, str):
                 if node.value == contract.repository_tool or node.value.startswith(
                     contract.repository_tool + "/"
                 ):
-                    repository_refs.setdefault(node.value, node.lineno)
+                    _record_earliest_line(repository_refs, node.value, node.lineno)
 
         for target, line in sorted(imports.items()):
             dst = _package(target, contract)
