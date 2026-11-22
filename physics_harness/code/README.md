@@ -15,7 +15,7 @@ can support other languages, but **unimplemented collectors are not claimed**.
 | `delete/` | Reserved: no automatic source-retirement or deletion engine is implemented |
 | `tests/` | Local regression tests for implemented Code lifecycle components |
 
-The separate [`libs/hu/`](../../../libs/hu/README.md) defines and **calculates**
+The separate [`libs/hu/`](../../libs/hu/README.md) defines and **calculates**
 numeric traits associated with human code understandability. The
 `analysis/hu_adapter.py` transports Diagnostics inputs and HU outputs;
 `analysis/hu_interpretation.py` interprets values and uncertainty. HU does
