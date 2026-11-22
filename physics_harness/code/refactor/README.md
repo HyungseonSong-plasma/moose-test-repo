@@ -9,26 +9,26 @@ transformation, edit the repository, or authorize a change.
 | Package | Responsibility |
 | --- | --- |
 | `code/diagnostics/` | Exact-source graph, evidence, receipt and collection completeness |
-| `libs/hu/` | Numeric HU-model features from existing source facts and observations, no interpretation or refactor decision |
+| `libs/code_understandability/` | Numeric code-understandability features from existing source facts and observations, no interpretation or refactor decision |
 | `code/analysis/result.py` | Generic revision-bound analysis records and measurements |
-| `code/analysis/hu_adapter.py` | Diagnostics↔HU input/output mapping and Evidence transport only |
-| `code/analysis/hu_interpretation.py` | Interpret calculated HU features, caveats and trade-offs for Planning |
+| `code/analysis/understandability_adapter.py` | Diagnostics↔HU input/output mapping and Evidence transport only |
+| `code/analysis/understandability_interpretation.py` | Interpret calculated HU features, caveats and trade-offs for Planning |
 | `code/refactor/planning.py` | Source-bound context and constraint validation |
 | `code/refactor/alternatives.py` | Apply the same checks to alternative proposals; no ranking |
 | `code/verification/` | Independent source/contract checks, post-change obligations |
 
 The **scope of a structural change** is independent of its **objective**:
 conceptual/data architecture, folder/module organization, and implementation
-internals can all use the same planning contracts. HU applies most directly to
+internals can all use the same planning contracts. Code-understandability metrics apply most directly to
 implementation internals, but no folder or architecture policy is hard-coded.
 
 ## Data flow
 
 ```
 run_scan -> DiagnosticResult
-  -> assess_code_hu(...) -> libs.hu.HUAssessment
-  -> summarize_hu(...) -> AnalysisRecord
-  -> interpret_hu_indicators(...) -> AnalysisRecord
+  -> assess_code_understandability(...) -> libs.code_understandability.UnderstandabilityAssessment
+  -> summarize_understandability(...) -> AnalysisRecord
+  -> interpret_understandability_indicators(...) -> AnalysisRecord
   -> build_planning_context(..., assessments=(record, interpretation))
   -> review_alternatives(...)
   -> post-change Verification [separate]
@@ -45,8 +45,8 @@ from pathlib import Path
 import subprocess
 
 from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
-from physics_harness.code.analysis.hu_adapter import assess_code_hu, summarize_hu
-from physics_harness.code.analysis.hu_interpretation import interpret_hu_indicators
+from physics_harness.code.analysis.understandability_adapter import assess_code_understandability, summarize_understandability
+from physics_harness.code.analysis.understandability_interpretation import interpret_understandability_indicators
 from physics_harness.code.refactor import (
     HardConstraint, PlanningAlternative, build_planning_context, review_alternatives,
 )
@@ -64,9 +64,9 @@ scan = run_scan(
 )
 target = next(n for n in scan.graph.nodes
               if n.kind == "python_function" and n.name == "verify_dependencies")
-hu = assess_code_hu(scan, target.id)
-record = summarize_hu(hu)
-interpretation = interpret_hu_indicators(hu)
+hu = assess_code_understandability(scan, target.id)
+record = summarize_understandability(hu)
+interpretation = interpret_understandability_indicators(hu)
 context = build_planning_context(
     scan, target.id,
     assessments=(record, interpretation),
@@ -94,7 +94,7 @@ for verdict in review.results:
 
 ## Semantics
 
-- Structural AST counts are **not** HU scores. Actual observed human outcomes
+- Structural AST counts are **not** code-understandability scores. Actual observed human outcomes
   remain separated by question/criterion and provenance; no automatic score
   weighting, prediction, or quality ranking.
 - Every proposed change may be compared with a `KEEP` baseline.
@@ -121,7 +121,7 @@ python -m pytest -q physics_harness/code/tests
 ```
 
 `test_hu_run_scan_integration.py` tests the real collector → HU → Analysis →
-Planning flow using the existing `git_factory` fixture. HU-only changes in
+Planning flow using the existing `git_factory` fixture. engine-only changes in
 `libs/hu/**` do not currently trigger the existing path-filtered Harness Code
 workflow by themselves; test ownership and scheduling need a separate scoped
 policy decision rather than broadening CI implicitly.
