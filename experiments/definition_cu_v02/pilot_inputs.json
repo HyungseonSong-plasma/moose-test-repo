@@ -1,0 +1,154 @@
+{
+  "schema_version": "0.2",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631",
+  "source_kind": "frozen_exact_blob_public_api_plus_module_inventory",
+  "readme_used": false,
+  "targets": [
+    {
+      "target_id": "T1",
+      "path": "physics_harness/code/graph",
+      "public_symbols": [
+        "Claim",
+        "ClaimEvidenceRef",
+        "Context",
+        "Edge",
+        "Evidence",
+        "GraphSnapshot",
+        "HierarchyView",
+        "Node",
+        "NodeOccurrence",
+        "RelationSelector",
+        "RelationSpec",
+        "Scope",
+        "SourceLocation",
+        "unfold_context"
+      ],
+      "blob_sha": "7568d3c83123a21a7faa210eeb7bddfd1d239a56",
+      "module_names": [
+        "claim",
+        "context",
+        "edge",
+        "evidence",
+        "node",
+        "scope"
+      ]
+    },
+    {
+      "target_id": "T2",
+      "path": "physics_harness/code/diagnostics",
+      "public_symbols": [
+        "ScanBudget",
+        "ScanRequest",
+        "CollectionResult",
+        "FactBatch",
+        "SourceInput",
+        "SourceRecord",
+        "UnresolvedTarget",
+        "file_node_id",
+        "graph_edge_id",
+        "run_scan",
+        "scan_scope_id",
+        "stable_id",
+        "DiagnosticResult",
+        "GraphAssembler",
+        "EvidenceReceipt",
+        "FileCoverage",
+        "GitSourceProvider",
+        "WorkflowCollector",
+        "PythonAstCollector",
+        "CppSourceCollector",
+        "MooseInputCollector",
+        "GitHubActionsRunProvider"
+      ],
+      "blob_sha": "224d8d554dbcf2aefbcfcd32d134e994fdb1082c",
+      "module_names": [
+        "assemble",
+        "collector",
+        "receipt",
+        "request"
+      ]
+    },
+    {
+      "target_id": "T3",
+      "path": "physics_harness/code/analysis",
+      "public_symbols": [
+        "ImpactResult",
+        "analyze_impact",
+        "TargetCoverage",
+        "analyze_target_coverage",
+        "propose_finding",
+        "Assessment",
+        "assess_finding",
+        "ParameterBlockAssessment",
+        "ParameterContractAssessment",
+        "assess_input_parameter_contract",
+        "GraphDiff",
+        "compare_graphs",
+        "assess_code_understandability",
+        "summarize_understandability",
+        "interpret_understandability_indicators"
+      ],
+      "blob_sha": "e682eb5e1618f21db1c6e234fcf2c94926af0396",
+      "module_names": [
+        "assessment",
+        "diff",
+        "findings",
+        "impact",
+        "parameter_contract",
+        "result",
+        "understandability_adapter",
+        "understandability_interpretation"
+      ]
+    },
+    {
+      "target_id": "T4",
+      "path": "physics_harness/code/refactor",
+      "public_symbols": [
+        "AlternativeReview",
+        "ConstraintCheck",
+        "HardConstraint",
+        "PlanValidation",
+        "PlanningAlternative",
+        "PlanningAssessment",
+        "PlanningContext",
+        "build_planning_context",
+        "review_alternatives",
+        "validate_alternative"
+      ],
+      "blob_sha": "4d71340b449e267d945e8b7b081f7dce729de675",
+      "module_names": [
+        "alternatives",
+        "planning"
+      ]
+    },
+    {
+      "target_id": "T5",
+      "path": "physics_harness/code/verification",
+      "public_symbols": [
+        "ChangeVerificationPlan",
+        "VerificationReceipt",
+        "plan_change_verification",
+        "verify_generated_artifact",
+        "DependencyContract",
+        "DependencyFinding",
+        "DependencyRule",
+        "DependencyVerification",
+        "verify_dependencies",
+        "verify_dependency_repository"
+      ],
+      "blob_sha": "4fb075320e1239c715eb4c84e25327de8ec7bcaf",
+      "module_names": [
+        "consistency",
+        "dependencies"
+      ]
+    },
+    {
+      "target_id": "T6",
+      "path": "physics_harness/code/delete",
+      "public_symbols": [],
+      "blob_sha": "2bb6122ec304ceb19f524e302d4e31f52a6a9a58",
+      "module_names": []
+    }
+  ]
+}
