@@ -44,6 +44,23 @@ class StructuralMetric:
 
 
 @dataclass(frozen=True, slots=True)
+class HUIndicator:
+    """Computed, evidence-bound HU model feature, not a human quality score."""
+
+    name: str
+    value: int | float
+    method: str
+    evidence_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _text(self.name, "indicator_name")
+        _text(self.method, "indicator_method")
+        if type(self.value) not in (int, float) or not isfinite(self.value) or self.value < 0:
+            raise ValueError("INVALID_INDICATOR_VALUE")
+        _references(self.evidence_ids, "indicator_evidence_ids")
+
+
+@dataclass(frozen=True, slots=True)
 class HUObservation:
     """An actual binary evaluator response, not a model prediction."""
 
@@ -71,6 +88,7 @@ class HUInput:
     structural_metrics: tuple[StructuralMetric, ...] = ()
     observations: tuple[HUObservation, ...] = ()
     unknowns: tuple[str, ...] = ()
+    source_facts: tuple[StructuralMetric, ...] = ()
 
     def __post_init__(self) -> None:
         _text(self.target_id, "target_id")
@@ -87,6 +105,12 @@ class HUInput:
         ):
             raise TypeError("INVALID_HU_OBSERVATIONS")
         _references(self.unknowns, "unknowns")
+        if not isinstance(self.source_facts, tuple) or not all(
+            isinstance(fact, StructuralMetric) for fact in self.source_facts
+        ):
+            raise TypeError("INVALID_HU_SOURCE_FACTS")
+        if len({fact.name for fact in self.source_facts}) != len(self.source_facts):
+            raise ValueError("DUPLICATE_HU_SOURCE_FACT")
         for observation in self.observations:
             if observation.revision != self.revision or observation.blob_sha != self.blob_sha:
                 raise ValueError("HU_OBSERVATION_SOURCE_MISMATCH")
@@ -111,3 +135,4 @@ class HUAssessment:
     observed: tuple[ObservedHU, ...]
     unknowns: tuple[str, ...]
     predicted_score: None = None  # deliberately not a structural-score proxy
+    indicators: tuple[HUIndicator, ...] = ()  # computed HU model features, not verdicts

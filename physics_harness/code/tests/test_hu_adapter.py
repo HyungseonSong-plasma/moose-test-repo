@@ -104,4 +104,34 @@ def test_different_human_criteria_are_not_conflated_by_name():
         HUObservation("e2", "c", "a.b", False, REV, BLOB),
     )
     result = summarize_hu(assess_code_hu(diagnostic(), "n:f", observations=observations))
-    assert len(result.values) == 3 + 6  # structural + 3 measurements per distinct question
+    assert len(result.values) == 3 + 1 + 6  # structural + derived indicator + observations
+
+
+def test_adapter_transports_candidate_call_facts_without_resolving_dependencies():
+    from physics_harness.code.analysis.hu_adapter import summarize_hu
+    data = diagnostic()
+    record = data.receipt.files[0]
+    record.collectors = ("python_ast",)
+    data.graph.edges = (
+        Obj(source_id="n:f", target_id="n:call", relation="CALLS_CANDIDATE",
+            evidence_ids=("ev:call",)),
+        Obj(source_id="n:f", target_id="n:dynamic", relation="DYNAMIC_REFERENCE_CANDIDATE",
+            evidence_ids=("ev:unknown",)),
+    )
+    hu = assess_code_hu(data, "n:f")
+    values = {metric.name: metric for metric in hu.indicators}
+    assert values["branch_density"].value == 0.25
+    assert values["candidate_call_density"].value == 0.25
+    assert values["candidate_call_density"].evidence_ids == ("ev:call", "ev:decl")
+    summary = summarize_hu(hu)
+    assert {value.name: value.value for value in summary.values}[
+        "indicator.candidate_call_density"] == 0.25
+    assert "ev:call" in summary.evidence_ids
+
+
+def test_adapter_does_not_claim_zero_calls_without_ast_coverage():
+    data = diagnostic()
+    data.graph.edges = ()
+    data.receipt.files[0].collectors = ()
+    result = assess_code_hu(data, "n:f")
+    assert [item.name for item in result.indicators] == ["branch_density"]

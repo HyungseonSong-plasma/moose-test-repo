@@ -9,6 +9,7 @@ from .assessment import (
     assess_finding, assess_input_parameter_contract,
 )
 from .diff import GraphDiff, compare_graphs
+from .hu_interpretation import interpret_hu_indicators
 
 __all__ = [
     "ImpactResult", "analyze_impact",
@@ -16,5 +17,5 @@ __all__ = [
     "propose_finding", "Assessment", "assess_finding",
     "ParameterBlockAssessment", "ParameterContractAssessment",
     "assess_input_parameter_contract",
-    "GraphDiff", "compare_graphs",
+    "GraphDiff", "compare_graphs", "interpret_hu_indicators",
 ]

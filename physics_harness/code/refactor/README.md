@@ -9,9 +9,10 @@ transformation, edit the repository, or authorize a change.
 | Package | Responsibility |
 | --- | --- |
 | `code/diagnostics/` | Exact-source graph, evidence, receipt and collection completeness |
-| `libs/hu/` | HU structural measurements, human observations, and descriptive comparison |
+| `libs/hu/` | Numeric HU-model features from existing source facts and observations, no interpretation or refactor decision |
 | `code/analysis/result.py` | Generic revision-bound analysis records and measurements |
-| `code/analysis/hu_adapter.py` | Diagnostics → HU library → generic AnalysisRecord |
+| `code/analysis/hu_adapter.py` | Diagnostics↔HU input/output mapping and Evidence transport only |
+| `code/analysis/hu_interpretation.py` | Interpret calculated HU features, caveats and trade-offs for Planning |
 | `code/refactor/planning.py` | Source-bound context and constraint validation |
 | `code/refactor/alternatives.py` | Apply the same checks to alternative proposals; no ranking |
 | `code/verification/` | Independent source/contract checks, post-change obligations |
@@ -27,7 +28,8 @@ implementation internals, but no folder or architecture policy is hard-coded.
 run_scan -> DiagnosticResult
   -> assess_code_hu(...) -> libs.hu.HUAssessment
   -> summarize_hu(...) -> AnalysisRecord
-  -> build_planning_context(..., assessments=(record,))
+  -> interpret_hu_indicators(...) -> AnalysisRecord
+  -> build_planning_context(..., assessments=(record, interpretation))
   -> review_alternatives(...)
   -> post-change Verification [separate]
 ```
@@ -44,6 +46,7 @@ import subprocess
 
 from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
 from physics_harness.code.analysis.hu_adapter import assess_code_hu, summarize_hu
+from physics_harness.code.analysis.hu_interpretation import interpret_hu_indicators
 from physics_harness.code.refactor import (
     HardConstraint, PlanningAlternative, build_planning_context, review_alternatives,
 )
@@ -63,9 +66,10 @@ target = next(n for n in scan.graph.nodes
               if n.kind == "python_function" and n.name == "verify_dependencies")
 hu = assess_code_hu(scan, target.id)
 record = summarize_hu(hu)
+interpretation = interpret_hu_indicators(hu)
 context = build_planning_context(
     scan, target.id,
-    assessments=(record,),
+    assessments=(record, interpretation),
     objectives=("Clarify import processing while preserving behavior",),
     hard_constraints=(
         HardConstraint("first_match", "Preserve first-matching-rule priority"),
