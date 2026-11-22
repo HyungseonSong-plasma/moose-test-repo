@@ -81,3 +81,42 @@ def test_invalid_utf8_is_unverified():
 def test_empty_scope_cannot_be_pass():
     result = verify_dependencies((), contract())
     assert result.status == "UNVERIFIED"
+
+
+def test_duplicate_import_witness_uses_earliest_source_line_not_ast_visit():
+    cases = (
+        ("import sample_pkg.cli", "analysis", "sample_pkg.cli"),
+        ("from sample_pkg.cli import entry", "analysis", "sample_pkg.cli"),
+        ("tool = 'build_tools/scripts'", "repository", "build_tools/scripts"),
+    )
+    for statement, category, target in cases:
+        # ast.walk visits the top-level occurrence before the nested one,
+        # even though the nested occurrence appears earlier in source text.
+        text = f"def earlier():\n    {statement}\n\n{statement}\n"
+        item = source("sample_pkg/analysis/duplicates.py", text)
+        result = verify_dependencies((item,), contract())
+        assert result.status == "FAIL"
+        assert len(result.findings) == 1  # first-match rule policy still wins
+        finding = result.findings[0]
+        assert (finding.category, finding.target, finding.line) == (
+            category, target, 2,
+        )
+        assert (finding.path, finding.blob_sha) == (
+            item.record.path, item.record.blob_sha,
+        )
+
+
+def test_cycle_witness_uses_earliest_line_of_duplicate_canonical_edge():
+    a = source(
+        "sample_pkg/analysis/dependency.py",
+        "def earlier():\n    import sample_pkg.service\n\nimport sample_pkg.service\n",
+    )
+    b = source("sample_pkg/service/dependency.py", "import sample_pkg.analysis\n")
+    report = verify_dependencies((b, a), contract())
+    assert report.status == "FAIL"
+    assert [finding.category for finding in report.findings] == ["cycle"]
+    cycle = report.findings[0]
+    assert (cycle.path, cycle.line, cycle.blob_sha) == (
+        a.record.path, 2, a.record.blob_sha,
+    )
+    assert cycle.target == "analysis -> service -> analysis"
