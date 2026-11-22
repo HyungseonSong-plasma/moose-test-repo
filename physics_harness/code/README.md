@@ -15,11 +15,13 @@ can support other languages, but **unimplemented collectors are not claimed**.
 | `delete/` | Reserved: no automatic source-retirement or deletion engine is implemented |
 | `tests/` | Local regression tests for implemented Code lifecycle components |
 
-The separate [`libs/hu/`](../../libs/hu/README.md) defines and **calculates**
-numeric traits associated with human code understandability. The
-`analysis/hu_adapter.py` transports Diagnostics inputs and HU outputs;
-`analysis/hu_interpretation.py` interprets values and uncertainty. HU does
-not interpret refactoring options, while Planning does not redefine metrics.
+The independent [`libs/code_understandability/`](../../libs/code_understandability/README.md)
+engine defines and computes metrics associated with code understandability.
+Human evaluations are optional evidence, not a metric prerequisite.
+`analysis/understandability_adapter.py` transports source facts and results;
+`analysis/understandability_interpretation.py` interprets their meaning.
+Planning, not the engine, decides how to compare refactor options.
+Historical `libs/hu/` imports remain compatible.
 
 ## Scope and evidence guarantees
 
@@ -63,7 +65,7 @@ refactoring strategy.
 python -m pytest -q physics_harness/code/tests
 ```
 
-A change solely under `libs/hu/**` does **not** currently trigger this
+A change solely under `libs/code_understandability/**` does **not** currently trigger this
 path-filtered Harness Code workflow. Repository CI owns its shared integration
 checks on pull requests. Changes to CI routing or trigger ownership are
 separate decisions; documenting current behavior does not modify them.

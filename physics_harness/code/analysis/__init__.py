@@ -11,6 +11,10 @@ from .parameter_contract import (
 )
 from .diff import GraphDiff, compare_graphs
 from .hu_interpretation import interpret_hu_indicators
+from .understandability_adapter import (
+    assess_code_understandability, summarize_understandability,
+)
+from .understandability_interpretation import interpret_understandability_indicators
 
 __all__ = [
     "ImpactResult", "analyze_impact",
@@ -19,4 +23,6 @@ __all__ = [
     "ParameterBlockAssessment", "ParameterContractAssessment",
     "assess_input_parameter_contract",
     "GraphDiff", "compare_graphs", "interpret_hu_indicators",
+    "assess_code_understandability", "summarize_understandability",
+    "interpret_understandability_indicators",
 ]
