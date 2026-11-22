@@ -273,3 +273,31 @@ exact candidate and post-integration HEAD tests, provenance receipt and rollback
 boundary. Unverified mandatory properties produce `HOLD` rather than implicitly
 passing. No hardcoded domain vocabulary, destination `libs/` path, or universal
 naming score is introduced.
+
+## Evolutionary Naming Audit v0.5 — behavior and semantic-review challenge
+
+`verification/naming_behavior.py` independently compares exact Git before/after
+Python AST executable bodies for all candidate placements; unchanged function
+signatures are not sufficient. Unchanged AST bodies do **not** prove runtime
+compatibility across module imports, globals or identity changes.
+
+`verification/naming_consumers.py` scans both revision-bound Git trees for
+static import consumers, dynamic import/reflection candidates and literal
+references in code, docs and config; it always discloses unknown external
+consumers and source budgets. A stale import after a module move blocks the
+candidate. The scanner never executes discovered code or reads modified
+worktree files.
+
+`verification/naming_semantic_review.py` produces a **candidate-blind**
+first-pass packet, then checks positive/negative responsibility hypotheses and
+a second-pass KEEP-vs-change challenge. Reviewer assertions and URLs cannot
+authenticate independence; even a consistent submission remains HOLD until a
+trusted external reviewer and behavior/consumer receipts are independently
+verified.
+
+`verification/naming_gates.py::evaluate_naming_safety_gates` recomputes the
+structural, behavioral, consumer and review gates for one exact candidate
+revision, exposing a single `NamingSafetyGateReport`. Its result is always
+`BLOCKED` or `HOLD`; `mutation_approved` is always false. **No actual code
+rename, extraction, merge or automatic mutation is performed by this layer.**
+Detailed contract: `docs/development/evolutionary-naming-semantic-gates-v05.md`.

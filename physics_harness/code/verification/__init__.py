@@ -26,3 +26,25 @@ __all__ = [
     "verify_dependency_repository",
     "NamingSourceVerification", "verify_naming_evidence_sources",
 ]
+
+from .naming_behavior import (
+    ExecutableComparison, NamingBehaviorReceipt, verify_naming_behavior_projection,
+)
+from .naming_consumers import (
+    ConsumerReference, NamingConsumerReceipt, audit_naming_consumers,
+)
+from .naming_semantic_review import (
+    BlindedSourceExcerpt, BlindedSemanticPacket, IndependentResponsibilityHypothesis,
+    SecondPassSemanticChallenge, SemanticReviewReceipt,
+    build_blinded_semantic_packet, review_semantic_challenge,
+)
+from .naming_gates import NamingSafetyGateReport, evaluate_naming_safety_gates
+
+__all__ += [
+    "ExecutableComparison", "NamingBehaviorReceipt", "verify_naming_behavior_projection",
+    "ConsumerReference", "NamingConsumerReceipt", "audit_naming_consumers",
+    "BlindedSourceExcerpt", "BlindedSemanticPacket", "IndependentResponsibilityHypothesis",
+    "SecondPassSemanticChallenge", "SemanticReviewReceipt",
+    "build_blinded_semantic_packet", "review_semantic_challenge",
+    "NamingSafetyGateReport", "evaluate_naming_safety_gates",
+]
