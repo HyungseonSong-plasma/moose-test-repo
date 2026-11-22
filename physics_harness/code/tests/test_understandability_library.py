@@ -79,7 +79,7 @@ class UnderstandabilityLibraryTests(unittest.TestCase):
                          {"loc": -4, "branches": -2, "max_branch_nesting": -1})
 
     def test_comparison_different_target_refuses(self):
-        with self.assertRaisesRegex(ValueError, "HU_TARGET_MISMATCH"):
+        with self.assertRaisesRegex(ValueError, "UNDERSTANDABILITY_TARGET_MISMATCH"):
             compare_understandability(evaluate_understandability(sample()),
                        evaluate_understandability(replace(sample(), target_id="other")))
 
