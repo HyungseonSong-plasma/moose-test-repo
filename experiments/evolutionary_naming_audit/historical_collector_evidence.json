@@ -1,0 +1,66 @@
+{
+  "schema_version": "0.2",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "source_path": "physics_harness/code/diagnostics/collector.py",
+  "provenance": "GitHub immutable commit/tree/blob inspection; prior blobs not replayed in shallow CI",
+  "interpretation": "NAME_CHANGE_NOT_JUSTIFIED_BY_SOURCE_HISTORY_ALONE",
+  "logical_identity": "same-path and matching top-level declarations: candidate only",
+  "history": [
+    {
+      "stage": "initial workflow provider",
+      "revision": "bf0589ab361c83b86c10658fb8139b9fdca8e1c2",
+      "blob_sha": "34a6b49d2e1a1317d5f635cb3d85bfabbe4d8ee5",
+      "provider_import_witnesses": [
+        "physics_harness/code/diagnostics/collector.py:160@34a6b49d2e1a1317d5f635cb3d85bfabbe4d8ee5"
+      ],
+      "imported_implementations": ["WorkflowCollector"]
+    },
+    {
+      "stage": "Python AST provider introduced",
+      "revision": "9603bdf416182fe4579176b940bb6b88d30d5885",
+      "blob_sha": "4222e5efced14e8d3fe8b7ed7e988fc2a5e1b946",
+      "provider_import_witnesses": [
+        "physics_harness/code/diagnostics/collector.py:161@4222e5efced14e8d3fe8b7ed7e988fc2a5e1b946",
+        "physics_harness/code/diagnostics/collector.py:162@4222e5efced14e8d3fe8b7ed7e988fc2a5e1b946"
+      ],
+      "imported_implementations": ["PythonAstCollector", "WorkflowCollector"]
+    },
+    {
+      "stage": "C++ and MOOSE Input providers introduced",
+      "revision": "25aa9a263ecfdad8c3be61a87a955264bea2347d",
+      "blob_sha": "d50b6a2ef964a26566e45bb2d2a05ff29f61094e",
+      "provider_import_witnesses": [
+        "physics_harness/code/diagnostics/collector.py:161@d50b6a2ef964a26566e45bb2d2a05ff29f61094e",
+        "physics_harness/code/diagnostics/collector.py:162@d50b6a2ef964a26566e45bb2d2a05ff29f61094e",
+        "physics_harness/code/diagnostics/collector.py:163@d50b6a2ef964a26566e45bb2d2a05ff29f61094e",
+        "physics_harness/code/diagnostics/collector.py:164@d50b6a2ef964a26566e45bb2d2a05ff29f61094e"
+      ],
+      "imported_implementations": ["CppSourceCollector", "MooseInputCollector", "PythonAstCollector", "WorkflowCollector"]
+    },
+    {
+      "stage": "current main",
+      "revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631",
+      "blob_sha": "3f169372d13a8d89ed9565eedfbcd3f18cb3c435",
+      "provider_import_witnesses": [
+        "physics_harness/code/diagnostics/collector.py:163@3f169372d13a8d89ed9565eedfbcd3f18cb3c435",
+        "physics_harness/code/diagnostics/collector.py:164@3f169372d13a8d89ed9565eedfbcd3f18cb3c435",
+        "physics_harness/code/diagnostics/collector.py:165@3f169372d13a8d89ed9565eedfbcd3f18cb3c435",
+        "physics_harness/code/diagnostics/collector.py:166@3f169372d13a8d89ed9565eedfbcd3f18cb3c435"
+      ],
+      "imported_implementations": ["CppSourceCollector", "MooseInputCollector", "PythonAstCollector", "WorkflowCollector"]
+    }
+  ],
+  "stable_top_level_declarations": ["SourceRecord", "SourceInput", "UnresolvedTarget", "FactBatch", "CollectionResult", "SourceProvider", "Collector", "stable_id", "file_node_id", "graph_edge_id", "scan_scope_id", "run_scan"],
+  "observed_implemented_provider_modules": [
+    "physics_harness/code/diagnostics/providers/python_ast.py",
+    "physics_harness/code/diagnostics/providers/cpp.py",
+    "physics_harness/code/diagnostics/providers/moose_input.py"
+  ],
+  "not_established": [
+    "Logical identity proven across history",
+    "Semantic responsibility unchanged",
+    "Public and dynamic consumer closure",
+    "Future functionality prediction",
+    "Automatic KEEP/RENAME/EXTRACT authorization"
+  ]
+}

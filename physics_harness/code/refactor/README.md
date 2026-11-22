@@ -167,3 +167,45 @@ not evidence of whole-repository semantic equivalence.
 
 See `docs/development/evolutionary-naming-audit-contract.md` for the detailed
 recommendation, extraction and verification obligations.
+
+
+## Historical responsibility evidence (v0.2, read-only)
+
+The naming-specific `refactor/evolution.py` analyzes **exact Git blobs** for
+Python declarations, module dependencies and delegation between a declared
+local protocol and an imported class implementing the same *method names*.
+It deliberately observes syntax, not runtime behavior or abstract semantics.
+The pre-existing Git source owner now exposes
+`GitSourceProvider.read_at_revision(exact_40_hex_sha, literal_path)`:
+local commit tree -> tracked regular blob -> validated byte content. Historical
+commits that are unavailable in a shallow clone fail closed; no implicit
+fetch, worktree fallback or synthetic history evidence.
+
+`audit_git_history(...)` checks that the before commit is an ancestor of the
+after commit, resolves exact historical blobs for a named owner and explicit
+provider inventory, compares top-level declarations/imports, and distinguishes
+already-isolated delegation from inline implementation candidates. New
+imports do **not** prove a new responsibility, and unchanged symbol names do
+**not** prove logical identity or behavioral compatibility. Results include
+`FUNCTION_BODIES_NOT_SEMANTICALLY_COMPARED` when byte content changes.
+
+- `KEEP_CONSIDERATION`: stable declarations with newly observed external owner
+  seams; GPT must still establish current responsibility and name validity.
+- `EXTRACTION_REVIEW`: an inline class with methods exists; independent
+  cohesion, separation cost, and contract checks remain required.
+- `HOLD`: identity or evidence missing, or no change justified.
+
+These are *evidence dispositions*, not `KEEP`/`RENAME` decisions. They never
+trigger a change and never grant mutation authority. To propose a change,
+pass independent responsibility/name-fit/boundary evidence through
+`NamingCase` and `review_naming_option`; then canonical Planning/Verification.
+
+**Real historical negative control:** `diagnostics/collector.py` gained Python,
+C++ and MOOSE Input provider imports while retaining `Collector`,
+`SourceProvider` and `run_scan` declarations. The implementations are already
+in `diagnostics/providers/`. Evidence: `experiments/evolutionary_naming_audit/`
+and `docs/development/evolutionary-naming-audit-history-v02.md`. Historic
+GitHub objects were inspected when the fixture was recorded; shallow CI
+only replays its own self-contained two-commit Git test and validates the
+current HEAD source. The frozen older-commit summary alone is not a CI
+semantic-evidence proof.
