@@ -1,13 +1,12 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue758-g1-scope-control-003",
+  "request_id": "issue758-g1-unresolved-control-004",
   "source_sha": "13c2b1e8747f698dff765fa9fb8a2d8c56dafff6",
   "includes": [
-    "physics_harness/code/verification/dependencies.py",
-    "physics_harness/code/verification/consistency.py",
-    "physics_harness/code/analysis/assessment.py",
-    "physics_harness/code/analysis/hu_adapter.py",
-    "libs/hu/evaluation.py"
+    "physics_harness/code/diagnostics/collector.py",
+    "physics_harness/code/diagnostics/providers/python_ast.py",
+    "physics_harness/code/refactor/planning.py",
+    "libs/hu/model.py"
   ],
   "excludes": [],
   "collectors": [
