@@ -101,10 +101,13 @@ def verify(m: dict, archive: dict[str, bytes], ci: str, native: str,
     for mark in ("FLOW_NATIVE_SOURCE_BOUND_P1_PASS",
                  "FLOW_IDEAL_GAS_DIRECT_MATERIAL_NATIVE_P2_PASS",
                  "FLOW_EI10_EI16_FOUR_FIXTURE_NATIVE_P2_PASS",
-                 "FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS",
+                 "FLOW_DBASE_LEGACY_P2_RETIRED_NEWONLY_P05_OWNS_417_941",
                  "ref: " + PIN, OCI,
                  "issue541_group_a2_flow_retirement_p0.py --self-test --check"):
         require(mark in native, "REPLACEMENT_NATIVE_OBLIGATION_REMOVED:" + mark)
+    require("FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS" not in native and
+            "run_chemistry_s6_p2_only.py" not in native,
+            "RETIRED_FLOW_DBASE_REINTRODUCED")
     require("ONE_SHOT_NAME" in surface and "FORBIDDEN_EVENTS" in surface and
             "branches: [main]" in surface, "GLOBAL_GUARD_WEAKENED")
 
