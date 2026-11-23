@@ -1,4 +1,4 @@
-# #817 additional EI16 EI20 EDETACH postcut Native W1 P2/P3; TEMPORARY delete after evidence.
+# #817 current MOOSE log-molar bridged EI16 EI20 EDETACH Native W1; TEMPORARY.
 # No private-rate or non-target chemistry inputs. Production smoke remains unchanged.
 name: Issue817 Code3 extended consumers Native EI16 EI20 EDETACH once
 
@@ -42,6 +42,7 @@ jobs:
           python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v
           python3 -m unittest discover -s tests -p test_issue817_code3_retirement.py -v
           python3 -m unittest discover -s tests -p test_issue817_code3_consumer_pairs.py -v
+          python3 -m unittest discover -s tests -p test_issue817_electron_energy_logmolar_bridge.py -v
           python3 -m py_compile experiments/Code3_electron_source_retirement/postcut_extended_native.py
           python3 ci/guards/issue817_code3_retirement.py --expected-head "$SOURCE_HEAD" --output /tmp/issue817-code3-source-preflight.json
       - name: Pull pinned Build Base and verify vendor source identities
