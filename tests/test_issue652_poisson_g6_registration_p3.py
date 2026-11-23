@@ -18,7 +18,7 @@ def fake_trace():
         for name, kind in items.items():
             # Populate actual Action-generated naming convention for suffixes.
             full_name = name if family in ("Variable", "FunctorMaterial") else (
-                "Poisson" + name
+                "physics_" + name
             )
             lines.append(f"G6_OWNER\t{family}\t{full_name}\t{kind}")
     for i in range(8):
@@ -30,6 +30,7 @@ def test_exact_registration_has_15_typed_owners():
     report = g6.registration_receipt(fake_trace())
     assert report["status"] == "EXPECTED_15_GENERATED_OWNERS_TRACE_PASS"
     assert len(report["observed_expected_owners"]) == 15
+    assert "Kernel/Poisson_diffusion" in report["observed_expected_owners"]
     assert report["dynamic_functor_value"] == "NOT_TESTED_BY_REGISTRATION"
 
 
