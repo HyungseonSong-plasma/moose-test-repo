@@ -97,6 +97,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check
+          python3 -m unittest discover -s tests -p test_fvkernel_native_usage_census.py -v
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
         run: |
@@ -2256,6 +2257,20 @@ jobs:
                         or (key[0]=="FVBC" and key[1].split("_")[0] in ion_species and key not in expected_bc)
                         or (key[0]=="FEBoundaryCondition" and key[1].startswith("e_") and key not in expected_e)]
                   if bad: raise RuntimeError(f"P5X_OWNER_UNEXPECTED_{case}_{bad}")
+                  # Issue #774 D5: record all FVKernel type/source use,
+                  # not only the 12 three-ion typed registrations below.
+                  from fvkernel_native_usage_census import summarize_clean_registration_trace
+                  full_usage = summarize_clean_registration_trace(
+                      tracefile.read_bytes(),
+                      repo/"physics_app"/"src"/"fvkernels",
+                      source_head=head,
+                      binary_sha256=receipt["binary_sha256"],
+                      registration_log_sha256=sha(tracefile),
+                      reported_event_count=len(events),
+                  )
+                  if full_usage["event_family_counts"]["FVKernel"] < len(expected_kernels):
+                      raise RuntimeError("FULL_FVKERNEL_CENSUS_MISSING_EXPECTED_ION_KERNELS")
+                  receipt.setdefault("full_fvkernel_source_usage",{})[case]=full_usage
                   receipt.setdefault("owner_registration",{})[case]={
                         "source":"actual FEProblemBase addFVKernel/addFVBC/addBoundaryCondition native registrations after original call and live P05 checkIntegrity",
                         "observer_kind":"EXTERNAL_LD_PRELOAD_AFTER_ORIGINAL_REGISTRATION",
