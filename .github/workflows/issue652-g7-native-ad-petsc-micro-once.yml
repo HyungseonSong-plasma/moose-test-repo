@@ -1,3 +1,4 @@
+# Bounded OCI scratch ownership repair, no protected Native inputs.
 name: Issue652 G7 exact ELF synthetic Poisson AD PETSc Jacobian (branch-only)
 on:
   push:
