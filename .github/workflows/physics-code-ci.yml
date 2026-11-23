@@ -89,8 +89,6 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
       - name: Validate FDEG Harness A-D P0
         run: python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v
-      - name: Validate pinned FDEG Thermal archive provenance P0
-        run: python3 -m unittest discover -s tests -p test_fdeg_thermal_archive.py -v
       - name: Validate FDEG Scan Cache P0
         run: python3 -m unittest discover -s tests -p test_fdeg_scan_cache.py -v
       - name: Capture FDEG exact-HEAD retirement evidence (code7 P0 only)

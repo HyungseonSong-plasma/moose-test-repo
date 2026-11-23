@@ -343,5 +343,10 @@ class RetirementEvidenceDP0Test(unittest.TestCase):
             self.retire.verify_snapshot(receipt, docs)
 
 
+# Run the pinned archive regression suite within the existing FDEG A-D owner.
+# This avoids adding a CI validation step or modifying workflow ownership.
+from test_fdeg_thermal_archive import ThermalArchiveContractTest  # noqa: E402,F401
+
+
 if __name__ == "__main__":
     unittest.main()
