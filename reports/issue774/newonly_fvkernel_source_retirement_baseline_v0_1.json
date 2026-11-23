@@ -1,0 +1,160 @@
+{
+  "schema": "fvkernel.newonly_source_retirement.v0.1",
+  "baseline_head": "156a5117ebe6816e67b352a9470572c2e74da367",
+  "source_head": "9457191f4c0693ae886586edd961965867ccd5c0",
+  "scope": "New-only S6-417/941 staged source usage; no global caller closure",
+  "runs": {
+    "native_p2": 44366325757,
+    "d8_3ns": 44409942970
+  },
+  "artifacts": {
+    "native_p2": 14458752206,
+    "d8_3ns": 14475669657,
+    "original_11_layer": 14372278070
+  },
+  "limitations": {
+    "p05_ion_only": true,
+    "full_unfiltered_factory_trace": false,
+    "complete_poststage_rendered_inputs": false,
+    "newonly_pr_unmerged": true,
+    "p3_p4_100us_accepted": false
+  },
+  "deletion_approved": false,
+  "source_files": [
+    {
+      "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+      "header_path": "physics_app/include/fvkernels/FVElectronResponseBandedCorrection.h",
+      "baseline_blob": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f",
+      "registered_types": [
+        "FVElectronResponseBandedCorrection"
+      ],
+      "verdict": "PROVISIONAL_DELETE_CANDIDATE",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVConservativeMassFractionTimeDerivative.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVConservativeMassFractionTimeDerivative.h",
+      "baseline_blob": "177a8d74bf9806cf9000f710b6583847ae6c0c58",
+      "registered_types": [
+        "PhysicsFVConservativeMassFractionTimeDerivative"
+      ],
+      "verdict": "USED_IN_NEWONLY",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h",
+      "baseline_blob": "07ecd234871c659b04389c87bff6f52fae7f800e",
+      "registered_types": [
+        "PhysicsFVElectronEnergyJouleHeating"
+      ],
+      "verdict": "PROVISIONAL_DELETE_CANDIDATE",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVElectronReactionSource.h",
+      "baseline_blob": "35ded0eab65ad7bed85baa0104261c90bc26bf3d",
+      "registered_types": [
+        "PhysicsFVElectronReactionSource"
+      ],
+      "verdict": "PROVISIONAL_DELETE_CANDIDATE",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVElectrostaticDrift.h",
+      "baseline_blob": "8d61a535b4e0fbf0a008fabb98d45e723affe999",
+      "registered_types": [
+        "PhysicsFVElectrostaticDrift"
+      ],
+      "verdict": "PROVISIONAL_DELETE_CANDIDATE",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.h",
+      "baseline_blob": "79bf6045942369bb483ab4e7480a08a5d1040d65",
+      "registered_types": [
+        "PhysicsFVHeavyMassElectromigrationCorrection"
+      ],
+      "verdict": "PROVISIONAL_DELETE_CANDIDATE",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h",
+      "baseline_blob": "0a7e72d64e6d9f7f059046a9abc1a7607757111f",
+      "registered_types": [
+        "PhysicsFVLogMolarElectronTimeDerivative",
+        "PhysicsFVLogMolarElectronDiffusion",
+        "PhysicsFVLogMolarElectrostaticDrift",
+        "PhysicsFVLogMolarElectronReactionSource"
+      ],
+      "verdict": "PROVISIONAL_DELETE_CANDIDATE",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVMassFractionAdvection.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVMassFractionAdvection.h",
+      "baseline_blob": "b8364dede4a0b2199f4dd29be863288bdb130a46",
+      "registered_types": [
+        "PhysicsFVMassFractionAdvection"
+      ],
+      "verdict": "USED_IN_NEWONLY",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVMassFractionTimeDerivative.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVMassFractionTimeDerivative.h",
+      "baseline_blob": "09b0f60eb6473ac295a690e463198c370fc2870b",
+      "registered_types": [
+        "PhysicsFVMassFractionTimeDerivative"
+      ],
+      "verdict": "PROVISIONAL_DELETE_CANDIDATE",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVMixtureAveragedDiffusion.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVMixtureAveragedDiffusion.h",
+      "baseline_blob": "9419e5d6b6c16aff977f588151c59bc965262900",
+      "registered_types": [
+        "PhysicsFVMixtureAveragedDiffusion"
+      ],
+      "verdict": "USED_IN_NEWONLY",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVSpeciesReactionSource.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVSpeciesReactionSource.h",
+      "baseline_blob": "4568bd41ff9a975b83d3dd7b44310f7fa274b61d",
+      "registered_types": [
+        "PhysicsFVSpeciesReactionSource"
+      ],
+      "verdict": "USED_IN_NEWONLY",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    },
+    {
+      "path": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+      "header_path": "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h",
+      "baseline_blob": "6887710910c95f37f5f6ed94d4344384b297b4e0",
+      "registered_types": [
+        "PhysicsFVThermalDiffusion"
+      ],
+      "verdict": "PROVISIONAL_DELETE_CANDIDATE",
+      "deletion_approved": false,
+      "consumer_scope_closed": false
+    }
+  ]
+}
