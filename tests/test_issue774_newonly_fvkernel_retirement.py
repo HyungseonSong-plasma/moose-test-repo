@@ -93,6 +93,11 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         paths = [d9.NEWONLY_CI, d9.TEMPLATE, d9.SAFETY, d9.EXISTING_TEST,
                  d9.NEW_TEST, d9.SELF]
         fake = {path: {"sha": "0"*40} for path in paths}
+        # The CI owner has acquired two independent historical custody
+        # preconditions; make these valid before testing unrelated failures.
+        fake[d9.JOULE_ARCHIVE] = {"sha": d9.JOULE_SMOKE_BLOB}
+        fake.update({p: {"sha": sha}
+                     for p, sha in d9.JOULE_HISTORICAL_GENERATORS.items()})
         fake[d9.OLD_HISTORICAL_CI[0]] = {"sha": "0"*40}
         with self.assertRaisesRegex(ValueError, "HISTORICAL_FDEG_CI_IMPORTED"):
             d9.check_ci_tree(ROOT, fake)
