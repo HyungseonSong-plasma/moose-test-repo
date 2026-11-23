@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """New-only Factory retirement CI contract for #774 (source/CI, not science).
 
-Retired Thermal and heavy mass-correction Factory types are unsupported
-in New-only. Historical Issue192/Issue282 research sources remain SHA-pinned. No blanket legacy CI suppression, and no claim of external caller
+Retired Thermal, heavy mass-correction and FV Joule Heating Factory types are
+unsupported in New-only. Frozen legacy recipes remain SHA-pinned. No blanket
+legacy CI suppression, and no claim of external caller
 zero. Preserve D5's original sanitized A/B registration receipts separately.
 
 This guard reads the exact Git HEAD tree, never a dirty working tree fallback.
@@ -30,7 +31,13 @@ HEADER = "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h"
 HEAVY = "PhysicsFVHeavyMassElectromigrationCorrection"
 HEAVY_SOURCE = "physics_app/src/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.C"
 HEAVY_HEADER = "physics_app/include/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.h"
-RETIRED_FACTORIES = (RETIRED, HEAVY)
+JOULE = "PhysicsFVElectronEnergyJouleHeating"
+JOULE_SOURCE = "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C"
+JOULE_HEADER = "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h"
+JOULE_SMOKE = "physics_app/ci/electron_energy_joule_smoke.i"
+JOULE_ARCHIVE = "docs/provenance/issue814_code2/electron_energy_joule_smoke.i.txt"
+JOULE_SMOKE_BLOB = "6c4901f843a98b74b450cc3a1fab09e8e1873b2c"
+RETIRED_FACTORIES = (RETIRED, HEAVY, JOULE)
 # These are frozen historical/research references, not supported New-only inputs.
 # Their tracked Git blobs must remain exact or this explicit exception fails closed.
 HISTORICAL_ALLOWED = {
@@ -40,9 +47,13 @@ HISTORICAL_ALLOWED = {
         "fe82208e49c6f89b127f74fd54cf85cbb91f8fa4",
     "physics_app/ci/audit_issue402_initial_composition_routes.py":
         "858f75f6a64596ccc7386b044fa8278caf8f8b78",
+    "experiments/fem_fvm_plasma_discriminator/prepare_cases.py":
+        "69ec14c58b502a953c9024c46d332494cad61e6c",
+    "experiments/Issue351_frozen_heavy_driver_parity/control.py":
+        "6d7efcb4ea94b2011782aba2c9cab40238756312",
 }
-EXPECTED_SOURCE_COUNT = 11
-EXPECTED_REGISTERED_COUNT = 16
+EXPECTED_SOURCE_COUNT = 10
+EXPECTED_REGISTERED_COUNT = 15
 EXPECTED_SHARED_SOURCE_OWNERS = {
     "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": 4,
     "physics_app/src/fvkernels/FVLogMolarTransport.C": 3,
@@ -107,7 +118,8 @@ def active_surface(path: str) -> str | None:
 def check_route_rows(rows: list[dict]) -> dict:
     """Pure classifier; never count docs/tests as active input consumers."""
     active = [r for r in rows if r["active_surface"] is not None]
-    counts = dict(sorted(Counter(r["active_surface"] for r in rows).items()))
+    counts = dict(sorted(Counter(r["active_surface"] or "NON_ACTIVE_REFERENCE"
+                                 for r in rows).items()))
     require(not active, "ACTIVE_RETIRED_FACTORY_REINTRODUCED:" +
             ",".join(r["path"] for r in active[:8]))
     return {
@@ -127,7 +139,7 @@ def check_historical_sources(tracked: dict) -> dict:
 
 def check_factory_inventory(root: Path, tracked: dict) -> dict:
     require(all(path not in tracked for path in
-                (SOURCE, HEADER, HEAVY_SOURCE, HEAVY_HEADER)),
+                (SOURCE, HEADER, HEAVY_SOURCE, HEAVY_HEADER, JOULE_SOURCE, JOULE_HEADER)),
             "RETIRED_SOURCE_OR_HEADER_REINTRODUCED")
     folder = root / "physics_app/src/fvkernels"
     entries = source_owners(folder)
@@ -136,7 +148,7 @@ def check_factory_inventory(root: Path, tracked: dict) -> dict:
     registered = sorted(t for row in entries for t in row["registered_factory_types"])
     require(len(registered) == EXPECTED_REGISTERED_COUNT
             and len(set(registered)) == EXPECTED_REGISTERED_COUNT
-            and RETIRED not in registered,
+            and not set(RETIRED_FACTORIES).intersection(registered),
             "FACTORY_REGISTRATION_COUNT_OR_ALIAS_DRIFT")
     for row in entries:
         path = row["source_file"]
@@ -153,6 +165,10 @@ def check_factory_inventory(root: Path, tracked: dict) -> dict:
 
 
 def check_ci_tree(root: Path, tracked: dict) -> dict:
+    require(JOULE_SMOKE not in tracked, "JOULE_LEGACY_SMOKE_STILL_ACTIVE")
+    require(JOULE_ARCHIVE in tracked and
+            tracked[JOULE_ARCHIVE]["sha"] == JOULE_SMOKE_BLOB,
+            "JOULE_ARCHIVE_EXACT_BLOB_MISMATCH")
     for path in OLD_HISTORICAL_CI:
         require(path not in tracked, "HISTORICAL_FDEG_CI_IMPORTED:" + path)
     for path in (NEWONLY_CI, TEMPLATE, SAFETY, EXISTING_TEST, NEW_TEST, SELF):
@@ -207,7 +223,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
     facts = check_factory_inventory(root, tracked)
     ci = check_ci_tree(root, tracked)
     raw = git(root, "grep", "-n", "-F", "-I", "-e", RETIRED,
-              "-e", HEAVY, "HEAD", "--", missing_ok=True)
+              "-e", HEAVY, "-e", JOULE, "HEAD", "--", missing_ok=True)
     rows = []
     for line in raw.decode("utf-8").splitlines():
         parts = line.split(":", 3)
