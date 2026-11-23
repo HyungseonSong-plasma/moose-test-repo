@@ -136,6 +136,9 @@ def validate_workflow(doc: dict) -> None:
              and "--archive-zip " + ARCHIVE in verifier
              and "fdeg-retirement-code7/archive-validation.log" in verifier,
              "HISTORICAL_VERIFY_COMMAND_MISSING")
+    _require("ci/guards/issue774_thermal_ci_contract.py --output" in verifier
+             and "fdeg-retirement-code7/ci-contract.json" in verifier,
+             "RETIREMENT_CI_RECEIPT_NOT_IN_HISTORICAL_ARTIFACT")
     upload = entries[UPLOAD_STEP]
     with_args = upload.get("with")
     _require(upload.get("uses") == "actions/upload-artifact@v4"
