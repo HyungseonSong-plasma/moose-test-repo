@@ -322,6 +322,17 @@ def run(*, source: Path, manifest: Path, output: Path,
                 return 124, "", True
         rc0, log0, timed0 = invoke(True)
         evidence["native_check_log_sha256"] = hashlib.sha256(log0.encode()).hexdigest()
+        evidence["native_check_returncode"] = rc0
+        # This one-off synthetic fixture contains no private rates. Expose only
+        # bounded, allowlisted error sentences; never raw full Native logs.
+        diagnostic_lines = [
+            line.strip()[:200] for line in log0.splitlines()
+            if any(term in line.lower() for term in (
+                "error", "unknown", "failed", "input", "syntax",
+                "not found", "parameter", "functor", "exception",
+                "usage", "invalid", "unrecognized"))
+        ]
+        evidence["synthetic_p2_diagnostic"] = diagnostic_lines[-8:]
         if rc0 != 0 or "Syntax OK" not in log0 or timed0:
             # Public synthetic test has no private rates; still avoid native logs.
             if "Functor" in log0 or "functor" in log0:
@@ -343,6 +354,8 @@ def run(*, source: Path, manifest: Path, output: Path,
     print("G7_PETSC_MICRO_JACOBIAN_RESULT", evidence["component_jacobian"],
           "P2", evidence.get("native_p2"), "P2_CATEGORY",
           evidence.get("native_p2_failure_category", "NONE"),
+          "P2_RC", evidence.get("native_check_returncode"),
+          "P2_DIAGNOSTIC", json.dumps(evidence.get("synthetic_p2_diagnostic", [])),
           "RC", evidence.get("native_solver_rc"),
           "REL", evidence.get("worst_relative_frobenius_error"),
           "ACTUAL_S6_AD_UNVERIFIED SCIENCE_HOLD", flush=True)
