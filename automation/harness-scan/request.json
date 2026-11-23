@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-g5-true-p2-secure-cleanup-r2-20261123",
-  "source_sha": "80c73754e3c6451884e6c22ec4bdb54a351d38b6",
+  "request_id": "issue652-g6-typed-registration-short3ns-20261123",
+  "source_sha": "9c5f074cb923c94b98d716165eaa74f6bf95d630",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
@@ -10,7 +10,10 @@
     "experiments/Issue402_plasma_dsl_g1/*.py",
     "tests/test_issue652*.py",
     "tests/test_issue633*.py",
-    "ci/guards/*.py"
+    "ci/guards/*.py",
+    "ci/guards/issue652_g6_runtime_gate.py",
+    "ci/guards/issue652_g6_owner_tracer.cc",
+    "tests/test_issue652_poisson_g6_registration_p3.py"
   ],
   "excludes": [],
   "collectors": [
