@@ -17,6 +17,9 @@ class LegacyThermalW1Test(unittest.TestCase):
         self.assertEqual(classify(0, "Syntax OK", TARGET), "SYNTAX_OK")
         self.assertEqual(classify(1, TARGET + " is not registered", TARGET),
                          "FACTORY_NOT_AVAILABLE")
+        # Exact real MOOSE text emitted by the D7 A/B negative controls.
+        self.assertEqual(classify(1, "A '" + TARGET + "' is not a registered object.", TARGET),
+                         "FACTORY_NOT_AVAILABLE")
         self.assertEqual(classify(1, UNKNOWN + " is not registered", UNKNOWN),
                          "FACTORY_NOT_AVAILABLE")
         self.assertEqual(classify(1, "cannot load shared library", TARGET),
