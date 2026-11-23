@@ -1,4 +1,4 @@
-# #817 S5-R normalized source-only P2 Native verification; TEMPORARY, remove after run.
+# #817 diagnostic retry: retain the Native ERROR context for both arms; TEMPORARY.
 # No private-rate or non-target chemistry inputs. Production smoke remains unchanged.
 name: Issue817 Code3 S5R normalized native P2 A-B
 
