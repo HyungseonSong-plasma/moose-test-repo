@@ -1,0 +1,112 @@
+{
+  "schema": "issue774.d14.public_d_100row_complete_stage_native_p2.v0.1",
+  "issue": 774,
+  "date": "2026-11-23",
+  "original_problem": "D12/D13 generated-minimal-folder copied without all original P3-X public support roots; inconsistent with controls",
+  "verdict": "PUBLIC_D_100ROW_NATIVE_P2_PASS_BOTH_417_941_WITH_COMPLETE_PUBLIC_STAGING",
+  "tested_code": {
+    "pr": 804,
+    "exact_sha": "581bdd03a6ab2e09c841903a6ac1761b54793753",
+    "tree_sha": "dc51c87097bec3335f78119c1d34c3ffaef57b25",
+    "base_pr": 803,
+    "physics_Cpp_modified": false,
+    "poisson_modified": false,
+    "production_CI_modified": false
+  },
+  "execution": {
+    "run_id": 45215687714,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45215687714",
+    "conclusion": "success",
+    "artifact_id": 14838747216,
+    "artifact_zip_sha256": "4cfb7ce86168c86bb496b8ce98d5ef27af42c04da00fa990cdeeec0e88beef49",
+    "protected_rate_cleanup_verified": true,
+    "protected_data_in_artifacts": false
+  },
+  "W1": {
+    "reused_source_sha": "05a3cf85bc5ed7d9c258b1377bd66d68d70f4e3e",
+    "W1_run_id": 45199787795,
+    "elf_sha256": "6afd05d4a4d356fe5132ca28076ba27e06bea93d485ac8a6b39d334bb9a9465b",
+    "rebuilt": false,
+    "original_app_libs_verified": true
+  },
+  "cases": {
+    "417": {
+      "baseline_42row": {
+        "native_returncode": 0,
+        "syntax_ok": true
+      },
+      "table_only_100row": {
+        "native_returncode": 0,
+        "syntax_ok": true
+      },
+      "json_binding_only_42row": {
+        "native_returncode": 0,
+        "syntax_ok": true
+      },
+      "full_public_d_100row": {
+        "native_returncode": 0,
+        "syntax_ok": true
+      },
+      "public_stage": {
+        "original_public_files": 22,
+        "composed_public_files": 23,
+        "modified_existing_files": 2,
+        "added_generated_JSON_files": 1,
+        "all_other_support_sha_unchanged": true
+      }
+    },
+    "941": {
+      "baseline_42row": {
+        "native_returncode": 0,
+        "syntax_ok": true
+      },
+      "table_only_100row": {
+        "native_returncode": 0,
+        "syntax_ok": true
+      },
+      "json_binding_only_42row": {
+        "native_returncode": 0,
+        "syntax_ok": true
+      },
+      "full_public_d_100row": {
+        "native_returncode": 0,
+        "syntax_ok": true
+      },
+      "public_stage": {
+        "original_public_files": 22,
+        "composed_public_files": 23,
+        "modified_existing_files": 2,
+        "added_generated_JSON_files": 1,
+        "all_other_support_sha_unchanged": true
+      }
+    }
+  },
+  "causal_interpretation": {
+    "D12_previous_native_hold": "VALID_FAILURE_FOR_INCOMPLETE_WORKTREE_NOT_FACTORY_PROOF",
+    "D13_previous_interaction_label": "CONFOUNDED_BECAUSE_FULL_ONLY_USED_MINIMAL_GENERATED_ROOT",
+    "D14_final": "COMPLETE_ORIGINAL_PUBLIC_SUPPORT_TREE_RESTORED__FULL_100ROW_NATIVE_PASS",
+    "old_PhysicsFVThermalDiffusion_factory_reintroduction_needed": false
+  },
+  "internal_owned_generator_paths": {
+    "canonical_repo_CI": ".github/workflows/ci.yml uses stage_public_d_physics and P4-X in complete P3-X stage",
+    "hybrid_history": "prepare_hybrid_json_s6.py in source-pinned issue402/issue541 science replay",
+    "restart_history": "Issue395 long-time restart separate from this P2 scope",
+    "qpx": "QPXFVThermalDiffusion is distinct, untouched"
+  },
+  "external_integrations": {
+    "requester_reports": "Generally none known",
+    "survey_required": false,
+    "global_external_zero_proof_required": false,
+    "status": "NONE_REPORTED_NOT_PROVEN_ZERO",
+    "conditional_review_if_actual_supported_external_integration_discovered": true
+  },
+  "remaining": {
+    "full_100us_Physics_P3_P4": "NOT_RUN",
+    "same_final_combined_merge_sha": "NOT_RUN",
+    "independent_reviewer_and_release_rollback": "NOT_COMPLETE",
+    "one_off_D14_workflow": "DROP_AT_FINAL_PRODUCTION_CI",
+    "safe_to_delete": false,
+    "main_merged": false
+  },
+  "scope": "Real MOOSE native --check-input input construction only; no time integration or scientific conservation acceptance"
+}
