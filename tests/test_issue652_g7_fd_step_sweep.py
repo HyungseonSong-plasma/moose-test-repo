@@ -44,7 +44,7 @@ def test_missing_or_bad_native_norm_never_becomes_pass():
     empty = sweep.classify("", returncode=0, timed_out=False, fd_step=1e-8, view=True)
     assert empty["native_status"] == "HOLD"
     assert empty["worst_relative_frobenius_error"] is None
-    assert empty["matrix_view"]["block_mapping"] == "UNVERIFIED"
+    assert empty["matrix_view"]["block_mapping"] == "UNVERIFIED_NO_DOF_VARIABLE_INDEX_MAP"
 
     log = "||J - Jfd||_F/||J||_F = 7.08621e-05, ||J - Jfd||_F = 1.12e-02"
     data = sweep.classify(log, returncode=0, timed_out=False, fd_step=1e-8, view=False)

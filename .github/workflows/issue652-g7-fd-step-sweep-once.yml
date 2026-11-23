@@ -1,4 +1,4 @@
-# Read PETSc direct J-Jfd matrix, not difference of rounded ASCII J and Jfd values.
+# Parser regression asserts DOF ownership explicitly unresolved for empty matrix views.
 name: Issue652 G7 PETSc FD step sweep and charge-source ablation (branch-only)
 on:
   push:
