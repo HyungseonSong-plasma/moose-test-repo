@@ -89,3 +89,26 @@ def test_unsupported_source_does_not_receive_false_pass(tmp_path: Path) -> None:
     report = verify_dependencies(sources, contract)
     assert report.status == "UNVERIFIED"
     assert "INCOMPLETE_SOURCE_COVERAGE" in report.unverified_properties
+
+def test_workflow_repository_adapter_exception_is_narrow(tmp_path: Path) -> None:
+    contract = DependencyContract.from_mapping(json.loads(
+        (ROOT / "ci/contracts/harness_dependencies.json").read_text(encoding="utf-8")))
+    permitted = make_sources(tmp_path, {
+        "workflow/native.py": 'CONFIG = "ci/workflow_profiles.json"\n',
+    })
+    result = verify_dependencies(permitted, contract)
+    assert result.status == "PASS", result.findings
+
+    prohibited = make_sources(tmp_path, {
+        "execution/native.py": 'CONFIG = "ci/workflow_profiles.json"\n',
+    })
+    result = verify_dependencies(prohibited, contract)
+    assert result.status == "FAIL"
+    assert [f.category for f in result.findings] == ["repository"]
+
+
+def test_no_arbitrary_repository_adapter_whitelist(tmp_path: Path) -> None:
+    bad = json.loads((ROOT / "ci/contracts/harness_dependencies.json").read_text())
+    bad["repository_tool_allowed_sources"] = ["not_a_known_package"]
+    with pytest.raises(ValueError, match="DEPENDENCY_CONTRACT_INVALID"):
+        DependencyContract.from_mapping(bad)
