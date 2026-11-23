@@ -17,6 +17,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+from contextlib import contextmanager
 
 from physics_harness.adapters.petsc.jacobian import parse_comparisons
 
@@ -270,6 +271,25 @@ def interpret(log: str, *, check_rc: int, solve_rc: int, timeout: bool) -> dict:
     }
 
 
+@contextmanager
+def private_workspace():
+    """Bounded repair of OCI-created root-owned JIT cache before host deletion."""
+    with tempfile.TemporaryDirectory(prefix="g7-petsc-ad-") as folder:
+        root = Path(folder)
+        if (root.is_symlink() or root.parent != Path(tempfile.gettempdir())
+                or not root.name.startswith("g7-petsc-ad-")):
+            raise NativeJacobianHold("PRIVATE_DIRECTORY_SCOPE_INVALID")
+        try:
+            yield root
+        finally:
+            subprocess.run(
+                ["sudo", "chown", "-Rh", f"{os.getuid()}:{os.getgid()}",
+                 "--", str(root)],
+                check=True, timeout=60, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+
 def run(*, source: Path, manifest: Path, output: Path,
         timeout: int, authorize: bool) -> dict:
     if not authorize:
@@ -286,8 +306,7 @@ def run(*, source: Path, manifest: Path, output: Path,
         "actual_s6_coupled_ad_jacobian": "UNVERIFIED",
         "science": "SCIENCE_HOLD",
     }
-    with tempfile.TemporaryDirectory(prefix="g7-petsc-ad-") as name:
-        temp = Path(name)
+    with private_workspace() as temp:
         (temp / "g7_micro_poisson.i").write_text(generated_input(), encoding="utf-8")
         evidence["fixture_sha256"] = sha256(temp / "g7_micro_poisson.i")
         def invoke(check: bool):
@@ -303,6 +322,16 @@ def run(*, source: Path, manifest: Path, output: Path,
                 return 124, "", True
         rc0, log0, timed0 = invoke(True)
         evidence["native_check_log_sha256"] = hashlib.sha256(log0.encode()).hexdigest()
+        if rc0 != 0 or "Syntax OK" not in log0 or timed0:
+            # Public synthetic test has no private rates; still avoid native logs.
+            if "Functor" in log0 or "functor" in log0:
+                evidence["native_p2_failure_category"] = "FUNCTOR_BINDING"
+            elif "not registered" in log0 or "Unknown" in log0 or "not found" in log0:
+                evidence["native_p2_failure_category"] = "TYPE_OR_PARAMETER_BINDING"
+            elif timed0:
+                evidence["native_p2_failure_category"] = "TIMEOUT"
+            else:
+                evidence["native_p2_failure_category"] = "OTHER_NATIVE_INPUT"
         if rc0 == 0 and "Syntax OK" in log0 and not timed0:
             rc, log, timed = invoke(False)
             evidence["native_solver_log_sha256"] = hashlib.sha256(log.encode()).hexdigest()
@@ -312,6 +341,10 @@ def run(*, source: Path, manifest: Path, output: Path,
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
     print("G7_PETSC_MICRO_JACOBIAN_RESULT", evidence["component_jacobian"],
+          "P2", evidence.get("native_p2"), "P2_CATEGORY",
+          evidence.get("native_p2_failure_category", "NONE"),
+          "RC", evidence.get("native_solver_rc"),
+          "REL", evidence.get("worst_relative_frobenius_error"),
           "ACTUAL_S6_AD_UNVERIFIED SCIENCE_HOLD", flush=True)
     return evidence
 
