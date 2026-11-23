@@ -17,11 +17,14 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry"))
+from retire_s6_p4_duplicate_owners import C0  # canonical 11-layer Chemistry C0
+
 CASES = ("417", "941")
 OLD_42_SHA256 = "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
 PUBLIC_D_100_SHA256 = "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
 SOURCE_100 = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
-C0 = "s6_c0_physics_base_no_d1.i"
 TABLE_RELATIVE = Path("experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt")
 CHEM_RELATIVE = Path("experiments/Issue395_powered_chemistry_ladder")
 
@@ -108,8 +111,6 @@ def preflight_case(stage: Path, receipt: dict, case: str, public_blob: bytes) ->
               for name in ordered}
     if pinned != expected:
         raise PublicD100Hold("G6B_G5_LAYER_RECEIPT_DRIFT")
-    import sys
-    sys.path.insert(0, str(ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry"))
     from prepare_s6_newonly import JSON_SHA  # pylint: disable=import-outside-toplevel
     from retire_s6_poisson_charge_owners import G5_OUTPUT_C0_SHA, G5_OVERLAY_SHA
     if (expected[C0] != G5_OUTPUT_C0_SHA or
