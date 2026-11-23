@@ -350,7 +350,7 @@ jobs:
         timeout-minutes: 75
         run: |
           set -euo pipefail
-          test "$SCAN_SOURCE_SHA" = "ca535ca5f9cd8c02d038dacacff7803af36c1010"
+          test "$SCAN_SOURCE_SHA" = "a89c96930703091c949c95cbd3a100f5d53ec98f"
           test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
           test ! -e scan-source/physics_app/physics-opt
           OCI='ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008'
