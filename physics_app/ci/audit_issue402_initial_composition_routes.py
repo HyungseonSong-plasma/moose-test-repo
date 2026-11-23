@@ -43,7 +43,7 @@ PATTERNS = {
     "rate_transport_charge_consumers": re.compile(
         r'HRateCoefMaterial|EIRateCoefMaterial|SurfaceReactionMaterial|'
         r'NVTransportMaterial|DDTransportMaterial|PhysicsPlasmaChargeDensityMaterial|'
-        r'PhysicsFVHeavyMassElectromigrationCorrection|PhysicsIonWallFluxMaterial'
+        r'PhysicsFVHeavyMassElectromigrationCorrection|IonWallFluxMaterial'
     ),
 }
 

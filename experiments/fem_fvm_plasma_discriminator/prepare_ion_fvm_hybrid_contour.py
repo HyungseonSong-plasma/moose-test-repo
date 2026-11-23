@@ -61,8 +61,8 @@ def build_case() -> str:
     # The shared ion wall-flux material also needs an element gradient when
     # potential is a continuous FEM variable; FaceArg gradients are not
     # implemented for that functor type.
-    old_wall_material = """  [ion_wall_flux]\n    type = PhysicsIonWallFluxMaterial\n"""
-    new_wall_material = """  [ion_wall_flux]\n    type = PhysicsIonWallFluxMaterial\n    use_element_gradient_for_potential = true\n"""
+    old_wall_material = """  [ion_wall_flux]\n    type = IonWallFluxMaterial\n"""
+    new_wall_material = """  [ion_wall_flux]\n    type = IonWallFluxMaterial\n    use_element_gradient_for_potential = true\n"""
     text = replace_once(text, old_wall_material, new_wall_material, "ion wall material")
 
     old_ion_bc = f"""  [ion_wall]\n    type = PhysicsFEMLogMolarIonWallBC\n    variable = log_ni\n    potential = potential\n    mobility = {base.ION_MU:.17g}\n    gas_temperature = {base.TG:.17g}\n    molar_mass = 0.032\n    charge_number = 1\n    sticking = 1.0\n    migration_gate_smoothing_width = 1.0e-3\n    boundary = '{base.GROUND}'\n  []\n"""

@@ -1,4 +1,4 @@
-#include "PhysicsIonWallFluxMaterial.h"
+#include "IonWallFluxMaterial.h"
 
 #include "Physics.h"
 #include "FaceInfo.h"
@@ -8,19 +8,21 @@
 #include <cmath>
 #include <type_traits>
 
-registerMooseObject("PhysicsApp", PhysicsIonWallFluxMaterial);
+registerMooseObject("PhysicsApp", IonWallFluxMaterial);
 
 namespace
 {
+// Only one IonWallFluxMaterial implementation remains. Keep helper names
+// unique across Unity translation units without a temporary C2 namespace.
 template <typename SpaceArg>
 constexpr bool
-isFaceArg()
+ionWallIsFaceArg()
 {
   return std::is_same_v<std::decay_t<SpaceArg>, Moose::FaceArg>;
 }
 
 ADReal
-outwardPositivePart(const ADReal & directed_field, const Real smoothing_width)
+ionWallOutwardPositivePart(const ADReal & directed_field, const Real smoothing_width)
 {
   if (smoothing_width <= 0.0)
     return MetaPhysicL::raw_value(directed_field) > 0.0
@@ -33,10 +35,10 @@ outwardPositivePart(const ADReal & directed_field, const Real smoothing_width)
 }
 
 RealVectorValue
-outwardNormal(const Moose::FaceArg & face)
+ionWallOutwardNormal(const Moose::FaceArg & face)
 {
   if (!face.fi)
-    mooseError("PhysicsIonWallFluxMaterial received a FaceArg without FaceInfo.");
+    mooseError("IonWallFluxMaterial received a FaceArg without FaceInfo.");
 
   RealVectorValue n = face.fi->normal();
 
@@ -49,19 +51,19 @@ outwardNormal(const Moose::FaceArg & face)
       return -n;
 
     mooseError(
-        "PhysicsIonWallFluxMaterial received a FaceArg whose face_side does not "
+        "IonWallFluxMaterial received a FaceArg whose face_side does not "
         "match either FaceInfo side.");
   }
 
   if (face.fi->neighborPtr())
     mooseError(
-        "PhysicsIonWallFluxMaterial requires a sided FaceArg on internal boundaries.");
+        "IonWallFluxMaterial requires a sided FaceArg on internal boundaries.");
 
   return n;
 }
 
 ADRealVectorValue
-faceElectricField(const Moose::Functor<ADReal> & potential,
+ionWallFaceElectricField(const Moose::Functor<ADReal> & potential,
                   const Moose::FaceArg & face,
                   const Moose::StateArg & state,
                   const bool use_element_gradient)
@@ -70,7 +72,7 @@ faceElectricField(const Moose::Functor<ADReal> & potential,
     return -potential.gradient(face, state);
 
   if (!face.fi)
-    mooseError("PhysicsIonWallFluxMaterial received a FaceArg without FaceInfo.");
+    mooseError("IonWallFluxMaterial received a FaceArg without FaceInfo.");
 
   // Continuous FEM variables do not implement FaceArg gradients. Evaluate the
   // gradient in the element that owns the sided wall face instead. For the
@@ -85,7 +87,7 @@ faceElectricField(const Moose::Functor<ADReal> & potential,
       return -potential.gradient(face.makeNeighbor(), state);
 
     mooseError(
-        "PhysicsIonWallFluxMaterial received a FaceArg whose face_side does not "
+        "IonWallFluxMaterial received a FaceArg whose face_side does not "
         "match either FaceInfo side.");
   }
 
@@ -98,7 +100,7 @@ faceElectricField(const Moose::Functor<ADReal> & potential,
 }
 
 InputParameters
-PhysicsIonWallFluxMaterial::validParams()
+IonWallFluxMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -155,7 +157,7 @@ PhysicsIonWallFluxMaterial::validParams()
   return params;
 }
 
-PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
+IonWallFluxMaterial::IonWallFluxMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _ion_number_density(getFunctor<ADReal>("ion_number_density")),
@@ -209,7 +211,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -222,7 +224,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
                   : _gas_temperature(r, state);
 
           if (MetaPhysicL::raw_value(T_i) <= 0.0)
-            mooseError("PhysicsIonWallFluxMaterial requires ion thermal temperature > 0 K.");
+            mooseError("IonWallFluxMaterial requires ion thermal temperature > 0 K.");
 
           const ADReal v_th =
               sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
@@ -238,18 +240,18 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
-          const RealVectorValue n_out = outwardNormal(r);
+          const RealVectorValue n_out = ionWallOutwardNormal(r);
           const ADRealVectorValue electric_field =
-              faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
+              ionWallFaceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal E_n = electric_field * n_out;
 
           const ADReal directed_field = _charge_number * E_n;
           const ADReal outward_drift_field =
-              outwardPositivePart(
+              ionWallOutwardPositivePart(
                   directed_field, _migration_gate_smoothing_width);
 
           return _ion_number_density(r, state) *
@@ -264,7 +266,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -277,7 +279,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
                   : _gas_temperature(r, state);
 
           if (MetaPhysicL::raw_value(T_i) <= 0.0)
-            mooseError("PhysicsIonWallFluxMaterial requires ion thermal temperature > 0 K.");
+            mooseError("IonWallFluxMaterial requires ion thermal temperature > 0 K.");
 
           const ADReal v_th =
               sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
@@ -286,13 +288,13 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
           const ADReal surface =
               _sticking * 0.25 * n_i * v_th;
 
-          const RealVectorValue n_out = outwardNormal(r);
+          const RealVectorValue n_out = ionWallOutwardNormal(r);
           const ADRealVectorValue electric_field =
-              faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
+              ionWallFaceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
-              outwardPositivePart(
+              ionWallOutwardPositivePart(
                   directed_field, _migration_gate_smoothing_width);
 
           const ADReal migration =
@@ -308,7 +310,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -321,7 +323,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
                   : _gas_temperature(r, state);
 
           if (MetaPhysicL::raw_value(T_i) <= 0.0)
-            mooseError("PhysicsIonWallFluxMaterial requires ion thermal temperature > 0 K.");
+            mooseError("IonWallFluxMaterial requires ion thermal temperature > 0 K.");
 
           const ADReal v_th =
               sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
@@ -338,17 +340,17 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
-          const RealVectorValue n_out = outwardNormal(r);
+          const RealVectorValue n_out = ionWallOutwardNormal(r);
           const ADRealVectorValue electric_field =
-              faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
+              ionWallFaceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
-              outwardPositivePart(
+              ionWallOutwardPositivePart(
                   directed_field, _migration_gate_smoothing_width);
 
           return _ion_number_density(r, state) *
@@ -363,7 +365,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       {
         using SpaceArg = decltype(r);
 
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!ionWallIsFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -376,7 +378,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
                   : _gas_temperature(r, state);
 
           if (MetaPhysicL::raw_value(T_i) <= 0.0)
-            mooseError("PhysicsIonWallFluxMaterial requires ion thermal temperature > 0 K.");
+            mooseError("IonWallFluxMaterial requires ion thermal temperature > 0 K.");
 
           const ADReal v_th =
               sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
@@ -385,13 +387,13 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
           const ADReal surface =
               _sticking * 0.25 * n_i * v_th;
 
-          const RealVectorValue n_out = outwardNormal(r);
+          const RealVectorValue n_out = ionWallOutwardNormal(r);
           const ADRealVectorValue electric_field =
-              faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
+              ionWallFaceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
-              outwardPositivePart(
+              ionWallOutwardPositivePart(
                   directed_field, _migration_gate_smoothing_width);
 
           const ADReal migration =

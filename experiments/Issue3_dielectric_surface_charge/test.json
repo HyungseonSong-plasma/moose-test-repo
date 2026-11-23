@@ -11,7 +11,7 @@
   "temporal_csv_policy": "include_initial_as_physics",
   "claim": "Representative 2D plasma-dielectric coupling conserves charged-particle and global charge inventories while finite dielectric SEE drives a lower-dimensional nonlinear surface-charge state that feeds the continuous-FEM Poisson weak form and self-consistently activates ion wall-migration feedback.",
   "production_mechanisms": [
-    "PhysicsIonWallFluxMaterial",
+    "IonWallFluxMaterial",
     "PhysicsElectronWallFluxMaterial",
     "PhysicsFVLogMolarDielectricFluxBC",
     "PhysicsLowerDSurfaceCurrent",

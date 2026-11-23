@@ -1,0 +1,160 @@
+{
+  "schema": "issue669.p3_x.source_only.producer_consumer_edges.v4",
+  "source_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "evidence_class": "STATIC_LINEAGE_BOUNDED_NOT_NATIVE_WAREHOUSE",
+  "cases": [
+    "S6-417",
+    "S6-941"
+  ],
+  "status": "PASS_STAGED_EXACT_ELECTRON_BC_AND_TWO_CANONICAL_FUNCTOR_RETIREMENT_SOURCE_ONLY",
+  "edges": [
+    {
+      "from": "unified_s6_{417,941}_newonly.json species.e.initial_number_density",
+      "to": "DDContinuityEq::addSolverVariables/addInitialConditions",
+      "state_owner": "log_e",
+      "ic_expression": "ln(n_e_particles_per_m3)-ln(N_A)",
+      "status": "STATIC_SOURCE_CONTRACT"
+    },
+    {
+      "from": "unified_s6_{417,941}_newonly.json species.e.temperature_eV + initial_number_density",
+      "to": "DDEnergyEq::addSolverVariables/addInitialConditions",
+      "state_owner": "log_e_energy",
+      "ic_expression": "ln(1.5*temperature_eV*n_e/N_A)",
+      "status": "STATIC_SOURCE_CONTRACT"
+    },
+    {
+      "from": "historical S6-400W prepared 42-row electron_moments.txt",
+      "to": "New-only JSON species.e.transport_coef {lookup,reduced,clamp}",
+      "status": "SOURCE_SHA_PINNED_RUNTIME_STAGED_BYTES_HOLD"
+    },
+    {
+      "from": "ESWallFluxMaterial(species_id=e)",
+      "to": "e_wall_number_flux",
+      "required_consumers": "4 particle + 4 energy FEM BCs",
+      "status": "STATIC_FACTORY_FUNCTOR_CONTRACT"
+    },
+    {
+      "from": "DDEnergyEq / ElectronEnergyMaterial",
+      "to": "e_energy_eV",
+      "required_consumers": "4 FEM energy BCs",
+      "status": "STATIC_FACTORY_FUNCTOR_CONTRACT"
+    },
+    {
+      "from": "INSFVPressureVariable pressure and [Physics]/[Plasmas] gas state",
+      "to": "neutral mass/momentum, Rhie-Chow, outlet BC, Maxwell/Poisson pressure-dependent consumers",
+      "status": "STATIC_PRESERVATION_RUNTIMEREACHABILITY_HOLD"
+    },
+    {
+      "from": "parent RF maxwell_t6, Transfers ×7, PID",
+      "to": "historical external Maxwell child + two include inputs + QVT mesh",
+      "status": "PHYSICAL_CHILD_STAGED_SOURCE_PASS_NEWONLY_DYNAMIC_HOLD"
+    }
+  ],
+  "boundary_ownership": [
+    {
+      "region": "electrode/metal/right",
+      "sidesets": "plasma_electrode plasma_metal plasma_right",
+      "existing_hybrid_particle_bc": "electron_sheath",
+      "existing_hybrid_energy_bc": "electron_energy_sheath",
+      "legacy_names_are_distinct_from_newonly_json_bc_names": true,
+      "target_ownership_contract": "exactly one particle and one energy electron BC contribution per covered sideset; no duplicate Hybrid+JSON warehouse objects",
+      "integrated_native_verified": false,
+      "static_shadow_legacy_bc_removed": true,
+      "json_generated_bc_expected": true,
+      "actual_cpp_generation_owner": "PlasmasAction::act add_bc (Chemistry.C)",
+      "runtime_verified": false,
+      "production_source_legacy_bc_retired": true,
+      "source_unique_electron_particle_bc_target": true,
+      "source_unique_electron_energy_bc_target": true
+    },
+    {
+      "region": "cover",
+      "sidesets": "plasma_cover",
+      "existing_hybrid_particle_bc": "electron_cover_dielectric",
+      "existing_hybrid_energy_bc": "electron_energy_cover",
+      "legacy_names_are_distinct_from_newonly_json_bc_names": true,
+      "target_ownership_contract": "exactly one particle and one energy electron BC contribution per covered sideset; no duplicate Hybrid+JSON warehouse objects",
+      "integrated_native_verified": false,
+      "static_shadow_legacy_bc_removed": true,
+      "json_generated_bc_expected": true,
+      "actual_cpp_generation_owner": "PlasmasAction::act add_bc (Chemistry.C)",
+      "runtime_verified": false,
+      "production_source_legacy_bc_retired": true,
+      "source_unique_electron_particle_bc_target": true,
+      "source_unique_electron_energy_bc_target": true
+    },
+    {
+      "region": "wafer",
+      "sidesets": "plasma_wafer",
+      "existing_hybrid_particle_bc": "electron_wafer_dielectric",
+      "existing_hybrid_energy_bc": "electron_energy_wafer",
+      "legacy_names_are_distinct_from_newonly_json_bc_names": true,
+      "target_ownership_contract": "exactly one particle and one energy electron BC contribution per covered sideset; no duplicate Hybrid+JSON warehouse objects",
+      "integrated_native_verified": false,
+      "static_shadow_legacy_bc_removed": true,
+      "json_generated_bc_expected": true,
+      "actual_cpp_generation_owner": "PlasmasAction::act add_bc (Chemistry.C)",
+      "runtime_verified": false,
+      "production_source_legacy_bc_retired": true,
+      "source_unique_electron_particle_bc_target": true,
+      "source_unique_electron_energy_bc_target": true
+    },
+    {
+      "region": "focus_ring",
+      "sidesets": "plasma_focus_ring",
+      "existing_hybrid_particle_bc": "electron_focus_ring_dielectric",
+      "existing_hybrid_energy_bc": "electron_energy_focus_ring",
+      "legacy_names_are_distinct_from_newonly_json_bc_names": true,
+      "target_ownership_contract": "exactly one particle and one energy electron BC contribution per covered sideset; no duplicate Hybrid+JSON warehouse objects",
+      "integrated_native_verified": false,
+      "static_shadow_legacy_bc_removed": true,
+      "json_generated_bc_expected": true,
+      "actual_cpp_generation_owner": "PlasmasAction::act add_bc (Chemistry.C)",
+      "runtime_verified": false,
+      "production_source_legacy_bc_retired": true,
+      "source_unique_electron_particle_bc_target": true,
+      "source_unique_electron_energy_bc_target": true
+    }
+  ],
+  "blocking_collision": "RESOLVED_IN_P3X_SOURCE_ONLY_SCRATCH: eight explicit legacy FEM electron BC blocks and two explicit old FunctorMaterial producers physically retired per case. Generated Physics/JSON targets remain uninstantiated until P5 Native P2.",
+  "untested": [
+    "native C++ warehouse object inventory",
+    "late-bound electron WallFlux/energy Functor resolution",
+    "New-only pressure/RF/neutral consumer reachability"
+  ],
+  "production_source_confirmation": {
+    "base_pr": 665,
+    "base_head_before_p3x": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "ci_run": 44256823392,
+    "ci_head_sha": "556f104d62cce635dcf7b59bf6966400b0b1fa18",
+    "artifact_id": 14405784430,
+    "artifact_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "each_case_removed_native_ion": 26,
+    "each_case_removed_old_electron_BCs": 8,
+    "each_case_removed_old_electron_FunctorMaterials": 2,
+    "p3x_specific_negative_controls_rejected": 28,
+    "source_sha_and_non_target_byte_preservation": "PASS",
+    "runtime": "HOLD"
+  },
+  "producer_collisions": [
+    {
+      "old_owner": "FunctorMaterials/electron_physical_density",
+      "functor": "n_e_physical",
+      "new_owner": "DDEnergyEq generated ADParsedFunctorMaterial",
+      "old_block_sha256": "33f68912653aaba28a9fd27353dc9671538c180a8e1d9accabb5c6e69e3e8b17",
+      "source_only_shadow_removed": true,
+      "runtime_rebind_verified": false,
+      "production_source_old_functor_retired": true
+    },
+    {
+      "old_owner": "FunctorMaterials/electron_wall_flux",
+      "functor": "e_wall_number_flux",
+      "new_owner": "DDEnergyEq generated ESWallFluxMaterial",
+      "old_block_sha256": "cd1be5c26c3f72ec0e42d36d342849918d48c02a2a609543c15db045309d6824",
+      "source_only_shadow_removed": true,
+      "runtime_rebind_verified": false,
+      "production_source_old_functor_retired": true
+    }
+  ],
+  "historical_archived_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
+}

@@ -68,7 +68,7 @@
   []
 
   [ion_wall_flux]
-    type = PhysicsIonWallFluxMaterial
+    type = IonWallFluxMaterial
     ion_number_density = n_i_physical
     potential = zero_potential
     mobility = ion_mobility

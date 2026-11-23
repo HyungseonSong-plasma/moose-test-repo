@@ -137,6 +137,6 @@ def test_fail_closed_catalogue_and_duplicate_operators():
         "duplicate DriftDiffusion BC operator owner",
         "boundaries BC type is not yet supported",
         "wrong named arguments in boundaries BC",
-        "drift_diffusion_boundary is retired; use boundaries",
+        "drift_diffusion_boundary is retired; use drift_diffusion_boundaries",
     ):
         assert fragment in CHEM
