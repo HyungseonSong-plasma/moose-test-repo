@@ -19,17 +19,42 @@ structural = functional.structural
 
 
 @contextmanager
-def historical_thermal_source():
-    """Only historical-source assertions may read the deleted C++ Factory."""
+def pinned_historical_source_root(profile):
+    """Verify both live and retired claim blobs without restoring a Factory.
+
+    If a profile cites retired C++ source, materialize only its pinned
+    historical witnesses in an isolated temporary tree. This never changes
+    the production PhysicsApp or treats retired evidence as live support.
+    """
+    origins = [profile["source"]] + [
+        claim.get("source", profile["source"]) for claim in profile["claims"]]
+    missing = [origin for origin in origins
+               if not (ROOT / origin["path"]).is_file()]
+    if not missing:
+        yield ROOT
+        return
+    archived_names = {
+        "PhysicsFVThermalDiffusion.C",
+        "PhysicsFVHeavyMassElectromigrationCorrection.C",
+    }
+    archive_root = ROOT / "docs/development/archive/issue774_retired_factories"
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
-        archived = (ROOT / "docs/development/archive/issue774_retired_factories/"
-                    "PhysicsFVThermalDiffusion.C.txt")
-        destination = root / "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C"
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(archived.read_bytes())
+        for origin in origins:
+            relative = origin["path"]
+            source = ROOT / relative
+            if not source.is_file():
+                if (not relative.startswith("physics_app/src/fvkernels/")
+                        or Path(relative).name not in archived_names):
+                    raise ValueError("FDEG_UNPINNED_RETIRED_CLAIM_SOURCE:" + relative)
+                source = archive_root / (Path(relative).name + ".txt")
+            raw = source.read_bytes()
+            if structural.blob_sha(raw) != origin["blob_sha"]:
+                raise ValueError("FDEG_HISTORIC_CLAIM_BLOB_DRIFT:" + relative)
+            dest = root / relative
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(raw)
         yield root
-
 
 class FunctionalP0Test(unittest.TestCase):
     def setUp(self):
@@ -280,14 +305,9 @@ class LiveContractsP0Test(unittest.TestCase):
         for target, profile in sorted(registry["profiles"].items()):
             with self.subTest(target=target):
                 functional.validate_registry_profile(profile)
-                if target == "PhysicsFVThermalDiffusion":
-                    # Historical profile remains pinned, but is not live in New-only.
-                    with historical_thermal_source() as old_root:
-                        witnesses, blobs = functional.source_witnesses(old_root, profile)
-                        parameters = functional.extract_parameters(old_root, profile)
-                else:
-                    witnesses, blobs = functional.source_witnesses(ROOT, profile)
-                    parameters = functional.extract_parameters(ROOT, profile)
+                with pinned_historical_source_root(profile) as source_root:
+                    witnesses, blobs = functional.source_witnesses(source_root, profile)
+                    parameters = functional.extract_parameters(source_root, profile)
                 self.assertTrue(witnesses)
                 self.assertIn(profile["source"]["path"], blobs)
                 self.assertTrue(all(w["line_start"] >= 1 for w in witnesses))
@@ -296,6 +316,23 @@ class LiveContractsP0Test(unittest.TestCase):
                 self.assertEqual(set(profile["required_discriminators"]),
                                  set(profile["discriminator_contracts"]))
                 self.assertTrue(parameters)
+
+    def test_retired_claim_sources_are_historical_and_sha_pinned(self):
+        registry = functional.load_registry(ROOT)["profiles"]
+        for target in ("PhysicsFVThermalDiffusion", "PhysicsFVElectrostaticDrift"):
+            profile = registry[target]
+            with pinned_historical_source_root(profile) as isolated_root:
+                self.assertNotEqual(isolated_root, ROOT)
+                witnesses, blobs = functional.source_witnesses(isolated_root, profile)
+                self.assertTrue(witnesses)
+                self.assertIn(profile["source"]["path"], blobs)
+        bad = copy.deepcopy(registry["PhysicsFVElectrostaticDrift"])
+        for claim in bad["claims"]:
+            if claim["id"] == "mass_correction":
+                claim["source"]["blob_sha"] = "0" * 40
+        with self.assertRaisesRegex(ValueError, "FDEG_HISTORIC_CLAIM_BLOB_DRIFT"):
+            with pinned_historical_source_root(bad):
+                pass
 
     def test_v02_live_candidate_source_witness_and_variable_density_blocker(self):
         registry = functional.load_registry(ROOT)
@@ -374,7 +411,8 @@ class LiveContractsP0Test(unittest.TestCase):
         self.assertFalse(params["n_ref"]["has_explicit_source_default"])
         self.assertFalse(params["number_source"]["has_explicit_source_default"])
         self.assertTrue(params["number_source"]["required"])
-        with historical_thermal_source() as old_root:
+        with pinned_historical_source_root(
+                doc["profiles"]["PhysicsFVThermalDiffusion"]) as old_root:
             thermal = functional.extract_parameters(
                 old_root, doc["profiles"]["PhysicsFVThermalDiffusion"])
         switch = next(p for p in thermal if p["name"] == "include_thermal_diffusion")
