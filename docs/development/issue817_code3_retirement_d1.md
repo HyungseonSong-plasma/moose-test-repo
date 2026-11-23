@@ -23,3 +23,13 @@ The `ci/guards/issue817_code3_retirement.py` census reads the exact tracked HEAD
 5. **D5-D6:** workflow cleanup, integration SHA lease, PR/issue/branch closure only when safe. Do not merge D9/main/Poisson now.
 
 **Decision:** `D1_D2_PREPARED`, `C_H_DELETE=HOLD_ACTIVE_CONSUMERS`, `P3=NOT_EXECUTED`, `SCIENCE_HOLD`, `MAIN_MERGE=DEFERRED`.
+
+## Actual bounded EI01 Native pilot result (2026-11-23)
+- **Tested exact source HEAD:** `6f38efdc7f808a34dc37ee34b44340424e67384f`.
+- [Actions run #45230510538](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45230510538) **terminal SUCCESS**. P0 active consumers and original #707 input tests PASS, pinned OCI W1 compile generated a real ELF, old/new EI01 P2 Syntax OK, bounded one-step P3 ran both and the CSV `n_e_avg` time arrays matched with relative tolerance `1e-10` (absolute `1e-4`).
+- **Exact PhysicsApp ELF SHA256:** `5a99436de2d582f28853c2ab124f45e3d75bc2827636b3734ab79f67dbf83b05`.
+- **Sanitized receipt:** Artifact #14847312584, ZIP SHA256 `31e2e7edff6c0ed778aa86fcbdd1f01f1fd3cd93f88c5cf948b61083431d00c3`. Only hash-based result/CSV observables retained; the old/candidate input bytes are not uploaded.
+- **Separately:** [real W5 generated input pair run #45229995933](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45229995933) PASS P0, artifact #14845867505. This W5 work did **not** run Native P2/P3.
+- **Precise claim:** `EI01_PHYSICAL_SINGLE_STEP_DENSITY_P2_P3_PASS`. **Not** residual/AD Jacobian parity, normalized state, all source channels, multi-step S5-R or H05/R2, or safe deletion.
+- This branch's one-off proof Workflows are removed after their immutable run/artifact capture. Git Blob identity of all underlying physics source, test and A/B candidate files is unchanged by that cleanup. Their run histories remain available.
+- **Status:** `D1_D2_P0_PASS / EI01_BOUND_NATIVE_PASS / OTHER_ACTIVE_CONSUMERS_PENDING / C_H_DELETE_HOLD / D9_AND_MAIN_MERGE_HOLD`.
