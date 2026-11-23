@@ -2,6 +2,10 @@
 name: Issue809 Code1 New-only retirement P0 one-off
 
 on:
+  push:
+    branches: [issue-809-code1-newonly-retirement]
+    paths:
+      - '.github/workflows/issue809-code1-retirement-p0-once.yml'
   pull_request:
     branches: [issue-774-d9-newonly-fvkernel-retirement-closure-20261123]
     types: [opened, synchronize, reopened]
@@ -20,17 +24,18 @@ jobs:
   code1_exact_head_p0:
     name: P0 exact-head Code1 source, archive and CI guard
     if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo')
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     env:
-      SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+      SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout immutable PR HEAD
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
       - name: Exact source and source cut
@@ -67,7 +72,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue809-code1-p0-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
+          name: issue809-code1-p0-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: evidence/
           if-no-files-found: warn
           retention-days: 30
