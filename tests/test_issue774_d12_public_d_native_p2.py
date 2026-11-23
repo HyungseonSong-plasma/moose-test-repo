@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ci/guards"))
 from issue774_d12_public_d_native_p2 import (  # noqa: E402
     W1_ELF_SHA, W1_RUN, W1_SOURCE_HEAD, classify_native, stage_W1,
-    decide_native_P2_status,
+    decide_native_P2_status, classify_four_way,
 )
 
 
@@ -69,6 +69,32 @@ class D12NativeP2Controls(unittest.TestCase):
         self.assertEqual(decide_native_P2_status(
             {"417": {"syntax_ok": False}, "941": public["941"]}, ref),
             "HOLD_PUBLIC_D_100ROW_CONSTRUCTION")
+
+    def test_causal_matrix_distinguishes_table_binding_interaction(self):
+        mk = lambda b, t, j, f: {
+            "baseline_42row": {"syntax_ok": b},
+            "table_only_100row": {"syntax_ok": t},
+            "json_binding_only_42row": {"syntax_ok": j},
+            "full_public_d_100row": {"syntax_ok": f},
+        }
+        signatures = {
+            (True, False, True, False): "100ROW_ELECTRON_TABLE_EFFECT",
+            (True, True, False, False): "PUBLIC_D_JSON_BINDING_EFFECT",
+            (True, False, False, False): "BOTH_INDEPENDENT_CHANGES_FAIL",
+            (True, True, True, False): "TABLE_AND_JSON_INTERACTION",
+            (True, True, True, True): "FULL_PUBLIC_D_NATIVE_PASS",
+            (False, True, True, False): "UNRELIABLE_42ROW_BASELINE",
+        }
+        for outcomes, expected in signatures.items():
+            both = {"417": mk(*outcomes), "941": mk(*outcomes)}
+            self.assertEqual(classify_four_way(both),
+                             {"417": expected, "941": expected})
+
+    def test_missing_diagonal_case_never_claims_causal_completion(self):
+        fragment = {"417": {"baseline_42row": {"syntax_ok": True}}}
+        labels = classify_four_way(fragment)
+        self.assertEqual(labels["417"], "INCOMPLETE_DIAGNOSTIC_MATRIX")
+        self.assertEqual(labels["941"], "INCOMPLETE_DIAGNOSTIC_MATRIX")
 
     def test_W1_expected_is_exact_existing_D10_binary_not_new_build(self):
         self.assertEqual(W1_RUN, "45199787795")
