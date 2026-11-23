@@ -3,7 +3,7 @@ name: Issue817 Code3 current consumers production migration P0 once
 
 on:
   push:
-    branches: [issue-817-code3-production-retirement]
+    branches: [issue-817-code3-c-h-cut-candidate]
     paths:
       - '.github/workflows/issue817-code3-production-p0-once.yml'
       - 'physics_app/ci/**'
@@ -11,7 +11,7 @@ on:
       - 'ci/guards/issue817_code3_production_migration.py'
       - 'tests/test_issue817_code3_production_migration.py'
   pull_request:
-    branches: [issue-774-d9-newonly-fvkernel-retirement-closure-20261123]
+    branches: [issue-817-code3-production-retirement]
     types: [opened, synchronize, reopened]
 permissions:
   contents: read
