@@ -1,0 +1,117 @@
+{
+  "schema": "issue774.d10.newonly_exact_head_native_p05_verified.v0.1",
+  "issue": 774,
+  "date": "2026-11-23",
+  "source_pr": 795,
+  "verified_source_head": "05a3cf85bc5ed7d9c258b1377bd66d68d70f4e3e",
+  "verified_source_tree": "51d9fcd765e0db3006f29b2775d19f118c26aeab",
+  "source_parent_d9_head": "87b7d97113ce6e75081dd15c56c86bc159bde6c9",
+  "source_diff_from_d9": [
+    ".github/workflows/issue774-d10-newonly-native-once.yml"
+  ],
+  "physics_cpp_change_count": 0,
+  "poisson_file_change_count": 0,
+  "actions": {
+    "run_id": 45199787795,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45199787795",
+    "w1_job": "PASS",
+    "native_417_941_job": "PASS",
+    "w1_artifact_id": 14832500622,
+    "w1_zip_sha256": "c3fbf30f473625e8238a938f5dc5b8d82c37ddbc7d789dd994ef92bde88e07d9",
+    "native_artifact_id": 14831463422,
+    "native_zip_sha256": "5413450bd9d30a4633919abe62b40c3dbb14a2f5630053a32b42c490c833f2ff"
+  },
+  "W1": {
+    "actual_elf_sha256": "6afd05d4a4d356fe5132ca28076ba27e06bea93d485ac8a6b39d334bb9a9465b",
+    "libphysics_opt_sha256": "c7471a17e934d13bf335016da8839414e6f518444c05b0d95648714151724044",
+    "libphysics_test_opt_sha256": "107e9f56458958bfcf6385ea0d79651a96675d5f724d1f8e40b591ca729a1ec5",
+    "build_count": 1,
+    "archive_roundtrip_check": "PASS",
+    "private_data_bundled": false,
+    "OCI": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "Native": {
+    "status": "PASS_16_INTENDED_NATIVE_REJECTIONS",
+    "tests_total": 16,
+    "completed": 16,
+    "expected_rejections": 16,
+    "private_data_in_artifacts": false,
+    "tmpfs_cleanup_verified": true,
+    "input_417": {
+      "layer_count": 11,
+      "clean_syntax_ok": true,
+      "clean_exit": 0,
+      "registration_counts": {
+        "FVKernel": 40,
+        "FVBC": 21,
+        "FEBoundaryCondition": 16
+      },
+      "total_registration_events": 77,
+      "observer_markers": 323
+    },
+    "input_941": {
+      "layer_count": 11,
+      "clean_syntax_ok": true,
+      "clean_exit": 0,
+      "registration_counts": {
+        "FVKernel": 40,
+        "FVBC": 21,
+        "FEBoundaryCondition": 16
+      },
+      "total_registration_events": 77,
+      "observer_markers": 309
+    },
+    "retired_thermal_actual_fvkernel_events": 0,
+    "active_fvkernel_source_usage": {
+      "FVLogMolarTransport": 9,
+      "PhysicsFVConservativeMassFractionTimeDerivative": 3,
+      "PhysicsFVMassFractionAdvection": 3,
+      "PhysicsFVMixtureAveragedDiffusion": 3,
+      "PhysicsFVSpeciesReactionSource": 6,
+      "other_local_sources": 0
+    },
+    "source_count": 12,
+    "local_factory_type_count": 17,
+    "actual_clean_input_source_restoration": "SHA_ALL_PUBLIC_FILES_UNCHANGED",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN"
+  },
+  "independent_77_event_comparison": {
+    "baseline_B_source_head": "c77d2f773eee96c30eeca49d7486fea22ea8e557",
+    "baseline_B_run_id": 45177755891,
+    "baseline_B_artifact_id": 14818699271,
+    "baseline_B_elf_sha256": "d6a87b61f7e3e8d06767f7a245c51e846293af740653609492d2e3f9714ac62c",
+    "comparison_report_sha256": "e453553738bd516bb5210682e1a8750963c07949ebfb79b4d01711963844e627",
+    "comparison_checks_passed": 44,
+    "comparison_checks_total": 44,
+    "checked": [
+      "source head identities",
+      "one W1 source/ELF chain per cohort",
+      "17 FVKernel factory owners",
+      "12 source blob IDs",
+      "417/941 eleven public input layers",
+      "417/941 chemistry JSON SHA",
+      "417/941 mesh SHA",
+      "417/941 clean syntax/exit",
+      "417/941 source restoration",
+      "417/941 all FVKernel/FVBC/FEBC event counts",
+      "417/941 per-type and per-source usage",
+      "16/16 Native negatives",
+      "protected tmpfs cleanup and no private artifact",
+      "no Native P3/P4 assertion"
+    ],
+    "verdict": "P05_EXACT_SCOPE_PARITY_PASS"
+  },
+  "legacy_input_support": "EXPLICITLY_NOT_REQUIRED",
+  "remaining": {
+    "supported_dynamic_and_generated_producer_scope": "OBSERVED_FOR_417_941_ONLY_NOT_ALL_POSSIBLE_ROUTES",
+    "external_consumers": "NOT_INDEPENDENTLY_ATTESTED",
+    "historic_fdeg_ci": "SEPARATE_D8_99_TEST_PASS",
+    "independent_rollback_review": "NOT_COMPLETE",
+    "main_and_upstream_665_integration": "DEFERRED_DURING_POISSON",
+    "P3_P4_full_100us_science": "SCIENCE_HOLD",
+    "one_off_D10_workflow": "DO_NOT_MERGE_TO_PRODUCTION",
+    "safe_to_delete": false
+  },
+  "verdict": "D10_EXACT_HEAD_W1_AND_NATIVE_P05_PASS_SCOPE_ONLY"
+}
