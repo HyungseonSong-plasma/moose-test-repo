@@ -1,0 +1,243 @@
+# Temporary W1 P1-only carrier for #814. Do not merge into production.
+# Retains #808's reviewed OCI pin, vendor checks, one-ELF/two-library bundle.
+# No private EI inputs, Native P2/P05, solver, P3/P4, or main merge.
+name: Issue814 code2 exact-source PhysicsApp W1 P1 once
+on:
+  push:
+    branches:
+      - issue-814-code2-p1-validation-20261123
+permissions:
+  contents: read
+env:
+  PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
+jobs:
+  p6_newonly_s6_build:
+    name: "P6 mandatory New-only W1 exact HEAD / ELF and 2 app libs (no Native)"
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    permissions:
+      contents: read
+    env:
+      SOURCE_HEAD: ${{ github.sha }}
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout pinned source-cut validation HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Validate D9 retired-source CI and D5 source census before one-W1 build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_fvkernel_native_usage_census.py -v
+          python3 -m unittest discover -s tests -p test_issue774_newonly_fvkernel_retirement.py -v
+          python3 ci/guards/issue774_newonly_fvkernel_retirement.py \
+            --expected-head "${{ github.sha }}" \
+            --output /tmp/issue774-d10-verified-newonly-retirement.json
+      - name: Validate source, OCI and vendor commits before build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          test "$(git rev-parse HEAD:physics_app)" = "869dabc25a34e03fc4018c2d8cd57cda26a630fb"
+          test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "e57cb1cc16ef9c6c336199f395d1cf4b49436bb6"
+          test "$(git rev-parse HEAD:tests/test_issue774_newonly_fvkernel_retirement.py)" = "c61e57ed43376275725b6a2840e54fd773f2a318"
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no -- physics_app ci/physics-build-base)"
+          test ! -e physics_app/physics-opt
+          test "$(git hash-object physics_app/dependencies.lock)" = 0aae0ffb5699fcd5c17e8ebe9ea4f2effde9ff47
+          grep -Fqx "PHYSICS_BUILD_BASE=$OCI" physics_app/dependencies.lock
+          docker pull "$OCI"
+          for pair in 'moose MOOSE' 'crane CRANE' 'squirrel SQUIRREL' 'zapdos ZAPDOS'; do
+            read -r key envname <<< "$pair"
+            expected="$(sed -n "s/^$envname=//p" physics_app/dependencies.lock)"
+            actual="$(docker image inspect "$OCI" --format "{{ index .Config.Labels \"io.physics.$key.sha\" }}")"
+            test -n "$expected"
+            test "$expected" = "$actual"
+          done
+          mkdir -p evidence
+          docker run --rm --entrypoint /bin/bash "$OCI" -lc '
+            set -euo pipefail
+            source /environment
+            command -v g++
+            g++ --version | head -1
+            command -v make
+            test -f /opt/physics_vendor/moose/framework/Makefile
+            test -f /opt/physics-build-base/BUILD_BASE_PROVENANCE.txt
+          ' > evidence/toolchain.log
+          echo P5_0_EXACT_HEAD_SOURCE_AND_VENDOR_OCI_PASS
+      - name: Build PhysicsApp exactly one time in the pinned OCI image
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e physics_app/physics-opt
+          docker run --rm --platform linux/amd64 --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            ' 2>&1 | tee evidence/build.log
+          test -x physics_app/physics-opt
+          test -s physics_app/physics-opt
+          echo P5_0_ONE_COMPILE_PASS
+      - name: Freeze and roundtrip verify actual ELF and all app shared libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, os, re, subprocess, tarfile, io
+          root = Path.cwd()
+          out = root / "evidence"
+          out.mkdir(exist_ok=True)
+          binary = root / "physics_app/physics-opt"
+          assert binary.is_file() and not binary.is_symlink() and binary.stat().st_size > 0
+          assert binary.open("rb").read(4) == b"\x7fELF"
+          head = subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
+          assert head == os.environ["SOURCE_HEAD"]
+          tree = subprocess.check_output(["git","rev-parse","HEAD^{tree}"],text=True).strip()
+          def sha(path):
+              dig = hashlib.sha256()
+              with path.open("rb") as stream:
+                  for chunk in iter(lambda:stream.read(8*1024*1024),b""):
+                      dig.update(chunk)
+              return dig.hexdigest()
+          def dynamic(path):
+              return subprocess.check_output(["readelf","-d",str(path)],text=True)
+          def needed(info):
+              return re.findall(r"Shared library: \[([^\]]+)\]",info)
+          def soname(info):
+              m = re.findall(r"Library soname: \[([^\]]+)\]",info)
+              return m[0] if m else None
+          exe_dyn = dynamic(binary)
+          app_needed = {n for n in needed(exe_dyn) if n.startswith("libphysics")}
+          assert app_needed, "Executable has no app library dependencies"
+          candidates = []
+          for f in (root/"physics_app").rglob("libphysics*.so*"):
+              if f.is_file() and f.resolve().is_file():
+                  target=f.resolve(strict=True)
+                  if target.open("rb").read(4)!=b"\x7fELF":
+                      continue
+                  info=dynamic(target)
+                  name=soname(info)
+                  if name:
+                      candidates.append((name,f,target,needed(info)))
+          assert candidates, "No actual application shared libraries found"
+          # Required app SONAMEs transitively follow other app-library NEEDED.
+          required=set(app_needed)
+          while True:
+              more={n for name,p,t,deps in candidates if name in required
+                    for n in deps if n.startswith("libphysics")}
+              if more <= required: break
+              required |= more
+          actual={}
+          for need in sorted(required):
+              found=[(p,t,deps) for name,p,t,deps in candidates if name==need]
+              assert found, f"App library dependency missing from build tree: {need}"
+              digests={sha(t) for p,t,deps in found}
+              assert len(digests)==1,f"Conflicting app libs with SONAME {need}"
+              source=next(((p,t,deps) for p,t,deps in found if p.name==need),found[0])
+              actual[need]=source
+          # Fail if application built other independently named libphysics SONAMEs,
+          # so that this bundle covers all compiled application libraries.
+          names={name for name,_,_,_ in candidates}
+          assert names <= required, f"Unexpected extra app libraries: {sorted(names-required)}"
+          files={"physics-opt":binary}
+          source_paths={"physics-opt":"physics_app/physics-opt"}
+          libraries={}
+          for n,(original,target,deps) in sorted(actual.items()):
+              files["lib/"+n]=target
+              source_paths["lib/"+n]=str(original.relative_to(root))
+              libraries[n]={"source_path":str(original.relative_to(root)),
+                            "real_target":str(target.relative_to(root)),
+                            "sha256":sha(target),
+                            "bytes":target.stat().st_size,
+                            "app_dependencies":[v for v in deps if v.startswith("libphysics")]}
+          total=sum(p.stat().st_size for p in files.values())
+          assert len(files)==3 and len(libraries)==2, "Expected exactly one executable and two distinct physics app libs"
+          assert total<2_000_000_000, "Unexpectedly large app-only binaries"
+          info={"schema":"issue671.p5_0.exact_head_single_build_app_shared_libraries.v1",
+                "source_repository":"HyungseonSong-plasma/moose-test-repo",
+                "source_issue":814,
+                "source_candidate_sha":"d199bdaec3d494809650155ee9e772dfac78a106",
+                "source_head":head, "source_tree":tree,
+                "branch_workflow_sha":os.environ["GITHUB_SHA"],
+                "run_id":os.environ["GITHUB_RUN_ID"],
+                "oci":os.environ["OCI"],
+                "lock_sha256":sha(root/"physics_app/dependencies.lock"),
+                "build_command":"make -C physics_app -j2 app_non_unity_dirs='%/utils'",
+                "build_count":1,
+                "binary":"physics-opt",
+                "binary_sha256":sha(binary),
+                "binary_size":binary.stat().st_size,
+                "binary_elf_needed":needed(exe_dyn),
+                "app_libraries":libraries,
+                "file_records":[{"stored_path":p,"source_path":source_paths[p],
+                                 "bytes":f.stat().st_size,"sha256":sha(f)}
+                                for p,f in sorted(files.items())],
+                "total_uncompressed_binary_bytes":total,
+                "build_log_sha256":sha(out/"build.log"),
+                "toolchain_sha256":sha(out/"toolchain.log"),
+                "native_check_input":"NOT_RUN",
+                "native_P3_P4":"NOT_RUN",
+                "science":"SCIENCE_HOLD",
+                "vendor_shared_libraries_bundled":False,
+                "private_data_bundled":False}
+          archive=out/"physics-opt-and-app-libs.tar.gz"
+          with tarfile.open(archive,mode="w:gz",compresslevel=7,format=tarfile.PAX_FORMAT) as tar:
+              for arc,source in sorted(files.items()):
+                  meta=tarfile.TarInfo(arc)
+                  meta.size=source.stat().st_size
+                  meta.mode=0o755 if arc=="physics-opt" else 0o644
+                  meta.mtime=0; meta.uid=0; meta.gid=0; meta.uname="";meta.gname=""
+                  with source.open("rb") as stream:
+                      tar.addfile(meta,stream)
+          with tarfile.open(archive,"r:gz") as tar:
+              actual_names=set(tar.getnames())
+              assert actual_names==set(files),f"Missing tar members: {set(files)-actual_names}"
+              for member in info["file_records"]:
+                  data=tar.extractfile(member["stored_path"])
+                  assert data is not None
+                  digest=hashlib.sha256()
+                  total_read=0
+                  for block in iter(lambda:data.read(8*1024*1024),b""):
+                      digest.update(block);total_read+=len(block)
+                  assert total_read==member["bytes"] and digest.hexdigest()==member["sha256"]
+          info["archive_sha256"]=sha(archive)
+          info["archive_size"]=archive.stat().st_size
+          info["archive_member_count"]=len(files)
+          info["archive_roundtrip_check"]="PASS"
+          (out/"identity.json").write_text(json.dumps(info,ensure_ascii=False,indent=2,sort_keys=True)+"\n")
+          (out/"sha256sums.txt").write_text("".join(
+              record["sha256"]+"  "+record["stored_path"]+"\n" for record in info["file_records"]))
+          print("P5_0_SAME_HEAD_EXE_AND_APP_LIBS_SHA_PASS")
+          print(json.dumps({"head":head,"binary_sha":info["binary_sha256"],
+              "app_libraries":libraries,"archive_sha":info["archive_sha256"],
+              "archive_size":info["archive_size"],
+              "files":len(files)},indent=2))
+          PY
+      - name: Upload app ELF + libraries + manifest, without private inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p6-newonly-w1-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: |
+            evidence/physics-opt-and-app-libs.tar.gz
+            evidence/identity.json
+            evidence/sha256sums.txt
+            evidence/toolchain.log
+            evidence/build.log
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
