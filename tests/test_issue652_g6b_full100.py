@@ -51,7 +51,7 @@ def test_full100_461_rows_and_100us_cadence(tmp_path: Path):
     result = full.verify_full_csv(path, deck)
     assert result["time_points"] == 461
     assert result["intervals"] == 460
-    assert result["t_end_seconds"] == 1e-4
+    assert abs(result["t_end_seconds"] - 1e-4) < 1e-15
     assert result["charge_conservation_budget"] == "NOT_EVALUATED"
 
 

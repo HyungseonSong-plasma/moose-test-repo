@@ -32,4 +32,4 @@ jobs:
           python3 -m py_compile \
             ci/guards/issue652_g6b_full100_case.py \
             ci/guards/issue652_g6b_full100_aggregate.py
-          echo G6B_FULL100_STRICT_P0_TESTS_PASS_NO_PROTECTED_NATIVE
+          echo G6B_FULL100_STRICT_P0_TESTS_PASS_FLOAT_TOLERANCE_NO_PROTECTED_NATIVE

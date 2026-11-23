@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 import re
 
@@ -48,7 +49,9 @@ def validate_case(entry: dict, case: str, source_sha: str,
         or series.get("time_points") != 461
         or series.get("intervals") != 460
         or series.get("t0_seconds") != 0.0
-        or series.get("t_end_seconds") != 1e-4
+        or not isinstance(series.get("t_end_seconds"), (int, float))
+        or not math.isfinite(series["t_end_seconds"])
+        or abs(series["t_end_seconds"] - 1e-4) > 1e-15
         or series.get("charge_conservation_budget") != "NOT_EVALUATED"
         or series.get("semantic_parity") != "NOT_EVALUATED"
         or solver.get("status") != "EXIT_ZERO"
