@@ -188,11 +188,24 @@ def run_one(root: Path, w1_root: Path, work: Path, names: list[str]) -> dict:
                 "log_sha256": None, "safe_error_categories": {"timeout": True}}
 
 
+def decide_native_P2_status(public: dict, control: dict) -> str:
+    if set(control) != set(CASES) or not all(
+        control[k].get("syntax_ok") is True for k in CASES
+    ):
+        return "HOLD_NATIVE_42ROW_BASELINE_SETUP"
+    if set(public) != set(CASES) or not all(
+        public[k].get("syntax_ok") is True for k in CASES
+    ):
+        return "HOLD_PUBLIC_D_100ROW_CONSTRUCTION"
+    return "PASS_BOTH_PUBLIC_D_INPUTS"
+
+
 def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
             *, source_head: str) -> dict:
     result = {
         "schema": "issue774.d12.public_d_100row_actual_native_p2.v0.1",
-        "source_head": source_head, "W1": {}, "cases": {}, "generated": {},
+        "source_head": source_head, "W1": {}, "cases": {},
+        "baseline_42row_controls": {}, "generated": {},
         "native_P2_status": "HOLD", "protected_rate_cleanup_verified": False,
         "protected_data_in_artifacts": False, "legacy_input_supported": False,
         "all_generators_or_external_consumers_closed": False,
@@ -223,6 +236,25 @@ def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
         need(protected.stat().st_mode & 0o777 == 0o700, "PRIVATE_SCRATCH_MODE")
         stages = json.loads((stage / "readiness.json").read_text())["stage_cases"]
         for case in CASES:
+            # Controlled positive reference from D10's exact original 42-row
+            # S6 stage, exercising the *same* binaries, OCI, mounts and rates.
+            base_source = stage / "scratch" / case
+            base_target = protected / ("control-" + case)
+            shutil.copytree(base_source, base_target, symlinks=False)
+            names = stages[case]["ordered"]
+            baseline_expected = result["generated"][case]["source_11_layer_sha256"]
+            base_chem = base_target / "experiments/Issue395_powered_chemistry_ladder"
+            need(all(sha((base_chem / n).read_bytes()) == baseline_expected[n]
+                     for n in baseline_expected),
+                 "BASELINE_42ROW_SOURCE_SHA_DRIFT")
+            base_rate_count = stage_private_rates(base_target, case, rates,
+                                                  EXPECTED, REQUIRED, validate_rows)
+            control = run_one(root, w1_root, base_target, names)
+            result["baseline_42row_controls"][case] = {
+                **control, "case": case, "baseline_input_layer_shas": baseline_expected,
+                "protected_rate_file_count": base_rate_count,
+                "protected_rate_content_published": False,
+            }
             generated_root = gen_dir / case
             target = protected / case
             shutil.copytree(generated_root, target, symlinks=False)
@@ -241,11 +273,8 @@ def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
                 "protected_rate_file_count": protected_files,
                 "protected_rate_content_published": False,
             }
-        result["native_P2_status"] = (
-            "PASS_BOTH_PUBLIC_D_INPUTS"
-            if set(result["cases"]) == set(CASES)
-            and all(result["cases"][k]["syntax_ok"] for k in CASES)
-            else "HOLD_PUBLIC_D_NATIVE_P2_CONSTRUCTION_FAILED"
+        result["native_P2_status"] = decide_native_P2_status(
+            result["cases"], result["baseline_42row_controls"]
         )
     except Exception as exc:
         result["native_P2_status"] = "HOLD_NATIVE_OR_SETUP"
