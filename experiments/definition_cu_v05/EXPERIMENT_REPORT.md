@@ -106,3 +106,30 @@ human name→definition prediction task (choice, accuracy, confidence, response
 time, progressive context navigation). Compare at fixed candidate difficulty
 and preserve failures/abstentions. Calibrate DEB/MRC and name contribution only
 when the model reproduces independent human results; until then **CU HOLD**.
+
+## Blinded human CU calibration: mechanical evidence gate
+
+The optional audit_blinded_human_calibration API in the existing v0.5 experiment
+checks externally supplied response record structure. It is not itself a human
+experiment, a source-truth authenticator or a pass gate for naming changes.
+
+Before any human response collection: independently adjudicate at least five
+held-out source definitions outside the existing curated pilot, pre-register
+a study protocol and exact source SHA, fix candidate choices, and assign
+NAME versus MASKED conditions so a participant never sees the same source
+case under both conditions. Keep the reference answer key out of all stimuli.
+
+Each trial must contain exactly: case_id (16-hex pseudonym), rater_id,
+condition (NAME/MASKED), candidate_codes (ordered list), selected_code
+(or null for abstention), elapsed_ms, stimulus_sha256, protocol_sha256,
+and source_revision. Trial data cannot include the expected answer or
+source-role labels. At least two different raters per case and condition
+are required; identical choice pools and immutable stimulus hashes are
+checked. The validator also rejects reused stimuli, duplicate exposures,
+wrong revision/protocol and out-of-pool responses.
+
+The output separates descriptive NAME and MASKED accuracy and differences;
+even a mechanically complete synthetic cohort remains status=HOLD with
+human_cu_calibrated=False and automatic_change_authorized=False.
+Independent ground truth, stimulus bytes/assignment and human identity still
+require external authentication. This repo contains no observed human trials.

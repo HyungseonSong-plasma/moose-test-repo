@@ -204,3 +204,94 @@ def test_invalid_source_witness_blocks_forged_reference():
                              {"kind":"RELATIONAL_FIELDS","source_ref":"graph.py:2@"+"a"*40}]}
     with pytest.raises(ValueError,match="UNBOUND_SOURCE_WITNESS"):
         _candidate_from_source_row(bad)
+
+
+def _synthetic_blinded_calibration():
+    """Generated controls, never actual participant responses."""
+    answer_key = {f"{i + 1:016x}": "A" for i in range(5)}
+    records = []
+    for i, case in enumerate(answer_key):
+        for arm, answer in (("NAME", "A"), ("MASKED", "B")):
+            for j in range(2):
+                records.append({
+                    "case_id": case, "rater_id": f"r{i}{arm[0]}{j}",
+                    "condition": arm, "candidate_codes": ["A", "B"],
+                    "selected_code": answer, "elapsed_ms": 1500,
+                    "stimulus_sha256": f"{i + (1 if arm == 'NAME' else 101):064x}",
+                    "source_revision": "a" * 40, "protocol_sha256": "b" * 64,
+                })
+    return records, answer_key
+
+
+def _run_blind_audit(records, key):
+    from experiments.definition_cu_v05.measure import audit_blinded_human_calibration
+    return audit_blinded_human_calibration(
+        records, key, source_revision="a" * 40, protocol_sha256="b" * 64,
+    )
+
+
+def test_complete_synthetic_human_trials_still_hold():
+    records, key = _synthetic_blinded_calibration()
+    out = _run_blind_audit(records, key)
+    assert out["structural_record_complete"] and out["trial_count"] == 20
+    assert out["name_accuracy_descriptive"] == 1
+    assert out["masked_accuracy_descriptive"] == 0
+    assert out["name_minus_masked_descriptive"] == 1
+    assert out["status"] == "HOLD" and not out["human_cu_calibrated"]
+    assert not out["automatic_change_authorized"]
+    assert "INDEPENDENT_GROUND_TRUTH_NOT_AUTHENTICATED" in out["unresolved"]
+
+
+def test_missing_human_evidence_remains_hold_not_a_score():
+    records, key = _synthetic_blinded_calibration()
+    out = _run_blind_audit(records[:-1], key)
+    assert out["status"] == "HOLD" and not out["structural_record_complete"]
+    assert any(x.startswith("INSUFFICIENT_RATERS:") for x in out["missing"])
+    empty = _run_blind_audit([], {})
+    assert empty["name_accuracy_descriptive"] is None
+    assert empty["masked_accuracy_descriptive"] is None
+    assert not empty["human_cu_calibrated"]
+
+
+def test_blind_audit_rejects_leakage_repeated_rater_and_choice_switch():
+    records, key = _synthetic_blinded_calibration()
+    extra = [dict(row) for row in records]
+    extra[0]["correct_answer"] = "A"
+    with pytest.raises(ValueError, match="SCHEMA_OR_BLINDING_LEAK"):
+        _run_blind_audit(extra, key)
+    repeated = [dict(row) for row in records]
+    repeated[2]["rater_id"] = repeated[0]["rater_id"]
+    with pytest.raises(ValueError, match="RATER_SAW_SAME_CASE_TWICE"):
+        _run_blind_audit(repeated, key)
+    changed = [dict(row) for row in records]
+    changed[2]["candidate_codes"] = ["B", "A"]
+    with pytest.raises(ValueError, match="CHOICE_POOL_CHANGED"):
+        _run_blind_audit(changed, key)
+
+
+def test_blind_audit_rejects_wrong_head_protocol_and_stimulus_drift():
+    records, key = _synthetic_blinded_calibration()
+    for changed_field, wrong_value in (
+        ("source_revision", "c" * 40), ("protocol_sha256", "d" * 64)
+    ):
+        changed = [dict(row) for row in records]
+        changed[0][changed_field] = wrong_value
+        with pytest.raises(ValueError, match="REVISION_OR_PROTOCOL_MISMATCH"):
+            _run_blind_audit(changed, key)
+    drift = [dict(row) for row in records]
+    drift[1]["stimulus_sha256"] = "e" * 64
+    with pytest.raises(ValueError, match="STIMULUS_CHANGED"):
+        _run_blind_audit(drift, key)
+
+
+def test_blind_audit_rejects_reused_stimulus_and_fake_choice():
+    records, key = _synthetic_blinded_calibration()
+    reused = [dict(row) for row in records]
+    for index in (2, 3):
+        reused[index]["stimulus_sha256"] = reused[0]["stimulus_sha256"]
+    with pytest.raises(ValueError, match="STIMULUS_REUSED"):
+        _run_blind_audit(reused, key)
+    wrong_choice = [dict(row) for row in records]
+    wrong_choice[0]["selected_code"] = "Z"
+    with pytest.raises(ValueError, match="INVALID_BLINDED_HUMAN_CALIBRATION_TRIAL"):
+        _run_blind_audit(wrong_choice, key)
