@@ -1,0 +1,76 @@
+{
+  "schema": "issue774.d9.newonly_factory_retirement_ci_evidence.v0.1",
+  "issue": 774,
+  "created_date": "2026-11-23",
+  "scope": "Exact New-only post-cut B ancestry; old input support waived; source+CI P0 only",
+  "user_decision": "LEGACY_THERMAL_INPUT_COMPATIBILITY_NOT_REQUIRED",
+  "user_decision_issue_comment": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/774#issuecomment-7103483022",
+  "parent_newonly_postcut_B": {
+    "pr": 783,
+    "head": "c77d2f773eee96c30eeca49d7486fea22ea8e557",
+    "native_p05_AB": "PASS_417_941_SOURCE_REGISTRATION_SCOPE_ONLY"
+  },
+  "d9": {
+    "code_pr": 793,
+    "source_head": "87b7d97113ce6e75081dd15c56c86bc159bde6c9",
+    "source_tree": "37c6f3fd15650d87c95682b7738dd973fc507b1",
+    "ci_run_id": 45196009333,
+    "ci_conclusion": "success",
+    "artifact_id": 14827937136,
+    "artifact_zip_sha256": "6e994334adbe3bb89d71563535cda339d1afc17402bc4d6de4ec5a2d64be9b03",
+    "tests": {
+      "d5_existing_native_source_census": 9,
+      "d9_newonly_retirement": 6,
+      "total": 15,
+      "failed": 0
+    },
+    "source_inventory": {
+      "tracked_paths": 1706,
+      "nonregular_git_entries": 0,
+      "binary_content_search": "EXCLUDED_BY_GIT_GREP_I",
+      "exact_retired_type_text_reference_paths": 4,
+      "active_input_cpp_generator_workflow_reference_paths": 0,
+      "historical_test_evidence_code_references": [
+        "ci/guards/fvkernel_native_usage_census.py",
+        "ci/guards/issue774_newonly_fvkernel_retirement.py",
+        "reports/issue774/newonly_d5_thermal_ab_plan.md",
+        "tests/test_fvkernel_native_usage_census.py"
+      ],
+      "active_source_files": 12,
+      "registered_factory_types": 17,
+      "shared_owners": {
+        "physics_app/src/fvkernels/FVLogMolarTransport.C": 3,
+        "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": 4
+      }
+    },
+    "production_ci": {
+      "workflow": ".github/workflows/ci.yml",
+      "template": "ci/workflow_templates/general-ci.yml",
+      "byte_equivalence": "PASS",
+      "p6_workflow_safety": "PASS",
+      "workflow_harness_check": "PASS",
+      "existing_p6_validation_step_extended": true,
+      "new_production_ci_jobs": 0,
+      "historical_FDEG_live_ci_imported": false
+    },
+    "native_build_replay_at_D9_head": "NOT_RUN",
+    "source_changes_to_Physics_cpp_or_headers": 0
+  },
+  "separate_historical_FDEG_CI": {
+    "pr": 791,
+    "ci_run": 45192097120,
+    "test_passed": 99,
+    "historical_archive_verified": true,
+    "do_not_cherry_pick_legacy_ci_into_newonly": true
+  },
+  "remaining": {
+    "external_dynamic_generated_consumers": "INDEPENDENT_COVERAGE_NOT_ATTESTED",
+    "same_exact_combined_integration_HEAD_P05": "NOT_RUN",
+    "independent_rollback_and_code_review": "NOT_COMPLETED",
+    "P3_P4_science": "SCIENCE_HOLD",
+    "main_merge": "DEFERRED_POISSON",
+    "one_off_branch_workflows": "DROP_AT_INTEGRATION",
+    "safe_to_delete": false
+  },
+  "verdict": "D9_NEWONLY_CI_RETIREMENT_SOURCE_SCOPE_PASS_NOT_GLOBAL_DELETION_APPROVAL"
+}
