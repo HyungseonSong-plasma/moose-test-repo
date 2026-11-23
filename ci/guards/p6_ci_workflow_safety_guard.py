@@ -86,7 +86,7 @@ def validate(workflow: str, template: str, dd_source: str,
 
     w1 = job_block(native, P6[0])
     need(all(v in w1 for v in (
-        "build_count", "physics-opt-and-app-libs.tar.gz",
+        '"build_count":1', "physics-opt-and-app-libs.tar.gz",
         "SOURCE_HEAD", "persist-credentials: false",
         "archive_roundtrip_check", "sha256sums.txt")),
         "W1_SINGLE_BUILD_AND_SAME_HEAD_CUSTODY")
