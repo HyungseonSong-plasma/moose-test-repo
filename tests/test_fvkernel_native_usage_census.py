@@ -74,11 +74,11 @@ class NativeSourceUsageTest(unittest.TestCase):
 
     def test_real_newonly_branch_factory_inventory_includes_thermal(self):
         rows = source_owners(ROOT / "physics_app/src/fvkernels")
-        self.assertEqual(len(rows), 13)
-        self.assertEqual(sum(len(x["registered_factory_types"]) for x in rows), 18)
+        self.assertEqual(len(rows), 12)
+        self.assertEqual(sum(len(x["registered_factory_types"]) for x in rows), 17)
         by_file = {r["source_file"].split("/")[-1]: r for r in rows}
-        self.assertEqual(by_file["PhysicsFVThermalDiffusion.C"]["registered_factory_types"],
-                         ["PhysicsFVThermalDiffusion"])
+        self.assertNotIn("PhysicsFVThermalDiffusion.C", by_file)
+        self.assertFalse((ROOT / "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h").exists())
         self.assertEqual(len(by_file["PhysicsFVLogMolarElectronTransport.C"]["registered_factory_types"]), 4)
         self.assertEqual(len(by_file["FVLogMolarTransport.C"]["registered_factory_types"]), 3)
 

@@ -5,7 +5,7 @@ name: Issue774 D5 New-only complete FVKernel source census
 
 on:
   pull_request:
-    branches: [issue-633-ion23-integration-20261117]
+    branches: [issue-774-d5-newonly-native-source-census]
     types: [opened, synchronize, reopened]
 
 permissions:
