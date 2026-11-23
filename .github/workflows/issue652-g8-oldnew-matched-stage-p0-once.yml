@@ -1,4 +1,4 @@
-# Exact public pre-G5 snapshot marker is created only inside the copied old scratch.
+# G8: synchronize original P3-X Old scratch to pinned non-Poisson New-only template only.
 name: Issue652 G8 matched Old/New Poisson S6 same-input stage P0 (branch-only)
 on:
   push:
