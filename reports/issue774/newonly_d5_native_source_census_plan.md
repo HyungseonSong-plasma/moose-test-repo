@@ -9,3 +9,12 @@ This change does not modify the production input, C++, protected rates, P05 Nati
 Receipt key: `full_fvkernel_source_usage[417|941]` under `p05_negative_receipt.json`. Each of the 13 source rows is `OBSERVED_VIA_FEProblemBase_addFVKernel` or `NOT_OBSERVED_IN_INSTRUMENTED_API` with `safe_to_delete=false`. A missing marker, malformed/truncated trace, wrong SHA, duplicate source Factory owner, or unexpected event fails the P05 clean observation.
 
 **Limitations:** This is the complete observed *interposed registration API*, not full Warehouse traversal, an exhaustive external runtime consumer census, P3 physics parity or deletion approval. Run this instrumented Source-only change before a second build with Thermal source removed. Do not compare unlike input/ELF/source identities or mistake a P2 check for P3 parity.
+
+## Before/after source-deletion A/B contract
+
+1. **Before (A):** Build exact instrumented New-only source, with Thermal `.C/.h` present, capture `full_fvkernel_source_usage` for 417 and 941 with clean P05 success and 11-layer/chemistry JSON/mesh SHA identities.
+2. **After (B):** Fork this exact source with **only Thermal `.C/.h` deleted** for the physics difference. Perform a fresh exact-HEAD PhysicsApp build in the same pinned OCI; repeat the identical 417/941 P05 clean Native checks and full trace.
+3. Join each run by Case, immutable original 11-layer/JSON/mesh SHA, pinned OCI digest and build provenance. Allow A/B binary SHA to differ because the C++ translation unit was removed; never claim same binary. Require equal full type-count maps, source rows for every **other** implementation file, P05 12+12+8 expected owners and N1–N8 failures.
+4. If either run lacks original protected-rate provenance, full trace SHA, one-shot observer marker, or clean success, classify `HOLD`; do not infer absence. Scientific P3 numerical equivalence remains outside the P2 check and demands separate accepted evidence if required.
+
+The Full Native Tracer records *successful FEProblemBase API registrations*, not an exhaustive list of possible statically registered classes. A zero count is only a run-local negative observation.
