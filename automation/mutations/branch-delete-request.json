@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-743-harness-dependency-verification",
-      "expected_sha": "ee7d052a5af74f7ac263608d0a43e62ad78dca5d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-743-harness-dependency-verification-ee7d052a5af7"
+      "branch": "remove-legacy-hu-code-use-cu-only",
+      "expected_sha": "3b6352ad62efe61afd0c0321b984d37716b1b5ef",
+      "archive_tag": "archive/oxygen-cleanup-20261106/remove-legacy-hu-code-use-cu-only-3b6352ad62ef"
     },
     {
-      "branch": "issue-749-repository-integration-ci",
-      "expected_sha": "9e62a6b1d11733906e47190523f15ae8b3a76984",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-749-repository-integration-ci-9e62a6b1d117"
+      "branch": "issue-697-fdeg-functional-v02",
+      "expected_sha": "3d9e382b90afacd98e02af8511071a6e5e950291",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-697-fdeg-functional-v02-3d9e382b90af"
     },
     {
-      "branch": "issue-755-hu-planning-v01",
-      "expected_sha": "b38f9320cc10af7c6ef366f69c82bc4e8497bec4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-755-hu-planning-v01-b38f9320cc10"
+      "branch": "test/harness-code-real-source-dryrun-20261119",
+      "expected_sha": "34e3598672c572a70da691408d11cb7fbbd92e14",
+      "archive_tag": "archive/oxygen-cleanup-20261106/test-harness-code-real-source-dryrun-20261119-34e3598672c5"
     },
     {
-      "branch": "issue-758-manual-harness-scan",
-      "expected_sha": "44384ab51c730578359d0815a16f6df09719e09b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-manual-harness-scan-44384ab51c73"
+      "branch": "issue-708-code4-native-evidence-ci-only",
+      "expected_sha": "909b878af143501fda67a98bceca21c519b8190c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-708-code4-native-evidence-ci-only-909b878af143"
     },
     {
-      "branch": "issue-758-hu-metric-analysis-boundary",
-      "expected_sha": "7c1250173f90ad323d3c5fdd13febf32c49bb292",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-hu-metric-analysis-boundary-7c1250173f90"
+      "branch": "issue-758-harness-scan-dispatch",
+      "expected_sha": "4bdc3c47b1b801c8078276105ee12de55bb8ad11",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-scan-dispatch-4bdc3c47b1b8"
     }
   ]
 }

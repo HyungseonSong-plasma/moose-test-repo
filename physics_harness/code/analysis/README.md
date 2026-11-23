@@ -11,10 +11,12 @@ diagnostic source collectors. It uses the existing immutable `GraphSnapshot`,
 | `assessment.py` | Evidence-typed, fail-closed conditional review disposition and explicit verification obligations |
 | `parameter_contract.py` | MOOSE input-to-C++ parameter comparison, separately scoped with unchanged source-only verdicts; original `assessment` exports retained |
 | `diff.py` | Compare stable Node/Edge semantics, source-bound Evidence changes, and Scope/coverage changes |
-| `adapters/understandability_adapter.py` | Transport Diagnostics data and optional human observations into the general metrics engine |
-| `adapters/understandability_interpretation.py` | Interpret code-understandability indicators and caveats; no metric formulas or auto-refactor verdict |
+| `adapters/lucidity_adapter.py` | Transport Diagnostics data and optional human observations into the general metrics engine |
+| `adapters/lucidity_interpretation.py` | Interpret code-understandability indicators and caveats; no metric formulas or auto-refactor verdict |
 
-`adapters/` groups model/domain-specific Analysis integrations; `diagnostics/providers/` already groups language/source-specific collectors. The original `analysis.understandability_*` module imports remain as compatibility re-exports, as does the package-level Analysis API. `parameter_contract.py` retains its current owner in this narrowly scoped move.
+`adapters/` contains specialized integrations. Old `analysis.lucidity_*` and
+`analysis.understandability_*` module entry points are compatibility re-exports;
+the public Analysis API and Diagnostics providers remain unchanged.
 
 ## Reuse
 

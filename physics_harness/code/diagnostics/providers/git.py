@@ -6,7 +6,7 @@ import hashlib
 from pathlib import Path
 import subprocess
 
-from ..collector import SourceRecord
+from ..collector import SourceRecord, SourceInput
 from ..request import ScanRequest, normalized_path
 
 
@@ -70,6 +70,42 @@ class GitSourceProvider:
         if actual != record.blob_sha or len(data) != record.size:
             raise ValueError("GIT_SOURCE_BLOB_MISMATCH")
         return data
+
+    def read_at_revision(self, revision: str, path: str) -> SourceInput:
+        """Read one regular tracked file from an exact local Git commit tree.
+
+        Historical commits must exist in the local object database. A shallow
+        clone missing the commit fails closed; never reads the worktree as a
+        fallback or fetches remote history implicitly. This is *source*
+        provenance, not evidence of behavioral/semantic equivalence.
+        """
+        import re
+        if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+            raise ValueError("INVALID_HISTORY_REVISION")
+        if not isinstance(path, str) or path.startswith(":("):
+            raise ValueError("INVALID_HISTORY_PATH")
+        try:
+            if normalized_path(path) != path:
+                raise ValueError("INVALID_HISTORY_PATH")
+        except (TypeError, ValueError) as exc:
+            raise ValueError("INVALID_HISTORY_PATH") from exc
+        if self._git("cat-file", "-t", revision).strip() != b"commit":
+            raise ValueError("HISTORY_OBJECT_NOT_COMMIT")
+        rows = [row for row in self._git(
+            "ls-tree", "--full-tree", "-l", "-z", revision, "--", path
+        ).split(b"\0") if row]
+        if len(rows) != 1:
+            raise ValueError("HISTORY_SOURCE_UNRESOLVED")
+        try:
+            meta, filename = rows[0].split(b"\t", 1)
+            mode, kind, sha, size = meta.decode("ascii").split()
+            observed = filename.decode("utf-8", "strict")
+            if observed != path or kind != "blob" or mode not in {"100644", "100755"}:
+                raise ValueError("HISTORY_NOT_REGULAR_FILE")
+            record = SourceRecord(path=path, blob_sha=sha.lower(), mode=mode, size=int(size))
+        except (ValueError, UnicodeError) as exc:
+            raise ValueError("HISTORY_SOURCE_INVALID") from exc
+        return SourceInput(record, self.read(record))
 
 
 __all__ = ["GitSourceProvider"]

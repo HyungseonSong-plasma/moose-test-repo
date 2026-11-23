@@ -1,32 +1,30 @@
-"""Specialized Analysis adapter placement preserves existing import contracts."""
+"""Specialized Analysis adapter placement preserves canonical and legacy exports."""
 
-from physics_harness.code import analysis
+from physics_harness.code import analysis, diagnostics
 from physics_harness.code.analysis import adapters
-from physics_harness.code.analysis import understandability_adapter as old_adapter
-from physics_harness.code.analysis import understandability_interpretation as old_interpretation
-from physics_harness.code.analysis.adapters import understandability_adapter as new_adapter
-from physics_harness.code.analysis.adapters import understandability_interpretation as new_interpretation
-from physics_harness.code import diagnostics
+from physics_harness.code.analysis import lucidity_adapter, lucidity_interpretation
+from physics_harness.code.analysis import understandability_adapter, understandability_interpretation
+from physics_harness.code.analysis.adapters import lucidity_adapter as implementation_adapter
+from physics_harness.code.analysis.adapters import lucidity_interpretation as implementation_interpretation
 from physics_harness.code.diagnostics.providers import cpp, git, moose_input, python_ast, workflow
 
 
-def test_understandability_exports_identical_across_old_and_new_paths():
-    assert old_adapter.assess_code_understandability is new_adapter.assess_code_understandability
-    assert old_adapter.summarize_understandability is new_adapter.summarize_understandability
-    assert old_interpretation.interpret_understandability_indicators is new_interpretation.interpret_understandability_indicators
-    assert analysis.assess_code_understandability is adapters.assess_code_understandability
-    assert analysis.summarize_understandability is adapters.summarize_understandability
-    assert analysis.interpret_understandability_indicators is adapters.interpret_understandability_indicators
+def test_all_analysis_import_paths_preserve_public_object_identity():
+    for module in (analysis, adapters, lucidity_adapter, understandability_adapter):
+        assert module.assess_code_understandability is implementation_adapter.assess_code_understandability
+        assert module.summarize_understandability is implementation_adapter.summarize_understandability
+    for module in (analysis, adapters, lucidity_interpretation, understandability_interpretation):
+        assert module.interpret_understandability_indicators is implementation_interpretation.interpret_understandability_indicators
 
 
-def test_implementation_owned_by_adapters_not_compatibility_shims():
+def test_adapters_own_implementations_not_wrapper_modules():
     for obj in (adapters.assess_code_understandability,
                 adapters.summarize_understandability,
                 adapters.interpret_understandability_indicators):
         assert obj.__module__.startswith("physics_harness.code.analysis.adapters.")
 
 
-def test_diagnostics_provider_public_entrypoints_unchanged():
+def test_diagnostics_provider_exports_unchanged():
     assert diagnostics.CppSourceCollector is cpp.CppSourceCollector
     assert diagnostics.GitSourceProvider is git.GitSourceProvider
     assert diagnostics.MooseInputCollector is moose_input.MooseInputCollector
