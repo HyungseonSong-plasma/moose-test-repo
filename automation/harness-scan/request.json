@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-poisson-g1-pytest-graph-20261123",
-  "source_sha": "aafa31d7bad265354c9dc18648dcc474e88ef187",
+  "request_id": "issue652-poisson-g2-src-test-20261123",
+  "source_sha": "6d0508ec89756f67ab21b4419b6d71fd9f81b490",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
@@ -12,8 +12,7 @@
     "experiments/Issue402_plasma_dsl_g1/*.json",
     "tests/test_issue652*.py",
     "tests/test_issue633*.py",
-    "ci/guards/*.py",
-    ".github/workflows/*.yml"
+    "ci/guards/*.py"
   ],
   "excludes": [],
   "collectors": [
