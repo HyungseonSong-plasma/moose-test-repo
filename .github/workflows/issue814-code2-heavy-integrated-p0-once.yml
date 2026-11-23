@@ -25,8 +25,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD:physics_app)" = "55da050e7cf4dd569607c3d45b59f7c617be301d"
-          test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "caff85665b577d17d4d86222f2b58866f9769bf5"
-          test "$(git rev-parse HEAD:tests/test_issue774_newonly_fvkernel_retirement.py)" = "e89bc304f492400e8ca035339357f9d914f41b93"
+          test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "0369ffd11a4a7cc7cd8805024ac2d496195f2f6c"
+          test "$(git rev-parse HEAD:tests/test_issue774_newonly_fvkernel_retirement.py)" = "27065082d067e338ba2f3cf2059935fea263c877"
           git merge-base --is-ancestor "bfcc95189f3ab8648599b8e946508a4e2f0507ad" HEAD
           test ! -e physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C
           test ! -e physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h
