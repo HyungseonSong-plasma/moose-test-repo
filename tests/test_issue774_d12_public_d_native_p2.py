@@ -39,7 +39,7 @@ class D12NativeP2Controls(unittest.TestCase):
         self.assertEqual(len(outcome["log_sha256"]), 64)
 
     def test_safe_fixed_native_error_diagnostics_are_not_full_logs(self):
-        log = "*** ERROR ***\\nChemistry material transport unknown parameter in /private/token/456\\n"
+        log = "*** ERROR ***\nChemistry material transport unknown parameter in /private/token/456\n"
         outcome = classify_native(1, log)
         self.assertFalse(outcome["syntax_ok"])
         self.assertTrue(outcome["safe_error_categories"]["chemistry_contract"])
