@@ -84,7 +84,11 @@ def summarize_clean_registration_trace(
         family_counts[tokens[1]] += 1
         type_counts[(tokens[1], tokens[3])] += 1
         events += 1
-    if (markers != 1 or not isinstance(reported_event_count, int)
+    # The preload constructor can execute in more than one loader process.
+    # Require evidence that the observer loaded, but never infer a single
+    # process from a shared trace. The P05 caller independently checks the
+    # per-object registration uniqueness and exact event count.
+    if (markers < 1 or not isinstance(reported_event_count, int)
             or events != reported_event_count or not family_counts["FVKernel"]):
         raise ValueError("REGISTRATION_EVENT_COUNT_OR_OBSERVER_MARKER_MISMATCH")
 
