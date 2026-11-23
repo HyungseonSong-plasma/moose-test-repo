@@ -2535,7 +2535,23 @@ jobs:
           out.mkdir(parents=True,exist_ok=True)
           for case in ("417","941"):
               folder=staged/"scratch"/case/"experiments"/"Issue395_powered_chemistry_ladder"
+              public_root=staged/"scratch"/case
+              def public_manifest():
+                  return {p.relative_to(public_root).as_posix():sha(p)
+                          for p in public_root.rglob("*") if p.is_file() and not p.is_symlink()}
+              before=public_manifest()
+              assert len(before)==22, "PUBLIC_D_SOURCE_SUPPORT_FILE_COUNT_DRIFT"
               rec=stage_public_d_physics(folder,case,p4[case]["ordered_inputs"],original)
+              after=public_manifest()
+              new_json=(folder/"chemistry"/f"public_d_s6_{case}_physics.json").relative_to(public_root).as_posix()
+              changed={
+                  (folder/"migrated_continuity.i").relative_to(public_root).as_posix(),
+                  (folder.parent/"Issue91_real_qvt_r3/r3_e0/electron_moments.txt").relative_to(public_root).as_posix(),
+              }
+              assert set(after)==set(before)|{new_json}, "PUBLIC_D_SUPPORT_FILE_SET_DRIFT"
+              assert {n for n in before if before[n]!=after[n]}==changed, "PUBLIC_D_SUPPORT_CHANGED_FILE_SET_DRIFT"
+              assert len(after)==23 and all(before[n]==after[n] for n in before if n not in changed)
+              print("PUBLIC_D_COMPLETE_SUPPORT_DELTA_PASS",case)
               assert rec["original_table_sha256"]==expected and rec["original_table_rows"]==100
               assert rec["expected_physics_ion_kernel_count"]==12
               assert rec["expected_physics_ion_bc_count"]==12

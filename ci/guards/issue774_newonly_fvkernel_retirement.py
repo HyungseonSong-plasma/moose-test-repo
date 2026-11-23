@@ -139,6 +139,7 @@ def check_ci_tree(root: Path, tracked: dict) -> dict:
         "python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check",
         "python3 -m unittest discover -s tests -p test_fvkernel_native_usage_census.py -v",
         "python3 -m unittest discover -s tests -p test_issue774_newonly_fvkernel_retirement.py -v",
+        "PUBLIC_D_COMPLETE_SUPPORT_DELTA_PASS",
     ):
         require(current.count(marker.encode()) == 1, "CI_CONTRACT_STEP_MISSING:" + marker)
     # No new broad CI owner: the retirement test is part of the existing P6
