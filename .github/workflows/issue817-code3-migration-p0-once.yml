@@ -42,8 +42,6 @@ jobs:
           python3 -m unittest discover -s tests -p test_issue774_newonly_fvkernel_retirement.py -v 2>&1 | tee evidence/d9_source_inventory.log
           python3 -m unittest discover -s tests -p test_fvkernel_native_usage_census.py -v 2>&1 | tee evidence/native_factory_census.log
           python3 ci/guards/issue817_code3_retirement.py --expected-head "$SOURCE_HEAD" --output evidence/issue817_postcut_receipt.json
-          test ! -e physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C
-          test ! -e physics_app/include/fvkernels/PhysicsFVElectronReactionSource.h
           python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v 2>&1 | tee evidence/code3_historical_fixture.log
           python3 -m unittest discover -s tests -p test_issue817_code3_consumer_pairs.py -v 2>&1 | tee evidence/code3_consumer_pairs.log
           python3 -m unittest discover -s tests -p test_issue817_code3_s5r_normalized.py -v 2>&1 | tee evidence/code3_normalized_ledger.log
