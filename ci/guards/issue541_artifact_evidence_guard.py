@@ -48,6 +48,7 @@ CHECK_OWNERS = {
     "Require complete CORE P0 artifact evidence": ("code", "--check-core-p0"),
     "Require source-bound CORE Native P1/P2 artifact evidence": ("native", "--check-core-native"),
     "Require actual native regression evidence before success": ("native", "--check-regression"),
+    "Require explicit Public D KEEP_HOLD evidence, not Native D PASS": ("native", "p6_legacy_hold_receipt.py --mode public"),
 }
 
 

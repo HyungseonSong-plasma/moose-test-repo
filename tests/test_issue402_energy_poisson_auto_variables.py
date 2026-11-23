@@ -10,7 +10,8 @@ def test_energy_autogeneration_requires_positive_molar_energy():
     for token in ('"initial_molar_energy_density_eV"', "std::isfinite(initial)",
                   "initial <= 0.0", "variableExists(variable",
                   "getProblem().addVariable(", "getProblem().addInitialCondition(",
-                  'std::log(getParam<Real>("initial_molar_energy_density_eV"))',
+                  'std::log(initial_energy)',
+                  '1.5 * (*electron.temperature_eV) * (*electron.initial_number_density)',
                   '"add_variables_physics"', '"add_ics_physics"'):
         assert token in code
 
@@ -43,3 +44,15 @@ def test_p2_decks_and_legacy_variable_reuse():
     run = (CASE / "run_native_binding_smoke.sh").read_text()
     assert "PLASMA_AUTO_ENERGY_POTENTIAL_P2_PASS" in run
     assert "PLASMA_INVALID_AUTO_ENERGY_POTENTIAL_REJECTED" in run
+
+def test_issue633_energy_closure_is_i_owned_and_p2_guards_current_diagnostic():
+    energy = (APP / "DDEnergyEq.C").read_text()
+    smoke = (CASE / "run_native_binding_smoke.sh").read_text()
+    native = (ROOT / "physics_app/ci/check_issue402_dd_json_plasma_boundary_p2.py").read_text()
+    assert 'MooseEnum("fluid", "fluid")' in energy
+    assert "species.e initial_number_density and positive temperature_eV in JSON" in energy
+    assert "requires either explicit .i initial_molar_energy_density_eV" in smoke
+    assert 'FULL_PHYSICS_JSON_ENERGY_CLOSURE_OPTIONAL' in native
+    assert 'FULL_PHYSICS_EXPLICIT_ENERGY_FLUID' in native
+    assert 'FULL_PHYSICS_INVALID_ENERGY_CLOSURE' in native
+    assert 'FULL_PHYSICS_MISSING_E_ENERGY_FLUID' not in native

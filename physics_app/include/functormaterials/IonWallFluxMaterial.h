@@ -33,11 +33,11 @@
  * should evaluate them with a sided FaceArg so that the same physical face
  * flux is shared by all consumers.
  */
-class PhysicsIonWallFluxMaterial : public FunctorMaterial
+class IonWallFluxMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  PhysicsIonWallFluxMaterial(const InputParameters & parameters);
+  IonWallFluxMaterial(const InputParameters & parameters);
 
 protected:
   const Moose::Functor<ADReal> & _ion_number_density;

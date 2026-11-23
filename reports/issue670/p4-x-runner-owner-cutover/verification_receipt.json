@@ -1,0 +1,124 @@
+{
+  "schema": "issue670.P4_X.owner_conflict.production_stage_integration.v1",
+  "task_id": "P4-X",
+  "issue_number": 670,
+  "scope": "Only seven verified owner conflicts, integrated to actual production --newonly stage after P2 and P3-X; does not yet represent P4-X all 35 receipts or Native P2.",
+  "status": "P4X_STAGE1_7_PROVIDER_CONFLICTS_FIXED_IN_SOURCE_RUNNER__NATIVE_AND_FULL_P4X_HOLD",
+  "source": {
+    "base_PR": 665,
+    "base_head_at_branch_creation": "65794d5f33449499349b97b7eaba13e1c4821688",
+    "original_11_layer_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "P3_X_actual_CI": 44257739203,
+    "P3_X_artifact": 14406746397,
+    "P3_X_actual_archive_SHA256": "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111",
+    "P3_X_417_941_11_layer_SHA": "11/11_EACH_CASE_REHASHED",
+    "previous_stage1_partial_commit": "cf51de8ed71e34f62e14e12e46ae9c30c023708f",
+    "previous_stage1_C0_after_sha256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490"
+  },
+  "implemented_files": [
+    {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py",
+      "git_blob_sha": "a3f9d93ea1095c9d00053e5104bb7326d1af8f31"
+    },
+    {
+      "path": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py",
+      "git_blob_sha": "d2091291161033a9662b0d583567f9c35d26c006"
+    },
+    {
+      "path": "ci/check_issue670_p4_x_owner_cutover.py",
+      "git_blob_sha": "ecbee86ff4fbac83366fcc72b221df81e79f2586"
+    }
+  ],
+  "cutover_order": [
+    "P2 exact 26 Native ion owner retirement",
+    "P3-X exact 8 electron FEM BC +2 electron Functor retirement",
+    "P4-X exact seven source FunctorMaterial owner edits, before layer11 stage",
+    "Stage 11th Physics overlay, JSON, table; preserve 11-layer ordering"
+  ],
+  "before_after": {
+    "each_case": {
+      "before_C0_SHA256": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "after_C0_SHA256": "2c3bab8a8e28b360dcd54775d91ba13c97401364c709944bc21d6bf0b6d79490",
+      "exact_old_functor_block_SHA_verified": 7,
+      "old_functor_materials_removed": 6,
+      "constants_changed_to_carrier_only": 1,
+      "old_mobility_and_diffusivity_properties_retired": 6,
+      "original_carrier_one_preserved": "1.0",
+      "expected_generated_new_ion_transport_materials": 3,
+      "expected_generated_new_ion_wall_flux_materials": 3,
+      "expected_generated_new_surface_current_materials": 3,
+      "other_10_staged_i_layers_byte_identical": true,
+      "legacy_ion_physical_density_aliases_preserved": [
+        "n_i_physical",
+        "n_m_physical",
+        "n_op_physical"
+      ],
+      "retained_consumers_preserved": [
+        "charge_number_density",
+        "charge_density_C_m3",
+        "sigma_s",
+        "sigma_wafer",
+        "sigma_focus_ring",
+        "Poisson",
+        "RF",
+        "neutral",
+        "pressure"
+      ],
+      "all_11_input_SHA_recomputed_before_mutation": 11
+    },
+    "cases": [
+      "S6-417",
+      "S6-941"
+    ],
+    "old_ion_FV_native_owners_retired_each_case": 26,
+    "old_electron_BC_functor_owners_retired_each_case": 10
+  },
+  "independent_test": {
+    "actual_P3_X_artifact_download_and_CRC": "PASS",
+    "local_standalone_Python_source_sha256": "78e4bbaaf0c23c25c6e4ac1983c1500cc689453b6e627364aee656d9bd4b51b5",
+    "local_offline_verification_file_sha256": "6362ca271e5711aa8087b8aa993c799eac10761ce8ce1e68eee6ad934f5c6885",
+    "local_reproducer_test_script_SHA256": "feffd879bb483ead11762f6d10cdfb08088e7992312655c4726aec03cedc369b",
+    "source_only_negative_controls": "30_OF_30_REJECTED",
+    "controls_by_case": 15,
+    "controls": [
+      "carrier_one_tamper",
+      "other_layer_tamper",
+      "wall_missing",
+      "current_missing",
+      "duplicate_wall",
+      "transport_source_tamper",
+      "Om_charge_inverted",
+      "Op_mobility_changed",
+      "electron_current_misbound",
+      "wafer_group_missing",
+      "ion_BC_missing",
+      "BC_factory_changed",
+      "11_layer_missing",
+      "wrong_input_order",
+      "manifest_C0_SHA_tamper"
+    ],
+    "final_stage_C0_exact_expected_SHA_verified": true,
+    "repository_test_script_committed": "ci/check_issue670_p4_x_owner_cutover.py",
+    "repository_test_script_run_on_CI": "NOT_RUN",
+    "runtime_Warehouse_or_P05_native_test": "NOT_RUN"
+  },
+  "important_runtime_gates": {
+    "P4_X_7_conflict_source_stage": "INTEGRATED_IN_FEATURE_BRANCH_READY_FOR_CI",
+    "P4_X_all_35_receipt_producer_consumer_recheck": "PENDING",
+    "P4_X_main_ion_density_and_Poisson_semantic_integration": "PENDING",
+    "P4_X_S6_main_mesh_dependency": "MISSING_FROM_PRIOR_NATIVE_DIAGNOSTIC",
+    "P5_0_exact_head_PhysicsApp_binary": "NOT_RUN",
+    "P5_417_941_same_binary_check_input": "NOT_RUN",
+    "P5_native_12_ion_Kernels_12_ion_BCs": "NOT_RUN",
+    "D8_live_consumer": "HOLD",
+    "science": "SCIENCE_HOLD"
+  },
+  "preservation": {
+    "historical_10_layer_archives_mutated": false,
+    "source_input_zip_mutated": false,
+    "private_EI_rate_bytes_modified": false,
+    "main_mutated": false,
+    "PR665_mutated": false,
+    "native_science_timestep_run": false
+  }
+}

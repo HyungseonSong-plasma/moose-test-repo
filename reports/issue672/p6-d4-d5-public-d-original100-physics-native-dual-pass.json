@@ -1,0 +1,112 @@
+{
+  "schema": "issue672.p6_d4_d5.public_d_original_100row_physics_p2.v1",
+  "decision": "MIGRATE_PUBLIC_D_TO_GENERATED_PHYSICS_CHEMISTRY; DO_NOT_CREATE_HISTORICAL_PUBLIC_D_COMPAT_P2_LANE",
+  "source": {
+    "pr665_parent": "3b447b67283dac3b1d5e592ed3db6e56754c3d0e",
+    "new_pr665_head_observed": "fd21e2e31c48d0fa495f0830b52a70fb06815514",
+    "subsequent_parent_changes": "CI/template/guards/tests only; no Physics C++ changes",
+    "helper_blob": "2ca7105616eef280838e2308966d56e8944af6d9",
+    "test_blob": "89ea2e8bf08b2a75a83ab1a937a2ac829b60a1b7",
+    "Chemistry_C_git_blob": "045de080e3d836d75495b1749d75d5d3deea2330",
+    "DDContinuity_C_git_blob": "13b25226d463b8fd1e4acaee16358f8f17d710a0"
+  },
+  "contract": {
+    "original_electron_100row_SHA256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "original_electron_git_blob": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+    "historical_mesh_42row_is_separate": true,
+    "ions": [
+      "O2p +1",
+      "Om -1",
+      "Op +1"
+    ],
+    "ion_mobility_SI": 10,
+    "ion_diffusion_SI": 0.25851999786435537,
+    "reactions_per_case": 8,
+    "retired_ion_FV_per_case": 26,
+    "retired_electron_FEM_and_functor_per_case": 10,
+    "retired_duplicate_materials_per_case": 6,
+    "carrier_one_preserved": true,
+    "staged_layers_per_case": 11,
+    "expected_generated_ion_FVKernels": 12,
+    "expected_generated_ion_FVBC": 12,
+    "expected_generated_electron_FEMBC": 8,
+    "typed_registration_new100": "NOT_CAPTURED; earlier exact 520 Physics C++ traced 12+12+8 for New-only 42-row",
+    "old_compat_runner": "NOT_CREATED"
+  },
+  "P0": {
+    "contract_tests_run": 44351706480,
+    "real_staging_run": 44353380924,
+    "real_staging_artifact": 14448708427,
+    "real_staging_zip_sha256": "2a01ac729e5386214ac1d148d1e51c8e750c8102232912cfcadabf5bd7c25ecf",
+    "both_cases": "SOURCE_STAGE_PASS"
+  },
+  "Native": [
+    {
+      "run": 44354230639,
+      "source": "5c7c64e6d089815f7c747ddf9d8774756ad4d106",
+      "job": 134977864548,
+      "conclusion": "SUCCESS",
+      "artifact": 14453620080,
+      "artifact_zip_sha256": "9ebea15f02fc1e4e21d8ab8d395480addebaad28df67769685369a493e4cee9c",
+      "binary_sha256": "35aba69374914309857e291694f54762e558cd2ad991498396070dc1a8555467",
+      "cases": {
+        "417": "exit0 Syntax OK",
+        "941": "exit0 Syntax OK"
+      }
+    },
+    {
+      "run": 44355898653,
+      "source": "8fdb6df7029ae52e90e4483196a4f6d9b1066a66",
+      "job": 134983804033,
+      "conclusion": "SUCCESS",
+      "artifact": 14452537009,
+      "artifact_zip_sha256": "8a880f9e906a6599a065f95350df353badac7e0cd0d8ca08eb0c82d68f63806f",
+      "stage_artifact": 14451757105,
+      "stage_zip_sha256": "645ec0dc5332c592dea5be649c9aa94adf2f1a2a20784c95fc10c4506fcc708c",
+      "binary_sha256": "62c5dd1129558cd6b6a721a28486f3abe55cabeee8c7add5effe4b38870ce697",
+      "two_app_libraries_sha256": {
+        "libphysics-opt.so.0": "see native build-identity.json",
+        "libphysics_test-opt.so.0": "see native build-identity.json"
+      },
+      "cases": {
+        "417": {
+          "exit": 0,
+          "syntax_ok": true,
+          "log_sha256": "16e02b03c05547cef89c410f151d781c4fffd4f2cb3c111387790f0a4d78f528"
+        },
+        "941": {
+          "exit": 0,
+          "syntax_ok": true,
+          "log_sha256": "dea51f75502c1b71101e27b9e650de17eccab767c3eb3b6f8611ad1feb6780f2"
+        }
+      }
+    }
+  ],
+  "security": {
+    "one_binary_per_run_for_both_cases": true,
+    "pinned_oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "original_rate_files_per_case": 5,
+    "protected_rate_archive_uploaded": false,
+    "protected_tmpfs_cleanup": "PASS_BOTH_RUNS",
+    "no_cpp_or_p05_change": true,
+    "no_P3_P4": true,
+    "science": "SCIENCE_HOLD"
+  },
+  "independent_verification": {
+    "real_native_zip_crc": "PASS_BOTH",
+    "last_native_zip_sha256": "8a880f9e906a6599a065f95350df353badac7e0cd0d8ca08eb0c82d68f63806f",
+    "last_result": "PASS_TWO_NATIVE_P2_SAME_ELF_ORIGINAL_100ROW",
+    "verifier_sha256": "37506010c3da71204653861225b1311cd2ac13f9a6045be29477cac3732fa9ca"
+  },
+  "remaining": {
+    "P6_D4": "PASS",
+    "P6_D5": "PASS_2_OF_2",
+    "historic_public_D_compatible_runner": "NOT_CREATED",
+    "P6_X_CI_ROUTING": "HOLD_OLD_PUBLIC_D_DIAGNOSTIC_CURRENTLY_STILL_PRESENT_IN_CI; REPLACE_WITH_AUTHORIZED_NEW_PHYSICS_P2_NOT_SKIP",
+    "exact_new_latest_PR665_CI": "NOT_RUN_AFTER_CI_ONLY_ADVANCES",
+    "D8_RF_WALL_CURRENT_NEW100": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD",
+    "MERGE": "HOLD"
+  },
+  "scope": "Only this isolated source/test/receipt; temporary validation workflow deleted, PR665 and main not edited."
+}

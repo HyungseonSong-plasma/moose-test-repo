@@ -1,0 +1,207 @@
+{
+  "schema": "issue669.p3_x.source_only.integration_verification.v4",
+  "task_id": "P3-X",
+  "source_head": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+  "status": "PASS_P3_X_PRODUCTION_RUNNER_SOURCE_ONLY_30_RECEIPTS_10_OLD_ELECTRON_OWNERS_REMOVED_BOTH_CASES__HOLD_NATIVE",
+  "scope": "Actual PR665-based disposable Scratch source-only P2→P3-X integration. Re-read all 30 task-isolated receipt refs and preserve original source/Artifact SHA; source deletion is exact 8 FEM BC +2 FunctorMaterial per case. Native C++ Warehouse and science are separate.",
+  "worker_evidence": {
+    "requested_slots": 30,
+    "located_unique_source_bound_receipts": 30,
+    "not_located": 0,
+    "missing_slots": [],
+    "index": "reports/issue669/p3-x/worker_receipt_index.json",
+    "index_git_blob": "b70e34748b8987e1c21174171c5b673b85f5a37e",
+    "verified_legacy_tasks": 26,
+    "verified_new_tasks": 4,
+    "task_isolated_new_task_ids": [
+      "P3-T5",
+      "P3-G2",
+      "P3-G6",
+      "P3-N3"
+    ],
+    "worker_source_status": "30/30 source receipts present; original 26 pinned to 9c15, 4 verified against actual new P3X static artifact; no Native automatic promotion."
+  },
+  "input_evidence": {
+    "p1_hybrid_11_layer": {
+      "ci_run": 44180190753,
+      "artifact_id": 14372315897,
+      "zip_sha256": "962d71a4689efac7b2fd24e10bc82c912a0ac5e5956aaaf277c8f0f6526e2620"
+    },
+    "p2_native_ion_retired_11_layer": {
+      "ci_run": 44196762787,
+      "artifact_id": 14379920938,
+      "zip_sha256": "f940af496d12a4cf87903237a912922d42dd1308a38915dd38cb3ca2da0dd6a4"
+    },
+    "p2_manifest_source_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "case_evidence": {
+      "417": {
+        "p1_file_sha_verified": 11,
+        "p2_file_sha_verified": 11,
+        "old_native_kernel_removed": 14,
+        "old_native_bc_removed": 12,
+        "old_native_ion_remaining": 0,
+        "changed": 5,
+        "byte_identical_unchanged": 6,
+        "old_electron_fem_bc_preserved": 8,
+        "newonly_json_11th_overlay_bound": false
+      },
+      "941": {
+        "p1_file_sha_verified": 11,
+        "p2_file_sha_verified": 11,
+        "old_native_kernel_removed": 14,
+        "old_native_bc_removed": 12,
+        "old_native_ion_remaining": 0,
+        "changed": 5,
+        "byte_identical_unchanged": 6,
+        "old_electron_fem_bc_preserved": 8,
+        "newonly_json_11th_overlay_bound": false
+      }
+    },
+    "p2_production_newonly": {
+      "source_pr": 674,
+      "base_pr": 665,
+      "pr674_head": "4185d04ccded7fe1f6b6da8a5ecc2d0cdf339d75",
+      "run_id": 44199587771,
+      "artifact_id": 14380831538,
+      "zip_sha256": "3e6468c6fa96c41387415d88b9f9b7b2d16bdc622ea469e1bb88840132f33683",
+      "cases": {
+        "417": {
+          "layer_files_sha_recomputed": 11,
+          "ion_owners_removed": 26,
+          "json_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+          "overlay_sha256": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
+          "table_rows": 42
+        },
+        "941": {
+          "layer_files_sha_recomputed": 11,
+          "ion_owners_removed": 26,
+          "json_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+          "overlay_sha256": "76f52e0aa5e25bb094ca1946f5cb820ccbf5e64c1abc54fb4f1f5e45b23eacac",
+          "table_rows": 42
+        }
+      },
+      "electron_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+      "source_only": true,
+      "native_P2": "NOT_RUN"
+    },
+    "p3_x_production_ci": {
+      "run": 44256823392,
+      "head_sha": "556f104d62cce635dcf7b59bf6966400b0b1fa18",
+      "conclusion": "SUCCESS",
+      "artifact_id": 14405784430,
+      "artifact_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+      "source_only": true,
+      "artifact_file_count": 179,
+      "negative_ion_preflight_rejected": 8,
+      "negative_electron_owner_json_pressure_rejected": 28,
+      "independently_recomputed_file_hashes": 22,
+      "independently_recomputed_removed_block_sha": 72,
+      "non_target_bytes_preserved": true,
+      "stage_source": "prepare_s6_run_input.py --newonly → retire_s6_ion_fv_owners.py → retire_s6_electron_newonly_owners.py",
+      "removed_before_P2_ion_per_case": 26,
+      "removed_after_P3_electron_per_case": 10,
+      "c0_sha256_both_cases": "d78a084434eca25b9ece07138c49bf93800845f5947f5ec327bfc81334daa17a",
+      "mean_energy_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
+    }
+  },
+  "independent_local_audit": {
+    "script": "p3_x_verify_source_stage.py",
+    "inventory_json_sha256": "4966a472145ea7cde3c53235f5d26278257d1f3f216aaca88594c97356c91ce2",
+    "edges_json_sha256": "f9950b29549b401836960502a24a457e5f5651dd408e3416c6b427af1c1b5a5e",
+    "receipt_json_sha256": "6061025b1763113aba47a1b229645baa5e681f8b02f0f0f081c2622747eb5ce3",
+    "non_target_original_bytes_preserved": true,
+    "negative_controls_rejected": 8,
+    "negative_controls_total": 8,
+    "negative_fixture_case": "417",
+    "historical_archive_modified": false,
+    "private_rate_bytes_read": false
+  },
+  "newonly_contract": {
+    "json_417_sha256": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "json_941_sha256": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "electron_transport": {
+      "type": "lookup",
+      "unit": "reduced",
+      "bounds_policy": "clamp",
+      "file": "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+    },
+    "prepared_42_row_electron_table_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    "committed_default_100_row_table_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "actual_runtime_staged_table_sha_verified": false,
+    "hybrid_vs_newonly_electron_bc_collision_status": "POTENTIAL_DUPLICATE_WALL_CONTRIBUTION_HOLD"
+  },
+  "gates": {
+    "P1_E_SOURCE": "PASS_29_OF_29",
+    "P2_NATIVE_ION_SOURCE_RETIREMENT": "PASS_26_TO_0_EACH_CASE",
+    "P2_NEWONLY_JSON_AND_OVERLAY_STAGE": "PASS_417_AND_941",
+    "P3_X_WORKER_RECEIPTS": "PASS_30_OF_30_SOURCE_SCOPED",
+    "P3_X_PRODUCTION_CUTOVER": "PASS_EIGHT_OLD_E_BC_AND_TWO_FUNCTOR_BLOCKS_DELETED_EACH_CASE",
+    "P3_X_FULL_STATIC_BYTE_RECONSTRUCTION": "PASS_72_OLD_BLOCKS_AND_22_FILES",
+    "P3_X_NEGATIVE_TESTS": "PASS_28_OF_28_P3X_PLUS_8_OF_8_P2",
+    "P3_X_ELECTRON_BC_AND_FUNCTOR_NATIVE_SINGLE_OWNER": "HOLD_NATIVE_WAREHOUSE_UNINSTANTIATED",
+    "P3_X_DYNAMIC_RF_NEUTRAL_PRESSURE_CONSUMER": "HOLD_RUNTIME_P5",
+    "P4_ION_SOURCE_CONSUMER_HANDOFF": "HOLD_P4_X",
+    "P5_NATIVE_P2": "NOT_RUN",
+    "Native_P3": "NOT_RUN",
+    "Native_P4": "NOT_RUN",
+    "SCIENCE": "SCIENCE_HOLD"
+  },
+  "integration_decision": "P3_X_SOURCE_ONLY_INTEGRATED_ON_TASK_BRANCH__STACKED_PR_AND_NATIVE_WAREHOUSE_PENDING",
+  "security": "No private rate bytes in outputs; no original/baseline/main/PR665 modifications; no native execution, no workflow skips or dont_create_kernels bypass",
+  "p3_x_shadow_proposal": {
+    "status": "PASS_SOURCE_ONLY_DISPOSABLE_COPY__NOT_IN_REPO_OR_PRODUCTION_RUNNER",
+    "cases": [
+      "417",
+      "941"
+    ],
+    "old_electron_BCs_removed_per_case": 8,
+    "old_electron_functor_producers_removed_per_case": 2,
+    "changed_11_layer_files_per_case": 1,
+    "unchanged_layer_files_per_case": 10,
+    "rejected_mutant_count": 8,
+    "expected_generated_electron_BC_count": 8,
+    "expected_generated_functors": [
+      "n_e_physical",
+      "e_wall_number_flux"
+    ],
+    "newonly_json_and_electron_table_untouched": true,
+    "local_verifier_sha256": "ded931704d30561027cb156f1ebfd6c1ff6f6cbb7d117d9fa7c06a2a9cfc6442",
+    "local_shadow_receipt_sha256": "bef062c89b7e2f4947f63915675917671aceb8c7f65dd2ba8dfa6ad0e5e869f4",
+    "local_shadow_zip_sha256": "86867d92a1260d4c13fecf10612c39169f2ebf970a1effb60d56d9433ddb5eb3",
+    "native_warehouse_single_owner_proven": false
+  },
+  "important_findings": [
+    "PR674 real 417/941 New-only overlay+JSON+42-row prepared electron table source stage separately independently rehashed.",
+    "Each real New-only staged C0 retains 8 electron FEM BC owners and 2 FunctorMaterials which conflict with Physics/JSON generated owner contracts; all 10 can be exact-sha retired in a disposable-source shadow, but runtime uniqueness is untested.",
+    "Source-level duplicate electron BC/WallFlux collision resolved in actual Production Runner after P2 ion retirement, independently reconstructed from all archived block bytes; runtime Warehouse still unproven."
+  ],
+  "blocked_gates": [
+    "Do not claim C++ Warehouse 8 generated electron BC/2 Functor singleton without P5 native --check-input",
+    "P4-X ion source/Poisson/wall dynamic consumers not integrated; P5 must follow P4",
+    "P3-X task branch code not yet merged into Draft PR #665; main merge forbidden",
+    "D8 New-only dynamic late-binding and SCIENCE_HOLD remain"
+  ],
+  "current_source_epoch": {
+    "historic_11_layer_pin": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+    "pr665_head_before_P3X": "b5c1de717bd944bfa11685e826a922fbb6ae483a",
+    "p3x_ci_head": "556f104d62cce635dcf7b59bf6966400b0b1fa18",
+    "ci_run": 44256823392,
+    "artifact_id": 14405784430,
+    "artifact_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6"
+  },
+  "historical_archived_head": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
+  "independent_postdownload_readback": {
+    "status": "PASS",
+    "first_CI_artifact_id": 14405638218,
+    "first_artifact_zip_sha256": "1c68a9622357cd13990521dad85504adf49c70916f2424c3511b600e2583e159",
+    "final_CI_artifact_id": 14405784430,
+    "final_zip_sha256": "9e6e8a646e3c3706e56b681c2a272081fbb55aaf74c4914f52c9db37507d0de6",
+    "comparison": "179/179 same archive paths, 178/179 byte-identical: only aggregate CI receipt includes 28 extra negative tests; real Scratch staged source inputs identical",
+    "independent_local_detailed_json_sha256": "e8b46025cca20785ecd3620fa6f19e242513f64bc7c1d3764612f3fb52b5fe4f",
+    "all_removed_exact_source_blocks_sha_match": 72,
+    "all_22_input_file_sha_match": true,
+    "non_target_bytes_preserved": true,
+    "p3_negative_rejected": 28,
+    "p2_negative_rejected": 8
+  }
+}

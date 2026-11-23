@@ -29,7 +29,10 @@ def test_user_drift_diffusion_transport_coefficient_options_are_removed():
     assert 'species[i] + "_diffusivity"' in src
     assert 'params.set<MooseFunctorName>("mobility") = species[i] + "_mobility"' in src
     assert 'params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity"' in src
-    assert "Generated FEM transport requires FEM species." in src
+    # P04: FEM-only was the old constraint. FV-only is now valid when the
+    # caller provides explicit potential/JSON transport and Chemistry sources.
+    assert "Selected fem_species/fvm_species require an explicit potential" in src
+    assert 'validate(_fvm_species, "fvm_species", "FVM");' in src
     assert "if (!isParamValid(\"fem_potential\"))" in src
     assert "mechanism.species(species[i]).charge_number" in src
     assert '"fem_charge_numbers"' not in src and '"fvm_charge_numbers"' not in src

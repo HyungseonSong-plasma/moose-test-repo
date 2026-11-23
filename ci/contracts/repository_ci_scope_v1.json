@@ -85,7 +85,9 @@
         "boltzmann-eepf-controls",
         "issue402_core_four_native_p2",
         "issue541_arch_dd_native_p2",
-        "issue541_arch_s6_hybrid_native_p2",
+        "p6_newonly_s6_build",
+        "p6_newonly_s6_native_p2",
+        "p6_public_d_100row_native_p2",
         "plasma_native_regression",
         "runtime-smoke"
       ]
@@ -110,7 +112,10 @@
     ".github/workflows/physics-native-ci.yml": [
       "physics_app/**",
       "experiments/**",
-      ".github/workflows/physics-native-ci.yml"
+      ".github/workflows/physics-native-ci.yml",
+      "ci/guards/p6_*",
+      "ci/guards/issue671_*",
+      "ci/contracts/repository_ci_scope_v1.json"
     ]
   }
 }

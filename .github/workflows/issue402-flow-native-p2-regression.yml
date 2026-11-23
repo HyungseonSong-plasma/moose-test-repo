@@ -1,4 +1,4 @@
-name: Issue402 FLOW maintained EI-H and reaction-reduction Native P2
+name: Issue402 FLOW EI-H and reaction-reduction Native P2 (legacy D-base retired)
 
 # Governed, exact-source replacement for TWO historic, branch-only Native
 # one-shots. This P0/P1/P2 gate never executes solver time steps/P3.
@@ -261,27 +261,8 @@ jobs:
                 --executable /workspace/physics_app/physics-opt
             ' 2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/flow_reduction_native_p2.log
           echo "FLOW_EI10_EI16_FOUR_FIXTURE_NATIVE_P2_PASS P3=NOT_RUN SCIENCE_HOLD"
-      - name: P2 - public pinned D-base 417 and 941 Native input only
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd control
-          python3 experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py \
-            --historical ../historical --expected-head "$EXPECTED_HEAD" \
-            --case both --output "$RUNNER_TEMP/flow_issue402_dbase_native_p2" \
-            --timeout-seconds 600 \
-            2>&1 | tee experiments/Issue402_plasma_dsl_g1/evidence/flow_dbase_native_p2_driver.log
-          python3 - "$RUNNER_TEMP/flow_issue402_dbase_native_p2/readiness.json" "$EXPECTED_HEAD" <<'PY'
-          import json, pathlib, sys
-          j=json.loads(pathlib.Path(sys.argv[1]).read_text())
-          assert j["source_sha"] == sys.argv[2]
-          assert j["historical_sha"] == "29d1acc6ef7969908b86719e4b95c73a1565136d"
-          assert j["P2"] == "PASS"
-          assert set(j["cases"]) == {"417","941"}
-          assert all(j["cases"][x]["P2"] == "PASS" for x in ("417","941"))
-          assert j["P3"] == "NOT_RUN" and j["science"] == "SCIENCE_HOLD"
-          print("FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS P3_NOT_RUN SCIENCE_HOLD")
-          PY
+          # Old D-base positive P2 is retired; real 417/941 production is covered by P6.
+          echo FLOW_DBASE_LEGACY_P2_RETIRED_NEWONLY_P05_OWNS_417_941
       - name: Upload source-bound, public P1/P2 evidence (no mesh or rates)
         if: always()
         uses: actions/upload-artifact@v4
@@ -292,9 +273,5 @@ jobs:
             control/experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json
             control/experiments/Issue402_plasma_dsl_g1/evidence/flow_ideal_gas_direct_native_p2.log
             control/experiments/Issue402_plasma_dsl_g1/evidence/flow_reduction_native_p2.log
-            control/experiments/Issue402_plasma_dsl_g1/evidence/flow_dbase_native_p2_driver.log
-            ${{ runner.temp }}/flow_issue402_dbase_native_p2/readiness.json
-            ${{ runner.temp }}/flow_issue402_dbase_native_p2/S6-417/native_P2.log
-            ${{ runner.temp }}/flow_issue402_dbase_native_p2/S6-941/native_P2.log
           if-no-files-found: warn
           retention-days: 30

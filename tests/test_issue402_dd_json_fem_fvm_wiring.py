@@ -43,7 +43,9 @@ def test_json_drives_species_transport_without_i_material_blocks():
 def test_continuity_maps_both_species_families_to_ddmaterial():
     code = (ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C").read_text()
     assert '"require_json_transport"' not in code
-    assert "chemistryData().hasDDTransport()" in code
+    # P04: selected FEM/FVM species must not silently inherit Native coefficients.
+    assert "chemistryData().hasDDTransport()" not in code
+    assert "if (!mechanism.ddTransport(id))" in code
     assert "validate(_fem_species, \"fem_species\", \"FEM\")" in code
     assert "validate(_fvm_species, \"fvm_species\", \"FVM\")" in code
     assert 'const auto * config = mechanism.ddTransport(id)' in code

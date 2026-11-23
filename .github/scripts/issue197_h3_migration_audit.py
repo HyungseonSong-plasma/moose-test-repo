@@ -138,7 +138,7 @@ def current_runtime_input(*, charge_number, field_sign):
         text = mp.upsert_parameter(text, 'Functions/phi_exact', 'expression', "'20000*x'")
 
     replacements = {
-        'FunctorMaterials/ion_wall_flux': 'PhysicsIonWallFluxMaterial',
+        'FunctorMaterials/ion_wall_flux': 'IonWallFluxMaterial',
         'FVKernels/ion_time': 'PhysicsFVMassFractionTimeDerivative',
         'FVKernels/ion_electrostatic_drift': 'PhysicsFVElectrostaticDrift',
     }
