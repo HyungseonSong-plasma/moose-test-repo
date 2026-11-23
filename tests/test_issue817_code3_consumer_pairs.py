@@ -41,9 +41,12 @@ class ActiveConsumerPairTests(unittest.TestCase):
                                 code3._outside_target(
                                     new.replace("csv = true","csv = false"),path))
 
-    def test_production_original_still_retained(self):
-        self.assertIn("type = PhysicsFVElectronReactionSource",h05.runtime_input())
-        self.assertIn("type = PhysicsFVElectronReactionSource",r2.RUNTIME_INPUT)
+    def test_production_generators_have_standard_electron_source(self):
+        self.assertIn("type = FVCoupledForce",h05.runtime_input())
+        self.assertIn("v = S_e_h05",h05.runtime_input())
+        self.assertIn("v = electron_ionization_number_source",r2.RUNTIME_INPUT)
+        self.assertNotIn("type = PhysicsFVElectronReactionSource",h05.runtime_input())
+        self.assertNotIn("type = PhysicsFVElectronReactionSource",r2.RUNTIME_INPUT)
 
 if __name__ == "__main__":
     unittest.main()

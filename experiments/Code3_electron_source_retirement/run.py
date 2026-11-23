@@ -90,14 +90,21 @@ def build_pair() -> tuple[str, str, dict]:
     # Import W5 only for real generation: the pure P0 contract must run
     # on Repository CI's minimal Python installation without polars/Native.
     from experiments.Issue216_w5_multistep_acceptance import run as w5
-    custom, meta = w5._build_case(
+    generated, meta = w5._build_case(
         dt_s=w5.BASELINE_DT_S, uniform_refine=0)
+    # The active W5 route is now standard. Reconstruct the historical *input*
+    # as an offline A/B fixture; never try to execute the retired Factory.
+    from experiments.Code3_electron_source_retirement.consumer_pairs import virtual_legacy_from_current
+    custom = virtual_legacy_from_current(generated, TARGET, "S_e_s5r", "normalized")
     standard, change = replace_electron_only(custom)
     if mp.get_parameter(custom, TARGET, "number_source") != "S_e_s5r":
-        raise Code3ParityError("W5_SIGNED_SOURCE_OWNER_CHANGED")
-    if mp.get_parameter(standard, TARGET, "v") != "S_e_s5r":
-        raise Code3ParityError("W5_STANDARD_FUNCTOR_CHANGED")
-    return custom, standard, {"baseline": meta, "change": change}
+        raise Code3ParityError("W5_HISTORICAL_SIGNED_SOURCE_OWNER_CHANGED")
+    if mp.get_parameter(generated, TARGET, "type") != NEW or mp.get_parameter(generated, TARGET, "v") != "S_e_s5r":
+        raise Code3ParityError("W5_CURRENT_STANDARD_SOURCE_CHANGED")
+    if not math.isclose(float(mp.get_parameter(generated, TARGET, "coef") or "nan"),
+                        change["coefficient"], rel_tol=1e-15):
+        raise Code3ParityError("W5_CURRENT_STANDARD_NORMALIZED_COEF_CHANGED")
+    return custom, generated, {"baseline": meta, "change": change, "historical_old_arm": "VIRTUAL_INPUT_ONLY"}
 
 
 def self_test() -> dict:
