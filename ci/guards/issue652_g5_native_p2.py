@@ -143,6 +143,25 @@ def stage_public(p3x_stage: Path, receipt_output: Path) -> dict:
     return receipt
 
 
+def secure_tmpfs_cleanup(path: Path) -> None:
+    """Clear root-owned OCI JIT cache AND private EI inputs; no silent skips."""
+    root = Path("/dev/shm")
+    if (path.is_symlink() or not path.is_relative_to(root)
+            or not any(part.startswith("issue652-g5-")
+                       for part in path.relative_to(root).parts)):
+        raise ValueError("G5_UNSAFE_PRIVATE_CLEANUP_PATH")
+    if not path.exists():
+        return
+    # OCI uses uid 0 and can create root-owned .jitcache. Host ownership is
+    # intentionally repaired only on our own exact /dev/shm scratch subtree.
+    subprocess.run(
+        ["sudo", "chown", "-Rh", f"{os.getuid()}:{os.getgid()}", "--", str(path)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
+        timeout=90,
+    )
+    shutil.rmtree(path)
+
+
 def native_check(p3x_stage: Path, stage_receipt: Path, output: Path) -> dict:
     """Run only real 11-layer check-input with protected EI rates in tmpfs."""
     assert_source_head()
@@ -249,13 +268,13 @@ def native_check(p3x_stage: Path, stage_receipt: Path, output: Path) -> dict:
                 "private_data_in_artifacts": False,
             }
             # Release case-specific secret-bearing scratch immediately.
-            shutil.rmtree(case_private)
+            secure_tmpfs_cleanup(case_private)
         results["Native_P2"] = (
             "PASS_SYNTAX_ONLY" if all(results["cases"][c]["passed"]
                                       for c in CASES) else "HOLD_NATIVE_FAILURE"
         )
     finally:
-        shutil.rmtree(work_tmp, ignore_errors=True)
+        secure_tmpfs_cleanup(work_tmp)
         tables.clear()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(results, indent=2, sort_keys=True) + "\n")
