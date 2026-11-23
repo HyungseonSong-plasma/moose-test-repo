@@ -1,4 +1,4 @@
-# #817 temporary production-consumer migration P0; delete before upstream merge.
+# #817 postcut regression retry: explicit negative-only absence checker allowlisted; TEMPORARY.
 name: Issue817 Code3 postcut exact-head active consumer P0 once
 
 on:
