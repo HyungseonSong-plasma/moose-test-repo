@@ -93,9 +93,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export G5_EXPECTED_SOURCE_HEAD="$GITHUB_SHA"
+          export G5_EXPECTED_SOURCE_HEAD="$G8_SOURCE"
           python3 "$RUNNER_TEMP/g8-input/stager.py" \
-            --source "$GITHUB_WORKSPACE" --repo-head "$GITHUB_SHA" \
+            --source "$GITHUB_WORKSPACE" --repo-head "$G8_SOURCE" \
             --artifact "$RUNNER_TEMP/g8-input/p3x-source.zip" \
             --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
             --historical-support-root "$GITHUB_WORKSPACE/historical" \
