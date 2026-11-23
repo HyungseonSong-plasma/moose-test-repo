@@ -100,6 +100,16 @@ def check_inventory(rows: list[dict], paths: set[str]):
     return {"source_files": len(rows), "registered_factory_types": len(seen)}
 
 
+def verify_post_cut_fdeg_capture(workflow: str):
+    """Accept live electron FDEG; refuse re-capture of either removed Factory."""
+    stem = "fdeg_retirement_evidence.py --mode capture --target "
+    live_target = stem + "PhysicsFVElectronReactionSource"
+    need("issue774_main_retirement.py" in workflow and
+         live_target in workflow and
+         all(stem + factory not in workflow for factory in FACTORIES),
+         "FDEG_POST_CUT_CI_STILL_CAPTURES_REMOVED_CPP")
+
+
 def audit(root: Path, expected_head: str):
     root = root.resolve()
     need(bool(SHA.fullmatch(expected_head)), "EXPECTED_HEAD_NOT_SHA")
@@ -156,9 +166,7 @@ def audit(root: Path, expected_head: str):
          "P6_OR_ARCH_RETAINED_NATIVE_REMOVED")
     need("issue541_arch_s6_hybrid_native_p2" not in jobs,
          "RETIRED_ARCH_DUPLICATE_JOB_RETURNED")
-    need("issue774_main_retirement.py" in code and
-         "fdeg_retirement_evidence.py --mode capture --target" not in code,
-         "FDEG_POST_CUT_CI_STILL_CAPTURES_REMOVED_CPP")
+    verify_post_cut_fdeg_capture(code)
     return {
         "schema": "issue774.main_thermal_heavy_retirement.v0.1",
         "source_head": actual,
