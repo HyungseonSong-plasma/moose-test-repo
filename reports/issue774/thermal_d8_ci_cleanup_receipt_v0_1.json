@@ -1,0 +1,85 @@
+{
+  "schema": "issue774.d8.thermal_fdeg_ci_retirement_evidence.v0.1",
+  "issue": 774,
+  "date": "2026-11-23",
+  "decision_ref": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/774#issuecomment-7103483022",
+  "old_input_current_binary_support": "EXPLICITLY_NOT_REQUIRED",
+  "old_factory_removal_interface_break": "ACCEPTED_AS_LEGACY_SUPPORT_TERMINATION",
+  "live_code_head": "13b61931d06f176c73dfe4a6f939b89aa79a484b",
+  "source_pr": 791,
+  "ci_run": {
+    "run_id": 45192097120,
+    "status": "SUCCESS",
+    "artifact_id": 14826972309,
+    "artifact_zip_sha256": "be7077872f156ae03ac4c65dc3a308b723be91292c1006eb26cf0472e563a863"
+  },
+  "suite_tests": {
+    "fdeg_structural": 16,
+    "fdeg_functional": 23,
+    "fdeg_transition": 18,
+    "fdeg_harness_abcd_including_archival_and_D8": 32,
+    "fdeg_scan_cache": 10,
+    "total": 99,
+    "failures": 0
+  },
+  "guard_receipt": {
+    "schema": "issue774.thermal_ci_cleanup_receipt.v0.1",
+    "result": "PASS_WITHIN_TRACKED_SOURCE_SCOPE",
+    "old_factory_source_present": false,
+    "old_factory_header_present": false,
+    "active_retired_type_references": [],
+    "tracked_active_candidate_files": 691,
+    "surviving_active_fdeg_profiles": 9,
+    "retained_survivor_blob_shas": "ALL_MATCHED",
+    "legacy_live_source_capture_steps": 0,
+    "historical_archive_verify_steps": 1,
+    "historical_archive_upload_steps": 1,
+    "original_fdeg_archive_sha256": "57e49b50df16dbd690d2899384cf7fa048c01a6f6e6cb4ab59154f1717b414a0",
+    "original_fdeg_archive_verification": "PASS",
+    "source_census_not_external_caller_zero": true
+  },
+  "physics_code_ci": {
+    "existing_job_and_step_count_unchanged": true,
+    "retirement_ci_receipt_added_to_existing_historical_artifact": true,
+    "exact_mutation_trigger_paths": [
+      "ci/baselines/fdeg_functional_contracts.json",
+      "ci/baselines/fdeg_transition_contracts.json",
+      "ci/baselines/issue774_thermal_retirement_ci_contract.json",
+      "reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip",
+      "reports/issue774/fdeg_thermal_historical_anchor_v0_1.json"
+    ],
+    "push_trigger_verified": true,
+    "pull_request_trigger_verified": true,
+    "stale_ci_capture_reinsertion_mutant": "REJECTED",
+    "archive_verifier_deletion_mutant": "REJECTED",
+    "duplicate_upload_mutant": "REJECTED",
+    "watch_path_deletion_mutant": "REJECTED",
+    "survivor_source_sha_tamper_mutant": "REJECTED",
+    "active_legacy_input_or_generator_mutant": "REJECTED"
+  },
+  "new_only_separate_stack": {
+    "B_sha": "c77d2f773eee96c30eeca49d7486fea22ea8e557",
+    "B_pr": 783,
+    "git_tree": "f6ef251777e89d9d9b4faca84d282a5425494f64",
+    "tracked_blobs": 1703,
+    "legacy_fdeg_live_ci_and_registry_files_present": false,
+    "old_thermal_cpp_source_or_header_present": false,
+    "new_only_ci": ".github/workflows/ci.yml",
+    "new_only_ci_old_thermal_symbol_present": false,
+    "new_only_source_census_workflow": ".github/workflows/issue774-d5-newonly-source-census-once.yml",
+    "new_only_P05_native_AB": "PASS_FOR_417_941_SCOPED",
+    "historical_ci_must_not_be_cherry_picked_without_merge_plan": true
+  },
+  "integration_gates": {
+    "main_merge": "DEFERRED_DUE_POISSON",
+    "poisson_files_modified": false,
+    "temporary_one_off_workflows": "DROP_AT_INTEGRATION",
+    "combined_source_base_exact_head_validation": "NOT_RUN",
+    "external_generated_consumers": "NOT_INDEPENDENTLY_ATTESTED",
+    "independent_reviewer_and_rollback": "NOT_COMPLETE",
+    "science_P3_P4": "HOLD",
+    "safe_to_delete": false,
+    "final_source_retirement_authorized": false
+  },
+  "conclusion": "CI_CLEANUP_PASS_SCOPE_ONLY__OLD_INPUT_SUPPORT_NOT_REQUIRED__MAIN_MERGE_DEFERRED"
+}
