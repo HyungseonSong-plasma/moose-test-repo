@@ -1,0 +1,90 @@
+{
+  "schema": "issue774.d11.public_d_generated_inputs_and_rollback_evidence.v0.1",
+  "issue": 774,
+  "date": "2026-11-23",
+  "requester_waived_old_input_support": true,
+  "code_pr": 798,
+  "tested_exact_source_head": "6c4b99b5798fa6636fa3d13e1edaefe3bd601612",
+  "tested_git_tree": "f37f3a70f18a744a824e3913676d43d0432f38de",
+  "source_parent": "05a3cf85bc5ed7d9c258b1377bd66d68d70f4e3e",
+  "workflow": {
+    "run_id": 45206089662,
+    "result": "success",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45206089662",
+    "artifact_id": 14833158719,
+    "artifact_zip_sha256": "54944466ef404369dfadf9ecba4217179f6701f5b0510edbe852077ef4cc11cd"
+  },
+  "public_input_staging": {
+    "cases": [
+      "417",
+      "941"
+    ],
+    "original_source": "D10 exact P3-X public source artifact and historical 400W parent mesh",
+    "P4_X_duplicate_retirement": "PASS",
+    "protected_private_EI_rates": "NOT_ACCESSED",
+    "source_original_11_layers_unchanged": true
+  },
+  "generated_public_d": {
+    "function": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_public_d_newphysics_100row.py:stage_public_d_physics",
+    "process": "Executed actual checked source in two separate scratch copies, after D10 pinned P4-X source stage",
+    "original_100row_table_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+    "checks": {
+      "generated_input_layers": 11,
+      "generated_json_type_field_count_distinct": 7,
+      "retired_target_occurrences": 0,
+      "original_tracked_source_touched": false,
+      "native_P2_P3_P4": "NOT_RUN"
+    },
+    "cases": {
+      "417": {
+        "status": "PASS_PUBLIC_INPUT_GENERATION_NO_NATIVE",
+        "generated_json_name": "public_d_s6_417_physics.json",
+        "generated_overlay_sha256": "26d8f93ad9fe3fbe002899b112b595764e437cfefdc6a7ffbd67258f6ebb41d9",
+        "input_type_statements": 320,
+        "distinct_input_types": 56,
+        "distinct_generated_json_type_fields": 7,
+        "old_Thermal_factory_occurrences": 0
+      },
+      "941": {
+        "status": "PASS_PUBLIC_INPUT_GENERATION_NO_NATIVE",
+        "generated_json_name": "public_d_s6_941_physics.json",
+        "generated_overlay_sha256": "97b2bf1225a2e05cf35c8a4ad9644e858a439221908625e0fa2981ea749127c1",
+        "input_type_statements": 321,
+        "distinct_input_types": 56,
+        "distinct_generated_json_type_fields": 7,
+        "old_Thermal_factory_occurrences": 0
+      }
+    }
+  },
+  "rollback": {
+    "status": "B_SOURCE_AND_W1_NATIVE_CUSTODY_VERIFIED",
+    "source_B_sha": "c77d2f773eee96c30eeca49d7486fea22ea8e557",
+    "same_git_physics_app_tree_sha": "42d40ba2be12c08da23fa6f4ac8d8d496fe8aaa1",
+    "B_W1_source_run_id": 45177755891,
+    "B_W1_ELF_SHA256": "d6a87b61f7e3e8d06767f7a245c51e846293af740653609492d2e3f9714ac62c",
+    "B_W1_tar_SHA256": "37104cdcae3d7009445258302b1008e0af416e2301d78d4b21c47246bbe2ba43",
+    "B_W1_member_content_sha": "PASS_ALL_3_MEMBERS",
+    "B_p05_417_941_native_status": "PASS_16_INTENDED_NATIVE_REJECTIONS",
+    "B_negative_controls": 16,
+    "old_Thermal_reintroduced": false,
+    "actual_rollback_executed": false,
+    "old_thermal_input_support_restored": false,
+    "production_merge_or_revert_approved": false
+  },
+  "coverage": {
+    "D5_B_to_D10_native_417_941": "PASS_44_44_PREVIOUSLY",
+    "D9_newonly_source_and_ci": "PASS_PREVIOUSLY",
+    "D11_public_d_100row_actual_generated_input_sanity": "PASS_TWO_CASES",
+    "other_untested_generated_inputs": "NOT_CLOSED",
+    "external_consumers": "NOT_INDEPENDENTLY_ATTESTED",
+    "legacy_PhyiscsApp_old_input_support": "NOT_REQUIRED",
+    "full_native_100row_P2": "NOT_RUN",
+    "P3_P4_100us_science": "SCIENCE_HOLD",
+    "independent_rollback_owner_approval": "NOT_OBTAINED",
+    "final_merge_head_requalification": "NOT_RUN",
+    "main_merge": false,
+    "poisson_changed": false,
+    "safe_to_delete": false
+  },
+  "verdict": "D11_PUBLIC_D_GENERATED_INPUT_AND_B_SOURCE_W1_CUSTODY_PASS_SCOPE_ONLY"
+}
