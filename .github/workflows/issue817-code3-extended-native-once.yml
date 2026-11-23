@@ -1,6 +1,6 @@
-# #817 exact-head Native: MOOSE quoted functor-name preflight fixed; TEMPORARY.
+# #817 final postcut fresh binary EI01 H05 R2 EI16 EI20 EDETACH and signed normalized; TEMPORARY.
 # No private-rate or non-target chemistry inputs. Production smoke remains unchanged.
-name: Issue817 Code3 extended consumers Native EI16 EI20 EDETACH once
+name: Issue817 Code3 complete registered consumers postcut Native once
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   postcut_extended_sources:
-    name: Exact-head postcut W1 EI16 EI20 EDETACH source closure P2 P3
+    name: Exact-head postcut W1 all physical and normalized source closure P2 P3
     runs-on: ubuntu-24.04
     timeout-minutes: 105
     env:
@@ -80,7 +80,13 @@ jobs:
           assert p.read_bytes()[:4]==b'\x7fELF'
           print('ISSUE817_CODE3_W1_EXACT_ELF=PASS')
           PY
-      - name: Verify current EI16 EI20 EDETACH physical source P2 P3 and domain closure
+      - name: Verify EI01 H05 R2 positive and negative normalized physical P2 P3
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 -m experiments.Code3_electron_source_retirement.postcut_native
+      - name: Verify EI16 EI20 EDETACH physical source P2 P3 and domain closure
         shell: bash
         run: |
           set -euo pipefail
@@ -91,6 +97,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: issue817-code3-extended-native-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
-          path: evidence/code3_postcut_extended_native.json
+          path: |
+            evidence/code3_postcut_native_receipt.json
+            evidence/code3_postcut_extended_native.json
           if-no-files-found: warn
           retention-days: 30

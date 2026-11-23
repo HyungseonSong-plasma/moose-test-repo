@@ -9,6 +9,8 @@ import unittest
 from physics_app.ci import check_e8_ei16_energy_runtime as ei16
 from physics_app.ci import check_stage5_ei20_runtime as ei20
 from physics_app.ci import check_stage5_edetach_runtime as ed
+from physics_app.ci import check_stage5_h05_runtime as h05
+from physics_app.ci import check_r2_o2_ionization_implementation as r2
 from physics_harness.adapters.moose import parameters as mp
 
 def accepted_bridge(text: str, prefix: str, material: str,
@@ -39,6 +41,9 @@ def accepted_bridge(text: str, prefix: str, material: str,
 class ActiveElectronEnergyBridgeTest(unittest.TestCase):
     def cases(self):
         return (
+            (h05.runtime_input(),"h05","mean_energy","FVKernels/n_e_source","S_e_h05"),
+            (r2.RUNTIME_INPUT,"r2","mean_energy_bridge","FVKernels/n_e_source",
+             "electron_ionization_number_source"),
             (ei16.RUNTIME_INPUT,"ei16","mean_energy_bridge","FVKernels/n_e_source",
              "electron_ionization_number_source"),
             (ei20.runtime_input(),"ei20","mean_energy_bridge","FVKernels/n_e_source",

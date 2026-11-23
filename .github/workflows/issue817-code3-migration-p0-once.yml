@@ -1,4 +1,4 @@
-# #817 exact-head P0: MOOSE quoted functor-name parameter semantics; TEMPORARY.
+# #817 final pre-merge P0 across H05 R2 EI16 EI20 EDETACH log-molar; TEMPORARY.
 name: Issue817 Code3 postcut exact-head active consumer P0 once
 
 on:
@@ -47,6 +47,7 @@ jobs:
           python3 -m unittest discover -s tests -p test_issue817_code3_s5r_normalized.py -v 2>&1 | tee evidence/code3_normalized_ledger.log
           python3 -m unittest discover -s tests -p test_issue817_energy_only_negatives.py -v 2>&1 | tee evidence/ei18_ei19_semantic_negatives.log
           python3 -m unittest discover -s tests -p test_issue817_electron_energy_logmolar_bridge.py -v 2>&1 | tee evidence/electron_energy_bridge_tests.log
+          python3 physics_app/ci/check_issue402_json_rate_native_p2.py --self-test 2>&1 | tee evidence/issue402_current_H05.log
           python3 physics_app/ci/check_e8_ei16_energy_runtime.py --self-test 2>&1 | tee evidence/ei16_static.log
           python3 physics_app/ci/check_stage5_ei18_runtime.py --self-test 2>&1 | tee evidence/ei18_static.log
           python3 - <<'PY' 2>&1 | tee evidence/ei19_static.log
