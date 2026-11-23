@@ -1425,6 +1425,39 @@ Chemistry::addFunctorMaterials()
     assignBlocks(params, _blocks);
     getProblem().addFunctorMaterial(type, "chemistry_e_energy_source", params);
   }
+
+  // G3: only opt-in New-only Poisson obtains live charge projections.
+  // G5 must retire all three homonymous Native C0 producers before Native P2.
+  if (mechanism.poisson())
+  {
+    const auto add_charge_functor =
+        [this](const std::string & property,
+               const std::vector<std::string> & functors,
+               const std::vector<std::string> & symbols,
+               const std::string & expression)
+    {
+      const std::string type = "ADParsedFunctorMaterial";
+      auto params = getFactory().getValidParams(type);
+      params.set<std::string>("property_name") = property;
+      params.set<std::vector<std::string>>("functor_names") = functors;
+      params.set<std::vector<std::string>>("functor_symbols") = symbols;
+      params.set<std::string>("expression") = expression;
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(type, "plasma_" + property, params);
+    };
+
+    // G1 validates z(O2p)=z(Op)=+1 and z(e)=z(Om)=-1.
+    add_charge_functor("charge_number_density",
+                       {"O2p_number_density", "Op_number_density",
+                        "n_e_physical", "Om_number_density"},
+                       {"ni", "nop", "ne", "nm"}, "ni+nop-ne-nm");
+    add_charge_functor("charge_density_C_m3",
+                       {"charge_number_density"}, {"nq"},
+                       "1.602176634e-19*nq");
+    add_charge_functor("poisson_source",
+                       {"charge_number_density"}, {"nq"},
+                       "1.8095128179727827e-08*nq");
+  }
 }
 } // namespace Plasma
 
