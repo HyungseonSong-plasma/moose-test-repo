@@ -1,0 +1,66 @@
+# D8 only; exact-head FDEG production CI contract replay without main merge.
+name: Issue774 D8 Thermal FDEG CI contract cleanup
+on:
+  pull_request:
+    branches: [issue-774-d6-thermal-consumer-compat-20261123]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'ci/baselines/issue774_thermal_retirement_ci_contract.json'
+      - 'ci/guards/issue774_thermal_ci_contract.py'
+      - 'tests/test_fdeg_harness_abcd.py'
+      - '.github/workflows/physics-code-ci.yml'
+      - '.github/workflows/issue774-d8-thermal-ci-contract-once.yml'
+permissions:
+  contents: read
+
+jobs:
+  exact_fdeg_owner:
+    name: D8 FDEG 5 P0 suites, archive integrity and CI migration receipt
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout immutable D8 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Assert exact HEAD and install minimal existing Harness dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          python3 -m pip install --quiet -r physics_harness/code/requirements.txt
+      - name: Run all five active FDEG P0 suites with retirement negatives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          for suite in structural functional transition harness_abcd scan_cache; do
+            python3 -m unittest discover -s tests -p "test_fdeg_${suite}.py" -v 2>&1 \
+              | tee "evidence/fdeg_${suite}.log"
+          done
+      - name: Verify pinned original FDEG archive and CI migration contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue774_thermal_ci_contract.py \
+            --root . --output evidence/issue774_thermal_ci_contract_receipt.json
+          python3 ci/guards/fdeg_thermal_archive.py \
+            --archive-zip reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip \
+            | tee evidence/fdeg_archive.log
+          python3 -m py_compile ci/guards/issue774_thermal_ci_contract.py
+      - name: Preserve public exact source CI migration receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue774-d8-thermal-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30
