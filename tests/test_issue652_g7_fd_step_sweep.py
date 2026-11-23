@@ -74,12 +74,13 @@ row 0: (0, 0.5)
 """
     result = sweep.matrix_summary(log)
     assert result["view_blocks_with_numeric_rows"] == 3
-    assert result["relative_difference_recomputed_from_view"] == pytest.approx(
+    assert result["relative_difference_direct_from_matview"] == pytest.approx(
         0.5 / (10**2 + 2**2 + 5**2)**0.5)
-    assert result["third_view_overlapping_entries"] == 1
-    assert result["max_third_view_entry_consistency_error"] == pytest.approx(0.)
+    assert result["view_triplet_count"] == 1
+    assert result["largest_rounding_disagreement_if_subtracted"] == pytest.approx(0.)
     assert result["top_matrix_differences_unmapped"][0]["row"] == 0
     assert result["top_matrix_differences_unmapped"][0]["column"] == 0
+    assert result["top_matrix_differences_unmapped"][0]["jac_minus_fd"] == pytest.approx(0.5)
     assert result["block_mapping"] == "UNVERIFIED_NO_DOF_VARIABLE_INDEX_MAP"
 
 
@@ -88,3 +89,20 @@ def test_no_implicit_expensive_native_execution(tmp_path: Path):
         sweep.sweep(source=tmp_path, manifest=tmp_path / "manifest",
                     output=tmp_path / "report.json", authorize=False)
     assert not (tmp_path / "report.json").exists()
+
+
+def test_view_uses_direct_difference_not_subtraction_of_rounded_large_values():
+    log = """Mat Object: 1 MPI process
+  type: seqaij
+row 0: (0, 100000000.)
+Mat Object: 1 MPI process
+  type: seqaij
+row 0: (0, 100000000.)
+Mat Object: 1 MPI process
+  type: seqaij
+row 0: (0, 80.)
+"""
+    result = sweep.matrix_summary(log)
+    assert result["relative_difference_direct_from_matview"] == pytest.approx(8e-7)
+    assert result["largest_rounding_disagreement_if_subtracted"] == pytest.approx(80.)
+    assert result["top_matrix_differences_unmapped"][0]["jac_minus_fd"] == pytest.approx(80.)

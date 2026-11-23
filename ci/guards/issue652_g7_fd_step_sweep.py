@@ -78,19 +78,21 @@ def command(source: Path, workspace: Path, fd_step: float, *, view: bool) -> lis
 
 
 def matrix_summary(log: str) -> dict:
-    """Read small PETSc ASCII MatView blocks without saving matrices or raw logs.
+    """Localize PETSc's *directly printed* J-Jfd matrix entries.
 
-    PETSc's documented presentation order is assembled, finite-difference, diff.
-    We report numerical matrix indices only (variable DOF ownership unproven).
+    MatView often rounds large J and Jfd entries to ~6 printed digits.
+    Subtracting those rounded matrices destroys a small, genuine residual.
+    Never compute the physics comparison from that rounded subtraction.
+    PETSc presents successive (J, Jfd, J-Jfd) triplets at different SNES
+    iterates. Variable/DOF ownership is NOT inferred from raw indices.
     """
     begins = list(MATRIX.finditer(log))
     blocks = []
     for k, start in enumerate(begins):
-        end = begins[k+1].start() if k+1 < len(begins) else len(log)
-        region = log[start.end():end]
+        end = begins[k + 1].start() if k + 1 < len(begins) else len(log)
         entries = {}
         active = None
-        for line in region.splitlines():
+        for line in log[start.end():end].splitlines():
             match = ROW.match(line)
             if match:
                 active = int(match.group(1))
@@ -101,44 +103,59 @@ def matrix_summary(log: str) -> dict:
                 active = None
                 continue
             for column, value in PAIR.findall(tail):
-                item = float(value)
-                if not math.isfinite(item):
-                    raise SweepHold("NONFINITE_VIEW_ENTRY")
-                entries[(active, int(column))] = item
+                numeric = float(value)
+                if not math.isfinite(numeric):
+                    raise SweepHold("NONFINITE_MATVIEW_ENTRY")
+                entries[(active, int(column))] = numeric
         if entries:
             blocks.append(entries)
-    if len(blocks) < 3:
-        return {
-            "view_blocks_with_numeric_rows": len(blocks),
-            "comparison_matrix_entries": "NOT_EXTRACTED",
-            "block_mapping": "UNVERIFIED",
-        }
-    assembly, fd, difference = blocks[:3]
-    coordinates = set(assembly) | set(fd)
-    calculated = {key: assembly.get(key, 0.) - fd.get(key, 0.) for key in coordinates}
-    err = math.sqrt(sum(v*v for v in calculated.values()))
-    norm = math.sqrt(sum(v*v for v in assembly.values()))
-    top = sorted(calculated.items(), key=lambda kv: abs(kv[1]), reverse=True)[:12]
-    # The third MatView is a cross-check only. Do not assume exact alignment
-    # unless its printed entries overlap the recomputed difference.
-    common = set(difference) & set(calculated)
-    consistency = (
-        max((abs(difference[k]-calculated[k]) for k in common), default=None)
-    )
+    results = []
+    for i in range(len(blocks) // 3):
+        assembled, fd, diff = blocks[3*i:3*i+3]
+        norm_j = math.sqrt(sum(value*value for value in assembled.values()))
+        norm_difference = math.sqrt(sum(value*value for value in diff.values()))
+        if norm_j == 0:
+            continue
+        rounded_disagreement = max(
+            (abs(difference-(assembled.get(key, 0.)-fd.get(key, 0.)))
+             for key, difference in diff.items()), default=None
+        )
+        top = sorted(diff.items(), key=lambda kv: abs(kv[1]), reverse=True)[:8]
+        results.append({
+            "group_index": i,
+            "relative_difference_direct_from_matview": norm_difference / norm_j,
+            "matrix_difference_norm_from_matview": norm_difference,
+            "printed_assembled_entries": len(assembled),
+            "printed_fd_entries": len(fd),
+            "printed_difference_entries": len(diff),
+            "largest_rounding_disagreement_if_subtracted": rounded_disagreement,
+            "top_matrix_differences_unmapped": [
+                {"row": key[0], "column": key[1], "jac_minus_fd": value}
+                for key, value in top
+            ],
+        })
+    largest = max(results,
+                  key=lambda entry: entry["relative_difference_direct_from_matview"],
+                  default=None)
     return {
         "view_blocks_with_numeric_rows": len(blocks),
-        "assembled_nonzero_printed": len(assembly),
-        "fd_nonzero_printed": len(fd),
-        "difference_nonzero_printed": len(difference),
-        "relative_difference_recomputed_from_view": err / norm if norm else None,
-        "diff_norm_from_view": err,
-        "max_third_view_entry_consistency_error": consistency,
-        "third_view_overlapping_entries": len(common),
-        "top_matrix_differences_unmapped": [
-            {"row": key[0], "column": key[1], "assembled_minus_fd": value,
-             "assembled": assembly.get(key, 0.), "finite_difference": fd.get(key, 0.)}
-            for key, value in top
+        "view_triplet_count": len(results),
+        "view_group_ratios": [
+            {"group_index": item["group_index"],
+             "relative_difference_direct_from_matview":
+                 item["relative_difference_direct_from_matview"]}
+            for item in results
         ],
+        "selected_group_index": largest["group_index"] if largest else None,
+        "relative_difference_direct_from_matview": (
+            largest["relative_difference_direct_from_matview"] if largest else None
+        ),
+        "largest_rounding_disagreement_if_subtracted": (
+            largest["largest_rounding_disagreement_if_subtracted"] if largest else None
+        ),
+        "top_matrix_differences_unmapped": (
+            largest["top_matrix_differences_unmapped"] if largest else []
+        ),
         "block_mapping": "UNVERIFIED_NO_DOF_VARIABLE_INDEX_MAP",
     }
 
@@ -243,8 +260,9 @@ def sweep(*, source: Path, manifest: Path, output: Path, authorize: bool) -> dic
                         mat = one.get("matrix_view", {})
                         print("G7_MATVIEW_NUMERIC_JSON=" + json.dumps({
                             "view_blocks": mat.get("view_blocks_with_numeric_rows"),
-                            "recomputed_relative": mat.get("relative_difference_recomputed_from_view"),
-                            "difference_view_consistency": mat.get("max_third_view_entry_consistency_error"),
+                            "direct_matview_relative": mat.get("relative_difference_direct_from_matview"),
+                            "all_group_ratios": mat.get("view_group_ratios"),
+                            "print_rounding_disagreement": mat.get("largest_rounding_disagreement_if_subtracted"),
                             "top_diffs": mat.get("top_matrix_differences_unmapped", [])[:5],
                             "variable_block_mapping": mat.get("block_mapping"),
                         }, separators=(",", ":"), allow_nan=False), flush=True)

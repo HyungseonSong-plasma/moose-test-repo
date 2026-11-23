@@ -1,4 +1,4 @@
-# Fix isolated string-newline match in synthetic no-charge control fixture.
+# Read PETSc direct J-Jfd matrix, not difference of rounded ASCII J and Jfd values.
 name: Issue652 G7 PETSc FD step sweep and charge-source ablation (branch-only)
 on:
   push:
