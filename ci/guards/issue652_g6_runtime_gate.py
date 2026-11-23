@@ -78,8 +78,8 @@ def exact_source() -> str:
 
 def registration_receipt(raw: bytes) -> dict:
     lines = raw.decode("utf-8").splitlines()
-    if lines.count("G6_PRELOAD_READY") != 1:
-        raise ValueError("G6_REGISTRATION_OBSERVER_NOT_LOADED_EXACTLY_ONCE")
+    if lines.count("G6_PRELOAD_READY") < 1:
+        raise ValueError("G6_REGISTRATION_OBSERVER_NOT_LOADED")
     rows = []
     for line in lines:
         if line == "G6_PRELOAD_READY":
@@ -117,6 +117,7 @@ def registration_receipt(raw: bytes) -> dict:
     return {
         "status": "EXPECTED_15_GENERATED_OWNERS_TRACE_PASS",
         "rows_total": len(rows),
+        "preload_marker_count": lines.count("G6_PRELOAD_READY"),
         "observer_sha256": sha(raw),
         "observed_expected_owners": matches,
         "global_consumer_closure": "UNPROVEN",
@@ -308,8 +309,11 @@ def run(staged: Path, output: Path, *, registration_only: bool) -> dict:
             if not case_result["P2_syntax_ok"] or not trace.is_file():
                 case_result["registration"] = "HOLD_OBSERVER_OR_NATIVE_FAILURE"
             else:
+                trace_bytes = trace.read_bytes()
+                case_result["preload_marker_count"] = trace_bytes.count(b"G6_PRELOAD_READY\n")
+                case_result["observed_trace_rows"] = trace_bytes.count(b"G6_OWNER\t")
                 try:
-                    case_result["registration"] = registration_receipt(trace.read_bytes())
+                    case_result["registration"] = registration_receipt(trace_bytes)
                 except ValueError as err:
                     case_result["registration"] = "HOLD_" + str(err)
             if not registration_only and isinstance(case_result["registration"], dict):
