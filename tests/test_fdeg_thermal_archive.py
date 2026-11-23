@@ -102,19 +102,20 @@ class ThermalArchiveContractTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ZIP_SHA_MISMATCH"):
             archive.verify_archive_bytes(blob, wrong)
 
-    def test_pinned_real_archive_source_blobs_match_precut_checkout(self):
+    def test_pinned_real_archive_source_blobs_match_historical_manifest(self):
         pin = json.loads((
             ROOT / "reports/issue774/fdeg_thermal_historical_anchor_v0_1.json"
         ).read_text())
         self.assertEqual(pin["target"], "PhysicsFVThermalDiffusion")
         self.assertEqual(pin["workflow_artifact_id"], 14806741858)
         self.assertFalse(pin["safe_delete"])
-        for path, blob_sha in pin["source_blobs"].items():
-            raw = (ROOT / path).read_bytes()
-            git_blob = hashlib.sha1(
-                b"blob " + str(len(raw)).encode() + b"\x00" + raw
-            ).hexdigest()
-            self.assertEqual(git_blob, blob_sha)
+        saved = ROOT / "reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip"
+        with zipfile.ZipFile(saved) as bundle:
+            manifest = json.loads(bundle.read("manifest.json"))
+        self.assertEqual(manifest["source_blobs"], pin["source_blobs"])
+        self.assertEqual(manifest["manifest_sha256"], pin["manifest_sha256"])
+        self.assertFalse((ROOT / "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C").exists())
+        self.assertFalse((ROOT / "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h").exists())
 
 
     def test_reproduced_original_artifact_has_matching_immutable_graphs(self):

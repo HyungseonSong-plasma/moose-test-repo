@@ -302,9 +302,9 @@ class LiveTransitionAcceptanceP0Test(unittest.TestCase):
     def setUpClass(cls):
         cls.policy, cls.policy_sha = transition.load_policy(ROOT)
 
-    def test_all_ten_profiles_cover_seven_agent_reviews(self):
+    def test_all_nine_live_profiles_preserve_review_contract(self):
         registry = functional.load_registry(ROOT)
-        self.assertEqual(len(registry["profiles"]), 10)
+        self.assertEqual(len(registry["profiles"]), 9)
         self.assertEqual(set(self.policy["profiles"]), set(registry["profiles"]))
         for target in sorted(registry["profiles"]):
             with self.subTest(target=target):

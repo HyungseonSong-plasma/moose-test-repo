@@ -135,29 +135,6 @@
       "rule": "rho*dw/dt differs from d(rho*w)/dt for variable rho; must not auto-substitute.",
       "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
     },
-    "PhysicsFVThermalDiffusion": {
-      "target": "PhysicsFVThermalDiffusion",
-      "review_comment_id": 7009743331,
-      "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009743331",
-      "historical": [
-        "QPX_ISSUE20_HISTORICAL_COMPATIBILITY_SEPARATE"
-      ],
-      "protected": [
-        "NVTRANSPORTMATERIAL_D_T_PRODUCER",
-        "TEMPERATURE_FUNCTOR",
-        "OTHER_D_T_CONSUMERS"
-      ],
-      "required": [
-        "NONZERO_GRAD_T_AND_D_T_ON_OFF_PARITY",
-        "INTERNAL_BOUNDARY_FACE_NORMAL_FLUX",
-        "FLAG_AND_ZERO_GRADIENT_NEGATIVES",
-        "D_T_PROVIDER_INDEPENDENT_OWNERSHIP",
-        "AD_JACOBIAN_CONSERVATION"
-      ],
-      "strategy": "RETAIN_NO_APPROVED_REPLACEMENT",
-      "rule": "Removing this consumer does not authorize removal of shared D_T Material producer.",
-      "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
-    },
     "PhysicsFVLogMolarElectronTimeDerivative": {
       "target": "PhysicsFVLogMolarElectronTimeDerivative",
       "review_comment_id": 7009734225,

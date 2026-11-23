@@ -47,3 +47,9 @@ First cut removes only the `.C` and `.h` and runs existing CI **without disguisi
 ## Temporary CI targeting
 
 Repository CI and Physics Code CI trigger only for pull requests targeting `main`. This Draft source-deletion rehearsal is temporarily retargeted to `main` **to expose the original failures**. It must be retargeted back to archive PR #776's branch before review, and cannot be merged under either base. Until the FDEG evidence migration cut, red CI is expected.
+
+## D4 follow-up simulation (pre-approval only)
+
+Prepared a separated technical *archive-aware* version of this rehearsal: remove the now-unavailable Thermal profile from the **active** Functional/Transition registries (old baseline blobs still pinned by Git ancestry and archived FDEG graph), preserve all nine surviving live profile checks, verify the historical `include_thermal_diffusion` default from the immutable functional graph, and replace live source-bound code7 capture with pinned ZIP validation. The FDEG code7 negative graph-tampering test remains. Repository CI's exact Workflow step ownership contract is updated to match the renamed historical verification/upload steps.
+
+**No owner approval is implied** by these simulated profile lifecycle edits. The independent post-cut `verify_retired` gate and all Native/coverage/compatibility receipts remain blocking. This cut is not mergeable to main; it does not produce a proven safe-to-delete verdict.

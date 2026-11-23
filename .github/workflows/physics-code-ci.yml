@@ -91,16 +91,16 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v
       - name: Validate FDEG Scan Cache P0
         run: python3 -m unittest discover -s tests -p test_fdeg_scan_cache.py -v
-      - name: Capture FDEG exact-HEAD retirement evidence (code7 P0 only)
+      - name: Verify pinned historical FDEG code7 archive (no live source)
         run: |
-          head="$(git rev-parse HEAD)"
-          python3 ci/guards/fdeg_retirement_evidence.py --mode capture --target PhysicsFVThermalDiffusion --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7"
-          python3 ci/guards/fdeg_retirement_evidence.py --mode verify-archive --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7"
-      - name: Upload exact-HEAD FDEG retirement snapshot
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/fdeg-retirement-code7"
+          python3 ci/guards/fdeg_thermal_archive.py --archive-zip reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip             | tee "$RUNNER_TEMP/fdeg-retirement-code7/archive-validation.log"
+      - name: Upload historical FDEG code7 verification
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: fdeg-retirement-code7-${{ github.run_id }}-${{ github.run_attempt }}
+          name: fdeg-historical-code7-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/fdeg-retirement-code7/
           retention-days: 14
       - name: Regression-test scoped Native P1 harness and Issue493 delegation

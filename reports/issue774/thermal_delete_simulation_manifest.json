@@ -24,5 +24,12 @@
   "physics_parity_proven": false,
   "archive_depends_on_pr": 776,
   "archive_path": "reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip",
-  "disposition_status": "PENDING_CI_FAILURE_INVENTORY"
+  "disposition_status": "TECHNICAL_ARCHIVE_AWARE_MIGRATION_SIMULATION",
+  "untested_runtime_parity": true,
+  "expected_changes": [
+    "ARCHIVE_AWARE_LIVE_FDEG_TEST_MIGRATION",
+    "ACTIVE_FDEG_PROFILE_RETIREMENT_SIMULATION",
+    "REPOSITORY_CI_OWNER_CONTRACT_UPDATE",
+    "PRESERVE_HISTORICAL_GRAPH_AND_NEGATIVE_CHECKS"
+  ]
 }

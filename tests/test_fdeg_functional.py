@@ -6,6 +6,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -260,9 +261,9 @@ class FunctionalP0Test(unittest.TestCase):
 
 
 class LiveContractsP0Test(unittest.TestCase):
-    def test_six_source_pinned_profiles_and_anchors(self):
+    def test_nine_live_source_pinned_profiles_and_anchors(self):
         registry = functional.load_registry(ROOT)
-        self.assertEqual(len(registry["profiles"]), 10)
+        self.assertEqual(len(registry["profiles"]), 9)
         for target, profile in sorted(registry["profiles"].items()):
             with self.subTest(target=target):
                 functional.validate_registry_profile(profile)
@@ -353,9 +354,16 @@ class LiveContractsP0Test(unittest.TestCase):
         self.assertFalse(params["n_ref"]["has_explicit_source_default"])
         self.assertFalse(params["number_source"]["has_explicit_source_default"])
         self.assertTrue(params["number_source"]["required"])
-        thermal = functional.extract_parameters(
-            ROOT, doc["profiles"]["PhysicsFVThermalDiffusion"])
-        switch = next(p for p in thermal if p["name"] == "include_thermal_diffusion")
+        # The retired code7 source is no longer a live Functional profile.
+        # Preserve the original parameter contract via its SHA-pinned graph.
+        archive_zip = (
+            ROOT / "reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip"
+        )
+        with zipfile.ZipFile(archive_zip) as bundle:
+            thermal = json.loads(bundle.read("functional.json"))
+        self.assertEqual(thermal["target"], "PhysicsFVThermalDiffusion")
+        switch = next(p for p in thermal["parameter_declarations"]
+                      if p["name"] == "include_thermal_diffusion")
         self.assertTrue(switch["has_explicit_source_default"])
 
     def test_real_source_signed_projection_graph_join(self):
