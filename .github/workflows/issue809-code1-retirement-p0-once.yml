@@ -1,0 +1,76 @@
+# #809 branch-only Code1 source cut P0. REMOVE before integration.
+name: Issue809 Code1 New-only retirement P0 one-off
+
+on:
+  push:
+    branches: [issue-809-code1-newonly-retirement]
+    paths:
+      - '.github/workflows/issue809-code1-retirement-p0-once.yml'
+  pull_request:
+    branches: [issue-774-d9-newonly-fvkernel-retirement-closure-20261123]
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/issue809-code1-retirement-p0-once.yml'
+      - 'physics_app/src/fvkernels/*.C'
+      - 'physics_app/include/fvkernels/*.h'
+      - 'ci/guards/issue774_newonly_fvkernel_retirement.py'
+      - 'ci/baselines/fdeg_historical_profiles_code1.json'
+      - 'tests/test_fvkernel_native_usage_census.py'
+      - 'tests/test_issue774_newonly_fvkernel_retirement.py'
+permissions:
+  contents: read
+
+jobs:
+  code1_exact_head_p0:
+    name: P0 exact-head Code1 source, archive and CI guard
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout immutable PR HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Exact source and source cut
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          # Exact source/header absence and Factory count are checked by the
+          # existing source guard, avoiding a spurious executable type-use.
+      - name: Existing Canonical CI source/trigger check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/workflow_harness.py --self-test
+          python3 ci/workflow_harness.py --check
+          python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check
+      - name: P0 positives and fail-closed negatives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 -m py_compile ci/guards/issue774_newonly_fvkernel_retirement.py tests/test_issue774_newonly_fvkernel_retirement.py tests/test_fvkernel_native_usage_census.py
+          python3 -m unittest discover -s tests -p test_fvkernel_native_usage_census.py -v 2>&1 | tee evidence/census_p0.log
+          python3 -m unittest discover -s tests -p test_issue774_newonly_fvkernel_retirement.py -v 2>&1 | tee evidence/code1_retirement_p0.log
+      - name: Exact Git-tree audit of all active retired types
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue774_newonly_fvkernel_retirement.py --expected-head "$SOURCE_HEAD" --output evidence/code1_newonly_retirement_receipt.json
+      - name: Retain only sanitized CI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue809-code1-p0-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30

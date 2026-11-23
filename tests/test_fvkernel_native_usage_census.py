@@ -90,12 +90,14 @@ class NativeSourceUsageTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "DUPLICATE_FACTORY_OWNER"):
             self.check()
 
-    def test_real_newonly_branch_factory_inventory_includes_thermal(self):
+    def test_real_newonly_branch_excludes_both_retired_factories(self):
         rows = source_owners(ROOT / "physics_app/src/fvkernels")
-        self.assertEqual(len(rows), 12)
-        self.assertEqual(sum(len(x["registered_factory_types"]) for x in rows), 17)
+        self.assertEqual(len(rows), 11)
+        self.assertEqual(sum(len(x["registered_factory_types"]) for x in rows), 16)
         by_file = {r["source_file"].split("/")[-1]: r for r in rows}
         self.assertNotIn("PhysicsFVThermalDiffusion.C", by_file)
+        self.assertNotIn("FVElectronResponseBandedCorrection.C", by_file)
+        self.assertFalse((ROOT / "physics_app/include/fvkernels/FVElectronResponseBandedCorrection.h").exists())
         self.assertFalse((ROOT / "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h").exists())
         self.assertEqual(len(by_file["PhysicsFVLogMolarElectronTransport.C"]["registered_factory_types"]), 4)
         self.assertEqual(len(by_file["FVLogMolarTransport.C"]["registered_factory_types"]), 3)

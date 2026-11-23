@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """New-only Factory retirement CI contract for #774 (source/CI, not science).
 
-The old PhysicsFVThermalDiffusion input type is explicitly unsupported in
-New-only. No blanket legacy CI suppression, and no claim of external caller
-zero. Preserve D5's original sanitized A/B registration receipts separately.
+The retired Thermal and code1 Factory types are explicitly unsupported in
+New-only. Preserve the immutable historical code1 profile and generator,
+without claiming global caller-zero, scientific parity, or historical replay
+on the current binary. D5 A/B receipts retain their original limited scope.
 
 This guard reads the exact Git HEAD tree, never a dirty working tree fallback.
 It is deliberately self-contained for the New-only ancestry, which does not
@@ -27,8 +28,15 @@ REPO = "HyungseonSong-plasma/moose-test-repo"
 RETIRED = "PhysicsFVThermalDiffusion"
 SOURCE = "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C"
 HEADER = "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h"
-EXPECTED_SOURCE_COUNT = 12
-EXPECTED_REGISTERED_COUNT = 17
+CODE1 = "FVElectronResponseBandedCorrection"
+CODE1_SOURCE = "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C"
+CODE1_HEADER = "physics_app/include/fvkernels/FVElectronResponseBandedCorrection.h"
+CODE1_ARCHIVE = "ci/baselines/fdeg_historical_profiles_code1.json"
+CODE1_ARCHIVE_BLOB = "9a8b0d60a9511fe089ef6cb3d900f902123ee742"
+CODE1_HISTORIC_GENERATOR = "experiments/Issue351_frozen_heavy_driver_parity/control.py"
+CODE1_HISTORIC_SHA = "6d7efcb4ea94b2011782aba2c9cab40238756312"
+EXPECTED_SOURCE_COUNT = 11
+EXPECTED_REGISTERED_COUNT = 16
 EXPECTED_SHARED_SOURCE_OWNERS = {
     "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": 4,
     "physics_app/src/fvkernels/FVLogMolarTransport.C": 3,
@@ -41,7 +49,7 @@ OLD_HISTORICAL_CI = (
     "ci/guards/fdeg_thermal_archive.py",
     "tests/test_fdeg_harness_abcd.py",
 )
-TEXT = re.compile(r"\b" + re.escape(RETIRED) + r"\b")
+TEXT = re.compile(r"\b(?:" + "|".join(map(re.escape, (RETIRED, CODE1))) + r")\b")
 HEAD = re.compile(r"[0-9a-f]{40}\Z")
 REGISTRATIONS = re.compile(
     r'register(?:AD)?MooseObject\s*\(\s*"PhysicsApp"\s*,\s*([A-Za-z_]\w*)\s*\)'
@@ -73,6 +81,10 @@ def active_surface(path: str) -> str | None:
     An archived negative fixture or code7 provenance document is not a live
     physics consumer, but it remains represented in the audit inventory.
     """
+    # #351 is immutable historical replay source, not a supported New-only
+    # generator. Its exact git blob is enforced by check_code1_archive().
+    if path == CODE1_HISTORIC_GENERATOR:
+        return None
     if path.endswith(".i"):
         return "MOOSE_INPUT"
     if path.startswith(("physics_app/src/", "physics_app/include/")) and \
@@ -91,9 +103,14 @@ def active_surface(path: str) -> str | None:
 def check_route_rows(rows: list[dict]) -> dict:
     """Pure classifier; never count docs/tests as active input consumers."""
     active = [r for r in rows if r["active_surface"] is not None]
-    counts = dict(sorted(Counter(r["active_surface"] for r in rows).items()))
+    # Reject before sorting; mixing historical None and active class strings
+    # must report the unsafe path, not raise TypeError during diagnostics.
     require(not active, "ACTIVE_RETIRED_FACTORY_REINTRODUCED:" +
             ",".join(r["path"] for r in active[:8]))
+    counts = dict(sorted(Counter(
+        r["active_surface"] if r["active_surface"] is not None else "NONACTIVE"
+        for r in rows
+    ).items()))
     return {
         "matched_tracked_text_paths": len(rows),
         "reference_classes": counts,
@@ -102,7 +119,8 @@ def check_route_rows(rows: list[dict]) -> dict:
 
 
 def check_factory_inventory(root: Path, tracked: dict) -> dict:
-    require(SOURCE not in tracked and HEADER not in tracked,
+    require(all(p not in tracked for p in
+                (SOURCE, HEADER, CODE1_SOURCE, CODE1_HEADER)),
             "RETIRED_SOURCE_OR_HEADER_REINTRODUCED")
     folder = root / "physics_app/src/fvkernels"
     entries = source_owners(folder)
@@ -111,7 +129,7 @@ def check_factory_inventory(root: Path, tracked: dict) -> dict:
     registered = sorted(t for row in entries for t in row["registered_factory_types"])
     require(len(registered) == EXPECTED_REGISTERED_COUNT
             and len(set(registered)) == EXPECTED_REGISTERED_COUNT
-            and RETIRED not in registered,
+            and RETIRED not in registered and CODE1 not in registered,
             "FACTORY_REGISTRATION_COUNT_OR_ALIAS_DRIFT")
     for row in entries:
         path = row["source_file"]
@@ -130,7 +148,7 @@ def check_factory_inventory(root: Path, tracked: dict) -> dict:
 def check_ci_tree(root: Path, tracked: dict) -> dict:
     for path in OLD_HISTORICAL_CI:
         require(path not in tracked, "HISTORICAL_FDEG_CI_IMPORTED:" + path)
-    for path in (NEWONLY_CI, TEMPLATE, SAFETY, EXISTING_TEST, NEW_TEST, SELF):
+    for path in (NEWONLY_CI, TEMPLATE, SAFETY, EXISTING_TEST, NEW_TEST, SELF, CODE1_ARCHIVE):
         require(path in tracked, "CI_OWNER_MISSING:" + path)
     current = git(root, "show", "HEAD:" + NEWONLY_CI)
     template = git(root, "show", "HEAD:" + TEMPLATE)
@@ -148,6 +166,34 @@ def check_ci_tree(root: Path, tracked: dict) -> dict:
             "newonly_retirement_test_steps": 1,
             "historical_fdeg_ci_imported": False,
             "source_safety_guard_retained": True}
+
+
+def check_code1_archive(root: Path, tracked: dict) -> dict:
+    """Keep exact #337/#351 source-attested history after retiring Factory code."""
+    require(tracked.get(CODE1_ARCHIVE, {}).get("sha") == CODE1_ARCHIVE_BLOB,
+            "CODE1_ARCHIVE_BLOB_DRIFT")
+    require(tracked.get(CODE1_HISTORIC_GENERATOR, {}).get("sha") == CODE1_HISTORIC_SHA,
+            "CODE1_HISTORICAL_GENERATOR_CHANGED")
+    archive = json.loads(git(root, "show", "HEAD:" + CODE1_ARCHIVE))
+    capture = archive.get("capture", {})
+    require(archive.get("schema") == "fdeg.historical_profiles.v0.1"
+            and capture.get("target") == CODE1
+            and capture.get("source_file") ==
+            {"path": CODE1_SOURCE, "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"}
+            and capture.get("header_file") ==
+            {"path": CODE1_HEADER, "blob_sha": "9446a9d5d7863fb83a2c65af8b127bbd08573ad6"}
+            and capture.get("historical_qualification_scope") ==
+            "BOTH_LANES_USED_KERNEL_NOT_KERNEL_REMOVAL_PARITY"
+            and sorted(row.get("run_id") for row in capture.get("qualified_runs", [])) ==
+            [36163219902, 36496470116]
+            and archive.get("functional_profile", {}).get("target") == CODE1
+            and archive.get("transition_profile", {}).get("target") == CODE1,
+            "CODE1_ARCHIVE_CONTRACT_INVALID")
+    return {"archive_path": CODE1_ARCHIVE, "archive_blob_sha": CODE1_ARCHIVE_BLOB,
+            "historical_generator_blob_sha": CODE1_HISTORIC_SHA,
+            "historical_runs": [36163219902, 36496470116],
+            "current_binary_legacy_replay_proven": False,
+            "historic_on_off_removal_parity_proven": False}
 
 
 def audit(root: Path, *, expected_head: str) -> dict:
@@ -179,9 +225,10 @@ def audit(root: Path, *, expected_head: str) -> dict:
                     "physics_app/src/fvkernels", "physics_app/include/fvkernels"),
             "MODIFIED_WORKTREE_FACTORY_SOURCE")
     facts = check_factory_inventory(root, tracked)
+    code1_archive = check_code1_archive(root, tracked)
     ci = check_ci_tree(root, tracked)
     raw = git(root, "grep", "-n", "-F", "-I", "-e", RETIRED,
-              "HEAD", "--", missing_ok=True)
+              "-e", CODE1, "HEAD", "--", missing_ok=True)
     rows = []
     for line in raw.decode("utf-8").splitlines():
         parts = line.split(":", 3)
@@ -189,7 +236,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
         _, path, lineno, source_line = parts
         require(path in tracked and lineno.isdecimal(),
                 "SOURCE_MISSING_FROM_EXACT_GIT_TREE")
-        if RETIRED not in source_line or not TEXT.search(source_line):
+        if not TEXT.search(source_line):
             continue
         rows.append({"path": path, "line": int(lineno),
                      "source_blob_sha": tracked[path]["sha"],
@@ -210,6 +257,9 @@ def audit(root: Path, *, expected_head: str) -> dict:
         "nonregular_git_entries": nonregular_entries,
         "binary_git_blob_content_scan": "EXCLUDED_BY_GIT_GREP_I_NOT_COUNTED_AS_REGULAR_TEXT",
         "retired_factory": RETIRED,
+        "additional_retired_factory": CODE1,
+        "code1_source_cut_applied": True,
+        "code1_historical_archive": code1_archive,
         "legacy_inputs_supported": False,
         "current_newonly_factory": facts,
         "newonly_ci": ci,
