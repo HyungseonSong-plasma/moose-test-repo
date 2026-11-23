@@ -17,6 +17,12 @@ on:
       - 'tests/**'
       - 'ci/guards/**'
       - 'ci/contracts/**'
+      # Exact historical FDEG contract and archive inputs must trigger validation.
+      - 'ci/baselines/fdeg_functional_contracts.json'
+      - 'ci/baselines/fdeg_transition_contracts.json'
+      - 'ci/baselines/issue774_thermal_retirement_ci_contract.json'
+      - 'reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip'
+      - 'reports/issue774/fdeg_thermal_historical_anchor_v0_1.json'
       - 'ci/workflow_templates/**'
       - '.github/workflows/physics-code-ci.yml'
   pull_request:
@@ -36,6 +42,12 @@ on:
       - 'tests/**'
       - 'ci/guards/**'
       - 'ci/contracts/**'
+      # Exact historical FDEG contract and archive inputs must trigger validation.
+      - 'ci/baselines/fdeg_functional_contracts.json'
+      - 'ci/baselines/fdeg_transition_contracts.json'
+      - 'ci/baselines/issue774_thermal_retirement_ci_contract.json'
+      - 'reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip'
+      - 'reports/issue774/fdeg_thermal_historical_anchor_v0_1.json'
       - 'ci/workflow_templates/**'
       - '.github/workflows/physics-code-ci.yml'
 
