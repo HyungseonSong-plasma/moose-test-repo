@@ -1,0 +1,134 @@
+{
+  "schema": "issue774.d12.public_d_native_p2_and_consumer_boundary.v0.1",
+  "issue": 774,
+  "date": "2026-11-23",
+  "requester_legacy_input_support": "NOT_REQUIRED",
+  "scope": "public New-only S6 417/941 42-row vs generated 100-row Native P2 with same W1 and protected rates",
+  "tested_source_head": "945679c1470695a19c10feae0f336e8606bcbbe4",
+  "tested_git_tree": "1eee449472c77068531a65caad4774a46357bfb7",
+  "draft_code_pr": 800,
+  "ci": {
+    "run_id": 45211070728,
+    "job_conclusion": "failure",
+    "artifact_id": 14834949203,
+    "zip_sha256": "e8985757a76fb5c47693a7ec56eaa443f4047156316d530fc1f8563dc4e4f5d1",
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45211070728"
+  },
+  "immutable_W1": {
+    "source_head": "05a3cf85bc5ed7d9c258b1377bd66d68d70f4e3e",
+    "build_run_id": 45199787795,
+    "ELF_sha256": "6afd05d4a4d356fe5132ca28076ba27e06bea93d485ac8a6b39d334bb9a9465b",
+    "both_app_lib_sha_verified": true,
+    "rebuild": false
+  },
+  "cases": {
+    "417": {
+      "existing_42row": {
+        "returncode": 0,
+        "syntax_ok": true
+      },
+      "new_public_d_100row": {
+        "returncode": 1,
+        "syntax_ok": false
+      },
+      "native_error": true,
+      "unregistered_factory": false,
+      "missing_file": false,
+      "transport_lookup_error": false,
+      "unknown_parameter": false,
+      "generated_old_thermal_refs": 0,
+      "protected_rate_file_count": 5
+    },
+    "941": {
+      "existing_42row": {
+        "returncode": 0,
+        "syntax_ok": true
+      },
+      "new_public_d_100row": {
+        "returncode": 1,
+        "syntax_ok": false
+      },
+      "native_error": true,
+      "unregistered_factory": false,
+      "missing_file": false,
+      "transport_lookup_error": false,
+      "unknown_parameter": false,
+      "generated_old_thermal_refs": 0,
+      "protected_rate_file_count": 5
+    }
+  },
+  "privacy": {
+    "protected_rate_cleanup_verified": true,
+    "private_rate_contents_uploaded": false,
+    "raw_native_logs_uploaded": false
+  },
+  "verdict": "HOLD_PUBLIC_D_100ROW_NATIVE_CONSTRUCTION_WHILE_42ROW_CONTROLS_PASS",
+  "scientific_scope": "P2_SYNTAX_CONSTRUCTION_ONLY_P3_P4_NOT_RUN",
+  "supported_scope_matrix": [
+    {
+      "entrypoint": "S6 417/941 New-only 42row",
+      "evidence": "D10 exact W1 Native P05 + D12 same-bin control",
+      "status": "PASS_42ROW"
+    },
+    {
+      "entrypoint": "S6 417/941 Public D 100row",
+      "evidence": "D11 actual generated 11-layer/json PASS; D12 Native P2 fails",
+      "status": "HOLD_NATIVE_P2"
+    },
+    {
+      "entrypoint": "Issue402 S6 --newonly stage and owner retirement helpers",
+      "evidence": "part of D10/D11 P4X bounded staging",
+      "status": "PASS_FOR_417_941_STAGING_ONLY"
+    },
+    {
+      "entrypoint": "Issue402 hybrid JSON generator",
+      "evidence": "tracked callable found; not independently exercised as currently supported New-only",
+      "status": "OWNER_DISPOSITION_REQUIRED"
+    },
+    {
+      "entrypoint": "Issue395 100-300us restart",
+      "evidence": "tracked restart runner, not part of P2 retirement route",
+      "status": "SEPARATE_SCIENCE_OWNER"
+    },
+    {
+      "entrypoint": "Issue20 thermal gradient QPX",
+      "evidence": "QPXFVThermalDiffusion, separate qpxApp type",
+      "status": "SEPARATE_APP_UNCHANGED"
+    },
+    {
+      "entrypoint": "Other owned scripts and one-off workflows",
+      "evidence": "tracked source candidates; exact active support not classified",
+      "status": "OWNER_INVENTORY_REQUIRED"
+    },
+    {
+      "entrypoint": "Unknown third party old typed PhysicsApp inputs",
+      "evidence": "old input support explicitly waived; unknown external caller zero is not provable",
+      "status": "UNSUPPORTED_LEGACY_BREAKING_CHANGE_NOTICE"
+    },
+    {
+      "entrypoint": "Known supported external integrations",
+      "evidence": "no complete owner attestation collected",
+      "status": "EXPLICIT_OWNER_LIST_AND_CONTRACT_TEST_PENDING"
+    }
+  ],
+  "external_supported_consumer_zero_claim": false,
+  "deletion_acceptance_policy": {
+    "global_external_zero_required": false,
+    "supported_current_newonly_routes_must_be_verified": true,
+    "unknown_legacy_clients_not_blocking_by_absence": true,
+    "breaking_change_communication_required": true,
+    "known_supported_external_owner_disposition_required": true,
+    "independent_review_and_final_merge_requalification_required": true
+  },
+  "next_work": [
+    "Locate first real MOOSE native error through sanitized, no-rate/no-path diagnostics rather than classify source removal",
+    "Repair only confirmed Public D 100row generator/input integration contract and rerun both exact Native cases with same 42row positive controls",
+    "Inventory remaining currently supported generator entrypoints and tie each to input SHA and Native/review evidence",
+    "Obtain external integration owner list or explicit no supported third-party consumer policy; publish legacy compatibility termination",
+    "Re-run final exact integrated HEAD and independent rollback review before merging"
+  ],
+  "physics_app_changes": 0,
+  "poisson_changes": 0,
+  "main_merge": false,
+  "safe_to_delete": false
+}
