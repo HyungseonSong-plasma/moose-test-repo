@@ -1,0 +1,109 @@
+{
+  "schema": "issue774.newonly_clean_integration_verified.v0.1",
+  "date": "2026-11-23",
+  "issue": 774,
+  "production_candidate": {
+    "pr": 807,
+    "head": "51475b5eeb2e40c9f71bac30012daa7954e3b3b7",
+    "draft": true,
+    "main_merged": false,
+    "no_new_production_jobs": true,
+    "one_off_D5_D9_workflows_removed": true,
+    "canonical_ci_equals_template": true,
+    "public_d_complete_stage_contract": "22 original public files; exactly 2 changed and 1 generated JSON"
+  },
+  "verification_only": {
+    "pr": 808,
+    "source_head": "edbdcf2ea4867e7fcbee4a0e40b6780f1acf2a06",
+    "files_added_vs_clean_production_head": 5,
+    "added_files_category": "temporary validation workflow and 4 test scripts/tests",
+    "actual_production_source_changes": 0,
+    "not_for_merge": true
+  },
+  "workflow": {
+    "run_id": 45219450397,
+    "run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45219450397",
+    "result": "success",
+    "jobs": {
+      "W1_exact_head": "success",
+      "S6_417_941_Native_P05": "success",
+      "PublicD_100row_Native_P2": "success"
+    }
+  },
+  "W1": {
+    "artifact_id": 14841390062,
+    "zip_sha256": "84afb3e5f15ac57eeb041766771376ef1d0f53d00c43d35665ac5b10ee1f487d",
+    "source_head": "edbdcf2ea4867e7fcbee4a0e40b6780f1acf2a06",
+    "elf_sha256": "a8c6b7ad7ace8bd5430421129ca414b8b3f2030540d4f0e67d80dc8ae6f82d00",
+    "archive_sha256": "913f589482236d2ec80fbd10235a1ec3fcef0aa2760dd55e9a7633b92b4cf292",
+    "build_count": 1,
+    "application_shared_libraries": 2,
+    "roundtrip_verified": true,
+    "private_data_bundled": false
+  },
+  "P05": {
+    "artifact_id": 14840526856,
+    "zip_sha256": "2eb13a54556c2812081a323e77dc8a2556a9a81f15033b8478423817304c8448",
+    "status": "PASS_16_INTENDED_NATIVE_REJECTIONS",
+    "native_negative_controls": "16/16",
+    "per_case": {
+      "417": {
+        "FVKernel": 40,
+        "FVBC": 21,
+        "FEBoundaryCondition": 16,
+        "total": 77,
+        "clean_syntax": "PASS"
+      },
+      "941": {
+        "FVKernel": 40,
+        "FVBC": 21,
+        "FEBoundaryCondition": 16,
+        "total": 77,
+        "clean_syntax": "PASS"
+      }
+    },
+    "D10_reference_parity_checks": "44/44 PASS",
+    "comparison_json_sha256": "d28b03f9beb2fe3b1482f91e00b736f4ec409aa2e8ebb9df982275761d6787d6",
+    "private_data_in_artifacts": false,
+    "tmpfs_cleanup_verified": true
+  },
+  "PublicD_P2": {
+    "artifact_id": 14841083348,
+    "zip_sha256": "7b244dcba7c48fec201201596d92b1c40f3efd3fa3ba8cc942d9556e3e15f1d7",
+    "status": "PASS_BOTH_PUBLIC_D_INPUTS",
+    "actual_native_checks": "8/8",
+    "matrix_cases": [
+      "417",
+      "941"
+    ],
+    "variants": [
+      "42row_baseline",
+      "100row_table_only",
+      "json_binding_only_42row",
+      "full_publicD_100row"
+    ],
+    "all_returncode_0_syntax_ok": true,
+    "uses_same_run_W1_ELF_sha256": "a8c6b7ad7ace8bd5430421129ca414b8b3f2030540d4f0e67d80dc8ae6f82d00",
+    "per_case_original_public_files": 22,
+    "per_case_modified_existing_files": 2,
+    "per_case_added_generated_JSON": 1,
+    "unmodified_support_file_SHA_preserved": true,
+    "private_data_in_artifacts": false,
+    "tmpfs_cleanup_verified": true
+  },
+  "external_consumers": {
+    "status": "NONE_REPORTED_BY_REQUESTER_NOT_PROVEN_ZERO",
+    "global_caller_zero_not_required": true
+  },
+  "legacy_input_compatibility": "EXPLICITLY_NOT_REQUIRED",
+  "QPX_thermal_factory": "SEPARATE_UNTOUCHED",
+  "remaining": {
+    "main_merge": "DEFERRED",
+    "independent_code_review": "NOT_COMPLETED",
+    "later_combined_parent_or_Poisson_SHA": "NOT_VERIFIED",
+    "P3_P4_full_time_integration": "NOT_RUN",
+    "exact_canonical_main_target_CI": "NOT_RUN_IN_THIS_BRANCH_ONLY_VALIDATION"
+  },
+  "local_consolidated_json_sha256": "5ecce9c00889a9ae5efaee23e3b1106d50393101af7f893e2be2905becd3bb4c",
+  "verdict": "CLEAN_SOURCE_CI_PLUS_SAME_RUN_W1_P05_PUBLIC_D_P2_VERIFIED__NO_MAIN_MERGE"
+}
