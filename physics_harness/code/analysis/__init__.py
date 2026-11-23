@@ -12,6 +12,7 @@ from .parameter_contract import (
 from .diff import GraphDiff, compare_graphs
 from .adapters import (
     assess_code_understandability, summarize_understandability,
+    interpret_understandability_indicators,
 )
 
 __all__ = [
