@@ -64,6 +64,12 @@ class NativeSourceUsageTest(unittest.TestCase):
             self.check(RAW.replace(b"P5X_PRELOAD_READY\n", b""))
         with self.assertRaisesRegex(ValueError, "INVALID_REGISTRATION_EVENT"):
             self.check(RAW.replace(b"\tFVKernel\t", b"\tUNKNOWN\t", 1))
+        # Namespaced and templated framework type labels are printable and
+        # may appear among external Factory types. They must be counted.
+        qualified = RAW.replace(b"FrameworkKernel", b"Framework::Kernel<AD>")
+        result = self.check(qualified)
+        self.assertEqual(result["other_source_or_framework_type_counts"],
+                         {"Framework::Kernel<AD>": 1})
 
     def test_factory_source_alias_collision_rejected(self):
         (self.folder / "Duplicate.C").write_text(

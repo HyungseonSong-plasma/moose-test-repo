@@ -78,7 +78,8 @@ def summarize_clean_registration_trace(
         if (len(tokens) != 4 or tokens[0] != "P5X_REGISTER"
                 or tokens[1] not in FAMILIES
                 or not tokens[2] or len(tokens[2]) > 256
-                or not CLASS.fullmatch(tokens[3])):
+                or not tokens[3] or len(tokens[3]) > 256
+                or not tokens[3].isprintable()):
             raise ValueError("INVALID_REGISTRATION_EVENT")
         family_counts[tokens[1]] += 1
         type_counts[(tokens[1], tokens[3])] += 1

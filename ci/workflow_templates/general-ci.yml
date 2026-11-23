@@ -2260,14 +2260,30 @@ jobs:
                   # Issue #774 D5: record all FVKernel type/source use,
                   # not only the 12 three-ion typed registrations below.
                   from fvkernel_native_usage_census import summarize_clean_registration_trace
-                  full_usage = summarize_clean_registration_trace(
-                      tracefile.read_bytes(),
-                      repo/"physics_app"/"src"/"fvkernels",
-                      source_head=head,
-                      binary_sha256=receipt["binary_sha256"],
-                      registration_log_sha256=sha(tracefile),
-                      reported_event_count=len(events),
-                  )
+                  try:
+                      full_usage = summarize_clean_registration_trace(
+                          tracefile.read_bytes(),
+                          repo/"physics_app"/"src"/"fvkernels",
+                          source_head=head,
+                          binary_sha256=receipt["binary_sha256"],
+                          registration_log_sha256=sha(tracefile),
+                          reported_event_count=len(events),
+                      )
+                  except ValueError as exc:
+                      # Only fixed public error codes, never raw secret/scratch names.
+                      known = {
+                          "REGISTRATION_TRACE_SIZE_OR_FORMAT",
+                          "SOURCE_OR_BINARY_IDENTITY", "INVALID_TRACE_IDENTITY",
+                          "REGISTRATION_TRACE_SHA_MISMATCH",
+                          "REGISTRATION_TRACE_NOT_UTF8",
+                          "INVALID_REGISTRATION_EVENT",
+                          "REGISTRATION_EVENT_COUNT_OR_OBSERVER_MARKER_MISMATCH",
+                          "SOURCE_DIRECTORY_UNAVAILABLE", "SOURCE_FILES_UNAVAILABLE",
+                          "SOURCE_FILE_UNSAFE", "SOURCE_FACTORY_AMBIGUOUS",
+                          "DUPLICATE_FACTORY_OWNER",
+                      }
+                      code = str(exc) if str(exc) in known else "UNKNOWN_CENSUS_VALIDATION_FAILURE"
+                      raise RuntimeError("OWNER_D5_FULL_CENSUS_" + code) from None
                   if full_usage["event_family_counts"]["FVKernel"] < len(expected_kernels):
                       raise RuntimeError("FULL_FVKERNEL_CENSUS_MISSING_EXPECTED_ION_KERNELS")
                   receipt.setdefault("full_fvkernel_source_usage",{})[case]=full_usage
