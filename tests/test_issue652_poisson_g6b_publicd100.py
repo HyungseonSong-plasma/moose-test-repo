@@ -76,3 +76,8 @@ def test_no_unapproved_native_execution_or_automatic_parity_promotion():
     assert '"main_merge": "NOT_AUTHORIZED"' in script
     assert "G6B_REFUSE_RECEIPT_OVERWRITE" in script
     assert "G6B_UNEXPECTED_JSON_EDIT" in script
+
+
+def test_g6b_uses_canonical_g5_chemistry_c0_not_research_template():
+    assert g6b.C0.endswith("__C0_chemistry_off.i")
+    assert g6b.C0 != C0.name
