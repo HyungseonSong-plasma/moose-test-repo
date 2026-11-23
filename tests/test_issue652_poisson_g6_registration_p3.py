@@ -35,7 +35,7 @@ def test_exact_registration_has_15_typed_owners():
 
 def test_multiple_preload_markers_cannot_duplicate_registered_owners():
     raw = fake_trace()
-    marker = b"G6_PRELOAD_READY\\n".replace(b"\\n", b"\n")
+    marker = b"G6_PRELOAD_READY\n"
     doubled = raw.replace(marker, marker * 2, 1)
     report = g6.registration_receipt(doubled)
     assert report["preload_marker_count"] == 2
