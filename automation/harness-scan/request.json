@@ -1,15 +1,13 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-poisson-g4-p1-realprop-r3-20261123",
-  "source_sha": "55732448882e4199717eb1da45d7425e4ffc7446",
+  "request_id": "issue652-g5-exact15-source-p0-20261123",
+  "source_sha": "f8e382d284d9d5fbd48bb3164e242c6fe58c6bdb",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
     "physics_app/src/bcs/*.C",
-    "physics_app/src/base/PhysicsApp.C",
     "experiments/Issue402_plasma_dsl_g1/*.i",
     "experiments/Issue402_plasma_dsl_g1/*.py",
-    "experiments/Issue402_plasma_dsl_g1/*.json",
     "tests/test_issue652*.py",
     "tests/test_issue633*.py",
     "ci/guards/*.py"
@@ -21,7 +19,7 @@
     "python_ast",
     "workflow"
   ],
-  "max_files": 1200,
+  "max_files": 1300,
   "max_bytes": 80000000,
-  "max_seconds": 540
+  "max_seconds": 480
 }
