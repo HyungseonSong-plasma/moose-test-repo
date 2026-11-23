@@ -1,0 +1,67 @@
+# #817 one-shot P0 on isolated Code3 pre-retirement branch. Remove before production integration.
+name: Issue817 Code3 source consumer and input parity P0 once
+
+on:
+  push:
+    branches: [issue-817-code3-newonly-retirement]
+    paths:
+      - '.github/workflows/issue817-code3-p0-once.yml'
+      - 'ci/guards/issue817_code3_retirement.py'
+      - 'tests/test_issue817_code3_retirement.py'
+      - 'tests/test_code3_electron_source_retirement.py'
+      - 'experiments/Code3_electron_source_retirement/run.py'
+  pull_request:
+    branches: [issue-774-d9-newonly-fvkernel-retirement-closure-20261123]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+
+jobs:
+  code3_exact_head_p0:
+    name: Code3 exact-head D1 consumer and D2 replacement P0
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout immutable code3 source head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Assert exact source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Verify existing CI routing and negative harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/workflow_harness.py --self-test
+          python3 ci/workflow_harness.py --check
+          python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check
+      - name: Execute Code3 source consumer and electron-only P0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 -m py_compile ci/guards/issue817_code3_retirement.py experiments/Code3_electron_source_retirement/run.py tests/test_issue817_code3_retirement.py tests/test_code3_electron_source_retirement.py
+          python3 -m unittest discover -s tests -p test_issue817_code3_retirement.py -v 2>&1 | tee evidence/code3_consumer_tests.log
+          python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v 2>&1 | tee evidence/code3_electron_input_parity_tests.log
+          python3 experiments/Code3_electron_source_retirement/run.py --self-test > evidence/code3_candidate_self_test.json
+          python3 ci/guards/issue817_code3_retirement.py --expected-head "$SOURCE_HEAD" --output evidence/code3_exact_head_census.json
+      - name: Upload sanitized scoped P0 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue817-code3-p0-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30
