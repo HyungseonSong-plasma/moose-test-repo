@@ -30,3 +30,11 @@ The shared build is executed once; only ELF artifacts + a SHA/OCI/source manifes
 Generic `EXIT_ZERO_UNVERIFIED` means subprocess success alone: the full transient grid, conservation, and scientific equivalence remain **UNVERIFIED / HOLD**. Full 100µs authorization, protected EI staging, and scientific proof must be implemented and approved in the specific Physics case script; the orchestration layer does not grant them.
 
 `dispatch --repository OWNER/REPO --workflow-file NAME.yml --ref APPROVED_BRANCH --authorize --spec ...` uses GitHub's API only for an **already registered active** workflow. It may fail for unregistered branch-only workflows. GitHub's dispatch API does not return a Run ID, so acceptance is not falsely reported as a completed Run. `status --repository ... --run-id ID` reads the actual Run/jobs. Credentials are read from `GH_TOKEN` or `GITHUB_TOKEN`; never from CLI arguments.
+
+## First planned real-world candidate
+
+`python bin/physics.py workflow plan --spec physics_harness/workflow/examples/issue652-g6b-publicd100-plan.json` produces an offline two-case plan with 417 and 941, original Public D 100-row source lineage, a 460-interval/100us **requested contract**, and a shared-build/independent-runner DAG. It has no `build_script` or `case_script`, so `generate` and `dispatch` deliberately fail closed until reviewed, case-specific P1/P2/P3 adapters exist. It does **not** authorize or run 100us.
+
+Future generated workflows must be committed/reviewed and registered on GitHub before dispatch. The exact candidate source revision must also contain the required workflow entrypoint and reviewed adapter scripts; pinning an older Physics-only commit will not magically supply the orchestration code.
+
+The generic workflow unit tests run in the unconditional `Repository CI` job, without adding `physics_harness/workflow/**` to the expensive Physics Code CI path filter.

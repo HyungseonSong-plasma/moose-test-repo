@@ -108,6 +108,15 @@ def main(argv: list[str] | None = None) -> int:
             from physics_harness.workflow.dispatcher import dispatch
             from physics_harness.workflow.validator import validate_executor_files
             validate_executor_files(spec, ROOT)
+            from physics_harness.workflow.generator import render
+            from physics_harness.workflow.provider import WORKFLOW_FILE
+            if not WORKFLOW_FILE.fullmatch(opt.workflow_file):
+                raise WorkflowValidationError("INVALID_WORKFLOW_FILENAME")
+            checked_in = ROOT / ".github/workflows" / opt.workflow_file
+            if (not checked_in.is_file() or
+                    checked_in.read_text(encoding="utf-8") !=
+                    render(spec, spec_path=relative, root=ROOT)):
+                raise WorkflowValidationError("REGISTERED_WORKFLOW_DOES_NOT_MATCH_REVIEWED_SPEC")
             _dump(dispatch(GitHubActionsProvider(opt.repository),
                            workflow_file=opt.workflow_file, ref=opt.ref,
                            authorize=opt.authorize))

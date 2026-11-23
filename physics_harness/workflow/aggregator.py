@@ -26,6 +26,9 @@ def aggregate(spec, directory: Path) -> dict:
             or entry.get("source_sha") != spec.source_sha
             or entry.get("oci_ref") != spec.oci_ref
             or entry.get("scientific_status") != "HOLD"
+            or entry.get("end_time_s_contract") != spec.end_time_s
+            or entry.get("intervals_contract") != spec.intervals
+            or entry.get("solver_time_coverage_verified") is not False
             or entry.get("schema_version") != 1
         ):
             cases[case.id] = "IDENTITY_MISMATCH"

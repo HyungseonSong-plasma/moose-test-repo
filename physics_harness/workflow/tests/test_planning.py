@@ -27,7 +27,7 @@ class WorkflowPlanningTests(unittest.TestCase):
         spec = WorkflowSpec.from_dict(payload())
         execution = plan(spec)
         self.assertEqual(execution.matrix["include"], [{"case": "417"}, {"case": "941"}])
-        self.assertEqual(execution.jobs, ("build", "case", "aggregate"))
+        self.assertEqual(execution.jobs, ("build", "cases", "aggregate"))
         self.assertEqual(execution.max_parallel, 2)
         self.assertEqual(execution.science_state, "HOLD")
         self.assertIn('"case":"417"', matrix_json(spec))

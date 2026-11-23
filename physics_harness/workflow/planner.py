@@ -28,7 +28,7 @@ def plan(spec) -> WorkflowPlan:
         source_sha=spec.source_sha,
         oci_ref=spec.oci_ref,
         profile=spec.profile,
-        jobs=("build", "case", "aggregate"),
+        jobs=("build", "cases", "aggregate"),
         matrix=build_matrix(spec),
         max_parallel=spec.max_parallel,
         case_timeout_minutes=spec.timeout_minutes,
