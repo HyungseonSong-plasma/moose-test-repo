@@ -106,8 +106,10 @@ def _check_ei01_recovery() -> None:
     if hashlib.sha256(raw).hexdigest() != provenance.get("sha256"):
         raise AssertionError("EI01 table SHA-256 does not match frozen recovery provenance")
 
+    # Archived #192 recovery uses the historical name mean_en_solved.
+    # Current runnable state binding is tested independently by live input P0.
     lookup = recovery.get("lookup_contract", {})
-    if lookup.get("coordinate") != "e_energy_eV":
+    if lookup.get("coordinate") != "mean_en_solved":
         raise AssertionError("EI01 lookup coordinate is not solved mean energy")
     if lookup.get("coordinate_unit") != "eV":
         raise AssertionError("EI01 lookup coordinate unit changed")
@@ -143,7 +145,7 @@ def _check_ei01_recovery() -> None:
         raise AssertionError("EI01 progress owner type changed")
     if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_attachment.txt":
         raise AssertionError("EI01 progress owner table binding changed")
-    if owner.get("mean_energy") != "e_energy_eV":
+    if owner.get("mean_energy") != "mean_en_solved":
         raise AssertionError("EI01 progress owner mean-energy binding changed")
     if owner.get("reaction_progress") != "R_attachment":
         raise AssertionError("EI01 canonical progress identity changed")
