@@ -1,0 +1,404 @@
+name: Issue652 G6B PublicD100 Native 417 941 parallel 3ns (branch-only)
+on:
+  push:
+    branches: [issue-652-g6b-parallel-417-941-20261123]
+    paths: [.github/workflows/issue652-g6b-case-matrix-once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue652-g6b-417-941-parallel-3ns
+  cancel-in-progress: false
+env:
+  G6B_OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+jobs:
+  plan:
+    name: P0 pinned Workflow Harness independent case matrix
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Checkout SHA-pinned Workflow Harness
+        uses: actions/checkout@v4
+        with:
+          ref: 38191a1140346b3ddd66ef592a3e09678f00dd3e
+          path: workflow-harness
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Generate independent cases through pinned Harness
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C workflow-harness rev-parse HEAD)" = "38191a1140346b3ddd66ef592a3e09678f00dd3e"
+          python3 - <<'PY'
+          import os, sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path("workflow-harness").resolve()))
+          from physics_harness.workflow.spec import WorkflowSpec
+          from physics_harness.workflow.matrix import matrix_json
+          from physics_harness.workflow.planner import plan
+          s=WorkflowSpec.from_dict({
+              "schema_version":1, "name":"Issue652 G6B 417 and 941 3ns Pilot",
+              "profile":"parallel_cases", "source_sha":os.environ["GITHUB_SHA"],
+              "oci_ref":os.environ["G6B_OCI"],
+              "cases":[{"id":"417"},{"id":"941"}], "max_parallel":2,
+              "timeout_minutes":90, "artifact_prefix":"issue652-g6b-parallel-3ns",
+              "end_time_s":3e-9, "intervals":3,
+          })
+          p=plan(s)
+          assert p.jobs == ("build","cases","aggregate")
+          assert p.case_isolation and p.fail_fast is False and p.max_parallel == 2
+          assert p.science_state == "HOLD"
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:
+              f.write("matrix="+matrix_json(s)+"\n")
+          print("G6B_TWO_INDEPENDENT_CASE_HARNESS_MATRIX_PASS SCIENCE_HOLD")
+          PY
+
+  build:
+    name: One shared exact-head ELF build for both cases
+    needs: [plan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Verify branch and source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git branch --show-current)" = "issue-652-g6b-parallel-417-941-20261123"
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          python3 -m py_compile ci/guards/issue652_g6b_publicd100_stage.py
+          echo G6B_EXACT_HEAD_AND_NO_PRIVATE_RATES_PASS
+      - name: Build exact-head PhysicsApp in SHA-pinned OCI and external G6 tracer
+        shell: bash
+        env:
+          OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e physics_app/physics-opt
+          docker pull "$OCI"
+          docker run --rm --network none \
+            --entrypoint /bin/bash --user 0:0 --workdir /workspace/physics_app \
+            --env GITHUB_SHA="$GITHUB_SHA" \
+            --mount "type=bind,src=$PWD,dst=/workspace" \
+            "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              # Preserve cached vendors, exclude only the app utils Unity collision.
+              make -j2 MOOSE_UNITY=true app_non_unity_dirs="%/utils"
+              test -x physics-opt
+              ./physics-opt --check-input -i ci/smoke.i
+              g++ -std=c++17 -fPIC -shared -o g6_owner_tracer.so \
+                /workspace/ci/guards/issue652_g6_owner_tracer.cc -ldl
+              test "$(head -c 4 physics-opt | od -An -tx1 | tr -d " \n")" = 7f454c46
+              test "$(head -c 4 g6_owner_tracer.so | od -An -tx1 | tr -d " \n")" = 7f454c46
+              echo G6B_REAL_EXACT_HEAD_NATIVE_P1_AND_TRACER_BUILD_PASS
+            '
+          sha256sum physics_app/physics-opt physics_app/g6_owner_tracer.so
+          echo G6B_NATIVE_P1_EXACT_SOURCE_BUILD_PASS
+      - name: Seal exact ELF plus tracer and two app libraries (no input data)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/g6b-shared"
+          python3 - "$RUNNER_TEMP/g6b-shared/manifest.json" <<'PY'
+          import hashlib,json,os,pathlib,sys
+          names=(
+              "physics_app/physics-opt",
+              "physics_app/g6_owner_tracer.so",
+              "physics_app/lib/libphysics-opt.so.0",
+              "physics_app/test/lib/libphysics_test-opt.so.0",
+          )
+          digests={}
+          for name in names:
+              p=pathlib.Path(name)
+              assert p.is_file() and p.open("rb").read(4)==b"\x7fELF"
+              digests[name]=hashlib.sha256(p.read_bytes()).hexdigest()
+          data={"schema_version":1,"source_sha":os.environ["GITHUB_SHA"],
+                "oci_ref":os.environ["G6B_OCI"],"files":digests,
+                "science_status":"HOLD","protected_input_in_build_bundle":False}
+          pathlib.Path(sys.argv[1]).write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
+          print("G6B_SHARED_EXACT_ELF_MANIFEST_PASS")
+          PY
+          # Follow fixed four ELF symlinks only, never private rates or solver scratch.
+          tar -chzf "$RUNNER_TEMP/g6b-shared/bundle.tar.gz" \
+            physics_app/physics-opt physics_app/g6_owner_tracer.so \
+            physics_app/lib/libphysics-opt.so.0 \
+            physics_app/test/lib/libphysics_test-opt.so.0
+          (cd "$RUNNER_TEMP/g6b-shared" && sha256sum bundle.tar.gz > bundle.sha256)
+      - name: Upload source-bound P1 ELF only
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue652-g6b-shared-${{ github.sha }}
+          path: ${{ runner.temp }}/g6b-shared/
+          if-no-files-found: error
+          retention-days: 30
+
+  cases:
+    name: Independent Native Case ${{ matrix.case }}
+    needs: [plan, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Checkout SHA-pinned historical public mesh source
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Prepare historical public 400W mesh with pinned public precursor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
+          (
+            cd historical
+            SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+            DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+            echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $SRC" | sha256sum --check -
+            cp "$SRC" "$DST"
+            export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
+            export OXYGEN_RESEARCH_400=1
+            bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400
+            python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+            echo "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc  experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" | sha256sum --check -
+          )
+          echo G6B_HISTORICAL_MESH_SOURCE_SHA_PASS
+      - name: Download SHA-pinned public P3-X artifact and exact staging helper
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/g6b-input"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14406746397/zip" \
+            --output "$RUNNER_TEMP/g6b-input/p3x-source.zip"
+          echo "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111  $RUNNER_TEMP/g6b-input/p3x-source.zip" | sha256sum --check -
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://raw.githubusercontent.com/HyungseonSong-plasma/moose-test-repo/41ab61e442a497db2388c025075237bd24cfd025/ci/issue671_p5_d8_native_probe.py" \
+            --output "$RUNNER_TEMP/g6b-input/stager.py"
+          test "$(git hash-object "$RUNNER_TEMP/g6b-input/stager.py")" = 8bf49b7807c9f9b3eed8e622e72062f2b5c822bc
+          python3 -m py_compile "$RUNNER_TEMP/g6b-input/stager.py"
+          echo G6B_PINNED_PUBLIC_ARTIFACT_STAGER_PASS
+      - name: Rebuild actual public 11-layer and G5 Poisson cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          export G5_EXPECTED_SOURCE_HEAD="$GITHUB_SHA"
+          python3 "$RUNNER_TEMP/g6b-input/stager.py" \
+            --source "$GITHUB_WORKSPACE" --repo-head "$GITHUB_SHA" \
+            --artifact "$RUNNER_TEMP/g6b-input/p3x-source.zip" \
+            --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            --historical-support-root "$GITHUB_WORKSPACE/historical" \
+            --output "$RUNNER_TEMP/g6b-input/staged" --stage-only
+          python3 ci/guards/issue652_g5_native_p2.py \
+            --staged "$RUNNER_TEMP/g6b-input/staged" \
+            --output "$RUNNER_TEMP/g6b-input/g5-result" --stage-only
+          echo G6B_G5_REAL_11_LAYER_PUBLIC_SOURCE_PASS
+      - name: Convert only disposable electron lookup to original Public D 100 rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue652_g6b_publicd100_stage.py \
+            --staged "$RUNNER_TEMP/g6b-input/staged" \
+            --g5-receipt "$RUNNER_TEMP/g6b-input/g5-result/g5_stage_receipt.json" \
+            --output "$RUNNER_TEMP/g6b-input/g6b_public100_receipt.json"
+          python3 - "$RUNNER_TEMP/g6b-input/g6b_public100_receipt.json" <<'PY'
+          import json,sys
+          r=json.load(open(sys.argv[1]))
+          assert r["original_publicd_lookup_sha256"]=="994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+          assert set(r["cases"])=={"417","941"}
+          for c in r["cases"].values():
+              assert c["P0"]=="PASS_SCRATCH_ONLY_100ROW_PROVENANCE"
+              assert c["time"]["intervals"]==460 and c["time"]["time_points"]==461
+              assert c["P3_100us"]=="NOT_RUN" and c["science"]=="SCIENCE_HOLD"
+              assert len(c["unchanged_11_layer_sha256"])==11
+          assert r["protected_rate_data_in_receipt"] is False
+          print("G6B_BOTH_REAL_PUBLIC_11_LAYER_100ROW_STAGE_P0_PASS")
+          PY
+          cp "$RUNNER_TEMP/g6b-input/g6b_public100_receipt.json" g6b_public100_receipt.json
+      - name: Download one shared ELF build and verify all immutable hashes
+        uses: actions/download-artifact@v4
+        with:
+          name: issue652-g6b-shared-${{ github.sha }}
+          path: ${{ runner.temp }}/g6b-shared
+      - name: Revalidate ELF package and exact source before private Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          (cd "$RUNNER_TEMP/g6b-shared" && sha256sum --check bundle.sha256)
+          python3 - "$RUNNER_TEMP/g6b-shared/bundle.tar.gz" <<'PY'
+          import sys,tarfile
+          wanted={"physics_app/physics-opt","physics_app/g6_owner_tracer.so",
+                  "physics_app/lib/libphysics-opt.so.0",
+                  "physics_app/test/lib/libphysics_test-opt.so.0"}
+          with tarfile.open(sys.argv[1],"r:gz") as archive:
+              entries=archive.getmembers()
+              assert {e.name for e in entries} == wanted
+              assert all(e.isfile() and not e.issym() for e in entries)
+          PY
+          tar -xzf "$RUNNER_TEMP/g6b-shared/bundle.tar.gz"
+          python3 - "$RUNNER_TEMP/g6b-shared/manifest.json" <<'PY'
+          import hashlib,json,os,pathlib,sys
+          m=json.load(open(sys.argv[1]))
+          assert m["source_sha"]==os.environ["GITHUB_SHA"]
+          assert m["oci_ref"]==os.environ["G6B_OCI"]
+          assert m["protected_input_in_build_bundle"] is False
+          assert set(m["files"])=={"physics_app/physics-opt",
+              "physics_app/g6_owner_tracer.so","physics_app/lib/libphysics-opt.so.0",
+              "physics_app/test/lib/libphysics_test-opt.so.0"}
+          for name,digest in m["files"].items():
+              p=pathlib.Path(name)
+              assert p.is_file() and not p.is_symlink()
+              assert p.open("rb").read(4)==b"\x7fELF"
+              assert hashlib.sha256(p.read_bytes()).hexdigest()==digest
+          print("G6B_SAME_BINARY_BOTH_CASES_PROVENANCE_PASS")
+          PY
+          chmod u+x physics_app/physics-opt
+          docker pull "$G6B_OCI"
+      - name: Actual protected Native P2 and bounded P3 for matrix case
+        shell: bash
+        env:
+          G6_EXPECTED_SOURCE_SHA: ${{ github.sha }}
+          CASE_ID: ${{ matrix.case }}
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          test "$G6_EXPECTED_SOURCE_SHA" = "$GITHUB_SHA"
+          test -n "$PROTECTED_ARCHIVE_B64"
+          python3 ci/guards/issue652_g6_runtime_gate.py \
+            --case "$CASE_ID" \
+            --staged "$RUNNER_TEMP/g6b-input/staged" \
+            --output "$RUNNER_TEMP/g6b-input/g6b_native_100row_3ns_receipt.json"
+          python3 - "$RUNNER_TEMP/g6b-input/g6b_native_100row_3ns_receipt.json" <<'PY'
+          import json,sys
+          r=json.load(open(sys.argv[1]))
+          assert set(r["cases"])=={__import__("os").environ["CASE_ID"]}
+          assert r["source_sha"]
+          assert r["registration"]=="PASS_TYPED_15_OWNERS"
+          assert r["P3_3ns"]=="PASS_FINITE_3NS_NO_BASELINE_PARITY"
+          assert r["P4_100us"]=="NOT_RUN"
+          assert r["science"]=="SCIENCE_HOLD"
+          assert r["raw_private_rates_in_artifact"] is False
+          print("G6B_NATIVE_SELECTED_CASE_3NS_PASS")
+          PY
+          cp "$RUNNER_TEMP/g6b-input/g6b_native_100row_3ns_receipt.json" g6b_native_100row_3ns_receipt.json
+      - name: Check isolated 100-row P0 and typed 3ns Native case receipt
+        shell: bash
+        env:
+          CASE_ID: ${{ matrix.case }}
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue652_g6b_parallel_evidence.py case \
+            --public g6b_public100_receipt.json \
+            --native g6b_native_100row_3ns_receipt.json \
+            --manifest "$RUNNER_TEMP/g6b-shared/manifest.json" \
+            --case "$CASE_ID" --source-sha "$GITHUB_SHA" \
+            --output "physics-case-receipt-$CASE_ID.json"
+          mv g6b_public100_receipt.json "g6b-public100-$CASE_ID.json"
+          mv g6b_native_100row_3ns_receipt.json "g6b-native3ns-$CASE_ID.json"
+          echo "G6B_NATIVE_INDEPENDENT_CASE_PASS=$CASE_ID"
+      - name: Upload only sanitized per-case receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue652-g6b-parallel-case-${{ matrix.case }}
+          path: |
+            g6b-public100-${{ matrix.case }}.json
+            g6b-native3ns-${{ matrix.case }}.json
+            physics-case-receipt-${{ matrix.case }}.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  aggregate:
+    name: Require BOTH independent case receipts / science HOLD
+    if: always()
+    needs: [build, cases]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Checkout SHA-pinned Workflow Harness
+        uses: actions/checkout@v4
+        with:
+          ref: 38191a1140346b3ddd66ef592a3e09678f00dd3e
+          path: workflow-harness
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Download both case receipts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: issue652-g6b-parallel-case-*
+          path: ${{ runner.temp }}/g6b-case-receipts
+          merge-multiple: true
+      - name: Download one shared build manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: issue652-g6b-shared-${{ github.sha }}
+          path: ${{ runner.temp }}/g6b-shared
+      - name: Recheck both cases with pinned Workflow Harness aggregator
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C workflow-harness rev-parse HEAD)" = "38191a1140346b3ddd66ef592a3e09678f00dd3e"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 ci/guards/issue652_g6b_parallel_evidence.py aggregate \
+            --receipts "$RUNNER_TEMP/g6b-case-receipts" \
+            --manifest "$RUNNER_TEMP/g6b-shared/manifest.json" \
+            --source-sha "$GITHUB_SHA" \
+            --harness-root "$GITHUB_WORKSPACE/workflow-harness" \
+            --output g6b_parallel_3ns_summary.json
+      - name: Upload sanitized two-case 3ns verdict only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue652-g6b-parallel-summary-${{ github.sha }}
+          path: g6b_parallel_3ns_summary.json
+          if-no-files-found: warn
+          retention-days: 30
