@@ -297,24 +297,27 @@ def run(*, before_g5: Path, after_g5: Path, stage_receipt: Path,
                 out = dest/"g8_outputs"
                 out.mkdir(mode=0o700)
                 copies[mode] = dest
+            g5_record = json.loads(
+                (after_g5.parent/"g5-result/g5_stage_receipt.json").read_text())
+            if (g5_record.get("source_sha") != SOURCE_SHA
+                    or set(g5_record.get("cases", {})) != set(CASES)):
+                raise MatchedHold("G5_INPUT_ORDER_RECEIPT_IDENTITY_DRIFT")
+            ordered = g5_record["cases"][case]["ordered"]
+            if (len(ordered) != 11 or [Path(x).name for x in ordered][0] != C0
+                    or len({Path(x).name for x in ordered}) != 11):
+                raise MatchedHold("G5_ELEVEN_LAYER_RUNTIME_ORDER_INVALID")
             codes = {}
             for mode in ("old", "new"):
-                command = g6.docker_cmd(copies[mode], record.get("ordered", []), observe=False)
-                # Stage receipt fixes order from P3-X G5; reconstruct exact 11 names.
-                if not record.get("ordered"):
-                    expected_order=json.loads((after_g5.parent/"g5-result/g5_stage_receipt.json").read_text())
-                    ordered=expected_order["cases"][case]["ordered"]
-                    command=g6.docker_cmd(copies[mode], ordered, observe=False)
+                command = g6.docker_cmd(copies[mode], ordered, observe=False)
                 command[-1] += " --check-input"
-                code, digest = execute_privately(
-                    command, copies[mode], private/(case+"-"+mode+"-p2.log"), 360)
+                log = private/(case+"-"+mode+"-p2.log")
+                code, digest = execute_privately(command, copies[mode], log, 360)
                 repair_private_permissions(private)
                 codes[mode] = code
-                if code != 0:
+                if code != 0 or b"Syntax OK" not in log.read_bytes():
                     raise MatchedHold("NATIVE_P2_FAIL_"+mode.upper()+":"+case)
             run_records = {}
             for mode in ("old", "new"):
-                ordered = json.loads((after_g5.parent/"g5-result/g5_stage_receipt.json").read_text())["cases"][case]["ordered"]
                 command = g6.docker_cmd(
                     copies[mode], ordered + ["Outputs/file_base=g8_outputs/plasma"],
                     observe=False)
