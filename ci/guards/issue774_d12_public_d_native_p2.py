@@ -121,8 +121,11 @@ def classify_native(rc: int, log: str) -> dict:
         "syntax_ok": rc == 0 and "Syntax OK" in log,
         "log_sha256": sha(log.encode("utf-8")),
         "log_bytes": len(log.encode("utf-8")),
-        "safe_error_categories": {name: bool(rx.search(error_section))
-                                  for name, rx in SAFE_ERROR_LABELS.items()},
+        "safe_error_categories": {
+            name: bool(rx.search(log if name in ("native_error", "syntax_ok")
+                                else error_section))
+            for name, rx in SAFE_ERROR_LABELS.items()
+        },
         "public_error_vocab_hits": safe_token_hits,
         "error_section_sha256": sha(error_section.encode("utf-8")),
         "error_section_line_count": len(error_section.splitlines()),
