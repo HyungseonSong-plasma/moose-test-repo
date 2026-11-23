@@ -348,8 +348,19 @@ parsePoissonRecord(const Json & root, const std::string & file)
       !poisson.contains("relative_permittivity") || !poisson.contains("boundaries"))
     fail(file, "POISSON_FIELDS_INVALID");
   const auto & eps = poisson.at("relative_permittivity");
-  const std::set<std::string> expected_blocks = {
-      "plasma", "cover", "wafer", "focus_ring", "vacuum", "coil1", "coil2", "coil3"};
+  // The first New-only S6 Poisson cutover is an exact Native parity gate,
+  // not a parameter sweep. Reject changed epsilon values in the runtime
+  // parser too, rather than relying solely on the Python P0 checker.
+  const std::map<std::string, double> expected_eps = {
+      {"plasma", 1.0}, {"cover", 3.6}, {"wafer", 12.5},
+      {"focus_ring", 8.0}, {"vacuum", 1.0},
+      {"coil1", 1.0}, {"coil2", 1.0}, {"coil3", 1.0}};
+  std::set<std::string> expected_blocks;
+  for (const auto & [block, value] : expected_eps)
+  {
+    (void)value;
+    expected_blocks.insert(block);
+  }
   if (!eps.is_object() || eps.size() != expected_blocks.size())
     fail(file, "POISSON_EPS_BLOCKS_INVALID");
 
@@ -361,7 +372,8 @@ parsePoissonRecord(const Json & root, const std::string & file)
     if (!it.value().is_number())
       fail(file, "POISSON_EPS_VALUE_INVALID: " + it.key());
     const auto value = it.value().get<double>();
-    if (!std::isfinite(value) || value <= 0.0)
+    if (!std::isfinite(value) || value <= 0.0 ||
+        value != expected_eps.at(it.key()))
       fail(file, "POISSON_EPS_VALUE_INVALID: " + it.key());
     result.relative_permittivity.emplace(it.key(), value);
   }
