@@ -37,7 +37,7 @@ from prepare_s6_newonly import JSON_SHA, TEMPLATE_SHA  # noqa: E402
 
 OCI = ("ghcr.io/hyungseonsong-plasma/physics-build-base@"
        "sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008")
-EXPECTED_HEAD = "c96c260dafb4785c4ef48680425dafae533b31d0"
+EXPECTED_HEAD = os.environ.get("G5_EXPECTED_SOURCE_HEAD", "")
 CASES = ("417", "941")
 
 
@@ -56,7 +56,8 @@ def file_sha(path: Path) -> str:
 def assert_source_head():
     observed = subprocess.check_output(["git", "-C", str(ROOT),
                                         "rev-parse", "HEAD"], text=True).strip()
-    if observed != EXPECTED_HEAD:
+    if (not re.fullmatch(r"[0-9a-f]{40}", EXPECTED_HEAD) or
+            observed != EXPECTED_HEAD):
         raise ValueError("G5_ACTIVE_SOURCE_SHA_DRIFT")
 
 
