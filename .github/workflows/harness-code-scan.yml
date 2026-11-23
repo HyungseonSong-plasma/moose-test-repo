@@ -169,29 +169,17 @@ jobs:
         shell: bash
         run: test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
 
-      - name: Checkout pinned Harness engine (code only)
-        uses: actions/checkout@v4
-        with:
-          ref: 156a5117ebe6816e67b352a9470572c2e74da367
-          path: scan-engine
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Assert exact Harness engine revision
-        shell: bash
-        run: test "$(git -C scan-engine rev-parse HEAD)" = "156a5117ebe6816e67b352a9470572c2e74da367"
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install Harness scan dependencies
-        run: python -m pip install -r scan-engine/physics_harness/code/requirements.txt
+        run: python -m pip install -r scan-source/physics_harness/code/requirements.txt
 
       - name: Run scoped source scan and export evidence
         shell: bash
-        working-directory: scan-engine
+        working-directory: scan-source
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -263,14 +251,7 @@ jobs:
                   ),
               )
               save("request.json", request)
-              save("engine-provenance.json", {
-                  "harness_engine_sha": "156a5117ebe6816e67b352a9470572c2e74da367",
-                  "target_source_sha": request.revision,
-                  "runtime_provider": "GitSourceProvider",
-                  "scan_entrypoint": "physics_harness.code.diagnostics.run_scan",
-                  "engine_source_separated": True,
-              })
-              result = run_scan(request, GitSourceProvider(Path('../scan-source')))
+              result = run_scan(request, GitSourceProvider(Path.cwd()))
               verification = result.verification
               if verification is None:
                   raise ValueError("MISSING_VERIFICATION_RECEIPT")
