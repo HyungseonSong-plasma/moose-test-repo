@@ -191,9 +191,7 @@ jobs:
 
       - name: Run scoped source scan and export evidence
         shell: bash
-        working-directory: scan-source
-        env:
-          PYTHONPATH: ${{ github.workspace }}/scan-engine
+        working-directory: scan-engine
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -272,7 +270,7 @@ jobs:
                   "scan_entrypoint": "physics_harness.code.diagnostics.run_scan",
                   "engine_source_separated": True,
               })
-              result = run_scan(request, GitSourceProvider(Path.cwd()))
+              result = run_scan(request, GitSourceProvider(Path('../scan-source')))
               verification = result.verification
               if verification is None:
                   raise ValueError("MISSING_VERIFICATION_RECEIPT")
