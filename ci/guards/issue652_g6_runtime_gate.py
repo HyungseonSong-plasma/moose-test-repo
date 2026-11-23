@@ -231,7 +231,21 @@ def execute(command: list[str], timeout: int) -> tuple[int, str]:
         return 124, "G6_EXECUTION_EXPLICIT_TIMEOUT"
 
 
-def run(staged: Path, output: Path, *, registration_only: bool) -> dict:
+def selected_cases(case: str | None) -> tuple[str, ...]:
+    """One CI lane selects one case; absence preserves the historical dual-case mode."""
+    if case is None:
+        return CASES
+    if case not in CASES:
+        raise ValueError("G6_CASE_NOT_IN_APPROVED_ALLOWLIST")
+    return (case,)
+
+
+def run(staged: Path, output: Path, *, registration_only: bool,
+        cases: tuple[str, ...] = CASES) -> dict:
+    if (not isinstance(cases, tuple) or not cases
+            or len(set(cases)) != len(cases)
+            or any(case not in CASES for case in cases)):
+        raise ValueError("G6_INVALID_SELECTED_CASES")
     source_sha = exact_source()
     source_receipt = json.loads((staged.parent / "g5-result/g5_stage_receipt.json").read_text()) if (
         staged.parent / "g5-result/g5_stage_receipt.json").is_file() else None
@@ -263,7 +277,7 @@ def run(staged: Path, output: Path, *, registration_only: bool) -> dict:
         "science": "SCIENCE_HOLD", "raw_private_rates_in_artifact": False,
     }
     try:
-        for case in CASES:
+        for case in cases:
             public = staged / "scratch" / case
             private = protected / case
             for path in public.rglob("*"):
@@ -360,13 +374,13 @@ def run(staged: Path, output: Path, *, registration_only: bool) -> dict:
         result["registration"] = (
             "PASS_TYPED_15_OWNERS" if all(
                 isinstance(result["cases"][c]["registration"], dict)
-                for c in CASES) else "HOLD"
+                for c in cases) else "HOLD"
         )
         if not registration_only:
             result["P3_3ns"] = (
                 "PASS_FINITE_3NS_NO_BASELINE_PARITY" if all(
                     isinstance(result["cases"][c]["P3_3ns"], dict)
-                    for c in CASES) else "HOLD"
+                    for c in cases) else "HOLD"
             )
     finally:
         secure_tmpfs_cleanup(protected)
@@ -387,8 +401,11 @@ def main() -> int:
     parser.add_argument("--staged", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--registration-only", action="store_true")
+    parser.add_argument("--case", choices=CASES,
+                        help="Run exactly one matrix case; absent preserves both cases")
     args = parser.parse_args()
-    run(args.staged, args.output, registration_only=args.registration_only)
+    run(args.staged, args.output, registration_only=args.registration_only,
+        cases=selected_cases(args.case))
     return 0
 
 
