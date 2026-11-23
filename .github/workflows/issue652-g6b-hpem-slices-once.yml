@@ -1,0 +1,96 @@
+name: Issue652 Poisson G6B S6-417 941 Exodus HPEM axis and z23 slices
+on:
+  push:
+    branches: [issue-652-g6b-hpem-slices-20261123]
+    paths: [.github/workflows/issue652-g6b-hpem-slices-once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue652-g6b-hpem-exodus-100us-slices
+  cancel-in-progress: false
+jobs:
+  compare-hpem:
+    name: Read P3 Exodus 417/941 and compare r0 + z23 vs frozen HPEM
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Checkout exact analysis source (full100 run source is pinned separately)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Validate source, HPEM reference identity, and comparison script
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          python3 -m py_compile ci/guards/issue652_g6b_compare_hpem.py
+          sha256sum experiments/Issue493_s6_boltzmann/reference/reference_vertical.csv \
+                    experiments/Issue493_s6_boltzmann/reference/reference_horizontal.csv
+      - name: Install numeric Exodus/mesh/plot readers (no Native build)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            'numpy>=1.26,<3' 'scipy>=1.14,<2' 'matplotlib>=3.9,<4' 'netCDF4>=1.7,<2'
+          python3 - <<'PY'
+          import numpy, scipy, matplotlib, netCDF4
+          print("HPEM_COMPARISON_NUMERICAL_LIBRARIES_READY")
+          PY
+      - name: Download ORIGINAL completed 417 native full100 Exodus + CSV (run 45216929109)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45216929109
+          name: issue652-g6b-full100-native-output-417
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/source-417
+      - name: Download ORIGINAL completed 941 native full100 Exodus + CSV
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45216929109
+          name: issue652-g6b-full100-native-output-941
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/source-941
+      - name: Download bound native P3 receipts for both cases
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45216929109
+          pattern: issue652-g6b-full100-case-*
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/case-receipts
+          merge-multiple: false
+      - name: Download independent full100 two-case aggregate
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45216929109
+          name: issue652-g6b-full100-summary-26e84a4a33cf93d9e278a4f0b2d78c53cae2d6ce
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/aggregate
+      - name: Slice 100us MOOSE electron density at r0 and z23; compare both cases to HPEM
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue652_g6b_compare_hpem.py \
+            --case417-status "$RUNNER_TEMP/case-receipts/issue652-g6b-full100-case-417" \
+            --case417-raw "$RUNNER_TEMP/source-417" \
+            --case941-status "$RUNNER_TEMP/case-receipts/issue652-g6b-full100-case-941" \
+            --case941-raw "$RUNNER_TEMP/source-941" \
+            --aggregate "$RUNNER_TEMP/aggregate" \
+            --output hpem_g6b_s6_417_941_slices
+          test -s hpem_g6b_s6_417_941_slices/metrics.json
+          test -s hpem_g6b_s6_417_941_slices/vertical_hpem_vs_s6_417_941.png
+          test -s hpem_g6b_s6_417_941_slices/horizontal_hpem_vs_s6_417_941.png
+          test -s hpem_g6b_s6_417_941_slices/vertical_profiles.csv
+          test -s hpem_g6b_s6_417_941_slices/horizontal_profiles.csv
+          echo HPEM_G6B_TWO_CASES_EXODUS_SLICES_PASS_SCIENCE_HOLD
+      - name: Upload only comparison PNG CSV metrics; do NOT republish raw Exodus
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue652-g6b-hpem-slices-417-941-100us
+          path: hpem_g6b_s6_417_941_slices/
+          if-no-files-found: warn
+          retention-days: 90
