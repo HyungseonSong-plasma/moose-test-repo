@@ -189,6 +189,19 @@ jobs:
       - name: Install Harness scan dependencies
         run: python -m pip install -r scan-engine/physics_harness/code/requirements.txt
 
+      - name: Run G1-G3 source parity and negative regressions
+        shell: bash
+        working-directory: scan-source
+        run: |
+          set -euo pipefail
+          python3 -m pip install 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_issue652_poisson_g1_json_contract.py \
+            tests/test_issue652_poisson_g2_density_ownership.py \
+            tests/test_issue652_poisson_g3_charge_ownership.py \
+            tests/test_issue633_newonly_run_species_schema.py \
+            tests/test_issue402_retired_charge_poisson_ownership.py
+
       - name: Run scoped source scan and export evidence
         shell: bash
         working-directory: scan-engine
@@ -331,12 +344,12 @@ jobs:
               raise
           PY
 
-      - name: P1 build exact G2 PhysicsApp in pinned OCI (one-shot, no solver)
+      - name: P1 build exact G3 PhysicsApp in pinned OCI (one-shot, no solver)
         shell: bash
         timeout-minutes: 75
         run: |
           set -euo pipefail
-          test "$SCAN_SOURCE_SHA" = "6d0508ec89756f67ab21b4419b6d71fd9f81b490"
+          test "$SCAN_SOURCE_SHA" = "751532fd2ceffb5cbea6b5d94908e4d24f13a4f8"
           test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
           test ! -e scan-source/physics_app/physics-opt
           OCI='ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008'
@@ -363,7 +376,7 @@ jobs:
           artifact=pathlib.Path("harness-scan-output")
           binary=source/"physics_app/physics-opt"
           data={
-              "schema":"issue652.poisson_g2.p1_exact_head.v1",
+              "schema":"issue652.poisson_g3.p1_exact_head.v1",
               "source_sha":os.environ["SCAN_SOURCE_SHA"],
               "oci":"ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
               "binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),
@@ -374,7 +387,7 @@ jobs:
               "Science":"HOLD",
           }
           (artifact/"p1_identity.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\\n")
-          print("POISSON_G2_P1_EXACT_SHA_PASS",data["source_sha"],data["binary_sha256"])
+          print("POISSON_G3_P1_EXACT_SHA_PASS",data["source_sha"],data["binary_sha256"])
           PY
 
       - name: Upload Graph and provenance receipts
