@@ -30,16 +30,16 @@ def sha(data: bytes) -> str:
 
 
 def launch(work: Path, stem: str, *, syntax: bool) -> dict:
-    """One same container and binary per source arm, without host Python MOOSE."""
+    """One pinned container/binary per arm; map the host UID to own MOOSE JIT scratch."""
     command = (
-        "set -euo pipefail; source /environment; "
+        "set -euo pipefail; source /environment; export HOME=/case; "
         "/workspace/physics_app/physics-opt " +
         ("--check-input " if syntax else "") +
         "-i " + stem + ".i"
     )
     result = subprocess.run(
         ["docker", "run", "--rm", "--platform", "linux/amd64",
-         "--entrypoint", "/bin/bash", "--user", "0:0", "--workdir", "/case",
+         "--entrypoint", "/bin/bash", "--user", f"{os.getuid()}:{os.getgid()}", "--workdir", "/case",
          "-v", str(ROOT) + ":/workspace", "-v", str(work) + ":/case",
          OCI, "-lc", command],
         text=True, capture_output=True, timeout=300, check=False,
