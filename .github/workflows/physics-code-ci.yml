@@ -107,6 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/fdeg-retirement-code7"
+          python3 ci/guards/issue774_thermal_ci_contract.py --output "$RUNNER_TEMP/fdeg-retirement-code7/ci-contract.json"
           python3 ci/guards/fdeg_thermal_archive.py --archive-zip reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip             | tee "$RUNNER_TEMP/fdeg-retirement-code7/archive-validation.log"
       - name: Upload historical FDEG code7 verification
         if: success()
