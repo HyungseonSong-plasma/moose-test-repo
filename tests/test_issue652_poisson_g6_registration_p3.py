@@ -33,6 +33,15 @@ def test_exact_registration_has_15_typed_owners():
     assert report["dynamic_functor_value"] == "NOT_TESTED_BY_REGISTRATION"
 
 
+def test_multiple_preload_markers_cannot_duplicate_registered_owners():
+    raw = fake_trace()
+    marker = b"G6_PRELOAD_READY\\n".replace(b"\\n", b"\n")
+    doubled = raw.replace(marker, marker * 2, 1)
+    report = g6.registration_receipt(doubled)
+    assert report["preload_marker_count"] == 2
+    assert len(report["observed_expected_owners"]) == 15
+
+
 @pytest.mark.parametrize("mutation,error", [
     (lambda s: s.replace(b"G6_PRELOAD_READY\n", b""), "G6_REGISTRATION_OBSERVER"),
     (lambda s: s.replace(b"ADMatDiffusion", b"Diffusion"), "G6_EXPECTED_SINGLE"),
