@@ -44,19 +44,22 @@ class D6ConsumerWitnessTest(unittest.TestCase):
         self.put("experiments/new/generate.py",
                  "KERNEL = 'PhysicsFVThermalDiffusion'\n")
         self.put("reports/issue774/a.json", '{"target":"PhysicsFVThermalDiffusion"}\n')
+        self.put("reports/issue774/old_example.md", "type = PhysicsFVThermalDiffusion\n")
         self.put("tests/test_fdeg_contract.py", 'NAME="PhysicsFVThermalDiffusion"\n')
         self.put("experiments/qpx/input.i", "type = QPXFVThermalDiffusion\n")
         head = self.commit()
         result = audit(self.root, head)
         rows = {r["path"]: r for r in result["reference_paths"]}
         self.assertEqual(result["source_head"], head)
-        self.assertEqual(result["tracked_path_count"], 5)
+        self.assertEqual(result["tracked_path_count"], 6)
         self.assertTrue(result["source_and_header_absent"])
         self.assertEqual(rows["experiments/old/input.i"]["reference_class"],
                          "MOOSE_INPUT_CONSUMER_REVIEW")
         self.assertEqual(rows["experiments/new/generate.py"]["reference_class"],
                          "GENERATOR_OR_SCRIPT_REFERENCE_REVIEW")
         self.assertEqual(rows["reports/issue774/a.json"]["reference_class"],
+                         "DOCUMENTED_EVIDENCE_REVIEW")
+        self.assertEqual(rows["reports/issue774/old_example.md"]["reference_class"],
                          "DOCUMENTED_EVIDENCE_REVIEW")
         self.assertEqual(rows["experiments/qpx/input.i"]["reference_class"],
                          "DISTINCT_QPX_APP_KEEP_UNCHANGED")
