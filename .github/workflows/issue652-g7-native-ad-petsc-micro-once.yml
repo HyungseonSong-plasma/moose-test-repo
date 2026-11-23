@@ -82,6 +82,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/g7-analysis${PYTHONPATH:+:$PYTHONPATH}"
           docker pull "$G7_OCI"
           python3 g7-analysis/ci/guards/issue652_g7_native_ad_jacobian.py \
             --source "$GITHUB_WORKSPACE" \
