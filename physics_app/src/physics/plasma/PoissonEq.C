@@ -2,8 +2,6 @@
 #include "Chemistry.h"
 
 #include <cmath>
-#include <iomanip>
-#include <sstream>
 
 namespace Plasma
 {
@@ -290,10 +288,8 @@ PoissonEq::addMaterials()
     const std::string type = "ADGenericConstantMaterial";
     auto params = getFactory().getValidParams(type);
     const auto epsilon = model->relative_permittivity.at(group.id);
-    std::ostringstream literal;
-    literal << std::setprecision(17) << epsilon;
     params.set<std::vector<std::string>>("prop_names") = {"relative_permittivity"};
-    params.set<std::vector<std::string>>("prop_values") = {literal.str()};
+    params.set<std::vector<Real>>("prop_values") = {epsilon};
     params.set<std::vector<SubdomainName>>("block") = group.blocks;
     getProblem().addMaterial(type, name() + "_eps_" + group.id, params);
   }
