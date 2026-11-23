@@ -31,15 +31,17 @@ Both Public D failures record `native_error=true`, `unregistered_factory=false`,
 | Issue395 `base14_restart_100to300us.py` and other old one-off workflows | Long-time-history/research route, different P3/P4 science | Separate science/owner disposition |
 | Issue20 `thermal_gradient_activation/prepare.py` | `QPXFVThermalDiffusion` in separate `qpxApp` | **Separate application; do not edit** |
 | Unknown third-party legacy `PhysicsFVThermalDiffusion` inputs | Requester waived current-binary compatibility | Explicit breaking change, **do not demand impossible unknown-caller-zero proof** |
-| Known currently supported external integrations | No complete independent owner registry obtained | List by owner, replay contract or obtain explicit owner disposition |
+| Known currently supported external integrations | Requester reports external consumers are generally absent; no concrete supported integration identified | **No external-owner verification gate by default**; review only if a specific supported integration is discovered |
 
 A targeted GitHub code search on indexed **default-branch** content located the old PhysicsApp Factory files and historic FDEG references in this repository. This is **not** a global external-user inventory, does not cover private integration copies or all branches, and cannot serve as an external consumer-zero attestation.
+
+**External-consumer policy clarification (requester, 2026-11-23):** external consumers normally do not exist in this project. This is a scoping decision, not evidence proving no third-party copy exists. It must not delay the internal New-only retirement workflow, and it must not be confused with the **repository-internal** generator routes that remain to be classified.
 
 ## Precise release gates
 
 1. **Owned supported generators:** review live entrypoints/Workflow callers, classify each `SUPPORTED`, `HISTORICAL`, `SEPARATE_APP` or `OWNER_DECISION`. Execute only supported routes with real output SHA + Native construction evidence. For unsupported old inputs, archive/deprecate rather than trying to keep Factory aliases alive.
-2. **Known external supported integrations:** integration owners explicitly provide covered repository/consumer builds or state that the old typed input is no longer supported. Publish a breaking-change migration note. Unknown external legacy caller-zero is **not** a technical gate.
+2. **External consumers:** requester reports they are generally absent, and no specific supported external integration has been named. Record **NONE REPORTED (not proven zero)** and remove the speculative external-owner inventory/signoff from release gates. Publish a short breaking-change note for unsupported legacy inputs. **Only if an actual supported external integration is subsequently identified**, test its contract or obtain that integration owner's disposition. Unknown outside caller-zero is not a technical gate.
 3. **Public D:** blocked specifically by current Native 100-row construction failure, independently of Thermal removal. Fix only with a classified MOOSE error and exact-head rerun.
 4. **Final promotion:** exact combined integration SHA, production CI Workflow/template reconciliation, independent rollback/reviewer receipt and applicable P3/P4 scientific gates. No unreviewed Poisson change or `main` merge.
 
-**Status: `D10_42ROW_NATIVE=PASS / D11_100ROW_GENERATION=PASS / D12_42ROW_CONTROLS=PASS / D12_100ROW_NATIVE=HOLD / EXTERNAL_SUPPORTED_OWNER_LIST=PENDING / SAFE_DELETE=HOLD`.** [Machine receipt](newonly_d12_public_d_native_hold_scope_v0_1.json).
+**Status: `D10_42ROW_NATIVE=PASS / D11_100ROW_GENERATION=PASS / D12_42ROW_CONTROLS=PASS / D12_100ROW_NATIVE=HOLD / EXTERNAL_INTEGRATIONS=NONE_REPORTED_NOT_A_GATE / SAFE_DELETE=HOLD`.** [Machine receipt](newonly_d12_public_d_native_hold_scope_v0_1.json).
