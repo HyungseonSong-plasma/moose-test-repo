@@ -1,0 +1,180 @@
+# #817 single isolated EI01 PhysicsApp Native A/B. TEMPORARY: remove before integration.
+# No private-rate or non-target chemistry inputs. Production smoke remains unchanged.
+name: Issue817 Code3 EI01 one-block Native A-B pilot
+
+on:
+  push:
+    branches: [issue-817-code3-newonly-retirement]
+    paths: ['.github/workflows/issue817-code3-ei01-native-once.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  exact_source_ei01_ab:
+    name: Exact-head W1 and EI01 paired Native P2 P3
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    env:
+      SOURCE_HEAD: ${{ github.sha }}
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout immutable exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify CI source and original Factory identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no -- physics_app)"
+          test ! -e physics_app/physics-opt
+          test "$(git hash-object physics_app/dependencies.lock)" = 0aae0ffb5699fcd5c17e8ebe9ea4f2effde9ff47
+          grep -Fqx "PHYSICS_BUILD_BASE=$OCI" physics_app/dependencies.lock
+          python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v
+          python3 -m unittest discover -s tests -p test_issue817_code3_retirement.py -v
+          python3 ci/guards/issue817_code3_retirement.py --expected-head "$SOURCE_HEAD" --output /tmp/issue817-code3-source-preflight.json
+      - name: Pull pinned Build Base and verify vendor source identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$OCI"
+          for pair in 'moose MOOSE' 'crane CRANE' 'squirrel SQUIRREL' 'zapdos ZAPDOS'; do
+            read -r key envname <<< "$pair"
+            expected="$(sed -n "s/^$envname=//p" physics_app/dependencies.lock)"
+            actual="$(docker image inspect "$OCI" --format "{{ index .Config.Labels \"io.physics.$key.sha\" }}")"
+            test -n "$expected" && test "$expected" = "$actual"
+          done
+      - name: Compile one exact-head PhysicsApp ELF
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --platform linux/amd64 --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+            ' > "$RUNNER_TEMP/code3_build.log" 2>&1 || {
+              tail -90 "$RUNNER_TEMP/code3_build.log"; exit 1;
+            }
+          test -s physics_app/physics-opt && test -x physics_app/physics-opt
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('physics_app/physics-opt')
+          assert p.read_bytes()[:4]==b'\x7fELF'
+          print('ISSUE817_CODE3_W1_EXACT_ELF=PASS')
+          PY
+      - name: Generate EI01 only-target-block A-B and real Native P2 P3
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 - <<'PY'
+          import csv, hashlib, json, math, os, subprocess
+          from pathlib import Path
+          from experiments.Code3_electron_source_retirement import run as code3
+          from physics_harness.adapters.moose import parameters as mp
+
+          head=os.environ["SOURCE_HEAD"]
+          root=Path.cwd()
+          original=(root/"physics_app/ci/ei01_attachment_runtime_smoke.i").read_text()
+          path="FVKernels/ei01_electron_source"
+          candidate,meta=code3.replace_electron_only(original,path=path)
+          assert code3._outside_target(original,path)==code3._outside_target(candidate,path)
+          assert mp.get_parameter(original,path,"type")==code3.OLD
+          assert mp.get_parameter(candidate,path,"type")==code3.NEW
+          assert meta["mode"]=="physical" and meta["coefficient"]==1
+          assert meta["source_functor"]=="ei01_electron_number_source"
+          stage=Path(os.environ["RUNNER_TEMP"])/"code3-ei01"
+          stage.mkdir(exist_ok=False)
+          (stage/"original.i").write_text(original)
+          (stage/"candidate.i").write_text(candidate)
+          binary=root/"physics_app/physics-opt"
+          def sha(b): return hashlib.sha256(b).hexdigest()
+          receipt={"schema":"issue817.code3.ei01_native_ab.v0.1",
+                   "source_head":head,"binary_sha256":sha(binary.read_bytes()),
+                   "oci":os.environ["OCI"],
+                   "original_input_sha256":sha(original.encode()),
+                   "candidate_input_sha256":sha(candidate.encode()),
+                   "only_changed_block":path,
+                   "non_target_bytes_unchanged":True,
+                   "source_functor":"ei01_electron_number_source",
+                   "replacement_coefficient":1,
+                   "cases":{},"safe_delete":False,
+                   "all_active_consumers_migrated":False,
+                   "normalized_mode_parity":"NOT_TESTED",
+                   "full_AD_Jacobian_parity":"NOT_TESTED"}
+          def run(name, check):
+              mode="--check-input " if check else ""
+              cmd=["docker","run","--rm","--platform","linux/amd64","--entrypoint","/bin/bash",
+                   "--user","0:0","--workdir","/case",
+                   "-v",str(root)+":/workspace","-v",str(stage)+":/case",
+                   os.environ["OCI"],"-lc",
+                   "set -euo pipefail; source /environment; /workspace/physics_app/physics-opt "+
+                   mode+"-i "+name+".i"]
+              r=subprocess.run(cmd,capture_output=True,text=True,timeout=240)
+              log=r.stdout+r.stderr
+              return {"rc":r.returncode,
+                      "syntax_ok":"Syntax OK" in log,
+                      "log_sha256":sha(log.encode()),
+                      "last_log_class":("MOOSE_ERROR" if "ERROR" in log else "CLEAN"),
+                      "log_tail_on_failure":log[-900:] if r.returncode else ""}
+          ok=True
+          for name in ("original","candidate"):
+              p2=run(name,True)
+              receipt["cases"][name]={"P2":p2}
+              if p2["rc"] or not p2["syntax_ok"]: ok=False
+          if ok:
+              for name in ("original","candidate"):
+                  p3=run(name,False)
+                  receipt["cases"][name]["P3"]=p3
+                  if p3["rc"]:ok=False
+          for name in ("original","candidate"):
+              f=stage/(name+"_out.csv")
+              if f.is_file():
+                  with f.open(newline="") as stream:
+                      rows=list(csv.DictReader(stream))
+                  receipt["cases"][name]["csv"]={
+                      "rows":len(rows),"sha256":sha(f.read_bytes()),
+                      "times":[row.get("time") for row in rows],
+                      "n_e_avg":[row.get("n_e_avg") for row in rows]}
+          if ok and all("csv" in receipt["cases"][n] for n in ("original","candidate")):
+              a=receipt["cases"]["original"]["csv"]
+              b=receipt["cases"]["candidate"]["csv"]
+              valid=(len(a["n_e_avg"])>=2 and a["times"]==b["times"] and
+                     len(a["n_e_avg"])==len(b["n_e_avg"]))
+              if valid:
+                  valid=all(math.isclose(float(v),float(w),rel_tol=1e-10,abs_tol=1e-4)
+                            for v,w in zip(a["n_e_avg"],b["n_e_avg"]))
+              receipt["bounded_ei01_electron_density_parity"]=bool(valid)
+              ok=ok and bool(valid)
+          else:
+              receipt["bounded_ei01_electron_density_parity"]=False
+              ok=False
+          receipt["status"]=("PASS_BOUNDED_EI01_NATIVE_NOT_GLOBAL_DELETE" if ok
+                              else "HOLD_NATIVE_OR_PARITY")
+          Path("evidence/code3_ei01_native_receipt.json").write_text(
+              json.dumps(receipt,indent=2,sort_keys=True)+"\n")
+          print("ISSUE817_CODE3_EI01_NATIVE",receipt["status"],head,
+                receipt["binary_sha256"])
+          if not ok:
+              for label,data in receipt["cases"].items():
+                  print(label,data.get("P2"),data.get("P3"))
+              raise SystemExit(1)
+          PY
+      - name: Upload only sanitized SHA and bounded source evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue817-code3-ei01-native-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: evidence/code3_ei01_native_receipt.json
+          if-no-files-found: warn
+          retention-days: 30
