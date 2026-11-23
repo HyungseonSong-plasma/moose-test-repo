@@ -1,0 +1,57 @@
+name: Issue814 code2 exact-source P0 one-shot (temporary)
+on:
+  push:
+    branches:
+      - issue-814-code2-p0-validation-20261123
+permissions:
+  contents: read
+concurrency:
+  group: issue814-code2-p0-validation
+  cancel-in-progress: false
+jobs:
+  code2-p0:
+    name: Source/Factory/archive/lookup P0 only
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact validation HEAD
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pin unmodified source candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:physics_app)" = "869dabc25a34e03fc4018c2d8cd57cda26a630fb"
+          test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "e57cb1cc16ef9c6c336199f395d1cf4b49436bb6"
+          git merge-base --is-ancestor "0a15c03728850e2d18ca64e33ae58c7e6891f9fa" HEAD
+          echo ISSUE814_P0_SOURCE_TREE_EXACT_PASS
+      - name: Run existing fail-closed P0 contracts and material lookup assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_fvkernel_native_usage_census.py -v
+          python3 -m unittest discover -s tests -p test_issue774_newonly_fvkernel_retirement.py -v
+          python3 -m py_compile ci/guards/issue774_newonly_fvkernel_retirement.py
+          python3 ci/guards/issue774_newonly_fvkernel_retirement.py \
+            --expected-head "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/issue814-p0.json"
+          python3 - <<'PY'
+          import runpy
+          checks = runpy.run_path("tests/test_issue402_material_class_names.py")
+          tests = [name for name in checks if name.startswith("test_") and callable(checks[name])]
+          assert len(tests) == 4, ("UNEXPECTED_MATERIAL_TEST_SET", tests)
+          for name in sorted(tests):
+              checks[name]()
+          print("ISSUE814_DDTRANSPORT_MATERIAL_P0_PASS", len(tests))
+          PY
+          echo ISSUE814_EXACT_HEAD_P0_PASS
+      - name: Preserve sanitized P0 evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue814-code2-p0-receipt
+          path: ${{ runner.temp }}/issue814-p0.json
+          if-no-files-found: warn
+          retention-days: 30
