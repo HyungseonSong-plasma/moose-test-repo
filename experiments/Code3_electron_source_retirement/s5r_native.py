@@ -34,13 +34,18 @@ def native_check(work: Path, arm: str, oci: str) -> dict:
         "-v", str(work) + ":/case", oci, "-lc", command],
         capture_output=True, text=True, timeout=600, check=False)
     combined = r.stdout + r.stderr
-    error_line = next((s for s in combined.splitlines() if
-                       ("*** ERROR ***" in s or "ERROR:" in s or "not registered" in s)), None)
+    lines = combined.splitlines()
+    index = next((i for i, s in enumerate(lines) if
+                  ("*** ERROR ***" in s or "ERROR:" in s or
+                   "not registered" in s)), None)
+    # Preserve a bounded, public-asset-only explanation after the ERROR marker,
+    # never the entire Native output or staged mesh/input in the artifact.
+    snippet = None if index is None else "\\n".join(lines[index:index + 16])[:1800]
     return {
         "returncode": r.returncode,
         "syntax_ok": r.returncode == 0 and "Syntax OK" in combined,
         "combined_log_sha256": digest(combined.encode()),
-        "diagnostic": error_line[:500] if error_line else None,
+        "diagnostic": snippet,
     }
 
 
