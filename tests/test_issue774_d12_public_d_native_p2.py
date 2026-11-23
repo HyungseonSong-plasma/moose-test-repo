@@ -38,6 +38,15 @@ class D12NativeP2Controls(unittest.TestCase):
         self.assertNotIn("secret-token-NOT-FOR-ARTIFACT", json.dumps(outcome))
         self.assertEqual(len(outcome["log_sha256"]), 64)
 
+    def test_safe_fixed_native_error_diagnostics_are_not_full_logs(self):
+        log = "*** ERROR ***\\nChemistry material transport unknown parameter in /private/token/456\\n"
+        outcome = classify_native(1, log)
+        self.assertFalse(outcome["syntax_ok"])
+        self.assertTrue(outcome["safe_error_categories"]["chemistry_contract"])
+        self.assertTrue(outcome["safe_error_categories"]["transport_lookup"])
+        self.assertIn("Chemistry", outcome["public_error_vocab_hits"])
+        self.assertNotIn("/private/token/456", json.dumps(outcome))
+
     def test_wrong_W1_identity_refused_before_unpacking(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
