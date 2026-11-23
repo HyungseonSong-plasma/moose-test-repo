@@ -182,7 +182,6 @@ def generated_input() -> str:
   type = Steady
   nl_max_its = 5
   nl_abs_tol = 1e-10
-  abort_on_solve_fail = false
 []
 [Outputs]
   exodus = false
