@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-poisson-g4-p1-namespacefix-r2-20261123",
-  "source_sha": "a89c96930703091c949c95cbd3a100f5d53ec98f",
+  "request_id": "issue652-poisson-g4-p1-realprop-r3-20261123",
+  "source_sha": "55732448882e4199717eb1da45d7425e4ffc7446",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
