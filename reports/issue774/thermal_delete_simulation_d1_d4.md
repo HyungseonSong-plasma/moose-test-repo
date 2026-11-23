@@ -43,3 +43,7 @@
 First cut removes only the `.C` and `.h` and runs existing CI **without disguising expected failures**. CI errors will identify concrete migration locations. The corrective simulation cut may then migrate only historical evidence checks, while keeping `safe_delete=false`.
 
 **This branch must remain Draft/unmerged** until unrelated approval conditions are satisfied: New-only PR #665 integration strategy, independent full generated-consumer scope, current binary compatibility decision, independent Native before/after comparison and explicit owner review.
+
+## Temporary CI targeting
+
+Repository CI and Physics Code CI trigger only for pull requests targeting `main`. This Draft source-deletion rehearsal is temporarily retargeted to `main` **to expose the original failures**. It must be retargeted back to archive PR #776's branch before review, and cannot be merged under either base. Until the FDEG evidence migration cut, red CI is expected.
