@@ -158,7 +158,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
     require(actual == expected_head, "EXACT_HEAD_MISMATCH")
     entries = git(root, "ls-tree", "-r", "-l", "-z", "HEAD").split(b"\0")
     tracked = {}
-    nonregular_or_binary = 0
+    nonregular_entries = 0
     for entry in entries:
         if not entry:
             continue
@@ -169,7 +169,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
         tracked[path] = {"mode": mode, "kind": kind, "sha": digest,
                          "size": size}
         if kind != "blob" or mode not in ("100644", "100755"):
-            nonregular_or_binary += 1
+            nonregular_entries += 1
     require(len(tracked) > 0 and all(x in tracked for x in
             ("physics_app/dependencies.lock", NEWONLY_CI, TEMPLATE)),
             "INCOMPLETE_NEWONLY_CHECKOUT")
@@ -207,7 +207,8 @@ def audit(root: Path, *, expected_head: str) -> dict:
         "source_head": actual,
         "source_tree": git(root, "rev-parse", "HEAD^{tree}").decode().strip(),
         "tracked_paths": len(tracked),
-        "nonregular_or_binary_not_text_scanned": nonregular_or_binary,
+        "nonregular_git_entries": nonregular_entries,
+        "binary_git_blob_content_scan": "EXCLUDED_BY_GIT_GREP_I_NOT_COUNTED_AS_REGULAR_TEXT",
         "retired_factory": RETIRED,
         "legacy_inputs_supported": False,
         "current_newonly_factory": facts,
