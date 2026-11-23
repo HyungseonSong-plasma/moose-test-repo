@@ -1,0 +1,12 @@
+      - name: Build once under reviewed OCI contract
+        run: |
+          python3 bin/physics.py workflow execute-build \
+            --spec @@SPEC_PATH@@ \
+            --output-dir "$RUNNER_TEMP/physics-workflow-build"
+      - name: Upload common build closure
+        uses: actions/upload-artifact@v4
+        with:
+          name: @@PREFIX@@-shared-build
+          path: ${{ runner.temp }}/physics-workflow-build/
+          if-no-files-found: error
+          retention-days: 14
