@@ -111,6 +111,16 @@ def validate_registries(root: Path, functional: dict, transition: dict) -> list[
 def validate_workflow(doc: dict) -> None:
     _require(isinstance(doc, dict) and isinstance(doc.get("jobs"), dict)
              and "physics_code_validate" in doc["jobs"], "MISSING_PHYSICS_CODE_JOB")
+    # The archive gate is only meaningful if archive/policy edits actually
+    # start this Workflow. Avoid broad reports/** and ci/baselines/** triggers.
+    triggers = doc.get("on")
+    _require(isinstance(triggers, dict), "MISSING_WORKFLOW_TRIGGERS")
+    critical = {POLICY, FUNCTIONAL, TRANSITION, ARCHIVE, ANCHOR}
+    for event in ("push", "pull_request"):
+        block = triggers.get(event)
+        paths = block.get("paths") if isinstance(block, dict) else None
+        _require(isinstance(paths, list) and critical <= set(paths),
+                 "FDEG_CONTRACT_CHANGE_NOT_TRIGGERED:" + event)
     steps = doc["jobs"]["physics_code_validate"].get("steps")
     _require(isinstance(steps, list), "INVALID_WORKFLOW_STEPS")
     labels = [step.get("name", "") for step in steps if isinstance(step, dict)]
