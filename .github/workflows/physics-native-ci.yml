@@ -13,6 +13,9 @@ on:
       - 'tests/boltzmann/**'
       - 'ci/guards/issue541_artifact_evidence_guard.py'
       - 'ci/guards/issue402_*'
+      - 'ci/guards/p6_*'
+      - 'ci/guards/issue671_*'
+      - 'ci/contracts/repository_ci_scope_v1.json'
       - '.github/workflows/physics-native-ci.yml'
 
 permissions:
