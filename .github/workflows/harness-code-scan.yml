@@ -53,7 +53,7 @@ jobs:
   source-scan:
     name: Exact-HEAD Harness Diagnostics (read-only)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 95
     steps:
       - name: Checkout ChatGPT request commit
         if: github.event_name == 'push'
@@ -312,6 +312,52 @@ jobs:
                   "revision": os.environ.get("SCAN_SOURCE_SHA", ""),
               })
               raise
+          PY
+
+      - name: P1 build exact G2 PhysicsApp in pinned OCI (one-shot, no solver)
+        shell: bash
+        timeout-minutes: 75
+        run: |
+          set -euo pipefail
+          test "$SCAN_SOURCE_SHA" = "6d0508ec89756f67ab21b4419b6d71fd9f81b490"
+          test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
+          test ! -e scan-source/physics_app/physics-opt
+          OCI='ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008'
+          mkdir -p harness-scan-output
+          docker pull "$OCI"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/scan-source,dst=/workspace" \
+            "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2 app_non_unity_dirs="%/utils"
+              test -x physics_app/physics-opt
+              test -s physics_app/lib/libphysics-opt.so.0
+            ' 2>&1 | tee harness-scan-output/p1_build.log
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          source=pathlib.Path("scan-source")
+          artifact=pathlib.Path("harness-scan-output")
+          binary=source/"physics_app/physics-opt"
+          data={
+              "schema":"issue652.poisson_g2.p1_exact_head.v1",
+              "source_sha":os.environ["SCAN_SOURCE_SHA"],
+              "oci":"ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+              "binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),
+              "build_log_sha256":hashlib.sha256((artifact/"p1_build.log").read_bytes()).hexdigest(),
+              "P1":"PASS",
+              "P2_newonly":"NOT_RUN",
+              "FunctorRegistration":"NOT_RUN",
+              "Science":"HOLD",
+          }
+          (artifact/"p1_identity.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\\n")
+          print("POISSON_G2_P1_EXACT_SHA_PASS",data["source_sha"],data["binary_sha256"])
           PY
 
       - name: Upload Graph and provenance receipts
