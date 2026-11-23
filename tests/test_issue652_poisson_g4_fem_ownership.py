@@ -97,6 +97,7 @@ def test_no_legacy_activation_or_native_source_retirement_at_g4():
     template = (PILOT / "issue633_newonly_s6_417_continuity.template.i").read_text()
     native = (PILOT / "native/s6_c0_physics_base_no_d1.i").read_text()
     assert 'void addMaterials() override;' in header
+    assert src.index("PoissonEq::addMaterials()") < src.index("} // namespace Plasma")
     assert 'registerMooseAction("PhysicsApp", PoissonEq, "add_materials_physics");' in src
     assert 'requireUniqueFEKernel("ADMatDiffusion", potential);' in src
     assert 'requireUniqueFEKernel("FunctorKernel", potential);' in src
