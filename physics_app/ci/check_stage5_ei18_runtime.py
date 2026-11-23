@@ -13,6 +13,10 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from physics_app.ci.check_issue817_electron_source_absence import (
+    assert_no_electron_particle_source,
+)
 CONTRACT = ROOT / "docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json"
 TABLE = ROOT / "physics_app/data/electron_impact/o_excitation_1d.txt"
 
@@ -415,6 +419,7 @@ def checker_self_test():
             raise AssertionError(f"runtime input missing {token}")
     if text.count("type = EIRateCoefMaterial") != 1:
         raise AssertionError("EI18 must have exactly one kinetic progress owner")
+    assert_no_electron_particle_source(text, channel="EI18")
     if "PhysicsFVElectronReactionSource" in text:
         raise AssertionError("EI18 must not change electron particle inventory")
     for forbidden in ("R_ion_O", "o_ionization.txt", "13.618", "PhysicsFVElectronReactionEnergySource"):

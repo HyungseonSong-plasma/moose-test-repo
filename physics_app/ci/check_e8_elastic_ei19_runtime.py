@@ -13,6 +13,10 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from physics_app.ci.check_issue817_electron_source_absence import (
+    assert_no_electron_particle_source,
+)
 DATA_DIR = ROOT / "physics_app/data/electron_impact"
 
 N_A = 6.02214076e23
@@ -496,6 +500,7 @@ def runtime_checker_self_test():
         raise AssertionError("EI19 standard-MOOSE projection missing")
     if ei19_text.count(f"v = {EI19['progress']}") != 1:
         raise AssertionError("EI19 energy path must consume canonical progress exactly once")
+    assert_no_electron_particle_source(ei19_text, channel="EI19")
     for forbidden in (
         "PhysicsFVElectronReactionEnergySource",
         "PhysicsFVElectronReactionSource",
