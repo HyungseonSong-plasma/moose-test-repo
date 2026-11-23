@@ -83,7 +83,7 @@ def _validate_tests(paths: tuple[str, ...]) -> None:
             raise ValueError("REPLAY_REQUIRES_PYTEST_MODULE")
 
 
-def _support_sources(test_paths: tuple[str, ...]) -> tuple[str, ...]:
+def _pytest_support_paths(test_paths: tuple[str, ...]) -> tuple[str, ...]:
     # Pytest config and ancestor conftest files affect test collection,
     # injected fixtures and how assertions execute even when tests are unchanged.
     paths = {"pytest.ini", "pyproject.toml", "setup.cfg", "tox.ini", "conftest.py"}
@@ -234,7 +234,7 @@ def run_naming_test_replay(
                                         baseline_revision).decode("utf-8", "strict").strip("\0").split("\0"))
             after_paths = set(_run_git(provider, "ls-tree", "-r", "--name-only", "-z",
                                        candidate_revision).decode("utf-8", "strict").strip("\0").split("\0"))
-            for path in _support_sources(test_paths):
+            for path in _pytest_support_paths(test_paths):
                 if path not in before_paths and path not in after_paths:
                     continue
                 if path not in before_paths or path not in after_paths:
