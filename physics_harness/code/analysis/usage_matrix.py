@@ -240,8 +240,14 @@ def build_usage_matrix(
         references.sort(key=lambda item: (
             item.category, item.consumer_id, item.edge_id, item.direction,
         ))
+        # An observation from another revision cannot establish a consumer
+        # at this exact Graph HEAD, even if its status says RUNTIME_OBSERVED.
         supported = any(
-            witness.observation_status in {"SOURCE_DECLARED", "RUNTIME_OBSERVED"}
+            witness.observation_status == "SOURCE_DECLARED" or (
+                witness.observation_status == "RUNTIME_OBSERVED"
+                and evidence[witness.evidence_id].attributes.get("source_sha")
+                    == graph.scope.revision
+            )
             for ref in references for witness in ref.witnesses
         )
         if supported:

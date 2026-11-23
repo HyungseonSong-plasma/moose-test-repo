@@ -190,4 +190,28 @@ def test_inferred_evidence_and_cross_head_runtime_cannot_certify_usage():
                                 ('n:t',), (UsageRelation('USES', 'POSSIBLE'),),
                                 required_paths=('src/item.py',))
     assert 'UNVERIFIED_RUNTIME_REVISION' in report.rows[0].blockers
+    assert report.rows[0].screening == 'HOLD'
     assert not report.rows[0].safe_to_delete
+
+    # A same-revision runtime witness can support a known consumer, but
+    # still never proves authorization or global consumer closure.
+    current = replace(runtime, attributes={'source_sha': sha})
+    report = build_usage_matrix(replace(graph, evidence=(current,)), receipt,
+                                ('n:t',), (UsageRelation('USES', 'POSSIBLE'),),
+                                required_paths=('src/item.py',))
+    assert report.rows[0].screening == 'RETAIN'
+    assert not report.global_consumer_closed
+    assert not report.mutation_approved
+
+
+def test_missing_required_path_cannot_be_silently_ignored(git_factory):
+    result, ids = scanned(git_factory)
+    report = build_usage_matrix(
+        result.graph, result.receipt, (ids['UnusedKernel'],), RULES,
+        required_paths=PATHS + ('inputs/unscanned.i',),
+        ignored_relations=IGNORED,
+    )
+    row = report.rows[0]
+    assert row.screening == 'HOLD'
+    assert 'TARGET_REQUIRED_PATHS_NOT_SCANNED' in row.blockers
+    assert row.coverage.missing_required_paths == ('inputs/unscanned.i',)
