@@ -148,8 +148,13 @@ def stage_pair(*, before_g5: Path, after_g5: Path, g5_receipt: Path,
         before_chem = before_root / CHEM_RELATIVE
         after_chem = after_root / CHEM_RELATIVE
         marker = before_chem / ".issue633_disposable_scratch"
-        if (marker.is_symlink() or marker.read_text().strip()
-                != "issue633-scratch-only"):
+        # The pinned P3-X artifact precedes G5, whose staging step creates
+        # this marker. Mirror ONLY that exact marker in our copied Old Scratch.
+        if marker.is_symlink():
+            raise MatchedHold("P4_DISPOSABLE_MARKER_SYMLINK")
+        if not marker.exists():
+            marker.write_text("issue633-scratch-only\n")
+        if marker.read_text().strip() != "issue633-scratch-only":
             raise MatchedHold("P4_DISPOSABLE_MARKER_REQUIRED")
         record = readiness["stage_cases"][case]
         ordered = [Path(x).name for x in record["ordered"]]
