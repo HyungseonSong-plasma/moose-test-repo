@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   postcut_extended_sources:
-      name: Exact-head postcut W1 EI16 EI20 EDETACH source closure P2 P3
+    name: Exact-head postcut W1 EI16 EI20 EDETACH source closure P2 P3
     runs-on: ubuntu-24.04
     timeout-minutes: 105
     env:
