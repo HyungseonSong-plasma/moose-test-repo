@@ -55,7 +55,7 @@ jobs:
           python3 -m py_compile ci/guards/issue817_code3_retirement.py experiments/Code3_electron_source_retirement/run.py tests/test_issue817_code3_retirement.py tests/test_code3_electron_source_retirement.py
           python3 -m unittest discover -s tests -p test_issue817_code3_retirement.py -v 2>&1 | tee evidence/code3_consumer_tests.log
           python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v 2>&1 | tee evidence/code3_electron_input_parity_tests.log
-          python3 experiments/Code3_electron_source_retirement/run.py --self-test > evidence/code3_candidate_self_test.json
+          python3 -m experiments.Code3_electron_source_retirement.run --self-test > evidence/code3_candidate_self_test.json
           python3 ci/guards/issue817_code3_retirement.py --expected-head "$SOURCE_HEAD" --output evidence/code3_exact_head_census.json
       - name: Upload sanitized scoped P0 evidence
         if: always()
