@@ -149,7 +149,8 @@ jobs:
               export SQUIRREL_DIR=/opt/physics_vendor/squirrel
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos
               export METHOD=opt
-              make -j2
+              # Preserve cached vendors, exclude only the app utils Unity collision.
+              make -j2 MOOSE_UNITY=true app_non_unity_dirs="%/utils"
               test -x physics-opt
               ./physics-opt --check-input -i ci/smoke.i
               g++ -std=c++17 -fPIC -shared -o g6_owner_tracer.so \
