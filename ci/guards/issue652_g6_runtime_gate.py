@@ -311,12 +311,12 @@ def run(staged: Path, output: Path, *, registration_only: bool) -> dict:
             else:
                 trace_bytes = trace.read_bytes()
                 case_result["preload_marker_count"] = trace_bytes.count(b"G6_PRELOAD_READY\n")
-                case_result["observed_trace_rows"] = trace_bytes.count(b"G6_OWNER\\t")
+                case_result["observed_trace_rows"] = trace_bytes.count(b"G6_OWNER\t")
                 # Diagnostic-only narrow public names/types. Never store raw
                 # trace, paths or protected rate input values in artifacts.
                 target_candidates = []
                 for raw_line in trace_bytes.decode("utf-8").splitlines():
-                    fields = raw_line.split("\\t")
+                    fields = raw_line.split("\t")
                     if (len(fields) == 4 and fields[0] == "G6_OWNER"
                             and (fields[2] == "potential" or
                                  "Poisson" in fields[2] or
