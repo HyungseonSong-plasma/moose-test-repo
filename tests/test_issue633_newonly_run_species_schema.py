@@ -33,7 +33,7 @@ def run_json(case):
 def test_actual_final_schema_is_one_complete_json_and_old_source_is_unchanged(case):
     new = run_json(case)
     old = json.loads((CHEM / f"unified_s6_{case}.json").read_text())
-    assert set(new) == {"species", "equations", "reactions", "drift_diffusion_boundaries", "ion_surface_current"}
+    assert set(new) == {"species", "equations", "reactions", "drift_diffusion_boundaries", "ion_surface_current", "poisson"}
     assert set(new["species"]) == NAMES
     assert new["equations"] == old["equations"]
     assert new["reactions"] == old["reactions"]
