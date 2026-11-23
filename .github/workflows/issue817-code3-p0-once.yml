@@ -57,6 +57,47 @@ jobs:
           python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v 2>&1 | tee evidence/code3_electron_input_parity_tests.log
           python3 -m experiments.Code3_electron_source_retirement.run --self-test > evidence/code3_candidate_self_test.json
           python3 ci/guards/issue817_code3_retirement.py --expected-head "$SOURCE_HEAD" --output evidence/code3_exact_head_census.json
+      - name: Produce actual W5 old/new input pair and signed source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          from experiments.Code3_electron_source_retirement import run as code3
+          from physics_harness.adapters.moose import parameters as mp
+          old, new, meta = code3.build_pair()
+          assert old != new
+          assert code3._outside_target(old) == code3._outside_target(new)
+          assert mp.get_parameter(old, code3.TARGET, "type") == code3.OLD
+          assert mp.get_parameter(new, code3.TARGET, "type") == code3.NEW
+          assert mp.get_parameter(old, code3.TARGET, "number_source") == "S_e_s5r"
+          assert mp.get_parameter(new, code3.TARGET, "v") == "S_e_s5r"
+          change = meta["change"]
+          assert change["non_target_bytes_unchanged"] is True
+          assert change["source_functor"] == "S_e_s5r"
+          assert change["coefficient"] > 0
+          assert change["runtime_parity"] == "NOT_EVALUATED"
+          receipt = {
+              "schema": "issue817.code3.real_w5_input_pair.v0.1",
+              "source_head": os.environ["SOURCE_HEAD"],
+              "producer": "Issue216_w5_multistep_acceptance._build_case",
+              "old_input_sha256": hashlib.sha256(old.encode()).hexdigest(),
+              "new_input_sha256": hashlib.sha256(new.encode()).hexdigest(),
+              "one_changed_block": code3.TARGET,
+              "unchanged_input_remainder": True,
+              "signed_source": "S_e_s5r",
+              "state_form": change["mode"],
+              "coefficient": change["coefficient"],
+              "Native_P2": "NOT_EXECUTED",
+              "Native_P3": "NOT_EXECUTED",
+              "residual_AD_jacobian_equivalence": "NOT_PROVEN",
+              "safe_delete": False,
+          }
+          Path("evidence/code3_actual_w5_pair.json").write_text(
+              json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+          print("ISSUE817_REAL_W5_PAIR=P0_PASS_NOT_SCIENCE")
+          PY
       - name: Upload sanitized scoped P0 evidence
         if: always()
         uses: actions/upload-artifact@v4
