@@ -1,4 +1,4 @@
-# Native P2 strict check: do not bypass unused Steady Executioner parameters.
+# G7 expanded predeclared FD sweep, and nonconverged initial state for charge-free linear control.
 name: Issue652 G7 PETSc FD step sweep and charge-source ablation (branch-only)
 on:
   push:
@@ -94,7 +94,7 @@ jobs:
           import json,sys
           v=json.load(open(sys.argv[1]))
           assert v["diagnostic_status"] == "PASS_SWEEP_EVIDENCE_ONLY"
-          assert len(v["sweep"]) == 5
+          assert len(v["sweep"]) == 9
           assert len(v["charge_free_control"]) == 2
           assert v["component_jacobian_strict_status"].startswith("HOLD")
           assert v["actual_s6_coupled_ad_jacobian"] == "UNVERIFIED"

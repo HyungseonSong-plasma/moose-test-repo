@@ -17,7 +17,7 @@ SPEC.loader.exec_module(sweep)
 
 
 def test_predeclared_step_sweep_does_not_change_strict_gate():
-    assert sweep.FD_STEPS == (1e-5, 1e-6, 1e-7, 1e-8, 1e-9)
+    assert sweep.FD_STEPS == (1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13)
     assert sweep.CONTROL_STEPS == (1e-6, 1e-8)
     assert sweep.RELATIVE_JAC_TOL == 1e-8
     cmd = sweep.command(Path("/tmp/source"), Path("/tmp/private"), 1e-6, view=True)
@@ -37,6 +37,7 @@ def test_charge_disabled_fixture_is_only_poisson_source_kernel_removal():
     assert "type = ADMatDiffusion" in control
     assert "[o2p_diffusion]" in control
     assert "[poisson_charge_source]" not in control
+    assert "  [potential]\\n    initial_condition = 0.1".replace("\\\\n", "\\n") in control
 
 
 def test_missing_or_bad_native_norm_never_becomes_pass():

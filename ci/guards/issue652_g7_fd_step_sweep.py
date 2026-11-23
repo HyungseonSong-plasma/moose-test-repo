@@ -28,8 +28,8 @@ from issue652_g7_native_ad_jacobian import (
 )
 from physics_harness.adapters.petsc.jacobian import parse_comparisons
 
-# Five predeclared perturbations around PETSc's ~1e-8 default.
-FD_STEPS = (1e-5, 1e-6, 1e-7, 1e-8, 1e-9)
+# Nine predeclared perturbations spanning truncation- and rounding-dominated regimes.
+FD_STEPS = (1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13)
 CONTROL_STEPS = (1e-6, 1e-8)
 MAX_TOTAL_SECONDS = 540
 MAX_PER_INVOCATION_SECONDS = 75
@@ -56,7 +56,16 @@ def charge_disabled_input() -> str:
     original = generated_input()
     if original.count(CHARGE_KERNEL) != 1:
         raise SweepHold("FIXTURE_CHARGE_KERNEL_NOT_UNIQUE")
-    return original.replace(CHARGE_KERNEL, "")
+    without_charge = original.replace(CHARGE_KERNEL, "")
+    # Without charge all variables are initially at their Dirichlet values:
+    # SNES converges without ever forming a Jacobian. Perturb only the
+    # potential initial state (linear diffusion Jacobian is state independent)
+    # to force the exact same PETSc comparison path.
+    old = "  [potential]\\n    initial_condition = 0.0"
+    old = old.replace("\\\\n", "\\n")
+    if without_charge.count(old) != 1:
+        raise SweepHold("POTENTIAL_INITIAL_STATE_NOT_UNIQUE")
+    return without_charge.replace(old, old.replace("0.0", "0.1"))
 
 
 def command(source: Path, workspace: Path, fd_step: float, *, view: bool) -> list[str]:
@@ -192,6 +201,8 @@ def sweep(*, source: Path, manifest: Path, output: Path, authorize: bool) -> dic
         "fixture": "3x3_synthetic_charge_functor_poisson",
         "sweep": [],
         "charge_free_control": [],
+        "control_potential_initial_excitation": 0.1,
+        "control_interpretation": "charge_kernel_removed_and_linear_potential_initial_state_perturbed",
         "component_jacobian_strict_status": "HOLD_PENDING_REVIEW",
         "actual_s6_coupled_ad_jacobian": "UNVERIFIED",
         "old_new_poisson_parity": "UNVERIFIED",
@@ -229,6 +240,15 @@ def sweep(*, source: Path, manifest: Path, output: Path, authorize: bool) -> dic
                     one = classify(log, returncode=rc, timed_out=timeout,
                                    fd_step=value, view=view)
                     report[mode].append(one)
+                    if view:
+                        mat = one.get("matrix_view", {})
+                        print("G7_MATVIEW_NUMERIC_JSON=" + json.dumps({
+                            "view_blocks": mat.get("view_blocks_with_numeric_rows"),
+                            "recomputed_relative": mat.get("relative_difference_recomputed_from_view"),
+                            "difference_view_consistency": mat.get("max_third_view_entry_consistency_error"),
+                            "top_diffs": mat.get("top_matrix_differences_unmapped", [])[:5],
+                            "variable_block_mapping": mat.get("block_mapping"),
+                        }, separators=(",", ":"), allow_nan=False), flush=True)
                     print("G7_FD_STEP", mode, f"{value:.0e}",
                           "RC", rc, "REL", one["worst_relative_frobenius_error"],
                           "STATUS", one["native_status"], flush=True)
