@@ -180,7 +180,8 @@ def compare_p05_source_usage(before: dict, after: dict) -> dict:
                     or r.get("protected_data_exported") is not False
                     or r.get("observed_all_events") !=
                     parent["owner_registration"][case]["recorded_all_events"]
-                    or r.get("observer_marker_count") != 1):
+                    or not isinstance(r.get("observer_marker_count"), int)
+                    or r["observer_marker_count"] < 1):
                 raise ValueError("D5_AB_" + label + "_CENSUS_INVALID:" + case)
         for field in ("observed_all_events", "event_family_counts",
                       "fvkernel_type_counts", "other_source_or_framework_type_counts"):

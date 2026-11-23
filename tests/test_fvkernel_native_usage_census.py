@@ -165,6 +165,20 @@ class NativeABComparisonTest(unittest.TestCase):
         self.assertFalse(result["safe_to_delete"])
         self.assertEqual(result["actual_P3_parity"],"NOT_TESTED")
 
+    def test_multiple_preload_markers_are_audited_not_ignored(self):
+        from fvkernel_native_usage_census import compare_p05_source_usage
+        a,b=self.fixture()
+        for case in ("417","941"):
+            a["full_fvkernel_source_usage"][case]["observer_marker_count"]=2
+            b["full_fvkernel_source_usage"][case]["observer_marker_count"]=3
+        result=compare_p05_source_usage(a,b)
+        self.assertEqual(result["status"],"PASS_SCOPE_ONLY_NOT_DELETION_APPROVAL")
+        self.assertFalse(result["safe_to_delete"])
+        for case in ("417","941"):
+            a["full_fvkernel_source_usage"][case]["observer_marker_count"]=0
+        with self.assertRaisesRegex(ValueError,"A_CENSUS_INVALID"):
+            compare_p05_source_usage(a,b)
+
     def test_thermal_was_active_rejected(self):
         from fvkernel_native_usage_census import compare_p05_source_usage, THERMAL_SOURCE
         a,b=self.fixture()
