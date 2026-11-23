@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "feature/harness-python-moose-template-evidence-20261119",
-      "expected_sha": "711b254f7b17c6718308ae83ce7c96e4a4f2a340",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-python-moose-template-evidence-20261119-711b254f7b17"
+      "branch": "remove-legacy-hu-code-use-cu-only",
+      "expected_sha": "3b6352ad62efe61afd0c0321b984d37716b1b5ef",
+      "archive_tag": "archive/oxygen-cleanup-20261106/remove-legacy-hu-code-use-cu-only-3b6352ad62ef"
     },
     {
-      "branch": "feature/harness-moose-param-contract-20261119",
-      "expected_sha": "7c5305128aba32e0f8e793d463d05a47e678545d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-moose-param-contract-20261119-7c5305128aba"
+      "branch": "issue-697-fdeg-functional-v02",
+      "expected_sha": "3d9e382b90afacd98e02af8511071a6e5e950291",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-697-fdeg-functional-v02-3d9e382b90af"
     },
     {
-      "branch": "feature/harness-verification-v01-20261120",
-      "expected_sha": "61defb3feba88a7f22620f36a0b65fe700eddbab",
-      "archive_tag": "archive/oxygen-cleanup-20261106/feature-harness-verification-v01-20261120-61defb3feba8"
+      "branch": "test/harness-code-real-source-dryrun-20261119",
+      "expected_sha": "34e3598672c572a70da691408d11cb7fbbd92e14",
+      "archive_tag": "archive/oxygen-cleanup-20261106/test-harness-code-real-source-dryrun-20261119-34e3598672c5"
     },
     {
-      "branch": "refactor/retire-directory-role-guard-v01-20261120",
-      "expected_sha": "261d2491281b0c65f10b0a9f11fe8fb65ba23cc5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/refactor-retire-directory-role-guard-v01-20261120-261d2491281b"
+      "branch": "issue-708-code4-native-evidence-ci-only",
+      "expected_sha": "909b878af143501fda67a98bceca21c519b8190c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-708-code4-native-evidence-ci-only-909b878af143"
     },
     {
-      "branch": "issue-743-verification-module-split",
-      "expected_sha": "9ddfbf9a1979f98c78ee1288458667168311cfa4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-743-verification-module-split-9ddfbf9a1979"
+      "branch": "issue-758-harness-scan-dispatch",
+      "expected_sha": "4bdc3c47b1b801c8078276105ee12de55bb8ad11",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-scan-dispatch-4bdc3c47b1b8"
     }
   ]
 }

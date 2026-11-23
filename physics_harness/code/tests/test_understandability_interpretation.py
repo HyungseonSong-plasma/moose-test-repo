@@ -2,8 +2,8 @@
 
 import pytest
 
-from libs.code_understandability import UnderstandabilityInput, evaluate_understandability, from_python_ast
-from physics_harness.code.analysis.understandability_interpretation import interpret_understandability_indicators
+from libs.code_lucidity import UnderstandabilityInput, evaluate_understandability, from_python_ast
+from physics_harness.code.analysis.lucidity_interpretation import interpret_understandability_indicators
 
 
 def test_interpretation_is_contextual_not_a_score_or_change_verdict():

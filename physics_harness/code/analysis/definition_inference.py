@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
-from libs.code_understandability.definition_metrics import (
+from libs.code_lucidity.definition_metrics import (
     DefinitionClause, NameCue, lexical_tokens, measure_definition,
 )
 

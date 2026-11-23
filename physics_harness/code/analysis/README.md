@@ -11,8 +11,8 @@ diagnostic source collectors. It uses the existing immutable `GraphSnapshot`,
 | `assessment.py` | Evidence-typed, fail-closed conditional review disposition and explicit verification obligations |
 | `parameter_contract.py` | MOOSE input-to-C++ parameter comparison, separately scoped with unchanged source-only verdicts; original `assessment` exports retained |
 | `diff.py` | Compare stable Node/Edge semantics, source-bound Evidence changes, and Scope/coverage changes |
-| `understandability_adapter.py` | Transport Diagnostics data and optional human observations into the general metrics engine |
-| `understandability_interpretation.py` | Interpret code-understandability indicators and caveats; no metric formulas or auto-refactor verdict |
+| `lucidity_adapter.py` | Transport Diagnostics data and optional human observations into the general metrics engine |
+| `lucidity_interpretation.py` | Interpret code-understandability indicators and caveats; no metric formulas or auto-refactor verdict |
 
 ## Reuse
 
