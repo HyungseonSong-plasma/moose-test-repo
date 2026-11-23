@@ -8,7 +8,14 @@ import sys
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT/"ci/guards"))
+FROZEN_SOURCE = os.environ.get("G8_NATIVE_SOURCE_ROOT")
+if FROZEN_SOURCE:
+    frozen_guards = Path(FROZEN_SOURCE).resolve()/"ci/guards"
+    if frozen_guards.is_dir():
+        sys.path.insert(0, str(frozen_guards))
+# The analysis-only module is loaded by exact file path; its historical G5
+# dependencies come strictly from the same pinned source as the Physics ELF.
+sys.path.append(str(ROOT/"ci/guards"))
 SPEC = importlib.util.spec_from_file_location(
     "issue652_g8_matched_stage", ROOT/"ci/guards/issue652_g8_matched_stage.py")
 assert SPEC and SPEC.loader
