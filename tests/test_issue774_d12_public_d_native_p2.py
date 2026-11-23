@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ci/guards"))
 from issue774_d12_public_d_native_p2 import (  # noqa: E402
     W1_ELF_SHA, W1_RUN, W1_SOURCE_HEAD, classify_native, stage_W1,
+    decide_native_P2_status,
 )
 
 
@@ -55,6 +56,19 @@ class D12NativeP2Controls(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "W1_SOURCE_AND_BUILD_PROVENANCE"):
                 stage_W1(root, root / "bin")
             self.assertFalse((root / "bin").exists())
+
+    def test_public_d_cannot_pass_without_both_reference_42row_controls(self):
+        ref = {"417": {"syntax_ok": True}, "941": {"syntax_ok": True}}
+        public = {"417": {"syntax_ok": True}, "941": {"syntax_ok": True}}
+        self.assertEqual(decide_native_P2_status(public, ref), "PASS_BOTH_PUBLIC_D_INPUTS")
+        self.assertEqual(decide_native_P2_status(public, {"417": ref["417"]}),
+                         "HOLD_NATIVE_42ROW_BASELINE_SETUP")
+        self.assertEqual(decide_native_P2_status(public,
+                         {"417": {"syntax_ok": False}, "941": ref["941"]}),
+                         "HOLD_NATIVE_42ROW_BASELINE_SETUP")
+        self.assertEqual(decide_native_P2_status(
+            {"417": {"syntax_ok": False}, "941": public["941"]}, ref),
+            "HOLD_PUBLIC_D_100ROW_CONSTRUCTION")
 
     def test_W1_expected_is_exact_existing_D10_binary_not_new_build(self):
         self.assertEqual(W1_RUN, "45199787795")
