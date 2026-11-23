@@ -10,10 +10,10 @@ from .parameter_contract import (
     assess_input_parameter_contract,
 )
 from .diff import GraphDiff, compare_graphs
-from .lucidity_adapter import (
+from .adapters import (
     assess_code_understandability, summarize_understandability,
+    interpret_understandability_indicators,
 )
-from .lucidity_interpretation import interpret_understandability_indicators
 
 __all__ = [
     "ImpactResult", "analyze_impact",
