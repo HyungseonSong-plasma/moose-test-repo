@@ -73,7 +73,13 @@ def test_archived_c0_exact_charge_contract_is_not_retired_in_g3():
         assert f"expression = '{expr}'" in c0
     staging = (CHEM / "prepare_s6_newonly.py").read_text()
     assert "retire_s6_p4_duplicate_owners" in staging
-    assert "retire_s6_poisson_charge_owners" not in staging
+    # G3 alone intentionally has no retirement; G5 (in stacked child PR)
+    # owns the exact source-identity cutover before any Native P2.
+    if (CHEM / "retire_s6_poisson_charge_owners.py").exists():
+        assert "retire_s6_poisson_charge_owners" in staging
+        assert "retire_g5_in_disposable_scratch(" in staging
+    else:
+        assert "retire_s6_poisson_charge_owners" not in staging
     # No Native P2 can be accepted while these three duplicate owners remain.
 
 
