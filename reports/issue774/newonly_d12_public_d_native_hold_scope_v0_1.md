@@ -37,6 +37,22 @@ A targeted GitHub code search on indexed **default-branch** content located the 
 
 **External-consumer policy clarification (requester, 2026-11-23):** external consumers normally do not exist in this project. This is a scoping decision, not evidence proving no third-party copy exists. It must not delay the internal New-only retirement workflow, and it must not be confused with the **repository-internal** generator routes that remain to be classified.
 
+
+## Internal generator invocation classification (checked source)
+
+The checked D12 Git tree has **44 tracked Workflow YAML files**. The following **12 relevant Workflows were inspected** to identify concrete callsites; this is not a claim that every dynamic invocation across all Workflows has been audited.
+
+| Owned entrypoint | Actual invocation / dependency | Treatment |
+|---|---|---|
+| `prepare_public_d_newphysics_100row.py` | `.github/workflows/ci.yml` calls `stage_public_d_physics` | **Current internal New-only CI route**; D11 generated outputs PASS, D12 Native 100-row HOLD |
+| `retire_s6_p4_duplicate_owners.py` | Canonical `ci.yml`, D10/D11/D12 isolated Workflows | **Internal staging helper**; D10/D11 tested scope |
+| `prepare_s6_newonly.py` | Imported directly by Public D generator | **Internal dependency**, not an independent external consumer |
+| `prepare_hybrid_json_s6.py` | `issue402-electron-fem-hybrid-p3-once.yml` and manual `issue541-arch-s6-p3-p4-replay.yml` | **Separate source-pinned science/replay path**; do not force into routine Thermal Factory retirement CI |
+| `base14_restart_100to300us.py` | Issue395 long-time/restart research | **Separate P3/P4 science scope**; review only if actively supported for a selected release |
+| Issue20 `thermal_gradient_activation/prepare.py` | QPX thermal gradient input generator | **Separate `QPXFVThermalDiffusion` Application**, untouched |
+
+This distinction is about *workflow ownership and selected coverage*, not proof that every route passes Native. Current Public D Native P2 remains HOLD. It is incorrect to relabel these scripts as external consumers or to schedule all historical replay scripts as mandatory New-only tests.
+
 ## Precise release gates
 
 1. **Owned supported generators:** review live entrypoints/Workflow callers, classify each `SUPPORTED`, `HISTORICAL`, `SEPARATE_APP` or `OWNER_DECISION`. Execute only supported routes with real output SHA + Native construction evidence. For unsupported old inputs, archive/deprecate rather than trying to keep Factory aliases alive.
