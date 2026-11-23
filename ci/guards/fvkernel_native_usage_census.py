@@ -11,7 +11,7 @@ import hashlib
 from pathlib import Path
 import re
 
-REGISTER = re.compile(r'registerMooseObject\s*\(\s*"PhysicsApp"\s*,\s*([A-Za-z_]\w*)\s*\)')
+REGISTER = re.compile(r'register(?:AD)?MooseObject\s*\(\s*"PhysicsApp"\s*,\s*([A-Za-z_]\w*)\s*\)')
 CLASS = re.compile(r"[A-Za-z_]\w{0,127}\Z")
 HEAD = re.compile(r"[a-f0-9]{40}\Z")
 SHA = re.compile(r"[a-f0-9]{64}\Z")

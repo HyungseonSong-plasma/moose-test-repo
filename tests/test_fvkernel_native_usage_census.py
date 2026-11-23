@@ -57,7 +57,7 @@ class NativeSourceUsageTest(unittest.TestCase):
 
     def test_trace_integrity_and_truncation_fail(self):
         with self.assertRaisesRegex(ValueError, "SHA_MISMATCH"):
-            self.check(RAW + b" ", digest=hashlib.sha256(RAW).hexdigest())
+            self.check(RAW.replace(b"NeutralKernel", b"AlienKernel"), digest=hashlib.sha256(RAW).hexdigest())
         with self.assertRaisesRegex(ValueError, "COUNT_OR_OBSERVER"):
             self.check(count=5)
         with self.assertRaisesRegex(ValueError, "COUNT_OR_OBSERVER"):
