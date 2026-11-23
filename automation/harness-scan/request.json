@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-g5-exact15-source-p0-20261123",
-  "source_sha": "f8e382d284d9d5fbd48bb3164e242c6fe58c6bdb",
+  "request_id": "issue652-g5-15owner-p0-r2-20261123",
+  "source_sha": "c96c260dafb4785c4ef48680425dafae533b31d0",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
