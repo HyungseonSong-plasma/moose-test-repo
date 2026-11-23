@@ -42,7 +42,9 @@ def classify(path: str, *, has_target: bool, has_other_app: bool,
         return "RETIRED_SOURCE_REINTRODUCED"
     if path.startswith("physics_app/src/") or path.startswith("physics_app/include/"):
         return "ACTIVE_CXX_REFERENCE_REVIEW"
-    if path.endswith(".i") or direct_type:
+    # A 'type = <Factory>' example inside .md/.json is NOT a parsed
+    # MOOSE input. Keep the literal as evidence, not a live consumer.
+    if path.endswith(".i"):
         return "MOOSE_INPUT_CONSUMER_REVIEW"
     if path.startswith(".github/workflows/"):
         return "LIVE_WORKFLOW_DEPENDENCY_REVIEW"
