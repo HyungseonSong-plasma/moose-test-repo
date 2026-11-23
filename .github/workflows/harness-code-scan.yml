@@ -169,17 +169,42 @@ jobs:
         shell: bash
         run: test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
 
+      - name: Checkout modern pinned Harness engine
+        uses: actions/checkout@v4
+        with:
+          ref: 156a5117ebe6816e67b352a9470572c2e74da367
+          path: scan-engine
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Assert Harness engine pinned
+        run: test "$(git -C scan-engine rev-parse HEAD)" = "156a5117ebe6816e67b352a9470572c2e74da367"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install Harness scan dependencies
-        run: python -m pip install -r scan-source/physics_harness/code/requirements.txt
+        run: python -m pip install -r scan-engine/physics_harness/code/requirements.txt
+
+      - name: Run G1–G5 exact-source Python and negative controls
+        shell: bash
+        working-directory: scan-source
+        run: |
+          set -euo pipefail
+          python3 -m pip install 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_issue652_poisson_g1_json_contract.py \
+            tests/test_issue652_poisson_g2_density_ownership.py \
+            tests/test_issue652_poisson_g3_charge_ownership.py \
+            tests/test_issue652_poisson_g4_fem_ownership.py \
+            tests/test_issue652_poisson_g5_source_retirement.py \
+            tests/test_issue633_newonly_run_species_schema.py \
+            tests/test_issue402_retired_charge_poisson_ownership.py
 
       - name: Run scoped source scan and export evidence
         shell: bash
-        working-directory: scan-source
+        working-directory: scan-engine
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -251,7 +276,8 @@ jobs:
                   ),
               )
               save("request.json", request)
-              result = run_scan(request, GitSourceProvider(Path.cwd()))
+              save("engine-provenance.json", {"harness_engine_sha":"156a5117ebe6816e67b352a9470572c2e74da367","target_source_sha":request.revision,"runtime":"GitSourceProvider → run_scan"})
+              result = run_scan(request, GitSourceProvider(Path('../scan-source')))
               verification = result.verification
               if verification is None:
                   raise ValueError("MISSING_VERIFICATION_RECEIPT")
