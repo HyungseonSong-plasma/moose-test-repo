@@ -210,6 +210,14 @@ def check() -> None:
                     not row.get("progress", "").startswith("reaction_rate_" + historical_id + "_") or
                     progress != "R_" + historical_id or owner != "HRateCoefMaterial"):
                 raise AssertionError(f"historical/new Chemistry owner mismatch for {channel}")
+        elif channel in ("EI18_O_TO_OS", "EI20_O_IONIZATION"):
+            # Historical S5-R v1 freezes PhysicsElectronImpactRateMaterial.
+            # Current live New-only chemistry is EIRateCoefMaterial; guarded
+            # independently by the EI18/EI20 static and Native discriminators.
+            if (row.get("progress") != progress or
+                    row.get("owner") != "PhysicsElectronImpactRateMaterial" or
+                    owner != "EIRateCoefMaterial"):
+                raise AssertionError(f"historic/current EI source-owner mismatch for {channel}")
         elif row.get("progress") != progress or row.get("owner") != owner:
             raise AssertionError(f"owner-map mismatch for {channel}")
         progress_names.append(progress)
