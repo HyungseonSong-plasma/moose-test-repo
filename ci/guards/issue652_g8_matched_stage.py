@@ -22,7 +22,7 @@ import re
 import subprocess
 import sys
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get("G8_NATIVE_SOURCE_ROOT", str(Path(__file__).resolve().parents[2]))).resolve()
 CHEM = ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry"
 sys.path.insert(0, str(CHEM))
 from prepare_s6_newonly import JSON_SHA, TEMPLATE_SHA  # noqa: E402
