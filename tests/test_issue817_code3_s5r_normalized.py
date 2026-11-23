@@ -19,17 +19,19 @@ class S5RNormalizedSourceGate(unittest.TestCase):
 
     def test_ei18_cannot_become_electron_source_functor(self):
         a,b,_=cp.s5r_pair()
-        names=mp.get_parameter(a,sc.MATERIAL,"functor_names")
-        bad=mp.upsert_parameter(a,sc.MATERIAL,"functor_names",names+" R_excitation_O_1p968")
-        bad_b=mp.upsert_parameter(b,sc.MATERIAL,"functor_names",names+" R_excitation_O_1p968")
+        names=mp.unquote(mp.get_parameter(a,sc.MATERIAL,"functor_names"))
+        changed="\u0027"+names+" R_excitation_O_1p968"+"\u0027"
+        bad=mp.upsert_parameter(a,sc.MATERIAL,"functor_names",changed)
+        bad_b=mp.upsert_parameter(b,sc.MATERIAL,"functor_names",changed)
         with self.assertRaisesRegex(ValueError,"ELECTRON_IONIZATION_SOURCE_LEDGER_DRIFT"):
             sc.assert_s5r_electron_ledger(bad,bad_b)
 
     def test_electron_sign_or_conversion_cannot_change(self):
         a,b,_=cp.s5r_pair()
-        ex=mp.get_parameter(a,sc.MATERIAL,"expression")
-        bad=mp.upsert_parameter(a,sc.MATERIAL,"expression",ex.replace("-rattach","+rattach"))
-        bad_b=mp.upsert_parameter(b,sc.MATERIAL,"expression",ex.replace("-rattach","+rattach"))
+        ex=mp.unquote(mp.get_parameter(a,sc.MATERIAL,"expression"))
+        changed="\u0027"+ex.replace("-rattach","+rattach")+"\u0027"
+        bad=mp.upsert_parameter(a,sc.MATERIAL,"expression",changed)
+        bad_b=mp.upsert_parameter(b,sc.MATERIAL,"expression",changed)
         with self.assertRaisesRegex(ValueError,"ELECTRON_SOURCE_SIGN_OR_AVOGADRO_DRIFT"):
             sc.assert_s5r_electron_ledger(bad,bad_b)
 

@@ -63,8 +63,9 @@ def assert_s5r_electron_ledger(original: str, candidate: str) -> dict:
     symbols = mp.words(mp.get_parameter(original, MATERIAL, "functor_symbols") or "")
     if src != list(PROGRESS) or symbols != list(SYMBOLS):
         raise ValueError("ELECTRON_IONIZATION_SOURCE_LEDGER_DRIFT")
-    expr = mp.get_parameter(original, MATERIAL, "expression")
-    if not expr or expr != mp.get_parameter(candidate, MATERIAL, "expression"):
+    expr = mp.unquote(mp.get_parameter(original, MATERIAL, "expression"))
+    candidate_expr = mp.unquote(mp.get_parameter(candidate, MATERIAL, "expression"))
+    if not expr or expr != candidate_expr:
         raise ValueError("ELECTRON_SIGNED_EXPRESSION_DRIFT")
     if (mp.get_parameter(original, path, "number_source") != "S_e_s5r" or
             mp.get_parameter(candidate, path, "v") != "S_e_s5r"):
