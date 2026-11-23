@@ -21,9 +21,9 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         receipt = d9.audit(ROOT, expected_head=head)
         self.assertEqual(receipt["schema"], d9.SCHEMA)
         self.assertFalse(receipt["legacy_inputs_supported"])
-        self.assertEqual(receipt["retired_factories"], [d9.RETIRED, d9.HEAVY])
-        self.assertEqual(receipt["current_newonly_factory"]["source_files"], 11)
-        self.assertEqual(receipt["current_newonly_factory"]["registered_factory_types"], 16)
+        self.assertEqual(receipt["retired_factories"], [d9.RETIRED, d9.HEAVY, d9.JOULE])
+        self.assertEqual(receipt["current_newonly_factory"]["source_files"], 10)
+        self.assertEqual(receipt["current_newonly_factory"]["registered_factory_types"], 15)
         self.assertTrue(receipt["newonly_ci"]["workflow_template_bytes_equal"])
         self.assertFalse(receipt["newonly_ci"]["historical_fdeg_ci_imported"])
         self.assertEqual(receipt["reference_audit"]["active_retired_type_references"], [])
@@ -78,7 +78,8 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         changed = dict(tracked, **{source: {"sha": "0"*40}})
         with self.assertRaisesRegex(ValueError, "RETIRED_SOURCE_OR_HEADER_REINTRODUCED"):
             d9.check_factory_inventory(ROOT, changed)
-        for retired_path in (d9.HEAVY_SOURCE, d9.HEAVY_HEADER):
+        for retired_path in (d9.HEAVY_SOURCE, d9.HEAVY_HEADER,
+                             d9.JOULE_SOURCE, d9.JOULE_HEADER):
             with self.assertRaisesRegex(ValueError, "RETIRED_SOURCE_OR_HEADER_REINTRODUCED"):
                 d9.check_factory_inventory(ROOT, dict(tracked, **{retired_path: {"sha": "0"*40}}))
         bad_sha = dict(tracked)
@@ -86,7 +87,7 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "EXACT_TREE_SOURCE_BLOB_MISMATCH"):
             d9.check_factory_inventory(ROOT, bad_sha)
         correct = d9.check_factory_inventory(ROOT, tracked)
-        self.assertEqual(correct["registered_factory_types"], 16)
+        self.assertEqual(correct["registered_factory_types"], 15)
 
     def test_historical_research_identity_is_immutable(self):
         good = {path: {"sha": sha} for path, sha in d9.HISTORICAL_ALLOWED.items()}
@@ -97,10 +98,29 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "HISTORICAL_SOURCE_PIN_DRIFT"):
                 d9.check_historical_sources(bad)
 
+    def test_code2_original_joule_smoke_is_byte_pinned_and_not_active(self):
+        import hashlib
+        raw = (ROOT / d9.JOULE_ARCHIVE).read_bytes()
+        actual = hashlib.sha1(
+            b"blob " + str(len(raw)).encode() + b"\0" + raw
+        ).hexdigest()
+        self.assertEqual(actual, d9.JOULE_SMOKE_BLOB)
+        self.assertFalse((ROOT / d9.JOULE_SMOKE).exists())
+
+    def test_code2_historical_runtime_generators_only_by_pinned_blob(self):
+        for path in (
+            "experiments/fem_fvm_plasma_discriminator/prepare_cases.py",
+            "experiments/Issue351_frozen_heavy_driver_parity/control.py",
+        ):
+            self.assertIn(path, d9.HISTORICAL_ALLOWED)
+            self.assertIsNone(d9.active_surface(path))
+        self.assertEqual(len(d9.RETIRED_FACTORIES), 3)
+
     def test_missing_workflow_owner_and_forbidden_historical_fdeg_import(self):
         paths = [d9.NEWONLY_CI, d9.TEMPLATE, d9.SAFETY, d9.EXISTING_TEST,
                  d9.NEW_TEST, d9.SELF]
         fake = {path: {"sha": "0"*40} for path in paths}
+        fake[d9.JOULE_ARCHIVE] = {"sha": d9.JOULE_SMOKE_BLOB}
         fake[d9.OLD_HISTORICAL_CI[0]] = {"sha": "0"*40}
         with self.assertRaisesRegex(ValueError, "HISTORICAL_FDEG_CI_IMPORTED"):
             d9.check_ci_tree(ROOT, fake)
