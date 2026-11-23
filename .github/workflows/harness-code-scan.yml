@@ -354,7 +354,7 @@ jobs:
         timeout-minutes: 35
         run: |
           set -euo pipefail
-          test "$SCAN_SOURCE_SHA" = "81f03946609fc6de9a227d5fd452d3f9aa154dcb"
+          test "$SCAN_SOURCE_SHA" = "80c73754e3c6451884e6c22ec4bdb54a351d38b6"
           test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
           python3 -m pip install --disable-pip-version-check --quiet \
             numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
@@ -421,7 +421,7 @@ jobs:
           set -euo pipefail
           OCI='ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008'
           test "$(git -C scan-source rev-parse HEAD)" = "$SCAN_SOURCE_SHA"
-          test "$SCAN_SOURCE_SHA" = "81f03946609fc6de9a227d5fd452d3f9aa154dcb"
+          test "$SCAN_SOURCE_SHA" = "80c73754e3c6451884e6c22ec4bdb54a351d38b6"
           test ! -e scan-source/physics_app/physics-opt
           docker pull "$OCI"
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
