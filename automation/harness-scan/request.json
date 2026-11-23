@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-g6-15owners-3ns-markers-retry3-20261123",
-  "source_sha": "e6f07666a90da3aa92a2639dbeb55cc9a981d04d",
+  "request_id": "issue652-g6-poisson-specific-registration-short3ns-retry4-20261123",
+  "source_sha": "548d5328d9a4f4469658d2785652b2bda7034643",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
