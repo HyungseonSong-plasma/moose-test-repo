@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ci/guards"))
 from issue774_d12_public_d_native_p2 import (  # noqa: E402
     W1_ELF_SHA, W1_RUN, W1_SOURCE_HEAD, classify_native, stage_W1,
-    decide_native_P2_status, classify_four_way,
+    decide_native_P2_status, classify_four_way, check_complete_public_tree,
 )
 
 
@@ -95,6 +95,37 @@ class D12NativeP2Controls(unittest.TestCase):
         labels = classify_four_way(fragment)
         self.assertEqual(labels["417"], "INCOMPLETE_DIAGNOSTIC_MATRIX")
         self.assertEqual(labels["941"], "INCOMPLETE_DIAGNOSTIC_MATRIX")
+
+    def test_complete_stage_preserves_every_support_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder) / "baseline"
+            out = Path(folder) / "composed"
+            base.mkdir()
+            out.mkdir()
+            for name, data in (("overlaid.i", b"old"),
+                               ("table.txt", b"42rows"),
+                               ("more/auxiliary.dat", b"public support")):
+                (base / name).parent.mkdir(parents=True, exist_ok=True)
+                (out / name).parent.mkdir(parents=True, exist_ok=True)
+                (base / name).write_bytes(data)
+                (out / name).write_bytes(data)
+            (out / "overlaid.i").write_bytes(b"new")
+            (out / "table.txt").write_bytes(b"100rows")
+            (out / "new.json").write_bytes(b"{}")
+            accepted = check_complete_public_tree(
+                base, out,
+                modified={"overlaid.i", "table.txt"},
+                added={"new.json"},
+            )
+            self.assertTrue(accepted["all_unchanged_public_support_sha_preserved"])
+            self.assertEqual(accepted["staged_baseline_public_file_count"], 3)
+            (out / "more/auxiliary.dat").unlink()
+            with self.assertRaisesRegex(ValueError, "INCOMPLETE_PUBLIC_STAGING_FILE_SET"):
+                check_complete_public_tree(
+                    base, out,
+                    modified={"overlaid.i", "table.txt"},
+                    added={"new.json"},
+                )
 
     def test_W1_expected_is_exact_existing_D10_binary_not_new_build(self):
         self.assertEqual(W1_RUN, "45199787795")
