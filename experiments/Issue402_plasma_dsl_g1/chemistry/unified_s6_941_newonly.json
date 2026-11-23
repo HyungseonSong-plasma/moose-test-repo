@@ -345,5 +345,37 @@
         "type": "FVLogMolarDielectricFluxBC"
       }
     }
+  },
+  "poisson": {
+    "relative_permittivity": {
+      "plasma": 1.0,
+      "cover": 3.6,
+      "wafer": 12.5,
+      "focus_ring": 8.0,
+      "vacuum": 1.0,
+      "coil1": 1.0,
+      "coil2": 1.0,
+      "coil3": 1.0
+    },
+    "boundaries": {
+      "ground": [
+        "inlet",
+        "outlet",
+        "plasma_electrode",
+        "plasma_metal",
+        "plasma_right",
+        "cover_outer_right",
+        "wafer_electrode",
+        "focus_ring_ground",
+        "vacuum_outer_ground",
+        "cover_coil_ground",
+        "vacuum_coil_ground"
+      ],
+      "surface_charge": {
+        "plasma_cover": "sigma_s",
+        "plasma_wafer": "sigma_wafer",
+        "plasma_focus_ring": "sigma_focus_ring"
+      }
+    }
   }
 }
