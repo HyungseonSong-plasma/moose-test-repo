@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """New-only Factory retirement CI contract for #774 (source/CI, not science).
 
-The old PhysicsFVThermalDiffusion input type is explicitly unsupported in
-New-only. No blanket legacy CI suppression, and no claim of external caller
+Retired Thermal and heavy mass-correction Factory types are unsupported
+in New-only. Historical Issue192/Issue282 research sources remain SHA-pinned. No blanket legacy CI suppression, and no claim of external caller
 zero. Preserve D5's original sanitized A/B registration receipts separately.
 
 This guard reads the exact Git HEAD tree, never a dirty working tree fallback.
@@ -27,8 +27,22 @@ REPO = "HyungseonSong-plasma/moose-test-repo"
 RETIRED = "PhysicsFVThermalDiffusion"
 SOURCE = "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C"
 HEADER = "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h"
-EXPECTED_SOURCE_COUNT = 12
-EXPECTED_REGISTERED_COUNT = 17
+HEAVY = "PhysicsFVHeavyMassElectromigrationCorrection"
+HEAVY_SOURCE = "physics_app/src/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.C"
+HEAVY_HEADER = "physics_app/include/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.h"
+RETIRED_FACTORIES = (RETIRED, HEAVY)
+# These are frozen historical/research references, not supported New-only inputs.
+# Their tracked Git blobs must remain exact or this explicit exception fails closed.
+HISTORICAL_ALLOWED = {
+    "experiments/historical_recipe_support/issue192_s5r.py":
+        "be9838b77dc2920b27a1f7065648062b630eacb5",
+    "experiments/Issue282_e2a_rz_bridge/research_type_bridge.py":
+        "fe82208e49c6f89b127f74fd54cf85cbb91f8fa4",
+    "physics_app/ci/audit_issue402_initial_composition_routes.py":
+        "858f75f6a64596ccc7386b044fa8278caf8f8b78",
+}
+EXPECTED_SOURCE_COUNT = 11
+EXPECTED_REGISTERED_COUNT = 16
 EXPECTED_SHARED_SOURCE_OWNERS = {
     "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": 4,
     "physics_app/src/fvkernels/FVLogMolarTransport.C": 3,
@@ -41,7 +55,7 @@ OLD_HISTORICAL_CI = (
     "ci/guards/fdeg_thermal_archive.py",
     "tests/test_fdeg_harness_abcd.py",
 )
-TEXT = re.compile(r"\b" + re.escape(RETIRED) + r"\b")
+TEXT = re.compile(r"\b(?:" + "|".join(re.escape(t) for t in RETIRED_FACTORIES) + r")\b")
 HEAD = re.compile(r"[0-9a-f]{40}\Z")
 REGISTRATIONS = re.compile(
     r'register(?:AD)?MooseObject\s*\(\s*"PhysicsApp"\s*,\s*([A-Za-z_]\w*)\s*\)'
@@ -73,6 +87,8 @@ def active_surface(path: str) -> str | None:
     An archived negative fixture or code7 provenance document is not a live
     physics consumer, but it remains represented in the audit inventory.
     """
+    if path in HISTORICAL_ALLOWED:
+        return None
     if path.endswith(".i"):
         return "MOOSE_INPUT"
     if path.startswith(("physics_app/src/", "physics_app/include/")) and \
@@ -101,8 +117,17 @@ def check_route_rows(rows: list[dict]) -> dict:
     }
 
 
+def check_historical_sources(tracked: dict) -> dict:
+    """Pinned historical recipe/bridge audits may mention the retired type."""
+    for path, expected_blob in HISTORICAL_ALLOWED.items():
+        require(path in tracked and tracked[path]["sha"] == expected_blob,
+                "HISTORICAL_SOURCE_PIN_DRIFT:" + path)
+    return dict(sorted(HISTORICAL_ALLOWED.items()))
+
+
 def check_factory_inventory(root: Path, tracked: dict) -> dict:
-    require(SOURCE not in tracked and HEADER not in tracked,
+    require(all(path not in tracked for path in
+                (SOURCE, HEADER, HEAVY_SOURCE, HEAVY_HEADER)),
             "RETIRED_SOURCE_OR_HEADER_REINTRODUCED")
     folder = root / "physics_app/src/fvkernels"
     entries = source_owners(folder)
@@ -182,7 +207,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
     facts = check_factory_inventory(root, tracked)
     ci = check_ci_tree(root, tracked)
     raw = git(root, "grep", "-n", "-F", "-I", "-e", RETIRED,
-              "HEAD", "--", missing_ok=True)
+              "-e", HEAVY, "HEAD", "--", missing_ok=True)
     rows = []
     for line in raw.decode("utf-8").splitlines():
         parts = line.split(":", 3)
@@ -190,7 +215,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
         _, path, lineno, source_line = parts
         require(path in tracked and lineno.isdecimal(),
                 "SOURCE_MISSING_FROM_EXACT_GIT_TREE")
-        if RETIRED not in source_line or not TEXT.search(source_line):
+        if not TEXT.search(source_line):
             continue
         rows.append({"path": path, "line": int(lineno),
                      "source_blob_sha": tracked[path]["sha"],
@@ -203,6 +228,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
                    "line_numbers": [], "active_surface": row["active_surface"]})
         entry["line_numbers"].append(row["line"])
     reference = check_route_rows(list(by_path.values()))
+    historical = check_historical_sources(tracked)
     return {
         "schema": SCHEMA,
         "source_head": actual,
@@ -211,6 +237,8 @@ def audit(root: Path, *, expected_head: str) -> dict:
         "nonregular_git_entries": nonregular_entries,
         "binary_git_blob_content_scan": "EXCLUDED_BY_GIT_GREP_I_NOT_COUNTED_AS_REGULAR_TEXT",
         "retired_factory": RETIRED,
+        "retired_factories": list(RETIRED_FACTORIES),
+        "pinned_historical_sources": historical,
         "legacy_inputs_supported": False,
         "current_newonly_factory": facts,
         "newonly_ci": ci,
