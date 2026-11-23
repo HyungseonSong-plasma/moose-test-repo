@@ -118,7 +118,8 @@ def active_surface(path: str) -> str | None:
 def check_route_rows(rows: list[dict]) -> dict:
     """Pure classifier; never count docs/tests as active input consumers."""
     active = [r for r in rows if r["active_surface"] is not None]
-    counts = dict(sorted(Counter(r["active_surface"] for r in rows).items()))
+    counts = dict(sorted(Counter(r["active_surface"] or "NON_ACTIVE_REFERENCE"
+                                 for r in rows).items()))
     require(not active, "ACTIVE_RETIRED_FACTORY_REINTRODUCED:" +
             ",".join(r["path"] for r in active[:8]))
     return {

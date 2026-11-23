@@ -71,6 +71,17 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
             d9.check_route_rows([{"path": "experiments/newonly/reattached_heavy_mass.py",
                                   "active_surface": "GENERATOR_OR_RUNTIME_JSON"}])
 
+    def test_mixed_historical_and_live_reintroduction_fails_closed(self):
+        rows = [
+            {"path": "docs/development/old.md", "active_surface": None},
+            {"path": "experiments/newonly/new_joule.py",
+             "active_surface": "GENERATOR_OR_RUNTIME_JSON"},
+        ]
+        with self.assertRaisesRegex(ValueError, "ACTIVE_RETIRED_FACTORY_REINTRODUCED"):
+            d9.check_route_rows(rows)
+        good = d9.check_route_rows([rows[0]])
+        self.assertEqual(good["reference_classes"], {"NON_ACTIVE_REFERENCE": 1})
+
     def test_reintroduced_cpp_source_or_wrong_blob_fails(self):
         rows = source_owners(ROOT / "physics_app/src/fvkernels")
         tracked = {r["source_file"]: {"sha": r["source_blob_sha"]} for r in rows}
