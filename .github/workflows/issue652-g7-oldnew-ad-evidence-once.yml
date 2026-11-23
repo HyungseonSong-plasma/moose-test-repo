@@ -1,3 +1,4 @@
+# G7 recheck: shared ADParsedFunctorMaterial factory declaration is not a unique G3 charge anchor.
 name: Issue652 G7 Poisson old/new evidence audit and AD charge algebra (branch-only)
 on:
   push:
