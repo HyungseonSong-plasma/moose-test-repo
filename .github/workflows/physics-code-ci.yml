@@ -569,6 +569,7 @@ jobs:
           set -euo pipefail
           python3 -m physics_harness.workflow.profiles --self-test
           python3 -m physics_harness.workflow.profiles --check
+          python3 -m unittest discover -s physics_harness/workflow/tests -p "test_*.py" -v
           python3 ci/guards/workflow_surface_guard.py --self-test
       - name: Verify scoped DD/S6 archived originals absent and global guard clean
         shell: bash

@@ -52,5 +52,21 @@
       "name": "Issue 493 Public S6 B C Results P4",
       "activation": "active"
     }
-  ]
+  ],
+  "execution_profiles": {
+    "general": {
+      "purpose": "repository_ci",
+      "generation": "static_profile"
+    },
+    "single_case": {
+      "purpose": "native_execution",
+      "generation": "case_matrix",
+      "max_parallel": 1
+    },
+    "parallel_cases": {
+      "purpose": "native_execution",
+      "generation": "case_matrix",
+      "max_parallel": 20
+    }
+  }
 }

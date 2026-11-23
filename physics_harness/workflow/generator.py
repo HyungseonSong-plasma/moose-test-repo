@@ -49,7 +49,7 @@ def render(spec, *, spec_path: str, root: Path) -> str:
     build_body = "    runs-on: ubuntu-24.04\n    timeout-minutes: 120\n    steps:\n" + build_steps
     build_job = fill(fragment("job.yml"), {"JOB_NAME": "build", "JOB_BODY": build_body})
     matrix_rows = "\n".join(
-        "          - case: " + item["case"] for item in build_matrix(spec)["include"]
+        "          - case: '" + item["case"] + "'" for item in build_matrix(spec)["include"]
     )
     case_steps = (checkout + "\n" + fill(fragment("steps/execute.yml"), common)
                   + "\n" + fill(fragment("steps/artifacts.yml"), common))
