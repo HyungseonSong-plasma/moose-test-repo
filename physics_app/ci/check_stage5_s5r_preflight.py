@@ -215,8 +215,15 @@ def check() -> None:
         raise AssertionError("duplicate canonical Stage-5 progress name")
 
     h05_row = owner_map["H05_OM_O_DETACHMENT"]
+    # The archived Stage-5 owner map records the historical custom C++ projector.
+    # Current supported H05 uses a standard MOOSE signed source with the same Functor.
     if h05_row.get("electron_particle_projection") != "PhysicsFVElectronReactionSource":
-        raise AssertionError("H05 electron-particle ownership changed")
+        raise AssertionError("historical H05 electron-particle contract changed")
+    from physics_app.ci.check_stage5_h05_runtime import runtime_input as _h05_current
+    h05_current = _h05_current()
+    if not all(part in h05_current for part in (
+            "type = FVCoupledForce", "v = S_e_h05", "coef = 1")):
+        raise AssertionError("current H05 standard electron projector is not proven")
     if h05_row.get("electron_energy_projection") != "NONE":
         raise AssertionError("H05 explicit electron-energy source was reintroduced")
     if "ADMITTED" not in h05_row.get("model_decision", ""):

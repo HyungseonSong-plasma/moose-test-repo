@@ -111,10 +111,10 @@ def text():
   variable=n_e
  []
  [ns]
-  type=PhysicsFVElectronReactionSource
+  type=FVCoupledForce
   variable=n_e
-  number_source=electron_edetach_number_source
-  state_form=physical
+  v=electron_edetach_number_source
+  coef=1
  []
  [et]
   type=FVTimeKernel
@@ -225,7 +225,7 @@ def selftest():
   except AssertionError: pass
   else: raise AssertionError("mutation")
  s=text()
- req=("property_name=R_detach_Om","type=PhysicsFVSpeciesReactionSource","type=PhysicsFVElectronReactionSource","type=FVCoupledForce","v=R_detach_Om")
+ req=("property_name=R_detach_Om","type=PhysicsFVSpeciesReactionSource","v=electron_edetach_number_source","coef=1","type=FVCoupledForce","v=R_detach_Om")
  if any(x not in s for x in req) or s.count("property_name=R_detach_Om")!=1: raise AssertionError("owner")
  if any(x in s for x in ("EIRateCoefMaterial","PhysicsFVElectronReactionEnergySource")): raise AssertionError("wrong owner")
  print("STAGE5_EDETACH_RUNTIME_CHECKER_SELFTEST_PASS")
