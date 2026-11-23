@@ -117,5 +117,34 @@ class ThermalArchiveContractTest(unittest.TestCase):
             self.assertEqual(git_blob, blob_sha)
 
 
+    def test_reproduced_original_artifact_has_matching_immutable_graphs(self):
+        pin = json.loads((
+            ROOT / "reports/issue774/fdeg_thermal_historical_anchor_v0_1.json"
+        ).read_text())
+        archive_path = ROOT / "reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip"
+        blob = archive_path.read_bytes()
+        self.assertEqual(len(blob), 37949)
+        self.assertEqual(hashlib.sha256(blob).hexdigest(), pin["artifact_zip_sha256"])
+        result = archive.verify_archive_bytes(blob, pin)
+        self.assertEqual(result["archive_integrity"], "PASS")
+        self.assertEqual(result["target"], "PhysicsFVThermalDiffusion")
+        self.assertEqual(result["baseline_head"], pin["baseline_head"])
+        self.assertFalse(result["safe_delete"])
+        self.assertFalse(result["global_consumer_closed"])
+        self.assertFalse(result["science_accepted"])
+
+    def test_archive_missing_graph_rejected_even_with_recomputed_zip_digest(self):
+        blob, pin = self.make_bundle()
+        src = zipfile.ZipFile(io.BytesIO(blob))
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as out:
+            for name in src.namelist():
+                if name != "transition.json":
+                    out.writestr(name, src.read(name))
+        damaged = buf.getvalue()
+        matching_digest = dict(pin, artifact_zip_sha256=hashlib.sha256(damaged).hexdigest())
+        with self.assertRaisesRegex(ValueError, "UNEXPECTED_ENTRIES"):
+            archive.verify_archive_bytes(damaged, matching_digest)
+
 if __name__ == "__main__":
     unittest.main()

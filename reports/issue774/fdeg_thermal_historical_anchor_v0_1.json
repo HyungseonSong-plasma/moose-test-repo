@@ -16,8 +16,11 @@
     "structural": "083254b5d4bd071852184b76ab9ca9ffb70ec84b4bce9b2843bd24b4739b4b8a",
     "transition": "22aec63a2cc7816e6f1bdb0b54aec4d37027fa19f2f81c3b2f9797141007753b"
   },
-  "provenance": "exact recorded workflow artifact; expires 2026-12-07; preserve ZIP outside expiring Actions storage before cut",
+  "provenance": "Exact workflow artifact downloaded and preserved byte-for-byte in the PR branch's reports/issue774/archive/; commit to main is a separate integration gate.",
   "purpose": "cryptographic identity of archived pre-retirement FDEG evidence, not approval to retire",
   "safe_delete": false,
-  "global_consumer_closed": false
+  "global_consumer_closed": false,
+  "repository_archive_path": "reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip",
+  "repository_archive_git_blob_sha": "9bf227311a0683942bb1769dfd174332f803049b",
+  "repository_archive_bytes": 37949
 }
