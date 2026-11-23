@@ -1,0 +1,60 @@
+# Temporary P0 exact source-tree testing for combined Thermal + Heavy + Joule.
+# Never merge into #807 or main; artifact is sanitized source census only.
+name: Issue814 code2 heavy integrated exact HEAD P0
+on:
+  push:
+    branches:
+      - issue-814-code2-heavy-integrated-p0-20261123
+permissions:
+  contents: read
+concurrency:
+  group: issue814-code2-heavy-integrated-p0
+  cancel-in-progress: false
+jobs:
+  combined-p0:
+    name: Exact source and New-only CI regression P0
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify combined source and guard identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:physics_app)" = "55da050e7cf4dd569607c3d45b59f7c617be301d"
+          test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "caff85665b577d17d4d86222f2b58866f9769bf5"
+          test "$(git rev-parse HEAD:tests/test_issue774_newonly_fvkernel_retirement.py)" = "e89bc304f492400e8ca035339357f9d914f41b93"
+          git merge-base --is-ancestor "bfcc95189f3ab8648599b8e946508a4e2f0507ad" HEAD
+          test ! -e physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C
+          test ! -e physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h
+          echo ISSUE814_INTEGRATED_SOURCE_PIN_PASS
+      - name: Execute existing independent census, history and negative tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_fvkernel_native_usage_census.py -v
+          python3 -m unittest discover -s tests -p test_issue774_newonly_fvkernel_retirement.py -v
+          python3 ci/guards/issue774_newonly_fvkernel_retirement.py \
+            --expected-head "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/issue814-integrated-p0.json"
+          python3 - <<'PY'
+          import runpy
+          tests = runpy.run_path("tests/test_issue402_material_class_names.py")
+          functions = [v for k, v in tests.items() if k.startswith("test_") and callable(v)]
+          assert len(functions) == 4, "MATERIAL_REGRESSION_SET_DRIFT"
+          for f in functions:
+              f()
+          print("ISSUE814_INTEGRATED_DDTRANSPORT_P0_PASS", len(functions))
+          PY
+          echo ISSUE814_INTEGRATED_P0_PASS
+      - if: always()
+        name: Preserve sanitized P0 receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue814-integrated-p0-receipt
+          path: ${{ runner.temp }}/issue814-integrated-p0.json
+          if-no-files-found: warn
+          retention-days: 30
