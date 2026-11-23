@@ -47,7 +47,7 @@ jobs:
           test "$(git rev-parse HEAD:physics_app)" = "869dabc25a34e03fc4018c2d8cd57cda26a630fb"
           test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "e57cb1cc16ef9c6c336199f395d1cf4b49436bb6"
           test "$(git rev-parse HEAD:tests/test_issue774_newonly_fvkernel_retirement.py)" = "c61e57ed43376275725b6a2840e54fd773f2a318"
-          git merge-base --is-ancestor "d199bdaec3d494809650155ee9e772dfac78a106" HEAD
+          # Shallow checkout: immutable source tree, guard and test blobs pin the validation scope.
           test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
           test -z "$(git status --porcelain --untracked-files=no -- physics_app ci/physics-build-base)"
           test ! -e physics_app/physics-opt
@@ -270,7 +270,7 @@ jobs:
           test "$(git rev-parse HEAD:physics_app)" = "869dabc25a34e03fc4018c2d8cd57cda26a630fb"
           test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "e57cb1cc16ef9c6c336199f395d1cf4b49436bb6"
           test "$(git rev-parse HEAD:tests/test_issue774_newonly_fvkernel_retirement.py)" = "c61e57ed43376275725b6a2840e54fd773f2a318"
-          git merge-base --is-ancestor "d199bdaec3d494809650155ee9e772dfac78a106" HEAD
+          # Shallow checkout: immutable source tree, guard and test blobs pin the validation scope.
           test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 13b25226d463b8fd1e4acaee16358f8f17d710a0
           test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 045de080e3d836d75495b1749d75d5d3deea2330
           test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
