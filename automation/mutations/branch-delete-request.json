@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-758-dependency-source-line-witness",
-      "expected_sha": "b4e493a85231346b69b47c03ea2c2fe31ffed453",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-dependency-source-line-witness-b4e493a85231"
+      "branch": "remove-legacy-hu-code-use-cu-only",
+      "expected_sha": "3b6352ad62efe61afd0c0321b984d37716b1b5ef",
+      "archive_tag": "archive/oxygen-cleanup-20261106/remove-legacy-hu-code-use-cu-only-3b6352ad62ef"
     },
     {
-      "branch": "issue-758-parameter-contract-module-boundary",
-      "expected_sha": "eff86ffa0c3255f6b8d5a3398e543e848e2dd379",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-parameter-contract-module-boundary-eff86ffa0c32"
+      "branch": "issue-697-fdeg-functional-v02",
+      "expected_sha": "3d9e382b90afacd98e02af8511071a6e5e950291",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-697-fdeg-functional-v02-3d9e382b90af"
     },
     {
-      "branch": "issue-758-code-lifecycle-readme-sync",
-      "expected_sha": "2d3f1c0b3ac3ae0d2353ae65fa906c823f5d291b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-code-lifecycle-readme-sync-2d3f1c0b3ac3"
+      "branch": "test/harness-code-real-source-dryrun-20261119",
+      "expected_sha": "34e3598672c572a70da691408d11cb7fbbd92e14",
+      "archive_tag": "archive/oxygen-cleanup-20261106/test-harness-code-real-source-dryrun-20261119-34e3598672c5"
     },
     {
-      "branch": "issue-758-source-ref-lookup-performance",
-      "expected_sha": "696a08eba4abee6c00d725f7992f843f1a260f3b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-source-ref-lookup-performance-696a08eba4ab"
+      "branch": "issue-708-code4-native-evidence-ci-only",
+      "expected_sha": "909b878af143501fda67a98bceca21c519b8190c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-708-code4-native-evidence-ci-only-909b878af143"
     },
     {
-      "branch": "rename-hu-code-understandability-metrics",
-      "expected_sha": "4e3c82fcdc0160907f2dbe4dd62deccd40aa4c9b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/rename-hu-code-understandability-metrics-4e3c82fcdc01"
+      "branch": "issue-758-harness-scan-dispatch",
+      "expected_sha": "4bdc3c47b1b801c8078276105ee12de55bb8ad11",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-scan-dispatch-4bdc3c47b1b8"
     }
   ]
 }
