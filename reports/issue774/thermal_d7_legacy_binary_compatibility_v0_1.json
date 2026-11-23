@@ -1,0 +1,63 @@
+{
+  "schema": "issue774.d7.thermal_legacy_factory_abi_ab.v0.1",
+  "issue": 774,
+  "source_head": "6c240d9f8b324d07b0e31eebaea1b9cbb60e8a6e",
+  "draft_pr": 789,
+  "workflow_run_id": 45188611631,
+  "workflow_status": "SUCCESS",
+  "artifact_id": 14824902064,
+  "artifact_zip_sha256": "21845d2d48d736453862270ae6c5b57cd2c9fc56fa39b43ee16864633e164a2f",
+  "scope": "PUBLIC_SYNTHETIC_MOOSE_LEGACY_FACTORY_CONSTRUCTION_CHECK",
+  "oci": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+  "cohorts": {
+    "A": {
+      "commit": "6c4eef073038ad69a0710e7c8555b5e03b9ad6ba",
+      "w1_run_id": 45177303119,
+      "binary_sha256": "6e0d04e48886a7897fa69aa85528c4aba41a9381451aa67f5477443c30df7f15",
+      "thermal_source_present": true
+    },
+    "B": {
+      "commit": "c77d2f773eee96c30eeca49d7486fea22ea8e557",
+      "w1_run_id": 45177755891,
+      "binary_sha256": "d6a87b61f7e3e8d06767f7a245c51e846293af740653609492d2e3f9714ac62c",
+      "thermal_source_present": false
+    }
+  },
+  "inputs": {
+    "on_sha256": "398b18852ce36e83e0031a96823a8f1703756f179a54f0cb6c9125eda20d71cc",
+    "off_sha256": "f3c5c7a4c3587de58aaa249aee0a7310e1c9d2da7583dbb09941102965ab17b3",
+    "unknown_sha256": "9b2d4168b889f9b7f2eb47476264ee84dea9d213f903686b115357dc9d7705b0",
+    "provenance": "Generated from controlled synthetic tracked .i; no historical inputs claimed"
+  },
+  "test_outcomes": {
+    "A": {
+      "on": "SYNTAX_OK_rc0",
+      "off": "SYNTAX_OK_rc0",
+      "unknown": "FACTORY_NOT_AVAILABLE_rc1"
+    },
+    "B": {
+      "on": "FACTORY_NOT_AVAILABLE_rc1",
+      "off": "FACTORY_NOT_AVAILABLE_rc1",
+      "unknown": "FACTORY_NOT_AVAILABLE_rc1"
+    }
+  },
+  "missing_type_error": "A 'PhysicsFVThermalDiffusion' is not a registered object.",
+  "first_attempt": {
+    "run_id": 45187995851,
+    "verdict": "HOLD_HARNESS_ERROR_LABEL_NOT_RECOGNIZED",
+    "resolved_with": "classify exact MOOSE phrase and P0 regression; no source physics change"
+  },
+  "verdict": "FACTORY_INTERFACE_BREAK_CONFIRMED_IN_SYNTHETIC_INPUT",
+  "current_binary_historical_input_compatibility": "BREAKS_WITHOUT_ALIAS_OR_LEGACY_FACTORY",
+  "technical_branch_validation": "PASS",
+  "owner_approval_to_drop_compatibility": "NOT_OBTAINED",
+  "external_and_generated_consumer_scope": "NOT_ATTESTED",
+  "historical_full_input_replay": "NOT_EXECUTED",
+  "nonzero_gradient_AD_residual_comparison": "NOT_EVALUATED",
+  "postcut_rollback_replay": "NOT_INDEPENDENTLY_VERIFIED",
+  "P3_P4_science": "SCIENCE_HOLD",
+  "default_disposition": "KEEP_LEGACY_FACTORY_FOR_CURRENT_BINARY_COMPAT_UNTIL_OWNER_DECISION",
+  "main_merge": false,
+  "poisson_edits": false,
+  "safe_to_delete": false
+}
