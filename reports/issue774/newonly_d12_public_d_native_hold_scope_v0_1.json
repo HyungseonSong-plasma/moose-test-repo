@@ -107,8 +107,8 @@
     },
     {
       "entrypoint": "Known supported external integrations",
-      "evidence": "no complete owner attestation collected",
-      "status": "EXPLICIT_OWNER_LIST_AND_CONTRACT_TEST_PENDING"
+      "evidence": "Requester reports that external consumers are generally absent; no specific supported external integration has been identified. This is not a proof of global zero.",
+      "status": "NONE_REPORTED_PROVISIONAL__NOT_A_RELEASE_BLOCKER"
     }
   ],
   "external_supported_consumer_zero_claim": false,
@@ -117,18 +117,21 @@
     "supported_current_newonly_routes_must_be_verified": true,
     "unknown_legacy_clients_not_blocking_by_absence": true,
     "breaking_change_communication_required": true,
-    "known_supported_external_owner_disposition_required": true,
-    "independent_review_and_final_merge_requalification_required": true
+    "known_supported_external_owner_disposition_required": false,
+    "independent_review_and_final_merge_requalification_required": true,
+    "discovered_actual_supported_external_integration_requires_review": true
   },
   "next_work": [
     "Locate first real MOOSE native error through sanitized, no-rate/no-path diagnostics rather than classify source removal",
     "Repair only confirmed Public D 100row generator/input integration contract and rerun both exact Native cases with same 42row positive controls",
     "Inventory remaining currently supported generator entrypoints and tie each to input SHA and Native/review evidence",
-    "Obtain external integration owner list or explicit no supported third-party consumer policy; publish legacy compatibility termination",
-    "Re-run final exact integrated HEAD and independent rollback review before merging"
+    "Re-run final exact integrated HEAD and independent rollback review before merging",
+    "Document old PhysicsFVThermalDiffusion input support termination; review a specific external integration only if one is actually identified"
   ],
   "physics_app_changes": 0,
   "poisson_changes": 0,
   "main_merge": false,
-  "safe_to_delete": false
+  "safe_to_delete": false,
+  "external_integrations_requester_statement": "External consumers are generally absent; no concrete supported integration named, 2026-11-23",
+  "external_integrations_policy": "No proactive census or independent signoff required in absence of a named supported external integration; if one is discovered, review that integration specifically"
 }
