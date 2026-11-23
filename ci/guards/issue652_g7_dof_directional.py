@@ -246,9 +246,6 @@ def analyze(*, source: Path, manifest: Path, output: Path,
             report["native_p2_rc"] = rc
             if rc == 0 and not timed_out and "Syntax OK" in log:
                 rc, log, timed_out = invoke(
-                    docker_command(source, temp, check=False) + [],
-                    timeout=120,
-                ) if False else invoke(
                     _view_command(source, temp), timeout=120
                 )
                 report["native_run_rc"] = rc
