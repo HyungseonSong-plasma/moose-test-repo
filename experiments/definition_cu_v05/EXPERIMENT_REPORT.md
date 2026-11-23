@@ -99,37 +99,31 @@ All commands are read-only with respect to the repository (the explicit output
 path is outside the checkout). The solver is not executed; no files are renamed,
 compressed, removed, or auto-modified.
 
-## Next decision gate
+## Acceptance boundary — human-evaluation workstream stopped (2026-11-23)
 
-Use an **independently constructed, held-out reference set** and a small blinded
-human name→definition prediction task (choice, accuracy, confidence, response
-time, progressive context navigation). Compare at fixed candidate difficulty
-and preserve failures/abstentions. Calibrate DEB/MRC and name contribution only
-when the model reproduces independent human results; until then **CU HOLD**.
+By decision for Issue #767, **independently adjudicated reference answers** and
+**actual blinded human evaluation** are stopped and are **not required** to
+accept this bounded read-only Definition CU experiment. Do not schedule new
+human trials or hold the pull request solely for human calibration.
 
-## Blinded human CU calibration: mechanical evidence gate
+Evaluate the implemented scope on source-bound evidence alone:
+- exact Git revision and blob provenance, name/README exclusion from source
+  definition inference, and input/scope fail-closed behavior;
+- reproducible original frozen-source pilot and explicit 5-role plus
+  5 synthetic-negative contrast (the synthetic controls are not people);
+- deterministic P0, rename/blank/sibling-name counterfactuals, stable-context
+  discrimination and abstention/ambiguity handling;
+- clean relevant exact-HEAD CI and ordinary source/code review.
 
-The optional audit_blinded_human_calibration API in the existing v0.5 experiment
-checks externally supplied response record structure. It is not itself a human
-experiment, a source-truth authenticator or a pass gate for naming changes.
+**Interpretation boundary:** DEB/MRC, discriminability and CIG/DDA proxy
+quantities are **not human-validated CU or universal quality scores**.
+A 0/5 original-name advantage is a negative result under the versioned
+lexicon/pilot only, not evidence that naming is defective. Unknown external,
+dynamic, non-Python and semantic-consumer scope stays explicitly unknown.
+No automatic rename, COMPRESS, REMOVE, production code changes or CI blocking
+based on these exploratory proxy scores is authorized.
 
-Before any human response collection: independently adjudicate at least five
-held-out source definitions outside the existing curated pilot, pre-register
-a study protocol and exact source SHA, fix candidate choices, and assign
-NAME versus MASKED conditions so a participant never sees the same source
-case under both conditions. Keep the reference answer key out of all stimuli.
-
-Each trial must contain exactly: case_id (16-hex pseudonym), rater_id,
-condition (NAME/MASKED), candidate_codes (ordered list), selected_code
-(or null for abstention), elapsed_ms, stimulus_sha256, protocol_sha256,
-and source_revision. Trial data cannot include the expected answer or
-source-role labels. At least two different raters per case and condition
-are required; identical choice pools and immutable stimulus hashes are
-checked. The validator also rejects reused stimuli, duplicate exposures,
-wrong revision/protocol and out-of-pool responses.
-
-The output separates descriptive NAME and MASKED accuracy and differences;
-even a mechanically complete synthetic cohort remains status=HOLD with
-human_cu_calibrated=False and automatic_change_authorized=False.
-Independent ground truth, stimulus bytes/assignment and human identity still
-require external authentication. This repo contains no observed human trials.
+The previously implemented optional blinded-response audit and its five
+synthetic tests have been withdrawn from the PR because that workstream
+is stopped. Its historic commit remains in the PR Git history but it is
+not part of the proposed integrated source tree.
