@@ -23,8 +23,10 @@ def test_lookup_rejects_wrong_row_count_columns_and_nonfinite():
     good = g6b.SOURCE_100.read_bytes()
     with pytest.raises(g6b.PublicD100Hold, match="CARDINALITY"):
         g6b.lookup_contract(b"\n".join(good.splitlines()[:42]) + b"\n", 100)
+    short = good.splitlines()
+    short[0] = b"\t".join(short[0].split()[:2])
     with pytest.raises(g6b.PublicD100Hold, match="COLUMNS"):
-        g6b.lookup_contract(good.replace(b"\t", b" ", 1).replace(b" ", b"", 1), 100)
+        g6b.lookup_contract(b"\n".join(short) + b"\n", 100)
     with pytest.raises(g6b.PublicD100Hold, match="NONPOSITIVE"):
         g6b.lookup_contract(good.replace(b"1.40991", b"nan", 1), 100)
 
