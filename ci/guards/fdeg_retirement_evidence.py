@@ -180,7 +180,7 @@ def verify_retired(root: Path, receipt: dict, review: dict, expected_head: str) 
     token = re.compile(r"\b" + re.escape(receipt["target"]) + r"\b")
     for rel, expected_blob in metadata.items():
         if (not isinstance(rel, str)
-                or not re.fullmatch(r"reports/issue774/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\.(?:json|md)", rel)
+                or not re.fullmatch(r"reports/issue774/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\.(?:json|md)", rel)
                 or ".." in Path(rel).parts
                 or not isinstance(expected_blob, str)
                 or not re.fullmatch(r"[0-9a-f]{40}", expected_blob)):
