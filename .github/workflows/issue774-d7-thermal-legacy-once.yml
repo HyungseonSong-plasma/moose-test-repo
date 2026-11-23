@@ -1,0 +1,71 @@
+# #774 D7: run only for the explicitly isolated legacy ABI draft PR.
+name: Issue774 D7 Thermal legacy binary compatibility A/B
+on:
+  pull_request:
+    branches: [issue-774-d6-thermal-consumer-compat-20261123]
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/issue774-d7-thermal-legacy-once.yml'
+      - 'ci/guards/issue774_thermal_legacy_probe.py'
+      - 'tests/test_issue774_d7_thermal_legacy_probe.py'
+      - 'experiments/Issue774_thermal_legacy_compat/**'
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  d7_legacy_synthetic:
+    name: D7 pinned A/B W1 ELF with synthetic legacy Factory input
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Checkout only immutable D7 PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify source and P0 negative controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          python3 -m unittest discover -s tests -p test_issue774_d7_thermal_legacy_probe.py -v
+          python3 -m py_compile ci/guards/issue774_thermal_legacy_probe.py
+      - name: Fetch immutable A pre-cut W1 binaries (no new Physics build)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45177303119
+          name: p6-newonly-w1-45177303119-1-6c4eef073038ad69a0710e7c8555b5e03b9ad6ba
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/d7/a
+      - name: Fetch immutable B post-cut W1 binaries (no new Physics build)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45177755891
+          name: p6-newonly-w1-45177755891-1-c77d2f773eee96c30eeca49d7486fea22ea8e557
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/d7/b
+      - name: Replay exact-HEAD ELF A/B in pinned build OCI with read-only cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          docker pull ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+          python3 ci/guards/issue774_thermal_legacy_probe.py \
+            --a-artifact "${{ runner.temp }}/d7/a" \
+            --b-artifact "${{ runner.temp }}/d7/b" \
+            --scratch "${{ runner.temp }}/d7/isolated" \
+            --input experiments/Issue774_thermal_legacy_compat/legacy_thermal_synthetic.i \
+            --receipt evidence/thermal_legacy_binary_ab.json
+      - name: Upload sanitized exact-head compatibility receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue774-d7-legacy-compat-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
+          path: evidence/thermal_legacy_binary_ab.json
+          if-no-files-found: warn
+          retention-days: 30
