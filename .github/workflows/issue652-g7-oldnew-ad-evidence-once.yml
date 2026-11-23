@@ -1,0 +1,89 @@
+name: Issue652 G7 Poisson old/new evidence audit and AD charge algebra (branch-only)
+on:
+  push:
+    branches: [issue-652-poisson-g7-equivalence-ad-20261123]
+    paths: [.github/workflows/issue652-g7-oldnew-ad-evidence-once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue652-g7-oldnew-ad-evidence-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    name: G7 immutable 100us readback and G3 AD charge algebra, science HOLD
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Run strict G7 evidence and derivative negative-control tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m pip install --quiet --disable-pip-version-check 'pytest>=8,<9'
+          python3 -m pytest -q tests/test_issue652_g7_equivalence_ad_audit.py
+          python3 -m py_compile ci/guards/issue652_g7_equivalence_ad_audit.py
+      - name: Read OLD source-bound 417 full100 RF/P4 diagnostic receipt (no raw Exodus)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 44426913036
+          name: issue673-publicd100-S6-417-P3P4-100us-9457191
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/g7-old417
+      - name: Read OLD source-bound 941 full100 RF/P4 diagnostic receipt
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 44426913036
+          name: issue673-publicd100-S6-941-P3P4-100us-9457191
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/g7-old941
+      - name: Read NEW G6B 417 exact-source 100us P3 diagnostic receipt
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45216929109
+          name: issue652-g6b-full100-case-417
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/g7-new417
+      - name: Read NEW G6B 941 exact-source 100us P3 diagnostic receipt
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45216929109
+          name: issue652-g6b-full100-case-941
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/g7-new941
+      - name: Compute old/new descriptive differences and independent charge-source sign/FD
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue652_g7_equivalence_ad_audit.py \
+            --old417 "$RUNNER_TEMP/g7-old417" \
+            --old941 "$RUNNER_TEMP/g7-old941" \
+            --new417 "$RUNNER_TEMP/g7-new417" \
+            --new941 "$RUNNER_TEMP/g7-new941" \
+            --cpp physics_app/src/physics/plasma/Chemistry.C \
+            --output g7_oldnew_ad_report.json
+          test -s g7_oldnew_ad_report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open("g7_oldnew_ad_report.json"))
+          assert set(r["cases"])=={"417","941"}
+          assert r["source_input_identity"].startswith("HOLD")
+          assert r["old_new_poisson_semantic_parity"]=="HOLD"
+          assert r["jacobian"]["petsc_assembled_jacobian"]=="NOT_RUN"
+          assert r["jacobian"]["algebraic_status"]=="PASS_INDEPENDENT_FORMULA_FD"
+          assert r["science"]=="SCIENCE_HOLD"
+          print("G7_IMMUTABLE_OLDNEW_READBACK_PASS_SCIENCE_HOLD")
+          PY
+      - name: Upload one sanitized G7 comparison report only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue652-g7-oldnew-descriptive-and-ad-algebra
+          path: g7_oldnew_ad_report.json
+          if-no-files-found: warn
+          retention-days: 90
