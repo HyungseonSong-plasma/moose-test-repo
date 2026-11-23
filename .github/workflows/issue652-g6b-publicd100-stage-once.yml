@@ -122,3 +122,4 @@ jobs:
           path: g6b_public100_receipt.json
           if-no-files-found: error
           retention-days: 30
+# Recheck canonical G5 11-layer C0 after issue652 G6B staging guard fix.
