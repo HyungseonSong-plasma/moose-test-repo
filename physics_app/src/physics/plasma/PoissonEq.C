@@ -265,8 +265,6 @@ PoissonEq::addFEBCs()
   }
 }
 
-}
-
 void
 PoissonEq::addMaterials()
 {
@@ -300,6 +298,8 @@ PoissonEq::addMaterials()
     getProblem().addMaterial(type, name() + "_eps_" + group.id, params);
   }
 }
+
+} // namespace Plasma
 
 using Plasma::PoissonEq;
 registerPhysicsBaseTasks("PhysicsApp", PoissonEq);
