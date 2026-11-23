@@ -24,7 +24,7 @@ MEMBERS = {
     "lib/libphysics-opt.so.0": "physics_app/lib/libphysics-opt.so.0",
     "lib/libphysics_test-opt.so.0": "physics_app/test/lib/libphysics_test-opt.so.0",
 }
-MISSING = re.compile(r"(?i)(not registered|not recognized|not known|unknown|not found|not a valid|invalid.{0,40}type|does not exist|doesn't exist)")
+MISSING = re.compile(r"(?i)(not registered|not a registered object|not recognized|not known|unknown|not found|not a valid|invalid.{0,40}type|does not exist|doesn't exist)")
 
 
 def sha(raw: bytes) -> str:
@@ -112,7 +112,7 @@ def native(binary: Path, cases: Path, name: str) -> dict:
             "safe_excerpt": "\n".join(
                 line[:240] for line in log.splitlines()
                 if any(word in line.lower() for word in
-                       ("syntax ok", "error", "not registered", "unknown", "kernel", "cannot")))[:1200],
+                       ("syntax ok", "error", "not registered", "registered object", "unknown", "kernel", "cannot")))[:1200],
         }
     except subprocess.TimeoutExpired:
         return {"rc": 124, "status": "TIMEOUT"}
