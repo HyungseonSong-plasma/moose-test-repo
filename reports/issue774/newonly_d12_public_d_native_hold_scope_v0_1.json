@@ -133,5 +133,55 @@
   "main_merge": false,
   "safe_to_delete": false,
   "external_integrations_requester_statement": "External consumers are generally absent; no concrete supported integration named, 2026-11-23",
-  "external_integrations_policy": "No proactive census or independent signoff required in absence of a named supported external integration; if one is discovered, review that integration specifically"
+  "external_integrations_policy": "No proactive census or independent signoff required in absence of a named supported external integration; if one is discovered, review that integration specifically",
+  "tracked_generator_route_review": {
+    "source_head": "945679c1470695a19c10feae0f336e8606bcbbe4",
+    "tracked_workflow_total": 44,
+    "inspected_relevant_workflows": 12,
+    "scope_limitation": "Selected named entrypoints; not an exhaustive 44-Workflow call graph",
+    "rows": [
+      {
+        "entrypoint": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_public_d_newphysics_100row.py",
+        "callsite": ".github/workflows/ci.yml",
+        "classification": "CURRENT_REPOSITORY_CI_INTERNAL",
+        "proof": "Repository CI calls stage_public_d_physics; D11 rendered 417/941 outputs; D12 100row Native P2 HOLD, 42row control PASS",
+        "action": "KEEP_SOURCE_AND_REPAIR_PUBLIC_D_INPUT_CONTRACT_NO_PHYSICS_SOURCE_CHANGE"
+      },
+      {
+        "entrypoint": "experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py",
+        "callsite": ".github/workflows/ci.yml, issue774-d10/d11/d12 branch-only workflows",
+        "classification": "INTERNAL_S6_STAGING_HELPER",
+        "proof": "D10 W1/P05 Native exact SHA, D11 generated 11-layer stage P4-X",
+        "action": "RETAIN_NO_STANDALONE_EXTERNAL_CONSUMER_GATE"
+      },
+      {
+        "entrypoint": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_s6_newonly.py",
+        "callsite": "Imported by prepare_public_d_newphysics_100row.py",
+        "classification": "INTERNAL_DEPENDENCY_NOT_EXTERNAL",
+        "proof": "Referenced directly from PublicD generator; verified through 417/941 D11 route only",
+        "action": "RETAIN_AS_DEPENDENCY"
+      },
+      {
+        "entrypoint": "experiments/Issue402_plasma_dsl_g1/chemistry/prepare_hybrid_json_s6.py",
+        "callsite": ".github/workflows/issue402-electron-fem-hybrid-p3-once.yml; .github/workflows/issue541-arch-s6-p3-p4-replay.yml",
+        "classification": "SEPARATE_HISTORY_PINNED_SCIENCE_REPLAY",
+        "proof": "Issue402 push-on-workflow-path replay, Issue541 manual workflow_dispatch approval; distinct from current 42row New-only P05",
+        "action": "DO_NOT_FORCE_INTO_THERMAL_FACTORY_DELETION_OR_DEFAULT_CI; RETAIN_SEPARATE_SCIENCE_OWNER"
+      },
+      {
+        "entrypoint": "experiments/Issue395_powered_chemistry_ladder/base14_restart_100to300us.py",
+        "callsite": "Issue395 restart/long-time science family",
+        "classification": "SEPARATE_SCIENCE_GENERATOR",
+        "proof": "Not independently executed in D12 Native P2 source-cut scope",
+        "action": "REVIEW_IF_SELECTED_AS_CURRENT_SUPPORTED_RUN; NOT_EXTERNAL"
+      },
+      {
+        "entrypoint": "experiments/Issue20_full_oxygen_canonical_promotion/thermal_gradient_activation/prepare.py",
+        "callsite": "Issue20 QPX thermal gradient",
+        "classification": "SEPARATE_QPX_APPLICATION",
+        "proof": "QPXFVThermalDiffusion distinct class name",
+        "action": "DO_NOT_MODIFY"
+      }
+    ]
+  }
 }
