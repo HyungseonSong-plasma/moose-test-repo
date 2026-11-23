@@ -11,8 +11,8 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - '.github/workflows/issue809-code1-retirement-p0-once.yml'
-      - 'physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C'
-      - 'physics_app/include/fvkernels/FVElectronResponseBandedCorrection.h'
+      - 'physics_app/src/fvkernels/*.C'
+      - 'physics_app/include/fvkernels/*.h'
       - 'ci/guards/issue774_newonly_fvkernel_retirement.py'
       - 'ci/baselines/fdeg_historical_profiles_code1.json'
       - 'tests/test_fvkernel_native_usage_census.py'
@@ -44,10 +44,8 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
           test -z "$(git status --porcelain --untracked-files=no)"
-          test ! -e physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C
-          test ! -e physics_app/include/fvkernels/FVElectronResponseBandedCorrection.h
-          test ! -e physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C
-          test ! -e physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h
+          # Exact source/header absence and Factory count are checked by the
+          # existing source guard, avoiding a spurious executable type-use.
       - name: Existing Canonical CI source/trigger check
         shell: bash
         run: |

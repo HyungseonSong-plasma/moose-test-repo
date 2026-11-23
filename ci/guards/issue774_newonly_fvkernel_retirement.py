@@ -103,9 +103,14 @@ def active_surface(path: str) -> str | None:
 def check_route_rows(rows: list[dict]) -> dict:
     """Pure classifier; never count docs/tests as active input consumers."""
     active = [r for r in rows if r["active_surface"] is not None]
-    counts = dict(sorted(Counter(r["active_surface"] for r in rows).items()))
+    # Reject before sorting; mixing historical None and active class strings
+    # must report the unsafe path, not raise TypeError during diagnostics.
     require(not active, "ACTIVE_RETIRED_FACTORY_REINTRODUCED:" +
             ",".join(r["path"] for r in active[:8]))
+    counts = dict(sorted(Counter(
+        r["active_surface"] if r["active_surface"] is not None else "NONACTIVE"
+        for r in rows
+    ).items()))
     return {
         "matched_tracked_text_paths": len(rows),
         "reference_classes": counts,

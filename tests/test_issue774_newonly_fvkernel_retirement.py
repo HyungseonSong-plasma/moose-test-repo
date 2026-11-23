@@ -94,6 +94,15 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "CI_OWNER_MISSING"):
             d9.check_ci_tree(ROOT, fake)
 
+    def test_mixed_historical_and_active_routes_fail_with_explicit_path(self):
+        rows = [
+            {"path": "docs/historical.md", "active_surface": None},
+            {"path": "experiments/new_factory.i", "active_surface": "MOOSE_INPUT"},
+        ]
+        with self.assertRaisesRegex(ValueError,
+                                    "ACTIVE_RETIRED_FACTORY_REINTRODUCED:experiments/new_factory.i"):
+            d9.check_route_rows(rows)
+
     def test_pinned_code1_history_rejects_archive_and_generator_drift(self):
         tracked = {
             d9.CODE1_ARCHIVE: {"sha": d9.CODE1_ARCHIVE_BLOB},
