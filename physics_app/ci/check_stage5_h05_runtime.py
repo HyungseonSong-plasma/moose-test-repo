@@ -136,10 +136,10 @@ def runtime_input():
     variable = n_e
   []
   [n_e_source]
-    type = PhysicsFVElectronReactionSource
+    type = FVCoupledForce
     variable = n_e
-    number_source = S_e_h05
-    state_form = physical
+    v = S_e_h05
+    coef = 1
   []
   [mean_en_time]
     type = FVTimeKernel
@@ -353,8 +353,9 @@ def self_test():
         "type = HRateCoefMaterial",
         "active_reactions = 'H05'",
         f"functor_names = '{PROGRESS}'",
-        "type = PhysicsFVElectronReactionSource",
-        "number_source = S_e_h05",
+        "type = FVCoupledForce",
+        "v = S_e_h05",
+        "coef = 1",
         "type = PhysicsFVSpeciesReactionSource",
         "source = S_O_h05",
         "source = S_Om_h05",
@@ -365,7 +366,7 @@ def self_test():
             raise AssertionError(f"runtime input missing {token}")
     if text.count("type = HRateCoefMaterial") != 1:
         raise AssertionError("H05 must have exactly one canonical progress owner")
-    for forbidden in ("PhysicsFVElectronReactionEnergySource", "FVCoupledForce", "S_epsilon_h05"):
+    for forbidden in ("PhysicsFVElectronReactionEnergySource", "S_epsilon_h05"):
         if forbidden in text:
             raise AssertionError(f"H05 zero-explicit-energy convention violated by {forbidden}")
     print("STAGE5_H05_RUNTIME_CHECKER_SELFTEST_PASS")
@@ -395,9 +396,9 @@ def static_gate():
     owner = (ROOT / "physics_app/src/materials/HRateCoefMaterial.C").read_text()
     if "reaction.progress" not in owner or "addFunctorProperty<ADReal>" not in owner:
         raise AssertionError("canonical R_H05 progress owner contract changed")
-    eproj = (ROOT / "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()
-    if 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' not in eproj:
-        raise AssertionError("electron projection dual-state semantics changed")
+    src = runtime_input()
+    if src.count("type = FVCoupledForce") != 1 or src.count("v = S_e_h05") != 1 or src.count("coef = 1") != 1:
+        raise AssertionError("retired Code3 electron source must use exactly one unit-coef standard FV source")
     self_test()
     print("STAGE5_H05_IMPLEMENTATION_P0_PASS")
 

@@ -31,7 +31,6 @@ RUNTIME_REF_RE = re.compile(
 
 RATE = Path("physics_app/src/materials/EIRateCoefMaterial.C")
 
-EK = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C")
 
 RUNTIME_INPUT = f"""[Mesh]
   [mesh]
@@ -141,10 +140,10 @@ RUNTIME_INPUT = f"""[Mesh]
     source = O2p_ionization_mass_source
   []
   [n_e_source]
-    type = PhysicsFVElectronReactionSource
+    type = FVCoupledForce
     variable = n_e
-    number_source = electron_ionization_number_source
-    state_form = physical
+    v = electron_ionization_number_source
+    coef = 1
   []
 []
 
@@ -378,7 +377,6 @@ def runtime_checker_self_test():
 
 def static_implementation_gate():
     rate = RATE.read_text()
-    electron_kernel = EK.read_text()
 
     assert 'registerMooseObject("PhysicsApp", EIRateCoefMaterial);' in rate
     assert 'reaction_progress' in rate
@@ -399,9 +397,8 @@ def static_implementation_gate():
     assert 'type = PhysicsElectronImpactIonizationMaterial' not in RUNTIME_INPUT
     assert 'type = PhysicsO2IonizationSourceMaterial' not in RUNTIME_INPUT
 
-    assert '_number_source(getFunctor<ADReal>("number_source"))' in electron_kernel
-    assert '_physical_state(getParam<MooseEnum>("state_form") == "physical")' in electron_kernel
-    assert 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' in electron_kernel
+    assert "[n_e_source]\n    type = FVCoupledForce\n    variable = n_e\n    v = electron_ionization_number_source\n    coef = 1" in RUNTIME_INPUT
+    assert "number_source = electron_ionization_number_source" not in RUNTIME_INPUT
 
     progress = 2.5
     s_o2 = -M_O2 * progress

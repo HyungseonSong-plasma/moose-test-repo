@@ -151,10 +151,10 @@ def runtime_input(mean=EREF):
     variable = n_e
   []
   [n_e_source]
-    type = PhysicsFVElectronReactionSource
+    type = FVCoupledForce
     variable = n_e
-    number_source = electron_ei20_number_source
-    state_form = physical
+    v = electron_ei20_number_source
+    coef = 1
   []
   [mean_en_time]
     type = FVTimeKernel
@@ -300,7 +300,7 @@ def self_test():
     text=runtime_input()
     required=("type = EIRateCoefMaterial",f"reaction_progress = {PROGRESS}",
               "type = PhysicsFVSpeciesReactionSource","source = Op_ei20_mass_source",
-              "type = PhysicsFVElectronReactionSource","number_source = electron_ei20_number_source",
+              "type = FVCoupledForce","v = electron_ei20_number_source","coef = 1",
               "type = FVCoupledForce",f"v = {PROGRESS}","O_ei20_mass_source","Op_ei20_mass_source","electron_ei20_number_source")
     for token in required:
         if token not in text: raise AssertionError(f"runtime input missing {token}")
@@ -327,8 +327,8 @@ def static_gate():
     owner=(ROOT/"physics_app/src/materials/EIRateCoefMaterial.C").read_text()
     for token in ('addRequiredParam<std::string>("reaction_progress"',"return k_raw * (n_e / N_A) * c_target;","strict Stage-4 policy forbids clamp/floor"):
         if token not in owner: raise AssertionError(f"generic progress owner contract missing: {token}")
-    ek=(ROOT/"physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()
-    if 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' not in ek: raise AssertionError("electron source projection semantics changed")
+    if "[n_e_source]\n    type = FVCoupledForce\n    variable = n_e\n    v = electron_ei20_number_source\n    coef = 1" not in runtime_input():
+        raise AssertionError("standard electron source must use signed EI20 Functor with unit coefficient")
     self_test(); print("STAGE5_EI20_IMPLEMENTATION_P0_PASS")
 
 def preflight(path):
