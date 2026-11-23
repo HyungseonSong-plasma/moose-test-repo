@@ -323,6 +323,59 @@ class RetirementEvidenceDP0Test(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "RETIREMENT_HISTORICAL_PATH_NOT_PREPINNED"):
                 self.retire.verify_retired(root, receipt, review, "c" * 40)
 
+    def test_postcut_evidence_report_requires_exact_blob_and_independent_review(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            receipt, review = self.synthetic_receipt(root)
+            report_path = "reports/issue774/thermal_status.json"
+            file = root / report_path
+            file.parent.mkdir(parents=True)
+            file.write_text('{"target":"Legacy","decision":"HOLD"}\n')
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_SOURCE_SYMBOL_REINTRODUCED"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+            review["post_cut_evidence_metadata_blobs"] = {
+                report_path: structural.blob_sha(file.read_bytes())
+            }
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_EVIDENCE_METADATA_REVIEW_MISSING"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+            review["independent_metadata_review_ref"] = "receipt:independent-metadata"
+            result = self.retire.verify_retired(root, receipt, review, "c" * 40)
+            self.assertEqual(result["safe_delete"], "HOLD")
+            self.assertEqual(result["caller_zero_reverified_here"],
+                             "NOT_PROVEN_BY_THIS_STATIC_GUARD")
+            file.write_text('{"target":"Legacy","decision":"PASS"}\n')
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_EVIDENCE_METADATA_BLOB_MISMATCH"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+
+    def test_postcut_metadata_never_hides_executable_or_live_input(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            receipt, review = self.synthetic_receipt(root)
+            meta = root / "reports/issue774/retirement.json"
+            meta.parent.mkdir(parents=True)
+            meta.write_text('{"target":"Legacy"}\n')
+            review["independent_metadata_review_ref"] = "receipt:independent-metadata"
+            review["post_cut_evidence_metadata_blobs"] = {
+                "cases/current.i": structural.blob_sha(b"type = Legacy\n")
+            }
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_EVIDENCE_METADATA_EXEMPTION_UNSAFE"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+            review["post_cut_evidence_metadata_blobs"] = {
+                "reports/issue774/retirement.json": structural.blob_sha(meta.read_bytes())
+            }
+            active = root / "cases/current.i"
+            active.parent.mkdir(parents=True)
+            active.write_text("type = Legacy\n")
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_SOURCE_SYMBOL_REINTRODUCED"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+            active.unlink()
+            review["post_cut_evidence_metadata_blobs"]["reports/issue774/retirement.json"] = "0" * 40
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_EVIDENCE_METADATA_BLOB_MISMATCH"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+            review["post_cut_evidence_metadata_blobs"] = {"reports/issue774/archive.zip":"0"*40}
+            with self.assertRaisesRegex(ValueError, "RETIREMENT_EVIDENCE_METADATA_EXEMPTION_UNSAFE"):
+                self.retire.verify_retired(root, receipt, review, "c" * 40)
+
     def test_static_retired_guard_never_returns_safe_delete_pass(self):
         with tempfile.TemporaryDirectory() as name:
             root = Path(name)
