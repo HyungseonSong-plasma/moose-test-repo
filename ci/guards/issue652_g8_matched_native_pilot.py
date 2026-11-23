@@ -21,6 +21,16 @@ import subprocess
 import sys
 import tempfile
 
+# Execute the G8 analysis script from a separate checkout, but import all
+# existing G5/G6 native modules from the SAME frozen Physics source as the
+# reused ELF. Python normally prepends this script's directory otherwise.
+_NativeSource = os.environ.get("G8_NATIVE_SOURCE_ROOT")
+if _NativeSource:
+    _NativeGuards = Path(_NativeSource).resolve() / "ci/guards"
+    if not _NativeGuards.is_dir() or _NativeGuards.is_symlink():
+        raise RuntimeError("EXACT_NATIVE_SOURCE_GUARDS_DIRECTORY_MISSING")
+    sys.path.insert(0, str(_NativeGuards))
+
 import issue652_g6_runtime_gate as g6
 from issue652_g5_native_p2 import (
     OCI, file_sha, secure_tmpfs_cleanup,
@@ -380,7 +390,11 @@ def main() -> int:
                    output=a.output,cases=tuple(a.case),
                    authorize=a.authorize_protected_native)
     except (OSError,KeyError,TypeError,ValueError,subprocess.SubprocessError) as exc:
-        print("G8_NATIVE_GATE_HOLD",type(exc).__name__,flush=True)
+        # Explicit fail-closed source/contract codes only; never raw native
+        # error strings (which could include protected input names/paths).
+        sanitized = str(exc)
+        code = sanitized if __import__("re").fullmatch(r"[A-Z0-9_]+",sanitized) else "REDACTED"
+        print("G8_NATIVE_GATE_HOLD",type(exc).__name__,code,flush=True)
         return 2
     return 0 if result["P3_3ns"].startswith("PASS_PROVISIONAL") else 3
 
