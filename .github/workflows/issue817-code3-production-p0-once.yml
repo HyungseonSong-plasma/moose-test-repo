@@ -1,4 +1,4 @@
-# #817 one-off only: remove before ANY production integration.
+# #817 exact production owner P0 after historic contracts and Issue224 fixes; TEMPORARY.
 name: Issue817 Code3 current consumers production migration P0 once
 
 on:
