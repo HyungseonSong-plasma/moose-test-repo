@@ -18,8 +18,9 @@ can support other languages, but **unimplemented collectors are not claimed**.
 The independent [`libs/code_understandability/`](../../libs/code_understandability/README.md)
 engine defines and computes metrics associated with code understandability.
 Human evaluations are optional evidence, not a metric prerequisite.
-`analysis/understandability_adapter.py` transports source facts and results;
-`analysis/understandability_interpretation.py` interprets their meaning.
+`analysis/adapters/understandability_adapter.py` transports source facts and results;
+`analysis/adapters/understandability_interpretation.py` interprets their meaning.
+The previous `analysis.understandability_*` import paths remain compatible.
 Planning, not the engine, decides how to compare refactor options.
 Obsolete `libs/hu/` and `analysis/hu_*` compatibility modules have been removed.
 

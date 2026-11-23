@@ -4,6 +4,8 @@
 collector. This is a general-purpose Graph evidence layer, **not a CI-specific
 decision engine**. Issue [#721](https://github.com/HyungseonSong-plasma/moose-test-repo/issues/721).
 
+Source/language-specific readers live under `providers/`. Keep the provider folder and its existing exports; generic request, collector, receipt, and assembly contracts stay in `diagnostics/`.
+
 ## Modules
 
 | Module | Responsibility |
