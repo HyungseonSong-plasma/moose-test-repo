@@ -114,7 +114,7 @@ def classify_native(rc: int, log: str) -> dict:
     error_section = log.split("*** ERROR ***", 1)[-1] if "*** ERROR ***" in log else log
     safe_token_hits = sorted(
         token for token in SAFE_ERROR_TOKENS
-        if re.search(r"\\b" + re.escape(token) + r"\\b", error_section, re.I)
+        if re.search(r"\b" + re.escape(token) + r"\b", error_section, re.I)
     )
     return {
         "returncode": rc,
