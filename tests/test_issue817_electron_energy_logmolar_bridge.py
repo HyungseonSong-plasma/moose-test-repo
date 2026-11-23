@@ -26,7 +26,7 @@ def accepted_bridge(text: str, prefix: str, material: str,
     ):
         block=prefix+"_log_molar_"+tag
         assert val(block,"type")=="ADParsedFunctorMaterial"
-        assert val(block,"functor_names")==var
+        assert mp.unquote(val(block,"functor_names"))==var
         assert mp.unquote(val(block,"functor_symbols"))==symbol
         assert mp.unquote(val(block,"expression"))==expression
     assert mp.get_parameter(text,source_path,"type")=="FVCoupledForce"

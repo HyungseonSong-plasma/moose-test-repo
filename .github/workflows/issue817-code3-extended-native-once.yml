@@ -1,4 +1,4 @@
-# #817 current MOOSE log-molar bridged EI16 EI20 EDETACH Native W1; TEMPORARY.
+# #817 exact-head Native: MOOSE quoted functor-name preflight fixed; TEMPORARY.
 # No private-rate or non-target chemistry inputs. Production smoke remains unchanged.
 name: Issue817 Code3 extended consumers Native EI16 EI20 EDETACH once
 
