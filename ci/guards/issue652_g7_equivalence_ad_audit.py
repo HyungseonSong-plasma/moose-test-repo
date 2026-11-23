@@ -152,7 +152,10 @@ def verify_charge_source(cpp_source: str) -> dict:
         'add_charge_functor("poisson_source",',
         '"1.8095128179727827e-08*nq"',
     ]
-    if not all(cpp_source.count(token) == 1 for token in required):
+    # The type may also be referenced by the unrelated chemistry-source factory.
+    # Require its presence and unique exact G3 charge declarations separately.
+    if cpp_source.count(required[0]) < 1 or not all(
+            cpp_source.count(token) == 1 for token in required[1:]):
         raise AuditHold("G3_CHARGE_SOURCE_ALGEBRA_SOURCE_DRIFT")
     # Independent central-difference checks on log-number-density states
     # (not a compiled ADReal, not an assembled PETSc Jacobian).
