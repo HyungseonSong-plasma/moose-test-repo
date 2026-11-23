@@ -39,6 +39,8 @@ def test_native_parity_eight_blocks_five_material_groups(case):
     assert '{"vacuum", {"vacuum", "coil1", "coil2", "coil3"}}' in g4
     assert 'getProblem().addMaterial(type, name() + "_eps_" + group.id, params);' in g4
     assert 'params.set<std::vector<std::string>>("prop_names") = {"relative_permittivity"};' in g4
+    assert 'params.set<std::vector<Real>>("prop_values") = {epsilon};' in g4
+    assert 'params.set<std::vector<std::string>>("prop_values")' not in g4
     assert 'params.set<std::vector<SubdomainName>>("block") = group.blocks;' in g4
 
 
