@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-g3-charge-native-p1-20261123",
-  "source_sha": "751532fd2ceffb5cbea6b5d94908e4d24f13a4f8",
+  "request_id": "issue652-poisson-g4-p0-harness-nativep1-20261123",
+  "source_sha": "ca535ca5f9cd8c02d038dacacff7803af36c1010",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
