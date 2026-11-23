@@ -65,6 +65,24 @@ class NativeSourceUsageTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "INVALID_REGISTRATION_EVENT"):
             self.check(RAW.replace(b"\tFVKernel\t", b"\tUNKNOWN\t", 1))
 
+    def test_repeated_preload_markers_preserve_registration_integrity(self):
+        # Multiple loader processes may initialize the same observer.
+        repeated = RAW.replace(
+            b"P5X_PRELOAD_READY\n",
+            b"P5X_PRELOAD_READY\nP5X_PRELOAD_READY\n",
+        )
+        result = self.check(repeated)
+        self.assertEqual(result["observer_marker_count"], 2)
+        self.assertEqual(result["observed_all_events"], 4)
+        self.assertEqual(result["fvkernel_type_counts"],
+                         {"NeutralKernel": 1, "FrameworkKernel": 1})
+        self.assertFalse(result["safe_to_delete"])
+        # Multiprocess markers cannot bypass unique-event and presence gates.
+        with self.assertRaisesRegex(ValueError, "COUNT_OR_OBSERVER"):
+            self.check(repeated, count=5)
+        with self.assertRaisesRegex(ValueError, "COUNT_OR_OBSERVER"):
+            self.check(repeated.replace(b"P5X_PRELOAD_READY\n", b""))
+
     def test_factory_source_alias_collision_rejected(self):
         (self.folder / "Duplicate.C").write_text(
             'registerMooseObject("PhysicsApp", NeutralKernel);\n'
