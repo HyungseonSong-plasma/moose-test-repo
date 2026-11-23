@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-743-harness-dependency-verification",
-      "expected_sha": "ee7d052a5af74f7ac263608d0a43e62ad78dca5d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-743-harness-dependency-verification-ee7d052a5af7"
+      "branch": "issue-758-dependency-source-line-witness",
+      "expected_sha": "b4e493a85231346b69b47c03ea2c2fe31ffed453",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-dependency-source-line-witness-b4e493a85231"
     },
     {
-      "branch": "issue-749-repository-integration-ci",
-      "expected_sha": "9e62a6b1d11733906e47190523f15ae8b3a76984",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-749-repository-integration-ci-9e62a6b1d117"
+      "branch": "issue-758-parameter-contract-module-boundary",
+      "expected_sha": "eff86ffa0c3255f6b8d5a3398e543e848e2dd379",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-parameter-contract-module-boundary-eff86ffa0c32"
     },
     {
-      "branch": "issue-755-hu-planning-v01",
-      "expected_sha": "b38f9320cc10af7c6ef366f69c82bc4e8497bec4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-755-hu-planning-v01-b38f9320cc10"
+      "branch": "issue-758-code-lifecycle-readme-sync",
+      "expected_sha": "2d3f1c0b3ac3ae0d2353ae65fa906c823f5d291b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-code-lifecycle-readme-sync-2d3f1c0b3ac3"
     },
     {
-      "branch": "issue-758-manual-harness-scan",
-      "expected_sha": "44384ab51c730578359d0815a16f6df09719e09b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-manual-harness-scan-44384ab51c73"
+      "branch": "issue-758-source-ref-lookup-performance",
+      "expected_sha": "696a08eba4abee6c00d725f7992f843f1a260f3b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-source-ref-lookup-performance-696a08eba4ab"
     },
     {
-      "branch": "issue-758-hu-metric-analysis-boundary",
-      "expected_sha": "7c1250173f90ad323d3c5fdd13febf32c49bb292",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-hu-metric-analysis-boundary-7c1250173f90"
+      "branch": "rename-hu-code-understandability-metrics",
+      "expected_sha": "4e3c82fcdc0160907f2dbe4dd62deccd40aa4c9b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/rename-hu-code-understandability-metrics-4e3c82fcdc01"
     }
   ]
 }
