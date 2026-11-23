@@ -83,5 +83,81 @@ class NativeSourceUsageTest(unittest.TestCase):
         self.assertEqual(len(by_file["FVLogMolarTransport.C"]["registered_factory_types"]), 3)
 
 
+class NativeABComparisonTest(unittest.TestCase):
+    """Synthetic A/B receipts test failure behavior without actual P3 execution."""
+
+    def fixture(self):
+        from fvkernel_native_usage_census import THERMAL_SOURCE, THERMAL_BLOB
+        row = dict(source_file="physics_app/src/fvkernels/Other.C",
+                   source_blob_sha="c"*40, registered_factory_types=["Other"],
+                   observed_factory_counts={"Other": 1},
+                   observed_fvkernel_instances=1,
+                   run_usage="OBSERVED_VIA_FEProblemBase_addFVKernel",
+                   deletion_approved=False)
+        t = dict(source_file=THERMAL_SOURCE, source_blob_sha=THERMAL_BLOB,
+                 registered_factory_types=["PhysicsFVThermalDiffusion"],
+                 observed_factory_counts={}, observed_fvkernel_instances=0,
+                 run_usage="NOT_OBSERVED_IN_INSTRUMENTED_API",
+                 deletion_approved=False)
+        def make(head, rows, nfactories):
+            owner = dict(
+                schema="fvkernel.native_source_usage.v0.1",
+                source_head=head, binary_sha256=("1" if head[0]=="a" else "2")*64,
+                trace_scope="POST_ORIGINAL_CALLS_NOT_WHOLE_WAREHOUSE",
+                safe_to_delete=False, global_consumer_closed=False,
+                protected_data_exported=False, observer_marker_count=1,
+                observed_all_events=77,
+                event_family_counts={"FVKernel": 35, "FVBC": 24, "FEBoundaryCondition": 18},
+                fvkernel_type_counts={"Other": 1}, other_source_or_framework_type_counts={},
+                source_files=rows, local_registered_factory_types=nfactories,
+            )
+            filtered=dict(recorded_all_events=77, observed_FVKernel=[["FVKernel","O2p_time","X"]],
+                          observed_FVBC=[], observed_electron_FE_BC=[],
+                          actual_registered_count={"FVKernel":12,"FVBC":12,"electron_FE_BC":8})
+            return dict(source_head=head, binary_sha256=owner["binary_sha256"],
+                        status="PASS_16_INTENDED_NATIVE_REJECTIONS",
+                        native_tests_completed=16,native_expected_rejections=16,
+                        science="SCIENCE_HOLD",private_data_in_artifacts=False,
+                        tmpfs_cleanup_verified=True, OCI="same-oci",
+                        one_build_bundle={"source_head":head, "W1_elf_sha256":owner["binary_sha256"],"build_count":1},
+                        cases={c:dict(source_layer_sha256={str(i):"x" for i in range(11)},
+                                      JSON_sha256="j",parent_mesh_sha256="m",
+                                      clean_syntax_ok=True,clean_exit=0,
+                                      source_restoration="SHA_ALL_PUBLIC_FILES_UNCHANGED")
+                               for c in ["417","941"]},
+                        full_fvkernel_source_usage={c:dict(owner) for c in ["417","941"]},
+                        owner_registration={c:dict(filtered) for c in ["417","941"]})
+        return make("a"*40,[t,row],18), make("b"*40,[row],17)
+
+    def test_positive_proves_observed_scope_only(self):
+        from fvkernel_native_usage_census import compare_p05_source_usage
+        a,b=self.fixture()
+        # Fixture uses compact synthetic source lists; a real 13/12 row inventory
+        # is required by the production gate and must be refused here.
+        with self.assertRaisesRegex(ValueError,"SOURCE_INVENTORY_COUNT"):
+            compare_p05_source_usage(a,b)
+
+    def test_thermal_was_active_rejected(self):
+        from fvkernel_native_usage_census import compare_p05_source_usage, THERMAL_SOURCE
+        a,b=self.fixture()
+        for c in ("417","941"):
+            t=next(x for x in a["full_fvkernel_source_usage"][c]["source_files"]
+                   if x["source_file"]==THERMAL_SOURCE)
+            t["observed_fvkernel_instances"]=1
+        with self.assertRaisesRegex(ValueError,"THERMAL_RUNTIME_OBSERVED"):
+            compare_p05_source_usage(a,b)
+
+    def test_inconsistent_input_and_oci_hold(self):
+        from fvkernel_native_usage_census import compare_p05_source_usage
+        a,b=self.fixture()
+        b["cases"]["941"]["JSON_sha256"]="tampered"
+        with self.assertRaisesRegex(ValueError,"INPUT_SHA_MISMATCH"):
+            compare_p05_source_usage(a,b)
+        a,b=self.fixture()
+        b["OCI"]="unrelated"
+        with self.assertRaisesRegex(ValueError,"SOURCE_HEAD_OR_OCI_INVALID"):
+            compare_p05_source_usage(a,b)
+
+
 if __name__ == "__main__":
     unittest.main()

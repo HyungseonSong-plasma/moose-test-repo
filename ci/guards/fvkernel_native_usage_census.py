@@ -125,3 +125,127 @@ def summarize_clean_registration_trace(
         "raw_names_exported": False,
         "protected_data_exported": False,
     }
+
+
+
+THERMAL_SOURCE = "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C"
+THERMAL_BLOB = "6887710910c95f37f5f6ed94d4344384b297b4e0"
+
+
+def compare_p05_source_usage(before: dict, after: dict) -> dict:
+    """A/B actual P05 registration parity, fail closed; never science approval."""
+    for label, receipt in (("A", before), ("B", after)):
+        if (receipt.get("status") != "PASS_16_INTENDED_NATIVE_REJECTIONS"
+                or receipt.get("native_tests_completed") != 16
+                or receipt.get("native_expected_rejections") != 16
+                or receipt.get("science") != "SCIENCE_HOLD"
+                or receipt.get("private_data_in_artifacts") is not False
+                or receipt.get("tmpfs_cleanup_verified") is not True):
+            raise ValueError("D5_AB_" + label + "_CLEAN_OR_PRIVATE_PROVENANCE_INVALID")
+        w1 = receipt.get("one_build_bundle", {})
+        if (w1.get("source_head") != receipt.get("source_head")
+                or w1.get("W1_elf_sha256") != receipt.get("binary_sha256")
+                or w1.get("build_count") != 1):
+            raise ValueError("D5_AB_" + label + "_ONE_BUILD_IDENTITY_INVALID")
+    if (before["source_head"] == after["source_head"]
+            or before.get("OCI") != after.get("OCI")):
+        raise ValueError("D5_AB_SOURCE_HEAD_OR_OCI_INVALID")
+    cases = {}
+    for case in ("417", "941"):
+        ac = before["cases"][case]
+        bc = after["cases"][case]
+        for key in ("source_layer_sha256", "JSON_sha256", "parent_mesh_sha256"):
+            if ac.get(key) != bc.get(key):
+                raise ValueError("D5_AB_INPUT_SHA_MISMATCH:" + case + ":" + key)
+        if (len(ac.get("source_layer_sha256", {})) != 11
+                or len(bc.get("source_layer_sha256", {})) != 11
+                or ac.get("clean_syntax_ok") is not True
+                or bc.get("clean_syntax_ok") is not True
+                or ac.get("clean_exit") != 0 or bc.get("clean_exit") != 0
+                or ac.get("source_restoration") != "SHA_ALL_PUBLIC_FILES_UNCHANGED"
+                or bc.get("source_restoration") != "SHA_ALL_PUBLIC_FILES_UNCHANGED"):
+            raise ValueError("D5_AB_CLEAN_INPUT_INTEGRITY_INVALID:" + case)
+        a = before["full_fvkernel_source_usage"][case]
+        b = after["full_fvkernel_source_usage"][case]
+        for label, r, parent in (("A", a, before), ("B", b, after)):
+            if (r.get("schema") != "fvkernel.native_source_usage.v0.1"
+                    or r.get("source_head") != parent["source_head"]
+                    or r.get("binary_sha256") != parent["binary_sha256"]
+                    or r.get("trace_scope") != "POST_ORIGINAL_CALLS_NOT_WHOLE_WAREHOUSE"
+                    or r.get("safe_to_delete") is not False
+                    or r.get("global_consumer_closed") is not False
+                    or r.get("protected_data_exported") is not False
+                    or r.get("observed_all_events") !=
+                    parent["owner_registration"][case]["recorded_all_events"]
+                    or r.get("observer_marker_count") != 1):
+                raise ValueError("D5_AB_" + label + "_CENSUS_INVALID:" + case)
+        for field in ("observed_all_events", "event_family_counts",
+                      "fvkernel_type_counts", "other_source_or_framework_type_counts"):
+            if a[field] != b[field]:
+                raise ValueError("D5_AB_FULL_REGISTRATION_MISMATCH:" + case + ":" + field)
+        for key in ("observed_FVKernel", "observed_FVBC", "observed_electron_FE_BC",
+                    "actual_registered_count"):
+            if before["owner_registration"][case][key] != after["owner_registration"][case][key]:
+                raise ValueError("D5_AB_FILTERED_OWNER_MISMATCH:" + case + ":" + key)
+        ar = {x["source_file"]: x for x in a["source_files"]}
+        br = {x["source_file"]: x for x in b["source_files"]}
+        therm = ar.get(THERMAL_SOURCE)
+        if therm is None or therm.get("source_blob_sha") != THERMAL_BLOB:
+            raise ValueError("D5_AB_THERMAL_PRECUT_SOURCE_IDENTITY_INVALID")
+        if therm.get("observed_fvkernel_instances") != 0:
+            raise ValueError("D5_AB_THERMAL_RUNTIME_OBSERVED")
+        if THERMAL_SOURCE in br or set(ar) - {THERMAL_SOURCE} != set(br):
+            raise ValueError("D5_AB_SOURCE_SET_DIFF_NOT_ONLY_THERMAL")
+        if len(ar) != 13 or len(br) != 12:
+            raise ValueError("D5_AB_SOURCE_INVENTORY_COUNT")
+        for path, row in br.items():
+            if ar[path] != row:
+                raise ValueError("D5_AB_OTHER_SOURCE_OR_FACTORY_CHANGED:" + path)
+        if a.get("local_registered_factory_types") != 18 or b.get("local_registered_factory_types") != 17:
+            raise ValueError("D5_AB_FACTORY_REGISTRY_COUNT")
+        cases[case] = {
+            "clean_input_source_shas_identical": True,
+            "full_fvkernel_type_counts_identical": True,
+            "observed_all_registration_events": a["observed_all_events"],
+            "thermal_factory_instances_before": 0,
+            "other_source_factory_counts_identical": True,
+        }
+    return {
+        "schema": "fvkernel.native_thermal_ab_comparison.v0.1",
+        "status": "PASS_SCOPE_ONLY_NOT_DELETION_APPROVAL",
+        "before_source_head": before["source_head"],
+        "after_source_head": after["source_head"],
+        "before_elf_sha256": before["binary_sha256"],
+        "after_elf_sha256": after["binary_sha256"],
+        "oci": before["OCI"],
+        "cases": cases,
+        "p2_registration_parity": "PASS_INSTRUMENTED_API_ONLY",
+        "actual_P3_parity": "NOT_TESTED",
+        "global_caller_zero": "NOT_PROVEN",
+        "safe_to_delete": False,
+    }
+
+
+def _main_ab() -> int:
+    import argparse
+    import json
+    parser = argparse.ArgumentParser(description="Exact Native P05 A/B source usage comparison")
+    parser.add_argument("--before", type=Path, required=True)
+    parser.add_argument("--after", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    try:
+        a = json.loads(args.before.read_text())
+        b = json.loads(args.after.read_text())
+        result = compare_p05_source_usage(a, b)
+        args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        print("D5_NATIVE_AB=HOLD:" + str(exc))
+        return 1
+    print("D5_NATIVE_AB=PASS_SCOPE_ONLY_NOT_DELETION_APPROVAL")
+    print("D5_NATIVE_AB_SUMMARY=" + str(args.output))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main_ab())
