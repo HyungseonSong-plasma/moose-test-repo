@@ -1,4 +1,4 @@
-# Bounded OCI scratch ownership repair; fixture-only P2 diagnostic, no protected inputs.
+# Native P2 strict check: do not bypass unused Steady Executioner parameters.
 name: Issue652 G7 exact ELF synthetic Poisson AD PETSc Jacobian (branch-only)
 on:
   push:
