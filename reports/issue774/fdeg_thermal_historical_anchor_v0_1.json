@@ -1,0 +1,23 @@
+{
+  "schema": "fdeg.historical_archive_anchor.v0.1",
+  "target": "PhysicsFVThermalDiffusion",
+  "baseline_head": "331288eb78a09d031588eb43c085374215c7a674",
+  "workflow_run_id": 45148961276,
+  "workflow_artifact_id": 14806741858,
+  "workflow_artifact_name": "fdeg-retirement-code7-45148961276-1",
+  "artifact_zip_sha256": "57e49b50df16dbd690d2899384cf7fa048c01a6f6e6cb4ab59154f1717b414a0",
+  "manifest_sha256": "c9ebfdb7567552aa65f193858695446f5287dddef0cbf6bc983c7891591b9055",
+  "source_blobs": {
+    "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h": "1845a3c793eefe72b8fbe22ba33df5324da26f36",
+    "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C": "6887710910c95f37f5f6ed94d4344384b297b4e0"
+  },
+  "graph_sha256": {
+    "functional": "93e57a1bc55a3fbe4d933525787ea7a5d74f66ee60de2ed86e33d2e9a197ea9c",
+    "structural": "083254b5d4bd071852184b76ab9ca9ffb70ec84b4bce9b2843bd24b4739b4b8a",
+    "transition": "22aec63a2cc7816e6f1bdb0b54aec4d37027fa19f2f81c3b2f9797141007753b"
+  },
+  "provenance": "exact recorded workflow artifact; expires 2026-12-07; preserve ZIP outside expiring Actions storage before cut",
+  "purpose": "cryptographic identity of archived pre-retirement FDEG evidence, not approval to retire",
+  "safe_delete": false,
+  "global_consumer_closed": false
+}
