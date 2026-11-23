@@ -48,5 +48,5 @@ def test_legacy_objects_are_defined_only_in_canonical_module():
     from physics_harness.code.verification.naming_replay import ReplayArtifact
 
     assert UnderstandabilityInput.__module__ == "libs.code_lucidity.model"
-    assert assess_code_understandability.__module__ == "physics_harness.code.analysis.lucidity_adapter"
+    assert assess_code_understandability.__module__ == "physics_harness.code.analysis.adapters.lucidity_adapter"
     assert ReplayArtifact.__module__ == "physics_harness.code.verification.junit_compare"
