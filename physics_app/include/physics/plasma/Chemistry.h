@@ -144,6 +144,15 @@ struct ReactionRecord
   int net(const std::string & species) const;
 };
 
+// G1: parsed opt-in Poisson settings. No Material, Kernel or BC is generated
+// until the independently reviewed Poisson Physics cutover (G4).
+struct PoissonRecord
+{
+  std::map<std::string, double> relative_permittivity;
+  std::vector<std::string> ground_boundaries;
+  std::map<std::string, std::string> surface_charge;
+};
+
 /** Immutable validated, shared plasma species and chemistry input contract. */
 class ChemistryData
 {
@@ -162,6 +171,7 @@ public:
   const NVTransportRecord * nvTransport() const;
   bool hasBoundaries() const { return _has_boundaries; }
   bool hasIonWalls() const;
+  const PoissonRecord * poisson() const { return _poisson ? &*_poisson : nullptr; }
   const std::string & surfaceElectronWallFlux() const { return _surface_electron_wall_flux; }
   const std::map<std::string, BoundaryRecord> & boundaries() const
   {
@@ -177,6 +187,7 @@ private:
   std::unique_ptr<NVTransportRecord> _nv_transport;
   bool _has_boundaries = false;
   std::map<std::string, BoundaryRecord> _boundaries;
+  std::optional<PoissonRecord> _poisson;
   std::string _surface_electron_wall_flux;
 };
 
