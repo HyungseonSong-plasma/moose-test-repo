@@ -10,6 +10,10 @@ from .parameter_contract import (
     assess_input_parameter_contract,
 )
 from .diff import GraphDiff, compare_graphs
+from .usage_matrix import (
+    UsageRelation, UsageWitness, UsageReference, UsageRow,
+    UsageMatrix, build_usage_matrix,
+)
 from .adapters import (
     assess_code_understandability, summarize_understandability,
     interpret_understandability_indicators,
@@ -22,6 +26,8 @@ __all__ = [
     "ParameterBlockAssessment", "ParameterContractAssessment",
     "assess_input_parameter_contract",
     "GraphDiff", "compare_graphs",
+    "UsageRelation", "UsageWitness", "UsageReference", "UsageRow",
+    "UsageMatrix", "build_usage_matrix",
     "assess_code_understandability", "summarize_understandability",
     "interpret_understandability_indicators",
 ]

@@ -11,12 +11,54 @@ diagnostic source collectors. It uses the existing immutable `GraphSnapshot`,
 | `assessment.py` | Evidence-typed, fail-closed conditional review disposition and explicit verification obligations |
 | `parameter_contract.py` | MOOSE input-to-C++ parameter comparison, separately scoped with unchanged source-only verdicts; original `assessment` exports retained |
 | `diff.py` | Compare stable Node/Edge semantics, source-bound Evidence changes, and Scope/coverage changes |
+| `usage_matrix.py` | Read-only multi-target one-hop Usage Matrix; selected typed relations, source witnesses, scoped coverage, conservative screening, JSON and Markdown views |
 | `adapters/lucidity_adapter.py` | Transport Diagnostics data and optional human observations into the general metrics engine |
 | `adapters/lucidity_interpretation.py` | Interpret code-understandability indicators and caveats; no metric formulas or auto-refactor verdict |
 
 `adapters/` contains specialized integrations. Old `analysis.lucidity_*` and
 `analysis.understandability_*` module entry points are compatibility re-exports;
 the public Analysis API and Diagnostics providers remain unchanged.
+
+| `usage_matrix.py` | Read-only multi-target one-hop Usage Matrix; selected typed relations, source witnesses, scoped coverage, conservative screening, JSON and Markdown views |
+
+## Usage Matrix v0.1
+
+`build_usage_matrix(graph, receipt, targets, relations, ...)` groups adjacent references
+without introducing a new Graph model or a domain-specific deletion rule. Relation
+selection and direction are explicit; all unclassified incident edges are blockers
+unless the caller declares their relations as known non-consumer relations.
+
+Example for source-declared MOOSE consumers (not a global caller census):
+
+```python
+from physics_harness.code.analysis import UsageRelation, build_usage_matrix
+
+relations = (
+    UsageRelation('DECLARES_TYPE_USE', 'DIRECT_DECLARATION'),
+    UsageRelation('MAY_GENERATE_INPUT', 'GENERATED_CANDIDATE'),
+    UsageRelation('HISTORICAL_ASSERTS_TYPE', 'HISTORICAL_REFERENCE'),
+    UsageRelation('DECLARES_GENERATOR_TEMPLATE_CANDIDATE', 'TEMPLATE_CANDIDATE'),
+)
+matrix = build_usage_matrix(
+    diagnostic.graph, diagnostic.receipt, moose_type_ids, relations,
+    required_paths=audited_paths,
+    unverified_surfaces=('external_consumers', 'generated_inputs', 'native_runtime'),
+    ignored_relations=('DECLARES_MOOSE_REGISTRATION', 'DECLARES_PARAM_CONTRACT'),
+)
+json_data = matrix.to_dict()   # JSON serializable, identity/evidence retained
+table = matrix.to_markdown()  # compact human review view
+```
+
+The caller must declare audited paths and unresolved surfaces; no omitted path
+is considered scanned. `RETAIN` means a source-bound reference exists and
+direct deletion is not allowed, **not** that runtime use was observed.
+`REVIEW_CANDIDATE` only means no identified consumers under the declared
+relation/scope policy; it never means zero global callers or safe removal.
+`HOLD` preserves missing evidence, dynamic references, partial scans,
+unclassified edge kinds, and other verification obligations. The result
+always reports `global_consumer_closed=False`, `mutation_approved=False`,
+and `safe_to_delete=False` on all rows. One-hop aggregation does not prove
+transitive callers, alternative physics semantics or actual Native execution.
 
 ## Reuse
 
