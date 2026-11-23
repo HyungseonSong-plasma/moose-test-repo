@@ -18,6 +18,9 @@ from poisson_contract import PoissonContractError, parse_strict_json, validate_p
 from retire_s6_p4_duplicate_owners import (
     C0 as P4_C0, retire_p4_duplicate_owners
 )
+from retire_s6_poisson_charge_owners import (
+    retire_g5_in_disposable_scratch, G5_OUTPUT_C0_SHA, G5_OVERLAY_SHA
+)
 
 PIN_HEAD = "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
 PILOT = Path(__file__).resolve().parents[1]
@@ -175,7 +178,22 @@ def prepare_newonly(
     )
     if p4_owners["retired_source_materials"] != 6:
         raise CutoverError("P4X_EXACT_SIX_DUPLICATE_MATERIALS_NOT_RETIRED")
-    (folder / "migrated_continuity.i").write_bytes(tmplblob)
+    # G5: source-bound, fail-closed retirement of EXACT 12 Poisson and 3
+    # Charge C0 owners. Generate the one Poisson Action inside the disposable
+    # overlay only after both P4 and 11-layer preflight evidence are accepted.
+    post_p4_sha = dict(p4_expected_sha)
+    post_p4_sha[P4_C0] = p4_owners["output_c0_sha256"]
+    g5_owners = retire_g5_in_disposable_scratch(
+        folder, [Path(name).name for name in ordered], parsed,
+        post_p4_layer_sha=post_p4_sha, original_overlay=tmplblob,
+        variant=variant,
+    )
+    if (g5_owners["retired_poisson_owners"] != 12 or
+            g5_owners["retired_charge_owners"] != 3):
+        raise CutoverError("G5_EXACT_FIFTEEN_OWNER_RETIREMENT_INCOMPLETE")
+    if g5_owners["output_c0_sha256"] != G5_OUTPUT_C0_SHA or (
+            g5_owners["output_overlay_sha256"] != G5_OVERLAY_SHA[variant]):
+        raise CutoverError("G5_PINNED_OUTPUT_SHA_CHANGED")
     dest_json.parent.mkdir(exist_ok=True)
     dest_json.write_bytes(jsblob)
     table_path.parent.mkdir(parents=True, exist_ok=True)
@@ -188,18 +206,24 @@ def prepare_newonly(
         raise CutoverError("P2_NEWONLY_TRANSPORT_TARGET_CHANGED")
     if sum(previous[x] != after[x] for x in after) != 6:
         raise CutoverError("P2_NEWONLY_UNEXPECTED_LAYER_DIFF_COUNT")
-    if after[P4_C0] != p4_owners["output_c0_sha256"]:
-        raise CutoverError("P4X_FINAL_C0_STAGE_SHA_MISMATCH")
+    if after[P4_C0] != g5_owners["output_c0_sha256"]:
+        raise CutoverError("G5_FINAL_C0_STAGE_SHA_MISMATCH")
+    if after["migrated_continuity.i"] != g5_owners["output_overlay_sha256"]:
+        raise CutoverError("G5_FINAL_OVERLAY_SHA_MISMATCH")
     return {
-        "status": "P2_NEWONLY_JSON_AND_LAYER11_STAGE_STATIC_PASS_RUNTIME_HOLD",
+        "status": "G5_POISSON_CHARGE_STAGED_STATIC_PASS_NATIVE_P2_HOLD",
         "variant": variant, "source_head": PIN_HEAD,
         "retirement": cutover, "p3_x_electron": p3_electron,
         "p4_x_duplicate_producers": p4_owners,
+        "g5_poisson_charge_owners": g5_owners,
+        "G5_STATIC_SOURCE_ONLY": "PASS_12_POISSON_3_CHARGE_EXACT_OWNERS",
+        "G5_NATIVE_P2": "NOT_RUN",
         "P4_X_STAGE1_SOURCE_ONLY": "PASS_7_EXACT_OWNERS_6_REMOVED_1_REPLACED",
         "P4_X_FULL_INTEGRATION": "HOLD_SOURCE_CONSUMER_AND_NATIVE_WAREHOUSE",
         "layers_before_sha256": previous,
         "layers_after_sha256": after, "json_sha256": sha(jsblob),
-        "newonly_overlay_sha256": sha(tmplblob),
+        "newonly_overlay_template_sha256": sha(tmplblob),
+        "newonly_overlay_sha256": after["migrated_continuity.i"],
         "electron_moments_sha256": sha(ebytes), "electron_moments_rows": 42,
         "child_include_sha256": dict(RF_CHILD_AND_MESH_SHA), "mesh_sha256": RF_MESH_SHA,
         "retired_native_ion_owners": 26, "remaining_native_ion_fv_owners": 0,
