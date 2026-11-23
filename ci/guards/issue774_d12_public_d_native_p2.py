@@ -200,6 +200,44 @@ def decide_native_P2_status(public: dict, control: dict) -> str:
     return "PASS_BOTH_PUBLIC_D_INPUTS"
 
 
+def check_complete_public_tree(baseline: Path, composed: Path,
+                               *, modified: set[str], added: set[str]) -> dict:
+    """New Public D must preserve *all* original support files, not only layers.
+
+    D12/D13 copied just the generated experiment directory for the full case,
+    unlike the positive controls that copied the entire P3-X stage. This
+    preflight detects missing auxiliary public roots without reading secrets.
+    """
+    def manifest(folder):
+        result = {}
+        for node in folder.rglob("*"):
+            if node.is_file():
+                rel = node.relative_to(folder).as_posix()
+                need(not node.is_symlink(), "SOURCE_SYMLINK_NOT_ACCEPTED:" + rel)
+                result[rel] = sha(node.read_bytes())
+        return result
+    before = manifest(baseline)
+    after = manifest(composed)
+    need(set(after) == set(before) | added,
+         "INCOMPLETE_PUBLIC_STAGING_FILE_SET")
+    need(modified <= set(before) and added.isdisjoint(set(before)),
+         "PUBLIC_STAGING_EXPECTED_DELTA_SHAPE")
+    for name, digest in before.items():
+        if name not in modified:
+            need(after[name] == digest,
+                 "UNAUTHORIZED_PUBLIC_SUPPORT_MUTATION:" + name)
+        else:
+            need(after[name] != digest,
+                 "PUBLIC_STAGING_DESIGNATED_CHANGE_MISSING:" + name)
+    return {
+        "staged_baseline_public_file_count": len(before),
+        "staged_composed_public_file_count": len(after),
+        "added_public_files": len(added),
+        "changed_public_files": len(modified),
+        "all_unchanged_public_support_sha_preserved": True,
+    }
+
+
 def classify_four_way(cases: dict) -> dict:
     """Classify each case using only independent native rc/Syntax OK verdicts."""
     outcomes = {}
@@ -325,7 +363,28 @@ def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
             binding_result = run_one(root, w1_root, binding_only, names)
 
             target = protected / case
-            shutil.copytree(generated_root, target, symlinks=False)
+            # Compose *onto the complete original public staged worktree*.
+            # The generator's minimal output directory only contains the
+            # modified experiment + 100-row table and omits other P3-X
+            # support files. Copying it wholesale caused D12/D13's full
+            # case to differ in more than two intended factors.
+            shutil.copytree(base_source, target, symlinks=False)
+            shutil.copyfile(source_table, target / table_rel)
+            target_chem = target / "experiments/Issue395_powered_chemistry_ladder"
+            shutil.copyfile(generated_chem / "chemistry" / name,
+                            target_chem / "chemistry" / name)
+            shutil.copyfile(generated_chem / "migrated_continuity.i",
+                            target_chem / "migrated_continuity.i")
+            delta = check_complete_public_tree(
+                base_source, target,
+                modified={
+                    table_rel,
+                    "experiments/Issue395_powered_chemistry_ladder/migrated_continuity.i",
+                },
+                added={
+                    "experiments/Issue395_powered_chemistry_ladder/chemistry/" + name
+                },
+            )
             names = stages[case]["ordered"]
             expected_shas = result["generated"][case]["output"]["output_layer_sha256"]
             chem_folder = target / "experiments/Issue395_powered_chemistry_ladder"
@@ -340,6 +399,7 @@ def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
                 "input_layer_shas": expected_shas,
                 "protected_rate_file_count": protected_files,
                 "protected_rate_content_published": False,
+                "complete_public_stage_preservation": delta,
             }
             result["diagnostic_matrix"][case] = {
                 "baseline_42row": control,
