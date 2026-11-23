@@ -41,6 +41,8 @@ _R2_NEW = '''  [r2_log_molar_density]
 
 def r2_energy_bridge(text: str) -> str:
     """Upgrade BOTH arms' historical energy representation identically."""
+    if text.count(_R2_NEW) == 1 and "physical_eV" not in text:
+        return text  # Current supported log-molar owner: avoid double transform.
     if text.count(_R2_OLD) != 1 or text.count("state_form = physical_eV") != 1:
         raise code3.Code3ParityError("R2_BRIDGE_SOURCE_DRIFT")
     updated = text.replace(_R2_OLD, _R2_NEW)

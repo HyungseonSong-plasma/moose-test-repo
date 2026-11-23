@@ -52,8 +52,6 @@ def migrate_h05_physical_energy_to_log_molar_scratch(source: str) -> str:
     electron_density = n_e
     state_form = physical_eV
   []"""
-    if source.count(archived) != 1 or source.count("physical_eV") != 1:
-        raise AssertionError("H05_RETIRED_STATE_SOURCE_IDENTITY_CHANGED")
     projections = """  [h05_log_molar_density]
     type = ADParsedFunctorMaterial
     property_name = h05_log_molar_density
@@ -75,7 +73,12 @@ def migrate_h05_physical_energy_to_log_molar_scratch(source: str) -> str:
     electron_density = h05_log_molar_density
     state_form = log_molar_eV
   []"""
-    result = source.replace(archived, projections + canonical)
+    current = projections + canonical
+    if source.count(current) == 1 and "physical_eV" not in source:
+        return source  # Active H05 generator already emits current registered state.
+    if source.count(archived) != 1 or source.count("physical_eV") != 1:
+        raise AssertionError("H05_RETIRED_STATE_SOURCE_IDENTITY_CHANGED")
+    result = source.replace(archived, current)
     if "physical_eV" in result:
         raise AssertionError("H05_UNMIGRATED_REPRESENTATION")
     return result
@@ -86,8 +89,9 @@ def self_test() -> None:
     from physics_app.ci.check_stage5_h05_runtime import runtime_input
     original = runtime_input()
     canonical = migrate_h05_physical_energy_to_log_molar_scratch(original)
-    assert "state_form = physical_eV" in original
-    assert "state_form = log_molar_eV" in canonical
+    assert "state_form = physical_eV" not in original
+    assert "state_form = log_molar_eV" in original
+    assert canonical == original  # idempotent on current generator
     assert "type = FVCoupledForce" in canonical
     assert "v = S_e_h05" in canonical
     assert "coef = 1" in canonical
@@ -99,7 +103,7 @@ def self_test() -> None:
         assert math.isclose(actual, energy_density / number_density, rel_tol=1e-13)
     try:
         migrate_h05_physical_energy_to_log_molar_scratch(
-            original.replace("state_form = physical_eV", "state_form = nonsensical")
+            original.replace("state_form = log_molar_eV", "state_form = nonsensical")
         )
     except AssertionError:
         pass

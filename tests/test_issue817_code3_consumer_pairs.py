@@ -26,9 +26,9 @@ class ActiveConsumerPairTests(unittest.TestCase):
 
     def test_wrong_energy_bridge_fail_closed(self):
         source=r2.RUNTIME_INPUT
-        bad=(source.replace("physical_eV","bad_mode"),
+        bad=(source.replace("state_form = log_molar_eV","state_form = bad_mode"),
              source.replace("mean_energy_bridge","lost_bridge"),
-             source.replace("physical_eV","physical_eV\n    state_form = physical_eV"))
+             source.replace("log(ne/6.02214076e23)","log(ne/1e20)"))
         for mutant in bad:
             with self.subTest(mutant=mutant[:40]):
                 with self.assertRaises(code3.Code3ParityError):
