@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace as Obj
 
-from libs.code_understandability import (
+from libs.code_lucidity import (
     HumanObservation, UnderstandabilityAssessment, UnderstandabilityInput,
     compare_understandability, evaluate_understandability, from_python_ast,
 )

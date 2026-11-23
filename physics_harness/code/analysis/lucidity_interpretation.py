@@ -5,7 +5,7 @@ No metric formula, data transport, fixed threshold, or mutation advice lives her
 
 from __future__ import annotations
 
-from libs.code_understandability import UnderstandabilityAssessment
+from libs.code_lucidity import UnderstandabilityAssessment
 
 from .result import AnalysisRecord, AnalysisValue
 

@@ -8,7 +8,7 @@ from xml.etree import ElementTree as ET
 import pytest
 
 from physics_harness.code.diagnostics.providers.git import GitSourceProvider
-from physics_harness.code.verification.naming_replay_execution import run_naming_test_replay
+from physics_harness.code.verification.pytest_revision_runner import run_naming_test_replay
 
 TEST = "tests/test_contract.py"
 TEST_CODE = "from api import process\n\ndef test_contract():\n    assert process(3) == 4\n"
@@ -194,9 +194,9 @@ def test_changed_pytest_ini_holds(repo):
 
 def test_executed_junit_artifact_consumed_by_existing_candidate_gate(repo):
     # Integration uses the canonical JUnit replay comparator in the full repo.
-    pytest.importorskip("physics_harness.code.verification.naming_replay")
-    from physics_harness.code.verification.naming_replay import compare_candidate_replay
-    from physics_harness.code.verification.naming_replay_execution import build_executed_replay_artifact_pair
+    pytest.importorskip("physics_harness.code.verification.junit_compare")
+    from physics_harness.code.verification.junit_compare import compare_candidate_replay
+    from physics_harness.code.verification.pytest_revision_runner import build_executed_replay_artifact_pair
     receipt = replay(repo)
     baseline_artifact, candidate_artifact = build_executed_replay_artifact_pair(receipt, TEST)
     comparison = compare_candidate_replay(repo[1], repo[2], baseline_artifact, candidate_artifact)

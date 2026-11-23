@@ -1,6 +1,6 @@
 from hashlib import sha256
 import pytest
-from physics_harness.code.verification.naming_replay import ReplayArtifact, compare_replay_artifacts
+from physics_harness.code.verification.junit_compare import ReplayArtifact, compare_replay_artifacts
 
 A = 'a'*40
 B = 'b'*40
@@ -63,7 +63,7 @@ def test_invalid_input_raises():
 
 
 def test_replay_must_bind_candidate_revision():
-    from physics_harness.code.verification.naming_replay import compare_candidate_replay
+    from physics_harness.code.verification.junit_compare import compare_candidate_replay
     x = '<testcase name="one"/>'
     result = compare_candidate_replay(A, 'c'*40, artifact(A,x), artifact(B,x))
     assert result.status == 'BLOCKED'

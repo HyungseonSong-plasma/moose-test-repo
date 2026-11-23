@@ -1,4 +1,4 @@
-# Code Understandability Metrics
+# Code Lucidity Metrics
 
 Canonical engine for **source-grounded code understandability indicators**.
 The engine is not restricted to how humans subjectively rate code and does not
@@ -27,7 +27,7 @@ weighted metric, semantic cohesion inference, or automatic verdict**.
 ## Canonical API
 
 ```python
-from libs.code_understandability import (
+from libs.code_lucidity import (
     UnderstandabilityInput, evaluate_understandability, from_python_ast,
 )
 
@@ -43,12 +43,12 @@ assert assessment.predicted_score is None
 ## Layer boundaries
 
 Diagnostics collects source and graph evidence; this engine computes
-indicators; `analysis/understandability_adapter.py` transports data and
-`analysis/understandability_interpretation.py` evaluates contextual meaning;
+indicators; `analysis/lucidity_adapter.py` transports data and
+`analysis/lucidity_interpretation.py` evaluates contextual meaning;
 Refactor Planning compares alternatives and Verification checks preservation.
 
 The retired `libs.hu` and `analysis.hu_*` import paths are not supported.
-Use `libs.code_understandability` and the canonical Analysis entry points.
+Use `libs.code_lucidity` and the canonical Analysis entry points.
 The persisted `hu_density_v1` measurement-method identifier remains unchanged
 only as **historical data identity** for comparing earlier measurements. Its
 spelling does not imply human evaluation is required.

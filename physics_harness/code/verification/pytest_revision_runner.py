@@ -303,7 +303,7 @@ def build_executed_replay_artifact_pair(
     The receiving compare_candidate_replay recomputes hashes/test IDs. This
     handoff does NOT establish the identity/authorization of the CI producer.
     """
-    from .naming_replay import ReplayArtifact  # canonical v0.6 JUnit validator
+    from .junit_compare import ReplayArtifact  # canonical v0.6 JUnit validator
     if not isinstance(receipt, NamingReplayReceipt) or test_path not in receipt.test_paths:
         raise ValueError("INVALID_EXECUTED_REPLAY_INPUT")
     observed = {(r.revision, r.test_path): r for r in receipt.runs}

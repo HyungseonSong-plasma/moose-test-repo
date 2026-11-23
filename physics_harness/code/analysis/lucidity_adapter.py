@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import json
 
-from libs.code_understandability import (
+from libs.code_lucidity import (
     HumanObservation, StructuralMetric, UnderstandabilityAssessment,
     UnderstandabilityInput, evaluate_understandability, from_python_ast,
 )

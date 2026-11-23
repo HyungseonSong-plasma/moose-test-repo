@@ -92,10 +92,10 @@ transaction and revalidate the post-merge SHA. No such executor is installed.
 
 ### Integration with the concurrent v0.6 JUnit comparison gate
 
-The PR also contains a pure, read-only `verification/naming_replay.py` that
+The PR also contains a pure, read-only `verification/junit_compare.py` that
 checks submitted JUnit digest, testcase identities, failure/skip states and
 exact naming candidate revisions. **Do not replace that canonical module**
-with executable code. `naming_replay_execution.py` is a distinct, explicitly
+with executable code. `pytest_revision_runner.py` is a distinct, explicitly
 invoked producer of real before/after JUnit artifacts. The helper
 `build_executed_replay_artifact_pair` hands those actual XML bytes and SHA-256
 digests to the canonical `compare_candidate_replay` or

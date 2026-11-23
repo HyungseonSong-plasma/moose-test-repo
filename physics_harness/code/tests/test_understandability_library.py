@@ -3,7 +3,7 @@
 import unittest
 from dataclasses import replace
 
-from libs.code_understandability import (
+from libs.code_lucidity import (
     UnderstandabilityIndicator, UnderstandabilityInput, HumanObservation, StructuralMetric, compare_understandability,
     derive_indicators, evaluate_understandability, from_python_ast,
 )

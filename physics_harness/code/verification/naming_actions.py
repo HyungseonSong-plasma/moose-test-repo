@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 from zipfile import BadZipFile, ZipFile
 from xml.etree import ElementTree as ET
 
-from .naming_replay import ReplayArtifact, ReplayComparison, compare_candidate_replay
+from .junit_compare import ReplayArtifact, ReplayComparison, compare_candidate_replay
 
 _SHA = re.compile(r"[0-9a-f]{40}\Z")
 _REPO = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")

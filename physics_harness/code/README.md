@@ -15,11 +15,11 @@ can support other languages, but **unimplemented collectors are not claimed**.
 | `delete/` | Reserved: no automatic source-retirement or deletion engine is implemented |
 | `tests/` | Local regression tests for implemented Code lifecycle components |
 
-The independent [`libs/code_understandability/`](../../libs/code_understandability/README.md)
+The independent [`libs/code_lucidity/`](../../libs/code_lucidity/README.md)
 engine defines and computes metrics associated with code understandability.
 Human evaluations are optional evidence, not a metric prerequisite.
-`analysis/understandability_adapter.py` transports source facts and results;
-`analysis/understandability_interpretation.py` interprets their meaning.
+`analysis/lucidity_adapter.py` transports source facts and results;
+`analysis/lucidity_interpretation.py` interprets their meaning.
 Planning, not the engine, decides how to compare refactor options.
 Obsolete `libs/hu/` and `analysis/hu_*` compatibility modules have been removed.
 
@@ -65,7 +65,12 @@ refactoring strategy.
 python -m pytest -q physics_harness/code/tests
 ```
 
-A change solely under `libs/code_understandability/**` does **not** currently trigger this
+A change solely under `libs/code_lucidity/**` does **not** currently trigger this
 path-filtered Harness Code workflow. Repository CI owns its shared integration
 checks on pull requests. Changes to CI routing or trigger ownership are
 separate decisions; documenting current behavior does not modify them.
+
+Canonical paths are `libs/code_lucidity/`, `analysis/lucidity_adapter.py`, and
+`analysis/lucidity_interpretation.py`. Public numeric measurement types and
+functions retain their explicit understandability vocabulary; this path rename
+does not introduce an aggregate score or change a metric formula.

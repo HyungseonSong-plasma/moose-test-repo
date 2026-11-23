@@ -65,7 +65,7 @@ def test_repo_consumer_scan_budget_holds_even_if_no_imports(history):
 
 
 from hashlib import sha256
-from physics_harness.code.verification.naming_replay import ReplayArtifact
+from physics_harness.code.verification.junit_compare import ReplayArtifact
 
 
 def _replay_artifact(revision: str, xml: bytes) -> ReplayArtifact:

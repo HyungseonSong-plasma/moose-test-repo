@@ -49,10 +49,10 @@ __all__ += [
     "NamingSafetyGateReport", "evaluate_naming_safety_gates",
 ]
 
-from .naming_replay import ReplayArtifact, ReplayComparison, compare_replay_artifacts, compare_candidate_replay
+from .junit_compare import ReplayArtifact, ReplayComparison, compare_replay_artifacts, compare_candidate_replay
 __all__ += ["ReplayArtifact", "ReplayComparison", "compare_replay_artifacts", "compare_candidate_replay"]
 
-from .naming_replay_execution import (
+from .pytest_revision_runner import (
     NamingReplayRun, NamingReplayReceipt, run_naming_test_replay,
     build_executed_replay_artifact_pair,
 )

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from ..diagnostics.providers.git import GitSourceProvider
 from ..refactor.naming import NamingCase, NamingOption
-from .naming_replay import ReplayArtifact, ReplayComparison, compare_candidate_replay
+from .junit_compare import ReplayArtifact, ReplayComparison, compare_candidate_replay
 from .naming_boundary import ResponsibilityBinding
 from .naming_candidate import CandidatePlacement, NamingCandidateReceipt, verify_naming_candidate
 from .naming_behavior import NamingBehaviorReceipt, verify_naming_behavior_projection

@@ -9,10 +9,10 @@ transformation, edit the repository, or authorize a change.
 | Package | Responsibility |
 | --- | --- |
 | `code/diagnostics/` | Exact-source graph, evidence, receipt and collection completeness |
-| `libs/code_understandability/` | Numeric code-understandability features from existing source facts and observations, no interpretation or refactor decision |
+| `libs/code_lucidity/` | Numeric code-understandability features from existing source facts and observations, no interpretation or refactor decision |
 | `code/analysis/result.py` | Generic revision-bound analysis records and measurements |
-| `code/analysis/understandability_adapter.py` | Diagnostics↔metric engine data mapping and Evidence transport only |
-| `code/analysis/understandability_interpretation.py` | Interpret calculated code-understandability indicators, caveats and trade-offs for Planning |
+| `code/analysis/lucidity_adapter.py` | Diagnostics↔metric engine data mapping and Evidence transport only |
+| `code/analysis/lucidity_interpretation.py` | Interpret calculated code-understandability indicators, caveats and trade-offs for Planning |
 | `code/refactor/planning.py` | Source-bound context and constraint validation |
 | `code/refactor/alternatives.py` | Apply the same checks to alternative proposals; no ranking |
 | `code/verification/` | Independent source/contract checks, post-change obligations |
@@ -26,7 +26,7 @@ implementation internals, but no folder or architecture policy is hard-coded.
 
 ```
 run_scan -> DiagnosticResult
-  -> assess_code_understandability(...) -> libs.code_understandability.UnderstandabilityAssessment
+  -> assess_code_understandability(...) -> libs.code_lucidity.UnderstandabilityAssessment
   -> summarize_understandability(...) -> AnalysisRecord
   -> interpret_understandability_indicators(...) -> AnalysisRecord
   -> build_planning_context(..., assessments=(record, interpretation))
@@ -45,8 +45,8 @@ from pathlib import Path
 import subprocess
 
 from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
-from physics_harness.code.analysis.understandability_adapter import assess_code_understandability, summarize_understandability
-from physics_harness.code.analysis.understandability_interpretation import interpret_understandability_indicators
+from physics_harness.code.analysis.lucidity_adapter import assess_code_understandability, summarize_understandability
+from physics_harness.code.analysis.lucidity_interpretation import interpret_understandability_indicators
 from physics_harness.code.refactor import (
     HardConstraint, PlanningAlternative, build_planning_context, review_alternatives,
 )
@@ -122,7 +122,7 @@ python -m pytest -q physics_harness/code/tests
 
 `test_understandability_run_scan_integration.py` and `test_code_understandability.py` test the real collector → code-understandability metrics → Analysis →
 Planning flow using the existing `git_factory` fixture. engine-only changes in
-`libs/code_understandability/**` do not currently trigger the existing path-filtered Harness Code
+`libs/code_lucidity/**` do not currently trigger the existing path-filtered Harness Code
 workflow by themselves; test ownership and scheduling need a separate scoped
 policy decision rather than broadening CI implicitly.
 
@@ -304,7 +304,7 @@ Detailed contract: `docs/development/evolutionary-naming-semantic-gates-v05.md`.
 
 ### v0.6 — Exact-revision JUnit replay comparison (read-only)
 
-`verification/naming_replay.py` compares immutable **raw JUnit XML bytes** and stable testcase identities for baseline/candidate SHA pairs. It blocks digest mismatches, invalid XML, missing tests, duplicate IDs, candidate failures, wrong revisions and malformed inputs; skipped tests, new tests and missing producer evidence remain unresolved. The naming safety orchestrator recomputes this receipt from optional `replay_baseline` / `replay_candidate` artifacts; missing artifacts are explicitly unresolved.
+`verification/junit_compare.py` compares immutable **raw JUnit XML bytes** and stable testcase identities for baseline/candidate SHA pairs. It blocks digest mismatches, invalid XML, missing tests, duplicate IDs, candidate failures, wrong revisions and malformed inputs; skipped tests, new tests and missing producer evidence remain unresolved. The naming safety orchestrator recomputes this receipt from optional `replay_baseline` / `replay_candidate` artifacts; missing artifacts are explicitly unresolved.
 
 **This does not run tests or authenticate CI.** Caller-supplied digests and run URLs are not independent attestation. A green before/after JUnit comparison can never authorize a Rename/Extraction. CI provenance, toolchain, semantic reviewer independence, external consumers, post-integration validation and rollback remain separate gates. The v0.6 interface is a replay evidence *falsifier*, not an executor.
 
@@ -313,7 +313,7 @@ Detailed contract: `docs/development/evolutionary-naming-semantic-gates-v05.md`.
 Two independent *verification-capability* adapters are now available, separate
 from the GPT planning and structural source reviewers:
 
-1. `verification/naming_replay_execution.py` exposes `run_naming_test_replay(...)` for
+1. `verification/pytest_revision_runner.py` exposes `run_naming_test_replay(...)` for
    **explicit trusted-runner execution** of the *same tracked pytest modules*
    on detached baseline/candidate Git worktrees. The source Git object
    ancestry, test-file blob, pytest configuration, and ancestor `conftest.py`
@@ -352,4 +352,4 @@ post-integration HEAD. A passing CI run in the same PR is insufficient.
 
 ### v0.7 — GitHub Actions artifact provenance (read-only)
 
-`verification/naming_actions.py` reads official GitHub HTTPS run/job/artifact metadata and raw archive bytes, checks exact repository/SHA/attempt/workflow/job/step/Artifact ownership, then compares JUnit test identities through the canonical `naming_replay` module. It checks a run twice for concurrent reruns, strips bearer credentials on artifact redirects, and fails closed on invalid ZIP/XML/pagination. It never dispatches or edits workflows. A missing JUnit artifact is **HOLD**, not success. Current Harness Code CI run `45081041451` has no JUnit artifact; Repository CI's `physics-architecture-census` must not be substituted. See `docs/development/evolutionary-naming-actions-provenance-v07.md`. Authenticated GitHub metadata does not attest the runner/toolchain, semantic parity, external consumers or mutation permission.
+`verification/naming_actions.py` reads official GitHub HTTPS run/job/artifact metadata and raw archive bytes, checks exact repository/SHA/attempt/workflow/job/step/Artifact ownership, then compares JUnit test identities through the canonical `junit_compare` module. It checks a run twice for concurrent reruns, strips bearer credentials on artifact redirects, and fails closed on invalid ZIP/XML/pagination. It never dispatches or edits workflows. A missing JUnit artifact is **HOLD**, not success. Current Harness Code CI run `45081041451` has no JUnit artifact; Repository CI's `physics-architecture-census` must not be substituted. See `docs/development/evolutionary-naming-actions-provenance-v07.md`. Authenticated GitHub metadata does not attest the runner/toolchain, semantic parity, external consumers or mutation permission.
