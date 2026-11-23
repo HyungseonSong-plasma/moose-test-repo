@@ -31,5 +31,23 @@
     "ACTIVE_FDEG_PROFILE_RETIREMENT_SIMULATION",
     "REPOSITORY_CI_OWNER_CONTRACT_UPDATE",
     "PRESERVE_HISTORICAL_GRAPH_AND_NEGATIVE_CHECKS"
-  ]
+  ],
+  "first_cut_observed_checks": {
+    "head": "1453b46b9f913c2f54ad529a89ce8860a08dee2d",
+    "repository_ci": {
+      "id": 45165487127,
+      "conclusion": "success"
+    },
+    "physics_code_ci": {
+      "id": 45165487143,
+      "conclusion": "failure",
+      "failed_job": "Physics Code Validation",
+      "failed_step": "Validate FDEG Functional Contract P0",
+      "errors": [
+        "FUNCTIONAL_SOURCE_READ_FAILED",
+        "FileNotFoundError"
+      ],
+      "n_errors": 2
+    }
+  }
 }

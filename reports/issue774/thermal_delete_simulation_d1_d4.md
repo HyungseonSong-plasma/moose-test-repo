@@ -53,3 +53,13 @@ Repository CI and Physics Code CI trigger only for pull requests targeting `main
 Prepared a separated technical *archive-aware* version of this rehearsal: remove the now-unavailable Thermal profile from the **active** Functional/Transition registries (old baseline blobs still pinned by Git ancestry and archived FDEG graph), preserve all nine surviving live profile checks, verify the historical `include_thermal_diffusion` default from the immutable functional graph, and replace live source-bound code7 capture with pinned ZIP validation. The FDEG code7 negative graph-tampering test remains. Repository CI's exact Workflow step ownership contract is updated to match the renamed historical verification/upload steps.
 
 **No owner approval is implied** by these simulated profile lifecycle edits. The independent post-cut `verify_retired` gate and all Native/coverage/compatibility receipts remain blocking. This cut is not mergeable to main; it does not produce a proven safe-to-delete verdict.
+
+## D4 first-cut observed CI failure — exact source `1453b46b9f913c2f54ad529a89ce8860a08dee2d`
+
+- [Repository CI #45165487127](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45165487127) **PASS**.
+- [Physics Code CI #45165487143](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45165487143) **FAIL** in **`Validate FDEG Functional Contract P0`** only after existing Structural P0 PASS.
+- Two observed errors: `test_six_source_pinned_profiles_and_anchors` raised `FUNCTIONAL_SOURCE_READ_FAILED` while attempting live source validation of `PhysicsFVThermalDiffusion.C`; `test_optional_description_is_not_default` raised `FileNotFoundError` on the same deleted `.C`.
+- These are **active source-bound test lifecycle dependencies**; they do not imply that New-only physically instantiated Thermal Diffusion. No direct C++ linkage failure was established by this Functional-stage failure.
+- The subsequent technical simulation cut preserves historical `include_thermal_diffusion` default through the archived original Functional Graph, keeps the nine surviving active Functional/Transition profile checks, keeps the original three-Graph hash and tamper negatives, and updates existing CI step/ownership contract. This is **not** independent deletion authorization.
+
+**Remaining blockers (unchanged):** full poststage New-only input and all runtime Factory events, external and generated consumer closure, legacy binary compatibility decision, qualified owner acceptance and pre/post Native results. Real deletion is HOLD.
