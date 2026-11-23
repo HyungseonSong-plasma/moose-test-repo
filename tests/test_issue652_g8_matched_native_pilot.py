@@ -73,3 +73,11 @@ def test_output_is_not_allowed_to_be_raw_exodus_or_private_input():
     assert "secure_tmpfs_cleanup(private)" in code
     assert "read_hashed_rows()" in code
     assert "compare_exodus(" in code
+
+
+def test_split_checkout_imports_frozen_native_code_when_source_env_defined():
+    import os
+    expected=os.environ.get("G8_NATIVE_SOURCE_ROOT")
+    if expected:
+        assert g8.g6.ROOT.resolve()==Path(expected).resolve()
+        assert g8.g6.__file__.startswith(str(Path(expected).resolve()))
