@@ -98,6 +98,7 @@ ALLOWED_ACTIVE_HISTORICAL_ASSERTIONS = {
     "physics_app/ci/check_stage5_ei18_runtime.py",
     "physics_app/ci/check_e8_elastic_ei19_runtime.py",
     "physics_app/ci/check_stage5_s5d_heavy_reactions.py",
+    "physics_app/ci/check_issue817_electron_source_absence.py",  # explicit negative-only semantic verifier
 }
 CURRENT_POSITIVE_ROUTES = {
     "physics_app/ci/ei01_attachment_runtime_smoke.i": (
