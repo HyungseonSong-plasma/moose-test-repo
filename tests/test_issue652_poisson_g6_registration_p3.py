@@ -37,7 +37,7 @@ def test_exact_registration_has_15_typed_owners():
     (lambda s: s.replace(b"G6_PRELOAD_READY\n", b""), "G6_REGISTRATION_OBSERVER"),
     (lambda s: s.replace(b"ADMatDiffusion", b"Diffusion"), "G6_EXPECTED_SINGLE"),
     (lambda s: s.replace(b"Poisson_diffusion", b"phi_diffusion"),
-     "G6_EXPECTED_SINGLE"),
+     "G6_RETIRED_NATIVE_OBJECT"),
     (lambda s: s.replace(b"G6_OWNER\tBC\tPoisson_grounded_potential\tDirichletBC\n", b""),
      "G6_EXPECTED_SINGLE"),
     (lambda s: s.replace(b"G6_OWNER\tVariable\tpotential\tMooseVariable\n",
