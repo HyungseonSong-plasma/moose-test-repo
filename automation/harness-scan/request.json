@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-g6-poisson-specific-registration-short3ns-retry4-20261123",
-  "source_sha": "548d5328d9a4f4469658d2785652b2bda7034643",
+  "request_id": "issue652-g6-poisson-specific-fixture-r5-20261123",
+  "source_sha": "23e95942d1b6059e80e0e97d5fe6e252d850ec36",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
