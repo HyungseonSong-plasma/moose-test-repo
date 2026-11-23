@@ -26,6 +26,7 @@ jobs:
           test "$(git rev-parse HEAD:physics_app)" = "869dabc25a34e03fc4018c2d8cd57cda26a630fb"
           test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "e57cb1cc16ef9c6c336199f395d1cf4b49436bb6"
           git merge-base --is-ancestor "0a15c03728850e2d18ca64e33ae58c7e6891f9fa" HEAD
+          test "$(git rev-parse HEAD:tests/test_issue774_newonly_fvkernel_retirement.py)" = "c61e57ed43376275725b6a2840e54fd773f2a318"
           echo ISSUE814_P0_SOURCE_TREE_EXACT_PASS
       - name: Run existing fail-closed P0 contracts and material lookup assertions
         shell: bash
