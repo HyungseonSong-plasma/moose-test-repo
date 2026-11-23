@@ -500,15 +500,43 @@ DDContinuityEq::addFunctorMaterials()
   const auto & fvm = _fvm_species;
   species.insert(species.end(), fvm.begin(), fvm.end());
 
-  // C2 wall laws consume a live physical particle-number density. Publish
-  // exactly one canonical Physics Functor for each selected FV ion with an
-  // explicit JSON ion_wall record, derived from its logarithmic MOLAR state.
-  // Preserve the Native n_i/n_m/n_op_physical aliases while Poisson and
-  // diagnostics still consume them; do not add a second alias owner here.
-  if (mechanism.hasIonWalls() && !getParam<bool>("dont_create_kernels"))
+  // G2 opt-in: one live electron number-density owner belongs to the selected
+  // Continuity state, not to a sheath-wall flag in DDEnergyEq. A new-only
+  // Poisson JSON requires these four charged states even before G3 charge
+  // producer and G4 Poisson residuals are activated.
+  const bool poisson_density = mechanism.poisson() != nullptr;
+  if (poisson_density)
+  {
+    if (getParam<bool>("dont_create_kernels"))
+      paramError("dont_create_kernels",
+                 "New-only Poisson density requires active Continuity state ownership.");
+    const std::set<std::string> fem(_fem_species.begin(), _fem_species.end());
+    const std::set<std::string> fvm(_fvm_species.begin(), _fvm_species.end());
+    if (!fem.count("e"))
+      paramError("fem_species", "New-only Poisson requires selected FEM electron e.");
+    for (const auto & id : {"O2p", "Om", "Op"})
+      if (!fvm.count(id))
+        paramError("fvm_species", "New-only Poisson requires selected charged FV ion ", id);
+
+    const std::string type = "ADParsedFunctorMaterial";
+    auto density = getFactory().getValidParams(type);
+    density.set<std::string>("property_name") = "n_e_physical";
+    density.set<std::vector<std::string>>("functor_names") = {"log_e"};
+    density.set<std::vector<std::string>>("functor_symbols") = {"c"};
+    density.set<std::string>("expression") = "6.02214076e23*exp(c)";
+    assignBlocks(density, _blocks);
+    getProblem().addFunctorMaterial(type, name() + "_electron_number_density", density);
+  }
+
+  // C2 wall laws and future Poisson charge sources consume state-dependent,
+  // canonical particle number densities from the SAME selected FV ions.
+  // Preserve old Native n_i/n_m/n_op_physical aliases for unrelated consumers.
+  if ((mechanism.hasIonWalls() || poisson_density) &&
+      !getParam<bool>("dont_create_kernels"))
     for (const auto & id : _fvm_species)
     {
-      if (!mechanism.species(id).ion_wall)
+      if (!mechanism.species(id).ion_wall &&
+          !(poisson_density && mechanism.species(id).charge_number != 0))
         continue;
       const std::string type = "ADParsedFunctorMaterial";
       auto params = getFactory().getValidParams(type);
