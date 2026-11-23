@@ -111,6 +111,10 @@ def preflight_case(stage: Path, receipt: dict, case: str, public_blob: bytes) ->
     import sys
     sys.path.insert(0, str(ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry"))
     from prepare_s6_newonly import JSON_SHA  # pylint: disable=import-outside-toplevel
+    from retire_s6_poisson_charge_owners import G5_OUTPUT_C0_SHA, G5_OVERLAY_SHA
+    if (expected[C0] != G5_OUTPUT_C0_SHA or
+            expected["migrated_continuity.i"] != G5_OVERLAY_SHA[case]):
+        raise PublicD100Hold("G6B_G5_ORIGINAL_POISSON_OWNER_SHA_CHANGED")
     mechanism_path = chem / "chemistry" / ("unified_s6_" + case + "_newonly.json")
     mechanism_blob = checked_bytes(mechanism_path, JSON_SHA[case], "G5_MECHANISM")
     mechanism = json.loads(mechanism_blob)
