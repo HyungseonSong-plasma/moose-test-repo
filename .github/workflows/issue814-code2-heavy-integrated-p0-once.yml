@@ -28,8 +28,7 @@ jobs:
           test "$(git rev-parse HEAD:ci/guards/issue774_newonly_fvkernel_retirement.py)" = "0369ffd11a4a7cc7cd8805024ac2d496195f2f6c"
           test "$(git rev-parse HEAD:tests/test_issue774_newonly_fvkernel_retirement.py)" = "27065082d067e338ba2f3cf2059935fea263c877"
           git merge-base --is-ancestor "bfcc95189f3ab8648599b8e946508a4e2f0507ad" HEAD
-          test ! -e physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C
-          test ! -e physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h
+          # Source removal is checked by exact HEAD:physics_app tree and the D9 guard.
           echo ISSUE814_INTEGRATED_SOURCE_PIN_PASS
       - name: Execute existing independent census, history and negative tests
         shell: bash
