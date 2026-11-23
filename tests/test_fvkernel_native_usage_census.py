@@ -127,15 +127,25 @@ class NativeABComparisonTest(unittest.TestCase):
                                for c in ["417","941"]},
                         full_fvkernel_source_usage={c:dict(owner) for c in ["417","941"]},
                         owner_registration={c:dict(filtered) for c in ["417","941"]})
-        return make("a"*40,[t,row],18), make("b"*40,[row],17)
+        extras = [
+            dict(row, source_file=f"physics_app/src/fvkernels/Extra{i}.C",
+                 source_blob_sha=f"{i:040x}",
+                 registered_factory_types=[f"Extra{i}"],
+                 observed_factory_counts={},
+                 observed_fvkernel_instances=0,
+                 run_usage="NOT_OBSERVED_IN_INSTRUMENTED_API")
+            for i in range(11)
+        ]
+        return make("a"*40,[t,row,*extras],18), make("b"*40,[row,*extras],17)
 
     def test_positive_proves_observed_scope_only(self):
         from fvkernel_native_usage_census import compare_p05_source_usage
         a,b=self.fixture()
-        # Fixture uses compact synthetic source lists; a real 13/12 row inventory
-        # is required by the production gate and must be refused here.
-        with self.assertRaisesRegex(ValueError,"SOURCE_INVENTORY_COUNT"):
-            compare_p05_source_usage(a,b)
+        result=compare_p05_source_usage(a,b)
+        self.assertEqual(result["status"],"PASS_SCOPE_ONLY_NOT_DELETION_APPROVAL")
+        self.assertEqual(set(result["cases"]),{"417","941"})
+        self.assertFalse(result["safe_to_delete"])
+        self.assertEqual(result["actual_P3_parity"],"NOT_TESTED")
 
     def test_thermal_was_active_rejected(self):
         from fvkernel_native_usage_census import compare_p05_source_usage, THERMAL_SOURCE
