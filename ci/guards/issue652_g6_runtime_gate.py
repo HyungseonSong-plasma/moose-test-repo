@@ -31,21 +31,21 @@ CASES = ("417", "941")
 EXPECTED_OWNERS = {
     "Variable": {"potential": "MooseVariable"},
     "Kernel": {
-        "_diffusion": "ADMatDiffusion",
-        "_charge_source": "FunctorKernel",
+        "Poisson_diffusion": "ADMatDiffusion",
+        "Poisson_charge_source": "FunctorKernel",
     },
     "Material": {
-        "_eps_plasma": "ADGenericConstantMaterial",
-        "_eps_cover": "ADGenericConstantMaterial",
-        "_eps_wafer": "ADGenericConstantMaterial",
-        "_eps_focus_ring": "ADGenericConstantMaterial",
-        "_eps_vacuum": "ADGenericConstantMaterial",
+        "Poisson_eps_plasma": "ADGenericConstantMaterial",
+        "Poisson_eps_cover": "ADGenericConstantMaterial",
+        "Poisson_eps_wafer": "ADGenericConstantMaterial",
+        "Poisson_eps_focus_ring": "ADGenericConstantMaterial",
+        "Poisson_eps_vacuum": "ADGenericConstantMaterial",
     },
     "BC": {
-        "_grounded_potential": "DirichletBC",
-        "_surface_charge_plasma_cover": "PhysicsADSurfaceChargePoissonBC",
-        "_surface_charge_plasma_wafer": "PhysicsADSurfaceChargePoissonBC",
-        "_surface_charge_plasma_focus_ring": "PhysicsADSurfaceChargePoissonBC",
+        "Poisson_grounded_potential": "DirichletBC",
+        "Poisson_surface_charge_plasma_cover": "PhysicsADSurfaceChargePoissonBC",
+        "Poisson_surface_charge_plasma_wafer": "PhysicsADSurfaceChargePoissonBC",
+        "Poisson_surface_charge_plasma_focus_ring": "PhysicsADSurfaceChargePoissonBC",
     },
     "FunctorMaterial": {
         "plasma_charge_number_density": "ADParsedFunctorMaterial",
@@ -311,7 +311,20 @@ def run(staged: Path, output: Path, *, registration_only: bool) -> dict:
             else:
                 trace_bytes = trace.read_bytes()
                 case_result["preload_marker_count"] = trace_bytes.count(b"G6_PRELOAD_READY\n")
-                case_result["observed_trace_rows"] = trace_bytes.count(b"G6_OWNER\t")
+                case_result["observed_trace_rows"] = trace_bytes.count(b"G6_OWNER\\t")
+                # Diagnostic-only narrow public names/types. Never store raw
+                # trace, paths or protected rate input values in artifacts.
+                target_candidates = []
+                for raw_line in trace_bytes.decode("utf-8").splitlines():
+                    fields = raw_line.split("\\t")
+                    if (len(fields) == 4 and fields[0] == "G6_OWNER"
+                            and (fields[2] == "potential" or
+                                 "Poisson" in fields[2] or
+                                 fields[2].startswith("plasma_charge_"))):
+                        target_candidates.append({
+                            "family": fields[1], "name": fields[2], "type": fields[3]})
+                case_result["bounded_target_registration_candidates"] = target_candidates[:80]
+                case_result["target_candidates_truncated"] = len(target_candidates) > 80
                 try:
                     case_result["registration"] = registration_receipt(trace_bytes)
                 except ValueError as err:
