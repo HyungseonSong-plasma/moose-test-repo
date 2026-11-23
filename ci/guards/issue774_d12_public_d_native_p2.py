@@ -42,7 +42,30 @@ SAFE_ERROR_LABELS = {
     "native_error": re.compile(r"\*\*\* ERROR \*\*\*", re.I),
     "timeout": re.compile(r"TIMEOUT", re.I),
     "syntax_ok": re.compile(r"Syntax OK"),
+    "unknown_parameter": re.compile(r"unknown parameter|unused parameter|unrecognized parameter", re.I),
+    "duplicate_object": re.compile(r"already exists|duplicate|already defined", re.I),
+    "missing_functor": re.compile(r"functor[^\n]{0,120}(missing|not found|unknown|does not exist)", re.I),
+    "missing_variable": re.compile(r"variable[^\n]{0,120}(missing|not found|unknown|does not exist)", re.I),
+    "chemistry_contract": re.compile(r"chemistry|reaction|species|equation", re.I),
+    "transport_lookup": re.compile(r"transport|lookup|interpolation|mobility|diffusivity", re.I),
+    "material_contract": re.compile(r"material|property|functor", re.I),
+    "unsupported_action": re.compile(r"unsupported|unimplemented|invalid (action|physics|block)", re.I),
+    "parameter_required": re.compile(r"required parameter|missing required|not supplied", re.I),
+    "boundary_contract": re.compile(r"boundary|sideset|\bFVBC\b", re.I),
 }
+ERROR_CONTEXT_MARKERS = (
+    "Syntax OK", "*** ERROR ***", "Error while", "Failed to",
+    "error occurred", "Exception", "invalid", "moose",
+)
+# Only these explicitly selected public contract terms may be emitted, never
+# arbitrary error lines, file paths, private rate identifiers or numbers.
+SAFE_ERROR_TOKENS = (
+    "FunctorMaterial", "ADGenericFunctorMaterial", "ChemicalReaction",
+    "Equation", "Physics", "Chemistry", "Transport", "Continuity",
+    "Energy", "Functor", "Material", "variable", "boundary", "parameter",
+    "Executioner", "kernel", "Flux", "coefficient", "EOS", "unit",
+    "thermal", "reaction", "species", "lookup", "pressure", "temperature",
+)
 
 
 def stage_W1(bundle: Path, target: Path) -> dict:
@@ -86,12 +109,23 @@ def stage_W1(bundle: Path, target: Path) -> dict:
 
 
 def classify_native(rc: int, log: str) -> dict:
+    # Restrict diagnostics to an explicit non-secret token whitelist.
+    # Even the first ERROR line may embed sensitive paths or values.
+    error_section = log.split("*** ERROR ***", 1)[-1] if "*** ERROR ***" in log else log
+    safe_token_hits = sorted(
+        token for token in SAFE_ERROR_TOKENS
+        if re.search(r"\\b" + re.escape(token) + r"\\b", error_section, re.I)
+    )
     return {
         "returncode": rc,
         "syntax_ok": rc == 0 and "Syntax OK" in log,
         "log_sha256": sha(log.encode("utf-8")),
         "log_bytes": len(log.encode("utf-8")),
-        "safe_error_categories": {name: bool(rx.search(log)) for name, rx in SAFE_ERROR_LABELS.items()},
+        "safe_error_categories": {name: bool(rx.search(error_section))
+                                  for name, rx in SAFE_ERROR_LABELS.items()},
+        "public_error_vocab_hits": safe_token_hits,
+        "error_section_sha256": sha(error_section.encode("utf-8")),
+        "error_section_line_count": len(error_section.splitlines()),
     }
 
 
@@ -204,8 +238,12 @@ def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
                 "protected_rate_file_count": protected_files,
                 "protected_rate_content_published": False,
             }
-            need(response["syntax_ok"], "PUBLIC_D_NATIVE_P2_CHECK_INPUT_HOLD_" + case)
-        result["native_P2_status"] = "PASS_BOTH_PUBLIC_D_INPUTS"
+        result["native_P2_status"] = (
+            "PASS_BOTH_PUBLIC_D_INPUTS"
+            if set(result["cases"]) == set(CASES)
+            and all(result["cases"][k]["syntax_ok"] for k in CASES)
+            else "HOLD_PUBLIC_D_NATIVE_P2_CONSTRUCTION_FAILED"
+        )
     except Exception as exc:
         result["native_P2_status"] = "HOLD_NATIVE_OR_SETUP"
         result["error_class"] = type(exc).__name__
