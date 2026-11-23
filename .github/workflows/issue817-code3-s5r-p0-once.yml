@@ -1,0 +1,72 @@
+# #817 S5-R normalized electron source ONLY. One-off; remove after evidence.
+name: Issue817 Code3 S5R normalized source controls P0
+
+on:
+  push:
+    branches: [issue-817-code3-s5r-native-d4]
+    paths: ['.github/workflows/issue817-code3-s5r-p0-once.yml']
+  pull_request:
+    branches: [issue-817-code3-consumer-pair-d3]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+
+jobs:
+  normalized_source_p0:
+    name: S5-R exact-head signed electron source and EI18/EI19 negatives
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    env:
+      SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Source identity and existing P6 CI safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          python3 ci/workflow_harness.py --self-test
+          python3 ci/workflow_harness.py --check
+          python3 ci/guards/p6_ci_workflow_safety_guard.py --self-test --check
+          python3 -m pip install --disable-pip-version-check --quiet \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
+      - name: Validate 5 source/energy-only negative gates and freeze input hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 -m unittest discover -s tests -p test_issue817_code3_s5r_normalized.py -v 2>&1 | tee evidence/s5r_source_negative_tests.log
+          python3 - <<'PY'
+          import json,hashlib,os
+          from pathlib import Path
+          from experiments.Code3_electron_source_retirement import consumer_pairs as p
+          from experiments.Code3_electron_source_retirement import s5r_controls as g
+          from experiments.Code3_electron_source_retirement import run as code3
+          old,new,meta=p.s5r_pair()
+          att=g.assert_s5r_electron_ledger(old,new)
+          assert code3._outside_target(old,p.S5R_TARGET)==code3._outside_target(new,p.S5R_TARGET)
+          receipt={"schema":"issue817.s5r.normalized_p0.v0.1",
+            "source_head":os.environ["SOURCE_HEAD"],
+            "original_sha256":hashlib.sha256(old.encode()).hexdigest(),
+            "candidate_sha256":hashlib.sha256(new.encode()).hexdigest(),
+            "original_factory_type":code3.OLD,"candidate_factory_type":code3.NEW,
+            "single_electron_block_change":True,"ledger":att,
+            "native_p2":"NOT_RUN","native_p3":"NOT_RUN",
+            "full_ad_jacobian":"NOT_PROVEN","code3_source_deleted":False,
+            "safe_delete":False}
+          Path("evidence/s5r_normalized_p0.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
+          print("ISSUE817_S5R_SOURCE_AND_EI18_EI19_NEGATIVES=PASS_NOT_SCIENCE")
+          PY
+          python3 ci/guards/issue817_code3_retirement.py --expected-head "$SOURCE_HEAD" --output evidence/code3_active_consumer_census.json
+      - name: Preserve sanitized source and P0 evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue817-s5r-p0-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30
