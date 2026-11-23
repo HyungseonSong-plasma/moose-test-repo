@@ -1,22 +1,17 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-pr665-9457191-dualrev-20261123-r2",
-  "source_sha": "9457191f4c0693ae886586edd961965867ccd5c0",
+  "request_id": "issue652-poisson-g1-pytest-graph-20261123",
+  "source_sha": "aafa31d7bad265354c9dc18648dcc474e88ef187",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
     "physics_app/include/physics/plasma/*.h",
-    "physics_app/src/materials/*.C",
-    "physics_app/include/materials/*.h",
     "physics_app/src/bcs/*.C",
-    "physics_app/include/bcs/*.h",
-    "physics_app/src/kernels/*.C",
-    "physics_app/include/kernels/*.h",
     "physics_app/src/base/PhysicsApp.C",
     "experiments/Issue402_plasma_dsl_g1/*.i",
     "experiments/Issue402_plasma_dsl_g1/*.py",
-    "tests/test_issue402*.py",
+    "experiments/Issue402_plasma_dsl_g1/*.json",
+    "tests/test_issue652*.py",
     "tests/test_issue633*.py",
-    "tests/test_issue668*.py",
     "ci/guards/*.py",
     ".github/workflows/*.yml"
   ],
@@ -27,7 +22,7 @@
     "python_ast",
     "workflow"
   ],
-  "max_files": 1300,
+  "max_files": 1200,
   "max_bytes": 80000000,
   "max_seconds": 540
 }
