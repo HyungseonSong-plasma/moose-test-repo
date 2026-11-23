@@ -281,7 +281,7 @@ def check() -> None:
         "required_heavy_temperature_functor": "T_g",
         "required_density_functor": "rho_mat",
         "required_constrained_oxygen_functor": "w_O2_constraint",
-        "required_solved_mean_energy_functor": "e_energy_eV",
+        "required_solved_mean_energy_functor": "mean_en_solved",
     }
     if ident != expected_identity:
         raise AssertionError("representative identity/state binding changed")
