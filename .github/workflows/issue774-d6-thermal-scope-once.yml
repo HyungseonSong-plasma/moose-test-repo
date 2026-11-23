@@ -1,0 +1,120 @@
+# Branch-targeted, one-off D6 P0. Never uses protected rates or modifies main.
+name: Issue774 D6 Thermal consumer and compatibility evidence
+on:
+  pull_request:
+    branches: [issue-774-thermal-delete-simulation]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'ci/guards/fdeg_retirement_evidence.py'
+      - 'ci/guards/issue774_d6_consumer_scope.py'
+      - 'tests/test_fdeg_harness_abcd.py'
+      - 'tests/test_issue774_d6_consumer_scope.py'
+      - '.github/workflows/issue774-d6-thermal-scope-once.yml'
+      - 'reports/issue774/**'
+permissions:
+  contents: read
+
+jobs:
+  d6_source_only:
+    name: D6 exact-head full-tree consumer census and Harness run_scan
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Validate source and install existing Harness dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          python3 -m pip install --quiet --disable-pip-version-check -r physics_harness/code/requirements.txt
+      - name: Run D6 source and FDEG fail-closed unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 -m unittest discover -s tests -p test_issue774_d6_consumer_scope.py -v 2>&1 | tee evidence/d6_consumer_tests.log
+          python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v 2>&1 | tee evidence/d6_fdeg_tests.log
+          python3 -m py_compile ci/guards/issue774_d6_consumer_scope.py ci/guards/fdeg_retirement_evidence.py
+      - name: Run exact Git-tree token and blob witness audit
+        shell: bash
+        run: |
+          python3 ci/guards/issue774_d6_consumer_scope.py --root . \
+            --expected-head "$SOURCE_HEAD" --output evidence/d6_consumer_inventory.json
+      - name: Run official GitSourceProvider and run_scan (not a new parser)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from collections import Counter
+          from collections.abc import Mapping
+          from dataclasses import fields, is_dataclass
+          from pathlib import Path
+          import json, os
+          from physics_harness.code.diagnostics import GitSourceProvider, ScanBudget, ScanRequest, run_scan
+          def as_json(v):
+              if is_dataclass(v) and not isinstance(v, type):
+                  return {f.name: as_json(getattr(v,f.name)) for f in fields(v)}
+              if isinstance(v, Mapping):
+                  return {str(k): as_json(x) for k,x in v.items()}
+              if isinstance(v, (tuple,list)):
+                  return [as_json(x) for x in v]
+              if isinstance(v, (set,frozenset)):
+                  return [as_json(x) for x in sorted(v,key=repr)]
+              if v is None or isinstance(v,(str,bool,int,float)):
+                  return v
+              raise TypeError("D6_BAD_GRAPH_VALUE")
+          def save(name, doc):
+              Path("evidence",name).write_text(json.dumps(
+                  as_json(doc),sort_keys=True,indent=2,allow_nan=False)+"\n")
+          req=ScanRequest(
+              repository="HyungseonSong-plasma/moose-test-repo",
+              revision=os.environ["SOURCE_HEAD"],
+              includes=(".github/workflows/*.yml","ci/guards/*.py","tests/*.py",
+                        "physics_app/src/fvkernels/*.C","physics_app/include/fvkernels/*.h",
+                        "physics_app/src/materials/*.C","physics_app/include/materials/*.h",
+                        "physics_app/ci/*.py","physics_app/ci/*.i",
+                        "experiments/*.py","experiments/*.i","archive/*.py","archive/*.i",
+                        "physics_harness/code/*.py"),
+              collectors=("cpp","moose_input","python_ast","workflow"),
+              budget=ScanBudget(max_files=1450,max_bytes=80000000,max_seconds=480))
+          save("d6_harness_request.json",req)
+          scan=run_scan(req,GitSourceProvider(Path.cwd()))
+          if scan.verification is None: raise ValueError("D6_VERIFICATION_MISSING")
+          save("d6_graph.json",scan.graph)
+          save("d6_evidence_receipt.json",scan.receipt)
+          save("d6_verification_receipt.json",scan.verification)
+          summary={"source_head":req.revision,"scope_id":scan.receipt.scope_id,
+                   "scan_status":scan.status,"verification_status":scan.verification.status,
+                   "failures":list(scan.verification.failures),
+                   "unverified_properties":list(scan.verification.unverified_properties),
+                   "file_statuses":dict(sorted(Counter(x.status for x in scan.receipt.files).items())),
+                   "unresolved_count":len(scan.receipt.unresolved),
+                   "nodes":len(scan.graph.nodes),"edges":len(scan.graph.edges),
+                   "evidence_records":len(scan.graph.evidence),
+                   "global_caller_zero_proven":False,"compatibility_proven":False,
+                   "safe_delete":False}
+          save("d6_harness_summary.json",summary)
+          print("D6_OFFICIAL_RUN_SCAN="+scan.status)
+          print("D6_HARNESS_UNRESOLVED="+str(len(scan.receipt.unresolved)))
+          print("D6_VERIFICATION="+scan.verification.status)
+          if scan.verification.failures: raise ValueError("D6_SOURCE_VERIFICATION_FAILED")
+          PY
+      - name: Preserve exact-head evidence without secrets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue774-d6-scope-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event.pull_request.head.sha }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
