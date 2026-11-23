@@ -1,0 +1,22 @@
+{
+  "schema": "issue817.code3.retirement_history.v0.1",
+  "legacy_source_path": "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
+  "legacy_header_path": "physics_app/include/fvkernels/PhysicsFVElectronReactionSource.h",
+  "legacy_source_git_blob_sha": "35ded0eab65ad7bed85baa0104261c90bc26bf3d",
+  "legacy_header_git_blob_sha": "5250b3500d6694481158e2abb896c7e1c6f349e9",
+  "old_signed_physical_residual": "-S_e",
+  "old_signed_normalized_residual": "-S_e/n_ref",
+  "replacement_type": "FVCoupledForce",
+  "physical_coefficient": "1",
+  "normalized_coefficient": "1/n_ref",
+  "source_history_provenance": "Draft PR #707 and Issue #817 pre-cut D1/D2/D3/D4",
+  "successful_native_evidence": {
+    "EI01": "45230510538",
+    "H05_R2": "45234619718",
+    "normalized_nonlinear_micro": "45239977824"
+  },
+  "negative_controls": "EI18/EI19 energy-only, wrong-sign normalized coefficient",
+  "historic_s5r_p2": "BOTH_OLD_AND_NEW_HOLD_MISSING_THERMAL_FACTORY",
+  "global_external_consumers": "UNVERIFIED",
+  "postcut_w1_p2_p3": "NOT_YET_RUN"
+}

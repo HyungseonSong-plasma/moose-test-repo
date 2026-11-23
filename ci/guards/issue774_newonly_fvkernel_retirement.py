@@ -27,8 +27,8 @@ REPO = "HyungseonSong-plasma/moose-test-repo"
 RETIRED = "PhysicsFVThermalDiffusion"
 SOURCE = "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C"
 HEADER = "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h"
-EXPECTED_SOURCE_COUNT = 12
-EXPECTED_REGISTERED_COUNT = 17
+EXPECTED_SOURCE_COUNT = 11
+EXPECTED_REGISTERED_COUNT = 16
 EXPECTED_SHARED_SOURCE_OWNERS = {
     "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": 4,
     "physics_app/src/fvkernels/FVLogMolarTransport.C": 3,

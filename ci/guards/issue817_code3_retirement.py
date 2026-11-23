@@ -23,7 +23,7 @@ RUNNER = "experiments/Code3_electron_source_retirement/run.py"
 RUNNER_BLOB = "0975c89f3072b782894566d43c5d2057afd9132f"
 TEST = "tests/test_code3_electron_source_retirement.py"
 TEST_BLOB = "5d4433f3e08a714129efd824dcae9521626c68d1"
-SCHEMA = "issue817.code3.consumer_baseline.v0.1"
+SCHEMA = "issue817.code3.consumer_cut.v0.2"
 HISTORIC_GENERATOR = "experiments/historical_recipe_support/issue192_s5r.py"
 LIVE_IMPORTER = "experiments/Issue192_s5r_representative/run.py"
 REQUIRED_REFERENCES = (
@@ -88,6 +88,76 @@ def check_pre_retirement(tracked: dict[str, dict], refs: dict[str, dict]) -> Non
            "HISTORICAL_GENERATOR_LIVE_IMPORTER_UNVERIFIED")
 
 
+
+# This pre-cut validator is retained only to verify the immutable original
+# diagnostic contract in its synthetic negative tests.
+ARCHIVE = "ci/baselines/code3_historical_source_retirement.json"
+ALLOWED_ACTIVE_HISTORICAL_ASSERTIONS = {
+    "physics_app/ci/check_e8_ei16_energy_contract.py",
+    "physics_app/ci/check_stage5_s5r_preflight.py",
+    "physics_app/ci/check_stage5_ei18_runtime.py",
+    "physics_app/ci/check_e8_elastic_ei19_runtime.py",
+    "physics_app/ci/check_stage5_s5d_heavy_reactions.py",
+}
+CURRENT_POSITIVE_ROUTES = {
+    "physics_app/ci/ei01_attachment_runtime_smoke.i": (
+        "type = FVCoupledForce", "v = ei01_electron_number_source", "coef = 1"),
+    "physics_app/ci/check_stage5_h05_runtime.py": (
+        "type = FVCoupledForce", "v = S_e_h05", "coef = 1"),
+    "physics_app/ci/check_r2_o2_ionization_implementation.py": (
+        "type = FVCoupledForce", "v = electron_ionization_number_source", "coef = 1"),
+    "physics_app/ci/check_stage5_ei20_runtime.py": (
+        "type = FVCoupledForce", "v = electron_ei20_number_source", "coef = 1"),
+    "physics_app/ci/check_e8_ei16_energy_runtime.py": (
+        "type = FVCoupledForce", "v = electron_ionization_number_source", "coef = 1"),
+    "physics_app/ci/check_stage5_edetach_runtime.py": (
+        "type=FVCoupledForce", "v=electron_edetach_number_source", "coef=1"),
+    "physics_app/ci/check_standard_moose_energy_projection.py": (
+        "type = FVCoupledForce", "v = electron_ionization_number_source", "coef = 1"),
+    HISTORIC_GENERATOR: (
+        "type = FVCoupledForce", "v = S_e_s5r", "coef = {1.0 / n_ref:.17g}"),
+}
+
+def check_post_retirement(root: Path, tracked: dict[str, dict], refs: dict[str, dict]) -> dict:
+    demand(SRC not in tracked and HDR not in tracked,
+           "RETIRED_CODE3_CPP_REINTRODUCED")
+    demand(ARCHIVE in tracked and LIVE_IMPORTER in tracked,
+           "HISTORICAL_PROVENANCE_OR_IMPORTER_MISSING")
+    archive = json.loads(git(root, "show", "HEAD:" + ARCHIVE))
+    demand(archive.get("legacy_source_git_blob_sha") == SRC_BLOB and
+           archive.get("legacy_header_git_blob_sha") == HDR_BLOB and
+           archive.get("old_signed_physical_residual") == "-S_e" and
+           archive.get("old_signed_normalized_residual") == "-S_e/n_ref",
+           "RETIREMENT_HISTORY_HASH_OR_SIGN_DRIFT")
+    for path, needles in CURRENT_POSITIVE_ROUTES.items():
+        demand(path in tracked, "MIGRATED_CONSUMER_MISSING:" + path)
+        source = git(root, "show", "HEAD:" + path).decode("utf-8")
+        demand(TARGET not in source, "OLD_FACTORY_IN_LIVE_CONSUMER:" + path)
+        for token in needles:
+            demand(token in source, "STANDARD_OWNER_OR_SIGNED_FUNCTOR_MISSING:" + path)
+    disallowed = []
+    for path, row in refs.items():
+        cls = row["class"]
+        if path.startswith("experiments/Code3_electron_source_retirement/"):
+            continue  # archived offline A/B fixture; never an active Factory
+        if path in ALLOWED_ACTIVE_HISTORICAL_ASSERTIONS:
+            continue  # legacy provenance or explicit negative absence control
+        if cls in ("ACTIVE_CI_CONSUMER_OR_GUARD",
+                   "MOOSE_INPUT_CONSUMER", "OTHER_CPP_CONSUMER",
+                   "WORKFLOW_REFERENCE"):
+            disallowed.append(path)
+        elif path.startswith("experiments/") and path.endswith((".py", ".i")):
+            disallowed.append(path)
+    demand(not disallowed, "OLD_FACTORY_ACTIVE_REFERENCE:" + ",".join(sorted(disallowed)))
+    return {
+        "retired_cpp_absent": True,
+        "archived_legacy_blob_sha_verified": True,
+        "migrated_consumer_count": len(CURRENT_POSITIVE_ROUTES),
+        "old_factory_active_references": [],
+        "negative_or_frozen_contract_references": sorted(
+            p for p in refs if p in ALLOWED_ACTIVE_HISTORICAL_ASSERTIONS),
+    }
+
 def audit(root: Path, expected_head: str) -> dict:
     root = root.resolve()
     demand(bool(REGEX_HEAD.fullmatch(expected_head)), "BAD_HEAD")
@@ -119,7 +189,7 @@ def audit(root: Path, expected_head: str) -> dict:
                                      "blob_sha": tracked[path]["sha"],
                                      "line_numbers": []})
         row["line_numbers"].append(int(lineno))
-    check_pre_retirement(tracked, refs)
+    postcut = check_post_retirement(root, tracked, refs)
     counts = dict(sorted(Counter(r["class"] for r in refs.values()).items()))
     return {
         "schema": SCHEMA,
@@ -141,8 +211,9 @@ def audit(root: Path, expected_head: str) -> dict:
         "replacement_normalized_coefficient": "1/n_ref",
         "P0_electron_only_input_diff": "SEPARATE_RUNNER",
         "P1_P2_P3_AD_parity": "NOT_TESTED_BY_THIS_GUARD",
-        "active_consumer_migration": "REQUIRED",
-        "source_cut_applied": False,
+        "active_consumer_migration": "TRACKED_NEWONLY_CONSUMERS_MIGRATED_PENDING_NATIVE",
+        "post_cut_contract": postcut,
+        "source_cut_applied": True,
         "safe_delete": False,
         "merge_to_main": False,
     }
@@ -160,7 +231,7 @@ def main() -> int:
     except (ValueError, UnicodeError, OSError) as exc:
         print("ISSUE817_CODE3_P0=FAIL:" + str(exc))
         return 1
-    print("ISSUE817_CODE3_P0=PASS_CONSUMERS_PRESENT_SAFE_DELETE_HOLD")
+    print("ISSUE817_CODE3_P0=PASS_TRACKED_FACTORY_CUT_NATIVE_SCIENCE_HOLD")
     return 0
 
 

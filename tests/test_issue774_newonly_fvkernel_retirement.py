@@ -21,8 +21,8 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         receipt = d9.audit(ROOT, expected_head=head)
         self.assertEqual(receipt["schema"], d9.SCHEMA)
         self.assertFalse(receipt["legacy_inputs_supported"])
-        self.assertEqual(receipt["current_newonly_factory"]["source_files"], 12)
-        self.assertEqual(receipt["current_newonly_factory"]["registered_factory_types"], 17)
+        self.assertEqual(receipt["current_newonly_factory"]["source_files"], 11)
+        self.assertEqual(receipt["current_newonly_factory"]["registered_factory_types"], 16)
         self.assertTrue(receipt["newonly_ci"]["workflow_template_bytes_equal"])
         self.assertFalse(receipt["newonly_ci"]["historical_fdeg_ci_imported"])
         self.assertEqual(receipt["reference_audit"]["active_retired_type_references"], [])
@@ -75,7 +75,7 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "EXACT_TREE_SOURCE_BLOB_MISMATCH"):
             d9.check_factory_inventory(ROOT, bad_sha)
         correct = d9.check_factory_inventory(ROOT, tracked)
-        self.assertEqual(correct["registered_factory_types"], 17)
+        self.assertEqual(correct["registered_factory_types"], 16)
 
     def test_missing_workflow_owner_and_forbidden_historical_fdeg_import(self):
         paths = [d9.NEWONLY_CI, d9.TEMPLATE, d9.SAFETY, d9.EXISTING_TEST,

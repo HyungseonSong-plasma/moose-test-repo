@@ -11,19 +11,20 @@ sys.path.insert(0, str(ROOT / "ci/guards"))
 import issue817_code3_retirement as code3  # noqa: E402
 
 
-class Code3PreRetirementCensus(unittest.TestCase):
-    def test_real_exact_head_reports_live_consumers_and_no_deletion(self):
+class Code3RetiredSourceCensus(unittest.TestCase):
+    def test_real_exact_head_proves_tracked_factory_cut_and_migrated_routes(self):
         head = subprocess.check_output(["git", "rev-parse", "HEAD"],
                                        cwd=ROOT, text=True).strip()
         result = code3.audit(ROOT, head)
         self.assertEqual(result["schema"], code3.SCHEMA)
-        self.assertFalse(result["source_cut_applied"])
-        self.assertFalse(result["safe_delete"])
-        self.assertEqual(result["active_consumer_migration"], "REQUIRED")
-        self.assertGreater(result["reference_count_by_class"]["ACTIVE_CI_CONSUMER_OR_GUARD"], 1)
-        self.assertGreater(result["reference_count_by_class"]["GENERATOR_POTENTIAL_UNRESOLVED"], 0)
-        self.assertIn(code3.HISTORIC_GENERATOR,
-                      {row["path"] for row in result["references"]})
+        self.assertTrue(result["source_cut_applied"])
+        self.assertFalse(result["safe_delete"])  # until post-cut W1/Native acceptance
+        self.assertEqual(result["active_consumer_migration"],
+                         "TRACKED_NEWONLY_CONSUMERS_MIGRATED_PENDING_NATIVE")
+        self.assertTrue(result["post_cut_contract"]["retired_cpp_absent"])
+        self.assertGreaterEqual(result["post_cut_contract"]["migrated_consumer_count"], 8)
+        self.assertEqual(result["post_cut_contract"]["old_factory_active_references"], [])
+        self.assertIn(code3.HISTORIC_GENERATOR, code3.CURRENT_POSITIVE_ROUTES)
 
     def test_stale_head_and_invalid_head_rejected(self):
         with self.assertRaisesRegex(ValueError, "EXACT_HEAD_MISMATCH"):
