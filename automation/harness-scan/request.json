@@ -1,6 +1,6 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-pr665-9457191-dualrev-20261123",
+  "request_id": "issue652-pr665-9457191-dualrev-20261123-r2",
   "source_sha": "9457191f4c0693ae886586edd961965867ccd5c0",
   "includes": [
     "physics_app/src/physics/plasma/*.C",
