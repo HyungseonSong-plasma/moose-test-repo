@@ -487,6 +487,16 @@ class ThermalRetiredCIContractP0Test(unittest.TestCase):
         })
         with self.assertRaisesRegex(ValueError, "STALE_LIVE_SOURCE_CAPTURE"):
             self.ci.validate_workflow(old_capture)
+        # A preserved archive test with a missing path trigger is an orphan
+        # gate: changing its inputs could silently bypass Physics Code CI.
+        unobserved_archive = copy.deepcopy(workflow)
+        unobserved_archive["on"]["pull_request"]["paths"].remove(self.ci.ARCHIVE)
+        with self.assertRaisesRegex(ValueError, "FDEG_CONTRACT_CHANGE_NOT_TRIGGERED"):
+            self.ci.validate_workflow(unobserved_archive)
+        unobserved_registry = copy.deepcopy(workflow)
+        unobserved_registry["on"]["push"]["paths"].remove(self.ci.FUNCTIONAL)
+        with self.assertRaisesRegex(ValueError, "FDEG_CONTRACT_CHANGE_NOT_TRIGGERED"):
+            self.ci.validate_workflow(unobserved_registry)
 
     def test_old_input_or_generator_is_not_ignored_as_archival_metadata(self):
         from issue774_thermal_ci_contract import active_reference_hits
