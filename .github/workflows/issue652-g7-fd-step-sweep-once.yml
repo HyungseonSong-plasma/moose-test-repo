@@ -1,4 +1,4 @@
-# G7 expanded predeclared FD sweep, and nonconverged initial state for charge-free linear control.
+# Fix isolated string-newline match in synthetic no-charge control fixture.
 name: Issue652 G7 PETSc FD step sweep and charge-source ablation (branch-only)
 on:
   push:

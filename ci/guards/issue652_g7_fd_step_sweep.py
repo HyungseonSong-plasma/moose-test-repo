@@ -61,8 +61,7 @@ def charge_disabled_input() -> str:
     # SNES converges without ever forming a Jacobian. Perturb only the
     # potential initial state (linear diffusion Jacobian is state independent)
     # to force the exact same PETSc comparison path.
-    old = "  [potential]\\n    initial_condition = 0.0"
-    old = old.replace("\\\\n", "\\n")
+    old = "  [potential]" + chr(10) + "    initial_condition = 0.0"
     if without_charge.count(old) != 1:
         raise SweepHold("POTENTIAL_INITIAL_STATE_NOT_UNIQUE")
     return without_charge.replace(old, old.replace("0.0", "0.1"))

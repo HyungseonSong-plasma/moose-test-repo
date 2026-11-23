@@ -37,7 +37,7 @@ def test_charge_disabled_fixture_is_only_poisson_source_kernel_removal():
     assert "type = ADMatDiffusion" in control
     assert "[o2p_diffusion]" in control
     assert "[poisson_charge_source]" not in control
-    assert "  [potential]\\n    initial_condition = 0.1".replace("\\\\n", "\\n") in control
+    assert ("  [potential]" + chr(10) + "    initial_condition = 0.1") in control
 
 
 def test_missing_or_bad_native_norm_never_becomes_pass():
