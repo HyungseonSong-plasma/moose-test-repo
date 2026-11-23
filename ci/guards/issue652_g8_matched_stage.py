@@ -167,11 +167,19 @@ def stage_pair(*, before_g5: Path, after_g5: Path, g5_receipt: Path,
         source_json = CHEM / f"unified_s6_{case}_newonly.json"
         new_json_path = after_chem / "chemistry" / source_json.name
         old_json_path = before_chem / "chemistry" / source_json.name
-        if (file_sha(source_json) != JSON_SHA[case]
-                or file_sha(new_json_path) != JSON_SHA[case]
-                or file_sha(old_json_path) != JSON_SHA[case]
-                or file_sha(before_chem / ordered[-1]) != TEMPLATE_SHA[case]):
-            raise MatchedHold("UNIFIED_POISSON_SOURCE_BEFORE_STAGE_CHANGED")
+        legacy_overlay_source = CHEM.parent / (
+            f"issue633_newonly_s6_{case}_continuity.template.i")
+        if (source_json.is_symlink() or not source_json.is_file()
+                or file_sha(source_json) != JSON_SHA[case]):
+            raise MatchedHold("PINNED_NEWONLY_CHEMISTRY_JSON_MISSING")
+        if (new_json_path.is_symlink() or not new_json_path.is_file()
+                or file_sha(new_json_path) != JSON_SHA[case]):
+            raise MatchedHold("PINNED_G5_NEWONLY_JSON_MISSING")
+        if (old_json_path.is_symlink() or not old_json_path.is_file()):
+            raise MatchedHold("PINNED_P3X_OLD_JSON_SOURCE_MISSING")
+        if (legacy_overlay_source.is_symlink() or not legacy_overlay_source.is_file()
+                or file_sha(legacy_overlay_source) != TEMPLATE_SHA[case]):
+            raise MatchedHold("PINNED_LEGACY_NEWONLY_OVERLAY_MISSING")
         mechanism = parse_strict_json(source_json.read_bytes())
         validate_poisson(mechanism)
         p4 = retire_p4_duplicate_owners(
@@ -181,6 +189,13 @@ def stage_pair(*, before_g5: Path, after_g5: Path, g5_receipt: Path,
         if (p4.get("output_c0_sha256") != OLD_C0_SHA or
                 file_sha(before_chem / C0) != OLD_C0_SHA):
             raise MatchedHold("HISTORIC_P4_POISSON_C0_SHA_DRIFT")
+        # P3-X's earlier overlay and unified mechanism are not yet the G5
+        # New-only payload. Put the canonical G5 *non-Poisson* overlay into
+        # the Old scratch, with the same chemistry JSON minus only the opt-in
+        # Poisson key. Both of these paths are explicit ownership allowlist.
+        (before_chem / ordered[-1]).write_bytes(legacy_overlay_source.read_bytes())
+        if file_sha(before_chem / ordered[-1]) != TEMPLATE_SHA[case]:
+            raise MatchedHold("OLD_NON_POISSON_TEMPLATE_SHA_DRIFT")
         old_json_path.write_bytes(old_poisson_json(source_json.read_bytes()))
         if not verify_semantic_json(old_json_path.read_bytes(), new_json_path.read_bytes()):
             raise MatchedHold("OLD_NEW_JSON_SEMANTICS_NOT_EQUAL")
