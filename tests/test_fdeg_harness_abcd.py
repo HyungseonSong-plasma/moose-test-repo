@@ -330,13 +330,13 @@ class RetirementEvidenceDP0Test(unittest.TestCase):
             self.assertEqual(result["caller_zero_reverified_here"],
                              "NOT_PROVEN_BY_THIS_STATIC_GUARD")
 
-    def test_exact_head_code7_capture_archive_has_valid_graph_joins(self):
+    def test_exact_head_live_electron_capture_and_archive_graph_joins(self):
         head = structural.git(ROOT, "rev-parse", "HEAD")
-        receipt, docs = self.retire.capture(ROOT, "PhysicsFVThermalDiffusion", head)
+        receipt, docs = self.retire.capture(ROOT, "PhysicsFVElectronReactionSource", head)
         self.retire.verify_snapshot(receipt, docs)
         self.assertEqual(receipt["safe_delete"], "HOLD")
         self.assertEqual(receipt["baseline_head"], head)
-        self.assertIn("physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+        self.assertIn("physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
                       receipt["source_blobs"])
         docs["transition"]["safe_delete"] = "PASS"
         with self.assertRaisesRegex(ValueError, "RETIREMENT_GRAPH_CONTENT_MISMATCH"):

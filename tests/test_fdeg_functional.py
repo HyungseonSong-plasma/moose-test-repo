@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+from contextlib import contextmanager
 import json
 import tempfile
 import unittest
@@ -15,6 +16,19 @@ assert spec and spec.loader
 functional = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(functional)
 structural = functional.structural
+
+
+@contextmanager
+def historical_thermal_source():
+    """Only historical-source assertions may read the deleted C++ Factory."""
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        archived = (ROOT / "docs/development/archive/issue774_retired_factories/"
+                    "PhysicsFVThermalDiffusion.C.txt")
+        destination = root / "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(archived.read_bytes())
+        yield root
 
 
 class FunctionalP0Test(unittest.TestCase):
@@ -266,7 +280,14 @@ class LiveContractsP0Test(unittest.TestCase):
         for target, profile in sorted(registry["profiles"].items()):
             with self.subTest(target=target):
                 functional.validate_registry_profile(profile)
-                witnesses, blobs = functional.source_witnesses(ROOT, profile)
+                if target == "PhysicsFVThermalDiffusion":
+                    # Historical profile remains pinned, but is not live in New-only.
+                    with historical_thermal_source() as old_root:
+                        witnesses, blobs = functional.source_witnesses(old_root, profile)
+                        parameters = functional.extract_parameters(old_root, profile)
+                else:
+                    witnesses, blobs = functional.source_witnesses(ROOT, profile)
+                    parameters = functional.extract_parameters(ROOT, profile)
                 self.assertTrue(witnesses)
                 self.assertIn(profile["source"]["path"], blobs)
                 self.assertTrue(all(w["line_start"] >= 1 for w in witnesses))
@@ -274,7 +295,7 @@ class LiveContractsP0Test(unittest.TestCase):
                 self.assertTrue(profile["unresolved_semantics"])
                 self.assertEqual(set(profile["required_discriminators"]),
                                  set(profile["discriminator_contracts"]))
-                self.assertTrue(functional.extract_parameters(ROOT, profile))
+                self.assertTrue(parameters)
 
     def test_v02_live_candidate_source_witness_and_variable_density_blocker(self):
         registry = functional.load_registry(ROOT)
@@ -353,8 +374,9 @@ class LiveContractsP0Test(unittest.TestCase):
         self.assertFalse(params["n_ref"]["has_explicit_source_default"])
         self.assertFalse(params["number_source"]["has_explicit_source_default"])
         self.assertTrue(params["number_source"]["required"])
-        thermal = functional.extract_parameters(
-            ROOT, doc["profiles"]["PhysicsFVThermalDiffusion"])
+        with historical_thermal_source() as old_root:
+            thermal = functional.extract_parameters(
+                old_root, doc["profiles"]["PhysicsFVThermalDiffusion"])
         switch = next(p for p in thermal if p["name"] == "include_thermal_diffusion")
         self.assertTrue(switch["has_explicit_source_default"])
 

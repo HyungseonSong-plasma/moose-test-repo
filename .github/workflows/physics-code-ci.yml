@@ -91,12 +91,14 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v
       - name: Validate FDEG Scan Cache P0
         run: python3 -m unittest discover -s tests -p test_fdeg_scan_cache.py -v
-      - name: Capture FDEG exact-HEAD retirement evidence (code7 P0 only)
+      - name: Capture live FDEG graph and verify retired Factory archives
         run: |
+          set -euo pipefail
           head="$(git rev-parse HEAD)"
-          python3 ci/guards/fdeg_retirement_evidence.py --mode capture --target PhysicsFVThermalDiffusion --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7"
-          python3 ci/guards/fdeg_retirement_evidence.py --mode verify-archive --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7"
-      - name: Upload exact-HEAD FDEG retirement snapshot
+          python3 ci/guards/fdeg_retirement_evidence.py --mode capture --target PhysicsFVElectronReactionSource --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/live-electron"
+          python3 ci/guards/fdeg_retirement_evidence.py --mode verify-archive --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/live-electron"
+          python3 ci/guards/issue774_main_retirement.py --self-test --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/retired-factories"
+      - name: Upload live FDEG and frozen retired Factory evidence
         if: success()
         uses: actions/upload-artifact@v4
         with:
