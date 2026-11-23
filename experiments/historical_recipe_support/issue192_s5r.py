@@ -531,10 +531,10 @@ def _insert_electron_source(text: str, *, n_ref: float) -> str:
     text = _insert_kernel(
         text,
         "s5r_electron_source",
-        f"""    type = PhysicsFVElectronReactionSource
+        f"""    type = FVCoupledForce
     variable = n_e
-    number_source = S_e_s5r
-    n_ref = {n_ref:.17g}
+    v = S_e_s5r
+    coef = {1.0 / n_ref:.17g}
     block = plasma""",
     )
     return text
@@ -804,9 +804,11 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
         )
     checks["electron_projection"] = (
         mp.get_parameter(text, "FVKernels/s5r_electron_source", "type")
-        == "PhysicsFVElectronReactionSource"
-        and mp.get_parameter(text, "FVKernels/s5r_electron_source", "number_source")
+        == "FVCoupledForce"
+        and mp.get_parameter(text, "FVKernels/s5r_electron_source", "v")
         == "S_e_s5r"
+        and mp.get_parameter(text, "FVKernels/s5r_electron_source", "n_ref") is None
+        and float(mp.get_parameter(text, "FVKernels/s5r_electron_source", "coef") or "nan") > 0
     )
 
     for suffix in ("ei02", "ei17"):

@@ -55,22 +55,19 @@ def _replace_source_projectors(text: str) -> tuple[str, dict[str, Any]]:
 
     path = "FVKernels/s5r_electron_source"
     typ = mp.get_parameter(text, path, "type")
-    source = mp.get_parameter(text, path, "number_source")
-    n_ref_raw = mp.get_parameter(text, path, "n_ref")
-    if typ != "PhysicsFVElectronReactionSource" or not source or not n_ref_raw:
+    source = mp.get_parameter(text, path, "v")
+    coef_raw = mp.get_parameter(text, path, "coef")
+    if typ != "FVCoupledForce" or source != "S_e_s5r" or not coef_raw:
         raise Issue224Error(
-            f"unexpected electron projector contract at {path}: type={typ}, source={source}, n_ref={n_ref_raw}"
+            f"already-retired electron projector contract drift at {path}: type={typ}, source={source}"
         )
-    n_ref = float(n_ref_raw)
-    if not math.isfinite(n_ref) or n_ref <= 0.0:
-        raise Issue224Error(f"invalid n_ref={n_ref_raw}")
-    coef = 1.0 / n_ref
-    text = mp.upsert_parameter(text, path, "type", "FVCoupledForce")
-    text = mp.remove_parameter(text, path, "number_source")
-    text = mp.remove_parameter(text, path, "n_ref")
-    text = mp.upsert_parameter(text, path, "v", source)
-    text = mp.upsert_parameter(text, path, "coef", f"{coef:.17g}")
-    replacements.append({"path": path, "from": typ, "to": "FVCoupledForce", "v": source, "coef": coef})
+    coef = float(coef_raw)
+    if not math.isfinite(coef) or coef <= 0.0:
+        raise Issue224Error("normalized electron source coefficient must be positive")
+    if mp.get_parameter(text, path, "number_source") is not None or mp.get_parameter(text, path, "n_ref") is not None:
+        raise Issue224Error("retired electron source parameters were reintroduced")
+    # Code3 is already retired in the active S5-R generator; this experiment
+    # now compares *heavy* projector choices only, with identical electron source.
 
     return text, {"replacement_count": len(replacements), "replacements": replacements}
 
@@ -210,7 +207,7 @@ def self_test() -> dict[str, Any]:
     checks: dict[str, bool] = {}
     custom, _ = _build(1, False)
     standard, meta = _build(1, True)
-    checks["replacement_count_7"] = meta["replacement"]["replacement_count"] == len(SOLVED_HEAVY) + 1
+    checks["replacement_count_heavy_only"] = meta["replacement"]["replacement_count"] == len(SOLVED_HEAVY)
     for species in SOLVED_HEAVY:
         source_path = f"FVKernels/s5r_source_{species}"
         time_path = f"FVKernels/{species}_time"
@@ -223,12 +220,13 @@ def self_test() -> dict[str, Any]:
         checks[f"conservative_time_preserved_custom:{species}"] = mp.get_parameter(custom, time_path, "type") == "PhysicsFVConservativeMassFractionTimeDerivative"
         checks[f"conservative_time_preserved_standard:{species}"] = mp.get_parameter(standard, time_path, "type") == "PhysicsFVConservativeMassFractionTimeDerivative"
     ep = "FVKernels/s5r_electron_source"
-    checks["custom_electron_projector"] = mp.get_parameter(custom, ep, "type") == "PhysicsFVElectronReactionSource"
+    checks["custom_electron_projector"] = (mp.get_parameter(custom, ep, "type") == "FVCoupledForce" and mp.get_parameter(custom, ep, "v") == "S_e_s5r" and float(mp.get_parameter(custom, ep, "coef") or "nan") > 0)
     checks["standard_electron_projector"] = (
         mp.get_parameter(standard, ep, "type") == "FVCoupledForce"
         and mp.get_parameter(standard, ep, "v") == "S_e_s5r"
         and mp.get_parameter(standard, ep, "number_source") is None
         and mp.get_parameter(standard, ep, "n_ref") is None
+        and mp.get_parameter(standard, ep, "coef") == mp.get_parameter(custom, ep, "coef")
     )
     for name, level, standard_branch in CASE_SPECS:
         text, case_meta = _build(level, standard_branch)
