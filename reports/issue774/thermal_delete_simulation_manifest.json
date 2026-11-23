@@ -1,0 +1,28 @@
+{
+  "schema": "fvkernel.thermal_delete_simulation.v0.1",
+  "issue": 774,
+  "phase": "D1_D4_SIMULATION",
+  "base_archive_head": "f6374f5833a97bad7c9c12207b627caa1fd8ede8",
+  "current_main_head": "156a5117ebe6816e67b352a9470572c2e74da367",
+  "newonly_source_head": "9457191f4c0693ae886586edd961965867ccd5c0",
+  "newonly_runs": {
+    "native_p2": 44366325757,
+    "rf_d8_3ns": 44409942970
+  },
+  "evidence_limitation": [
+    "ION_FILTERED_P05_OWNER_LIST",
+    "NO_COMPLETE_POSTSTAGE_INPUT_ARCHIVE",
+    "NO_UNFILTERED_GENERATED_FACTORY_TRACE",
+    "P3_P4_100US_NOT_ACCEPTED"
+  ],
+  "source_file": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+  "header_file": "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h",
+  "newonly_use": "NOT_OBSERVED_WITHIN_REVIEWED_SCOPES",
+  "deletion_candidate": true,
+  "global_consumer_closed": false,
+  "deletion_approved": false,
+  "physics_parity_proven": false,
+  "archive_depends_on_pr": 776,
+  "archive_path": "reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip",
+  "disposition_status": "PENDING_CI_FAILURE_INVENTORY"
+}
