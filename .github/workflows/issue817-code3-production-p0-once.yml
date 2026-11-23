@@ -55,7 +55,7 @@ jobs:
             experiments/historical_recipe_support/issue192_s5r.py
           python3 -m unittest discover -s tests -p test_issue817_code3_production_migration.py -v 2>&1 | tee evidence/owner_negative_tests.log
           python3 -m ci.guards.issue817_code3_production_migration \
-            --expected-head "$SOURCE_HEAD" --phase migrate \
+            --expected-head "$SOURCE_HEAD" --phase postcut \
             --output evidence/current_signed_source_census.json
       - name: Execute current live CI source contracts and S5R static validators
         shell: bash
