@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CI = ROOT / ".github/workflows/ci.yml"
-TEMPLATE = ROOT / "ci/workflow_templates/general-ci.yml"
+TEMPLATE = ROOT / "physics_harness/workflow/definitions/general-ci.yml"
 PHYSICS_CODE_CI = ROOT / ".github/workflows/physics-code-ci.yml"
 PHYSICS_NATIVE_CI = ROOT / ".github/workflows/physics-native-ci.yml"
 CORE = "experiments/Issue402_plasma_dsl_g1/evidence/core_four"

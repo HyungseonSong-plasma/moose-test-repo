@@ -5,7 +5,7 @@
       "key": "general",
       "purpose": "general",
       "trigger": "push_pull_request",
-      "template": "ci/workflow_templates/general-ci.yml",
+      "template": "physics_harness/workflow/definitions/general-ci.yml",
       "output": ".github/workflows/ci.yml",
       "name": "Repository CI"
     },
@@ -14,7 +14,7 @@
       "purpose": "special",
       "issue": 493,
       "trigger": "self_path_main_once",
-      "template": "ci/workflow_templates/issue493-public-p3-job.yml",
+      "template": "physics_harness/workflow/definitions/issue493-public-p3-job.yml",
       "output": ".github/workflows/issue493-public-p3-once.yml",
       "name": "Issue 493 Public S6 P3 Native",
       "activation": "deferred"
@@ -25,7 +25,7 @@
       "issue": 493,
       "variant": "diagnostic",
       "trigger": "self_path_main_once",
-      "template": "ci/workflow_templates/issue493-public-p3-diagnostic-job.yml",
+      "template": "physics_harness/workflow/definitions/issue493-public-p3-diagnostic-job.yml",
       "output": ".github/workflows/issue493-public-p3-diagnostic-once.yml",
       "name": "Issue 493 Public S6 B Diagnostic 600s",
       "activation": "deferred"
@@ -36,7 +36,7 @@
       "issue": 493,
       "variant": "completion",
       "trigger": "self_path_main_once",
-      "template": "ci/workflow_templates/issue493-public-p3-b-completion-job.yml",
+      "template": "physics_harness/workflow/definitions/issue493-public-p3-b-completion-job.yml",
       "output": ".github/workflows/issue493-public-p3-b-completion-once.yml",
       "name": "Issue 493 Public S6 B Completion Max 340m",
       "activation": "deferred"
@@ -47,7 +47,7 @@
       "issue": 493,
       "variant": "archive",
       "trigger": "self_path_main_once",
-      "template": "ci/workflow_templates/issue493-public-bc-results-p4-job.yml",
+      "template": "physics_harness/workflow/definitions/issue493-public-bc-results-p4-job.yml",
       "output": ".github/workflows/issue493-public-bc-results-p4-once.yml",
       "name": "Issue 493 Public S6 B C Results P4",
       "activation": "active"

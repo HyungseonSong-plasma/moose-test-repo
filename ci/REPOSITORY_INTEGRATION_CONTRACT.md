@@ -1,7 +1,7 @@
 # Repository Integration Contract Verification — v0.1
 
 **Owner:** `.github/workflows/ci.yml` (generated verbatim from
-`ci/workflow_templates/general-ci.yml`).
+`physics_harness/workflow/definitions/general-ci.yml`).
 
 ## Definition
 

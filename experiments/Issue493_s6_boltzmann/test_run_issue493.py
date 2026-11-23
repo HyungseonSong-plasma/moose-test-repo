@@ -47,7 +47,7 @@ class ExperimentTests(unittest.TestCase):
         self.assertIn('app_non_unity_dirs=', harness)
         self.assertNotIn('"MOOSE_UNITY=false"', harness)
         job = (pathlib.Path(__file__).resolve().parents[2] /
-               'ci/workflow_templates/issue493-public-p3-job.yml').read_text(encoding='utf-8')
+               'physics_harness/workflow/definitions/issue493-public-p3-job.yml').read_text(encoding='utf-8')
         self.assertNotIn('github.event.pull_request.number', job)
         self.assertIn('native_build.py', job)
         self.assertIn('--profile auto --max-jobs 4 --max-attempts 3', job)
@@ -57,7 +57,7 @@ class ExperimentTests(unittest.TestCase):
         workflow = (pathlib.Path(__file__).resolve().parents[2] /
                     '.github/workflows/ci.yml').read_text(encoding='utf-8')
         job = (pathlib.Path(__file__).resolve().parents[2] /
-               'ci/workflow_templates/issue493-public-p3-job.yml').read_text(encoding='utf-8')
+               'physics_harness/workflow/definitions/issue493-public-p3-job.yml').read_text(encoding='utf-8')
         marker = '"$BUILD_BASE_REF" -lc ' + chr(39)
         self.assertEqual(job.count(marker), 1)
         payload = job.split(marker, 1)[1].split(

@@ -17,7 +17,7 @@ on:
       - 'tests/**'
       - 'ci/guards/**'
       - 'ci/contracts/**'
-      - 'ci/workflow_templates/**'
+      - 'physics_harness/workflow/**'
       - '.github/workflows/physics-code-ci.yml'
   pull_request:
     branches: [main]
@@ -36,7 +36,7 @@ on:
       - 'tests/**'
       - 'ci/guards/**'
       - 'ci/contracts/**'
-      - 'ci/workflow_templates/**'
+      - 'physics_harness/workflow/**'
       - '.github/workflows/physics-code-ci.yml'
 
 permissions:
@@ -567,8 +567,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 ci/workflow_harness.py --self-test
-          python3 ci/workflow_harness.py --check
+          python3 -m physics_harness.workflow.profiles --self-test
+          python3 -m physics_harness.workflow.profiles --check
           python3 ci/guards/workflow_surface_guard.py --self-test
       - name: Verify scoped DD/S6 archived originals absent and global guard clean
         shell: bash

@@ -32,7 +32,7 @@ def scope(path: str) -> str:
         return "HISTORICAL_LOCATION_ACTIVITY_UNKNOWN"
     if path.startswith("tests/") or path.startswith("physics_app/ci/"):
         return "TEST_OR_CHECKER_ONLY"
-    if path.startswith(".github/workflows/") or path.startswith("ci/workflow_templates/"):
+    if path.startswith(".github/workflows/") or path.startswith("physics_harness/workflow/definitions/"):
         return "WORKFLOW_DECLARATION"
     return "CURRENT_SOURCE_NOT_PROVEN_ACTIVE"
 

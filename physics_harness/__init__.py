@@ -17,4 +17,5 @@ __all__ = [
     "spec",
     "transforms",
     "validation",
+    "workflow",
 ]
