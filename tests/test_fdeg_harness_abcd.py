@@ -407,6 +407,114 @@ class RetirementEvidenceDP0Test(unittest.TestCase):
             self.retire.verify_snapshot(receipt, docs)
 
 
+
+class ThermalRetiredCIContractP0Test(unittest.TestCase):
+    """Kept under existing FDEG Harness A-D CI step; no extra CI owner."""
+
+    @classmethod
+    def setUpClass(cls):
+        import issue774_thermal_ci_contract as ci
+        cls.ci = ci
+
+    def test_verified_live_ci_has_nine_survivors_and_only_historical_code7(self):
+        result = self.ci.audit(ROOT)
+        self.assertEqual(result["CI_MIGRATION"], "PASS_WITHIN_TRACKED_SOURCE_SCOPE")
+        self.assertEqual(result["active_registry_count"], 9)
+        self.assertEqual(result["live_capture_steps"], 0)
+        self.assertEqual(result["historical_archive_verify_steps"], 1)
+        self.assertEqual(result["historical_archive_upload_steps"], 1)
+        self.assertEqual(result["active_retired_type_references"], [])
+        self.assertFalse(result["safe_to_delete"])
+        self.assertFalse(result["global_consumer_closed"])
+
+    def test_waiver_does_not_forge_deletion_or_external_approval(self):
+        import copy
+        original = json.loads((ROOT / self.ci.POLICY).read_text())
+        self.ci.validate_policy(original)
+        bad = copy.deepcopy(original)
+        bad["legacy_input_support"] = "REQUIRED"
+        with self.assertRaisesRegex(ValueError, "LEGACY_SUPPORT_NOT_WAIVED"):
+            self.ci.validate_policy(bad)
+        bad = copy.deepcopy(original)
+        bad["safe_to_delete"] = True
+        with self.assertRaisesRegex(ValueError, "FALSE_RETIREMENT_APPROVAL"):
+            self.ci.validate_policy(bad)
+        bad = copy.deepcopy(original)
+        bad["requester_policy_ref"] = ""
+        with self.assertRaisesRegex(ValueError, "REQUESTER_DECISION_REFERENCE_MISSING"):
+            self.ci.validate_policy(bad)
+
+    def test_retired_active_profile_and_survivor_source_sha_are_rejected(self):
+        import copy
+        functional = json.loads((ROOT / self.ci.FUNCTIONAL).read_text())
+        transition = json.loads((ROOT / self.ci.TRANSITION).read_text())
+        self.assertEqual(len(self.ci.validate_registries(ROOT, functional, transition)), 9)
+        bad = copy.deepcopy(functional)
+        bad["profiles"][self.ci.TARGET] = {"target": self.ci.TARGET}
+        with self.assertRaisesRegex(ValueError, "ACTIVE_RETIRED_PROFILE"):
+            self.ci.validate_registries(ROOT, bad, transition)
+        bad = copy.deepcopy(functional)
+        first = next(iter(bad["profiles"].values()))
+        first["source"]["blob_sha"] = "0" * 40
+        with self.assertRaisesRegex(ValueError, "SURVIVOR_SOURCE_SHA_MISMATCH"):
+            self.ci.validate_registries(ROOT, bad, transition)
+
+    def test_removed_archive_ci_or_orphan_artifact_fails(self):
+        import copy
+        import yaml
+        source = (ROOT / self.ci.WORKFLOW).read_text()
+        workflow = yaml.load(source, Loader=yaml.BaseLoader)
+        self.ci.validate_workflow(workflow)
+        steps = workflow["jobs"]["physics_code_validate"]["steps"]
+        no_verifier = copy.deepcopy(workflow)
+        no_verifier["jobs"]["physics_code_validate"]["steps"] = [
+            item for item in steps if item.get("name") != self.ci.VERIFY_STEP
+        ]
+        with self.assertRaisesRegex(ValueError, "MISSING_OR_DUPLICATE_FDEG_STEP"):
+            self.ci.validate_workflow(no_verifier)
+        duplicate = copy.deepcopy(workflow)
+        duplicate["jobs"]["physics_code_validate"]["steps"].append(
+            next(copy.deepcopy(item) for item in steps
+                 if item.get("name") == self.ci.UPLOAD_STEP)
+        )
+        with self.assertRaisesRegex(ValueError, "MISSING_OR_DUPLICATE_FDEG_STEP"):
+            self.ci.validate_workflow(duplicate)
+        old_capture = copy.deepcopy(workflow)
+        old_capture["jobs"]["physics_code_validate"]["steps"].append({
+            "name": "regressed source-bound FDEG code7",
+            "run": "python3 ci/guards/fdeg_retirement_evidence.py "
+                   "--mode capture --target PhysicsFVThermalDiffusion",
+        })
+        with self.assertRaisesRegex(ValueError, "STALE_LIVE_SOURCE_CAPTURE"):
+            self.ci.validate_workflow(old_capture)
+
+    def test_old_input_or_generator_is_not_ignored_as_archival_metadata(self):
+        from issue774_thermal_ci_contract import active_reference_hits
+        sample = {
+            "docs/development/old.md": "PhysicsFVThermalDiffusion",
+            "tests/test_fdeg_functional.py": "PhysicsFVThermalDiffusion",
+            "experiments/qpx/input.i": "type = QPXFVThermalDiffusion",
+            "physics_app/ci/stage.py": 'obj = "PhysicsFVThermalDiffusion"',
+            "experiments/legacy/current.i": "type = PhysicsFVThermalDiffusion",
+            ".github/workflows/regression.yml":
+                "run: echo PhysicsFVThermalDiffusion",
+        }
+        self.assertEqual(active_reference_hits(sample), [
+            ".github/workflows/regression.yml",
+            "experiments/legacy/current.i",
+            "physics_app/ci/stage.py",
+        ])
+
+    def test_historical_archive_tamper_cannot_pass_cleanup(self):
+        from fdeg_thermal_archive import verify_archive_bytes
+        blob = (ROOT / self.ci.ARCHIVE).read_bytes()
+        anchor = json.loads((ROOT / self.ci.ANCHOR).read_text())
+        self.assertEqual(verify_archive_bytes(blob, anchor)["archive_integrity"], "PASS")
+        changed = dict(anchor, artifact_zip_sha256="0" * 64)
+        with self.assertRaisesRegex(ValueError, "ZIP_SHA_MISMATCH"):
+            verify_archive_bytes(blob, changed)
+
+
 # Run the pinned archive regression suite within the existing FDEG A-D owner.
 # This avoids adding a CI validation step or modifying workflow ownership.
 from test_fdeg_thermal_archive import ThermalArchiveContractTest  # noqa: E402,F401
