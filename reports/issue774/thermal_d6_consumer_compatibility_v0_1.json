@@ -1,0 +1,124 @@
+{
+  "schema": "issue774.d6.thermal_consumer_compatibility.v0.1",
+  "issue": 774,
+  "created_date": "2026-11-23",
+  "scope": "Thermal source file retirement rehearsal; tracked-source read-only analysis only",
+  "review_branch_source_head": "a0c325e0fd7f1d871a60f4f179dfea71ddaf1413",
+  "main_merged": false,
+  "poisson_changed": false,
+  "approved_deletion": false,
+  "safe_to_delete": false,
+  "science": "SCIENCE_HOLD",
+  "parent_rehearsal": {
+    "pr": 777,
+    "head": "fe2e6e3979e79890a941252ec0f5bf850241e854",
+    "archive_pr": 776,
+    "source_removed_only_in_draft": true
+  },
+  "d5_native_source_parity": {
+    "A": {
+      "pr": 781,
+      "head": "6c4eef073038ad69a0710e7c8555b5e03b9ad6ba",
+      "run_id": 45177303119,
+      "artifact_id": 14820526285
+    },
+    "B": {
+      "pr": 783,
+      "head": "c77d2f773eee96c30eeca49d7486fea22ea8e557",
+      "run_id": 45177755891,
+      "artifact_id": 14818699271
+    },
+    "cases": [
+      "417",
+      "941"
+    ],
+    "fvkernel_per_case": 40,
+    "thermal_registration_before": 0,
+    "A_B_verdict": "PASS_SCOPE_ONLY_NOT_DELETION_APPROVAL"
+  },
+  "d6_exact_head_validation": {
+    "pr": 786,
+    "head": "a0c325e0fd7f1d871a60f4f179dfea71ddaf1413",
+    "workflow_run_id": 45183621897,
+    "artifact_id": 14822027558,
+    "artifact_zip_sha256": "cec9510f30586fda973a4833da4148ff99b924e6faf87c8d613c293eed2d1d32",
+    "inventory_sha256": "0c9e8deaf904e3b5baa89d865aeeea98380aba126255d6e2b5f89466b3cd3e80",
+    "harness_summary_sha256": "59c9072b74906b659bb46b93bc758f39f32106927dedbe45ba74625d57571a26",
+    "verification_receipt_sha256": "90059435d193b3d25413881c32e61a9bd79272da1e6f25e116836387b9f04ddc",
+    "unit_tests": {
+      "consumer": 5,
+      "fdeg_harness_and_archive": 26,
+      "failed": 0
+    },
+    "exact_tree": {
+      "tracked_paths": 1804,
+      "binary_or_nonregular_unscanned": 2,
+      "source_and_header_absent": true,
+      "reference_path_counts": {
+        "EXACT_PHYSICSAPP_MOOSE_I_CONSUMERS": 0,
+        "DIRECT_LITERAL_GENERATOR_CONSUMERS": 0,
+        "DOCUMENTED_EVIDENCE_REVIEW": 8,
+        "TEST_OR_GUARD_REFERENCE_REVIEW": 5,
+        "DISTINCT_QPX_APP_KEEP_UNCHANGED": 4
+      },
+      "total_reference_paths": 17
+    },
+    "official_harness": {
+      "entrypoint": "GitSourceProvider → run_scan",
+      "scan_status": "PARTIAL",
+      "verification_status": "UNVERIFIED",
+      "verification_failures": [],
+      "selected_files": 900,
+      "scanned_files": 698,
+      "unresolved_files": 202,
+      "unresolved_evidence_items": 1766,
+      "nodes": 84706,
+      "edges": 258019,
+      "evidence_records": 258919,
+      "unverified": [
+        "GLOBAL_CONSUMER_CLOSURE_UNPROVEN",
+        "INCOMPLETE_REQUESTED_SCOPE",
+        "NATIVE_RUNTIME_COMPATIBILITY_UNPROVEN",
+        "SEMANTIC_COMPATIBILITY_UNPROVEN",
+        "UNRESOLVED_SOURCE_EVIDENCE",
+        "UNSCANNED_REQUESTED_FILES"
+      ]
+    }
+  },
+  "technical_migration": {
+    "fdeg_old_source_archive": "Historical exact-SHA ZIP retained in Draft #776",
+    "archive_aware_live_test_migration": "Draft #777 covered CI previously passed",
+    "postcut_metadata_policy": "Independent review reference plus exact report path and SHA1 blob; no reports-wide exemption; no pre-cut manifest rewrite",
+    "metadata_independent_review_supplied": false,
+    "consumer_category_disposition": "Tracked exact-token references classified; generator/external scope unresolved"
+  },
+  "legacy_compatibility": {
+    "old_factory": "PhysicsFVThermalDiffusion",
+    "old_residual": "-D_T * grad(T).n / T",
+    "new_only_current_use": "0 instrumented P2 registrations",
+    "separate_qpx_factory": "QPXFVThermalDiffusion",
+    "separate_qpx_retained": true,
+    "thermal_coefficient_producer_retained": true,
+    "current_binary_support_termination_owner_approved": false,
+    "historical_binary_replay_compatibility_accepted": false,
+    "status": "HOLD_OWNER_DECISION_REQUIRED",
+    "options": [
+      "KEEP_LEGACY_FACTORY: retain original implementation for supported old input",
+      "ARCHIVE_AND_DEPRECATE: independently approve dropping old binary input support and pin runnable historical environment",
+      "REIMPLEMENT: independent signed residual/AD and nonzero-gradient parity with old inputs"
+    ]
+  },
+  "independent_gate_closure": {
+    "tracked_static_literal_reference_census": "COMPLETE_WITHIN_TEXT_SCOPE",
+    "generated_external_coverage": "NOT_ATTESTED",
+    "current_binary_compatibility": "NOT_APPROVED",
+    "precut_fdeg_graph_identity": "PINNED_IN_DRAFT_BRANCH",
+    "metadata_evidence_independent_review": "NOT_SUPPLIED",
+    "independent_native_review": "NOT_SUPPLIED",
+    "owner_approval": "NOT_SUPPLIED",
+    "rollback_review": "NOT_SUPPLIED",
+    "newonly_upstream_integration": "DRAFT_#665",
+    "P3_P4_science": "NOT_ACCEPTED"
+  },
+  "conclusion": "D6_SOURCE_CLASSIFICATION_VERIFIED__D6_CONSUMER_AND_COMPATIBILITY_CLOSURE_HOLD"
+}
