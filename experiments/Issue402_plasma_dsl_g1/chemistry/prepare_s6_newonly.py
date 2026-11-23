@@ -14,6 +14,7 @@ from retire_s6_ion_fv_owners import CutoverError, retire_in_disposable_scratch
 from retire_s6_electron_newonly_owners import (
     inspect_electron_contract, retire_electron_in_disposable_scratch
 )
+from poisson_contract import PoissonContractError, parse_strict_json, validate_poisson
 from retire_s6_p4_duplicate_owners import (
     C0 as P4_C0, retire_p4_duplicate_owners
 )
@@ -21,8 +22,8 @@ from retire_s6_p4_duplicate_owners import (
 PIN_HEAD = "9c15a4f0e2cf8042cb0d4b2f18af31511021d168"
 PILOT = Path(__file__).resolve().parents[1]
 JSON_SHA = {
-    "417": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
-    "941": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+    "417": "9e033db06869977b869849aaf2b1817ac1541af5e80f64d80a3ea1e737ce8195",
+    "941": "8b005c05aec13616ed9136506875a538a2cb49dc224eba17a3f477f79b39861f",
 }
 TEMPLATE_SHA = {
     "417": "c89a01124fb96aa760b6753383eaa79ec6ae07d715d53910754dfe22afff6c8d",
@@ -91,9 +92,13 @@ def prepare_newonly(
     tmpl = PILOT / ("issue633_newonly_s6_" + variant + "_continuity.template.i")
     jsblob = checked_file(js, JSON_SHA[variant], "JSON")
     tmplblob = checked_file(tmpl, TEMPLATE_SHA[variant], "OVERLAY")
-    parsed = json.loads(jsblob)
+    try:
+        parsed = parse_strict_json(jsblob)
+        validate_poisson(parsed)
+    except PoissonContractError as exc:
+        raise CutoverError("P2_NEWONLY_POISSON_CONTRACT_INVALID:" + str(exc)) from exc
     wanted_eq = {"EI-02", "EI-17", "EI-415", "EI-401", "EI-407", "EI-2069", "H25", "EI-" + variant}
-    if set(parsed) != {"species", "equations", "reactions", "ion_surface_current", "drift_diffusion_boundaries"}:
+    if set(parsed) != {"species", "equations", "reactions", "ion_surface_current", "drift_diffusion_boundaries", "poisson"}:
         raise CutoverError("P2_NEWONLY_JSON_SCHEMA_DRIFT")
     if set(parsed["species"]) != {"e", "O2", "O", "O2p", "Om", "Op", "O2a"}:
         raise CutoverError("P2_NEWONLY_SPECIES_DRIFT")
