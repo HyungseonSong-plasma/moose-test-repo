@@ -45,6 +45,9 @@ jobs:
           python3 -m unittest discover -s tests -p test_code3_electron_source_retirement.py -v 2>&1 | tee evidence/code3_historical_fixture.log
           python3 -m unittest discover -s tests -p test_issue817_code3_consumer_pairs.py -v 2>&1 | tee evidence/code3_consumer_pairs.log
           python3 -m unittest discover -s tests -p test_issue817_code3_s5r_normalized.py -v 2>&1 | tee evidence/code3_normalized_ledger.log
+          python3 -m unittest discover -s tests -p test_issue817_energy_only_negatives.py -v 2>&1 | tee evidence/ei18_ei19_semantic_negatives.log
+          python3 physics_app/ci/check_stage5_ei18_runtime.py --self-test 2>&1 | tee evidence/ei18_static.log
+          python3 physics_app/ci/check_e8_elastic_ei19_runtime.py --self-test 2>&1 | tee evidence/ei19_static.log
           python3 -m experiments.Issue224_standard_source_projector_memory.run --self-test > evidence/issue224_heavy_only.json
           python3 - <<'PY'
           from tests.characterization import test_issue192_s5r as t
