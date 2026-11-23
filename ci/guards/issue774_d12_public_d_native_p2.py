@@ -200,12 +200,42 @@ def decide_native_P2_status(public: dict, control: dict) -> str:
     return "PASS_BOTH_PUBLIC_D_INPUTS"
 
 
+def classify_four_way(cases: dict) -> dict:
+    """Classify each case using only independent native rc/Syntax OK verdicts."""
+    outcomes = {}
+    for case in CASES:
+        matrix = cases.get(case, {})
+        expected = {
+            "baseline_42row", "table_only_100row",
+            "json_binding_only_42row", "full_public_d_100row",
+        }
+        if set(matrix) != expected:
+            outcomes[case] = "INCOMPLETE_DIAGNOSTIC_MATRIX"
+            continue
+        good = {k: v.get("syntax_ok") is True for k, v in matrix.items()}
+        if not good["baseline_42row"]:
+            label = "UNRELIABLE_42ROW_BASELINE"
+        elif good["full_public_d_100row"]:
+            label = "FULL_PUBLIC_D_NATIVE_PASS"
+        elif not good["table_only_100row"] and good["json_binding_only_42row"]:
+            label = "100ROW_ELECTRON_TABLE_EFFECT"
+        elif good["table_only_100row"] and not good["json_binding_only_42row"]:
+            label = "PUBLIC_D_JSON_BINDING_EFFECT"
+        elif not good["table_only_100row"] and not good["json_binding_only_42row"]:
+            label = "BOTH_INDEPENDENT_CHANGES_FAIL"
+        else:
+            label = "TABLE_AND_JSON_INTERACTION"
+        outcomes[case] = label
+    return outcomes
+
+
 def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
             *, source_head: str) -> dict:
     result = {
         "schema": "issue774.d12.public_d_100row_actual_native_p2.v0.1",
         "source_head": source_head, "W1": {}, "cases": {},
         "baseline_42row_controls": {}, "generated": {},
+        "diagnostic_matrix": {}, "diagnostic_classification": {},
         "native_P2_status": "HOLD", "protected_rate_cleanup_verified": False,
         "protected_data_in_artifacts": False, "legacy_input_supported": False,
         "all_generators_or_external_consumers_closed": False,
@@ -255,7 +285,45 @@ def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
                 "protected_rate_file_count": base_rate_count,
                 "protected_rate_content_published": False,
             }
+            # 2x2 causal probes: keep W1, OCI, chemistry, 11-layer
+            # source and original private rate hashes identical. Vary only
+            # the original 42-row -> 100-row public table or the public
+            # JSON name/overlay binding.
             generated_root = gen_dir / case
+            generated_chem = (
+                generated_root / "experiments/Issue395_powered_chemistry_ladder"
+            )
+            table_rel = "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+            source_table = generated_root / table_rel
+            need(source_table.is_file() and sha(source_table.read_bytes()) ==
+                 result["generated"][case]["original_100row_table_sha256"],
+                 "DIAGNOSTIC_PUBLIC_100ROW_TABLE_SHA")
+            table_only = protected / ("table-only-" + case)
+            shutil.copytree(base_source, table_only, symlinks=False)
+            shutil.copyfile(source_table, table_only / table_rel)
+            need(sha((table_only / table_rel).read_bytes()) ==
+                 result["generated"][case]["original_100row_table_sha256"],
+                 "DIAGNOSTIC_TABLE_ONLY_READBACK")
+            stage_private_rates(table_only, case, rates, EXPECTED,
+                                REQUIRED, validate_rows)
+            table_result = run_one(root, w1_root, table_only, names)
+
+            binding_only = protected / ("binding-only-" + case)
+            shutil.copytree(base_source, binding_only, symlinks=False)
+            name = "public_d_s6_" + case + "_physics.json"
+            target_chem = (binding_only /
+                           "experiments/Issue395_powered_chemistry_ladder")
+            shutil.copyfile(generated_chem / "chemistry" / name,
+                            target_chem / "chemistry" / name)
+            shutil.copyfile(generated_chem / "migrated_continuity.i",
+                            target_chem / "migrated_continuity.i")
+            need(sha((target_chem / "migrated_continuity.i").read_bytes()) ==
+                 result["generated"][case]["generated_overlay_sha256"],
+                 "DIAGNOSTIC_BINDING_OVERLAY_READBACK")
+            stage_private_rates(binding_only, case, rates, EXPECTED,
+                                REQUIRED, validate_rows)
+            binding_result = run_one(root, w1_root, binding_only, names)
+
             target = protected / case
             shutil.copytree(generated_root, target, symlinks=False)
             names = stages[case]["ordered"]
@@ -273,8 +341,17 @@ def execute(root: Path, stage: Path, gen_dir: Path, w1: Path, temp_root: Path,
                 "protected_rate_file_count": protected_files,
                 "protected_rate_content_published": False,
             }
+            result["diagnostic_matrix"][case] = {
+                "baseline_42row": control,
+                "table_only_100row": table_result,
+                "json_binding_only_42row": binding_result,
+                "full_public_d_100row": response,
+            }
         result["native_P2_status"] = decide_native_P2_status(
             result["cases"], result["baseline_42row_controls"]
+        )
+        result["diagnostic_classification"] = classify_four_way(
+            result["diagnostic_matrix"]
         )
     except Exception as exc:
         result["native_P2_status"] = "HOLD_NATIVE_OR_SETUP"
@@ -301,6 +378,8 @@ def main() -> int:
     for key in ("root", "stage", "generated-scratch", "w1", "temp-root", "receipt"):
         p.add_argument("--" + key, type=Path, required=True)
     p.add_argument("--expected-head", required=True)
+    p.add_argument("--diagnostic-accept-hold", action="store_true",
+                   help="Exit 0 for complete controlled diagnostics even when Native P2 is HOLD")
     args = p.parse_args()
     result = execute(args.root, args.stage, args.generated_scratch,
                      args.w1, args.temp_root, source_head=args.expected_head)
@@ -308,8 +387,19 @@ def main() -> int:
     args.receipt.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
     print("D12_PUBLIC_D_NATIVE_P2=" + result["native_P2_status"])
     print("D12_PRIVATE_SCRATCH_CLEANUP=" + str(result["protected_rate_cleanup_verified"]))
-    return 0 if (result["native_P2_status"] == "PASS_BOTH_PUBLIC_D_INPUTS"
-                 and result["protected_rate_cleanup_verified"]) else 1
+    native_pass = result["native_P2_status"] == "PASS_BOTH_PUBLIC_D_INPUTS"
+    diagnostic_pass = (args.diagnostic_accept_hold
+                       and set(result["diagnostic_classification"]) == set(CASES)
+                       and all(result["baseline_42row_controls"][k].get("syntax_ok")
+                               for k in CASES)
+                       and all(result["diagnostic_classification"][k] not in
+                               ("INCOMPLETE_DIAGNOSTIC_MATRIX", "UNRELIABLE_42ROW_BASELINE")
+                               for k in CASES))
+    if diagnostic_pass and not native_pass:
+        print("D13_CAUSAL_DIAGNOSTIC=PASS_BOTH_CASES__NATIVE_P2_STILL_HOLD")
+    return 0 if result["protected_rate_cleanup_verified"] and (
+        native_pass or diagnostic_pass
+    ) else 1
 
 
 if __name__ == "__main__":
