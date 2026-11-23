@@ -232,8 +232,8 @@ def execute(command: list[str], timeout: int) -> tuple[int, str]:
 
 def run(staged: Path, output: Path, *, registration_only: bool) -> dict:
     source_sha = exact_source()
-    source_receipt = json.loads((staged / "g5-result/g5_stage_receipt.json").read_text()) if (
-        staged / "g5-result/g5_stage_receipt.json").is_file() else None
+    source_receipt = json.loads((staged.parent / "g5-result/g5_stage_receipt.json").read_text()) if (
+        staged.parent / "g5-result/g5_stage_receipt.json").is_file() else None
     if source_receipt is None:
         raise ValueError("G6_G5_EXACT_SOURCE_RECEIPT_REQUIRED")
     if source_receipt["source_sha"] != source_sha or set(source_receipt["cases"]) != set(CASES):
