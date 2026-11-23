@@ -1,0 +1,52 @@
+{
+  "schema": "fvkernel.thermal_retired_ci_contract.v0.1",
+  "issue": 774,
+  "decision_date": "2026-11-23",
+  "requester_policy_ref": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/774#issuecomment-7103483022",
+  "target": "PhysicsFVThermalDiffusion",
+  "support_contract": "NEW_ONLY",
+  "legacy_input_support": "NOT_REQUIRED",
+  "explicitly_accepted_break": "Factory type PhysicsFVThermalDiffusion is not registered in the post-cut PhysicsApp binary, independent of include_thermal_diffusion ON/OFF",
+  "legacy_break_native_ref": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45188611631",
+  "active_factory": {
+    "source": "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+    "header": "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h",
+    "expected_present": false
+  },
+  "historical_archive": {
+    "path": "reports/issue774/archive/fdeg-retirement-code7-45148961276-1.zip",
+    "anchor": "reports/issue774/fdeg_thermal_historical_anchor_v0_1.json",
+    "verification": "ci/guards/fdeg_thermal_archive.py",
+    "retained_immutable": true
+  },
+  "active_fdeg": {
+    "functional": "ci/baselines/fdeg_functional_contracts.json",
+    "transition": "ci/baselines/fdeg_transition_contracts.json",
+    "number_of_other_profiles": 9,
+    "retired_profile_present": false
+  },
+  "canonical_ci": {
+    "workflow": ".github/workflows/physics-code-ci.yml",
+    "functional_test": "tests/test_fdeg_functional.py",
+    "transition_test": "tests/test_fdeg_transition.py",
+    "archive_test": "tests/test_fdeg_thermal_archive.py",
+    "harness_test": "tests/test_fdeg_harness_abcd.py",
+    "source_bound_live_capture_allowed": false
+  },
+  "source_references_policy": {
+    "active_physics_CXX": false,
+    "tracked_moose_i_target": false,
+    "active_workflow_runtime_capture": false,
+    "historical_docs_archive_and_test_metadata": true,
+    "separate_QPX_type_retained": true
+  },
+  "ci_contract_status": "MUST_PASS_TO_ACCEPT_CLEANUP",
+  "temporary_evidence_workflows": "NOT_FOR_MAIN_INTEGRATION",
+  "independent_external_generated_scope": "NOT_ATTESTED",
+  "newonly_native_p05_parity": "417/941 D5 A/B PASS, scoped",
+  "global_consumer_closed": false,
+  "science": "SCIENCE_HOLD",
+  "requested_merge_to_main": false,
+  "safe_to_delete": false,
+  "final_code_retirement_authorized": false
+}
