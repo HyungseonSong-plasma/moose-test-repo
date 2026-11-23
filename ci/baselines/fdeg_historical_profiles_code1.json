@@ -1,0 +1,261 @@
+{
+  "schema": "fdeg.historical_profiles.v0.1",
+  "capture": {
+    "baseline_commit": "d0010827910581a1ca3bf4b405846a9960416c39",
+    "target": "FVElectronResponseBandedCorrection",
+    "source_file": {
+      "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+      "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+    },
+    "header_file": {
+      "path": "physics_app/include/fvkernels/FVElectronResponseBandedCorrection.h",
+      "blob_sha": "9446a9d5d7863fb83a2c65af8b127bbd08573ad6"
+    },
+    "historical_qualification_scope": "BOTH_LANES_USED_KERNEL_NOT_KERNEL_REMOVAL_PARITY",
+    "qualified_runs": [
+      {
+        "issue": 337,
+        "run_id": 36163219902
+      },
+      {
+        "issue": 351,
+        "run_id": 36496470116
+      }
+    ],
+    "evidence_level": "HISTORICALLY_QUALIFIED_BOTH_WITH_KERNEL"
+  },
+  "functional_profile": {
+    "target": "FVElectronResponseBandedCorrection",
+    "source": {
+      "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+      "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+    },
+    "capability": "NONLOCAL_BANDED_ELECTRON_RESPONSE",
+    "equation": "poisson.nonlocal_residual",
+    "operator_kind": "FVElementalKernel",
+    "notes": "Historic fixed-point parity with this kernel present on BOTH arms does not prove kernel removal parity.",
+    "claims": [
+      {
+        "id": "matrix_response",
+        "relation": "IMPLEMENTS",
+        "to": "capability:NONLOCAL_BANDED_ELECTRON_RESPONSE",
+        "expression": "R_i=beta_i*sum_band(W_ij*(phi_j-anchor_j))",
+        "anchors": [
+          "response += w * (_var(arg_j, state) - _anchor(arg_j, state));",
+          "return beta_i * response;"
+        ],
+        "mode": "all",
+        "conditions": [
+          "valid 1D row mapping",
+          "matrix size N*N",
+          "1<=bandwidth<N",
+          "ghost_layers>=bandwidth+1"
+        ],
+        "units": "Poisson residual per beta and potential",
+        "applicability": "SOURCE_CLASS_ONLY",
+        "assumptions": [],
+        "counterexamples": [
+          "phi=anchor requires zero",
+          "band width changed",
+          "negative beta sign"
+        ],
+        "source": {
+          "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+          "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+        },
+        "evidence_kind": "SOURCE_OBSERVATION"
+      },
+      {
+        "id": "parameter_guards",
+        "relation": "REQUIRES",
+        "to": "condition:positive_cell_dx_and_band",
+        "expression": "n_cells>0, dx>0, bandwidth in [1,n_cells-1] and sufficient ghosts",
+        "anchors": [
+          "if (_n_cells == 0)",
+          "if (_dx <= 0.0)",
+          "if (_bandwidth == 0 || _bandwidth >= _n_cells)"
+        ],
+        "mode": "all",
+        "conditions": [],
+        "units": "UNSPECIFIED",
+        "applicability": "SOURCE_CLASS_ONLY",
+        "assumptions": [],
+        "counterexamples": [
+          "n_cells=0",
+          "dx<=0",
+          "invalid band"
+        ],
+        "source": {
+          "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+          "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+        },
+        "evidence_kind": "SOURCE_OBSERVATION"
+      },
+      {
+        "id": "row_mapping",
+        "relation": "EVALUATES",
+        "to": "numerical:one_dimensional_row_mapping",
+        "expression": "lround((centroid.x-xmin)/dx-0.5) maps cell to response row",
+        "anchors": [
+          "std::lround((x - _xmin) / _dx - 0.5);"
+        ],
+        "mode": "all",
+        "conditions": [],
+        "units": "UNSPECIFIED",
+        "applicability": "SOURCE_CLASS_ONLY",
+        "assumptions": [
+          "uniform 1D mesh mapping not independently validated"
+        ],
+        "counterexamples": [
+          "nonuniform mesh"
+        ],
+        "source": {
+          "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+          "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+        },
+        "evidence_kind": "SOURCE_OBSERVATION"
+      },
+      {
+        "id": "zero_response",
+        "relation": "SATISFIES",
+        "to": "invariant:phi_equals_anchor",
+        "expression": "R=0 when phi==anchor for sampled stencil and valid inputs",
+        "anchors": [
+          "response += w * (_var(arg_j, state) - _anchor(arg_j, state));"
+        ],
+        "mode": "all",
+        "conditions": [
+          "phi_j=anchor_j for band neighbors"
+        ],
+        "units": "UNSPECIFIED",
+        "applicability": "SOURCE_CLASS_ONLY",
+        "assumptions": [],
+        "counterexamples": [
+          "missing stencil ghost"
+        ],
+        "source": {
+          "path": "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C",
+          "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"
+        },
+        "evidence_kind": "SOURCE_OBSERVATION"
+      }
+    ],
+    "required_discriminators": [
+      "PHI_EQUALS_ANCHOR",
+      "BETA_ZERO",
+      "ROW_SUM_ZERO_ASSUMPTION",
+      "ROW_SUM_NONZERO_COUNTEREXAMPLE",
+      "BAND_AND_GHOST_BOUNDARY",
+      "ON_OFF_NATIVE_COMPARISON"
+    ],
+    "alternatives": [],
+    "unresolved_semantics": [
+      "ROW_SUM_ZERO_NOT_CHECKED",
+      "HISTORICAL_KERNEL_REMOVAL_PARITY_NOT_PROVEN",
+      "NATIVE_ON_OFF_NOT_OBSERVED",
+      "CURRENT_LEGACY_INPUT_COMPAT_UNVERIFIED"
+    ],
+    "historical_guards": [
+      "HISTORICAL_GUMMEL_CLOSURE_PARITY_NOT_REMOVAL_PARITY"
+    ],
+    "discriminator_contracts": {
+      "PHI_EQUALS_ANCHOR": {
+        "setup": "valid N,b,mesh,ghost; all sampled phi_j=anchor_j",
+        "observable": "element Poisson banded correction residual",
+        "expected": "R_i=0; independent from unproven global row-sum assumption",
+        "status": "NOT_EVALUATED",
+        "measured_run_id": null,
+        "acceptance_tolerance": "OWNER_UNSPECIFIED"
+      },
+      "BETA_ZERO": {
+        "setup": "valid matrix and mesh, beta=0",
+        "observable": "element Poisson correction residual",
+        "expected": "R_i=0",
+        "status": "NOT_EVALUATED",
+        "measured_run_id": null,
+        "acceptance_tolerance": "OWNER_UNSPECIFIED"
+      },
+      "ROW_SUM_ZERO_ASSUMPTION": {
+        "setup": "row-sum-zero W verified per row and uniform phi-anchor shift",
+        "observable": "change in residual under uniform shift",
+        "expected": "invariant only if sum_j W_ij=0, which constructor does not verify",
+        "status": "NOT_EVALUATED",
+        "measured_run_id": null,
+        "acceptance_tolerance": "OWNER_UNSPECIFIED"
+      },
+      "ROW_SUM_NONZERO_COUNTEREXAMPLE": {
+        "setup": "row-sum-nonzero W and uniform phi-anchor shift",
+        "observable": "residual delta",
+        "expected": "generally nonzero; must not claim unconditional invariance",
+        "status": "NOT_EVALUATED",
+        "measured_run_id": null,
+        "acceptance_tolerance": "OWNER_UNSPECIFIED"
+      },
+      "BAND_AND_GHOST_BOUNDARY": {
+        "setup": "N=0, dx<=0, b=0, b>=N, wrong matrix length, ghost_layers<b+1",
+        "observable": "parameter rejection and stencil availability",
+        "expected": "constructor rejects invalid numeric bounds; missing neighbor raises runtime error",
+        "status": "NOT_EVALUATED",
+        "measured_run_id": null,
+        "acceptance_tolerance": "OWNER_UNSPECIFIED"
+      },
+      "ON_OFF_NATIVE_COMPARISON": {
+        "setup": "same executable/mesh/time/inputs with legacy correction enabled vs disabled",
+        "observable": "residual, Jacobian, phi fields and time trace delta",
+        "expected": "historical two-arm-with-kernel parity does not establish deletion parity",
+        "status": "NOT_EVALUATED",
+        "measured_run_id": null,
+        "acceptance_tolerance": "OWNER_UNSPECIFIED"
+      }
+    },
+    "preservation_contract": {
+      "applicability": "IF_ACTIVATED_ONLY",
+      "equation_term_owner": "poisson.nonlocal_residual",
+      "removal_effect": "conditional Poisson banded nonlocal residual and Jacobian removed if kernel executes",
+      "representation_and_state": "Poisson potential/anchor/beta, 1D band/ghost mapping, row-sum-zero UNVERIFIED",
+      "required_producer_names": [
+        "anchor",
+        "beta",
+        "matrix",
+        "potential"
+      ],
+      "coupled_guards": [
+        "Poisson nonlinear solve",
+        "ghost stencil",
+        "AD Jacobian"
+      ],
+      "explicit_refusals": [
+        "historical both-with-kernel parity != removal parity",
+        "row-sum-zero not proven"
+      ],
+      "claim_ids": [
+        "matrix_response"
+      ],
+      "effective_runtime_status": "UNKNOWN",
+      "science_acceptance": "NOT_EVALUATED"
+    }
+  },
+  "transition_profile": {
+    "target": "FVElectronResponseBandedCorrection",
+    "review_comment_id": 7009744383,
+    "review_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/issues/691#issuecomment-7009744383",
+    "historical": [
+      "PINNED_337_351_REPLAY_PRESERVE_IMMUTABLY",
+      "CURRENT_BINARY_LEGACY_INPUT_COMPATIBILITY_SEPARATE_APPROVAL"
+    ],
+    "protected": [
+      "PINNED_HISTORICAL_SOURCES_INPUTS_ARTIFACTS",
+      "POISSON_SOLVER_AND_OTHER_OWNERS",
+      "ANCHOR_BETA_MATRIX_FUNCTORS"
+    ],
+    "required": [
+      "GENERATED_POISSON_SUB_I_EFFECTIVE_BINDING",
+      "PHI_EQUALS_ANCHOR_BETA_ZERO_ROW_SUM_POSITIVE_NEGATIVE",
+      "BAND_GHOST_AND_ROW_MAP",
+      "INDEPENDENT_ON_OFF_RESIDUAL_JACOBIAN_FIELD_PARITY"
+    ],
+    "strategy": "RETAIN_NO_APPROVED_REPLACEMENT",
+    "rule": "Historical AB/BA both-with-kernel comparisons cannot show removal parity.",
+    "status": "REVIEWED_REQUIREMENTS_NOT_VERIFIED_EXECUTION"
+  }
+}
