@@ -165,11 +165,36 @@ def verify_retired(root: Path, receipt: dict, review: dict, expected_head: str) 
             registry = json.loads(registry_file.read_text(encoding="utf-8"))
             if receipt["target"] in registry.get("profiles", {}):
                 raise ValueError("RETIREMENT_ACTIVE_PROFILE_NOT_ARCHIVED:" + registry_rel)
-    detected = []
+    # Post-cut evidence reports were not in the immutable PRE-cut manifest.
+    # They can be separated from live consumers only by an independently
+    # reviewed, exact-path + exact-blob disposition. This is NOT a blanket
+    # exclusion of reports/, and never retroactively edits historical pins.
+    metadata = review.get("post_cut_evidence_metadata_blobs", {})
+    if not isinstance(metadata, dict):
+        raise ValueError("RETIREMENT_EVIDENCE_METADATA_MAP_INVALID")
+    if metadata:
+        attestation = review.get("independent_metadata_review_ref")
+        if (not isinstance(attestation, str) or not attestation.strip()
+                or attestation in {"UNKNOWN", "NOT_EVALUATED", "NOT_OBSERVED"}):
+            raise ValueError("RETIREMENT_EVIDENCE_METADATA_REVIEW_MISSING")
     token = re.compile(r"\b" + re.escape(receipt["target"]) + r"\b")
+    for rel, expected_blob in metadata.items():
+        if (not isinstance(rel, str)
+                or not re.fullmatch(r"reports/issue774/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\.(?:json|md)", rel)
+                or ".." in Path(rel).parts
+                or not isinstance(expected_blob, str)
+                or not re.fullmatch(r"[0-9a-f]{40}", expected_blob)):
+            raise ValueError("RETIREMENT_EVIDENCE_METADATA_EXEMPTION_UNSAFE")
+        file = functional.safe_path(root, rel)
+        if (not file.is_file() or file.is_symlink()
+                or structural.blob_sha(file.read_bytes()) != expected_blob):
+            raise ValueError("RETIREMENT_EVIDENCE_METADATA_BLOB_MISMATCH:" + rel)
+        if not token.search(file.read_text(encoding="utf-8", errors="replace")):
+            raise ValueError("RETIREMENT_EVIDENCE_METADATA_TARGET_MISSING:" + rel)
+    detected = []
     for file in structural.tracked_files(root)[0]:
         rel = file.relative_to(root).as_posix()
-        if rel in protected:
+        if rel in protected or rel in metadata:
             continue
         if rel.startswith(("ci/baselines/fdeg_", "docs/development/fdeg_",
                            "tests/test_fdeg_")):
