@@ -47,3 +47,9 @@ No general FV-to-FEM Joule parity claim is accepted here.
 No C/H deletion, CI removal, experimental input conversion, or replacement-parity claim should be made on this preflight branch. The current reproducible old typed inputs and the current-binary Issue351 replay must either be validly migrated or explicitly declared unsupported for the accepted New-only scope. Any statement of universal external caller-zero is unsupported.
 
 **Required next action:** classify and disposition the four identified tracked consumer surfaces and inspect indirect runtime/test/Workflow routes at the exact selected candidate SHA before proposing a source-cut PR.
+
+## #814 source-cut candidate (Draft, not accepted)
+
+Child branch `issue-814-code2-joule-source-cut-candidate-20261123` proposes deleting the exact FV Joule C/H and its single Factory, archiving the `physical_eV` smoke fixture byte-identically as `docs/provenance/issue814_code2/electron_energy_joule_smoke.i.txt` (old input blob `6c4901f843a98b74b450cc3a1fab09e8e1873b2c`), and retaining the three remaining DDTransport lookup smoke fixtures in the existing test. Old `prepare_cases.py` and Issue351 `control.py` are not modified; their old-type/current-binary behavior is explicitly **unsupported historical** in New-only and guarded by original blob SHA, rather than silently converted to FEM.
+
+Existing D9 guard checks both retired Thermal and code2, 11 .C/16 Factory standalone counts, archive blob identity, negative reintroduction and Workflow/template parity. These counts **must not** be imported unmodified into combined #809/#811 integration. This is a bounded deletion *candidate*, not an accepted cutover: `SAFE_DELETE=HOLD` until actual exact-head P0/P1 and 417/941 Native P2/P05, and independent residual/AD/P3 checks if physical behavior is rewired. Poisson and main remain untouched.

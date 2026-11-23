@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """New-only Factory retirement CI contract for #774 (source/CI, not science).
 
-The old PhysicsFVThermalDiffusion input type is explicitly unsupported in
-New-only. No blanket legacy CI suppression, and no claim of external caller
+Thermal and FV Joule typed inputs are unsupported in the New-only scope.
+Frozen legacy references remain source-pinned, not current binary support. No blanket legacy CI suppression, and no claim of external caller
 zero. Preserve D5's original sanitized A/B registration receipts separately.
 
 This guard reads the exact Git HEAD tree, never a dirty working tree fallback.
@@ -27,8 +27,21 @@ REPO = "HyungseonSong-plasma/moose-test-repo"
 RETIRED = "PhysicsFVThermalDiffusion"
 SOURCE = "physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C"
 HEADER = "physics_app/include/fvkernels/PhysicsFVThermalDiffusion.h"
-EXPECTED_SOURCE_COUNT = 12
-EXPECTED_REGISTERED_COUNT = 17
+RETIRED_JOULE = "PhysicsFVElectronEnergyJouleHeating"
+JOULE_SOURCE = "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C"
+JOULE_HEADER = "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h"
+JOULE_SMOKE = "physics_app/ci/electron_energy_joule_smoke.i"
+JOULE_ARCHIVE = "docs/provenance/issue814_code2/electron_energy_joule_smoke.i.txt"
+JOULE_SMOKE_BLOB = "6c4901f843a98b74b450cc3a1fab09e8e1873b2c"
+JOULE_HISTORICAL_GENERATORS = {
+    "experiments/fem_fvm_plasma_discriminator/prepare_cases.py":
+        "69ec14c58b502a953c9024c46d332494cad61e6c",
+    "experiments/Issue351_frozen_heavy_driver_parity/control.py":
+        "6d7efcb4ea94b2011782aba2c9cab40238756312",
+}
+RETIRED_TYPES = (RETIRED, RETIRED_JOULE)
+EXPECTED_SOURCE_COUNT = 11
+EXPECTED_REGISTERED_COUNT = 16
 EXPECTED_SHARED_SOURCE_OWNERS = {
     "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": 4,
     "physics_app/src/fvkernels/FVLogMolarTransport.C": 3,
@@ -41,7 +54,7 @@ OLD_HISTORICAL_CI = (
     "ci/guards/fdeg_thermal_archive.py",
     "tests/test_fdeg_harness_abcd.py",
 )
-TEXT = re.compile(r"\b" + re.escape(RETIRED) + r"\b")
+TEXT = re.compile(r"\b(?:" + "|".join(map(re.escape, RETIRED_TYPES)) + r")\b")
 HEAD = re.compile(r"[0-9a-f]{40}\Z")
 REGISTRATIONS = re.compile(
     r'register(?:AD)?MooseObject\s*\(\s*"PhysicsApp"\s*,\s*([A-Za-z_]\w*)\s*\)'
@@ -102,7 +115,8 @@ def check_route_rows(rows: list[dict]) -> dict:
 
 
 def check_factory_inventory(root: Path, tracked: dict) -> dict:
-    require(SOURCE not in tracked and HEADER not in tracked,
+    require(all(path not in tracked for path in
+                (SOURCE, HEADER, JOULE_SOURCE, JOULE_HEADER)),
             "RETIRED_SOURCE_OR_HEADER_REINTRODUCED")
     folder = root / "physics_app/src/fvkernels"
     entries = source_owners(folder)
@@ -111,7 +125,7 @@ def check_factory_inventory(root: Path, tracked: dict) -> dict:
     registered = sorted(t for row in entries for t in row["registered_factory_types"])
     require(len(registered) == EXPECTED_REGISTERED_COUNT
             and len(set(registered)) == EXPECTED_REGISTERED_COUNT
-            and RETIRED not in registered,
+            and not set(RETIRED_TYPES).intersection(registered),
             "FACTORY_REGISTRATION_COUNT_OR_ALIAS_DRIFT")
     for row in entries:
         path = row["source_file"]
@@ -128,6 +142,13 @@ def check_factory_inventory(root: Path, tracked: dict) -> dict:
 
 
 def check_ci_tree(root: Path, tracked: dict) -> dict:
+    require(JOULE_SMOKE not in tracked, "JOULE_LEGACY_SMOKE_STILL_ACTIVE")
+    require(JOULE_ARCHIVE in tracked and
+            tracked[JOULE_ARCHIVE]["sha"] == JOULE_SMOKE_BLOB,
+            "JOULE_ARCHIVE_EXACT_BLOB_MISMATCH")
+    for path, sha in JOULE_HISTORICAL_GENERATORS.items():
+        require(path in tracked and tracked[path]["sha"] == sha,
+                "CODE2_HISTORICAL_GENERATOR_BLOB_DRIFT:" + path)
     for path in OLD_HISTORICAL_CI:
         require(path not in tracked, "HISTORICAL_FDEG_CI_IMPORTED:" + path)
     for path in (NEWONLY_CI, TEMPLATE, SAFETY, EXISTING_TEST, NEW_TEST, SELF):
@@ -182,7 +203,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
     facts = check_factory_inventory(root, tracked)
     ci = check_ci_tree(root, tracked)
     raw = git(root, "grep", "-n", "-F", "-I", "-e", RETIRED,
-              "HEAD", "--", missing_ok=True)
+              "-e", RETIRED_JOULE, "HEAD", "--", missing_ok=True)
     rows = []
     for line in raw.decode("utf-8").splitlines():
         parts = line.split(":", 3)
@@ -190,11 +211,16 @@ def audit(root: Path, *, expected_head: str) -> dict:
         _, path, lineno, source_line = parts
         require(path in tracked and lineno.isdecimal(),
                 "SOURCE_MISSING_FROM_EXACT_GIT_TREE")
-        if RETIRED not in source_line or not TEXT.search(source_line):
+        if not TEXT.search(source_line):
             continue
+        surface = active_surface(path)
+        if path in JOULE_HISTORICAL_GENERATORS and RETIRED_JOULE in source_line:
+            require(tracked[path]["sha"] == JOULE_HISTORICAL_GENERATORS[path],
+                    "CODE2_HISTORICAL_GENERATOR_BLOB_DRIFT:" + path)
+            surface = None  # Frozen historical replay; current binary unsupported.
         rows.append({"path": path, "line": int(lineno),
                      "source_blob_sha": tracked[path]["sha"],
-                     "active_surface": active_surface(path)})
+                     "active_surface": surface})
     by_path = {}
     for row in rows:
         path = row["path"]
@@ -210,7 +236,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
         "tracked_paths": len(tracked),
         "nonregular_git_entries": nonregular_entries,
         "binary_git_blob_content_scan": "EXCLUDED_BY_GIT_GREP_I_NOT_COUNTED_AS_REGULAR_TEXT",
-        "retired_factory": RETIRED,
+        "retired_factory": list(RETIRED_TYPES),
         "legacy_inputs_supported": False,
         "current_newonly_factory": facts,
         "newonly_ci": ci,
