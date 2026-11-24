@@ -1,24 +1,24 @@
 {
   "targets": [
     {
-      "branch": "cleanup-774-retirement-refs-20261124-batch14",
-      "expected_sha": "a480b33f167ada47426128a5f70ff79b84dedbb7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch14-a480b33f167a"
+      "branch": "cleanup-774-retirement-refs-20261124-batch15",
+      "expected_sha": "481d6830e5525a0f5be2f05fa820905c78db04fb",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch15-481d6830e552"
     },
     {
-      "branch": "cleanup-issue535-s6-reference-20261115",
-      "expected_sha": "1b1a5c8bdb11a01589247bf55e7e71c8f5d15ddb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue535-s6-reference-20261115-1b1a5c8bdb11"
+      "branch": "issue-402-electron-fem-only-20261114",
+      "expected_sha": "226f87a6f8022f28ae6ccf5181b4db17ab68ad15",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-electron-fem-only-20261114-226f87a6f802"
     },
     {
-      "branch": "cleanup-wave1-s6-p3-20261116",
-      "expected_sha": "6efeb8bbc519914099380e02ad60364b1c87032f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-p3-20261116-6efeb8bbc519"
+      "branch": "issue-402-fv-log-molar-transport-retirement-20261114",
+      "expected_sha": "7b2ddb34f36d6fdf4cac1394a390a7a260707c37",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-fv-log-molar-transport-retirement-20261114-7b2ddb34f36d"
     },
     {
-      "branch": "issue-541-s6-p2-closure-cutover-20261116",
-      "expected_sha": "b0f7967830ba290c55339918be3fac0c36397e7c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-s6-p2-closure-cutover-20261116-b0f7967830ba"
+      "branch": "issue-633-p6c3-newonly-guard-rebase-20261118",
+      "expected_sha": "381de40e46c92582669e867d90cb4ce0a170e116",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p6c3-newonly-guard-rebase-20261118-381de40e46c9"
     }
   ]
 }
