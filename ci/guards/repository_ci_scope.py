@@ -92,6 +92,43 @@ def inspect(sources: dict[str, str], contract: dict) -> list[str]:
         for pattern in required_paths:
             if f"      - '{pattern}'" not in contents:
                 problems.append(f"{workflow}: CHANGED_SOURCE_PATH_UNROUTED:{pattern}")
+    legacy_path = ".github/workflows/physics-legacy-audit.yml"
+    legacy = sources[legacy_path]
+    if ("  workflow_dispatch:\n" not in legacy
+            or re.search(r"^  (?:push|pull_request|workflow_run|schedule):",
+                         legacy, re.MULTILINE)):
+        problems.append("LEGACY_AUDIT_NOT_MANUAL_ONLY")
+    # Reject orphaned manual selectors after a temporary contract is retired.
+    options = re.search(
+        r"(?m)^        options:\n((?:          - [a-z][a-z0-9_-]*\n)+)",
+        legacy,
+    )
+    choices = (
+        re.findall(r"(?m)^          - ([a-z][a-z0-9_-]*)$", options.group(1))
+        if options else []
+    )
+    active_manual_jobs = owners[legacy_path]["jobs"]
+    if len(choices) != len(set(choices)) or set(choices) != set(active_manual_jobs):
+        problems.append("LEGACY_AUDIT_SELECTOR_OWNER_DIVERGENCE")
+    for job in owners[legacy_path]["jobs"]:
+        block = job_block(legacy, job)
+        expected = "    if: $" + "{{ inputs.audit == '" + job + "' }}"
+        if expected not in block:
+            problems.append("LEGACY_AUDIT_JOB_NOT_EXPLICITLY_SELECTED:" + job)
+    active = job_block(sources[".github/workflows/physics-code-ci.yml"],
+                       "physics_code_validate")
+    for command in (
+        "physics_app.ci.check_issue402_json_rate_native_p2 --self-test",
+        "check_stage5_s5d_heavy_reactions.py --static",
+        "check_stage5_h05_runtime.py --static",
+        "check_stage5_s5r_assembly.py --static",
+        "check_stage5_s5r_ei16_recovery.py",
+        "check_standard_moose_energy_projection.py --self-test",
+        "audit_issue402_initial_composition_routes.py --fail-on-legacy",
+        "python -m pytest -q",
+    ):
+        if command not in active:
+            problems.append("ACTIVE_PHYSICS_CONTRACT_UNVERIFIED:" + command)
     diagnostics = sources[".github/workflows/repository-diagnostics.yml"]
     if "  workflow_dispatch:\n" not in diagnostics:
         problems.append("DIAGNOSTIC_MANUAL_TRIGGER_ABSENT")
@@ -133,6 +170,33 @@ def self_test(sources: dict[str, str], contract: dict) -> None:
         1,
     )
     assert "REPOSITORY_CI_MUST_RUN_FOR_ALL_CHANGES" in inspect(mutated, contract)
+
+    legacy = ".github/workflows/physics-legacy-audit.yml"
+    mutated = dict(sources)
+    mutated[legacy] = sources[legacy].replace(
+        "  workflow_dispatch:\n", "  push:\n", 1
+    )
+    assert "LEGACY_AUDIT_NOT_MANUAL_ONLY" in inspect(mutated, contract)
+    mutated[legacy] = sources[legacy].replace(
+        "        options:\n", "        options:\n          - issue402_s6_reference_receipt\n", 1
+    )
+    assert "LEGACY_AUDIT_SELECTOR_OWNER_DIVERGENCE" in inspect(mutated, contract)
+    chosen = contract["workflow_owners"][legacy]["jobs"][0]
+    mutated[legacy] = sources[legacy].replace(
+        "    if: $" + "{{ inputs.audit == '" + chosen + "' }}",
+        "    if: true", 1
+    )
+    assert ("LEGACY_AUDIT_JOB_NOT_EXPLICITLY_SELECTED:" + chosen
+            in inspect(mutated, contract))
+    code = ".github/workflows/physics-code-ci.yml"
+    mutated = dict(sources)
+    mutated[code] = sources[code].replace(
+        "check_stage5_s5d_heavy_reactions.py --static",
+        "REMOVED_s5d_source_check", 1
+    )
+    assert any("ACTIVE_PHYSICS_CONTRACT_UNVERIFIED" in issue
+               for issue in inspect(mutated, contract))
+
 
 
 def main() -> int:

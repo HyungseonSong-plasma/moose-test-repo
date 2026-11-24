@@ -28,14 +28,7 @@
     },
     ".github/workflows/physics-code-ci.yml": {
       "jobs": [
-        "issue402_core_four_p0",
-        "issue402_ideal_gas_p0",
-        "issue402_json_rate_p0",
-        "issue402_legacy_p0_inventory",
-        "issue402_reaction_material_p0",
-        "issue402_s6_reference_receipt",
         "issue541_arch_replay_p0",
-        "issue541_evidence_identity_p0",
         "issue541_group_a_evidence",
         "physics_code_validate"
       ],
@@ -76,6 +69,7 @@
         "Validate numerical-method ownership",
         "Validate plasma semantic ownership",
         "Validate retired Gummel Action is absent",
+        "Verify current-source P0 invariants formerly duplicated in Issue jobs",
         "actions/checkout@v4",
         "actions/setup-python@v5"
       ]
@@ -95,6 +89,14 @@
     ".github/workflows/repository-diagnostics.yml": {
       "jobs": [
         "artifact-api-probe"
+      ]
+    },
+    ".github/workflows/physics-legacy-audit.yml": {
+      "jobs": [
+        "issue402_json_rate_p0",
+        "issue402_ideal_gas_p0",
+        "issue402_core_four_p0",
+        "issue402_reaction_material_p0"
       ]
     }
   },

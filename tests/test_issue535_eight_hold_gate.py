@@ -234,7 +234,7 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
                 live = (
                     ".github/workflows/physics-native-ci.yml"
                     if job == "issue402_core_four_native_p2"
-                    else ".github/workflows/physics-code-ci.yml"
+                    else ".github/workflows/physics-legacy-audit.yml"
                 )
             text = (ROOT / live).read_text(encoding="utf-8")
             assert re.search(r"(?m)^  " + re.escape(job) + r":\s*$", text), (

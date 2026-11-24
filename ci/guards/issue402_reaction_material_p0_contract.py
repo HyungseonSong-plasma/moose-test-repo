@@ -10,7 +10,7 @@ import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-CI = ROOT / ".github/workflows/physics-code-ci.yml"
+CI = ROOT / ".github/workflows/physics-legacy-audit.yml"
 LEGACY = ROOT / ".github/workflows/issue402-reaction-material-reduction-p0-once.yml"
 JOB = "issue402_reaction_material_p0"
 
