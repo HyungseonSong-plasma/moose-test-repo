@@ -1,145 +1,62 @@
-name: Issue881 FDEG Code6 Harness comparison (one-shot)
+name: Issue881 immutable original evidence blob staging (one-shot)
 on:
   push:
     branches: [issue-881-fdeg-inventory-ci-only]
     paths: [.github/workflows/issue881-fdeg-inventory-ci-only.yml]
 permissions:
-  contents: read
+  actions: read
+  contents: write
 jobs:
-  inventory:
+  stage:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: '7a119106a22f2de2ca5c761a4119f00509e0efdd'
-          persist-credentials: false
-          fetch-depth: 1
-      - name: Exact source tracked text inventory
+      - name: Verify original ZIP bytes and stage exactly two Git blobs
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "7a119106a22f2de2ca5c761a4119f00509e0efdd"
-          test "$(git rev-parse HEAD^{tree})" = "665d0eff8c72e4798fa3671794f6f170922f48ec"
-          mkdir -p "$RUNNER_TEMP/issue881"
-          git ls-tree -r HEAD > "$RUNNER_TEMP/issue881/tree.txt"
-          rc=0
-          git grep -n -I -i -F -e fdeg HEAD -- > "$RUNNER_TEMP/issue881/references.txt" || rc=$?
-          test "$rc" -le 1
+          test "$GITHUB_REPOSITORY" = "HyungseonSong-plasma/moose-test-repo"
+          test "$GITHUB_REF" = "refs/heads/issue-881-fdeg-inventory-ci-only"
           python3 - <<'PY'
-          import collections, hashlib, json, os, pathlib, subprocess
-          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "issue881"
-          raw = (root / "references.txt").read_bytes()
-          hits = collections.Counter()
-          for line in raw.decode("utf-8", errors="strict").splitlines():
-              if not line.startswith("HEAD:"):
-                  raise ValueError("Unexpected git grep result")
-              path, number, _ = line[5:].split(":", 2)
-              if not number.isdecimal():
-                  raise ValueError("Unexpected line number")
-              hits[path] += 1
-          tree = (root / "tree.txt").read_bytes()
-          paths = [line.split("\t", 1)[1] for line in tree.decode().splitlines()]
-          names = [p for p in paths if "fdeg" in p.lower()]
-          summary = {
-              "schema": "issue881.tracked_literal_inventory.v1",
-              "source_head": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-              "source_tree": subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip(),
-              "request_head": os.environ["GITHUB_SHA"],
-              "run_id": os.environ["GITHUB_RUN_ID"],
-              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
-              "tracked_paths": len(paths),
-              "named_paths": names,
-              "reference_paths": dict(sorted(hits.items())),
-              "reference_lines": sum(hits.values()),
-              "tree_sha256": hashlib.sha256(tree).hexdigest(),
-              "references_sha256": hashlib.sha256(raw).hexdigest(),
-              "scope": "git grep -n -I -i -F fdeg HEAD; tracked text, literal only",
-              "unresolved": ["binary contents not searched", "dynamic names/imports not resolved", "untracked or external consumers not attested"],
-              "global_consumer_closed": False,
-              "safe_delete_authorized": False,
-          }
-          (root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
-          print(json.dumps(summary, indent=2, sort_keys=True))
-          PY
-      - name: Install existing Harness Code dependency
-        run: python3 -m pip install -r physics_harness/code/requirements.txt
-      - name: Compare Code6 declared templates with current Harness candidates
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import collections, hashlib, json, os, pathlib, re, subprocess, sys
-          root = pathlib.Path.cwd()
-          out = pathlib.Path(os.environ["RUNNER_TEMP"]) / "issue881"
-          target = "PhysicsFVMassFractionTimeDerivative"
-          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-          assert head == "7a119106a22f2de2ca5c761a4119f00509e0efdd"
-          sys.path.insert(0, str(root / "ci/guards"))
-          import fdeg_structural
-          from physics_harness.code.diagnostics import ScanBudget, ScanRequest, GitSourceProvider, run_scan
-          legacy = fdeg_structural.scan(root, target, expected_head=head)
-          rows = [row for row in legacy["instances"]
-                  if row.get("instance_kind") == "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"]
-          expected = collections.Counter()
-          for row in rows:
-              path, line = row["input_path"], row["type_line"]
-              raw = subprocess.check_output(["git", "show", f"{head}:{path}"])
-              blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
-              assert row["evidence"]["blob_sha"] == blob
-              assert re.fullmatch(r"\s*type\s*=\s*" + target + r"\s*", raw.decode().splitlines()[line-1])
-              assert row["runtime_activation"] == "NOT_OBSERVED"
-              expected[(path, line)] += 1
-          paths = tuple(sorted({p for p, _ in expected}))
-          assert paths, "Legacy source template inventory missing"
-          scan = run_scan(ScanRequest(repository="HyungseonSong-plasma/moose-test-repo",
-                          revision=head, includes=paths, collectors=("python_ast",),
-                          budget=ScanBudget(max_files=100, max_bytes=10000000, max_seconds=120)),
-                          GitSourceProvider(root))
-          targets = {n.id for n in scan.graph.nodes if n.kind == "moose_type" and n.name == target}
-          witnesses = {e.id: e for e in scan.graph.evidence}
-          observed = []
-          candidates = collections.Counter()
-          for edge in scan.graph.edges:
-              if edge.target_id not in targets:
-                  continue
-              for eid in edge.evidence_ids:
-                  ev = witnesses[eid]
-                  at = dict(ev.attributes)
-                  assert at["source_sha"] == head
-                  assert ev.observation_status != "RUNTIME_OBSERVED"
-                  observed.append({"edge_id": edge.id, "relation": edge.relation, "source": at,
-                                   "observation_status": ev.observation_status})
-                  if edge.relation in ("MAY_GENERATE_INPUT", "DECLARES_GENERATOR_TEMPLATE_CANDIDATE"):
-                      candidates[(at["path"], at["line"])] += 1
-          def counts(c):
-              return [{"path": p, "line": l, "count": n} for (p,l), n in sorted(c.items())]
-          payload = {
-              "schema": "issue881.code6_source_candidate_comparison.v1",
-              "source_head": head, "scope": list(paths),
-              "legacy_instance_count": len(rows),
-              "legacy_source_template_census": legacy["source_template_census"],
-              "legacy_instances": rows,
-              "harness_target_candidate_count": sum(candidates.values()),
-              "harness_target_edges": observed,
-              "matched_legacy_locations": sum((expected & candidates).values()),
-              "unmatched_legacy_locations": counts(expected - candidates),
-              "additional_candidate_locations": counts(candidates - expected),
-              "harness_coverage": scan.receipt.completeness,
-              "harness_unresolved": list(scan.receipt.unresolved),
-              "harness_files": [{"path": f.path, "blob_sha": f.blob_sha, "status": f.status}
-                                for f in scan.receipt.files],
-              "legacy_block_path_and_bindings_preserved_by_this_comparison": False,
-              "runtime_coverage": "NOT_PROVEN",
-              "global_consumer_closed": False,
-              "retirement_authorized": False,
-          }
-          (out / "code6-comparison.json").write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
-          print(json.dumps({k:v for k,v in payload.items() if k not in {"legacy_instances","harness_target_edges","harness_unresolved","harness_files"}}, indent=2))
+          import base64, hashlib, json, os, pathlib, subprocess, zipfile
+          repo = os.environ["GITHUB_REPOSITORY"]
+          out = pathlib.Path(os.environ["RUNNER_TEMP"]) / "issue881-custody"
+          out.mkdir()
+          specs = [
+              (14959988094, 45476946329, "f9d89f8313ba0a885f1a2cf10ab5d02d0e46f134414cab5266e41e362f37edf6", "live-electron/manifest.json", "baseline_head", "cee3dd7447e5ca776d85cd600944bbac287d6610"),
+              (14962467467, 45484020418, "37238045a198628ac8d65a27e96cfda9cec245f45e1ede1d46924e9ca3bc301e", "code6-comparison.json", "source_head", "7a119106a22f2de2ca5c761a4119f00509e0efdd"),
+          ]
+          rows = []
+          for artifact, run, sha256, member, key, expected in specs:
+              meta = json.loads(subprocess.check_output(["gh", "api", f"repos/{repo}/actions/artifacts/{artifact}"]))
+              assert meta["id"] == artifact and meta["workflow_run"]["id"] == run
+              assert meta["digest"] == "sha256:" + sha256 and not meta["expired"]
+              p = out / f"artifact-{artifact}.zip"
+              with p.open("wb") as fp:
+                  subprocess.run(["gh", "api", f"repos/{repo}/actions/artifacts/{artifact}/zip"], stdout=fp, check=True)
+              data = p.read_bytes()
+              assert hashlib.sha256(data).hexdigest() == sha256, "original ZIP digest mismatch"
+              with zipfile.ZipFile(p) as z:
+                  assert z.testzip() is None
+                  receipt = json.loads(z.read(member))
+                  assert receipt[key] == expected
+              blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+              request = json.dumps({"content": base64.b64encode(data).decode(), "encoding": "base64"}).encode()
+              result = json.loads(subprocess.check_output(["gh", "api", "--method", "POST", f"repos/{repo}/git/blobs", "--input", "-"], input=request))
+              assert result["sha"] == blob, "Git blob identity mismatch"
+              rows.append({"artifact_id": artifact, "producer_run_id": run, "source_head": expected,
+                           "zip_sha256": sha256, "git_blob_sha": blob, "bytes": len(data)})
+          result = {"schema": "issue881.original_zip_blob_staging.v1",
+                    "request_head": os.environ["GITHUB_SHA"], "run_id": os.environ["GITHUB_RUN_ID"],
+                    "rows": rows, "ref_mutation": False, "custody_complete": False}
+          (out / "receipt.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+          print(json.dumps(result, indent=2, sort_keys=True))
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: issue881-fdeg-code6-comparison-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/issue881/
+          name: issue881-original-zip-blob-staging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/issue881-custody/receipt.json
           if-no-files-found: error
           retention-days: 30
