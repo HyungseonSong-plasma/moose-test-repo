@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-774-newonly-integration-validate-20261123",
-      "expected_sha": "edbdcf2ea4867e7fcbee4a0e40b6780f1acf2a06",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-newonly-integration-validate-20261123-edbdcf2ea486"
+      "branch": "issue-774-d12-public-d-native-evidence-20261123",
+      "expected_sha": "674e4287088e9b1889776eb6ea4f5cfacbcb7711",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d12-public-d-native-evidence-20261123-674e4287088e"
     },
     {
-      "branch": "issue-774-newonly-integration-verified-evidence-20261123",
-      "expected_sha": "183fb3ca2945d0785f93d50fba68943cd0c881aa",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-newonly-integration-verified-evidence-20261123-183fb3ca2945"
+      "branch": "issue-774-d12-public-d-native-p2-20261123",
+      "expected_sha": "945679c1470695a19c10feae0f336e8606bcbbe4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d12-public-d-native-p2-20261123-945679c14706"
     },
     {
-      "branch": "issue-774-d14-public-d-native-evidence-20261123",
-      "expected_sha": "216361e83810c380d566b09c9221fd16249d3293",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d14-public-d-native-evidence-20261123-216361e83810"
+      "branch": "issue-774-d11-public-generator-evidence-20261123",
+      "expected_sha": "207133760c9f4517da5beda473833e3ae61c8ca1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d11-public-generator-evidence-20261123-207133760c9f"
     },
     {
-      "branch": "issue-774-d14-public-d-complete-staging-native-20261123",
-      "expected_sha": "581bdd03a6ab2e09c841903a6ac1761b54793753",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d14-public-d-complete-staging-native-20261123-581bdd03a6ab"
+      "branch": "issue-774-d11-public-d-generator-rollback-20261123",
+      "expected_sha": "6c4b99b5798fa6636fa3d13e1edaefe3bd601612",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d11-public-d-generator-rollback-20261123-6c4b99b5798f"
     },
     {
-      "branch": "issue-774-d13-public-d-causal-matrix-20261123",
-      "expected_sha": "166d9387c160bda0043be23c65a2172a52e680c3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d13-public-d-causal-matrix-20261123-166d9387c160"
+      "branch": "issue-774-d10-native-evidence-20261123",
+      "expected_sha": "11da1178d77b47650bd2d389e187748ea0e83cec",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d10-native-evidence-20261123-11da1178d77b"
     }
   ]
 }
