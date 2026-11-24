@@ -1,0 +1,186 @@
+name: Issue 882 bounded generated HIT evidence
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/issue-882-generated-hit-evidence.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue-882-live-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  capture:
+    if: ${{ github.head_ref == 'issue-882-p1d-live-artifact' && github.event.pull_request.head.repo.full_name == github.repository }}
+    name: Capture generated HIT
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+      manifest_digest: ${{ steps.capture.outputs.manifest_digest }}
+      hit_digest: ${{ steps.capture.outputs.hit_digest }}
+      invocation_digest: ${{ steps.capture.outputs.invocation_digest }}
+      producer_job: ${{ steps.job_identity.outputs.job_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact source revision
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - name: Resolve numeric producer job ID
+        id: job_identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          job_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --jq '[.jobs[] | select(.name == "Capture generated HIT") | .id] | if length == 1 then .[0] else error("ambiguous producer job") end')"
+          [[ "$job_id" =~ ^[1-9][0-9]*$ ]]
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+      - name: Capture vetted Code6 generator
+        id: capture
+        env:
+          PRODUCER_JOB: ${{ steps.job_identity.outputs.job_id }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python - <<'PY'
+          import importlib.util, json, os
+          from hashlib import sha256
+          from pathlib import Path
+          from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest
+          from physics_harness.code.verification.generated_input_actions import capture_generated_return
+          root = Path.cwd()
+          path = "physics_app/ci/check_stage5_ei20_runtime.py"
+          provider = GitSourceProvider(root)
+          rev = os.environ["EXPECTED_HEAD"]
+          request = ScanRequest(os.environ["GITHUB_REPOSITORY"], rev, (path,), collectors=("python_ast",))
+          blob = provider.read_at_revision(rev, path).record.blob_sha
+          spec = importlib.util.spec_from_file_location("vetted_code6_generator", root / path)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          captured = capture_generated_return(
+              request, provider, producer_path=path, producer_blob_sha=blob,
+              function=module.runtime_input, arguments={"mean": 5.73276},
+              artifact_path="inputs/generated.i", run_id=int(os.environ["GITHUB_RUN_ID"]),
+              attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]),
+              job_id=int(os.environ["PRODUCER_JOB"]),
+              workflow_path=".github/workflows/issue-882-generated-hit-evidence.yml")
+          out = Path(os.environ["RUNNER_TEMP"]) / "issue882-capture"
+          out.mkdir()
+          (out / "inputs").mkdir()
+          (out / "inputs/generated.i").write_bytes(captured.hit)
+          (out / "manifest.json").write_bytes(captured.manifest)
+          claim = json.loads(captured.manifest)
+          manifest_digest = sha256(captured.manifest).hexdigest()
+          hit_digest = sha256(captured.hit).hexdigest()
+          invocation_digest = claim["identity"]["invocation_sha256"]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as stream:
+              stream.write(f"manifest_digest={manifest_digest}\nhit_digest={hit_digest}\ninvocation_digest={invocation_digest}\n")
+          print("ISSUE882_CAPTURE " + json.dumps({"manifest": claim, "manifest_sha256": manifest_digest}, sort_keys=True))
+          PY
+      - name: Upload generated HIT
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue882-generated-hit
+          path: ${{ runner.temp }}/issue882-capture/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Record upload receipt
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARCHIVE_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+        run: |
+          printf 'ISSUE882_UPLOAD artifact_id=%s archive_sha256=%s\n' "$ARTIFACT_ID" "$ARCHIVE_DIGEST"
+  verify:
+    name: Verify uploaded generated HIT
+    needs: capture
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Replay downloaded ZIP through existing Graph collector
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          ARTIFACT_ID: ${{ needs.capture.outputs.artifact_id }}
+          ARCHIVE_DIGEST: ${{ needs.capture.outputs.artifact_digest }}
+          MANIFEST_DIGEST: ${{ needs.capture.outputs.manifest_digest }}
+          HIT_DIGEST: ${{ needs.capture.outputs.hit_digest }}
+          INVOCATION_DIGEST: ${{ needs.capture.outputs.invocation_digest }}
+          PRODUCER_JOB: ${{ needs.capture.outputs.producer_job }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from hashlib import sha256
+          from pathlib import Path
+          from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest
+          from physics_harness.code.diagnostics.providers.generated_input import GeneratedInputIdentity, collect_generated_input
+          from physics_harness.code.verification.naming_actions import GitHubActionsRestReader, read_actions_archive_members
+          env = os.environ
+          repo, rev, run_id, attempt = env["GITHUB_REPOSITORY"], env["EXPECTED_HEAD"], int(env["GITHUB_RUN_ID"]), int(env["GITHUB_RUN_ATTEMPT"])
+          if attempt != 1:
+              raise ValueError("Only first attempt is supported")
+          provider = GitSourceProvider(Path.cwd())
+          provider.assert_head(rev)
+          path = "physics_app/ci/check_stage5_ei20_runtime.py"
+          request = ScanRequest(repo, rev, (path,), collectors=("python_ast",))
+          reader = GitHubActionsRestReader(env["GH_TOKEN"])
+          run = reader.run(repo, run_id)
+          assert run["id"] == run_id and run["head_sha"] == rev and run["run_attempt"] == attempt
+          assert run["repository"]["full_name"] == repo
+          assert run["path"] == ".github/workflows/issue-882-generated-hit-evidence.yml"
+          job_id = int(env["PRODUCER_JOB"])
+          jobs = [j for j in reader.jobs(repo, run_id) if j["id"] == job_id]
+          assert len(jobs) == 1 and jobs[0]["name"] == "Capture generated HIT"
+          job = jobs[0]
+          assert job["run_id"] == run_id and job["run_attempt"] == attempt and job["conclusion"] == "success" and job["status"] == "completed"
+          for name in ("Verify exact source revision", "Capture vetted Code6 generator", "Upload generated HIT", "Record upload receipt"):
+              steps = [s for s in job["steps"] if s["name"] == name]
+              assert len(steps) == 1 and steps[0]["conclusion"] == "success"
+          aid = int(env["ARTIFACT_ID"])
+          digest = env["ARCHIVE_DIGEST"]
+          items = [a for a in reader.artifacts(repo, run_id) if a["id"] == aid or a["name"] == "issue882-generated-hit"]
+          assert len(items) == 1
+          a = items[0]
+          assert a["id"] == aid and a["name"] == "issue882-generated-hit" and a["expired"] is False
+          assert a["digest"] == "sha256:" + digest
+          assert a["workflow_run"]["id"] == run_id and a["workflow_run"]["head_sha"] == rev
+          assert a["workflow_run"]["repository_id"] == run["repository"]["id"]
+          archive = reader.archive(repo, aid)
+          assert sha256(archive).hexdigest() == digest
+          members = read_actions_archive_members(archive, entries=("manifest.json", "inputs/generated.i"))
+          manifest = members["manifest.json"]
+          hit = members["inputs/generated.i"]
+          assert sha256(manifest).hexdigest() == env["MANIFEST_DIGEST"]
+          assert sha256(hit).hexdigest() == env["HIT_DIGEST"]
+          expected = GeneratedInputIdentity(repo, rev, path, provider.read_at_revision(rev, path).record.blob_sha,
+              run_id, attempt, aid, "inputs/generated.i", env["HIT_DIGEST"], env["INVOCATION_DIGEST"])
+          claim = json.loads(manifest)
+          assert claim["schema_version"] == 1 and claim["workflow_path"] == ".github/workflows/issue-882-generated-hit-evidence.yml" and claim["job_id"] == job_id
+          observed = GeneratedInputIdentity(**claim["identity"], artifact_id=aid)
+          result = collect_generated_input(request, provider, expected=expected, receipt=observed, content=hit)
+          assert result.status == "PARTIAL"
+          assert any(n.kind == "moose_type" and n.name == "PhysicsFVMassFractionTimeDerivative" for n in result.batch.nodes)
+          assert not any(e.observation_status == "RUNTIME_OBSERVED" for e in result.batch.evidence)
+          again = reader.run(repo, run_id)
+          assert again["head_sha"] == rev and again["run_attempt"] == attempt
+          print("ISSUE882_LIVE_REPLAY " + json.dumps({"artifact_id": aid, "archive_sha256": digest, "manifest_sha256": env["MANIFEST_DIGEST"],
+              "hit_sha256": env["HIT_DIGEST"], "producer_job": job_id, "run_id": run_id, "attempt": attempt, "revision": rev,
+              "status": "PARTIAL", "code6_reference_detected": True, "native_runtime_observed": False}, sort_keys=True))
+          PY
