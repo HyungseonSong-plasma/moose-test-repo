@@ -59,8 +59,9 @@ def s5r(case):
     deck,meta=s._stage(case)
     return deck
 
-def e2a(case,d):
-    from experiments.Issue26_electron_energy.E2a_controlled_diffusion.run import _stage_case
+def e2a(case,mode):
+    from experiments.Issue26_electron_energy.E2a_controlled_diffusion.run import _stage_case, CASE_DIFFUSIVITIES
+    d=CASE_DIFFUSIVITIES[mode]
     from experiments.Issue282_e2a_rz_bridge.research_type_bridge import project_historical_registration_only
     _stage_case(case,diffusivity_m2_s=d)
     deck=case/"input.i"
@@ -106,16 +107,15 @@ def sheath(case,enabled):
     return staged(case,s.SOURCE,text)
 
 run("S5R",s5r)
-from experiments.Issue26_electron_energy.E2a_controlled_diffusion.run import CASE_DIFFUSIVITIES
-for name,d in CASE_DIFFUSIVITIES.items():
-    run("E2a_"+name,lambda case,d=d:e2a(case,d))
+for name in ("zero_diffusion","diffusion"):
+    run("E2a_"+name,lambda case,name=name:e2a(case,name))
 run("H3_positive",lambda case:h3(case,1,1))
 run("H3_negative",lambda case:h3(case,-1,1))
 run("wall_drift_off",lambda case:wall(case,False))
 run("wall_drift_on",lambda case:wall(case,True))
 run("sheath_control",lambda case:sheath(case,False))
 run("sheath_primary",lambda case:sheath(case,True))
-result["status"]="OBSERVED" if all(x["state"]=="OBSERVED" for x in result["cases"].values()) else "INCOMPLETE"
+result["status"]="OBSERVED" if len(result["cases"])==9 and all(x["state"]=="OBSERVED" for x in result["cases"].values()) else "INCOMPLETE"
 save()
 print("CODE4_HISTORICAL_REACHABILITY="+result["status"])
 sys.exit(0 if result["status"]=="OBSERVED" else 1)
