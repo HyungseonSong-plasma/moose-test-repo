@@ -21,12 +21,14 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         receipt = d9.audit(ROOT, expected_head=head)
         self.assertEqual(receipt["schema"], d9.SCHEMA)
         self.assertFalse(receipt["legacy_inputs_supported"])
-        self.assertEqual(receipt["retired_factories"], [d9.RETIRED, d9.HEAVY, d9.JOULE])
-        self.assertEqual(receipt["current_newonly_factory"]["source_files"], 10)
-        self.assertEqual(receipt["current_newonly_factory"]["registered_factory_types"], 15)
+        self.assertEqual(receipt["retired_factories"], [d9.RETIRED, d9.HEAVY, d9.JOULE, d9.CODE1, d9.CODE3])
+        self.assertEqual(receipt["current_newonly_factory"]["source_files"], 8)
+        self.assertEqual(receipt["current_newonly_factory"]["registered_factory_types"], 13)
         self.assertTrue(receipt["newonly_ci"]["workflow_template_bytes_equal"])
         self.assertFalse(receipt["newonly_ci"]["historical_fdeg_ci_imported"])
         self.assertEqual(receipt["reference_audit"]["active_retired_type_references"], [])
+        self.assertEqual(receipt["reference_audit"]["code3_reviewed_assertions"],
+                         {path: 1 for path in d9.CODE3_ASSERTIONS})
         self.assertFalse(receipt["safe_to_delete"])
         self.assertFalse(receipt["merge_to_main"])
         self.assertEqual(receipt["global_dynamic_and_external_consumers"],
@@ -89,8 +91,7 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         changed = dict(tracked, **{source: {"sha": "0"*40}})
         with self.assertRaisesRegex(ValueError, "RETIRED_SOURCE_OR_HEADER_REINTRODUCED"):
             d9.check_factory_inventory(ROOT, changed)
-        for retired_path in (d9.HEAVY_SOURCE, d9.HEAVY_HEADER,
-                             d9.JOULE_SOURCE, d9.JOULE_HEADER):
+        for retired_path in d9.RETIRED_PATHS:
             with self.assertRaisesRegex(ValueError, "RETIRED_SOURCE_OR_HEADER_REINTRODUCED"):
                 d9.check_factory_inventory(ROOT, dict(tracked, **{retired_path: {"sha": "0"*40}}))
         bad_sha = dict(tracked)
@@ -98,7 +99,7 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "EXACT_TREE_SOURCE_BLOB_MISMATCH"):
             d9.check_factory_inventory(ROOT, bad_sha)
         correct = d9.check_factory_inventory(ROOT, tracked)
-        self.assertEqual(correct["registered_factory_types"], 15)
+        self.assertEqual(correct["registered_factory_types"], 13)
 
     def test_historical_research_identity_is_immutable(self):
         good = {path: {"sha": sha} for path, sha in d9.HISTORICAL_ALLOWED.items()}
@@ -125,7 +126,7 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         ):
             self.assertIn(path, d9.HISTORICAL_ALLOWED)
             self.assertIsNone(d9.active_surface(path))
-        self.assertEqual(len(d9.RETIRED_FACTORIES), 3)
+        self.assertEqual(len(d9.RETIRED_FACTORIES), 5)
 
     def test_missing_workflow_owner_and_forbidden_historical_fdeg_import(self):
         paths = [d9.NEWONLY_CI, d9.TEMPLATE, d9.SAFETY, d9.EXISTING_TEST,
@@ -139,6 +140,40 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         fake.pop(d9.NEW_TEST)
         with self.assertRaisesRegex(ValueError, "CI_OWNER_MISSING"):
             d9.check_ci_tree(ROOT, fake)
+
+    def test_pinned_code1_history_rejects_archive_and_generator_drift(self):
+        tracked = {
+            d9.CODE1_ARCHIVE: {"sha": d9.CODE1_ARCHIVE_BLOB},
+            d9.CODE1_HISTORIC_GENERATOR: {"sha": d9.CODE1_HISTORIC_SHA},
+        }
+        report = d9.check_code1_archive(ROOT, tracked)
+        self.assertFalse(report["current_binary_legacy_replay_proven"])
+        for path in (d9.CODE1_ARCHIVE, d9.CODE1_HISTORIC_GENERATOR):
+            modified = dict(tracked, **{path: {"sha": "0"*40}})
+            expected = ("CODE1_ARCHIVE_BLOB_DRIFT" if path == d9.CODE1_ARCHIVE
+                        else "CODE1_HISTORICAL_GENERATOR_CHANGED")
+            with self.assertRaisesRegex(ValueError, expected):
+                d9.check_code1_archive(ROOT, modified)
+
+    def test_s5r_pins_and_code3_reference_scope(self):
+        tracked = {d9.S5R_ARCHIVE: {"sha": d9.S5R_ORIGINAL_BLOB},
+                   d9.S5R: {"sha": d9.S5R_MIGRATED_BLOB}}
+        self.assertEqual(d9.check_s5r_lineage(tracked)["original"], d9.S5R_ORIGINAL_BLOB)
+        for path in tracked:
+            bad = dict(tracked, **{path: {"sha": "0"*40}})
+            with self.assertRaisesRegex(ValueError, "S5R_.*_DRIFT"):
+                d9.check_s5r_lineage(bad)
+        self.assertIsNone(d9.reference_surface(d9.S5R, d9.HEAVY))
+        self.assertIsNotNone(d9.reference_surface(d9.S5R, d9.CODE3))
+        for path, assertion in d9.CODE3_ASSERTIONS.items():
+            self.assertIsNone(d9.reference_surface(path, assertion))
+            self.assertIsNotNone(d9.reference_surface(path, "type = " + d9.CODE3))
+            self.assertIsNotNone(d9.reference_surface(path, assertion + " # changed"))
+            with self.assertRaisesRegex(ValueError, "ACTIVE_RETIRED_FACTORY_REINTRODUCED"):
+                d9.check_route_rows([
+                    {"path": path, "active_surface": d9.reference_surface(path, assertion)},
+                    {"path": path, "active_surface": d9.reference_surface(path, "type = " + d9.CODE3)},
+                ])
 
     def test_bad_source_sha_rejected_even_when_active_type_absent(self):
         with self.assertRaisesRegex(ValueError, "EXACT_HEAD_MISMATCH"):

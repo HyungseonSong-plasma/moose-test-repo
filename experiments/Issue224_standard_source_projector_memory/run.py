@@ -5,7 +5,8 @@ Compare the accepted W5 production construction against a diagnostic branch that
 replaces only thin heavy/electron reaction-source projector kernels with standard
 MOOSE FVCoupledForce. Conservative species accumulation and all transport,
 kinetics, sheath, coefficients, mesh, and Rhie-Chow semantics remain unchanged.
-No physical timestep or linear solve is authorized.
+No physical timestep or linear solve is authorized. After #817 the electron
+projector is standard in both branches; only heavy projectors vary.
 """
 from __future__ import annotations
 
@@ -53,24 +54,16 @@ def _replace_source_projectors(text: str) -> tuple[str, dict[str, Any]]:
         text = mp.upsert_parameter(text, path, "coef", "1.0")
         replacements.append({"path": path, "from": typ, "to": "FVCoupledForce", "v": source, "coef": 1.0})
 
-    path = "FVKernels/s5r_electron_source"
-    typ = mp.get_parameter(text, path, "type")
-    source = mp.get_parameter(text, path, "number_source")
-    n_ref_raw = mp.get_parameter(text, path, "n_ref")
-    if typ != "PhysicsFVElectronReactionSource" or not source or not n_ref_raw:
-        raise Issue224Error(
-            f"unexpected electron projector contract at {path}: type={typ}, source={source}, n_ref={n_ref_raw}"
-        )
-    n_ref = float(n_ref_raw)
-    if not math.isfinite(n_ref) or n_ref <= 0.0:
-        raise Issue224Error(f"invalid n_ref={n_ref_raw}")
-    coef = 1.0 / n_ref
-    text = mp.upsert_parameter(text, path, "type", "FVCoupledForce")
-    text = mp.remove_parameter(text, path, "number_source")
-    text = mp.remove_parameter(text, path, "n_ref")
-    text = mp.upsert_parameter(text, path, "v", source)
-    text = mp.upsert_parameter(text, path, "coef", f"{coef:.17g}")
-    replacements.append({"path": path, "from": typ, "to": "FVCoupledForce", "v": source, "coef": coef})
+    # #817: Electron source is already standard in *both* current branches.
+    # This historical setup-only memory A/B now varies only heavy projectors;
+    # old custom-electron results are preserved as immutable archived runs.
+    electron_path = "FVKernels/s5r_electron_source"
+    if (mp.get_parameter(text, electron_path, "type") != "FVCoupledForce"
+            or mp.get_parameter(text, electron_path, "v") != "S_e_s5r"):
+        raise Issue224Error("current normalized electron owner is not standard")
+    scale = float(mp.get_parameter(text, electron_path, "coef") or "nan")
+    if not math.isfinite(scale) or scale <= 0:
+        raise Issue224Error("normalized electron source coefficient invalid")
 
     return text, {"replacement_count": len(replacements), "replacements": replacements}
 
@@ -210,7 +203,7 @@ def self_test() -> dict[str, Any]:
     checks: dict[str, bool] = {}
     custom, _ = _build(1, False)
     standard, meta = _build(1, True)
-    checks["replacement_count_7"] = meta["replacement"]["replacement_count"] == len(SOLVED_HEAVY) + 1
+    checks["replacement_count_6_heavy_only"] = meta["replacement"]["replacement_count"] == len(SOLVED_HEAVY)
     for species in SOLVED_HEAVY:
         source_path = f"FVKernels/s5r_source_{species}"
         time_path = f"FVKernels/{species}_time"
@@ -223,7 +216,7 @@ def self_test() -> dict[str, Any]:
         checks[f"conservative_time_preserved_custom:{species}"] = mp.get_parameter(custom, time_path, "type") == "PhysicsFVConservativeMassFractionTimeDerivative"
         checks[f"conservative_time_preserved_standard:{species}"] = mp.get_parameter(standard, time_path, "type") == "PhysicsFVConservativeMassFractionTimeDerivative"
     ep = "FVKernels/s5r_electron_source"
-    checks["custom_electron_projector"] = mp.get_parameter(custom, ep, "type") == "PhysicsFVElectronReactionSource"
+    checks["current_electron_projector_already_standard"] = mp.get_parameter(custom, ep, "type") == "FVCoupledForce"
     checks["standard_electron_projector"] = (
         mp.get_parameter(standard, ep, "type") == "FVCoupledForce"
         and mp.get_parameter(standard, ep, "v") == "S_e_s5r"

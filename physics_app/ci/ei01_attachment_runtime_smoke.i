@@ -27,10 +27,10 @@
     variable = n_e
   []
   [ei01_electron_source]
-    type = PhysicsFVElectronReactionSource
+    type = FVCoupledForce
     variable = n_e
-    number_source = ei01_electron_number_source
-    state_form = physical
+    v = ei01_electron_number_source
+    coef = 1
   []
 []
 
