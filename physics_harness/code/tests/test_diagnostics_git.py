@@ -293,3 +293,84 @@ def test_receipt_rejects_non_hex_and_noncanonical_sha():
         with pytest.raises(ValueError, match="FILE_RECEIPT_BLOB_REQUIRED"):
             FileCoverage("src/file.py", bad, "SCANNED")
     assert FileCoverage("src/file.py", "a" * 40, "SCANNED").blob_sha == "a" * 40
+
+
+def test_naming_tree_paths_preserve_filters_and_historical_identity(git_factory, monkeypatch):
+    from physics_harness.code.verification.naming_boundary import _tree_paths
+    from physics_harness.code.verification.naming_consumers import _git_source_paths
+    from physics_harness.code.tests.conftest import git
+
+    root, old = git_factory({"z.py": "pass\n", "a.md": "# doc\n",
+                             "a space.py": "pass\n", "line\nbreak.py": "pass\n",
+                             "data.bin": b"\x00", "upper.PY": "pass\n",
+                             ".py": "pass\n"})
+    (root / "tool.py").write_text("pass\n")
+    (root / "tool.py").chmod(0o755)
+    (root / "linked.py").symlink_to("z.py")
+    git(root, "add", ".")
+    git(root, "update-index", "--add", "--cacheinfo", "160000," + old + ",submodule.py")
+    git(root, "commit", "-qm", "nonregular and executable controls")
+    current = git(root, "rev-parse", "HEAD")
+    (root / "untracked.py").write_text("pass\n")
+    (root / "z.py").write_text("# worktree mutation\n")
+    provider = GitSourceProvider(root)
+    original_git = provider._git
+    calls = []
+
+    def record(*args):
+        calls.append(args)
+        return original_git(*args)
+
+    monkeypatch.setattr(provider, "_git", record)
+    for revision, executable in ((old, ()), (current, ("tool.py",))):
+        calls.clear()
+        python = frozenset(("z.py", "a space.py", "line\nbreak.py", ".py") + executable)
+        text = tuple(sorted(("z.py", "a space.py", "line\nbreak.py", "a.md") + executable))
+        assert _tree_paths(provider, revision) == python
+        assert calls == [("cat-file", "-t", revision),
+                         ("ls-tree", "--full-tree", "-r", "-z", revision)]
+        calls.clear()
+        assert _git_source_paths(provider, revision) == text
+        assert calls == [("cat-file", "-t", revision),
+                         ("ls-tree", "--full-tree", "-r", "-z", revision)]
+    assert provider.read_at_revision(old, "z.py").content == b"pass\n"
+    with pytest.raises(ValueError, match="GIT_HEAD_MISMATCH"):
+        provider.inventory(request(old))
+
+
+@pytest.mark.parametrize("consumer,error", [
+    ("boundary", "INVALID_BOUNDARY_REVISION"),
+    ("consumer", "INVALID_CONSUMER_REVISION"),
+])
+def test_naming_tree_paths_keep_revision_errors(git_factory, consumer, error):
+    from physics_harness.code.verification.naming_boundary import _tree_paths
+    from physics_harness.code.verification.naming_consumers import _git_source_paths
+    from physics_harness.code.tests.conftest import git
+
+    root, head = git_factory({"a.py": "pass\n"})
+    provider = GitSourceProvider(root)
+    select = _tree_paths if consumer == "boundary" else _git_source_paths
+    with pytest.raises(ValueError, match=error):
+        select(provider, "HEAD")
+    with pytest.raises(ValueError, match="GIT_SOURCE_UNAVAILABLE"):
+        select(provider, "0"*40)
+    blob = git(root, "rev-parse", "HEAD:a.py")
+    with pytest.raises(ValueError, match=consumer.upper()+"_REVISION_NOT_COMMIT"):
+        select(provider, blob)
+
+
+@pytest.mark.parametrize("row,exception", [
+    (b"bad-row\0", ValueError),
+    (b"100644 blob " + b"0"*40 + b"\tbad\xff.py\0", UnicodeDecodeError),
+])
+def test_naming_tree_paths_keep_malformed_row_errors(git_factory, monkeypatch, row, exception):
+    from physics_harness.code.verification.naming_boundary import _tree_paths
+    from physics_harness.code.verification.naming_consumers import _git_source_paths
+
+    root, head = git_factory({"a.py": "pass\n"})
+    provider = GitSourceProvider(root)
+    monkeypatch.setattr(provider, "_git", lambda *args:
+                        b"commit\n" if args[0] == "cat-file" else row)
+    for select in (_tree_paths, _git_source_paths):
+        with pytest.raises(exception):
+            select(provider, head)

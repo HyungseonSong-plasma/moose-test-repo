@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 import hashlib
 from pathlib import Path
 import subprocess
@@ -31,6 +32,21 @@ class GitSourceProvider:
         actual = self._git("rev-parse", "--verify", "HEAD").decode("ascii").strip()
         if actual.lower() != revision.lower():
             raise ValueError("GIT_HEAD_MISMATCH")
+
+    def _regular_tree_paths(self, revision: str) -> Iterator[str]:
+        """Read regular blob paths from a caller-validated exact commit.
+
+        No HEAD check, path normalization, domain filtering or consumer error
+        translation: those remain the responsibility of the calling operation.
+        """
+        rows = self._git("ls-tree", "--full-tree", "-r", "-z", revision).split(b"\0")
+        for row in rows:
+            if not row:
+                continue
+            meta, filename = row.split(b"\t", 1)
+            mode, kind, _ = meta.decode("ascii").split()
+            if kind == "blob" and mode in {"100644", "100755"}:
+                yield filename.decode("utf-8", "strict")
 
     def inventory(self, request: ScanRequest) -> tuple[SourceRecord, ...]:
         if not isinstance(request, ScanRequest):

@@ -77,19 +77,8 @@ def _tree_paths(provider: GitSourceProvider, revision: str) -> frozenset[str]:
         raise ValueError("INVALID_BOUNDARY_REVISION")
     if provider._git("cat-file", "-t", revision).strip() != b"commit":
         raise ValueError("BOUNDARY_REVISION_NOT_COMMIT")
-    rows = provider._git("ls-tree", "--full-tree", "-r", "-z", revision).split(b"\0")
-    paths = set()
-    for row in rows:
-        if not row:
-            continue
-        meta, name = row.split(b"\t", 1)
-        mode, typ, sha = meta.decode("ascii").split()
-        if typ != "blob" or mode not in {"100644", "100755"}:
-            continue
-        path = name.decode("utf-8", "strict")
-        if path.endswith(".py"):
-            paths.add(normalized_path(path))
-    return frozenset(paths)
+    return frozenset(normalized_path(path) for path in provider._regular_tree_paths(revision)
+                     if path.endswith(".py"))
 
 
 def _declaration_inventory(tree: ast.Module, path: str) -> tuple[list[tuple[str, ast.AST]], set[str]]:
