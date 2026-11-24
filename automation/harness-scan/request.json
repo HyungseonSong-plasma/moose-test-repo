@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "real-qvt-inventory-smoke-retirement-baseline-20261124",
-  "source_sha": "86fcbcb44752940d36b89618d40ff2f62eaff9a0",
+  "request_id": "code4-r6-canonical-rewire-candidate-20261124",
+  "source_sha": "1cd5cbd79137791e1acdd13ac17c15c61e55f242",
   "includes": [
     "*.i",
     "*.py",
