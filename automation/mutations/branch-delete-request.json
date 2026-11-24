@@ -1,39 +1,14 @@
 {
   "targets": [
     {
-      "branch": "cleanup-774-retirement-refs-20261124-batch10",
-      "expected_sha": "7f1c632ad218c3dd9b50dc4aeb64c164794d63a2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch10-7f1c632ad218"
+      "branch": "cleanup-774-retirement-refs-20261124-batch11",
+      "expected_sha": "b5818260eeb1868457a1ea8ae7ad8478bf90fa3d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch11-b5818260eeb1"
     },
     {
-      "branch": "code4-retirement-pr-a-evidence-20261119",
-      "expected_sha": "642bb1a353cf1d4705ef8281e1df9f522c0b7649",
-      "archive_tag": "archive/oxygen-cleanup-20261106/code4-retirement-pr-a-evidence-20261119-642bb1a353cf"
-    },
-    {
-      "branch": "code6/retirement-evidence-baseline-20261119",
-      "expected_sha": "181d4770386f0009e6c677c819c245b7fe8fe351",
-      "archive_tag": "archive/oxygen-cleanup-20261106/code6-retirement-evidence-baseline-20261119-181d4770386f"
-    },
-    {
-      "branch": "issue-671-d8-caller-single-owner-native-20261118",
-      "expected_sha": "e68dc832e018aaa7e089d5a005d141d20974aed1",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-caller-single-owner-native-20261118-e68dc832e018"
-    },
-    {
-      "branch": "issue-671-d8-full-s6-rf-actual-state-20261118",
-      "expected_sha": "24b4c40f39579927de2b3ceff4043a5565d682e2",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-full-s6-rf-actual-state-20261118-24b4c40f3957"
-    },
-    {
-      "branch": "issue-671-p5-warehouse-inventory-receipt-20261118",
-      "expected_sha": "9e9b4f5ddb99bcbbf8c31746d7331587c9885a3f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-warehouse-inventory-receipt-20261118-9e9b4f5ddb99"
-    },
-    {
-      "branch": "issue-671-rf-transfer-real-child-one-step-20261118",
-      "expected_sha": "240e055d7b60632beb4404a784d3e41bfa3aafd3",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-rf-transfer-real-child-one-step-20261118-240e055d7b60"
+      "branch": "issue-633-ci-required-newonly-historical-compat-20261118",
+      "expected_sha": "04cfccc86a86ec0aa3704160e4fb185aa3d747fc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ci-required-newonly-historical-compat-20261118-04cfccc86a86"
     }
   ]
 }
