@@ -1,18 +1,23 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue867-real-contract-json-qualification-20261124",
-  "source_sha": "16446e3d5337955e27d762e62818a7ec2fc9f099",
+  "request_id": "issue867-b02-b03-real-qvt-reference-qualification-20261124",
+  "source_sha": "218fc46cad0aa5c6697aafa7b053ce07e641b075",
   "includes": [
     "docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json",
     "docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json",
-    "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i"
+    "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i",
+    "physics_app/ci/check_stage5_s5r_preflight.py",
+    "physics_app/ci/check_electron_energy_real_qvt_inventory.py",
+    "tests/test_issue402_material_class_names.py",
+    "tests/test_issue402_reaction_reduction_p2_only.py"
   ],
   "excludes": [],
   "collectors": [
     "json",
+    "python_ast",
     "moose_input"
   ],
-  "max_files": 10,
-  "max_bytes": 2000000,
+  "max_files": 15,
+  "max_bytes": 4000000,
   "max_seconds": 90
 }
