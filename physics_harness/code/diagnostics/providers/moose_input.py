@@ -15,6 +15,7 @@ from ..collector import (
     file_node_id, graph_edge_id, stable_id,
 )
 from ..request import ScanRequest
+from .file_reference_facts import FileReferenceFacts, path_kind
 
 
 _ASSIGNMENT = re.compile(r"^([A-Za-z_]\w*)\s*=\s*(.*)$")
@@ -42,7 +43,7 @@ def _uncomment(line: str) -> str:
 
 class MooseInputCollector:
     name = "moose_input"
-    version = "moose-hit-static-v0.2"
+    version = "moose-hit-static-v0.3"
 
     def supports(self, record: SourceRecord) -> bool:
         return record.path.endswith(".i")
@@ -60,15 +61,32 @@ class MooseInputCollector:
         includes: list[tuple[int | None, str, int]] = []
         unresolved: set[str] = set()
         seen_paths: set[tuple[str, ...]] = set()
+        file_facts = FileReferenceFacts(request, record, scope_id, self.version)
+
+        def observe_path(raw_value: str, line: int, key: str, block_path: tuple[str, ...]):
+            value = raw_value.strip()
+            if len(value) >= 2 and value[0] in {"'", '"'} and value[-1] == value[0]:
+                value = value[1:-1]
+            # Explicit HIT file fields are not general strings. Anything
+            # outside the narrow single-token path contract is unresolved.
+            unknown = path_kind(value) != "literal"
+            literal = value or "(missing)"
+            file_facts.add(
+                literal, line, f"hit:{key}:{line}", unknown=unknown,
+                details={"path_context": key, "raw_value": raw_value,
+                         "block_path": block_path},
+            )
 
         for line_number, raw in enumerate(content.splitlines(), start=1):
             line = _uncomment(raw).strip()
             if not line:
                 continue
-            if line.startswith("!include"):
+            if line == "!include" or line.startswith(("!include ", "!include\t")):
                 target = line[len("!include"):].strip()
                 includes.append((stack[-1] if stack else None,
                                  target or "(missing)", line_number))
+                observe_path(target, line_number, "!include",
+                             blocks[stack[-1]]["path"] if stack else ())
                 unresolved.add(
                     f"MOOSE_INCLUDE_UNRESOLVED:{record.path}:{line_number}"
                 )
@@ -131,6 +149,8 @@ class MooseInputCollector:
                     blocks[stack[-1]]["attributes"][key] = value
                 if key == "type":
                     types.append((stack[-1], value, line_number))
+                if key in {"file", "table_file"}:
+                    observe_path(value, line_number, key, block["path"])
                 if "$" in value:
                     unresolved.add(
                         f"MOOSE_DYNAMIC_PARAMETER:{record.path}:{line_number}:{key}"
@@ -244,6 +264,7 @@ class MooseInputCollector:
             link(root_id if index is None else block_id(index), unknown_id,
                  "INCLUDES_CANDIDATE", eid, f"include:{line_number}")
 
+        file_facts.merge_into(nodes, edges, evidence, unknown_targets, unresolved)
         return CollectionResult(
             FactBatch(
                 nodes=tuple(nodes), edges=tuple(edges), evidence=tuple(evidence),

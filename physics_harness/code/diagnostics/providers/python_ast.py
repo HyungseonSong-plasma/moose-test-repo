@@ -19,6 +19,7 @@ from ..collector import (
     file_node_id, graph_edge_id, stable_id,
 )
 from ..request import ScanRequest
+from .file_reference_facts import FileReferenceFacts, path_kind
 
 
 _DEFINITIONS = (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
@@ -51,7 +52,7 @@ def _body_metrics(node: ast.AST) -> tuple[int, int]:
 
 class PythonAstCollector:
     name = "python_ast"
-    version = "python-ast-v0.2"
+    version = "python-ast-v0.3"
 
     def supports(self, record: SourceRecord) -> bool:
         return record.path.endswith(".py")
@@ -72,6 +73,9 @@ class PythonAstCollector:
         unresolved: set[str] = set()
         unresolved_targets: list[UnresolvedTarget] = []
         occurrences: Counter[tuple[str, str]] = Counter()
+        file_facts = FileReferenceFacts(request, record, scope_id, self.version)
+        parents = {id(child): parent for parent in ast.walk(root)
+                   for child in ast.iter_child_nodes(parent)}
         docstrings = {
             id(statement.body[0].value)
             for statement in ast.walk(root)
@@ -238,6 +242,17 @@ class PythonAstCollector:
                     link(self.owner, unknown_id, "DYNAMIC_REFERENCE_CANDIDATE",
                          unknown_eid, discriminator)
                     unresolved.add(f"DYNAMIC_PYTHON_REFERENCE:{record.path}:{item.lineno}")
+                if name in {"Path", "pathlib.Path", "PurePath", "pathlib.PurePath"}:
+                    if (item.keywords or len(item.args) > 1 or any(
+                        not isinstance(arg, ast.Constant) or not isinstance(arg.value, str)
+                        for arg in item.args
+                    )):
+                        self.file_fact(item, ast.unparse(item), "PATH_CONSTRUCTOR_EXPRESSION",
+                                       unknown=True, tag="constructor")
+                elif isinstance(item.func, ast.Attribute) and item.func.attr in {"glob", "rglob"}:
+                    if item.args and not isinstance(item.args[0], ast.Constant):
+                        self.file_fact(item, ast.unparse(item), "GLOB_EXPRESSION",
+                                       unknown=True, tag="glob")
                 self.generic_visit(item)
 
             def visit_Assert(self, item: ast.Assert) -> None:
@@ -294,9 +309,53 @@ class PythonAstCollector:
                             f"PYTHON_MOOSE_TYPE_TEMPLATE_UNRESOLVED:{record.path}:{line}"
                         )
 
+            def file_fact(self, item: ast.AST, literal: str, context: str,
+                          *, unknown: bool = False, tag: str = "literal") -> None:
+                line, col = item.lineno, item.col_offset
+                end_line, end_col = item.end_lineno, item.end_col_offset
+                file_facts.add(
+                    literal, line, f"python:{tag}:{line}:{col}:{end_line}:{end_col}",
+                    unknown=unknown,
+                    details={"column": col, "end_line": end_line, "end_column": end_col,
+                             "column_unit": "UTF8_BYTE", "path_context": context,
+                             "literal_context": self.literal_context,
+                             "source_expression": ast.get_source_segment(text, item)},
+                )
+
             def visit_Constant(self, item: ast.Constant) -> None:
-                if isinstance(item.value, str) and id(item) not in docstrings:
-                    self.collect_moose_literal(item, item.value)
+                if not isinstance(item.value, str) or id(item) in docstrings:
+                    return
+                self.collect_moose_literal(item, item.value)
+                kind = path_kind(item.value)
+                if kind is None:
+                    return
+                parent = parents.get(id(item))
+                context = "STRING_LITERAL"
+                unknown = kind == "unresolved"
+                if isinstance(parent, ast.BinOp) and isinstance(parent.op, ast.Div):
+                    context = "PATH_OPERAND"
+                    # A suffix of a nested chain is not a standalone path.
+                    if (parent.right is not item or isinstance(parent.left, ast.BinOp)
+                            or (isinstance(parents.get(id(parent)), ast.BinOp)
+                                and isinstance(parents[id(parent)].op, ast.Div))):
+                        context, unknown = "COMPOSED_PATH_FRAGMENT", True
+                elif isinstance(parent, ast.Call) and ast.unparse(parent.func) in {
+                    "Path", "pathlib.Path", "PurePath", "pathlib.PurePath",
+                }:
+                    context = "PATH_CONSTRUCTOR_ARGUMENT"
+                    if len(parent.args) != 1 or parent.keywords:
+                        context, unknown = "COMPOSED_PATH_FRAGMENT", True
+                self.file_fact(item, item.value, context, unknown=unknown)
+
+            def visit_BinOp(self, item: ast.BinOp) -> None:
+                if isinstance(item.op, ast.Div) and any(
+                    isinstance(part, ast.Constant) and isinstance(part.value, str)
+                    and path_kind(part.value) is not None for part in ast.walk(item)
+                ):
+                    self.file_fact(item, ast.unparse(item), "PATH_COMPOSITION",
+                                   unknown=True, tag="composition")
+                self.generic_visit(item)
+
 
             def visit_JoinedStr(self, item: ast.JoinedStr) -> None:
                 # Formatted values remain dynamic; retain the literal fragments
@@ -314,6 +373,9 @@ class PythonAstCollector:
                             self.visit(part.format_spec)
                 literal = "".join(parts)
                 self.collect_moose_literal(item, literal)
+                if dynamic and path_kind(literal.replace("<PYTHON_DYNAMIC_EXPRESSION>", "{dynamic}")) is not None:
+                    self.file_fact(item, ast.unparse(item), "FORMATTED_PATH_EXPRESSION",
+                                   unknown=True, tag="formatted")
                 if dynamic and _MOOSE_TYPE_LINE.search(literal):
                     unresolved.add(
                         f"PYTHON_GENERATOR_RENDER_UNVERIFIED:{record.path}:{item.lineno}"
@@ -336,6 +398,7 @@ class PythonAstCollector:
                 self.generic_visit(item)
 
         SyntaxVisitor().visit(root)
+        file_facts.merge_into(nodes, edges, evidence, unresolved_targets, unresolved)
         return CollectionResult(
             FactBatch(
                 nodes=tuple(nodes), edges=tuple(edges), evidence=tuple(evidence),
