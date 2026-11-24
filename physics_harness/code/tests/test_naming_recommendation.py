@@ -75,7 +75,7 @@ def options():
     return (
         NamingOption("keep", "KEEP", "Keep existing owner and name"),
         NamingOption("rename", "RENAME", "Name covers both observed source kinds",
-                     proposed_name="source_collector",
+                     proposed_name="source_collector", module_path_policy="RETIRE_OLD_PATH",
                      coverage_rationale="Existing collector responsibilities are preserved",
                      boundary_rationale="Does not plan or mutate sources",
                      context_rationale="diagnostics is the namespace",
@@ -268,7 +268,7 @@ def test_extract_keep_can_win_when_name_still_valid_but_ownership_is_mixed(repos
     extract_keep = NamingOption("extract_keep", "EXTRACT_KEEP", "Delegate implementation",
                                 **common)
     extract_rename = NamingOption("extract_rename", "EXTRACT_RENAME", "Delegate and rename",
-                                  proposed_name="source_collector", **common)
+                                  proposed_name="source_collector", module_path_policy="RETIRE_OLD_PATH", **common)
     proposed = (options()[0], options()[1], extract_keep, extract_rename)
     counterarguments = (
         RejectedNamingCandidate("keep", "Mixed implementation should be separated", ("seam",)),

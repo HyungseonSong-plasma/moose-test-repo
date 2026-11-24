@@ -132,7 +132,7 @@ def test_candidate_rename_file_requires_renamed_file_and_maintained_declarations
     c=replace(c,name_fit="NARROW", name_mismatch_evidence_ids=("name_mismatch",),
               evidence=c.evidence+(mismatch,))
     opt=NamingOption("rename", "RENAME", "Widen to stable source_collector",
-             proposed_name="source_collector",retained_responsibility_ids=c.responsibility_ids,
+             proposed_name="source_collector",module_path_policy="RETIRE_OLD_PATH",retained_responsibility_ids=c.responsibility_ids,
              evidence_ids=("name_mismatch","evolution","boundary","context"),
              coverage_rationale="Collector handles diverse sources",
              boundary_rationale="Does not plan/verify code changes",
@@ -156,7 +156,7 @@ def test_candidate_rename_cannot_keep_same_path(history):
                            (f"{PATH}:4@{digest(NEW)}",),baseline)
     c=replace(c,name_fit="NARROW",name_mismatch_evidence_ids=("name_mismatch",),
               evidence=c.evidence+(mismatch,))
-    opt=NamingOption("rename","RENAME","rename",proposed_name="source_collector",
+    opt=NamingOption("rename","RENAME","rename",proposed_name="source_collector",module_path_policy="RETIRE_OLD_PATH",
           retained_responsibility_ids=c.responsibility_ids,
           evidence_ids=("name_mismatch","evolution","boundary","context"),
           coverage_rationale="cover",boundary_rationale="not broad",context_rationale="diagnostics",

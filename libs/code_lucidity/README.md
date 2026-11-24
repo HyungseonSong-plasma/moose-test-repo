@@ -43,11 +43,11 @@ assert assessment.predicted_score is None
 ## Layer boundaries
 
 Diagnostics collects source and graph evidence; this engine computes
-indicators; `analysis/lucidity_adapter.py` transports data and
-`analysis/lucidity_interpretation.py` evaluates contextual meaning;
+indicators; `analysis/adapters/lucidity_adapter.py` transports data and
+`analysis/adapters/lucidity_interpretation.py` evaluates contextual meaning;
 Refactor Planning compares alternatives and Verification checks preservation.
 
-The retired `libs.hu` and `analysis.hu_*` import paths are not supported.
+Superseded metric-engine and adapter import paths have been retired.
 Use `libs.code_lucidity` and the canonical Analysis entry points.
 The persisted `hu_density_v1` measurement-method identifier remains unchanged
 only as **historical data identity** for comparing earlier measurements. Its

@@ -32,6 +32,7 @@ from .naming_behavior import (
 )
 from .naming_consumers import (
     ConsumerReference, NamingConsumerReceipt, audit_naming_consumers,
+    ModulePathTransitionReceipt, verify_module_path_transition,
 )
 from .naming_semantic_review import (
     BlindedSourceExcerpt, BlindedSemanticPacket, IndependentResponsibilityHypothesis,
@@ -43,6 +44,7 @@ from .naming_gates import NamingSafetyGateReport, evaluate_naming_safety_gates
 __all__ += [
     "ExecutableComparison", "NamingBehaviorReceipt", "verify_naming_behavior_projection",
     "ConsumerReference", "NamingConsumerReceipt", "audit_naming_consumers",
+    "ModulePathTransitionReceipt", "verify_module_path_transition",
     "BlindedSourceExcerpt", "BlindedSemanticPacket", "IndependentResponsibilityHypothesis",
     "SecondPassSemanticChallenge", "SemanticReviewReceipt",
     "build_blinded_semantic_packet", "review_semantic_challenge",

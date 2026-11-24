@@ -137,3 +137,64 @@ def test_budget_rejects_bool_and_zero(history):
     with pytest.raises(ValueError,match="INVALID_CONSUMER_BUDGET"):
         audit_naming_consumers(case(history[1],baseline),extract_option(),
             GitSourceProvider(root),baseline,placements(),max_files=True)
+
+
+@pytest.mark.parametrize("policy,keep_old,expected_blocker", [
+    ("PRESERVE_COMPATIBILITY", True, None),
+    ("PRESERVE_COMPATIBILITY", False, "REQUIRED_COMPATIBILITY_PATH_MISSING_OR_NONREGULAR:pkg/old.py"),
+    ("RETIRE_OLD_PATH", True, "RETIRED_MODULE_PATH_STILL_PRESENT:pkg/old.py"),
+    ("RETIRE_OLD_PATH", False, None),
+])
+def test_explicit_module_path_policy(git_factory, policy, keep_old, expected_blocker):
+    from physics_harness.code.verification.naming_consumers import verify_module_path_transition
+    root, base = git_factory({"pkg/old.py": "from .new import value\n",
+                              "pkg/new.py": "value = 1\n"})
+    if not keep_old:
+        (root / "pkg/old.py").unlink()
+    (root / "client.py").write_text("from pkg.new import value\n")
+    git(root, "add", "."); git(root, "commit", "-qm", "candidate")
+    after = git(root, "rev-parse", "HEAD")
+    result = verify_module_path_transition(GitSourceProvider(root), base, after,
+                                           "pkg/old.py", "pkg/new.py", policy)
+    assert result.old_path_present is keep_old
+    assert result.new_path_present is True
+    assert result.path_policy_witnessed is (expected_blocker is None)
+    assert result.status == ("BLOCKED" if expected_blocker else "HOLD")
+    if expected_blocker:
+        assert expected_blocker in result.blockers
+    assert "EXTERNAL_CONSUMERS_NOT_SCANNED" in result.unresolved
+    assert not result.mutation_approved
+
+
+@pytest.mark.parametrize("stale,remnant", [(True, False), (False, True), (False, False)])
+def test_package_retirement_checks_import_and_entire_directory(git_factory, stale, remnant):
+    from physics_harness.code.verification.naming_consumers import verify_module_path_transition
+    root, base = git_factory({"pkg/old/__init__.py": "from pkg.new import value\n",
+                              "pkg/old/extra.py": "pass\n", "pkg/new/__init__.py": "value = 1\n"})
+    (root / "pkg/old/__init__.py").unlink()
+    if not remnant:
+        (root / "pkg/old/extra.py").unlink()
+    (root / "client.py").write_text("from pkg.old import value\n" if stale else "from pkg.new import value\n")
+    git(root, "add", "."); git(root, "commit", "-qm", "candidate")
+    result = verify_module_path_transition(GitSourceProvider(root), base, git(root, "rev-parse", "HEAD"),
+                                           "pkg/old/__init__.py", "pkg/new/__init__.py", "RETIRE_OLD_PATH")
+    assert result.old_path_present is remnant
+    assert ("STALE_IMPORT_TO_RETIRED_MODULE:pkg.old" in result.blockers) is stale
+    assert ("RETIRED_MODULE_PATH_STILL_PRESENT:pkg/old/__init__.py" in result.blockers) is remnant
+    assert result.status == ("BLOCKED" if stale or remnant else "HOLD")
+
+
+def test_retirement_does_not_confuse_symlink_or_missing_commit_with_absence(git_factory):
+    from physics_harness.code.verification.naming_consumers import verify_module_path_transition
+    root, base = git_factory({"pkg/old.py": "pass\n", "pkg/new.py": "pass\n"})
+    (root / "pkg/old.py").unlink()
+    (root / "pkg/old.py").symlink_to("new.py")
+    git(root, "add", "."); git(root, "commit", "-qm", "candidate")
+    provider = GitSourceProvider(root)
+    result = verify_module_path_transition(provider, base, git(root, "rev-parse", "HEAD"),
+                                           "pkg/old.py", "pkg/new.py", "RETIRE_OLD_PATH")
+    assert result.old_path_present is True and result.status == "BLOCKED"
+    missing = verify_module_path_transition(provider, base, "0"*40,
+                                            "pkg/old.py", "pkg/new.py", "RETIRE_OLD_PATH")
+    assert missing.old_path_present is None and not missing.path_policy_witnessed
+    assert missing.status == "HOLD"

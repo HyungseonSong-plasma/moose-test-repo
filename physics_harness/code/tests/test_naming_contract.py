@@ -42,6 +42,7 @@ def option(*, variant="RENAME", proposed_name="collector", extracted_units=(),
     return NamingOption(
         "candidate", variant, "Responsibility-bound generalization",
         proposed_name=proposed_name, extracted_units=extracted_units,
+        module_path_policy="RETIRE_OLD_PATH" if variant in {"RENAME", "EXTRACT_RENAME"} else None,
         retained_responsibility_ids=retained, evidence_ids=evidence_ids,
         coverage_rationale="Collect source facts across supported input kinds",
         boundary_rationale="Does not assess, plan or execute changes",
@@ -239,3 +240,16 @@ def test_unresolved_proposal_never_reaches_canonical_planner():
     from physics_harness.code.refactor.naming import to_planning_alternative
     with pytest.raises(ValueError, match="NAMING_OPTION_NOT_READY_FOR_PLANNING"):
         to_planning_alternative(case(name_fit="UNKNOWN"), option())
+
+
+def test_module_rename_requires_explicit_compatibility_or_retirement():
+    missing = replace(option(), module_path_policy=None)
+    assert review_naming_option(case(), missing).disposition == "HOLD"
+    assert "MODULE_PATH_POLICY_UNDECLARED" in review_naming_option(case(), missing).unknowns
+    for policy in ("RETIRE_OLD_PATH", "PRESERVE_COMPATIBILITY"):
+        selected = replace(option(), module_path_policy=policy)
+        result = review_naming_option(case(), selected)
+        assert result.disposition == "REVIEWABLE"
+        assert "VERIFY_MODULE_PATH_TRANSITION:" + policy in result.required_checks
+    with pytest.raises(ValueError, match="INVALID_MODULE_PATH_POLICY"):
+        replace(option(), module_path_policy="AUTO")

@@ -12,8 +12,10 @@ import ast
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 import re
+from subprocess import TimeoutExpired
 
 from ..diagnostics.providers.git import GitSourceProvider
+from ..diagnostics.request import normalized_path
 from ..refactor.naming import NamingCase, NamingOption
 from .naming_candidate import CandidatePlacement
 
@@ -245,4 +247,127 @@ def audit_naming_consumers(
     )
 
 
-__all__ = ["ConsumerReference", "NamingConsumerReceipt", "audit_naming_consumers"]
+@dataclass(frozen=True, slots=True)
+class ModulePathTransitionReceipt:
+    """Source-bound path policy evidence, not runtime or mutation approval."""
+    baseline_revision: str
+    candidate_revision: str
+    old_path: str
+    new_path: str
+    policy: str
+    status: str  # BLOCKED / HOLD
+    old_path_present: bool | None
+    new_path_present: bool | None
+    path_policy_witnessed: bool
+    references: tuple[ConsumerReference, ...]
+    scanned_files: int
+    blockers: tuple[str, ...]
+    unresolved: tuple[str, ...]
+
+    @property
+    def mutation_approved(self) -> bool:
+        return False
+
+
+def _module_entry(provider: GitSourceProvider, revision: str, path: str) -> str | None:
+    """Observe trees, symlinks and gitlinks; absence is not a read error."""
+    rows = provider._git("ls-tree", "--full-tree", "-z", revision,
+                         "--", ":(literal)" + path).split(b"\0")
+    entries = []
+    for row in rows:
+        if not row:
+            continue
+        meta, filename = row.split(b"\t", 1)
+        mode, kind, sha = meta.decode("ascii").split()
+        if filename.decode("utf-8", "strict") != path:
+            raise ValueError("MODULE_TREE_ENTRY_MISMATCH")
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise ValueError("MODULE_TREE_ENTRY_INVALID")
+        entries.append(mode)
+    if len(entries) > 1:
+        raise ValueError("MODULE_TREE_ENTRY_AMBIGUOUS")
+    return entries[0] if entries else None
+
+
+def verify_module_path_transition(
+    provider: GitSourceProvider, baseline_revision: str, candidate_revision: str,
+    old_path: str, new_path: str, policy: str, *,
+    max_files: int = 3000, max_bytes: int = 20_000_000,
+) -> ModulePathTransitionReceipt:
+    """Check a module move or retirement of an already migrated shim.
+
+    Package paths use __init__.py. Retirement also forbids the old directory
+    and alternate .py form. Compatibility requires a regular retained file,
+    but its exports and runtime behavior still need independent verification.
+    """
+    if not isinstance(provider, GitSourceProvider):
+        raise TypeError("MODULE_TRANSITION_PROVIDER_REQUIRED")
+    if policy not in {"PRESERVE_COMPATIBILITY", "RETIRE_OLD_PATH"}:
+        raise ValueError("INVALID_MODULE_PATH_POLICY")
+    if type(max_files) is not int or max_files < 1 or type(max_bytes) is not int or max_bytes < 1:
+        raise ValueError("INVALID_CONSUMER_BUDGET")
+    for path in (old_path, new_path):
+        normalized_path(path)
+        if (not path.endswith(".py") or path == "__init__.py" or "." in path[:-3]
+                or not all(part.isidentifier() for part in _module_for(path).split("."))):
+            raise ValueError("INVALID_PYTHON_MODULE_PATH")
+    if _module_for(old_path) == _module_for(new_path):
+        raise ValueError("MODULE_TRANSITION_REQUIRES_DISTINCT_PATHS")
+    for revision in (baseline_revision, candidate_revision):
+        if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+            raise ValueError("INVALID_MODULE_TRANSITION_REVISION")
+    blocked: set[str] = set()
+    unknown = {"EXTERNAL_CONSUMERS_NOT_SCANNED", "DYNAMIC_AND_SERIALIZED_CONTRACTS_UNPROVEN"}
+    refs: tuple[ConsumerReference, ...] = ()
+    count = 0
+    old_present = new_present = None
+    witnessed = False
+    if baseline_revision == candidate_revision:
+        blocked.add("MODULE_TRANSITION_REQUIRES_DISTINCT_COMMIT")
+    else:
+        try:
+            for revision in (baseline_revision, candidate_revision):
+                if provider._git("cat-file", "-t", revision).strip() != b"commit":
+                    raise ValueError("MODULE_TRANSITION_NOT_COMMIT")
+            provider._git("merge-base", "--is-ancestor", baseline_revision, candidate_revision)
+            provider.read_at_revision(baseline_revision, old_path)
+            module = _module_for(old_path)
+            module_root = module.replace(".", "/")
+            old_entry = _module_entry(provider, candidate_revision, old_path)
+            old_present = any(_module_entry(provider, candidate_revision, path) is not None
+                              for path in (module_root + ".py", module_root))
+            new_entry = _module_entry(provider, candidate_revision, new_path)
+            new_present = new_entry is not None
+            if new_entry not in {"100644", "100755"}:
+                blocked.add("CANONICAL_MODULE_MISSING_OR_NONREGULAR:" + new_path)
+            else:
+                provider.read_at_revision(candidate_revision, new_path)
+            if policy == "PRESERVE_COMPATIBILITY":
+                if old_entry not in {"100644", "100755"}:
+                    blocked.add("REQUIRED_COMPATIBILITY_PATH_MISSING_OR_NONREGULAR:" + old_path)
+                else:
+                    provider.read_at_revision(candidate_revision, old_path)
+                    unknown.add("COMPATIBILITY_EXPORTS_AND_BEHAVIOR_UNVERIFIED")
+            elif old_present:
+                blocked.add("RETIRED_MODULE_PATH_STILL_PRESENT:" + old_path)
+            witnessed = not blocked
+            refs, issues, count = _scan_revision(provider, candidate_revision, module, None,
+                                                 max_files=max_files, max_bytes=max_bytes)
+            unknown.update(issues)
+            if policy == "RETIRE_OLD_PATH" and any(
+                    ref.category == "STATIC_IMPORT" for ref in refs):
+                blocked.add("STALE_IMPORT_TO_RETIRED_MODULE:" + module)
+            if any(ref.category == "TEXT_LITERAL" for ref in refs):
+                unknown.add("LITERAL_REFERENCE_REQUIRES_REVIEW:" + module)
+            if any(ref.category == "DYNAMIC_CANDIDATE" for ref in refs):
+                unknown.add("DYNAMIC_CONSUMERS_PRESENT")
+        except (ValueError, TypeError, UnicodeError, TimeoutExpired) as exc:
+            unknown.add("MODULE_TRANSITION_SOURCE_OR_ANCESTRY_UNPROVEN:" + type(exc).__name__)
+    return ModulePathTransitionReceipt(
+        baseline_revision, candidate_revision, old_path, new_path, policy,
+        "BLOCKED" if blocked else "HOLD", old_present, new_present, witnessed,
+        refs, count, tuple(sorted(blocked)), tuple(sorted(unknown)))
+
+
+__all__ = ["ConsumerReference", "NamingConsumerReceipt", "audit_naming_consumers",
+           "ModulePathTransitionReceipt", "verify_module_path_transition"]
