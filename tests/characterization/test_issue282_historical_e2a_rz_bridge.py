@@ -4,6 +4,7 @@ Tests below are an offline contract check, NOT a live 2-D backend V&V verdict.
 """
 from __future__ import annotations
 
+import hashlib
 import math
 from pathlib import Path
 
@@ -158,8 +159,26 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
         retired_lookup = current == "PhysicsElectronTransportLookupMaterial"
         canonical = "DDTransportMaterial" if retired_lookup else current
         candidate = ROOT / "physics_app" / "src" / dirname / f"{canonical}.C"
-        assert candidate.is_file(), f"missing current PhysicsApp source: {candidate}"
-        source = candidate.read_text(encoding="utf-8")
+        if current == "PhysicsFVHeavyMassElectromigrationCorrection":
+            # The historical seven-token projection stays reversible; the
+            # retired Heavy Mass factory is evidenced only by its exact
+            # pre-cut archive, not by the current binary or an alias.
+            assert not candidate.exists(), "retired Heavy Mass source reintroduced"
+            archive = (ROOT / "docs/development/archive/issue774_retired_factories"
+                       / f"{current}.C.txt")
+            raw = archive.read_bytes()
+            blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+            assert blob == "79bf6045942369bb483ab4e7480a08a5d1040d65"
+            # No live implementation or alias may reuse the retired name.
+            for live in (ROOT / "physics_app" / "src").rglob("*.C"):
+                assert not re.search(
+                    rf'\bregister(?:AD)?MooseObject(?:Aliased)?\s*\([^;]*\b{re.escape(current)}\b[^;]*\)\s*;',
+                    live.read_text(encoding="utf-8"),
+                ), f"retired Heavy Mass registration in {live}"
+            source = raw.decode("utf-8")
+        else:
+            assert candidate.is_file(), f"missing current PhysicsApp source: {candidate}"
+            source = candidate.read_text(encoding="utf-8")
         assert re.search(
             rf'register(?:AD)?MooseObject\(\s*"PhysicsApp"\s*,\s*{re.escape(canonical)}\s*\)\s*;',
             source,
