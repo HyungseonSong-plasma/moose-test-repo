@@ -267,7 +267,9 @@ def test_p1_second_pass_cannot_credit_ambiguous_observation(history):
     provider = GitSourceProvider(history[0])
     packet = build_blinded_semantic_packet(subject, provider, bindings())
     opt = extract_option()
-    receipt = review_semantic_challenge(packet, hypotheses(packet), challenge(opt), opt)
+    claims = (replace(hypotheses(packet)[0],
+                      symbol_keys=tuple(sorted(set(packet.observed_symbol_keys)))),)
+    receipt = review_semantic_challenge(packet, claims, challenge(opt), opt)
     key = PATH+"::function:python_decode"
     assert key in packet.observed_symbol_keys
     assert key not in receipt.verified_symbol_coverage
