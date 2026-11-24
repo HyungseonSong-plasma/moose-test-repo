@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from ..diagnostics.providers.git import GitSourceProvider
 from ..refactor.naming import NamingCase, NamingOption
-from .naming_boundary import ResponsibilityBinding, verify_naming_boundary
+from .naming_boundary import ResponsibilityBinding, _declaration_nodes, verify_naming_boundary
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,26 +103,26 @@ def build_blinded_semantic_packet(
     problems = set(gate.unresolved) | set(gate.blockers)
     excerpts = []
     cache = {}
+    ambiguous = {x.split(":", 1)[1] for x in gate.unresolved
+                 if x.startswith("AMBIGUOUS_DECLARATION:")}
     for symbol in gate.observed_symbols[:max_excerpts]:
         try:
-            path, key = symbol.key.split("::", 1)
+            if symbol.key in ambiguous:
+                continue
+            path, _ = symbol.key.split("::", 1)
             if path not in cache:
                 source = provider.read_at_revision(case.revision, path)
-                cache[path] = (source.content.decode("utf-8", "strict"),
-                               ast.parse(source.content.decode("utf-8", "strict"), filename=path))
-            content, tree = cache[path]
-            node = None
-            prefix, identifier = key.split(":", 1)
-            if prefix == "function":
-                node = next((x for x in tree.body if isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef)) and x.name == identifier), None)
-            elif prefix == "class":
-                node = next((x for x in tree.body if isinstance(x, ast.ClassDef) and x.name == identifier), None)
-            elif prefix == "method":
-                cls, method = identifier.split(".", 1)
-                owner = next((x for x in tree.body if isinstance(x, ast.ClassDef) and x.name == cls), None)
-                node = next((x for x in owner.body if isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef)) and x.name == method), None) if owner else None
+                content = source.content.decode("utf-8", "strict")
+                tree = ast.parse(content, filename=path)
+                nodes, _ = _declaration_nodes(tree, path)
+                cache[path] = (content, source.record.blob_sha, nodes)
+            content, blob, nodes = cache[path]
+            node = nodes.get(symbol.key)
             if node is None:
                 problems.add("BLINDED_DECLARATION_NOT_FOUND:" + symbol.key)
+                continue
+            if symbol.source_ref != f"{path}:{node.lineno}@{blob}":
+                problems.add("BLINDED_DECLARATION_ANCHOR_MISMATCH:" + symbol.key)
                 continue
             code = ast.get_source_segment(content, node) or ""
             truncated = len(code) > max_symbol_chars
@@ -160,6 +160,9 @@ def review_semantic_challenge(
     blocked = set()
     unresolved = set(packet.unresolved)
     observed = set(packet.observed_symbol_keys)
+    ambiguous = {x.split(":", 1)[1] for x in packet.unresolved
+                 if x.startswith("AMBIGUOUS_DECLARATION:")}
+    reviewable = {excerpt.symbol for excerpt in packet.excerpts} & observed - ambiguous
     covered = set()
     for h in hypotheses:
         if not (h.label.strip() and h.symbol_keys and h.positive_responsibility.strip()
@@ -169,7 +172,10 @@ def review_semantic_challenge(
             blocked.add("REVIEW_DUPLICATE_SYMBOL_BINDING")
         if set(h.symbol_keys) - observed:
             blocked.add("REVIEW_REFERENCES_UNKNOWN_SOURCE_SYMBOL")
-        covered.update(s for s in h.symbol_keys if s in observed)
+        # Observed keys are an inventory, not proof of an available declaration.
+        unresolved.update("REVIEW_SYMBOL_WITHOUT_VERIFIED_EXCERPT:" + key
+                          for key in h.symbol_keys if key in observed and key not in reviewable)
+        covered.update(key for key in h.symbol_keys if key in reviewable)
     if set(packet.observed_symbol_keys) - covered:
         unresolved.add("REVIEW_DID_NOT_ADDRESS_ALL_OBSERVED_DECLARATIONS")
     if challenge.option_id != option.id:

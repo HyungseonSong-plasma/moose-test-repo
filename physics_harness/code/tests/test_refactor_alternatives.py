@@ -3,6 +3,8 @@
 from types import SimpleNamespace as Obj
 import unittest
 
+import pytest
+
 from physics_harness.code.refactor import (
     PlanningAlternative, build_planning_context, review_alternatives,
 )
@@ -65,9 +67,9 @@ if __name__ == "__main__":
 
 
 def test_review_validates_input_types():
-    with __import__('pytest').raises(TypeError, match="PLANNING_CONTEXT_REQUIRED"):
+    with pytest.raises(TypeError, match="PLANNING_CONTEXT_REQUIRED"):
         review_alternatives(None, ())
-    with __import__('pytest').raises(TypeError, match="INVALID_CONSTRAINT_CHECKS"):
+    with pytest.raises(TypeError, match="INVALID_CONSTRAINT_CHECKS"):
         review_alternatives(context(), (), constraint_checks=("not-a-check",))
 
 
@@ -87,7 +89,7 @@ def test_new_folder_destination_is_a_post_change_obligation_not_existing_source(
 
 
 def test_claiming_creation_at_existing_scanned_path_blocks():
-    with __import__('pytest').raises(ValueError, match="CREATED_PATH_OVERLAPS_EXISTING_PATH"):
+    with pytest.raises(ValueError, match="CREATED_PATH_OVERLAPS_EXISTING_PATH"):
         PlanningAlternative("duplicate", "CHANGE", "not valid", created_paths=("src/a.py",),
                             affected_paths=("src/a.py",))
 

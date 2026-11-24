@@ -12,7 +12,7 @@ from dataclasses import asdict, dataclass
 
 from ..diagnostics.receipt import EvidenceReceipt
 from ..graph import GraphSnapshot, RelationSelector
-from .impact import TargetCoverage, analyze_target_coverage
+from .impact import TargetCoverage, _target_coverage
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,10 +177,11 @@ def build_usage_matrix(
 
     rows = []
     for target_id in sorted(targets):
-        coverage = analyze_target_coverage(
+        coverage = _target_coverage(
             graph, receipt, target_id,
             required_paths=required_paths,
             unverified_surfaces=unverified_surfaces,
+            nodes=nodes, evidence=evidence, incident_edges=adjacent[target_id],
         )
         blockers = set(coverage.local_blockers)
         if coverage.unverified_surfaces:

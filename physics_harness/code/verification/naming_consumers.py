@@ -61,19 +61,8 @@ def _git_source_paths(provider: GitSourceProvider, revision: str) -> tuple[str, 
         raise ValueError("INVALID_CONSUMER_REVISION")
     if provider._git("cat-file", "-t", revision).strip() != b"commit":
         raise ValueError("CONSUMER_REVISION_NOT_COMMIT")
-    rows = provider._git("ls-tree", "--full-tree", "-r", "-z", revision).split(b"\x00")
-    result = []
-    for row in rows:
-        if not row:
-            continue
-        meta, name = row.split(b"\t", 1)
-        mode, kind, _ = meta.decode("ascii").split()
-        if kind != "blob" or mode not in {"100644", "100755"}:
-            continue
-        path = name.decode("utf-8", "strict")
-        if PurePosixPath(path).suffix in _TEXT_EXTENSIONS:
-            result.append(path)
-    return tuple(sorted(result))
+    return tuple(sorted(path for path in provider._regular_tree_paths(revision)
+                        if PurePosixPath(path).suffix in _TEXT_EXTENSIONS))
 
 
 def _module_for(path: str) -> str:
@@ -129,33 +118,34 @@ def _scan_revision(provider: GitSourceProvider, revision: str,
             if path.endswith(".py"):
                 tree = ast.parse(value, filename=path)
                 for node in ast.walk(tree):
+                    category = "STATIC_IMPORT"
                     if isinstance(node, ast.Import):
-                        for alias in node.names:
-                            if alias.name == old_module or alias.name.startswith(old_module + "."):
-                                refs.add(ConsumerReference(path, revision, f"{path}:{node.lineno}@{blob}",
-                                          "STATIC_IMPORT", alias.name))
+                        details = tuple(alias.name for alias in node.names
+                                        if alias.name == old_module
+                                        or alias.name.startswith(old_module + "."))
                     elif isinstance(node, ast.ImportFrom):
                         target = _resolve_from(path, node)
-                        if (target == old_module or target.startswith(old_module + ".") or
-                             any(target + "." + alias.name == old_module for alias in node.names)):
-                            for alias in node.names:
-                                if (old_name is None or alias.name == old_name or
-                                        target == old_module):
-                                    refs.add(ConsumerReference(path, revision,
-                                          f"{path}:{node.lineno}@{blob}", "STATIC_IMPORT",
-                                          f"from:{target}:{alias.name}"))
                         if node.level and not target:
                             problems.add("RELATIVE_IMPORT_RESOLUTION_UNKNOWN:" + path)
+                        if not (target == old_module or target.startswith(old_module + ".")
+                                or any(target + "." + alias.name == old_module for alias in node.names)):
+                            continue
+                        details = tuple(f"from:{target}:{alias.name}" for alias in node.names
+                                        if old_name is None or alias.name == old_name
+                                        or target == old_module)
                     elif isinstance(node, ast.Call):
                         func = node.func
                         val = func.id if isinstance(func, ast.Name) else (
                             func.attr if isinstance(func, ast.Attribute) else "")
-                        if val in _DYNAMIC_CALLS or val in {"import_module", "loads", "load"}:
-                            # A dynamic call in an unrelated module isn't evidence
-                            # of referencing the renamed symbol, but its presence
-                            # prevents an exhaustive static consumer-closure claim.
-                            refs.add(ConsumerReference(path, revision,
-                                f"{path}:{node.lineno}@{blob}", "DYNAMIC_CANDIDATE", val))
+                        if val not in _DYNAMIC_CALLS and val not in {"import_module", "loads", "load"}:
+                            continue
+                        # Dynamic calls do not prove a renamed-symbol dependency.
+                        category, details = "DYNAMIC_CANDIDATE", (val,)
+                    else:
+                        continue
+                    refs.update(ConsumerReference(path, revision,
+                                f"{path}:{node.lineno}@{blob}", category, detail)
+                                for detail in details)
             for idx, line in enumerate(lines, 1):
                 if literal_re.search(line):
                     refs.add(ConsumerReference(path, revision, f"{path}:{idx}@{blob}",

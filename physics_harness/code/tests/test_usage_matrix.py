@@ -215,3 +215,66 @@ def test_missing_required_path_cannot_be_silently_ignored(git_factory):
     assert row.screening == 'HOLD'
     assert 'TARGET_REQUIRED_PATHS_NOT_SCANNED' in row.blockers
     assert row.coverage.missing_required_paths == ('inputs/unscanned.i',)
+
+
+@pytest.mark.parametrize("input_text", [INPUT, INPUT.replace("UsedKernel", "$" + "{KERNEL}")])
+def test_batch_coverage_equals_standalone_on_complete_and_partial_scope(git_factory, input_text):
+    from physics_harness.code.analysis.impact import analyze_target_coverage
+
+    result, ids = scanned(git_factory, input_text)
+    required = PATHS + ("inputs/missing.i",)
+    surfaces = ("external", "runtime")
+    batch = build_usage_matrix(result.graph, result.receipt, tuple(reversed(tuple(ids.values()))),
+                               RULES, required_paths=required,
+                               unverified_surfaces=surfaces, ignored_relations=IGNORED)
+    for row in batch.rows:
+        assert row.coverage == analyze_target_coverage(
+            result.graph, result.receipt, row.target_id, required_paths=required,
+            unverified_surfaces=surfaces)
+
+
+def test_batch_coverage_preserves_self_ignored_and_isolated_evidence(git_factory):
+    from physics_harness.code.analysis.impact import analyze_target_coverage
+
+    result, ids = scanned(git_factory)
+    target = ids["UsedKernel"]
+    witness = result.graph.evidence[0]
+    self_edge = Edge("edge:p4-self", target, target, "SELF", evidence_ids=(witness.id,))
+    isolated = Node("node:p4-isolated", "symbol", "isolated")
+    graph = replace(result.graph, nodes=result.graph.nodes + (isolated,),
+                    edges=result.graph.edges + (self_edge,))
+    rules = RULES + (UsageRelation("SELF", "SELF"),)
+    targets = (target, isolated.id)
+    batch = build_usage_matrix(graph, result.receipt, targets, rules,
+                               required_paths=PATHS, ignored_relations=IGNORED)
+    rows = {row.target_id: row for row in batch.rows}
+    assert "SELF_REFERENCE_NOT_EXTERNAL_CONSUMER" in rows[target].blockers
+    assert witness.id in rows[target].coverage.related_evidence_ids
+    assert "TARGET_EVIDENCE_ABSENT" in rows[isolated.id].coverage.local_blockers
+    assert not rows[isolated.id].references
+    for row in batch.rows:
+        assert row.coverage == analyze_target_coverage(
+            graph, result.receipt, row.target_id, required_paths=PATHS)
+    ignored = build_usage_matrix(graph, result.receipt, targets, RULES,
+                                 required_paths=PATHS, ignored_relations=IGNORED + ("SELF",))
+    assert tuple(row.coverage for row in ignored.rows) == tuple(row.coverage for row in batch.rows)
+
+
+def test_batch_builds_graph_maps_once(git_factory, monkeypatch):
+    result, ids = scanned(git_factory)
+    calls = {"nodes": 0, "evidence": 0}
+    original_nodes = GraphSnapshot.nodes_by_id
+    original_evidence = GraphSnapshot.evidence_by_id
+
+    def nodes(graph):
+        calls["nodes"] += 1
+        return original_nodes(graph)
+
+    def evidence(graph):
+        calls["evidence"] += 1
+        return original_evidence(graph)
+
+    monkeypatch.setattr(GraphSnapshot, "nodes_by_id", nodes)
+    monkeypatch.setattr(GraphSnapshot, "evidence_by_id", evidence)
+    assert len(matrix(result, ids).rows) == 2
+    assert calls == {"nodes": 1, "evidence": 1}
