@@ -1,4 +1,5 @@
 # Bounded evidence only. Never merge. No compile.
+# Retry: isolate retired option on the passing molar input.
 name: R5a post-cut grounded sheath energy Native (CI ONLY NEVER MERGE)
 on:
   push:

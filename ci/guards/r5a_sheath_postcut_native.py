@@ -67,8 +67,13 @@ try:
     normalized=original.replace("initial_condition = 5.73276e16","initial_condition = 2.86638").replace("prop_values = '1.0e16 5.73276 0.0 0.0'","prop_values = '1.0 5.73276 0.0 0.0'").replace("physical_eV_state = true","energy_reference_eV = 2.0")
     require(normalized.count("energy_reference_eV = 2.0")==2,"normalized deck")
     result["normalized_oracle"]=oracle(run("normalized",normalized),1.,2.86638,2.)
-    run("retired_true",original,True)
-    run("retired_false",original.replace("physical_eV_state = true","physical_eV_state = false").replace("physical_eV_state = false","energy_reference_eV = 1.0\n    physical_eV_state = false"),True)
+    # Inject just the retired option into the independently passing molar deck.
+    # This avoids the missing normalization reference masking an unused option.
+    require(smoke.count("molar_energy_state = true")==2,"unexpected positive fixture")
+    for value in ("true","false"):
+        negative=smoke.replace("molar_energy_state = true","molar_energy_state = true\n    physical_eV_state = "+value)
+        require(negative.replace("\n    physical_eV_state = "+value,"")==smoke,"negative mutation drift")
+        run("retired_"+value,negative,True)
     result["status"]="PASS_BOUNDED"
 except Exception as exc:
     result["error"]=repr(exc)
