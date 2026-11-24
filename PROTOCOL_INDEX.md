@@ -154,6 +154,8 @@ If the exact source cannot be established, stop the affected path as `ARTIFACT_L
 
 Trigger `GITHUB_PR_MERGE` / central `pull-request-merge` when an accepted work item is ready for PR integration.
 
+Apply `docs/protocols/validation.md` VAL-23 for risk-based independent review at planning, implementation, validation, controller continuation and final integration. The existing repeated-failure escalation remains binding; do not turn optional review into a HOLD.
+
 Samuel capability routing and native merge safety own the generic merge mechanics: fresh PR state, exact expected head SHA, mergeability, CI success, mutation, read-back, and rejected-merge recovery. Physics acceptance and the decision that a change is scientifically ready remain local.
 
 ## Samuel rule-reuse gate
