@@ -1,5 +1,5 @@
 # Bounded evidence only. Never merge. No compile.
-name: Code4 historical consumer reachability P2 (CI ONLY NEVER MERGE)
+name: Code4 additional historical consumer reachability P2 (CI ONLY NEVER MERGE)
 on:
   push:
     branches: [issue-713-code4-historical-reachability-ci-only]
@@ -106,7 +106,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: code4-historical-reachability-${{ github.run_id }}-${{ github.run_attempt }}
+          name: code4-historical-additional-${{ github.run_id }}-${{ github.run_attempt }}
           path: evidence/
           retention-days: 30
           if-no-files-found: error
