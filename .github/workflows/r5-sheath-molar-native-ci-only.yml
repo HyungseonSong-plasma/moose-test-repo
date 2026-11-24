@@ -1,0 +1,94 @@
+# Bounded evidence only. Never merge. No compile.
+name: R5 GroundedSheath physical to molar Native A-B (CI ONLY NEVER MERGE)
+on:
+  push:
+    branches: [issue-713-r5-sheath-molar-native-ci-only]
+    paths: [.github/workflows/r5-sheath-molar-native-ci-only.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SOURCE_HEAD: a8265ffa2af628a97f5063756f3ac8579516bdb1
+      SOURCE_TREE: 539cd74384d561b093c3ea2dedb43b6e5446760e
+      W1_RUN: '45435133108'
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: a8265ffa2af628a97f5063756f3ac8579516bdb1
+          path: target
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: p6-newonly-w1-45435133108-1-a8265ffa2af628a97f5063756f3ac8579516bdb1
+          run-id: 45435133108
+          github-token: ${{ github.token }}
+          path: w1
+      - name: Verify W1 identity and restore ELF and app libs
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess,tarfile,shutil
+          P=pathlib.Path
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          rec=json.loads(P('w1/identity.json').read_text())
+          assert rec['source_head']==os.environ['SOURCE_HEAD']==subprocess.check_output(['git','-C','target','rev-parse','HEAD'],text=True).strip()
+          assert rec['source_tree']==os.environ['SOURCE_TREE']==subprocess.check_output(['git','-C','target','rev-parse','HEAD^{tree}'],text=True).strip()
+          assert rec['run_id']==os.environ['W1_RUN'] and rec['oci']==os.environ['OCI']
+          assert rec['build_count']==1 and rec['archive_roundtrip_check']=='PASS'
+          assert rec['native_check_input']=='NOT_RUN' and rec['private_data_bundled'] is False
+          assert rec['lock_sha256']==sha(P('target/physics_app/dependencies.lock'))
+          archive=P('w1/physics-opt-and-app-libs.tar.gz')
+          assert sha(archive)==rec['archive_sha256']
+          paths={'physics-opt':P('target/physics_app/physics-opt'),
+                 'lib/libphysics-opt.so.0':P('target/physics_app/lib/libphysics-opt.so.0'),
+                 'lib/libphysics_test-opt.so.0':P('target/physics_app/test/lib/libphysics_test-opt.so.0')}
+          entries={x['stored_path']:x for x in rec['file_records']}
+          assert set(entries)==set(paths) and len(rec['file_records'])==3
+          assert rec['binary_sha256']==entries['physics-opt']['sha256']
+          for name in ('libphysics-opt.so.0','libphysics_test-opt.so.0'):
+              assert rec['app_libraries'][name]['sha256']==entries['lib/'+name]['sha256']
+          with tarfile.open(archive,'r:gz') as tar:
+              assert set(tar.getnames())==set(paths) and len(tar.getmembers())==3
+              for name,dst in paths.items():
+                  m=tar.getmember(name)
+                  assert m.isfile() and m.size==entries[name]['bytes']
+                  assert not dst.exists()
+                  dst.parent.mkdir(parents=True,exist_ok=True)
+                  with tar.extractfile(m) as source,dst.open('wb') as output:shutil.copyfileobj(source,output)
+                  assert sha(dst)==entries[name]['sha256'] and dst.open('rb').read(4)==bytes([127,69,76,70])
+                  if name=='physics-opt':dst.chmod(0o755)
+          P('evidence/w1_identity.json').write_text(json.dumps(rec,indent=2))
+          PY
+          docker pull "$OCI"
+      - name: Run exact source and bounded A-B oracle
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 -v "$PWD/target:/workspace" -v "$PWD/control:/control:ro" -v "$PWD/evidence:/evidence" --workdir /workspace "$OCI" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            export LD_LIBRARY_PATH="/workspace/physics_app/lib:/workspace/physics_app/test/lib:${LD_LIBRARY_PATH:-}"
+            ldd /workspace/physics_app/physics-opt | tee /evidence/ldd.log
+            if grep -F "not found" /evidence/ldd.log; then exit 1; fi
+            /workspace/physics_app/physics-opt --version | tee /evidence/version.log
+            python3 /control/ci/guards/r5_sheath_molar_native_ab.py /workspace /evidence
+          '
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r5-sheath-molar-ab-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/
+          retention-days: 30
+          if-no-files-found: error
