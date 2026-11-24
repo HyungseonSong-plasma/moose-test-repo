@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from ..diagnostics.collector import stable_id
 from ..diagnostics.receipt import EvidenceReceipt
 from ..diagnostics.request import normalized_path
-from ..graph import Context, GraphSnapshot, HierarchyView, RelationSelector, unfold_context
+from ..graph import (Context, Edge, Evidence, GraphSnapshot, HierarchyView,
+                     Node, RelationSelector, unfold_context)
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +120,19 @@ def analyze_target_coverage(
     generators, generated inputs, native runtime and external users. Unknown
     source-scope findings are retained rather than assumed unrelated.
     """
+    return _target_coverage(graph, receipt, target_id,
+                            required_paths=required_paths,
+                            unverified_surfaces=unverified_surfaces)
+
+
+def _target_coverage(
+    graph: GraphSnapshot, receipt: EvidenceReceipt, target_id: str, *,
+    required_paths: tuple[str, ...], unverified_surfaces: tuple[str, ...],
+    nodes: dict[str, Node] | None = None,
+    evidence: dict[str, Evidence] | None = None,
+    incident_edges: list[Edge] | None = None,
+) -> TargetCoverage:
+    """Use only internal, same-snapshot indexes when already built by Usage Matrix."""
     if not isinstance(graph, GraphSnapshot):
         raise TypeError("graph must be a GraphSnapshot")
     if not isinstance(receipt, EvidenceReceipt):
@@ -140,7 +154,7 @@ def analyze_target_coverage(
     if len(set(unverified_surfaces)) != len(unverified_surfaces):
         raise ValueError("DUPLICATE_TARGET_SURFACE")
 
-    nodes = graph.nodes_by_id()
+    nodes = graph.nodes_by_id() if nodes is None else nodes
     if not isinstance(target_id, str) or target_id not in nodes:
         raise ValueError("UNKNOWN_TARGET_COVERAGE_NODE")
 
@@ -156,11 +170,11 @@ def analyze_target_coverage(
         raise ValueError("TARGET_COVERAGE_RECEIPT_GRAPH_PATH_MISMATCH")
 
     related_ids = set(nodes[target_id].evidence_ids)
-    for edge in graph.edges:
+    for edge in graph.edges if incident_edges is None else incident_edges:
         if edge.source_id == target_id or edge.target_id == target_id:
             related_ids.update(edge.evidence_ids)
 
-    by_id = graph.evidence_by_id()
+    by_id = graph.evidence_by_id() if evidence is None else evidence
     related_sources = set()
     for evidence_id in related_ids:
         ev = by_id[evidence_id]
