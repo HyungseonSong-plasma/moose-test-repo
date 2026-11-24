@@ -39,6 +39,24 @@ OCI = ("ghcr.io/hyungseonsong-plasma/physics-build-base@"
        "sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008")
 EXPECTED_HEAD = os.environ.get("G5_EXPECTED_SOURCE_HEAD", "")
 CASES = ("417", "941")
+PRE_G5_JSON_SHA = {
+    "417": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "941": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+}
+LOOKUP_SHA = {
+    42: "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b",
+    100: "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+}
+LOOKUP_REL = Path("experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt")
+
+
+def checked_lookup(case_root: Path, rows: int) -> str:
+    path = case_root / LOOKUP_REL
+    if (rows not in LOOKUP_SHA or path.is_symlink() or not path.is_file()
+            or file_sha(path) != LOOKUP_SHA[rows]
+            or len(path.read_bytes().splitlines()) != rows):
+        raise ValueError("G5_LOOKUP_IDENTITY_DRIFT")
+    return LOOKUP_SHA[rows]
 
 
 def sha(data: bytes) -> str:
@@ -105,6 +123,13 @@ def stage_public(p3x_stage: Path, receipt_output: Path) -> dict:
             raise ValueError("G5_REAL_JSON_TEMPLATE_SHA_DRIFT:" + case)
         mechanism = parse_strict_json(jblob)
         validate_poisson(mechanism)
+        dest = chem / "chemistry" / jsrc.name
+        if (dest.is_symlink() or not dest.is_file()
+                or file_sha(dest) != PRE_G5_JSON_SHA[case]):
+            raise ValueError("G5_REAL_PRE_G5_JSON_IDENTITY_DRIFT")
+        if {k: v for k, v in mechanism.items() if k != "poisson"} != parse_strict_json(dest.read_bytes()):
+            raise ValueError("G5_NON_POISSON_JSON_CHANGE")
+        checked_lookup(base, 42)
         previous_10 = {name: before[name] for name in ordered[1:-1]}
         p4 = retire_p4_duplicate_owners(
             chem, ordered, mechanism, post_p3_layer_sha=before,
@@ -162,7 +187,7 @@ def secure_tmpfs_cleanup(path: Path) -> None:
     shutil.rmtree(path)
 
 
-def native_check(p3x_stage: Path, stage_receipt: Path, output: Path) -> dict:
+def native_check(p3x_stage: Path, stage_receipt: Path, output: Path, lookup_rows: int = 42) -> dict:
     """Run only real 11-layer check-input with protected EI rates in tmpfs."""
     assert_source_head()
     data = json.loads(stage_receipt.read_text())
@@ -172,6 +197,24 @@ def native_check(p3x_stage: Path, stage_receipt: Path, output: Path) -> dict:
     if not binary.is_file() or binary.is_symlink() or binary.read_bytes()[:4] != b"\x7fELF":
         raise ValueError("G5_NATIVE_EXACT_BINARY_NOT_PRESENT")
     binary_sha = file_sha(binary)
+    if lookup_rows not in LOOKUP_SHA:
+        raise ValueError("G5_LOOKUP_ROWS_INVALID")
+    for case in CASES:
+        public = p3x_stage / "scratch" / case
+        chem = public / "experiments/Issue395_powered_chemistry_ladder"
+        entry = data["cases"][case]
+        names = [Path(x).name for x in entry["ordered"]]
+        if (len(names) != 11 or len(set(names)) != 11 or names[0] != C0
+                or names[-1] != "migrated_continuity.i"
+                or any(Path(x).is_absolute() or ".." in Path(x).parts for x in entry["ordered"])
+                or entry["layer_sha256"].get(C0) != G5_OUTPUT_C0_SHA
+                or entry["layer_sha256"].get("migrated_continuity.i") != G5_OVERLAY_SHA[case]):
+            raise ValueError("G5_NATIVE_ORDER_OR_OWNER_IDENTITY_DRIFT")
+        mechanism = chem / "chemistry" / f"unified_s6_{case}_newonly.json"
+        if (mechanism.is_symlink() or file_sha(mechanism) != JSON_SHA[case]
+                or entry["newonly_json_sha256"] != JSON_SHA[case]):
+            raise ValueError("G5_NATIVE_JSON_IDENTITY_DRIFT")
+        checked_lookup(public, lookup_rows)
     sys.path.insert(0, str(ROOT / "ci/guards"))
     from issue671_secure_ei_rate_scratch import (  # noqa: E402
         EXPECTED, REQUIRED, read_hashed_rows, validate_rows,
@@ -188,6 +231,7 @@ def native_check(p3x_stage: Path, stage_receipt: Path, output: Path) -> dict:
         "schema": "issue652.g5.exact_s6_native_p2.v1",
         "source_sha": EXPECTED_HEAD, "oci": OCI,
         "binary_sha256": binary_sha, "cases": {},
+        "lookup_rows": lookup_rows, "lookup_sha256": LOOKUP_SHA[lookup_rows],
         "Native_P2": "HOLD", "G6": "NOT_RUN", "science": "SCIENCE_HOLD",
         "private_rate_data_in_artifacts": False,
     }
@@ -264,6 +308,8 @@ def native_check(p3x_stage: Path, stage_receipt: Path, output: Path) -> dict:
                 "raw_output_bytes": len(combined),
                 "diagnostic_flags": flags,
                 "source_layer_sha256": expected,
+                "newonly_json_sha256": JSON_SHA[case],
+                "lookup_sha256": checked_lookup(case_private, lookup_rows),
                 "protected_table_rows_verified": len(REQUIRED[case]),
                 "private_data_in_artifacts": False,
             }
@@ -276,6 +322,9 @@ def native_check(p3x_stage: Path, stage_receipt: Path, output: Path) -> dict:
     finally:
         secure_tmpfs_cleanup(work_tmp)
         tables.clear()
+    results["private_cleanup_verified"] = not work_tmp.exists()
+    if not results["private_cleanup_verified"] or file_sha(binary) != binary_sha:
+        raise ValueError("G5_NATIVE_CLEANUP_OR_BINARY_DRIFT")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(results, indent=2, sort_keys=True) + "\n")
     print("POISSON_G5_NATIVE_P2", results["Native_P2"])
@@ -290,6 +339,7 @@ def main() -> int:
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--stage-only", action="store_true")
     ap.add_argument("--native-only", action="store_true")
+    ap.add_argument("--lookup-rows", type=int, choices=(42, 100), default=42)
     args = ap.parse_args()
     if args.stage_only == args.native_only:
         raise ValueError("G5_EXACT_ONE_OPERATION_REQUIRED")
@@ -297,7 +347,7 @@ def main() -> int:
         stage_public(args.staged, args.output / "g5_stage_receipt.json")
     else:
         native_check(args.staged, args.output / "g5_stage_receipt.json",
-                     args.output / "g5_native_receipt.json")
+                     args.output / "g5_native_receipt.json", args.lookup_rows)
     return 0
 
 

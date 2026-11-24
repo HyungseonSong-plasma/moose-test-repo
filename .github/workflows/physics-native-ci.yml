@@ -743,8 +743,8 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$BASE_HEAD"
           test "$GITHUB_EVENT_NAME" = "pull_request"
-          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 13b25226d463b8fd1e4acaee16358f8f17d710a0
-          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 045de080e3d836d75495b1749d75d5d3deea2330
+          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 98ad4267aa530c9b2e06402530c3d4a43807429f
+          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 951e1056cfdaf2531d6f604862c1224240e0b848
           test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
           test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
           test ! -e physics_app/physics-opt
@@ -809,6 +809,10 @@ jobs:
             --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
             --historical-support-root "$GITHUB_WORKSPACE/historical" \
             --output "$RUNNER_TEMP/p05-in/staged" --stage-only
+          # Isolate the actual G5 staging from the pre-G5 P6 regression.
+          cp -a "$RUNNER_TEMP/p05-in/staged" "$RUNNER_TEMP/p05-in/g5-staged"
+          G5_EXPECTED_SOURCE_HEAD="$BASE_HEAD" python3 ci/guards/issue652_g5_native_p2.py \
+            --staged "$RUNNER_TEMP/p05-in/g5-staged" --output "$RUNNER_TEMP/g5-out" --stage-only
           python3 - "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-in/p4_receipt.json" <<'PY'
           from pathlib import Path
           import sys,json,hashlib
@@ -1297,6 +1301,33 @@ jobs:
           sys.exit(0 if receipt["status"]=="PASS_16_INTENDED_NATIVE_REJECTIONS" else 1)
           PY
 
+      - name: Require G5 Poisson 417/941 exact-stage Native P2 (42-row lookup)
+        shell: bash
+        env:
+          G5_EXPECTED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test "$(git rev-parse HEAD)" = "$BASE_HEAD"
+          sha256sum -c "$RUNNER_TEMP/p05-in/physics-opt.sha256"
+          python3 ci/guards/issue652_g5_native_p2.py \
+            --staged "$RUNNER_TEMP/p05-in/g5-staged" --output "$RUNNER_TEMP/g5-out" \
+            --native-only --lookup-rows 42
+          sha256sum -c "$RUNNER_TEMP/p05-in/physics-opt.sha256"
+          python3 - "$RUNNER_TEMP/g5-out/g5_native_receipt.json" "$BASE_HEAD" <<'PY'
+          import json, sys
+          from pathlib import Path
+          result = json.loads(Path(sys.argv[1]).read_text())
+          assert result["source_sha"] == sys.argv[2]
+          assert result["lookup_rows"] == 42
+          assert result["Native_P2"] == "PASS_SYNTAX_ONLY"
+          assert set(result["cases"]) == {"417", "941"}
+          assert all(row["passed"] for row in result["cases"].values())
+          assert result["private_cleanup_verified"] is True
+          assert result["science"] == "SCIENCE_HOLD"
+          print("G5_BOTH_CASES_NATIVE_P2_42ROW_PASS")
+          PY
       - name: Upload sanitized N1-N8 receipt and exact binary hash only
         if: always()
         uses: actions/upload-artifact@v4
@@ -1308,6 +1339,7 @@ jobs:
             ${{ runner.temp }}/p05-in/physics-opt.sha256
             ${{ runner.temp }}/p05-in/w1_identity.json
             ${{ runner.temp }}/p05-in/tracer.sha256
+            ${{ runner.temp }}/g5-out/*.json
           if-no-files-found: error
           retention-days: 14
 
@@ -1339,8 +1371,8 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$BASE_HEAD"
           test "$GITHUB_EVENT_NAME" = "pull_request"
-          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 13b25226d463b8fd1e4acaee16358f8f17d710a0
-          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 045de080e3d836d75495b1749d75d5d3deea2330
+          test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 98ad4267aa530c9b2e06402530c3d4a43807429f
+          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 951e1056cfdaf2531d6f604862c1224240e0b848
           test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
           test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
           test ! -e physics_app/physics-opt
@@ -1403,6 +1435,10 @@ jobs:
             --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
             --historical-support-root "$GITHUB_WORKSPACE/historical" \
             --output "$RUNNER_TEMP/p05-in/staged" --stage-only
+          # Isolate the actual G5 staging from the pre-G5 P6 regression.
+          cp -a "$RUNNER_TEMP/p05-in/staged" "$RUNNER_TEMP/p05-in/g5-staged"
+          G5_EXPECTED_SOURCE_HEAD="$BASE_HEAD" python3 ci/guards/issue652_g5_native_p2.py \
+            --staged "$RUNNER_TEMP/p05-in/g5-staged" --output "$RUNNER_TEMP/g5-out" --stage-only
           python3 - "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-in/p4_receipt.json" <<'PY'
           from pathlib import Path
           import sys,json,hashlib
@@ -1937,6 +1973,37 @@ jobs:
                     "PRIVATE_CLEANUP",receipt["tmpfs_cleanup_verified"])
           sys.exit(0 if receipt["status"]=="PASS_16_INTENDED_NATIVE_REJECTIONS" else 1)
           PY
+      - name: Require G5 Poisson 417/941 exact-stage Native P2 (100-row lookup)
+        shell: bash
+        env:
+          G5_EXPECTED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test "$(git rev-parse HEAD)" = "$BASE_HEAD"
+          sha256sum -c "$RUNNER_TEMP/p05-in/physics-opt.sha256"
+          python3 ci/guards/issue652_g6b_publicd100_stage.py \
+            --staged "$RUNNER_TEMP/p05-in/g5-staged" \
+            --g5-receipt "$RUNNER_TEMP/g5-out/g5_stage_receipt.json" \
+            --output "$RUNNER_TEMP/g5-out/g6b_publicd100_stage_receipt.json"
+          python3 ci/guards/issue652_g5_native_p2.py \
+            --staged "$RUNNER_TEMP/p05-in/g5-staged" --output "$RUNNER_TEMP/g5-out" \
+            --native-only --lookup-rows 100
+          sha256sum -c "$RUNNER_TEMP/p05-in/physics-opt.sha256"
+          python3 - "$RUNNER_TEMP/g5-out/g5_native_receipt.json" "$BASE_HEAD" <<'PY'
+          import json, sys
+          from pathlib import Path
+          result = json.loads(Path(sys.argv[1]).read_text())
+          assert result["source_sha"] == sys.argv[2]
+          assert result["lookup_rows"] == 100
+          assert result["Native_P2"] == "PASS_SYNTAX_ONLY"
+          assert set(result["cases"]) == {"417", "941"}
+          assert all(row["passed"] for row in result["cases"].values())
+          assert result["private_cleanup_verified"] is True
+          assert result["science"] == "SCIENCE_HOLD"
+          print("G5_BOTH_CASES_NATIVE_P2_100ROW_PASS")
+          PY
       - name: Upload exact HEAD Public D 100row typed and N1-N8 sanitized evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -1950,5 +2017,6 @@ jobs:
             ${{ runner.temp }}/p05-in/physics-opt.sha256
             ${{ runner.temp }}/p05-in/w1_identity.json
             ${{ runner.temp }}/p05-in/tracer.sha256
+            ${{ runner.temp }}/g5-out/*.json
           if-no-files-found: error
           retention-days: 14
