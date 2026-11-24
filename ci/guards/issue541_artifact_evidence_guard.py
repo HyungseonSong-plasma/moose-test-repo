@@ -17,6 +17,7 @@ CI = ROOT / ".github/workflows/ci.yml"
 TEMPLATE = ROOT / "ci/workflow_templates/general-ci.yml"
 PHYSICS_CODE_CI = ROOT / ".github/workflows/physics-code-ci.yml"
 PHYSICS_NATIVE_CI = ROOT / ".github/workflows/physics-native-ci.yml"
+PHYSICS_LEGACY_AUDIT = ROOT / ".github/workflows/physics-legacy-audit.yml"
 CORE = "experiments/Issue402_plasma_dsl_g1/evidence/core_four"
 REGRESSION = "experiments/Issue402_plasma_dsl_g1/evidence"
 
@@ -40,12 +41,12 @@ UPLOAD_OWNERS = {
     "Upload architecture census": "core",
     "Upload migration source snapshot": "code",
     "Upload C++ EEPF data, explicitly marked not real-gas parity": "native",
-    "Store four-workflow P0 and inventory evidence": "code",
+    "Store four-workflow P0 and inventory evidence": "manual",
     "Publish exact-head P1/P2 source-bound evidence (no P3)": "native",
     "Upload native regression evidence": "native",
 }
 CHECK_OWNERS = {
-    "Require complete CORE P0 artifact evidence": ("code", "--check-core-p0"),
+    "Require complete CORE P0 artifact evidence": ("manual", "--check-core-p0"),
     "Require source-bound CORE Native P1/P2 artifact evidence": ("native", "--check-core-native"),
     "Require actual native regression evidence before success": ("native", "--check-regression"),
     "Require explicit Public D KEEP_HOLD evidence, not Native D PASS": ("native", "p6_legacy_hold_receipt.py --mode public"),
@@ -100,6 +101,7 @@ def policy_sources(ci: str) -> dict[str, str]:
         "core": ci,
         "code": PHYSICS_CODE_CI.read_text(encoding="utf-8"),
         "native": PHYSICS_NATIVE_CI.read_text(encoding="utf-8"),
+        "manual": PHYSICS_LEGACY_AUDIT.read_text(encoding="utf-8"),
     }
 
 
@@ -120,7 +122,7 @@ def check_policy(
         step = step_block(sources[UPLOAD_OWNERS[name]], name)
         assert "uses: actions/upload-artifact@v4" in step, "UPLOAD_ACTION_MISSING:" + name
         assert "if-no-files-found: error" in step, "ARTIFACT_MISSING_MUST_FAIL:" + name
-    p0 = step_block(sources["code"], "Store four-workflow P0 and inventory evidence")
+    p0 = step_block(sources["manual"], "Store four-workflow P0 and inventory evidence")
     assert "/tmp/issue541_recovered_p0.log" in p0, "RECOVERED_P0_NOT_UPLOADED"
     for name, (owner, check) in CHECK_OWNERS.items():
         assert check in step_block(sources[owner], name), "ARTIFACT_CHECKER_NOT_WIRED:" + name

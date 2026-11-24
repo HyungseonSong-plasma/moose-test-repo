@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "ci/baselines/issue541_core_four_retirement.json"
-CI = ROOT / ".github/workflows/physics-code-ci.yml"
+CI = ROOT / ".github/workflows/physics-legacy-audit.yml"
 NATIVE_CI = ROOT / ".github/workflows/physics-native-ci.yml"
 GROUP_A = ROOT / "ci/baselines/issue541_group_a_retirement.json"
 
