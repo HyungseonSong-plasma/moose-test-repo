@@ -1,14 +1,24 @@
 {
   "targets": [
     {
-      "branch": "cleanup-774-retirement-refs-20261124-batch11",
-      "expected_sha": "b5818260eeb1868457a1ea8ae7ad8478bf90fa3d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch11-b5818260eeb1"
+      "branch": "cleanup-774-retirement-refs-20261124-batch12",
+      "expected_sha": "2be8818fddd1c049a01377bca7e945bf0197177d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch12-2be8818fddd1"
     },
     {
-      "branch": "issue-633-ci-required-newonly-historical-compat-20261118",
-      "expected_sha": "04cfccc86a86ec0aa3704160e4fb185aa3d747fc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-ci-required-newonly-historical-compat-20261118-04cfccc86a86"
+      "branch": "issue-671-ei-h25-channel-knockout-w1-20261118",
+      "expected_sha": "edc2832f5aa64d2d6589faded1062e675c966cc7",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-ei-h25-channel-knockout-w1-20261118-edc2832f5aa6"
+    },
+    {
+      "branch": "issue-672-p6-i3-fvm-grounded-only-p0-p2-20261118",
+      "expected_sha": "e58120bcbb41f830f2be9f13549241e1b36334c6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-672-p6-i3-fvm-grounded-only-p0-p2-20261118-e58120bcbb41"
+    },
+    {
+      "branch": "issue-713-code4-c1-native-evidence-ci-only",
+      "expected_sha": "f12f033692715465e7b9be9b417b930892d65442",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-713-code4-c1-native-evidence-ci-only-f12f03369271"
     }
   ]
 }
