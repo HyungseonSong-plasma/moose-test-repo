@@ -51,7 +51,7 @@ for original, expected in HISTORICAL_FIXTURES.items():
     assert not (REPO / original).exists(), f"Retired active fixture returned: {original}"
     archived = ARCHIVE / (original + ".txt")
     raw = archived.read_bytes()
-    actual = hashlib.sha1(f"blob {len(raw)}\\0".encode() + raw).hexdigest()
+    actual = hashlib.sha1(f"blob {len(raw)}".encode() + bytes(1) + raw).hexdigest()
     assert actual == expected, f"Historical fixture blob drift: {original}"
 
 print("RETIRED_GUMMEL_ACTION_CONTRACT: PASS")
