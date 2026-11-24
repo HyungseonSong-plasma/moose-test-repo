@@ -74,11 +74,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm --network none --entrypoint /bin/bash --user 0:0 -v "$PWD:/workspace" --workdir /workspace "$OCI" -lc '
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 -v "$PWD/target:/workspace" -v "$PWD/control:/control:ro" -v "$PWD/evidence:/evidence" --workdir /workspace "$OCI" -lc '
             set -euo pipefail
             source /environment
-            git config --global --add safe.directory /workspace/target
-            python3 /workspace/control/ci/guards/r4_wall_flux_native_ab.py /workspace/target /workspace/evidence
+            git config --global --add safe.directory /workspace
+            export LD_LIBRARY_PATH="/workspace/physics_app/lib:/workspace/physics_app/test/lib:${LD_LIBRARY_PATH:-}"
+            ldd /workspace/physics_app/physics-opt | tee /evidence/ldd.log
+            if grep -F "not found" /evidence/ldd.log; then exit 1; fi
+            /workspace/physics_app/physics-opt --version | tee /evidence/version.log
+            python3 /control/ci/guards/r4_wall_flux_native_ab.py /workspace /evidence
           '
       - name: Preserve evidence
         if: always()
