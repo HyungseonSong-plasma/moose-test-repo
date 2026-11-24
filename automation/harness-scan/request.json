@@ -1,19 +1,17 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "issue652-g6-poisson-specific-fixture-r5-20261123",
-  "source_sha": "23e95942d1b6059e80e0e97d5fe6e252d850ec36",
+  "request_id": "physical-eV-retirement-impact-20261124",
+  "source_sha": "2bf977e17fa2e4eb84b24bce51a717bc76be60f7",
   "includes": [
-    "physics_app/src/physics/plasma/*.C",
-    "physics_app/include/physics/plasma/*.h",
-    "physics_app/src/bcs/*.C",
-    "experiments/Issue402_plasma_dsl_g1/*.i",
-    "experiments/Issue402_plasma_dsl_g1/*.py",
-    "tests/test_issue652*.py",
-    "tests/test_issue633*.py",
-    "ci/guards/*.py",
-    "ci/guards/issue652_g6_runtime_gate.py",
-    "ci/guards/issue652_g6_owner_tracer.cc",
-    "tests/test_issue652_poisson_g6_registration_p3.py"
+    "*.i",
+    "*.py",
+    "*.C",
+    "*.h",
+    "*.cc",
+    "*.cpp",
+    "*.hpp",
+    ".github/workflows/*.yml",
+    ".github/workflows/*.yaml"
   ],
   "excludes": [],
   "collectors": [
@@ -22,7 +20,7 @@
     "python_ast",
     "workflow"
   ],
-  "max_files": 1300,
+  "max_files": 1500,
   "max_bytes": 80000000,
   "max_seconds": 480
 }
