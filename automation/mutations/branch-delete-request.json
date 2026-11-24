@@ -99,6 +99,86 @@
       "branch": "issue-774-code2-joule-preflight-20261123",
       "expected_sha": "9db93fdcb667bfc5e054430235111a11c81f1964",
       "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-code2-joule-preflight-20261123-9db93fdcb667"
+    },
+    {
+      "branch": "issue-652-g6b-hpem-slices-20261123",
+      "expected_sha": "713cf34e24625839e585b4b9af9d09e379f3ea97",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-g6b-hpem-slices-20261123-713cf34e2462"
+    },
+    {
+      "branch": "issue-652-g6b-parallel-417-941-20261123",
+      "expected_sha": "a7d8d4a4e8c65ba43d046622c093167ff4d4a8ab",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-g6b-parallel-417-941-20261123-a7d8d4a4e8c6"
+    },
+    {
+      "branch": "issue-652-poisson-g6b-publicd100-preflight-20261123",
+      "expected_sha": "add83d41349fb59008488b88c82b706571035de9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-poisson-g6b-publicd100-preflight-20261123-add83d41349f"
+    },
+    {
+      "branch": "issue-817-code3-c-h-cut-candidate",
+      "expected_sha": "c7f2641df7d89fad0a58f263f57d1263a687e867",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-c-h-cut-candidate-c7f2641df7d8"
+    },
+    {
+      "branch": "issue-817-code3-production-retirement",
+      "expected_sha": "729ad598f549bf69cf17d5c9ac39775d3e7046b4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-production-retirement-729ad598f549"
+    },
+    {
+      "branch": "issue-817-combined-validation-20261124",
+      "expected_sha": "f380f77580db907d7299eb2cc0779910cc0c9712",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-combined-validation-20261124-f380f77580db"
+    },
+    {
+      "branch": "issue-817-exact-head-ci-base-20261124",
+      "expected_sha": "d1c130473773a3a3cf4d5041380a87173364faf4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-exact-head-ci-base-20261124-d1c130473773"
+    },
+    {
+      "branch": "issue-817-main-bounded-native-validation-20261124",
+      "expected_sha": "3c21d347f5a415118a417cc87375f2db9738506f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-main-bounded-native-validation-20261124-3c21d347f5a4"
+    },
+    {
+      "branch": "issue-814-code2-heavy-integrated-candidate-20261123",
+      "expected_sha": "2ad18eb3efab553b85da2dacece6944b19023216",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-814-code2-heavy-integrated-candidate-20261123-2ad18eb3efab"
+    },
+    {
+      "branch": "issue-814-code2-heavy-integrated-native-20261123",
+      "expected_sha": "c1a34e29db1473b179406888053b45d76ffa8214",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-814-code2-heavy-integrated-native-20261123-c1a34e29db14"
+    },
+    {
+      "branch": "issue-814-code2-heavy-integrated-p0-20261123",
+      "expected_sha": "dbbf6645c410005b5d240ac263a5b298ad6795d4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-814-code2-heavy-integrated-p0-20261123-dbbf6645c410"
+    },
+    {
+      "branch": "issue-814-code2-joule-source-cut-candidate-20261123",
+      "expected_sha": "653052b0261981345944fbd6e4bf7aa0688d7695",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-814-code2-joule-source-cut-candidate-20261123-653052b02619"
+    },
+    {
+      "branch": "issue-814-code2-native-p05-once-20261123",
+      "expected_sha": "1b3c81d5f7953b1c4313135fb13ae20375c1452c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-814-code2-native-p05-once-20261123-1b3c81d5f795"
+    },
+    {
+      "branch": "issue-814-code2-p0-validation-20261123",
+      "expected_sha": "51d5ece4f5feed11ec113bc48d20185110591bfa",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-814-code2-p0-validation-20261123-51d5ece4f5fe"
+    },
+    {
+      "branch": "issue-814-code2-p1-validation-20261123",
+      "expected_sha": "b4fbc22228414ee88a9d0575321358b6d660a135",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-814-code2-p1-validation-20261123-b4fbc2222841"
+    },
+    {
+      "branch": "issue-code2-retirement-pra",
+      "expected_sha": "f85f4b2679d066bcfa96d55e5acd4db634b5eead",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-code2-retirement-pra-f85f4b2679d0"
     }
   ]
 }
