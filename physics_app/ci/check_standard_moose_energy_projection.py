@@ -91,11 +91,25 @@ EI10_INPUT = f"""[Mesh]
     functor_symbols = 'dens wo2'
     expression = 'dens*wo2/0.031998'
   []
+  [fixture_log_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = fixture_log_molar_density
+    functor_names = 'n_e'
+    functor_symbols = 'ne'
+    expression = 'log(ne/6.02214076e23)'
+  []
+  [fixture_log_molar_energy]
+    type = ADParsedFunctorMaterial
+    property_name = fixture_log_molar_energy
+    functor_names = 'mean_en'
+    functor_symbols = 'energy'
+    expression = 'log(energy/6.02214076e23)'
+  []
   [mean_energy_bridge]
     type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
+    electron_energy_density = fixture_log_molar_energy
+    electron_density = fixture_log_molar_density
+    state_form = log_molar_eV
   []
   [ei10_rate]
     type = ADParsedFunctorMaterial
@@ -244,11 +258,25 @@ EI16_INPUT = f"""[Mesh]
     functor_symbols = 'dens wo2'
     expression = 'dens*wo2/0.031998'
   []
+  [fixture_log_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = fixture_log_molar_density
+    functor_names = 'n_e'
+    functor_symbols = 'ne'
+    expression = 'log(ne/6.02214076e23)'
+  []
+  [fixture_log_molar_energy]
+    type = ADParsedFunctorMaterial
+    property_name = fixture_log_molar_energy
+    functor_names = 'mean_en'
+    functor_symbols = 'energy'
+    expression = 'log(energy/6.02214076e23)'
+  []
   [mean_energy_bridge]
     type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
+    electron_energy_density = fixture_log_molar_energy
+    electron_density = fixture_log_molar_density
+    state_form = log_molar_eV
   []
   [ei16_rate]
     type = EIRateCoefMaterial
