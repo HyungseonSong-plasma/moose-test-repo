@@ -353,3 +353,18 @@ post-integration HEAD. A passing CI run in the same PR is insufficient.
 ### v0.7 — GitHub Actions artifact provenance (read-only)
 
 `verification/naming_actions.py` reads official GitHub HTTPS run/job/artifact metadata and raw archive bytes, checks exact repository/SHA/attempt/workflow/job/step/Artifact ownership, then compares JUnit test identities through the canonical `junit_compare` module. It checks a run twice for concurrent reruns, strips bearer credentials on artifact redirects, and fails closed on invalid ZIP/XML/pagination. It never dispatches or edits workflows. A missing JUnit artifact is **HOLD**, not success. Current Harness Code CI run `45081041451` has no JUnit artifact; Repository CI's `physics-architecture-census` must not be substituted. See `docs/development/evolutionary-naming-actions-provenance-v07.md`. Authenticated GitHub metadata does not attest the runner/toolchain, semantic parity, external consumers or mutation permission.
+
+
+### Explicit module path lifecycle
+
+For a module rename, declare `module_path_policy` on `NamingOption`: either
+`PRESERVE_COMPATIBILITY` (old import path remains intentionally supported) or
+`RETIRE_OLD_PATH` (old module/package must disappear). Missing policy is HOLD,
+not implicit compatibility. The exact-candidate gate recomputes
+`verify_module_path_transition` for file-owner moves. The same read-only
+verifier can assess a standalone move or retirement of an already migrated shim
+without inventing declaration ownership. Package paths are specified by
+`__init__.py`; retirement rejects residual directory and alternate module forms.
+Retained files are not proof of working exports; retired paths with stale static
+imports are BLOCKED. Literal, dynamic, serialized and external consumers remain
+unresolved. No automatic deletion, runtime equivalence or mutation authority.

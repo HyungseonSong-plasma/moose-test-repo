@@ -167,8 +167,13 @@ class NamingOption:
     evidence_ids: tuple[str, ...] = ()
     rejected_names: tuple[str, ...] = ()
     impact_paths: tuple[str, ...] = ()
+    module_path_policy: str | None = None  # explicit retain vs retire, never inferred
 
     def __post_init__(self) -> None:
+        if self.module_path_policy not in {None, "PRESERVE_COMPATIBILITY", "RETIRE_OLD_PATH"}:
+            raise ValueError("INVALID_MODULE_PATH_POLICY")
+        if self.module_path_policy is not None and self.variant not in {"RENAME", "EXTRACT_RENAME"}:
+            raise ValueError("MODULE_PATH_POLICY_REQUIRES_RENAME")
         _nonempty(self.id, "OPTION_ID")
         if self.variant not in _VARIANTS:
             raise ValueError("INVALID_OPTION_VARIANT")
@@ -250,6 +255,13 @@ def review_naming_option(case: NamingCase, option: NamingOption) -> NamingOption
     if case.coherence == "MIXED" and option.variant == "RENAME":
         blocked.add("MIXED_RESPONSIBILITIES_CANNOT_BE_FIXED_BY_RENAME")
     if option.variant in {"RENAME", "EXTRACT_RENAME"}:
+        if case.target_kind in {"FILE", "FOLDER"}:
+            if option.module_path_policy is None:
+                unknown.add("MODULE_PATH_POLICY_UNDECLARED")
+            else:
+                required.add("VERIFY_MODULE_PATH_TRANSITION:" + option.module_path_policy)
+        elif option.module_path_policy is not None:
+            blocked.add("MODULE_PATH_POLICY_REQUIRES_MODULE_TARGET")
         if option.proposed_name == case.current_name:
             blocked.add("NO_EFFECTIVE_NAME_CHANGE")
         if option.proposed_name in case.occupied_names:
@@ -425,6 +437,7 @@ def build_naming_recommendation_brief(
         "options": [
             {"id": o.id, "variant": o.variant, "name": o.proposed_name,
              "rationale": o.rationale, "evidence_ids": list(o.evidence_ids),
+             "module_path_policy": o.module_path_policy,
              "coverage": o.coverage_rationale, "excluded_boundary": o.boundary_rationale,
              "context": o.context_rationale,
              "extracted_owners": [p.owner_id for p in o.extracted_units]}
@@ -436,6 +449,7 @@ def build_naming_recommendation_brief(
             "Compare KEEP against every non-KEEP candidate and cite observed evidence IDs.",
             "Distinguish name-only defects from responsibility mixing or duplicated owners.",
             "For extraction, distinguish what stays from what moves and reuse the current owner.",
+            "For module path changes, explicitly distinguish preserving compatibility from retiring the old path.",
             "Propose the least sufficient abstraction covering observed positive responsibilities",
             "without implying excluded responsibilities or creating ambiguous sibling names.",
             "If there is no unique supported winner, choose HOLD; do not force a name.",

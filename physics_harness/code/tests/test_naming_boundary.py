@@ -96,6 +96,7 @@ def extraction(*, dest=DEST, existing=True):
 def extract_option(*, variant="EXTRACT_KEEP", dest=DEST, existing=True):
     return NamingOption("extract", variant, "Delegate Python implementation to provider",
           proposed_name="source_collector" if variant == "EXTRACT_RENAME" else None,
+          module_path_policy="RETIRE_OLD_PATH" if variant == "EXTRACT_RENAME" else None,
           coverage_rationale="Own coordination and C++ scan",
           boundary_rationale="Does not implement Python parser after extraction",
           context_rationale="Diagnostics gives collector semantics",

@@ -15,7 +15,10 @@ from .junit_compare import ReplayArtifact, ReplayComparison, compare_candidate_r
 from .naming_boundary import ResponsibilityBinding
 from .naming_candidate import CandidatePlacement, NamingCandidateReceipt, verify_naming_candidate
 from .naming_behavior import NamingBehaviorReceipt, verify_naming_behavior_projection
-from .naming_consumers import NamingConsumerReceipt, audit_naming_consumers
+from .naming_consumers import (
+    NamingConsumerReceipt, ModulePathTransitionReceipt, audit_naming_consumers,
+    verify_module_path_transition,
+)
 from .naming_semantic_review import (
     BlindedSemanticPacket, IndependentResponsibilityHypothesis,
     SecondPassSemanticChallenge, SemanticReviewReceipt,
@@ -38,6 +41,7 @@ class NamingSafetyGateReport:
     unresolved: tuple[str, ...]
     required_checks: tuple[str, ...]
     replay: ReplayComparison | None = None
+    module_transition: ModulePathTransitionReceipt | None = None
 
     @property
     def mutation_approved(self) -> bool:
@@ -76,6 +80,19 @@ def evaluate_naming_safety_gates(
     blocked = set(structural.blockers) | set(behavior.blockers) | set(consumers.blockers)
     unresolved = set(structural.unresolved) | set(behavior.unresolved) | set(consumers.unresolved) | set(blind.unresolved)
     checks = set(structural.required_checks) | set(behavior.required_checks) | set(consumers.required_checks)
+    transition = None
+    if candidate_owner_path != case.current_path:
+        if option.module_path_policy is None:
+            unresolved.add("MODULE_PATH_POLICY_UNDECLARED")
+        elif case.target_kind == "FILE":
+            transition = verify_module_path_transition(
+                provider, case.revision, candidate_revision, case.current_path,
+                candidate_owner_path, option.module_path_policy,
+                max_files=max_consumer_files, max_bytes=max_consumer_bytes)
+            blocked.update(transition.blockers)
+            unresolved.update(transition.unresolved)
+        else:
+            unresolved.add("MODULE_PATH_TRANSITION_SCOPE_UNSUPPORTED")
     checks.update({"AUTHENTICATED_INDEPENDENT_SEMANTIC_REVIEW",
                    "TRUSTED_EXACT_COMMIT_BEFORE_AFTER_TEST_RUN",
                    "VERIFIED_EXTERNAL_CONSUMER_SCOPE",
@@ -107,7 +124,7 @@ def evaluate_naming_safety_gates(
     return NamingSafetyGateReport(case.revision, candidate_revision, option.id,
         "BLOCKED" if blocked else "HOLD", structural, behavior, consumers,
         blind, semantic, tuple(sorted(blocked)), tuple(sorted(unresolved)),
-        tuple(sorted(checks)), replay)
+        tuple(sorted(checks)), replay, transition)
 
 
 __all__ = ["NamingSafetyGateReport", "evaluate_naming_safety_gates"]
