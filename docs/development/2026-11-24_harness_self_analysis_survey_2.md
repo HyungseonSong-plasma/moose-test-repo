@@ -1,7 +1,7 @@
 # 조사#2 — Harness Code / Libs: evidence refinement and solution lucidity
 
 **Status:** RESEARCH; follow-up to [Survey #1 / PR #853](https://github.com/HyungseonSong-plasma/moose-test-repo/pull/853). Not an architecture authority, implementation approval or deletion permission.  
-**Pinned source:** [2bf977e17fa2e4eb84b24bce51a717bc76be60f7](https://github.com/HyungseonSong-plasma/moose-test-repo/commit/2bf977e17fa2e4eb84b24bce51a717bc76be60f7). Main remained unchanged during the investigation.  
+**Pinned source:** [2bf977e17fa2e4eb84b24bce51a717bc76be60f7](https://github.com/HyungseonSong-plasma/moose-test-repo/commit/2bf977e17fa2e4eb84b24bce51a717bc76be60f7). Both actual runs used this revision. At PR preflight main advanced to `de51d59d250cac730f24b4a5937c531d27c1e233` (merge #852): 17 modified files, all outside `physics_harness/code/` and `libs/`. Scope source files are unchanged; evidence remains bound to the original revision, not promoted to the newer SHA. Three-dot compare still contains only the two research documents.  
 **Scope:** physics_harness/code and libs. Existing Graph, Diagnostics, Analysis, Code Lucidity and Refactor Planning APIs; no new production engine.
 
 ## 1. Correct the gaps in Survey #1
