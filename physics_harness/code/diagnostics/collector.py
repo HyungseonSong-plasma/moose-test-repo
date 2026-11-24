@@ -162,6 +162,7 @@ def run_scan(
     if registry is None:
         from .providers.cpp import CppSourceCollector
         from .providers.moose_input import MooseInputCollector
+        from .providers.json_source import JsonSourceCollector
         from .providers.python_ast import PythonAstCollector
         from .providers.workflow import WorkflowCollector
         registry = {
@@ -169,6 +170,7 @@ def run_scan(
             "python_ast": PythonAstCollector(),
             "cpp": CppSourceCollector(),
             "moose_input": MooseInputCollector(),
+            "json": JsonSourceCollector(),
         }
     selected_collectors = []
     for key in request.collectors:
