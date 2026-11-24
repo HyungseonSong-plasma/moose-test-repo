@@ -303,3 +303,71 @@ def test_keep_allows_bounded_partial_inspection_but_discloses_unbound(history):
     assert r.status=="STRUCTURE_WITNESSED"
     assert PATH+"::function:cpp_decode" in r.unbound_owner_declarations
     assert not r.mutation_approved
+
+
+def test_boundary_reuses_only_budgeted_scope_reads(history, monkeypatch):
+    root, before, baseline = history
+    provider = GitSourceProvider(root)
+    real_read = provider.read_at_revision
+    calls = []
+
+    def read(revision, path):
+        calls.append((revision, path))
+        return real_read(revision, path)
+
+    monkeypatch.setattr(provider, "read_at_revision", read)
+    subject = case(before, baseline)
+    result = verify_naming_boundary(subject, keep(), provider, bindings())
+    assert result.status == "STRUCTURE_WITNESSED"
+    # Independent provenance once, then one scope read (no second AST read).
+    assert calls.count((baseline, PATH)) == 2
+    assert calls.count((before, PATH)) == 1
+    calls.clear()
+    repeated = verify_naming_boundary(subject, keep(), provider, bindings())
+    assert repeated == result
+    assert calls.count((baseline, PATH)) == 2
+    assert calls.count((before, PATH)) == 1
+
+
+def test_boundary_folder_budget_precedes_parsing(history):
+    root, before, baseline = history
+    malformed = root / "diagnostics/aaa.py"
+    malformed.write_bytes(b"def invalid(\n")
+    git(root, "add", ".")
+    git(root, "commit", "-qm", "malformed first source")
+    revision = git(root, "rev-parse", "HEAD")
+    subject = case(before, baseline, target_kind="FOLDER", target_name="diagnostics",
+                   target_path="diagnostics")
+    subject = replace(subject, revision=revision,
+                      evidence=tuple(replace(e, source_revision=revision)
+                                     if e.source_revision == baseline else e
+                                     for e in subject.evidence))
+    provider = GitSourceProvider(root)
+    result = verify_naming_boundary(subject, keep(), provider, bindings(),
+                                    max_bytes=len(malformed.read_bytes()))
+    assert "SOURCE_BYTE_BUDGET_EXCEEDED" in result.unresolved
+    assert not any(x.startswith("EXACT_SOURCE_OR_AST_UNAVAILABLE:")
+                   for x in result.unresolved)
+    assert result.observed_symbols == ()
+    enough = verify_naming_boundary(subject, keep(), provider, bindings())
+    assert "EXACT_SOURCE_OR_AST_UNAVAILABLE:SyntaxError" in enough.unresolved
+    assert enough.observed_symbols == ()
+
+
+def test_boundary_destination_still_read_independently(history, monkeypatch):
+    root, before, baseline = history
+    provider = GitSourceProvider(root)
+    real_read = provider.read_at_revision
+    calls = []
+
+    def read(revision, path):
+        calls.append((revision, path))
+        return real_read(revision, path)
+
+    monkeypatch.setattr(provider, "read_at_revision", read)
+    result = verify_naming_boundary(case(before, baseline), extract_option(),
+                                    provider, bindings())
+    assert result.status == "STRUCTURE_WITNESSED"
+    assert calls.count((baseline, PATH)) == 2
+    assert calls.count((baseline, DEST)) == 1
+    assert calls.count((before, PATH)) == 1
