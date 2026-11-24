@@ -468,7 +468,7 @@ class PythonAstCollector:
                         if kind != "str":
                             continue
                         for match in _MOOSE_TYPE_LINE.finditer(text_value):
-                            name = match.group(1).strip().strip("'\\\"")
+                            name = match.group(1).strip().strip("'\"")
                             if _MOOSE_IDENTIFIER.fullmatch(name):
                                 names.add(name)
                             else:
