@@ -44,7 +44,19 @@ Architecture and refactor work should prefer static, characterization, import/co
 
 ## Repository role
 
-This workspace stores regression inputs, minimal reproducers, checkers/reference data, incident/development logs, scripts, specifications, and small source deltas needed to reproduce or document MOOSE/Physics investigations. Production source changes belong in the appropriate source repository.
+This workspace owns the canonical local Physics application (`physics_app/`), reusable harness and regression/experiment assets. Changes to external dependencies belong in their respective source repositories.
+
+| Area | Current entry point |
+| --- | --- |
+| Physics application source and build provenance | [`physics_app/README.md`](physics_app/README.md), [`SOURCE_PROVENANCE.md`](physics_app/SOURCE_PROVENANCE.md) |
+| Experiment cases and scientific execution | [`experiments/README.md`](experiments/README.md) |
+| Code evidence, analysis and refactoring | [`physics_harness/code/README.md`](physics_harness/code/README.md) |
+| On-demand source inspection | [`docs/guides/harness_source_scan_on_demand.md`](docs/guides/harness_source_scan_on_demand.md) |
+| Understandability metrics | [`libs/code_lucidity/README.md`](libs/code_lucidity/README.md) |
+| Development records and their lifecycle | [`docs/development/README.md`](docs/development/README.md) |
+| Reusable troubleshooting | [`docs/knowledge/TROUBLESHOOTING_INDEX.md`](docs/knowledge/TROUBLESHOOTING_INDEX.md) |
+
+Consult the owning GitHub issue for current implementation/retirement state rather than inferring it from a dated development record. A closed or superseded document does not authorize changes to physical contracts or pinned evidence.
 
 ## License
 
