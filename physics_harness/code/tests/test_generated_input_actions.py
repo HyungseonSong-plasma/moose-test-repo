@@ -236,3 +236,112 @@ def test_archive_symlink_rejected():
     data = zip_members([("valid.i", HIT), (link, b"target")])
     with pytest.raises(ValueError, match="ARCHIVE_SYMLINK_UNSUPPORTED"):
         read_actions_archive_members(data, entries=("valid.i",))
+
+
+# P1c: execute only an explicitly selected, vetted text-returning generator.
+def load_fixture_module(root, relative):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("capture_test_module", root / relative)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def capture_fixture(git_factory, source="def render(kind='MyKernel'):\n    return '[Kernels]\\n [./k]\\n type = ' + kind + '\\n [../]\\n[]\\n'\n"):
+    from physics_harness.code.verification.generated_input_actions import capture_generated_return
+    path = "src/generator.py"
+    root, revision = git_factory({path: source})
+    provider = GitSourceProvider(root)
+    request = ScanRequest("example/repo", revision, (path,), collectors=("python_ast",))
+    blob = provider.read_at_revision(revision, path).record.blob_sha
+    module = load_fixture_module(root, path)
+    options = dict(producer_path=path, producer_blob_sha=blob, function=module.render,
+                   arguments={}, artifact_path="inputs/generated.i", run_id=10,
+                   attempt=1, job_id=JOB_ID, workflow_path=WORKFLOW)
+    return request, provider, options, capture_generated_return
+
+
+def test_capture_real_callable_and_exact_invocation_hash(git_factory):
+    request, provider, options, capture = capture_fixture(git_factory)
+    a = capture(request, provider, **options)
+    b = capture(request, provider, **dict(options, arguments={"kind": "MyKernel"}))
+    c = capture(request, provider, **dict(options, arguments={"kind": "OtherKernel"}))
+    assert a == b and a != c
+    assert b"MyKernel" in a.hit and b"OtherKernel" in c.hit
+    manifest = json.loads(a.manifest)
+    assert manifest["identity"]["artifact_sha256"] == sha256(a.hit).hexdigest()
+    assert "artifact_id" not in manifest["identity"]
+    assert b"MyKernel" not in a.manifest
+    assert not a.producer_authenticated
+
+
+def test_capture_rejects_changed_worktree(git_factory):
+    request, provider, options, capture = capture_fixture(git_factory)
+    (provider.root / options["producer_path"]).write_text("def render(): return 'changed'\n")
+    with pytest.raises(ValueError, match="GENERATED_CAPTURE_WORKTREE_SOURCE_MISMATCH"):
+        capture(request, provider, **options)
+
+
+def test_capture_rejects_changed_loaded_code(git_factory):
+    request, provider, options, capture = capture_fixture(git_factory)
+    function = options["function"]
+    function.__code__ = function.__code__.replace(co_consts=("changed",))
+    with pytest.raises(ValueError, match="GENERATED_CAPTURE_CODE_MISMATCH"):
+        capture(request, provider, **options)
+
+
+def test_capture_rejects_wrong_blob_before_call(git_factory):
+    request, provider, options, capture = capture_fixture(git_factory)
+    with pytest.raises(ValueError, match="GENERATED_PRODUCER_BLOB_MISMATCH"):
+        capture(request, provider, **dict(options, producer_blob_sha="a" * 40))
+
+
+@pytest.mark.parametrize("value", [{"unsafe": 1}, float("nan"), "x" * 4097])
+def test_capture_rejects_unbounded_or_nonfinite_arguments(git_factory, value):
+    request, provider, options, capture = capture_fixture(git_factory)
+    with pytest.raises(ValueError):
+        capture(request, provider, **dict(options, arguments={"kind": value}))
+
+
+def test_capture_rejects_nontext_result(git_factory):
+    request, provider, options, capture = capture_fixture(
+        git_factory, "def render(): return 42\n")
+    with pytest.raises(TypeError, match="GENERATED_CAPTURE_TEXT_RETURN_REQUIRED"):
+        capture(request, provider, **options)
+
+
+def test_code6_existing_generator_through_capture_and_acquisition():
+    """Real repository generator, actual returned HIT, simulated Actions API.
+
+    Do not run its solver or main() and do not treat fake metadata as an
+    authenticated GitHub upload. This is a Code-only P0 regression.
+    """
+    from pathlib import Path
+    from physics_harness.code.verification.generated_input_actions import capture_generated_return
+
+    root = Path(__file__).resolve().parents[3]
+    path = "physics_app/ci/check_stage5_ei20_runtime.py"
+    provider = GitSourceProvider(root)
+    revision = provider._git("rev-parse", "HEAD").decode("ascii").strip()
+    request = ScanRequest("HyungseonSong-plasma/moose-test-repo", revision,
+                          (path,), collectors=("python_ast",))
+    blob = provider.read_at_revision(revision, path).record.blob_sha
+    module = load_fixture_module(root, path)
+    options = dict(producer_path=path, producer_blob_sha=blob,
+                   function=module.runtime_input, arguments={"mean": 5.73276},
+                   artifact_path="inputs/generated.i", run_id=10, attempt=1,
+                   job_id=JOB_ID, workflow_path=WORKFLOW)
+    captured = capture_generated_return(request, provider, **options)
+    assert b"PhysicsFVMassFractionTimeDerivative" in captured.hit
+    identity = GeneratedInputIdentity(
+        **json.loads(captured.manifest)["identity"], artifact_id=20)
+    reader = FakeReader(identity)
+    reader.refresh_archive(hit=captured.hit, manifest_bytes=captured.manifest)
+    acquired = acquire((request, provider, identity, reader))
+    assert acquired.identity == identity
+    assert acquired.result.status == "PARTIAL"
+    assert not acquired.producer_authenticated
+    assert any(n.kind == "moose_type" and n.name == "PhysicsFVMassFractionTimeDerivative"
+               for n in acquired.result.batch.nodes)
+    assert not any(e.observation_status == "RUNTIME_OBSERVED"
+                   for e in acquired.result.batch.evidence)
