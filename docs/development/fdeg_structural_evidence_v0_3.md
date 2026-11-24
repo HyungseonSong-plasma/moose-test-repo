@@ -4,7 +4,14 @@
 
 ## Versioned JSON contract
 
-`ci/guards/fdeg_structural.py` emits `fdeg.structural.v0.3` with the v0.2 nodes, source/line/blob `evidence`, content-addressed `edge_id`, exact `repository_head`, `graph_id` and `instances[]`, plus:
+`ci/guards/fdeg_structural.py` emits `fdeg.structural.v0.3`, the Structural schema consumed by Functional v0.2. The base contract includes:
+
+- Directed nodes and `edges[]` with `from`, `to`, `relation`, `strength`, `detail` and path/line/blob/excerpt `evidence`.
+- Exact `repository_head`, content-addressed `graph_id` and `edge_id` (not persistent IDs across changed evidence).
+- `instances[]` records identify declared input instances by `instance_id`, input/block path, Factory type, type line, structural edge, raw parameter bindings and source blob. `DECLARES_INSTANCE` and `INPUT_INSTANTIATES` are source declarations, not Native activation.
+- Declared bindings and includes are not effective defaults, resolved Functors or evaluated include expansions. Dynamic, generated, overridden and external consumers retain unresolved coverage obligations.
+
+Additional source surfaces:
 
 - Each edge now has `source_head`, `revision_scope`, `reference_role`, and `activation_status=NOT_OBSERVED`.
 - `enrichment.build_ownership[]`: `physics_app/Makefile`/app.mk declaration `BUILD_OWNS_SOURCE`, not proof of successful compilation/linking.
@@ -27,13 +34,13 @@
 ```bash
 python3 -m unittest discover -s tests -p test_fdeg_structural.py -v
 python3 ci/guards/fdeg_structural.py \
-  --target PhysicsFVThermalDiffusion \
+  --target PhysicsFVMassFractionTimeDerivative \
   --expected-head "$(git rev-parse HEAD)" \
   --output /tmp/fdeg-structural.json
 ```
 
-`STRUCTURAL_RECORDED` establishes source extraction only. `INCOMPLETE` with unresolved contracts is expected for many historical generator paths. The CLI returns 2 on incomplete reports but still writes JSON; Functional may consume that report while preserving unresolved gating. Neither code path can issue a deletion/transition/physics-PASS decision. `Transition` and `Coverage` v0.1 remain outside the upgrade.
+`STRUCTURAL_RECORDED` establishes source extraction only. `INCOMPLETE` with unresolved contracts is expected for many historical generator paths. The CLI returns 2 on incomplete reports but still writes JSON; Functional may consume that report while preserving unresolved gating. Neither code path can issue a deletion/transition/physics-PASS decision. Transition v0.1 is a separate conditional planning assembler; global Coverage/caller-zero and runtime proof remain outside this source contract.
 
-## Cross-module migration
+## Current cross-module contract
 
-Functional v0.1 has a narrow compatibility shim to accept Structural v0.3 source identity while keeping its original claim semantics; Functional v0.2 in #697 must additionally validate producer/generation evidence and expose the new consumer contracts. The two upgrades are dependent and must be validated in order.
+[Functional v0.2](fdeg_functional_contract_v0_2.md) consumes Structural v0.3 at the same exact HEAD, validates graph/edge/instance identities and reconstructs source evidence. [Transition v0.1](fdeg_transition_evidence_v0_1.md) consumes those matching reports for conditional migration planning. Regenerate obsolete-schema reports at the relevant exact revision; do not relabel them. See [A–D remediation](fdeg_harness_abcd_remediation.md) for later scope and lifecycle refinements. The current general-purpose Code Diagnostics/Analysis framework is documented separately in [Harness Code](../../physics_harness/code/README.md); it does not automatically replace FDEG validation.
