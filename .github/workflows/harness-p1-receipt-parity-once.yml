@@ -1,0 +1,115 @@
+name: P1 exact receipt parity (one-shot)
+on:
+  push:
+    branches: [issue-758-harness-p1-receipt-parity]
+    paths: ['.github/workflows/harness-p1-receipt-parity-once.yml']
+permissions:
+  contents: read
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: de51d59d250cac730f24b4a5937c531d27c1e233
+          path: before
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 08cfb005954ce583bd3ef1dca4ed36cbc95c5f5a
+          path: after
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact revision and requirements
+        run: |
+          test "$(git -C before rev-parse HEAD)" = de51d59d250cac730f24b4a5937c531d27c1e233
+          test "$(git -C after rev-parse HEAD)" = 08cfb005954ce583bd3ef1dca4ed36cbc95c5f5a
+          python -m pip install 'pytest>=8,<9' -r before/physics_harness/code/requirements.txt
+      - name: Compare complete normal-input receipt fields
+        env:
+          GIT_AUTHOR_DATE: '2026-11-24T00:00:00+00:00'
+          GIT_COMMITTER_DATE: '2026-11-24T00:00:00+00:00'
+        run: |
+          cat > "$RUNNER_TEMP/p1_parity.py" <<'PY'
+          from dataclasses import asdict, replace
+          import json
+          import tempfile
+          from pathlib import Path
+          from physics_harness.code.diagnostics.providers.git import GitSourceProvider
+          from physics_harness.code.refactor.naming import NamingEvidence, NamingOption
+          from physics_harness.code.verification.naming_boundary import ResponsibilityBinding, verify_naming_boundary
+          from physics_harness.code.verification.naming_candidate import CandidatePlacement, verify_naming_candidate
+          from physics_harness.code.verification.naming_behavior import verify_naming_behavior_projection
+          from physics_harness.code.verification.naming_semantic_review import build_blinded_semantic_packet
+          from physics_harness.code.verification.naming_gates import evaluate_naming_safety_gates
+          from physics_harness.code.tests.test_naming_boundary import history, case, bindings, extract_option, keep, PATH, DEST, NEW, digest, git
+          from physics_harness.code.tests.test_naming_candidate import third_commit, placements
+          output = {}
+          def save(label, value):
+              output[label] = asdict(value)
+          def fixture():
+              return history.__wrapped__(Path(tempfile.mkdtemp()))
+          root, before, base = fixture()
+          provider = GitSourceProvider(root)
+          subject = case(before, base)
+          save("keep", verify_naming_boundary(subject, keep(), provider, bindings()))
+          save("extract", verify_naming_boundary(subject, extract_option(), provider, bindings()))
+          save("budget", verify_naming_boundary(subject, keep(), provider, bindings(), max_bytes=1))
+          save("blind", build_blinded_semantic_packet(subject, provider, bindings()))
+          save("blind_truncated", build_blinded_semantic_packet(subject, provider, bindings(), max_symbol_chars=16))
+          for kind, name, rid, mapped in (("CLASS","Collector","coord",bindings()[0]), ("FUNCTION","python_decode","python",bindings()[1])):
+              scoped = replace(subject, target_kind=kind, current_name=name, responsibility_ids=(rid,))
+              save(kind, verify_naming_boundary(scoped, keep(), provider, (mapped,)))
+          for label, text in (("unique",None),("changed_signature","class PythonProvider: pass\ndef python_decode(source, extra): return source\n"),("missing","class PythonProvider: pass\n")):
+              root, before, base = fixture()
+              provider = GitSourceProvider(root)
+              subject = case(before, base)
+              after = third_commit((root,before,base), **({"dest_source":text} if text is not None else {}))
+              args=(subject,extract_option(),provider,bindings(),after,PATH,placements())
+              save(label+"_candidate", verify_naming_candidate(*args))
+              save(label+"_behavior", verify_naming_behavior_projection(*args))
+              save(label+"_gate", evaluate_naming_safety_gates(*args))
+          root,before,base=fixture()
+          provider=GitSourceProvider(root)
+          subject=case(before,base)
+          mismatch=NamingEvidence("name_mismatch","NAME_MISMATCH","Existing name too narrow",(f"{PATH}:4@{digest(NEW)}",),base)
+          subject=replace(subject,name_fit="NARROW",name_mismatch_evidence_ids=("name_mismatch",),evidence=subject.evidence+(mismatch,))
+          option=NamingOption("rename","RENAME","Widen to stable source_collector",proposed_name="source_collector",retained_responsibility_ids=subject.responsibility_ids,evidence_ids=("name_mismatch","evolution","boundary","context"),coverage_rationale="Collector handles diverse sources",boundary_rationale="Does not plan/verify code changes",context_rationale="Stable diagnostics domain",impact_paths=(PATH,))
+          renamed="diagnostics/source_collector.py"
+          git(root,"mv",PATH,renamed)
+          git(root,"commit","-qm","rename candidate")
+          after=git(root,"rev-parse","HEAD")
+          moves=tuple(CandidatePlacement(b.responsibility_id,old,old.replace(PATH+"::",renamed+"::"),"original") for b in bindings() for old in b.source_symbols)
+          args=(subject,option,provider,bindings(),after,renamed,moves)
+          save("rename_candidate",verify_naming_candidate(*args))
+          save("rename_behavior",verify_naming_behavior_projection(*args))
+          save("rename_gate",evaluate_naming_safety_gates(*args))
+          print(json.dumps(output,sort_keys=True,indent=2))
+          
+          PY
+          (cd before; PYTHONPATH="$PWD" python "$RUNNER_TEMP/p1_parity.py" > "$RUNNER_TEMP/p1-before.json")
+          (cd after; PYTHONPATH="$PWD" python "$RUNNER_TEMP/p1_parity.py" > "$RUNNER_TEMP/p1-after.json")
+          python - <<'PY'
+          import json, os, pathlib, hashlib
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          before=(root/'p1-before.json').read_bytes(); after=(root/'p1-after.json').read_bytes()
+          a=json.loads(before); b=json.loads(after)
+          differences=[k for k in sorted(set(a)|set(b)) if a.get(k)!=b.get(k)]
+          report={'baseline':'de51d59d250cac730f24b4a5937c531d27c1e233','candidate':'08cfb005954ce583bd3ef1dca4ed36cbc95c5f5a','receipt_count':len(a),'same':not differences,'differences':differences,'sha256_before':hashlib.sha256(before).hexdigest(),'sha256_after':hashlib.sha256(after).hexdigest(),'labels':sorted(a)}
+          (root/'p1-parity.json').write_text(json.dumps(report,indent=2))
+          print('P1_PARITY='+json.dumps(report))
+          assert not differences, differences
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p1-receipt-parity
+          path: |
+            ${{ runner.temp }}/p1-before.json
+            ${{ runner.temp }}/p1-after.json
+            ${{ runner.temp }}/p1-parity.json
+          if-no-files-found: warn
+          retention-days: 30
