@@ -1,0 +1,13 @@
+# Issue814 code2 — integrated source-cut candidate against #807 + #811
+
+**STATE:** CANDIDATE_ONLY / CODE2_P0=PASS_STANDALONE / CODE2_P1=PASS_STANDALONE / INTEGRATED_P0=PENDING / INTEGRATED_NATIVE=PENDING / SAFE_DELETE=HOLD / SCIENCE_HOLD / MAIN_MERGE=DEFERRED.
+
+**Exact parent:** production-only New-only [Draft PR #807](https://github.com/HyungseonSong-plasma/moose-test-repo/pull/807) at `c0bec1d94733f9fecdc1c6eb859a7a6e8b2d1628`. Includes independently accepted Heavy correction #811/#812 and earlier Thermal retirement. Code1 #809 is **not** present on this ancestry; it remains a separate integration consideration. This candidate does not merge anything to #807 or main.
+
+**Code2 source removal:** delete `physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C` (blob `07ecd234871c659b04389c87bff6f52fae7f800e`) and `physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h` (blob `1d2afa9ba448041c664fdc1822ede5472b93551e`) with the sole Factory registration. Preserve byte-identical `physics_app/ci/electron_energy_joule_smoke.i` as historical `docs/provenance/issue814_code2/electron_energy_joule_smoke.i.txt` (Git blob `6c4901f843a98b74b450cc3a1fab09e8e1873b2c`). Do not rewrite `state_form=molar_eV` in original historical generator, and do not claim Issue351 current-binary replay support. Keep the three remaining material lookup smoke fixtures and active `DDEnergyEq` + `FEMLogMolarElectronJouleHeating` unmodified.
+
+**Combined source census:** after Thermal + Heavy + Joule removal, expected **10 FVKernel .C source files / 15 distinct Factory registrations**. The 4 and 3 registrations in the two shared log-molar transport units remain intact. The static guard checks exact pinned historical Heavy + Joule recipe blobs, disappearance of C/H and original live smoke, old Factory reintroduction, full tracked references and existing P6 workflow-template byte parity.
+
+**Prior independent code2 standalone evidence:** [P0 #45228680403](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45228680403) PASS (9 census, 7 retirement, 4 DDTransport material tests); [P1 W1 #45229220498](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45229220498) SUCCESS with actual ELF and two app shared libraries. These are NOT evidence for this combined candidate.
+
+**Remaining gates:** exact integrated P0 with negative mutation, fresh combined P1 build, real S6-417/941 Native P2/P05, protected data cleanup and archive receipts, optional Public D 100-row P2 on exact combined source, explicit scientific parity boundary. No Poisson #652 alteration. Do not merge to main without separate review/release authorization or reconcile independently validated code1 branch by blindly adding counts.
