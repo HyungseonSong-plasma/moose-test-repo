@@ -2,14 +2,14 @@
 
 `physics_harness/code/` provides reusable, read-only foundations for inspecting
 source code and repository automation. Its collectors currently cover selected
-Python, C++, MOOSE input and GitHub Actions Workflow forms; the architecture
+Python, C++, MOOSE input, JSON and GitHub Actions Workflow forms; the architecture
 can support other languages, but **unimplemented collectors are not claimed**.
 
 | Component | Implemented responsibility |
 | --- | --- |
 | [`graph/`](graph/README.md) | Revision-independent Node/Edge identity, source-bound Evidence and Claim, Scope, deterministic context traversal |
 | [`diagnostics/`](diagnostics/README.md) | Exact Git revision/Blob source scanning, bounded collectors, source Graph/Evidence receipts and partial-coverage reporting |
-| [`analysis/`](analysis/README.md) | Source-bound findings, impact and coverage analysis; interpreting HU indicators; MOOSE parameter-contract analysis |
+| [`analysis/`](analysis/README.md) | Source-bound findings, impact and coverage, exact-inventory file-reference resolution, code-understandability interpretation and MOOSE parameter-contract analysis |
 | [`refactor/`](refactor/README.md) | Strategy-neutral KEEP/CHANGE alternatives, evidence/constraint checks and explicit follow-up verification obligations |
 | [`verification/`](verification/README.md) | Graph/receipt consistency, configurable source dependency checks and before/after verification planning |
 | `delete/` | Reserved: no automatic source-retirement or deletion engine is implemented |
@@ -21,7 +21,6 @@ Human evaluations are optional evidence, not a metric prerequisite.
 `analysis/adapters/lucidity_adapter.py` transports source facts and results;
 `analysis/adapters/lucidity_interpretation.py` interprets their meaning.
 Planning, not the engine, decides how to compare refactor options.
-Obsolete `libs/hu/` and `analysis/hu_*` compatibility modules have been removed.
 
 ## Scope and evidence guarantees
 
@@ -32,10 +31,10 @@ link evidence with support/refute/qualify roles and remain conditional.
 
 `diagnostics.run_scan()` selects bounded source inputs and collectors.
 Built-in source collectors include `workflow`, `python_ast`, `cpp` and
-`moose_input`. The injected read-only `GitHubActionsRunProvider` records
+`moose_input` and `json`. The injected read-only `GitHubActionsRunProvider` records
 external Run/Attempt observations separately; it does not invent execution
 from static Workflow declarations. Candidate import, call, and MOOSE type
-edges are **syntactic candidates**, not resolved runtime dependencies.
+edges are **syntactic candidates**, not resolved runtime dependencies. JSON, Python and MOOSE HIT file-reference candidates can be analyzed using explicit repository-root or owner-directory bases against the exact Git inventory. The resolution result is a candidate path/blob, not runtime use.
 
 A `COMPLETE`/source-`VERIFIED` result means only that the requested scope
 was collected and its metadata is consistent. Unsupported constructs,
@@ -47,7 +46,7 @@ semantic equivalence, native runtime compatibility or safe deletion.
 
 ```text
 Diagnostics -> Graph and source evidence
-            -> HU metrics (via Adapter) -> Analysis interpretation
+            -> Code-understandability metrics (via Adapter) -> Analysis interpretation
             -> Refactor Planning (KEEP / CHANGE and verification obligations)
             -> Verification after an approved code change
 ```

@@ -15,7 +15,7 @@ on:
         description: 'Comma-separated tracked-source globs'
         type: string
         required: true
-        default: 'physics_harness/code/*.py,libs/hu/*.py'
+        default: 'physics_harness/code/*.py,libs/code_lucidity/*.py'
       excludes:
         description: 'Optional comma-separated exclusion globs'
         type: string

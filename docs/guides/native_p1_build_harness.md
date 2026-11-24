@@ -1,6 +1,6 @@
 # Native P1 build harness — application-scoped, adaptive, fail closed
 
-**Status:** implementation on an isolated PR; not yet an OCI/native validation.
+**Status:** implemented in the canonical repository. The historical source-pinned OCI build and smoke evidence below establishes only the recorded revisions and scopes; it does not certify every future host or scientific case.
 **Scope:** compile a reviewed exact-SHA MOOSE PhysicsApp against an existing immutable, source- and ABI-pinned vendor build image. No source or physics change, no global non-Unity rebuild, no secret handling or workflow activation.
 
 ## Why P1 required a different build command after the source change
