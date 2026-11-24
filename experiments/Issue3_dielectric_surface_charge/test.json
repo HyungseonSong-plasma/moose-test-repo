@@ -15,8 +15,7 @@
     "PhysicsElectronWallFluxMaterial",
     "PhysicsFVLogMolarDielectricFluxBC",
     "PhysicsLowerDSurfaceCurrent",
-    "PhysicsADSurfaceChargePoissonBC",
-    "PhysicsFVElectronEnergyWallFluxBC"
+    "PhysicsADSurfaceChargePoissonBC"
   ],
   "issue": "#3",
   "promotion_issue": "#3",
