@@ -9,7 +9,7 @@ from .assemble import DiagnosticResult, GraphAssembler
 from .receipt import EvidenceReceipt, FileCoverage
 from .providers.git import GitSourceProvider
 from .providers.workflow import WorkflowCollector
-from .providers.python_ast import PythonAstCollector
+from .providers.python_ast import PythonAstCollector, PythonStaticCollector
 from .providers.cpp import CppSourceCollector
 from .providers.moose_input import MooseInputCollector
 from .providers.json_source import JsonSourceCollector
@@ -20,6 +20,6 @@ __all__ = [
     "SourceRecord", "UnresolvedTarget", "file_node_id", "graph_edge_id",
     "run_scan", "scan_scope_id", "stable_id", "DiagnosticResult", "GraphAssembler",
     "EvidenceReceipt", "FileCoverage", "GitSourceProvider", "WorkflowCollector",
-    "PythonAstCollector", "CppSourceCollector", "MooseInputCollector",
+    "PythonAstCollector", "PythonStaticCollector", "CppSourceCollector", "MooseInputCollector",
     "GitHubActionsRunProvider", "JsonSourceCollector",
 ]
