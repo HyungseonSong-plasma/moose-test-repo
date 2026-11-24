@@ -70,33 +70,37 @@ jobs:
           P('evidence/w1_identity.json').write_text(json.dumps(rec,indent=2))
           PY
           docker pull "$OCI"
-      - name: Install repository Python evidence dependencies in pinned OCI
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install repository staging dependencies on runner
+        shell: bash
+        working-directory: target
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'numpy>=1.26,<3' 'scipy>=1.14,<2' 'matplotlib>=3.8,<4' -r requirements-evidence-engine.txt -r requirements-ontology.txt -r physics_harness/code/requirements.txt
+          python -c "import polars, pyarrow, duckdb, pydantic, z3, owlready2, numpy, scipy, matplotlib, yaml; import physics_harness.evidence; print(polars.__version__)" | tee ../evidence/python-preflight.log
+          python -m pip freeze > ../evidence/python-dependencies.txt
+      - name: Stage historical inputs on runner and bind manifest
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p python-deps
-          docker run --rm --entrypoint /bin/bash --user 0:0 -v "$PWD/target:/workspace:ro" -v "$PWD/python-deps:/python-deps" -v "$PWD/evidence:/evidence" --workdir /workspace "$OCI" -lc '
-            set -euo pipefail
-            source /environment
-            python3 -m pip install --disable-pip-version-check --target /python-deps "numpy>=1.26,<3" "scipy>=1.14,<2" "matplotlib>=3.8,<4" -r requirements-evidence-engine.txt -r requirements-ontology.txt -r physics_harness/code/requirements.txt
-            export PYTHONPATH="/python-deps:/workspace:${PYTHONPATH:-}"
-            python3 -c "import polars, pyarrow, duckdb, pydantic, z3, owlready2, numpy, scipy, matplotlib, yaml; import physics_harness.evidence; print(polars.__version__)" | tee /evidence/python-preflight.log
-            python3 -m pip list --path /python-deps --format freeze > /evidence/python-dependencies.txt
-          '
+          python -m py_compile control/ci/guards/code4_historical_reachability.py
+          python control/ci/guards/code4_historical_reachability.py target evidence stage
+          echo "STAGE_SHA256=$(sha256sum evidence/stage_manifest.json | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
       - name: Run exact source and bounded historical P2 diagnostics
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm --network none --entrypoint /bin/bash --user 0:0 -v "$PWD/target:/workspace" -v "$PWD/control:/control:ro" -v "$PWD/python-deps:/python-deps:ro" -v "$PWD/evidence:/evidence" --workdir /workspace "$OCI" -lc '
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 -v "$PWD/target:/workspace" -v "$PWD/control:/control:ro" -e STAGE_SHA256 -v "$PWD/evidence:/evidence" --workdir /workspace "$OCI" -lc '
             set -euo pipefail
             source /environment
-            export PYTHONPATH="/python-deps:/workspace:${PYTHONPATH:-}"
             git config --global --add safe.directory /workspace
             export LD_LIBRARY_PATH="/workspace/physics_app/lib:/workspace/physics_app/test/lib:${LD_LIBRARY_PATH:-}"
             ldd /workspace/physics_app/physics-opt | tee /evidence/ldd.log
             if grep -F "not found" /evidence/ldd.log; then exit 1; fi
             /workspace/physics_app/physics-opt --version | tee /evidence/version.log
-            python3 /control/ci/guards/code4_historical_reachability.py /workspace /evidence
+            python3 /control/ci/guards/code4_historical_reachability.py /workspace /evidence native
           '
       - name: Preserve evidence
         if: always()
