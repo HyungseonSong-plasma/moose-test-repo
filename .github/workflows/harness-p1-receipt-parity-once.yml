@@ -1,0 +1,91 @@
+name: P5 exact unresolved and dependency survey (one-shot)
+on:
+  push:
+    branches: [issue-758-harness-p1-receipt-parity]
+    paths: ['.github/workflows/harness-p1-receipt-parity-once.yml']
+permissions:
+  contents: read
+jobs:
+  survey:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cb22cdfcde8669d063390b9d69aff9d1a10ca252
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact source and requirements
+        run: |
+          test "$(git rev-parse HEAD)" = cb22cdfcde8669d063390b9d69aff9d1a10ca252
+          python -m pip install -r physics_harness/code/requirements.txt
+      - name: Run Harness and bind unresolved source witnesses
+        run: |
+          PYTHONPATH="$PWD" python - <<'PY'
+          import ast,json,sys,os
+          from pathlib import Path
+          from collections import Counter,defaultdict
+          from dataclasses import asdict
+          import importlib.util
+          from physics_harness.code.diagnostics import GitSourceProvider,ScanRequest,ScanBudget,run_scan
+          from physics_harness.code.verification.dependencies import DependencyContract,verify_dependency_repository
+          repo="HyungseonSong-plasma/moose-test-repo"; rev="cb22cdfcde8669d063390b9d69aff9d1a10ca252"
+          provider=GitSourceProvider(Path.cwd())
+          request=ScanRequest(repository=repo,revision=rev,includes=("physics_harness/code/*.py","libs/*.py"),collectors=("python_ast",),budget=ScanBudget(max_files=500,max_bytes=20_000_000,max_seconds=180))
+          scan=run_scan(request,provider); graph=scan.graph; receipt=scan.receipt
+          nodes=graph.nodes_by_id(); evidence=graph.evidence_by_id()
+          files={f.path:f for f in receipt.files}; sources={p:provider.read_at_revision(rev,p).content.decode("utf-8") for p in files}
+          details=[]
+          def source_line(path,line):
+              lines=sources[path].splitlines()
+              return lines[line-1].strip() if 0<line<=len(lines) else None
+          for f in receipt.files:
+              if f.status=="SCANNED": continue
+              details.append({"path":f.path,"blob":f.blob_sha,"status":f.status,"details":f.details})
+          rows=[]
+          for item in receipt.unresolved:
+              typ,_,rest=item.partition(":")
+              row={"entry":item,"type":typ}
+              if typ=="UNRESOLVED_REFERENCE":
+                  node=nodes[rest]; row["node"]=node.name
+                  row["witnesses"]=[{"id":e,"ref":evidence[e].source_ref,"status":evidence[e].observation_status,"path":evidence[e].attributes["path"],"line":evidence[e].attributes["line"],"column":evidence[e].attributes["column"],"source":source_line(evidence[e].attributes["path"],evidence[e].attributes["line"])} for e in node.evidence_ids]
+              elif typ=="UNRESOLVED":
+                  row["path"]=rest; row["details"]=files[rest].details
+              elif typ in {"DYNAMIC_PYTHON_REFERENCE","PYTHON_MOOSE_TYPE_TEMPLATE_UNRESOLVED","PYTHON_GENERATOR_RENDER_UNVERIFIED"}:
+                  p,_,line=rest.rpartition(":"); row.update(path=p,line=int(line),source=source_line(p,int(line)),blob=files[p].blob_sha)
+              rows.append(row)
+          # Graph's IMPORTS_CANDIDATE edges are observations, not runtime resolution.
+          # Derive bounded tracked-module possibilities from syntax without importing modules.
+          inventory={f.path for f in provider.inventory(request) if f.mode in {"100644","100755"}}
+          def tracked(module):
+              p=module.replace(".","/")
+              return sorted(x for x in (p+".py",p+"/__init__.py") if x in inventory)
+          imports=[]
+          for edge in graph.edges:
+              if edge.relation!="IMPORTS_CANDIDATE": continue
+              for eid in edge.evidence_ids:
+                  ev=evidence[eid]; p=ev.attributes["path"]; name=nodes[edge.target_id].name
+                  pkg=p.rsplit("/",1)[0].replace("/",".")
+                  mod,sep,alias=name.partition(":")
+                  try:
+                      absmod=importlib.util.resolve_name(mod,pkg) if mod.startswith(".") else mod
+                      possibilities=sorted(set(tracked(absmod)+ (tracked(absmod+"."+alias) if sep and alias!="*" else [])))
+                  except (ValueError,ImportError): absmod=None; possibilities=[]
+                  imports.append({"source":p,"line":ev.attributes["line"],"column":ev.attributes["column"],"specifier":name,"absolute_candidate":absmod,"tracked_candidates":possibilities,"evidence_id":eid,"owner_kind":nodes[edge.source_id].kind,"source_ref":ev.source_ref})
+          contract=DependencyContract.from_mapping(json.loads(Path("ci/contracts/harness_dependencies.json").read_text()))
+          dep=verify_dependency_repository(ScanRequest(repository=repo,revision=rev,includes=("physics_harness/*.py",),collectors=("python_ast",),budget=ScanBudget(max_files=1500,max_bytes=100_000_000,max_seconds=180)),provider,contract)
+          report={"source":rev,"scope":receipt.scope_id,"files":dict(Counter(f.status for f in receipt.files)),"nodes":len(graph.nodes),"edges":len(graph.edges),"evidence":len(graph.evidence),"unresolved_count":len(rows),"types":dict(Counter(r["type"] for r in rows)),"verification":asdict(scan.verification),"file_details":details,"rows":rows,"imports":imports,"import_counts":{"total":len(imports),"relative":sum(x["specifier"].startswith(".") for x in imports),"tracked_candidate":sum(bool(x["tracked_candidates"]) for x in imports),"multiple_candidate":sum(len(x["tracked_candidates"])>1 for x in imports),"owner_kinds":dict(Counter(x["owner_kind"] for x in imports))},"dependency":asdict(dep)}
+          out=Path(os.environ["RUNNER_TEMP"])/"p5-evidence.json";out.write_text(json.dumps(report,indent=2,sort_keys=True))
+          print("P5_SUMMARY="+json.dumps({k:v for k,v in report.items() if k not in {"rows","imports","file_details"}},sort_keys=True))
+          for f in details: print("P5_FILE="+json.dumps(f,sort_keys=True))
+          for row in rows: print("P5_ROW="+json.dumps(row,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p5-exact-unresolved-evidence
+          path: ${{ runner.temp }}/p5-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
