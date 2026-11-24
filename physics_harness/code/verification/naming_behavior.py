@@ -15,7 +15,7 @@ from pathlib import PurePosixPath
 
 from ..diagnostics.providers.git import GitSourceProvider
 from ..refactor.naming import NamingCase, NamingOption
-from .naming_boundary import ResponsibilityBinding
+from .naming_boundary import ResponsibilityBinding, _declaration_nodes
 from .naming_candidate import CandidatePlacement, verify_naming_candidate
 
 
@@ -52,15 +52,7 @@ class NamingBehaviorReceipt:
 
 def _ast_symbols(source: bytes, path: str) -> tuple[dict[str, ast.AST], ast.Module]:
     tree = ast.parse(source.decode("utf-8", "strict"), filename=path, type_comments=True)
-    symbols: dict[str, ast.AST] = {}
-    for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            symbols[path + "::function:" + node.name] = node
-        elif isinstance(node, ast.ClassDef):
-            symbols[path + "::class:" + node.name] = node
-            for child in node.body:
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    symbols[path + "::method:" + node.name + "." + child.name] = child
+    symbols, _ = _declaration_nodes(tree, path)
     return symbols, tree
 
 

@@ -13,7 +13,8 @@ import re
 from ..diagnostics.providers.git import GitSourceProvider
 from ..refactor.naming import NamingCase, NamingOption
 from .naming_boundary import (
-    ResponsibilityBinding, _symbol_inventory, _tree_paths, verify_naming_boundary,
+    ResponsibilityBinding, _key_in_scope, _symbol_inventory, _tree_paths,
+    verify_naming_boundary,
 )
 
 
@@ -134,7 +135,10 @@ def verify_naming_candidate(
         unknown.add("CANDIDATE_DROPPED_RESPONSIBILITY_SYMBOL")
     unit_by_id = {u.owner_id: u for u in option.extracted_units}
     by_id = {b.responsibility_id for b in baseline_bindings}
-    key_set = {s.key: s for s in baseline.observed_symbols}
+    before_ambiguities = {x.split(":", 1)[1] for x in baseline.unresolved
+                          if x.startswith("AMBIGUOUS_DECLARATION:")}
+    key_set = {s.key: s for s in baseline.observed_symbols
+               if s.key not in before_ambiguities}
     after_paths = {candidate_owner_path} if candidate_owner_path in new_paths else set()
     for u in option.extracted_units:
         if u.destination_path is None:
@@ -146,10 +150,28 @@ def verify_naming_candidate(
     if len(after_paths) > max_files:
         unknown.add("CANDIDATE_FILE_BUDGET_EXCEEDED")
     after_symbols = {}
+    after_ambiguities: set[str] = set()
     if new_paths and len(after_paths) <= max_files:
         try:
-            after_symbols = {s.key: s for s in _symbol_inventory(provider, candidate_revision,
-                                                                  tuple(sorted(after_paths)))}
+            after_inventory = _symbol_inventory(provider, candidate_revision,
+                                                tuple(sorted(after_paths)),
+                                                ambiguous=after_ambiguities)
+            after_symbols = {s.key: s for s in after_inventory
+                             if s.key not in after_ambiguities}
+            selected = {p.after_symbol for p in placements}
+            # Full ownership scans cover all affected files. Bounded class/function
+            # cases additionally cover the renamed target and enclosing class.
+            target_name = (option.proposed_name if option.variant == "RENAME"
+                           else case.current_name) or case.current_name
+            relevant = {key for key in after_ambiguities
+                        if case.target_kind in {"FILE", "FOLDER"}
+                        or key in selected
+                        or _key_in_scope(key, case.target_kind,
+                                         candidate_owner_path, target_name)
+                        or any(key.startswith(p + "::method:" + n + ".")
+                               for sym in selected if "::class:" in sym
+                               for p, n in (sym.split("::class:", 1),))}
+            unknown.update("AMBIGUOUS_DECLARATION:" + key for key in relevant)
         except (ValueError, UnicodeError, SyntaxError) as exc:
             unknown.add("CANDIDATE_SOURCE_PARSE_FAILED:" + type(exc).__name__)
     verified = []
@@ -167,6 +189,8 @@ def verify_naming_candidate(
         expected_path = candidate_owner_path if p.owner_id == "original" else unit_by_id[p.owner_id].destination_path
         if expected_path is None or not p.after_symbol.startswith(expected_path + "::"):
             blocked.add("PLACEMENT_ON_WRONG_OWNER_PATH:" + p.after_symbol)
+        if p.before_symbol in before_ambiguities or p.after_symbol in after_ambiguities:
+            continue  # never validate a placement using an arbitrary declaration
         old = key_set.get(p.before_symbol)
         current = after_symbols.get(p.after_symbol)
         if not old:

@@ -92,13 +92,74 @@ def _tree_paths(provider: GitSourceProvider, revision: str) -> frozenset[str]:
     return frozenset(paths)
 
 
+def _declaration_nodes(tree: ast.Module, path: str) -> tuple[dict[str, ast.AST], set[str]]:
+    """Resolve only unique supported declaration keys; never select a collision.
+
+    Conditional declarations are not supported bindings. Record their keys as
+    unresolved, including when they compete with an otherwise direct declaration.
+    Nested local functions are not module/class owner declarations.
+    """
+    nodes: dict[str, ast.AST] = {}
+    ambiguous: set[str] = set()
+    functions = (ast.FunctionDef, ast.AsyncFunctionDef)
+
+    def add(key: str, node: ast.AST, direct: bool) -> None:
+        if not direct or key in nodes:
+            ambiguous.add(key)
+        if direct and key not in nodes:
+            nodes[key] = node
+
+    def visit(node: ast.AST, owner: str | None = None, direct: bool = False) -> None:
+        if isinstance(node, functions):
+            key = (f"method:{owner}.{node.name}" if owner is not None
+                   else f"function:{node.name}")
+            add(path + "::" + key, node, direct)
+            return
+        if isinstance(node, ast.ClassDef):
+            if owner is not None:
+                return  # nested classes are outside the supported owner inventory
+            add(path + "::class:" + node.name, node, direct)
+            for item in node.body:
+                visit(item, node.name, direct)
+            return
+        # Descending through compound statements does not establish ownership.
+        for child in ast.iter_child_nodes(node):
+            visit(child, owner, False)
+
+    for stmt in tree.body:
+        visit(stmt, direct=True)
+    for key in tuple(nodes):
+        if "::method:" in key:
+            parent = key.split("::method:", 1)[1].split(".", 1)[0]
+            if path + "::class:" + parent in ambiguous:
+                ambiguous.add(key)
+    return {key: node for key, node in nodes.items() if key not in ambiguous}, ambiguous
+
+
+def _key_in_scope(key: str, kind: str, path: str, name: str) -> bool:
+    if kind == "FOLDER":
+        return key.split("::", 1)[0].startswith(path.rstrip("/") + "/")
+    if not key.startswith(path + "::"):
+        return False
+    if kind == "FILE":
+        return True
+    if kind == "CLASS":
+        return (key == path + "::class:" + name
+                or key.startswith(path + "::method:" + name + "."))
+    return kind == "FUNCTION" and key == path + "::function:" + name
+
+
 def _symbol_inventory(provider: GitSourceProvider, revision: str,
-                      paths: tuple[str, ...]) -> tuple[OwnedSymbol, ...]:
+                      paths: tuple[str, ...], *, ambiguous: set[str] | None = None
+                      ) -> tuple[OwnedSymbol, ...]:
     observed = []
     for path in paths:
         source = provider.read_at_revision(revision, path)
         body = ast.parse(source.content.decode("utf-8", "strict"), filename=path)
         sha = source.record.blob_sha
+        if ambiguous is not None:
+            _, collisions = _declaration_nodes(body, path)
+            ambiguous.update(collisions)
         def declare(key: str, node: ast.AST, *, args: ast.AST | None = None):
             # Method/function signatures are compared structurally, not executed.
             signature = ast.dump(args, include_attributes=False) if args else ""
@@ -201,6 +262,7 @@ def verify_naming_boundary(
     all_paths: frozenset[str] = frozenset()
     observed: tuple[OwnedSymbol, ...] = ()
     scope = ()
+    ambiguous: set[str] = set()
     try:
         all_paths = _tree_paths(provider, case.revision)
         scope = _source_scope(case, all_paths)
@@ -218,12 +280,16 @@ def verify_naming_boundary(
                     unresolved.add("SOURCE_BYTE_BUDGET_EXCEEDED")
                     break
             if not any(x.endswith("BUDGET_EXCEEDED") for x in unresolved):
-                observed = _relevant_symbols(case, _symbol_inventory(provider, case.revision, scope))
+                observed = _relevant_symbols(case, _symbol_inventory(
+                    provider, case.revision, scope, ambiguous=ambiguous))
                 if not observed:
                     unresolved.add("TARGET_DECLARATIONS_UNRESOLVED")
     except (ValueError, UnicodeError, SyntaxError) as exc:
         unresolved.add("EXACT_SOURCE_OR_AST_UNAVAILABLE:" + type(exc).__name__)
-    by_key = {x.key: x for x in observed}
+    ambiguous = {key for key in ambiguous if _key_in_scope(
+        key, case.target_kind, case.current_path, case.current_name)}
+    unresolved.update("AMBIGUOUS_DECLARATION:" + key for key in ambiguous)
+    by_key = {x.key: x for x in observed if x.key not in ambiguous}
     evidence = {e.id: e for e in case.evidence}
     verified = []
     for rid, binding in declared.items():
@@ -233,6 +299,8 @@ def verify_naming_boundary(
         if evidence[rid].source_revision != case.revision:
             unresolved.add("RESPONSIBILITY_NOT_ON_CURRENT_REVISION:" + rid)
         for key in binding.source_symbols:
+            if key in ambiguous:
+                continue  # an observed collision is not a missing declaration
             symbol = by_key.get(key)
             if symbol is None:
                 if not observed:
@@ -292,7 +360,19 @@ def verify_naming_boundary(
                 blocked.add("NEW_EXTRACTION_PATH_ALREADY_EXISTS:" + path)
             elif unit.destination_existing:
                 try:
-                    dest = _symbol_inventory(provider, case.revision, (path,))
+                    dest_ambiguities: set[str] = set()
+                    dest = _symbol_inventory(provider, case.revision, (path,),
+                                             ambiguous=dest_ambiguities)
+                    # A full-file/folder extraction depends on the destination inventory.
+                    # For bounded declarations only the selected owner names are relevant.
+                    bound_names = {key.split("::", 1)[1] for rid in unit.responsibility_ids
+                                   if rid in declared for key in declared[rid].source_symbols}
+                    for key in dest_ambiguities:
+                        name = key.split("::", 1)[1]
+                        if (case.target_kind in {"FILE", "FOLDER"} or name in bound_names
+                                or any(name.startswith("method:" + n[6:] + ".")
+                                       for n in bound_names if n.startswith("class:"))):
+                            unresolved.add("AMBIGUOUS_DECLARATION:" + key)
                     if not dest:
                         unresolved.add("DESTINATION_HAS_NO_DECLARATIONS:" + path)
                     before_names = {s.split("::", 1)[1] for rid in unit.responsibility_ids
