@@ -87,10 +87,9 @@ def test_retired_mean_energy_mode_absent_from_current_fixture_owners() -> None:
     for filename in (
         "electron_energy_transport_smoke.i",
         "electron_energy_lookup_response_smoke.i",
-        "electron_energy_real_qvt_inventory_smoke.i",
     ):
         cases[filename] = (root / filename).read_text()
-    assert len(cases) == 13
+    assert len(cases) == 12
     for name, source in cases.items():
         assert "physical_eV" not in source, name
         assert re.search(r"^\s*\[n_e\]\s*$", source, re.M), name

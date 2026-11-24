@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Static P0/preflight for Stage-5 S5-R representative real-QVT assembly.
 
-This checker establishes only that the frozen S5-R ledger and its production-state
-providers are internally consistent and available for assembly. It does not claim
+This checker checks the frozen S5-R ledger and remaining representative-state
+references for assembly; it does not validate an electron-energy runtime oracle.
+It does not claim
 that a representative input has been assembled, that --check-input passes, or that
 representative runtime evidence exists.
 """
@@ -16,7 +17,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json"
 HEAVY = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"
-ELECTRON = ROOT / "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i"
 OWNERSHIP = ROOT / "docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json"
 E8 = ROOT / "docs/development/2026-09-10_issue26_e8_closure_surface_contract.json"
 E8_ELASTIC = ROOT / "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json"
@@ -259,24 +259,10 @@ def check() -> None:
     _require(heavy, "functor_names = 'D_mix_Om T_g'", "O- mobility")
     _require(heavy, "functor_names = 'D_mix_Op T_g'", "O+ mobility")
 
-    electron = ELECTRON.read_text()
-    _require(electron, "type = ElectronEnergyMaterial", "electron-energy oracle")
-    _require(electron, "electron_energy_density = mean_en", "electron-energy oracle")
-    _require(electron, "electron_density = n_e", "electron-energy oracle")
-    _require(electron, "type = DDTransportMaterial", "electron transport")
-    _require(electron, "model = lookup", "electron transport")
-    _require(electron, "table_file =", "electron transport")
-    if "property_table_file" in electron or "mean_energy = e_energy_eV" in electron:
-        raise AssertionError("retired lookup input option found")
-    _require(electron, "bounds_policy = error", "electron transport")
-    if "bounds_policy = clamp" in electron or "bounds_policy = floor" in electron:
-        raise AssertionError("non-strict electron transport lookup found")
-
     ident = contract.get("representative_identity", {})
     expected_identity = {
         "geometry": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
         "heavy_state_reference": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
-        "electron_energy_reference": "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i",
         "electron_transport_table": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
         "required_heavy_temperature_functor": "T_g",
         "required_density_functor": "rho_mat",
@@ -288,7 +274,6 @@ def check() -> None:
     for relative in (
         ident["geometry"],
         ident["heavy_state_reference"],
-        ident["electron_energy_reference"],
         ident["electron_transport_table"],
     ):
         if not (ROOT / relative).is_file():
@@ -300,7 +285,7 @@ def check() -> None:
 
     print("S5R_P0_PROVIDER_OWNER_PREFLIGHT_PASS")
     print("ei01_production_rate_owner=RECOVERED")
-    print("claim=provider/ledger/state-binding preflight only")
+    print("claim=ledger/remaining representative-state references only")
     print("representative_assembly=NOT_YET_ESTABLISHED")
     print("check_input=NOT_YET_ESTABLISHED")
     print("representative_runtime=NOT_YET_ESTABLISHED")
