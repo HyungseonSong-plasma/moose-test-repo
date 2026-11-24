@@ -1,0 +1,70 @@
+name: Issue881 FDEG exact tracked inventory (one-shot)
+on:
+  push:
+    branches: [issue-881-fdeg-inventory-ci-only]
+    paths: [.github/workflows/issue881-fdeg-inventory-ci-only.yml]
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: '7a119106a22f2de2ca5c761a4119f00509e0efdd'
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Exact source tracked text inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "7a119106a22f2de2ca5c761a4119f00509e0efdd"
+          test "$(git rev-parse HEAD^{tree})" = "665d0eff8c72e4798fa3671794f6f170922f48ec"
+          mkdir -p "$RUNNER_TEMP/issue881"
+          git ls-tree -r HEAD > "$RUNNER_TEMP/issue881/tree.txt"
+          rc=0
+          git grep -n -I -i -F -e fdeg HEAD -- > "$RUNNER_TEMP/issue881/references.txt" || rc=$?
+          test "$rc" -le 1
+          python3 - <<'PY'
+          import collections, hashlib, json, os, pathlib, subprocess
+          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "issue881"
+          raw = (root / "references.txt").read_bytes()
+          hits = collections.Counter()
+          for line in raw.decode("utf-8", errors="strict").splitlines():
+              if not line.startswith("HEAD:"):
+                  raise ValueError("Unexpected git grep result")
+              path, number, _ = line[5:].split(":", 2)
+              if not number.isdecimal():
+                  raise ValueError("Unexpected line number")
+              hits[path] += 1
+          tree = (root / "tree.txt").read_bytes()
+          paths = [line.split("\t", 1)[1] for line in tree.decode().splitlines()]
+          names = [p for p in paths if "fdeg" in p.lower()]
+          summary = {
+              "schema": "issue881.tracked_literal_inventory.v1",
+              "source_head": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "source_tree": subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip(),
+              "request_head": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "tracked_paths": len(paths),
+              "named_paths": names,
+              "reference_paths": dict(sorted(hits.items())),
+              "reference_lines": sum(hits.values()),
+              "tree_sha256": hashlib.sha256(tree).hexdigest(),
+              "references_sha256": hashlib.sha256(raw).hexdigest(),
+              "scope": "git grep -n -I -i -F fdeg HEAD; tracked text, literal only",
+              "unresolved": ["binary contents not searched", "dynamic names/imports not resolved", "untracked or external consumers not attested"],
+              "global_consumer_closed": False,
+              "safe_delete_authorized": False,
+          }
+          (root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+          print(json.dumps(summary, indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: issue881-fdeg-inventory-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/issue881/
+          if-no-files-found: error
+          retention-days: 30
