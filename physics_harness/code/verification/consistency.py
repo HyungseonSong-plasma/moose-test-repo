@@ -128,7 +128,7 @@ def verify_generated_artifact(
             from .python_call_trace import validate_python_trace_metadata
             try:
                 validate_python_trace_metadata(
-                    evidence, scope, paths, nodes_by_id, graph.edges)
+                    evidence, scope, paths, nodes_by_id, graph.edges, evidence_by_id)
             except (KeyError, TypeError, ValueError, AttributeError):
                 failures.add("PYTHON_TRACE_PROVENANCE_INVALID:" + evidence.id)
             unknown.add("RUNTIME_EXECUTION_NOT_INDEPENDENTLY_VERIFIED")
