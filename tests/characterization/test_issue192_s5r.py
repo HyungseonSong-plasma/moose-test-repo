@@ -148,7 +148,7 @@ def test_s5r_reuses_standard_projection_and_excludes_deferred_channels() -> None
         text, OWNER_BLOCKS["EI10"], "property_name") == PROGRESS["EI10"]
     assert (
         mp.get_parameter(text, "FVKernels/s5r_electron_source", "type")
-        == "PhysicsFVElectronReactionSource"
+        == "FVCoupledForce"
     )
     for channel in (
         "EI10",

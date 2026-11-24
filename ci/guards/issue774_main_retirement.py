@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#774/#811: exact-HEAD retired Factory audit and frozen FDEG provenance.
+"""#774/#817: exact-HEAD five retired Factory audit and frozen FDEG provenance.
 
 Source/registration/archival validation only. Does not assert global consumer
 zero, legacy input compatibility, P3/P4 physics parity, or release approval.
@@ -27,17 +27,59 @@ ORIGINALS = {
         "79bf6045942369bb483ab4e7480a08a5d1040d65",
     "physics_app/include/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.h":
         "57a56a1e5e3c7297283705b7d2d1dc1acdcd9ff2",
+    "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C":
+        "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f",
+    "physics_app/include/fvkernels/FVElectronResponseBandedCorrection.h":
+        "9446a9d5d7863fb83a2c65af8b127bbd08573ad6",
+    "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C":
+        "07ecd234871c659b04389c87bff6f52fae7f800e",
+    "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h":
+        "1d2afa9ba448041c664fdc1822ede5472b93551e",
+    "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C":
+        "35ded0eab65ad7bed85baa0104261c90bc26bf3d",
+    "physics_app/include/fvkernels/PhysicsFVElectronReactionSource.h":
+        "5250b3500d6694481158e2abb896c7e1c6f349e9",
 }
 PINNED_HISTORICAL_CONSUMERS = {
-    "experiments/historical_recipe_support/issue192_s5r.py":
-        "be9838b77dc2920b27a1f7065648062b630eacb5",
     "experiments/Issue282_e2a_rz_bridge/research_type_bridge.py":
         "fe82208e49c6f89b127f74fd54cf85cbb91f8fa4",
     "physics_app/ci/audit_issue402_initial_composition_routes.py":
         "858f75f6a64596ccc7386b044fa8278caf8f8b78",
+    "experiments/fem_fvm_plasma_discriminator/prepare_cases.py":
+        "69ec14c58b502a953c9024c46d332494cad61e6c",
+    "experiments/Issue351_frozen_heavy_driver_parity/control.py":
+        "6d7efcb4ea94b2011782aba2c9cab40238756312",
 }
 FACTORIES = ("PhysicsFVThermalDiffusion",
-             "PhysicsFVHeavyMassElectromigrationCorrection")
+             "PhysicsFVHeavyMassElectromigrationCorrection",
+             "PhysicsFVElectronEnergyJouleHeating",
+             "FVElectronResponseBandedCorrection",
+             "PhysicsFVElectronReactionSource")
+CODE3 = FACTORIES[4]
+S5R = "experiments/historical_recipe_support/issue192_s5r.py"
+JOULE_SMOKE = "physics_app/ci/electron_energy_joule_smoke.i"
+PINNED_PROVENANCE = {
+    "ci/baselines/fdeg_functional_contracts.json": "6f1a2948a852a9de9045e74fda72c99d105378aa",
+    "ci/baselines/fdeg_transition_contracts.json": "1bd17e05f17e8ac5942b946dfd45f6d023f1403f",
+    "ci/baselines/fdeg_historical_profiles_code1.json": "9a8b0d60a9511fe089ef6cb3d900f902123ee742",
+    "docs/provenance/issue814_code2/electron_energy_joule_smoke.i.txt": "6c4901f843a98b74b450cc3a1fab09e8e1873b2c",
+    "docs/provenance/issue817_code3/issue192_s5r_pre_migration.py.txt": "be9838b77dc2920b27a1f7065648062b630eacb5",
+    S5R: "7dc29e5773b145d9f052d9898901eec61c904344",
+}
+CODE3_ASSERTIONS = {
+    "physics_app/ci/check_r2_o2_ionization_implementation.py":
+        'assert "type = PhysicsFVElectronReactionSource" not in RUNTIME_INPUT',
+    "physics_app/ci/check_stage5_s5r_preflight.py":
+        'if h05_row.get("electron_particle_projection") != "PhysicsFVElectronReactionSource":',
+    "physics_app/ci/check_e8_ei16_energy_contract.py":
+        'assert own["electron_particle_projector"] == "PhysicsFVElectronReactionSource"',
+    "physics_app/ci/check_e8_elastic_ei19_runtime.py":
+        '"PhysicsFVElectronReactionSource",',
+    "physics_app/ci/check_stage5_ei18_runtime.py":
+        'if "PhysicsFVElectronReactionSource" in text:',
+    "physics_app/ci/check_stage5_s5d_heavy_reactions.py":
+        '"reaction_source_", "PhysicsFVElectronReactionSource",',
+}
 TOKEN = re.compile(r"\b(?:" + "|".join(FACTORIES) + r")\b")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 P6 = {"p6_newonly_s6_build", "p6_newonly_s6_native_p2",
@@ -60,8 +102,7 @@ def verify_archive_bytes(archived: dict[str, bytes]):
         archive = HISTORY_ROOT + Path(rel).name + ".txt"
         need(archive in archived and blob(archived[archive]) == expected,
              "HISTORICAL_CPP_BLOB_DRIFT_" + rel)
-        need(FACTORIES[0] in archived[archive].decode("utf-8") or
-             FACTORIES[1] in archived[archive].decode("utf-8"),
+        need(any(factory in archived[archive].decode("utf-8") for factory in FACTORIES),
              "HISTORICAL_FACTORY_IDENTITY_MISSING_" + rel)
         verified[rel] = {"archive": archive, "blob_sha": expected,
                          "content_bytes": len(archived[archive])}
@@ -70,8 +111,6 @@ def verify_archive_bytes(archived: dict[str, bytes]):
 
 def live_surface(path: str):
     """Narrow active current-binary consumer surfaces, never a global claim."""
-    if path in PINNED_HISTORICAL_CONSUMERS:
-        return None
     if path.endswith(".i"):
         return "MOOSE_INPUT"
     if path.startswith(("physics_app/src/", "physics_app/include/")) and \
@@ -80,18 +119,29 @@ def live_surface(path: str):
     if path.startswith((".github/workflows/", "ci/workflow_templates/")) and \
             path.endswith((".yml", ".yaml")):
         return "LIVE_WORKFLOW"
-    if path.startswith(("experiments/", "physics_app/ci/", "scripts/")) and \
+    if path.startswith(("experiments/", "physics_app/ci/", "scripts/", "automation/")) and \
             path.endswith((".py", ".json", ".sh")):
         return "RUNTIME_GENERATOR"
     return None
 
 
+def reference_surface(path: str, line: str):
+    tokens = set(TOKEN.findall(line))
+    if path == S5R and tokens == {FACTORIES[1]}:
+        return None  # original and migrated blobs pinned independently
+    if tokens == {CODE3} and CODE3_ASSERTIONS.get(path) == line.strip():
+        return None
+    if path in PINNED_HISTORICAL_CONSUMERS and CODE3 not in tokens:
+        return None  # complete reviewed blob checked by audit
+    return live_surface(path)
+
+
 def check_inventory(rows: list[dict], paths: set[str]):
     need(all(path not in paths for path in ORIGINALS), "RETIRED_CPP_REINTRODUCED")
-    need(len(rows) == 11, "FV_SOURCE_COUNT_NOT_ELEVEN")
+    need(len(rows) == 8, "FV_SOURCE_COUNT_NOT_EIGHT")
     seen = [name for row in rows for name in row["registered_factory_types"]]
-    need(len(seen) == 16 and len(set(seen)) == 16 and
-         not set(FACTORIES).intersection(seen), "FV_FACTORY_COUNT_NOT_SIXTEEN")
+    need(len(seen) == 13 and len(set(seen)) == 13 and
+         not set(FACTORIES).intersection(seen), "FV_FACTORY_COUNT_NOT_THIRTEEN")
     counts = {x["source_file"]: len(x["registered_factory_types"]) for x in rows}
     need(counts.get("physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C") == 4,
          "ELECTRON_SHARED_OWNER_COUNT_DRIFT")
@@ -101,9 +151,9 @@ def check_inventory(rows: list[dict], paths: set[str]):
 
 
 def verify_post_cut_fdeg_capture(workflow: str):
-    """Accept live electron FDEG; refuse re-capture of either removed Factory."""
+    """Accept retained shared electron FDEG; refuse capture of all retired Factories."""
     stem = "fdeg_retirement_evidence.py --mode capture --target "
-    live_target = stem + "PhysicsFVElectronReactionSource"
+    live_target = stem + "PhysicsFVLogMolarElectronReactionSource"
     need("issue774_main_retirement.py" in workflow and
          live_target in workflow and
          all(stem + factory not in workflow for factory in FACTORIES),
@@ -134,9 +184,11 @@ def audit(root: Path, expected_head: str):
         need(blob(data) == paths[rel][2], "ARCHIVE_WORKTREE_DIRTY")
         archived[rel] = data
     original_receipts = verify_archive_bytes(archived)
-    for path, sha in PINNED_HISTORICAL_CONSUMERS.items():
+    for path, sha in {**PINNED_HISTORICAL_CONSUMERS, **PINNED_PROVENANCE}.items():
         need(path in paths and paths[path][2] == sha,
              "HISTORICAL_CONSUMER_NOT_PINNED_" + path)
+        need(blob((root / path).read_bytes()) == sha, "HISTORICAL_WORKTREE_DIRTY_" + path)
+    need(JOULE_SMOKE not in paths, "RETIRED_JOULE_SMOKE_REINTRODUCED")
     rows = source_owners(root / "physics_app/src/fvkernels")
     for row in rows:
         p = row["source_file"]
@@ -144,13 +196,22 @@ def audit(root: Path, expected_head: str):
              "EXACT_FACTORY_SOURCE_NOT_CHECKED_OUT_" + p)
     counts = check_inventory(rows, set(paths))
     actual_sources = []
+    reviewed_assertions = {path: 0 for path in CODE3_ASSERTIONS}
     for rel, (mode, kind, sha) in paths.items():
         if kind != "blob" or live_surface(rel) is None:
             continue
         raw = (root / rel).read_bytes()
         need(blob(raw) == sha, "ACTIVE_SOURCE_DIRTY_" + rel)
-        if TOKEN.search(raw.decode("utf-8", errors="replace")):
-            actual_sources.append({"path": rel, "category": live_surface(rel)})
+        for line in raw.decode("utf-8", errors="replace").splitlines():
+            if not TOKEN.search(line):
+                continue
+            if CODE3_ASSERTIONS.get(rel) == line.strip():
+                reviewed_assertions[rel] += 1
+            surface = reference_surface(rel, line)
+            if surface is not None:
+                actual_sources.append({"path": rel, "category": surface})
+    need(all(count == 1 for count in reviewed_assertions.values()),
+         "CODE3_ASSERTION_INVENTORY_DRIFT")
     need(not actual_sources, "RETIRED_FACTORY_ACTIVE_SOURCE_REFERENCE_" +
          ",".join(x["path"] for x in actual_sources[:5]))
     native = (root / ".github/workflows/physics-native-ci.yml").read_text()
@@ -168,7 +229,7 @@ def audit(root: Path, expected_head: str):
          "RETIRED_ARCH_DUPLICATE_JOB_RETURNED")
     verify_post_cut_fdeg_capture(code)
     return {
-        "schema": "issue774.main_thermal_heavy_retirement.v0.1",
+        "schema": "issue774.main_combined_retirement.v0.2",
         "source_head": actual,
         "source_tree": subprocess.check_output(
             ["git", "-C", str(root), "rev-parse", "HEAD^{tree}"],
@@ -176,12 +237,14 @@ def audit(root: Path, expected_head: str):
         "deleted_factories": list(FACTORIES),
         "historical_original_blobs": original_receipts,
         "historical_consumer_blobs": PINNED_HISTORICAL_CONSUMERS,
+        "pinned_provenance_blobs": PINNED_PROVENANCE,
+        "reviewed_code3_assertions": reviewed_assertions,
         "current_newonly": counts,
         "current_active_retired_symbol_references": actual_sources,
         "core_and_split_native_ci_preserved": True,
         "p3_p4_scientific_parity": "NOT_EVALUATED",
         "global_external_callers_zero": "NOT_ATTESTED",
-        "old_binary_input_compatibility": "EXPLICITLY_NOT_REQUIRED",
+        "old_binary_input_compatibility": "THERMAL_WAIVER_ONLY_OTHER_SCOPE_HOLD",
         "release_authorization": "INDEPENDENT_REVIEW_HOLD",
     }
 
@@ -203,8 +266,14 @@ def self_test():
          "INPUT_CONSUMER_CLASSIFIER_LOST")
     need(live_surface("physics_app/src/fvkernels/NewSource.C") == "PHYSICS_CPP",
          "CPP_CONSUMER_CLASSIFIER_LOST")
-    need(live_surface("experiments/historical_recipe_support/issue192_s5r.py") is None,
-         "ARCHIVE_RESEARCH_EXCEPTION_LOST")
+    need(reference_surface(S5R, "type = " + FACTORIES[1]) is None,
+         "PINNED_S5R_RESEARCH_EXCEPTION_LOST")
+    need(reference_surface(S5R, "type = " + CODE3) is not None,
+         "S5R_CODE3_REINTRODUCTION_ACCEPTED")
+    for path, assertion in CODE3_ASSERTIONS.items():
+        need(reference_surface(path, assertion) is None, "ASSERTION_CLASSIFIER_LOST")
+        need(reference_surface(path, "type = " + CODE3) is not None,
+             "ACTIVE_CODE3_REINTRODUCTION_ACCEPTED")
     try:
         check_inventory([], set())
     except ValueError:

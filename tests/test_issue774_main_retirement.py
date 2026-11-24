@@ -17,9 +17,10 @@ def test_current_registered_owner_inventory_and_archived_evidence():
         ["git", "-C", str(module.ROOT), "rev-parse", "HEAD"],
         text=True).strip()
     receipt = module.audit(module.ROOT, head)
-    assert receipt["current_newonly"]["source_files"] == 11
-    assert receipt["current_newonly"]["registered_factory_types"] == 16
-    assert len(receipt["historical_original_blobs"]) == 4
+    assert receipt["current_newonly"]["source_files"] == 8
+    assert receipt["current_newonly"]["registered_factory_types"] == 13
+    assert len(receipt["historical_original_blobs"]) == 10
+    assert receipt["reviewed_code3_assertions"] == {path: 1 for path in module.CODE3_ASSERTIONS}
     assert receipt["current_active_retired_symbol_references"] == []
     assert receipt["p3_p4_scientific_parity"] == "NOT_EVALUATED"
     assert receipt["global_external_callers_zero"] == "NOT_ATTESTED"
@@ -33,7 +34,7 @@ def test_fdeg_post_cut_accepts_live_capture_rejects_retired_targets():
 
     stem = "fdeg_retirement_evidence.py --mode capture --target "
     good = ("python ci/guards/issue774_main_retirement.py\\n"
-            "python ci/guards/" + stem + "PhysicsFVElectronReactionSource")
+            "python ci/guards/" + stem + "PhysicsFVLogMolarElectronReactionSource")
     module.verify_post_cut_fdeg_capture(good)
     for retired in module.FACTORIES:
         with pytest.raises(
@@ -43,4 +44,4 @@ def test_fdeg_post_cut_accepts_live_capture_rejects_retired_targets():
     with pytest.raises(
             ValueError,
             match="FDEG_POST_CUT_CI_STILL_CAPTURES_REMOVED_CPP"):
-        module.verify_post_cut_fdeg_capture("python " + stem + "PhysicsFVElectronReactionSource")
+        module.verify_post_cut_fdeg_capture("python " + stem + "PhysicsFVLogMolarElectronReactionSource")

@@ -5,6 +5,7 @@ import copy
 import importlib.util
 from contextlib import contextmanager
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -16,6 +17,29 @@ assert spec and spec.loader
 functional = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(functional)
 structural = functional.structural
+HISTORICAL_HEAD = "0755571b5d011f89a7473704337e23c042273381"
+
+
+@contextmanager
+def pinned_historical_graph_root():
+    """Exact pre-cut main worktree: never restore retired code into active PhysicsApp."""
+    try:
+        observed = structural.git(ROOT, "rev-parse", HISTORICAL_HEAD + "^{commit}")
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError("Fetch exact historical FDEG commit " + HISTORICAL_HEAD) from exc
+    if observed != HISTORICAL_HEAD:
+        raise ValueError("FDEG_HISTORICAL_HEAD_DRIFT")
+    with tempfile.TemporaryDirectory(prefix="fdeg-history-") as directory:
+        root = Path(directory) / "source"
+        subprocess.run(["git", "-C", str(ROOT), "worktree", "add", "--detach",
+                        str(root), HISTORICAL_HEAD], check=True, capture_output=True)
+        try:
+            if structural.git(root, "rev-parse", "HEAD") != HISTORICAL_HEAD:
+                raise ValueError("FDEG_HISTORICAL_HEAD_DRIFT")
+            yield root
+        finally:
+            subprocess.run(["git", "-C", str(ROOT), "worktree", "remove",
+                            str(root)], check=True, capture_output=True)
 
 
 @contextmanager
@@ -36,6 +60,9 @@ def pinned_historical_source_root(profile):
     archived_names = {
         "PhysicsFVThermalDiffusion.C",
         "PhysicsFVHeavyMassElectromigrationCorrection.C",
+        "FVElectronResponseBandedCorrection.C",
+        "PhysicsFVElectronEnergyJouleHeating.C",
+        "PhysicsFVElectronReactionSource.C",
     }
     archive_root = ROOT / "docs/development/archive/issue774_retired_factories"
     with tempfile.TemporaryDirectory() as directory:
@@ -319,7 +346,10 @@ class LiveContractsP0Test(unittest.TestCase):
 
     def test_retired_claim_sources_are_historical_and_sha_pinned(self):
         registry = functional.load_registry(ROOT)["profiles"]
-        for target in ("PhysicsFVThermalDiffusion", "PhysicsFVElectrostaticDrift"):
+        for target in ("PhysicsFVThermalDiffusion", "PhysicsFVElectrostaticDrift",
+                       "FVElectronResponseBandedCorrection",
+                       "PhysicsFVElectronEnergyJouleHeating",
+                       "PhysicsFVElectronReactionSource"):
             profile = registry[target]
             with pinned_historical_source_root(profile) as isolated_root:
                 self.assertNotEqual(isolated_root, ROOT)
@@ -404,8 +434,10 @@ class LiveContractsP0Test(unittest.TestCase):
 
     def test_optional_description_is_not_default(self):
         doc = functional.load_registry(ROOT)
-        source = functional.extract_parameters(
-            ROOT, doc["profiles"]["PhysicsFVElectronReactionSource"])
+        with pinned_historical_source_root(
+                doc["profiles"]["PhysicsFVElectronReactionSource"]) as old_root:
+            source = functional.extract_parameters(
+                old_root, doc["profiles"]["PhysicsFVElectronReactionSource"])
         params = {p["name"]: p for p in source}
         self.assertTrue(params["state_form"]["has_explicit_source_default"])
         self.assertFalse(params["n_ref"]["has_explicit_source_default"])
@@ -420,9 +452,11 @@ class LiveContractsP0Test(unittest.TestCase):
 
     def test_real_source_signed_projection_graph_join(self):
         target = "PhysicsFVElectronReactionSource"
-        graph = structural.scan(ROOT, target)
-        result = functional.assemble(ROOT, graph, target,
-                                     functional.load_registry(ROOT))
+        with pinned_historical_graph_root() as old_root:
+            graph = structural.scan(old_root, target, HISTORICAL_HEAD)
+            result = functional.assemble(old_root, graph, target,
+                                         functional.load_registry(old_root), HISTORICAL_HEAD)
+        self.assertEqual(result["source_identity"]["repository_head"], HISTORICAL_HEAD)
         self.assertEqual(result["capability"],
                          "SIGNED_ELECTRON_NUMBER_SOURCE_PROJECTION")
         self.assertTrue(any(e["relation"] == "IMPLEMENTS" and

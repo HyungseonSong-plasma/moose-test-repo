@@ -68,7 +68,6 @@ def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
     assert 'getFunctorByName<ADReal>("e_energy_eV")' in dd
     for fixture in ("electron_energy_transport_smoke.i",
                     "electron_energy_lookup_response_smoke.i",
-                    "electron_energy_joule_smoke.i",
                     "electron_energy_real_qvt_inventory_smoke.i"):
         text = (BASE / "ci" / fixture).read_text()
         assert "type = DDTransportMaterial" in text
