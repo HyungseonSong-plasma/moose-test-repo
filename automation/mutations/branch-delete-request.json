@@ -1,17 +1,16 @@
 {
   "targets": [
     {
-      "branch": "issue-758-lucidity-path-retirement",
-      "expected_sha": "436cb7b3210ed9423c3001c9c5f5c351f8f2219e"
+      "branch": "issue-867-json-source-collector",
+      "expected_sha": "1474f6ebd3ae4da68d5b45c602a6c8fe17cb0c49"
     },
     {
-      "branch": "issue-758-lucidity-retirement-validation",
-      "expected_sha": "41cd846f75fcb47772408db858531e4688198252",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-lucidity-retirement-validation-41cd846f75fc"
+      "branch": "issue-867-file-reference-resolution",
+      "expected_sha": "16446e3d5337955e27d762e62818a7ec2fc9f099"
     },
     {
-      "branch": "cleanup-758-v05-final-refs",
-      "expected_sha": "3e0c38495a2c2e8353c007f75244009f57a8e32a"
+      "branch": "issue-867-python-hit-file-references",
+      "expected_sha": "218fc46cad0aa5c6697aafa7b053ce07e641b075"
     }
   ]
 }
