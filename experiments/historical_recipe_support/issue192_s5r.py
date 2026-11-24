@@ -531,10 +531,10 @@ def _insert_electron_source(text: str, *, n_ref: float) -> str:
     text = _insert_kernel(
         text,
         "s5r_electron_source",
-        f"""    type = PhysicsFVElectronReactionSource
+        f"""    type = FVCoupledForce
     variable = n_e
-    number_source = S_e_s5r
-    n_ref = {n_ref:.17g}
+    v = S_e_s5r
+    coef = {1.0 / n_ref:.17g}
     block = plasma""",
     )
     return text
@@ -804,9 +804,13 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
         )
     checks["electron_projection"] = (
         mp.get_parameter(text, "FVKernels/s5r_electron_source", "type")
-        == "PhysicsFVElectronReactionSource"
-        and mp.get_parameter(text, "FVKernels/s5r_electron_source", "number_source")
+        == "FVCoupledForce"
+        and mp.get_parameter(text, "FVKernels/s5r_electron_source", "v")
         == "S_e_s5r"
+        and math.isclose(
+            float(mp.get_parameter(text, "FVKernels/s5r_electron_source", "coef")),
+            1.0 / _top_level_float(text, "n_e_value"), rel_tol=1e-14,
+        )
     )
 
     for suffix in ("ei02", "ei17"):
@@ -893,6 +897,8 @@ def build_s5r_input(base_text: str) -> tuple[str, dict[str, Any]]:
     text = _promote_current_physics_object_types(text)
 
     n_ref = _top_level_float(text, "n_e_value")
+    if not math.isfinite(n_ref) or n_ref <= 0.0:
+        raise Issue192S5RError("invalid electron reference density for signed source")
     text = _insert_energy_state(text)
     text = _insert_concentrations(text)
     text = _insert_kinetic_owners(text)

@@ -90,14 +90,16 @@ class NativeSourceUsageTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "DUPLICATE_FACTORY_OWNER"):
             self.check()
 
-    def test_real_newonly_factory_inventory_excludes_three_retired_sources(self):
+    def test_real_newonly_factory_inventory_excludes_five_retired_sources(self):
         rows = source_owners(ROOT / "physics_app/src/fvkernels")
-        self.assertEqual(len(rows), 10)
-        self.assertEqual(sum(len(x["registered_factory_types"]) for x in rows), 15)
+        self.assertEqual(len(rows), 8)
+        self.assertEqual(sum(len(x["registered_factory_types"]) for x in rows), 13)
         by_file = {r["source_file"].split("/")[-1]: r for r in rows}
         for retired in ("PhysicsFVThermalDiffusion",
                         "PhysicsFVHeavyMassElectromigrationCorrection",
-                        "PhysicsFVElectronEnergyJouleHeating"):
+                        "PhysicsFVElectronEnergyJouleHeating",
+                        "FVElectronResponseBandedCorrection",
+                        "PhysicsFVElectronReactionSource"):
             self.assertNotIn(retired + ".C", by_file)
             self.assertFalse((ROOT / ("physics_app/include/fvkernels/" +
                                      retired + ".h")).exists())

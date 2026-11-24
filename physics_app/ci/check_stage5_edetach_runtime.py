@@ -111,10 +111,10 @@ def text():
   variable=n_e
  []
  [ns]
-  type=PhysicsFVElectronReactionSource
+  type=FVCoupledForce
   variable=n_e
-  number_source=electron_edetach_number_source
-  state_form=physical
+  v=electron_edetach_number_source
+  coef=1
  []
  [et]
   type=FVTimeKernel
@@ -225,7 +225,7 @@ def selftest():
   except AssertionError: pass
   else: raise AssertionError("mutation")
  s=text()
- req=("property_name=R_detach_Om","type=PhysicsFVSpeciesReactionSource","type=PhysicsFVElectronReactionSource","type=FVCoupledForce","v=R_detach_Om")
+ req=("property_name=R_detach_Om","type=PhysicsFVSpeciesReactionSource","v=electron_edetach_number_source","coef=1","type=FVCoupledForce","v=R_detach_Om")
  if any(x not in s for x in req) or s.count("property_name=R_detach_Om")!=1: raise AssertionError("owner")
  if any(x in s for x in ("EIRateCoefMaterial","PhysicsFVElectronReactionEnergySource")): raise AssertionError("wrong owner")
  print("STAGE5_EDETACH_RUNTIME_CHECKER_SELFTEST_PASS")
@@ -233,7 +233,9 @@ def static():
  c=json.loads(C.read_text()); r=c["reaction"]; q=c["rate_law"]; p=c["projection"]; s=c["source_provenance"]
  if c["status"]!="CONTRACT_FROZEN" or c["slice"]!="S5-C_EDETACH_OM" or r["canonical_progress"]!=P or r["heavy_stoichiometry"]!={"Om":-1,"O":1} or r["net_electron_particle_stoich"]!=1: raise AssertionError("contract")
  if (q["particle_rate_prefactor_m3_s"],q["activation_eV"],q["temperature_exponent"],q["progress_owner"])!=(A,E,B,"ADParsedFunctorMaterial"): raise AssertionError("rate")
- if q["canonical_temperature_mapping"]!="Te_eV=(2/3)*e_energy_eV_eV" or s["collision_type"]!="Ionization" or s["collision_metadata_value"]!=L or p["electron_number_source"]!="+N_A*R_detach_Om" or p["energy_projection_owner"]!="FVCoupledForce": raise AssertionError("semantics")
+ if q["canonical_temperature_mapping"]!="Te_eV=(2/3)*mean_en_solved_eV" or s["collision_type"]!="Ionization" or s["collision_metadata_value"]!=L or p["electron_number_source"]!="+N_A*R_detach_Om" or p["energy_projection_owner"]!="FVCoupledForce": raise AssertionError("semantics")
+ if "functor_names='e_energy_eV'" not in text() or "expression='(2.0/3.0)*meanen'" not in text():
+  raise AssertionError("current Te_eV runtime state mapping is not source-locked")
  selftest(); print("STAGE5_EDETACH_IMPLEMENTATION_P0_PASS")
 def run(exe,out,sha,base):
  static(); exe=Path(exe).resolve()

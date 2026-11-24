@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """New-only Factory retirement CI contract for #774 (source/CI, not science).
 
-Retired Thermal, heavy mass-correction and FV Joule Heating Factory types are
+The five retired Thermal, heavy mass-correction, Joule, Banded and electron-source Factory types are
 unsupported in New-only. Frozen legacy recipes remain SHA-pinned. No blanket
 legacy CI suppression, and no claim of external caller
 zero. Preserve D5's original sanitized A/B registration receipts separately.
@@ -37,12 +37,32 @@ JOULE_HEADER = "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeatin
 JOULE_SMOKE = "physics_app/ci/electron_energy_joule_smoke.i"
 JOULE_ARCHIVE = "docs/provenance/issue814_code2/electron_energy_joule_smoke.i.txt"
 JOULE_SMOKE_BLOB = "6c4901f843a98b74b450cc3a1fab09e8e1873b2c"
-RETIRED_FACTORIES = (RETIRED, HEAVY, JOULE)
+CODE1 = "FVElectronResponseBandedCorrection"
+CODE1_SOURCE = "physics_app/src/fvkernels/FVElectronResponseBandedCorrection.C"
+CODE1_HEADER = "physics_app/include/fvkernels/FVElectronResponseBandedCorrection.h"
+CODE1_ARCHIVE = "ci/baselines/fdeg_historical_profiles_code1.json"
+CODE1_ARCHIVE_BLOB = "9a8b0d60a9511fe089ef6cb3d900f902123ee742"
+CODE1_HISTORIC_GENERATOR = "experiments/Issue351_frozen_heavy_driver_parity/control.py"
+CODE1_HISTORIC_SHA = "6d7efcb4ea94b2011782aba2c9cab40238756312"
+CODE3 = "PhysicsFVElectronReactionSource"
+CODE3_SOURCE = "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C"
+CODE3_HEADER = "physics_app/include/fvkernels/PhysicsFVElectronReactionSource.h"
+S5R = "experiments/historical_recipe_support/issue192_s5r.py"
+S5R_ARCHIVE = "docs/provenance/issue817_code3/issue192_s5r_pre_migration.py.txt"
+S5R_ORIGINAL_BLOB = "be9838b77dc2920b27a1f7065648062b630eacb5"
+S5R_MIGRATED_BLOB = "7dc29e5773b145d9f052d9898901eec61c904344"
+RETIRED_FACTORIES = (RETIRED, HEAVY, JOULE, CODE1, CODE3)
+RETIRED_PATHS = (SOURCE, HEADER, HEAVY_SOURCE, HEAVY_HEADER, JOULE_SOURCE,
+                 JOULE_HEADER, CODE1_SOURCE, CODE1_HEADER, CODE3_SOURCE, CODE3_HEADER)
+CODE3_ASSERTIONS = {
+    "physics_app/ci/check_r2_o2_ionization_implementation.py":
+        'assert "type = PhysicsFVElectronReactionSource" not in RUNTIME_INPUT',
+    "physics_app/ci/check_stage5_s5r_preflight.py":
+        'if h05_row.get("electron_particle_projection") != "PhysicsFVElectronReactionSource":',
+}
 # These are frozen historical/research references, not supported New-only inputs.
 # Their tracked Git blobs must remain exact or this explicit exception fails closed.
 HISTORICAL_ALLOWED = {
-    "experiments/historical_recipe_support/issue192_s5r.py":
-        "be9838b77dc2920b27a1f7065648062b630eacb5",
     "experiments/Issue282_e2a_rz_bridge/research_type_bridge.py":
         "fe82208e49c6f89b127f74fd54cf85cbb91f8fa4",
     "physics_app/ci/audit_issue402_initial_composition_routes.py":
@@ -52,8 +72,8 @@ HISTORICAL_ALLOWED = {
     "experiments/Issue351_frozen_heavy_driver_parity/control.py":
         "6d7efcb4ea94b2011782aba2c9cab40238756312",
 }
-EXPECTED_SOURCE_COUNT = 10
-EXPECTED_REGISTERED_COUNT = 15
+EXPECTED_SOURCE_COUNT = 8
+EXPECTED_REGISTERED_COUNT = 13
 EXPECTED_SHARED_SOURCE_OWNERS = {
     "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": 4,
     "physics_app/src/fvkernels/FVLogMolarTransport.C": 3,
@@ -115,6 +135,18 @@ def active_surface(path: str) -> str | None:
     return None
 
 
+def reference_surface(path: str, line: str) -> str | None:
+    tokens = set(TEXT.findall(line))
+    if path == S5R and tokens == {HEAVY}:
+        return None  # exact original and migrated Git blobs checked separately
+    if tokens == {CODE3} and CODE3_ASSERTIONS.get(path) == line.strip():
+        return None  # negative or frozen provenance assertion, not a Factory consumer
+    if CODE3 in tokens and path in HISTORICAL_ALLOWED:
+        # Existing exemptions cover the original retired types only.
+        return "CODE3_REFERENCE_REQUIRES_DISPOSITION"
+    return active_surface(path)
+
+
 def check_route_rows(rows: list[dict]) -> dict:
     """Pure classifier; never count docs/tests as active input consumers."""
     active = [r for r in rows if r["active_surface"] is not None]
@@ -137,9 +169,17 @@ def check_historical_sources(tracked: dict) -> dict:
     return dict(sorted(HISTORICAL_ALLOWED.items()))
 
 
+def check_s5r_lineage(tracked: dict) -> dict:
+    require(tracked.get(S5R_ARCHIVE, {}).get("sha") == S5R_ORIGINAL_BLOB,
+            "S5R_ORIGINAL_ARCHIVE_DRIFT")
+    require(tracked.get(S5R, {}).get("sha") == S5R_MIGRATED_BLOB,
+            "S5R_MIGRATED_SOURCE_DRIFT")
+    return {"original": S5R_ORIGINAL_BLOB, "migrated": S5R_MIGRATED_BLOB}
+
+
 def check_factory_inventory(root: Path, tracked: dict) -> dict:
     require(all(path not in tracked for path in
-                (SOURCE, HEADER, HEAVY_SOURCE, HEAVY_HEADER, JOULE_SOURCE, JOULE_HEADER)),
+                RETIRED_PATHS),
             "RETIRED_SOURCE_OR_HEADER_REINTRODUCED")
     folder = root / "physics_app/src/fvkernels"
     entries = source_owners(folder)
@@ -192,6 +232,34 @@ def check_ci_tree(root: Path, tracked: dict) -> dict:
             "source_safety_guard_retained": True}
 
 
+def check_code1_archive(root: Path, tracked: dict) -> dict:
+    """Keep exact #337/#351 source-attested history after retiring Factory code."""
+    require(tracked.get(CODE1_ARCHIVE, {}).get("sha") == CODE1_ARCHIVE_BLOB,
+            "CODE1_ARCHIVE_BLOB_DRIFT")
+    require(tracked.get(CODE1_HISTORIC_GENERATOR, {}).get("sha") == CODE1_HISTORIC_SHA,
+            "CODE1_HISTORICAL_GENERATOR_CHANGED")
+    archive = json.loads(git(root, "show", "HEAD:" + CODE1_ARCHIVE))
+    capture = archive.get("capture", {})
+    require(archive.get("schema") == "fdeg.historical_profiles.v0.1"
+            and capture.get("target") == CODE1
+            and capture.get("source_file") ==
+            {"path": CODE1_SOURCE, "blob_sha": "1e58703a7794ddd8eed3cba28ed9e5a1e39a141f"}
+            and capture.get("header_file") ==
+            {"path": CODE1_HEADER, "blob_sha": "9446a9d5d7863fb83a2c65af8b127bbd08573ad6"}
+            and capture.get("historical_qualification_scope") ==
+            "BOTH_LANES_USED_KERNEL_NOT_KERNEL_REMOVAL_PARITY"
+            and sorted(row.get("run_id") for row in capture.get("qualified_runs", [])) ==
+            [36163219902, 36496470116]
+            and archive.get("functional_profile", {}).get("target") == CODE1
+            and archive.get("transition_profile", {}).get("target") == CODE1,
+            "CODE1_ARCHIVE_CONTRACT_INVALID")
+    return {"archive_path": CODE1_ARCHIVE, "archive_blob_sha": CODE1_ARCHIVE_BLOB,
+            "historical_generator_blob_sha": CODE1_HISTORIC_SHA,
+            "historical_runs": [36163219902, 36496470116],
+            "current_binary_legacy_replay_proven": False,
+            "historic_on_off_removal_parity_proven": False}
+
+
 def audit(root: Path, *, expected_head: str) -> dict:
     root = root.resolve()
     require(isinstance(expected_head, str) and HEAD.fullmatch(expected_head),
@@ -222,8 +290,9 @@ def audit(root: Path, *, expected_head: str) -> dict:
             "MODIFIED_WORKTREE_FACTORY_SOURCE")
     facts = check_factory_inventory(root, tracked)
     ci = check_ci_tree(root, tracked)
-    raw = git(root, "grep", "-n", "-F", "-I", "-e", RETIRED,
-              "-e", HEAVY, "-e", JOULE, "HEAD", "--", missing_ok=True)
+    raw = git(root, "grep", "-n", "-F", "-I",
+              *(arg for name in RETIRED_FACTORIES for arg in ("-e", name)),
+              "HEAD", "--", missing_ok=True)
     rows = []
     for line in raw.decode("utf-8").splitlines():
         parts = line.split(":", 3)
@@ -235,7 +304,7 @@ def audit(root: Path, *, expected_head: str) -> dict:
             continue
         rows.append({"path": path, "line": int(lineno),
                      "source_blob_sha": tracked[path]["sha"],
-                     "active_surface": active_surface(path)})
+                     "active_surface": reference_surface(path, source_line)})
     by_path = {}
     for row in rows:
         path = row["path"]
@@ -243,8 +312,12 @@ def audit(root: Path, *, expected_head: str) -> dict:
                    "source_blob_sha": row["source_blob_sha"],
                    "line_numbers": [], "active_surface": row["active_surface"]})
         entry["line_numbers"].append(row["line"])
+        if row["active_surface"] is not None:
+            entry["active_surface"] = row["active_surface"]
     reference = check_route_rows(list(by_path.values()))
     historical = check_historical_sources(tracked)
+    code1_archive = check_code1_archive(root, tracked)
+    s5r_lineage = check_s5r_lineage(tracked)
     return {
         "schema": SCHEMA,
         "source_head": actual,
@@ -255,6 +328,9 @@ def audit(root: Path, *, expected_head: str) -> dict:
         "retired_factory": RETIRED,
         "retired_factories": list(RETIRED_FACTORIES),
         "pinned_historical_sources": historical,
+        "code1_historical_archive": code1_archive,
+        "s5r_lineage": s5r_lineage,
+        "code1_source_cut_applied": True,
         "legacy_inputs_supported": False,
         "current_newonly_factory": facts,
         "newonly_ci": ci,

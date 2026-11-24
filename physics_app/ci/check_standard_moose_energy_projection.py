@@ -307,10 +307,10 @@ EI16_INPUT = f"""[Mesh]
     source = O2p_ionization_mass_source
   []
   [n_e_source]
-    type = PhysicsFVElectronReactionSource
+    type = FVCoupledForce
     variable = n_e
-    number_source = electron_ionization_number_source
-    state_form = physical
+    v = electron_ionization_number_source
+    coef = 1
   []
 []
 

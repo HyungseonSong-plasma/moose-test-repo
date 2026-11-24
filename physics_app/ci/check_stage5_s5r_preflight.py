@@ -106,8 +106,10 @@ def _check_ei01_recovery() -> None:
     if hashlib.sha256(raw).hexdigest() != provenance.get("sha256"):
         raise AssertionError("EI01 table SHA-256 does not match frozen recovery provenance")
 
+    # Archived #192 recovery uses the historical name mean_en_solved.
+    # Current runnable state binding is tested independently by live input P0.
     lookup = recovery.get("lookup_contract", {})
-    if lookup.get("coordinate") != "e_energy_eV":
+    if lookup.get("coordinate") != "mean_en_solved":
         raise AssertionError("EI01 lookup coordinate is not solved mean energy")
     if lookup.get("coordinate_unit") != "eV":
         raise AssertionError("EI01 lookup coordinate unit changed")
@@ -143,7 +145,7 @@ def _check_ei01_recovery() -> None:
         raise AssertionError("EI01 progress owner type changed")
     if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_attachment.txt":
         raise AssertionError("EI01 progress owner table binding changed")
-    if owner.get("mean_energy") != "e_energy_eV":
+    if owner.get("mean_energy") != "mean_en_solved":
         raise AssertionError("EI01 progress owner mean-energy binding changed")
     if owner.get("reaction_progress") != "R_attachment":
         raise AssertionError("EI01 canonical progress identity changed")
@@ -208,6 +210,14 @@ def check() -> None:
                     not row.get("progress", "").startswith("reaction_rate_" + historical_id + "_") or
                     progress != "R_" + historical_id or owner != "HRateCoefMaterial"):
                 raise AssertionError(f"historical/new Chemistry owner mismatch for {channel}")
+        elif channel in ("EI18_O_TO_OS", "EI20_O_IONIZATION"):
+            # Historical S5-R v1 freezes PhysicsElectronImpactRateMaterial.
+            # Current live New-only chemistry is EIRateCoefMaterial; guarded
+            # independently by the EI18/EI20 static and Native discriminators.
+            if (row.get("progress") != progress or
+                    row.get("owner") != "PhysicsElectronImpactRateMaterial" or
+                    owner != "EIRateCoefMaterial"):
+                raise AssertionError(f"historic/current EI source-owner mismatch for {channel}")
         elif row.get("progress") != progress or row.get("owner") != owner:
             raise AssertionError(f"owner-map mismatch for {channel}")
         progress_names.append(progress)
@@ -215,8 +225,15 @@ def check() -> None:
         raise AssertionError("duplicate canonical Stage-5 progress name")
 
     h05_row = owner_map["H05_OM_O_DETACHMENT"]
+    # The archived Stage-5 owner map records the historical custom C++ projector.
+    # Current supported H05 uses a standard MOOSE signed source with the same Functor.
     if h05_row.get("electron_particle_projection") != "PhysicsFVElectronReactionSource":
-        raise AssertionError("H05 electron-particle ownership changed")
+        raise AssertionError("historical H05 electron-particle contract changed")
+    from physics_app.ci.check_stage5_h05_runtime import runtime_input as _h05_current
+    h05_current = _h05_current()
+    if not all(part in h05_current for part in (
+            "type = FVCoupledForce", "v = S_e_h05", "coef = 1")):
+        raise AssertionError("current H05 standard electron projector is not proven")
     if h05_row.get("electron_energy_projection") != "NONE":
         raise AssertionError("H05 explicit electron-energy source was reintroduced")
     if "ADMITTED" not in h05_row.get("model_decision", ""):
@@ -264,7 +281,7 @@ def check() -> None:
         "required_heavy_temperature_functor": "T_g",
         "required_density_functor": "rho_mat",
         "required_constrained_oxygen_functor": "w_O2_constraint",
-        "required_solved_mean_energy_functor": "e_energy_eV",
+        "required_solved_mean_energy_functor": "mean_en_solved",
     }
     if ident != expected_identity:
         raise AssertionError("representative identity/state binding changed")
