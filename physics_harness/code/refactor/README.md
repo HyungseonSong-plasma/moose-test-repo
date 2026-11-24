@@ -11,8 +11,8 @@ transformation, edit the repository, or authorize a change.
 | `code/diagnostics/` | Exact-source graph, evidence, receipt and collection completeness |
 | `libs/code_lucidity/` | Numeric code-understandability features from existing source facts and observations, no interpretation or refactor decision |
 | `code/analysis/result.py` | Generic revision-bound analysis records and measurements |
-| `code/analysis/lucidity_adapter.py` | Diagnostics↔metric engine data mapping and Evidence transport only |
-| `code/analysis/lucidity_interpretation.py` | Interpret calculated code-understandability indicators, caveats and trade-offs for Planning |
+| `code/analysis/adapters/lucidity_adapter.py` | Diagnostics↔metric engine data mapping and Evidence transport only |
+| `code/analysis/adapters/lucidity_interpretation.py` | Interpret calculated code-understandability indicators, caveats and trade-offs for Planning |
 | `code/refactor/planning.py` | Source-bound context and constraint validation |
 | `code/refactor/alternatives.py` | Apply the same checks to alternative proposals; no ranking |
 | `code/verification/` | Independent source/contract checks, post-change obligations |
@@ -45,8 +45,8 @@ from pathlib import Path
 import subprocess
 
 from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
-from physics_harness.code.analysis.lucidity_adapter import assess_code_understandability, summarize_understandability
-from physics_harness.code.analysis.lucidity_interpretation import interpret_understandability_indicators
+from physics_harness.code.analysis.adapters.lucidity_adapter import assess_code_understandability, summarize_understandability
+from physics_harness.code.analysis.adapters.lucidity_interpretation import interpret_understandability_indicators
 from physics_harness.code.refactor import (
     HardConstraint, PlanningAlternative, build_planning_context, review_alternatives,
 )

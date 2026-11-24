@@ -4,8 +4,8 @@ Runs in moose-test-repo with the existing Diagnostics/Graph infrastructure.
 """
 
 from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, run_scan
-from physics_harness.code.analysis.lucidity_adapter import assess_code_understandability, summarize_understandability
-from physics_harness.code.analysis.lucidity_interpretation import interpret_understandability_indicators
+from physics_harness.code.analysis.adapters.lucidity_adapter import assess_code_understandability, summarize_understandability
+from physics_harness.code.analysis.adapters.lucidity_interpretation import interpret_understandability_indicators
 from physics_harness.code.refactor import (
     PlanningAlternative, build_planning_context,
     review_alternatives,

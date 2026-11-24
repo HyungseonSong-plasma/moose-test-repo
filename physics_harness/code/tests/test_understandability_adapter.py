@@ -5,7 +5,7 @@ from dataclasses import replace
 import unittest
 
 from libs.code_lucidity import HumanObservation
-from physics_harness.code.analysis.lucidity_adapter import assess_code_understandability
+from physics_harness.code.analysis.adapters.lucidity_adapter import assess_code_understandability
 
 REV = "a" * 40
 BLOB = "b" * 40
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
 
 def test_summary_preserves_structural_measurements_and_unknowns():
-    from physics_harness.code.analysis.lucidity_adapter import summarize_understandability
+    from physics_harness.code.analysis.adapters.lucidity_adapter import summarize_understandability
     result = summarize_understandability(assess_code_understandability(diagnostic(), "n:f"))
     assert result.name == "CODE_UNDERSTANDABILITY"
     assert result.status == "MEASURED"
@@ -87,7 +87,7 @@ def test_summary_preserves_structural_measurements_and_unknowns():
 
 
 def test_summary_does_not_forge_population_score_from_single_person():
-    from physics_harness.code.analysis.lucidity_adapter import summarize_understandability
+    from physics_harness.code.analysis.adapters.lucidity_adapter import summarize_understandability
     observation = HumanObservation("e1", "q1", "INTENT_ACCURACY", True, REV, BLOB)
     result = summarize_understandability(assess_code_understandability(
         diagnostic(), "n:f", observations=(observation,)
@@ -98,7 +98,7 @@ def test_summary_does_not_forge_population_score_from_single_person():
 
 
 def test_different_human_criteria_are_not_conflated_by_name():
-    from physics_harness.code.analysis.lucidity_adapter import summarize_understandability
+    from physics_harness.code.analysis.adapters.lucidity_adapter import summarize_understandability
     observations = (
         HumanObservation("e1", "b.c", "a", True, REV, BLOB),
         HumanObservation("e2", "c", "a.b", False, REV, BLOB),
@@ -108,7 +108,7 @@ def test_different_human_criteria_are_not_conflated_by_name():
 
 
 def test_adapter_transports_candidate_call_facts_without_resolving_dependencies():
-    from physics_harness.code.analysis.lucidity_adapter import summarize_understandability
+    from physics_harness.code.analysis.adapters.lucidity_adapter import summarize_understandability
     data = diagnostic()
     record = data.receipt.files[0]
     record.collectors = ("python_ast",)

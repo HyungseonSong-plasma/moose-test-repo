@@ -333,3 +333,43 @@ def test_p1_duplicate_order_never_selects_a_body(history, first, second):
     packet = build_blinded_semantic_packet(subject, provider, bindings())
     assert "AMBIGUOUS_DECLARATION:"+PATH+"::function:python_decode" in packet.unresolved
     assert not any(e.symbol == PATH+"::function:python_decode" for e in packet.excerpts)
+
+
+@pytest.mark.parametrize("policy,retain,blocked", [
+    (None, False, False),
+    ("RETIRE_OLD_PATH", True, True),
+    ("PRESERVE_COMPATIBILITY", False, True),
+    ("RETIRE_OLD_PATH", False, False),
+    ("PRESERVE_COMPATIBILITY", True, False),
+])
+def test_gate_enforces_declared_module_path_policy(history, policy, retain, blocked):
+    from physics_harness.code.refactor.naming import NamingEvidence, NamingOption
+    from physics_harness.code.verification.naming_candidate import CandidatePlacement
+    root, before, baseline = history
+    subject = case(before, baseline)
+    mismatch = NamingEvidence("mismatch", "NAME_MISMATCH", "Too narrow",
+                              (f"{PATH}:4@{digest(NEW)}",), baseline)
+    subject = replace(subject, name_fit="NARROW", name_mismatch_evidence_ids=("mismatch",),
+                      evidence=subject.evidence + (mismatch,))
+    opt = NamingOption("rename", "RENAME", "Name alignment", proposed_name="source_collector",
+                       coverage_rationale="cover", boundary_rationale="boundary", context_rationale="context",
+                       retained_responsibility_ids=subject.responsibility_ids,
+                       evidence_ids=("mismatch","boundary","context","evolution"), impact_paths=(PATH,),
+                       module_path_policy=policy)
+    new = "diagnostics/source_collector.py"
+    git(root,"mv",PATH,new)
+    if retain:
+        (root / PATH).write_text("from .source_collector import Collector, python_decode, cpp_decode\n")
+    git(root,"add","."); git(root,"commit","-qm","rename candidate")
+    after = git(root,"rev-parse","HEAD")
+    moves = tuple(CandidatePlacement(b.responsibility_id, old, old.replace(PATH+"::",new+"::"),"original")
+                  for b in bindings() for old in b.source_symbols)
+    result = evaluate_naming_safety_gates(subject,opt,GitSourceProvider(root),bindings(),after,new,moves)
+    assert (result.status == "BLOCKED") is blocked
+    if policy is None:
+        assert result.module_transition is None
+        assert "MODULE_PATH_POLICY_UNDECLARED" in result.unresolved
+    else:
+        assert result.module_transition.policy == policy
+        assert result.module_transition.path_policy_witnessed is (not blocked)
+    assert not result.mutation_approved
