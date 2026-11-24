@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: issue817-combined-validation-52b18f572322ac395845b38300433049ed96a840
+  group: issue817-combined-validation-4a177e4d38a40b99998b1e46680a8c59be621cef
   cancel-in-progress: false
 jobs:
   active_source_p0:
@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
-      SOURCE_HEAD: 52b18f572322ac395845b38300433049ed96a840
+      SOURCE_HEAD: 4a177e4d38a40b99998b1e46680a8c59be621cef
       PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 52b18f572322ac395845b38300433049ed96a840
+          ref: 4a177e4d38a40b99998b1e46680a8c59be621cef
           fetch-depth: 1
           persist-credentials: false
       - name: Pin CI identity and self-test canonical workflow safety
@@ -88,7 +88,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue817-code3-production-p0-${{ github.run_id }}-${{ github.run_attempt }}-52b18f572322ac395845b38300433049ed96a840
+          name: issue817-code3-production-p0-${{ github.run_id }}-${{ github.run_attempt }}-4a177e4d38a40b99998b1e46680a8c59be621cef
           path: evidence/
           if-no-files-found: warn
           retention-days: 30
@@ -98,13 +98,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 105
     env:
-      SOURCE_HEAD: 52b18f572322ac395845b38300433049ed96a840
+      SOURCE_HEAD: 4a177e4d38a40b99998b1e46680a8c59be621cef
       OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
     steps:
       - name: Checkout immutable exact source
         uses: actions/checkout@v4
         with:
-          ref: 52b18f572322ac395845b38300433049ed96a840
+          ref: 4a177e4d38a40b99998b1e46680a8c59be621cef
           fetch-depth: 1
           persist-credentials: false
       - name: Verify CI source and original Factory identity
@@ -170,7 +170,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue817-code3-postcut-native-${{ github.run_id }}-${{ github.run_attempt }}-52b18f572322ac395845b38300433049ed96a840
+          name: issue817-code3-postcut-native-${{ github.run_id }}-${{ github.run_attempt }}-4a177e4d38a40b99998b1e46680a8c59be621cef
           path: evidence/code3_postcut_native_receipt.json
           if-no-files-found: warn
           retention-days: 30

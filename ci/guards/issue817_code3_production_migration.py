@@ -151,6 +151,47 @@ def active_inputs() -> list[dict]:
     return records
 
 
+def check_absent_particle_source(text: str, case: str) -> dict:
+    """Independent assembled-input oracle for the three no-particle lanes."""
+    allowed = {
+        "EI18": {"n_e", "mean_en", "w_Os"},
+        "EI19": {"mean_en"},
+        "S5D": {"w_O2p", "w_O", "w_Om", "w_Op"},
+    }
+    if case not in allowed:
+        fail("UNKNOWN_ABSENCE_CASE:" + case)
+    children = mp.direct_children(text, "FVKernels")
+    if not children:
+        fail("ABSENCE_EMPTY_KERNELS:" + case)
+    electron_time = 0
+    for path in children:
+        kind = mp.get_parameter(text, path, "type")
+        variable = mp.get_parameter(text, path, "variable")
+        if not kind or variable not in allowed[case]:
+            fail("UNEXPECTED_ABSENCE_LANE_KERNEL:" + case + ":" + path)
+        if kind == TARGET:
+            fail("LEGACY_FACTORY_IN_ABSENCE_LANE:" + case)
+        if variable == "n_e":
+            if kind != "FVTimeKernel":
+                fail("FORBIDDEN_ELECTRON_PARTICLE_SOURCE:" + case + ":" + path)
+            electron_time += 1
+    if electron_time != (1 if case == "EI18" else 0):
+        fail("ELECTRON_TIME_OWNER_DRIFT:" + case)
+    return {"case": case, "electron_particle_source": "NONE",
+            "kernel_count": len(children),
+            "input_sha256": hashlib.sha256(text.encode()).hexdigest()}
+
+
+def absent_particle_inputs() -> list[dict]:
+    from physics_app.ci import check_stage5_ei18_runtime as ei18
+    from physics_app.ci import check_e8_elastic_ei19_runtime as ei19
+    from physics_app.ci import check_stage5_s5d_heavy_reactions as s5d
+    return [check_absent_particle_source(text, case) for case, text in (
+        ("EI18", ei18._runtime_input()), ("EI19", ei19._ei19_input()),
+        ("S5D", s5d.input_text(600.0)),
+    )]
+
+
 def check_static_current_source_references() -> dict:
     # Legacy source-read guards were once deliberately active CI. Deleting
     # the C++ source is invalid if any current source attestation still reads it.
@@ -173,12 +214,14 @@ def audit(expected: str, phase: str) -> dict:
     frozen_source(phase)
     inputs = active_inputs()
     guard = check_static_current_source_references()
+    absent = absent_particle_inputs()
     if len(inputs) != 8:
         fail("ACTIVE_CONSUMER_COUNT")
     return {
         "schema": SCHEMA, "source_head": head, "phase": phase,
         "current_consumer_count": len(inputs),
         "consumers": inputs, "source_guard": guard,
+        "no_particle_source_lanes": absent,
         "physics_Factory_C_H_deleted": phase == "postcut",
         "P0": "PASS_MIGRATION_CONTRACT",
         "existing_old_new_science_runs": [45230510538, 45234619718, 45239977824],

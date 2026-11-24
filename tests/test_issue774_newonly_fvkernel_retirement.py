@@ -27,6 +27,8 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         self.assertTrue(receipt["newonly_ci"]["workflow_template_bytes_equal"])
         self.assertFalse(receipt["newonly_ci"]["historical_fdeg_ci_imported"])
         self.assertEqual(receipt["reference_audit"]["active_retired_type_references"], [])
+        self.assertEqual(receipt["reference_audit"]["code3_reviewed_assertions"],
+                         {path: 1 for path in d9.CODE3_ASSERTIONS})
         self.assertFalse(receipt["safe_to_delete"])
         self.assertFalse(receipt["merge_to_main"])
         self.assertEqual(receipt["global_dynamic_and_external_consumers"],
@@ -166,6 +168,12 @@ class NewOnlyRetirementCIContract(unittest.TestCase):
         for path, assertion in d9.CODE3_ASSERTIONS.items():
             self.assertIsNone(d9.reference_surface(path, assertion))
             self.assertIsNotNone(d9.reference_surface(path, "type = " + d9.CODE3))
+            self.assertIsNotNone(d9.reference_surface(path, assertion + " # changed"))
+            with self.assertRaisesRegex(ValueError, "ACTIVE_RETIRED_FACTORY_REINTRODUCED"):
+                d9.check_route_rows([
+                    {"path": path, "active_surface": d9.reference_surface(path, assertion)},
+                    {"path": path, "active_surface": d9.reference_surface(path, "type = " + d9.CODE3)},
+                ])
 
     def test_bad_source_sha_rejected_even_when_active_type_absent(self):
         with self.assertRaisesRegex(ValueError, "EXACT_HEAD_MISMATCH"):
