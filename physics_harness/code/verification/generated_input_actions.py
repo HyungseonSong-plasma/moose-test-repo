@@ -2,6 +2,8 @@
 
 GitHub metadata witnesses archive custody, not arbitrary generator execution.
 A manifest inside the archive is a producer assertion, not an attestation.
+The artifact ID is assigned after upload and is obtained from API metadata,
+never demanded in the pre-upload manifest.
 """
 from __future__ import annotations
 
@@ -113,7 +115,9 @@ def acquire_generated_input(
         time_check()
         run = reader.run(repo, run_id)
         time_check()
-        repository = run.get("repository") or {}
+        if not isinstance(run, dict) or not isinstance(run.get("repository"), dict):
+            raise ValueError("GENERATED_ACTIONS_RUN_INVALID")
+        repository = run["repository"]
         if (type(repository.get("id")) is not int or repository["id"] < 1
                 or repository.get("full_name") != repo
                 or run.get("id") != run_id
@@ -138,7 +142,9 @@ def acquire_generated_input(
         if len(selected) != 1:
             raise ValueError("GENERATED_ARTIFACT_MISSING_OR_AMBIGUOUS")
         item = selected[0]
-        owner = item.get("workflow_run") or {}
+        owner = item.get("workflow_run")
+        if not isinstance(owner, dict):
+            raise ValueError("GENERATED_ARTIFACT_ASSOCIATION_MISMATCH")
         if (item.get("id") != expected.artifact_id
                 or item.get("name") != artifact_name
                 or item.get("expired") is not False
@@ -195,7 +201,13 @@ def acquire_generated_input(
             or manifest["workflow_path"] != workflow_path
             or not isinstance(manifest["identity"], dict)):
         raise ValueError("GENERATED_MANIFEST_CONTEXT_MISMATCH")
-    receipt = GeneratedInputIdentity(**manifest["identity"])
+    manifest_identity = dict(manifest["identity"])
+    expected_manifest = asdict(expected)
+    expected_manifest.pop("artifact_id")
+    if manifest_identity != expected_manifest or set(manifest_identity) != set(expected_manifest):
+        raise ValueError("GENERATED_RECEIPT_IDENTITY_MISMATCH")
+    receipt = GeneratedInputIdentity(
+        **manifest_identity, artifact_id=expected.artifact_id)
     if receipt != expected:
         raise ValueError("GENERATED_RECEIPT_IDENTITY_MISMATCH")
     if artifact_identity(before[0]) != artifact or run_identity() != before:
