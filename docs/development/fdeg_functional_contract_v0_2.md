@@ -6,7 +6,7 @@
 
 Consume only the Structural v0.3 evidence graph and reviewed Functional registry so GPT can list, per declared consumer, *what functionality would be removed if it were active*, the known/unknown provider and runtime bindings, candidates' necessary parity dimensions and missing evidence without searching implementation source.
 
-The assembler does not claim a complete dependency census or that a supplied source-bound hypothesis was proven by Native execution. Transition and Coverage modules are **not** implemented here.
+The assembler does not claim a complete dependency census or that a supplied source-bound hypothesis was proven by Native execution. [Transition v0.1](fdeg_transition_evidence_v0_1.md) is a separate assembler; global Coverage and Native equivalence are not established here.
 
 ## Input identity
 
@@ -17,10 +17,13 @@ The assembler does not claim a complete dependency census or that a supplied sou
 - Bind all existing incumbent claims to pinned C++ source Blob/line and function-local anchors. Failing anchors and changed blobs are hard P0 errors.
 - For candidate alternatives with source present locally, attest candidate source Blob/function/anchor; this establishes a candidate expression only, **never equivalence**. Missing candidate source stays `NOT_LOCALLY_SOURCE_VERIFIED`.
 
-## New output
+## Output
 
 | Graph surface | Meaning / limit |
 | --- | --- |
+| `parameter_declarations` | Source-bound local `validParams()` declarations, required/optional parameters, C++ type and explicit defaults versus description-only; not effective runtime values or a complete inherited-parameter census |
+| `discriminator_contracts` | Reviewed positive/negative experiment specifications; no observed result or accepted tolerance |
+| `runtime_observation`, `equivalence_verdict` | `NOT_OBSERVED`, `NOT_PROVEN`; source-supported text/claims are not executed scientific evidence |
 | `preservation_contract` | Conditional loss of residual/flux/time contribution, representation, coupled invariants, refusal/counterexamples, related incumbent claim IDs |
 | `consumer_contracts[]` | Declared source `instance_id`, structural edge ID, variable/block/raw state_form, local source default, possible producer candidates and `UNKNOWN` effective provider/integrator/state; functional effect **if active** |
 | `EQUATION_TERM_OWNER_CONDITIONAL` | Declared input instance maps to an equation term. Does not prove that a Native object was instantiated |
@@ -33,7 +36,9 @@ The assembler does not claim a complete dependency census or that a supplied sou
 | `workflow_execution_routes` | Workflow job/trigger static declarations, not CI runtime provenance |
 | `target_scoped_unresolved` | Exact unresolved generator/provider references in the target graph. A missing provider candidate may be declared in included/external input, not necessarily absent |
 
-### Special cases from code1–7
+### Original code1–7 target catalog (historical contract context)
+
+These entries describe the original source-pinned functional obligations, not a current inventory of active Factory classes or retirement status. Consult the owning retirement issues and current source tree before choosing a target.
 
 - **code1:** source-backed Poisson banded term; row-sum-zero and historical both-with-kernel parity remain unverified; ON/OFF Native required.
 - **code2:** electron-energy electric work; preserve `PhysicsElectronFluxModel` helper, residual `-E·Gamma_e`, normalized scale and AD derivatives; **no approved replacement**.
@@ -63,4 +68,4 @@ Structural may exit 2 when it emits an evidence graph with unresolved source pat
 
 P0 negative controls cover missing/tracked generator paths, source and header identity, provider ambiguity/missing/mutated metadata, exact SHA and altered graph ID, dynamic refs, candidate source Blob change, replacement-dimension false PASS, historical vs current and absent runtime evidence.
 
-**No C++ deletion, no auto-migration, no scientific parity claim, and no Transition/Coverage implementation.**
+**No C++ deletion, auto-migration or scientific parity claim.** Transition planning and the general-purpose [Harness Code](../../physics_harness/code/README.md) layer are separate; neither is a substitute for executed runtime evidence.
