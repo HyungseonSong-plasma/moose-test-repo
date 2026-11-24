@@ -1,12 +1,14 @@
 {
   "targets": [
     {
-      "branch": "issue-875-docs-cleanup-b3",
-      "expected_sha": "6d268570af5abbc3faad5d3dac9b8589c1420086"
+      "branch": "issue-881-fdeg-inventory-ci-only",
+      "expected_sha": "571e9a3114264c1914d4e1cbe6ad8e8393ebec62",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-881-fdeg-inventory-ci-only-571e9a311426"
     },
     {
-      "branch": "issue-875-docs-cleanup-b4",
-      "expected_sha": "7d129fc0b07dceb82bfb2c390af7dcbc2ad4767f"
+      "branch": "issue-881-retire-fdeg",
+      "expected_sha": "97ecbdb6a7f36fcf9446631c3973b7fe4096fb1f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-881-retire-fdeg-97ecbdb6a7f3"
     }
   ]
 }
