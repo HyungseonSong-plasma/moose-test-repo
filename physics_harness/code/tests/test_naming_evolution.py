@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 from hashlib import sha1
-from pathlib import Path
-import subprocess
+from physics_harness.code.tests.conftest import git
 
 import pytest
 
@@ -183,30 +182,19 @@ def test_source_history_requires_different_revisions():
         compare_source_history(initial(), initial())
 
 
-def test_real_local_git_tree_reader_never_uses_dirty_worktree(tmp_path):
+def test_real_local_git_tree_reader_never_uses_dirty_worktree(git_factory):
     from physics_harness.code.diagnostics.providers.git import GitSourceProvider
-    root = tmp_path / "repo"
-    root.mkdir()
-    def git(*args):
-        return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
-    git("init", "-q")
-    git("config", "user.email", "tester@example.invalid")
-    git("config", "user.name", "Tester")
+    root, before_sha = git_factory({
+        OWNER: BEFORE, "diagnostics/providers/workflow.py": PROVIDERS["workflow"],
+    })
     path = root / OWNER
-    path.parent.mkdir(parents=True)
-    path.write_bytes(BEFORE)
     source_dir = root / "diagnostics/providers"
-    source_dir.mkdir(parents=True)
-    (source_dir / "workflow.py").write_bytes(PROVIDERS["workflow"])
-    git("add", OWNER, "diagnostics/providers/workflow.py")
-    git("commit", "-qm", "before")
-    before_sha = git("rev-parse", "HEAD")
     path.write_bytes(AFTER)
     (source_dir / "python_ast.py").write_bytes(PROVIDERS["python_ast"])
     (source_dir / "cpp.py").write_bytes(PROVIDERS["cpp"])
-    git("add", OWNER, "diagnostics/providers/python_ast.py", "diagnostics/providers/cpp.py")
-    git("commit", "-qm", "after")
-    after_sha = git("rev-parse", "HEAD")
+    git(root, "add", OWNER, "diagnostics/providers/python_ast.py", "diagnostics/providers/cpp.py")
+    git(root, "commit", "-qm", "after")
+    after_sha = git(root, "rev-parse", "HEAD")
     provider = GitSourceProvider(root)
     before_file = provider.read_at_revision(before_sha, OWNER)
     after_file = provider.read_at_revision(after_sha, OWNER)
@@ -243,9 +231,9 @@ def test_real_local_git_tree_reader_never_uses_dirty_worktree(tmp_path):
         audit_git_history(provider, "f" * 40, after_sha, OWNER)
     link = root / "diagnostics/redirect.py"
     link.symlink_to("collector.py")
-    git("add", "diagnostics/redirect.py")
-    git("commit", "-qm", "symlink")
-    new_head = git("rev-parse", "HEAD")
+    git(root, "add", "diagnostics/redirect.py")
+    git(root, "commit", "-qm", "symlink")
+    new_head = git(root, "rev-parse", "HEAD")
     with pytest.raises(ValueError, match="HISTORY_SOURCE_INVALID"):
         provider.read_at_revision(new_head, "diagnostics/redirect.py")
 
