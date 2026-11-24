@@ -9,4 +9,9 @@ Evidence references:
 - [Code6 source comparison 45484020418](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45484020418), artifact 14962467467, ZIP SHA-256 `37238045a198628ac8d65a27e96cfda9cec245f45e1ede1d46924e9ca3bc301e`. 15/15 literal source locations, ten generators; no missing or additional candidate locations. PARTIAL (159 diagnostic entries); no runtime or external closure. Detailed block/bindings retain their source-specific owner in #704.
 - Dynamic references: #882, separate from this subsystem retirement.
 
-**Draft merge gate:** actual historical artifact bytes require durable custody before merge. Run links alone expire and must not be described as durable custody. Original source lineage is not an assertion that a replay is byte-identical to the historical observation. See #881.
+## Original evidence custody
+
+Both original ZIPs are stored here byte-for-byte, not reconstructed reports. The staging run [45485652803](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45485652803) verified producer run, source identity, original SHA-256 and ZIP CRC before staging the Git blobs; independent local download/hash matched the same blob identities. The tracked paths and digests are listed in [custody manifest](custody.json). Original source lineage remains distinct from the historical observation. No scientific acceptance or runtime closure is asserted.
+
+- [artifact-14959988094.zip](artifact-14959988094.zip): 49855 bytes, Git blob `a02d6adba2b65531c7452f85ff3f734615b0dd1a`.
+- [artifact-14962467467.zip](artifact-14962467467.zip): 82889 bytes, Git blob `85ff04621fc5b17248e80e5298a93bc7f76fcd04`.
