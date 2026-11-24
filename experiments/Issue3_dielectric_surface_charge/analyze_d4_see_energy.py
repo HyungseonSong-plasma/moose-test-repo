@@ -93,7 +93,7 @@ def main() -> int:
     passed = all(off["checks"].values()) and all(on["checks"].values()) and all(cross.values())
     report = {
         "classification": "D4_DIELECTRIC_SEE_ENERGY_PASS" if passed else "D4_DIELECTRIC_SEE_ENERGY_FAIL",
-        "scope": "isolated physical_eV wall-energy equation; SEE emitted energy fixed by PhysicsFVElectronEnergyWallFluxBC at 4 eV",
+        "scope": "isolated log-molar wall-energy equation; reconstructed physical inventory; SEE emitted energy fixed at 4 eV",
         "see_off": off,
         "see_on": on,
         "expected_energy_shift_eV_m3": expected_shift,
