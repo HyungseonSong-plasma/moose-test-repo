@@ -275,7 +275,7 @@ def trace_generated_calls(
                   unresolved=tuple(sorted(unresolved))), status="PARTIAL"))
 
 
-def validate_python_trace_metadata(evidence, scope, paths, nodes, edges):
+def validate_python_trace_metadata(evidence, scope, paths, nodes, edges, witnesses):
     """Validate Graph/receipt binding only; never attest execution from metadata."""
     a = evidence.attributes
     if (evidence.observation_status != "RUNTIME_OBSERVED"
@@ -296,7 +296,7 @@ def validate_python_trace_metadata(evidence, scope, paths, nodes, edges):
             raise ValueError("PYTHON_TRACE_DIGEST_INVALID")
     for prefix in ("caller", "callee"):
         item = paths[a[prefix + "_path"]]
-        if (item.status != "SCANNED" or item.blob_sha != a[prefix + "_blob_sha"]
+        if (item.status not in {"SCANNED", "UNRESOLVED"} or item.blob_sha != a[prefix + "_blob_sha"]
                 or "python_ast" not in item.collectors):
             raise ValueError("PYTHON_TRACE_SOURCE_INVALID")
     span = a["position"]
@@ -318,6 +318,14 @@ def validate_python_trace_metadata(evidence, scope, paths, nodes, edges):
             or not any(e.source_id == caller and e.target_id == site
                        and e.relation == "CALLS_CANDIDATE" for e in edges)):
         raise ValueError("PYTHON_TRACE_ENDPOINT_INVALID")
+    for node_id, prefix in ((site, "caller"), (caller, "caller"), (callee, "callee")):
+        if not any(
+                witnesses[eid].observation_status == "SOURCE_DECLARED"
+                and witnesses[eid].attributes.get("path") == a[prefix + "_path"]
+                and witnesses[eid].attributes.get("blob_sha") == a[prefix + "_blob_sha"]
+                and witnesses[eid].attributes.get("source_sha") == scope.revision
+                for eid in nodes[node_id].evidence_ids):
+            raise ValueError("PYTHON_TRACE_SOURCE_WITNESS_MISSING")
     matches = [e for e in edges if evidence.id in e.evidence_ids]
     if (len(matches) != 1 or matches[0].source_id != site
             or matches[0].target_id != callee
