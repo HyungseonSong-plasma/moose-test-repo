@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-817-main-combined-retirement-20261124",
-      "expected_sha": "a35da81ff2956a38de566d03bd5779b033e2856e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-main-combined-retirement-20261124-a35da81ff295"
+      "branch": "issue-652-poisson-g8-matched-pilot-20261123",
+      "expected_sha": "73d0b1f4ab2d2d963f41f3ec95c1efb1c5c580de",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-poisson-g8-matched-pilot-20261123-73d0b1f4ab2d"
     },
     {
-      "branch": "issue-774-main-thermal-heavy-retirement-20261123",
-      "expected_sha": "19b6fa4c6a8e964cfa80674d8b6daa267f52fafc",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-main-thermal-heavy-retirement-20261123-19b6fa4c6a8e"
+      "branch": "issue-652-poisson-g7-equivalence-ad-20261123",
+      "expected_sha": "131fc8319529d1e94103c7754542761818a834db",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-poisson-g7-equivalence-ad-20261123-131fc8319529"
     },
     {
-      "branch": "issue-809-code1-verified-integration-20261123",
-      "expected_sha": "383b46665c0a5fbc0aa344081bfa7cbaf9890665",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-809-code1-verified-integration-20261123-383b46665c0a"
+      "branch": "issue-652-g6b-publicd100-parallel-full100-20261123",
+      "expected_sha": "26e84a4a33cf93d9e278a4f0b2d78c53cae2d6ce",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-g6b-publicd100-parallel-full100-20261123-26e84a4a33cf"
     },
     {
-      "branch": "issue-817-code3-verified-retirement-stage-20261123",
-      "expected_sha": "a2e896bf0fd0667c1e6935552edaef83bc517eaa",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-verified-retirement-stage-20261123-a2e896bf0fd0"
+      "branch": "issue-817-code3-integrated-retirement-20261123",
+      "expected_sha": "7b52001a11e4035fafe0fd86d1d6c598196eefc8",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-integrated-retirement-20261123-7b52001a11e4"
     },
     {
-      "branch": "issue-817-combined-retirement-20261124",
-      "expected_sha": "4a177e4d38a40b99998b1e46680a8c59be621cef",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-combined-retirement-20261124-4a177e4d38a4"
+      "branch": "issue-817-code3-s5r-native-d4",
+      "expected_sha": "238f9b7ba0f69072257c08b904a2366be389240e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-s5r-native-d4-238f9b7ba0f6"
     }
   ]
 }
