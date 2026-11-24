@@ -81,3 +81,18 @@ def test_split_checkout_imports_frozen_native_code_when_source_env_defined():
     if expected:
         assert g8.g6.ROOT.resolve()==Path(expected).resolve()
         assert g8.g6.__file__.startswith(str(Path(expected).resolve()))
+
+
+@pytest.mark.parametrize("phase", sorted(g8.PREFLIGHT_PHASES))
+def test_preflight_phase_reports_fixed_code_without_exception_text(phase, capsys):
+    with pytest.raises(g8.MatchedHold, match="G8_PREFLIGHT_"+phase+"_HOLD") as err:
+        with g8.preflight_phase(phase):
+            raise ValueError("SENSITIVE_EXAMPLE_SENTINEL")
+    assert str(err.value) == "G8_PREFLIGHT_"+phase+"_HOLD"
+    assert "SENSITIVE_EXAMPLE_SENTINEL" not in capsys.readouterr().out
+
+
+def test_preflight_success_reports_only_fixed_phase(capsys):
+    with g8.preflight_phase("SHARED_ELF"):
+        pass
+    assert capsys.readouterr().out.strip() == "G8_PREFLIGHT_SHARED_ELF_PASS"

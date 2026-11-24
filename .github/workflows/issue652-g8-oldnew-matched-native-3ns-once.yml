@@ -1,3 +1,4 @@
+# G8 diagnostic retry: fixed non-secret preflight phases; no acceptance threshold changes.
 # G8: synchronize original P3-X Old scratch to pinned non-Poisson New-only template only.
 # G8: frozen G5/G6 native Python modules imported from exact 26e84a4 Physics checkout.
 name: Issue652 G8 S6-417 941 exact same ELF old/new Poisson native 3ns comparison

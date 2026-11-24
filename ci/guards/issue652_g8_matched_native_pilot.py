@@ -11,6 +11,7 @@ Protected rates, source decks, private logs and raw Exodus never uploaded.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import math
@@ -40,6 +41,24 @@ from issue652_g8_matched_stage import (
     CHEM_RELATIVE, TABLE_RELATIVE, MatchedHold,
 )
 from issue652_g6b_parallel_evidence import verify_bundle
+
+# Only fixed non-secret phase identifiers may be emitted on failures.
+PREFLIGHT_PHASES = frozenset({
+    "SOURCE_IDENTITY", "STAGE_RECEIPT", "BUILD_MANIFEST",
+    "SHARED_ELF", "PROTECTED_ARCHIVE", "PRIVATE_TMPFS",
+})
+
+
+@contextmanager
+def preflight_phase(phase):
+    if phase not in PREFLIGHT_PHASES:
+        raise MatchedHold("G8_UNKNOWN_PREFLIGHT_PHASE")
+    try:
+        yield
+    except Exception:
+        raise MatchedHold("G8_PREFLIGHT_" + phase + "_HOLD") from None
+    print("G8_PREFLIGHT_" + phase + "_PASS", flush=True)
+
 
 MAX_SECONDS_PER_ARM = 900
 NA = 6.02214076e23
@@ -246,24 +265,31 @@ def run(*, before_g5: Path, after_g5: Path, stage_receipt: Path,
         raise MatchedHold("NATIVE_OUTPUT_OVERWRITE")
     if not cases or any(case not in CASES for case in cases):
         raise MatchedHold("CASE_SELECTION_INVALID")
-    if g6.exact_source() != SOURCE_SHA:
-        raise MatchedHold("SOURCE_OR_GITHUB_SHA_CHANGED")
-    stage = json.loads(stage_receipt.read_text())
-    bundle = verify_bundle(build_manifest, SOURCE_SHA)
-    if (stage.get("schema") != "issue652.g8.old_new_same_input_stage.v1"
-            or stage.get("same_input_stage") != "PASS"
-            or stage.get("physics_app_source_sha") != SOURCE_SHA
-            or set(stage.get("cases", {})) != set(CASES)):
-        raise MatchedHold("G8_MATCHED_P0_STAGE_REQUIRED")
-    binary = g6.ROOT/"physics_app/physics-opt"
-    if file_sha(binary) != bundle["files"]["physics_app/physics-opt"]:
-        raise MatchedHold("EXACT_P1_SHARED_BINARY_DIGEST_DRIFT")
-    from issue671_secure_ei_rate_scratch import EXPECTED, read_hashed_rows
-    _, tables = read_hashed_rows()
-    os.environ.pop("OXYGEN24_RATES_TAR_XZ_B64", None)
-    os.environ.pop("PROTECTED_ARCHIVE_B64", None)
-    if set(tables) != set(EXPECTED):
-        raise MatchedHold("PROTECTED_ARCHIVE_INCOMPLETE")
+    with preflight_phase("SOURCE_IDENTITY"):
+        if g6.exact_source() != SOURCE_SHA:
+            raise MatchedHold("SOURCE_OR_GITHUB_SHA_CHANGED")
+    with preflight_phase("STAGE_RECEIPT"):
+        stage = json.loads(stage_receipt.read_text())
+        if (stage.get("schema") != "issue652.g8.old_new_same_input_stage.v1"
+                or stage.get("same_input_stage") != "PASS"
+                or stage.get("physics_app_source_sha") != SOURCE_SHA
+                or set(stage.get("cases", {})) != set(CASES)):
+            raise MatchedHold("G8_MATCHED_P0_STAGE_REQUIRED")
+    with preflight_phase("BUILD_MANIFEST"):
+        bundle = verify_bundle(build_manifest, SOURCE_SHA)
+    with preflight_phase("SHARED_ELF"):
+        binary = g6.ROOT/"physics_app/physics-opt"
+        if file_sha(binary) != bundle["files"]["physics_app/physics-opt"]:
+            raise MatchedHold("EXACT_P1_SHARED_BINARY_DIGEST_DRIFT")
+    with preflight_phase("PROTECTED_ARCHIVE"):
+        from issue671_secure_ei_rate_scratch import EXPECTED, read_hashed_rows
+        try:
+            _, tables = read_hashed_rows()
+            if set(tables) != set(EXPECTED):
+                raise MatchedHold("PROTECTED_ARCHIVE_INCOMPLETE")
+        finally:
+            os.environ.pop("OXYGEN24_RATES_TAR_XZ_B64", None)
+            os.environ.pop("PROTECTED_ARCHIVE_B64", None)
     result = {
         "schema": "issue652.g8.old_new_matched_native_3ns.v1",
         "source_sha": SOURCE_SHA,
@@ -278,8 +304,9 @@ def run(*, before_g5: Path, after_g5: Path, stage_receipt: Path,
         "P3_3ns": "HOLD", "P3_100us": "NOT_RUN",
         "P4": "NOT_RUN", "science": "SCIENCE_HOLD",
     }
-    private = Path(tempfile.mkdtemp(prefix="issue652-g5-g8-",dir="/dev/shm"))
-    os.chmod(private,0o700)
+    with preflight_phase("PRIVATE_TMPFS"):
+        private = Path(tempfile.mkdtemp(prefix="issue652-g5-g8-",dir="/dev/shm"))
+        os.chmod(private,0o700)
     try:
         for case in cases:
             record = stage["cases"][case]
@@ -390,11 +417,24 @@ def main() -> int:
                    output=a.output,cases=tuple(a.case),
                    authorize=a.authorize_protected_native)
     except (OSError,KeyError,TypeError,ValueError,subprocess.SubprocessError) as exc:
-        # Explicit fail-closed source/contract codes only; never raw native
-        # error strings (which could include protected input names/paths).
-        sanitized = str(exc)
-        code = sanitized if __import__("re").fullmatch(r"[A-Z0-9_]+",sanitized) else "REDACTED"
-        print("G8_NATIVE_GATE_HOLD",type(exc).__name__,code,flush=True)
+        # Only literal allowlisted phase labels, never arbitrary exception text.
+        phase_codes = {"G8_PREFLIGHT_" + p + "_HOLD" for p in PREFLIGHT_PHASES}
+        message = str(exc)
+        code = message if isinstance(exc, MatchedHold) and message in phase_codes else "G8_UNCLASSIFIED_HOLD"
+        print("G8_NATIVE_GATE_HOLD", code, flush=True)
+        if not a.output.exists() and not a.output.is_symlink():
+            receipt = {
+                "schema": "issue652.g8.old_new_matched_native_3ns.v1",
+                "source_sha": SOURCE_SHA,
+                "P3_3ns": "HOLD", "P3_100us": "NOT_RUN",
+                "P4": "NOT_RUN", "science": "SCIENCE_HOLD",
+                "blocker_code": code, "cases": {},
+                "private_input_artifact": False,
+                "private_log_artifact": False,
+                "raw_exodus_artifact": False,
+            }
+            a.output.parent.mkdir(parents=True, exist_ok=True)
+            a.output.write_text(json.dumps(receipt, sort_keys=True, indent=2)+"\n")
         return 2
     return 0 if result["P3_3ns"].startswith("PASS_PROVISIONAL") else 3
 
