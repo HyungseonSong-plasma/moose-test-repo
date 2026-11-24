@@ -2,9 +2,9 @@
 
 **Status:** immutable Python data records, snapshot reference validation, and
 bounded context unfolding implemented. Language parsers, native execution,
-semantic claim assessment, FDEG adapters, and code mutation are **not**
+semantic claim assessment and code mutation are **not**
 implemented. Applies across languages and file types in `moose-test-repo`;
-not a FDEG migration or retirement authorization.
+not a retirement authorization.
 
 ## Canonical graph
 
@@ -47,9 +47,9 @@ Distinguish evidence acquisition (`SOURCE_DECLARED`, `INFERRED`,
 A source-backed conditional functional claim is not a native verification
 result; a plan-review PASS is not a retirement or scientific PASS.
 
-This supports existing FDEG families without conflating them:
+These roles distinguish structural, functional and transition evidence without conflating them:
 
-| FDEG family | Graph role | Evidence/Claim role |
+| Evidence family | Graph role | Evidence/Claim role |
 | --- | --- | --- |
 | Structural | Code entities and declared dependencies | Source-pinned evidence; claims limited by observed scope |
 | Functional | Functional subjects, contracts, candidate relations | Conditional semantic/preservation claims, alternative comparisons, required discriminators |
@@ -57,7 +57,7 @@ This supports existing FDEG families without conflating them:
 
 Actual `steps`, `blocking_obligations`, and `candidate_rewiring_options`
 need a change/plan representation rather than silently becoming canonical
-code edges. FDEG report conversion and validation remain future work.
+code edges. Historical FDEG reports remain archival evidence, not an active adapter requirement.
 
 ## Dynamic context
 
@@ -131,7 +131,7 @@ a known relation, runtime activation, coverage, or safe deletion.
 `GraphSnapshot` validates subject, endpoint, evidence, and scope references;
 `unfold_context` implements bounded, path-local cycle-safe hierarchy display.
 No parser, claim evaluator, automatic graph-ID match, native observation,
-transition-plan execution, or FDEG report adapter is implemented.
+or transition-plan execution is implemented.
 
 
 ## Implemented Python interfaces and boundaries

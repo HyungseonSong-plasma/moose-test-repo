@@ -74,7 +74,7 @@ workflows, actual Runs/costs, and CI waste verdicts are **not implemented**.
 
 ### Validation and scope
 
-Code Diagnostics regression tests are under `physics_harness/code/tests/` and are run by **Harness Code CI** using `pytest`. External Run/Attempt observations are supported by the injected provider described below; artifact custody and native/semantic verification are separate obligations. Existing FDEG scanners remain separate. Do not promote observations across source revisions or infer automatic deletion.
+Code Diagnostics regression tests are under `physics_harness/code/tests/` and are run by **Harness Code CI** using `pytest`. External Run/Attempt observations are supported by the injected provider described below; artifact custody and native/semantic verification are separate obligations. Harness Code is the active general source-evidence owner. Historical analysis reports retain their original source revision. Do not promote observations across source revisions or infer automatic deletion.
 
 ### Python AST source facts (P1/P2)
 

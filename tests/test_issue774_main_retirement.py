@@ -32,19 +32,27 @@ def test_current_registered_owner_inventory_and_archived_evidence():
 def test_historical_archive_mutations_and_active_surface_fail_closed():
     module.self_test()
 
-def test_fdeg_post_cut_accepts_live_capture_rejects_retired_targets():
+def test_retirement_workflow_requires_independent_checks_and_receipt():
     import pytest
 
-    stem = "fdeg_retirement_evidence.py --mode capture --target "
-    good = ("python ci/guards/issue774_main_retirement.py\\n"
-            "python ci/guards/" + stem + "PhysicsFVLogMolarElectronReactionSource")
-    module.verify_post_cut_fdeg_capture(good)
-    for retired in module.FACTORIES:
-        with pytest.raises(
-                ValueError,
-                match="FDEG_POST_CUT_CI_STILL_CAPTURES_REMOVED_CPP"):
-            module.verify_post_cut_fdeg_capture(good + "\\npython " + stem + retired)
-    with pytest.raises(
-            ValueError,
-            match="FDEG_POST_CUT_CI_STILL_CAPTURES_REMOVED_CPP"):
-        module.verify_post_cut_fdeg_capture("python " + stem + "PhysicsFVLogMolarElectronReactionSource")
+    good = (module.ROOT / ".github/workflows/physics-code-ci.yml").read_text()
+    module.verify_retirement_workflow(good)
+    for before, after, error in (
+        ("--self-test --expected-head", "--expected-head",
+         "RETIRED_FACTORY_CHECKS_MISSING_OR_CHANGED"),
+        ("ci.guards.issue817_code3_production_migration", "ci.guards.not_the_migration",
+         "RETIRED_FACTORY_CHECKS_MISSING_OR_CHANGED"),
+        ('head="$(git rev-parse HEAD)"', 'head="stale"',
+         "RETIRED_FACTORY_CHECKS_MISSING_OR_CHANGED"),
+        ("name: Verify retired Factory archives and consumer invariants",
+         "name: Verify retired Factory archives and consumer invariants\n        if: false",
+         "RETIRED_FACTORY_CHECKS_MISSING_OR_CHANGED"),
+        ("name: Verify retired Factory archives and consumer invariants",
+         "name: Verify retired Factory archives and consumer invariants\n        continue-on-error: true",
+         "RETIRED_FACTORY_CHECKS_MISSING_OR_CHANGED"),
+        ("name: Upload retired Factory evidence", "name: Removed upload",
+         "RETIRED_FACTORY_RECEIPT_UPLOAD_MISSING_OR_CHANGED"),
+    ):
+        assert before in good
+        with pytest.raises(ValueError, match=error):
+            module.verify_retirement_workflow(good.replace(before, after, 1))
