@@ -75,12 +75,9 @@
     coeff = electron_energy_diffusion
   []
   [energy_drift]
-    type = PhysicsFVElectrostaticDrift
+    type = FVAdvection
     variable = mean_en
-    potential = phi_zero
-    mobility = electron_energy_mobility
-    carrier = carrier_one
-    charge_number = -1
+    velocity = '0 0 0'
     advected_interp_method = upwind
   []
 []
