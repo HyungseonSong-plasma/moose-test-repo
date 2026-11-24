@@ -50,6 +50,25 @@ class ActiveCode3MigrationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "COEFFICIENT_DRIFT"):
             gate.check_owner(normalized, TARGET, "signed_electron_source", 1/ref*1.01)
 
+    def test_no_particle_source_lanes_and_standard_force_reintroduction(self):
+        from physics_app.ci import check_stage5_ei18_runtime as ei18
+        from physics_app.ci import check_e8_elastic_ei19_runtime as ei19
+        from physics_app.ci import check_stage5_s5d_heavy_reactions as s5d
+        cases = {"EI18": ei18._runtime_input(), "EI19": ei19._ei19_input(),
+                 "S5D": s5d.input_text(600.0)}
+        self.assertEqual({r["case"] for r in gate.absent_particle_inputs()}, set(cases))
+        for case, text in cases.items():
+            self.assertEqual(gate.check_absent_particle_source(text, case)["electron_particle_source"], "NONE")
+            bad = text.replace("[FVKernels]", """[FVKernels]
+  [unexpected_particle_source]
+    type = FVCoupledForce
+    variable = n_e
+    v = signed_electron_source
+    coef = 1
+  []""", 1)
+            with self.assertRaisesRegex(ValueError, "FORBIDDEN_ELECTRON_PARTICLE_SOURCE|UNEXPECTED_ABSENCE_LANE_KERNEL"):
+                gate.check_absent_particle_source(bad, case)
+
     def test_live_generators_reject_old_factory_and_preserve_electron_ledger(self):
         result = gate.active_inputs()
         self.assertEqual({x["case"] for x in result},

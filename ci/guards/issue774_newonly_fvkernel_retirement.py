@@ -59,6 +59,16 @@ CODE3_ASSERTIONS = {
         'assert "type = PhysicsFVElectronReactionSource" not in RUNTIME_INPUT',
     "physics_app/ci/check_stage5_s5r_preflight.py":
         'if h05_row.get("electron_particle_projection") != "PhysicsFVElectronReactionSource":',
+    # Frozen EI16 ownership receipt, not a current input owner.
+    "physics_app/ci/check_e8_ei16_energy_contract.py":
+        'assert own["electron_particle_projector"] == "PhysicsFVElectronReactionSource"',
+    # Existing absence tests: never allow a whole source file as an exception.
+    "physics_app/ci/check_e8_elastic_ei19_runtime.py":
+        '"PhysicsFVElectronReactionSource",',
+    "physics_app/ci/check_stage5_ei18_runtime.py":
+        'if "PhysicsFVElectronReactionSource" in text:',
+    "physics_app/ci/check_stage5_s5d_heavy_reactions.py":
+        '"reaction_source_", "PhysicsFVElectronReactionSource",',
 }
 # These are frozen historical/research references, not supported New-only inputs.
 # Their tracked Git blobs must remain exact or this explicit exception fails closed.
@@ -315,6 +325,17 @@ def audit(root: Path, *, expected_head: str) -> dict:
         if row["active_surface"] is not None:
             entry["active_surface"] = row["active_surface"]
     reference = check_route_rows(list(by_path.values()))
+    # Keep the reviewed exception inventory visible; actual assembled inputs
+    # are checked independently by the Code3 migration guard.
+    assertion_counts = Counter()
+    for line in raw.decode("utf-8").splitlines():
+        _, path, _, source_line = line.split(":", 3)
+        if CODE3_ASSERTIONS.get(path) == source_line.strip():
+            assertion_counts[path] += 1
+    require(set(assertion_counts) == set(CODE3_ASSERTIONS)
+            and all(count == 1 for count in assertion_counts.values()),
+            "CODE3_ASSERTION_INVENTORY_DRIFT")
+    reference["code3_reviewed_assertions"] = dict(sorted(assertion_counts.items()))
     historical = check_historical_sources(tracked)
     code1_archive = check_code1_archive(root, tracked)
     s5r_lineage = check_s5r_lineage(tracked)
