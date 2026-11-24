@@ -10,6 +10,7 @@ ENTRYPOINTS = {
     # Opt-in source scan: registered only for human workflow_dispatch.
     "harness-code-scan.yml": {"push", "workflow_dispatch"},
     "physics-code-ci.yml": {"push", "pull_request"},
+    "physics-legacy-audit.yml": {"workflow_dispatch"},
     "physics-native-ci.yml": {"pull_request"},
     "repository-diagnostics.yml": {"workflow_dispatch"},
     "experiment.yml": {"workflow_dispatch"},
