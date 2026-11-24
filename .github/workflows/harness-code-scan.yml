@@ -235,7 +235,7 @@ jobs:
 
           try:
               collectors = tokens("SCAN_COLLECTORS", required=True)
-              valid_collectors = {"python_ast", "workflow", "cpp", "moose_input"}
+              valid_collectors = {"python_ast", "workflow", "cpp", "moose_input", "json"}
               if not set(collectors) <= valid_collectors:
                   raise ValueError("unknown or unsupported collector")
               request = ScanRequest(

@@ -17,6 +17,7 @@ decision engine**. Issue [#721](https://github.com/HyungseonSong-plasma/moose-te
 | `providers/python_ast.py` | Python syntax-only declaration, import, call-site and name/attribute reference candidates |
 | `providers/cpp.py` | C++ class/include/Factory macro source-declaration candidates |
 | `providers/moose_input.py` | MOOSE HIT `.i` blocks, type reference and unresolved include syntax |
+| `providers/json_source.py` | Strict JSON string-value file-path candidates with JSON Pointer and exact source witnesses |
 | `providers/github_actions.py` | Read-only external Run/Attempt/Job/Step observation with exact source SHA and pagination controls |
 
 
@@ -189,3 +190,9 @@ literal type is known. Nonliteral `type = {variable}` values generate
 an unresolved placeholder, rather than a fabricated `moose_type`.
 Docstrings do not count as generators. No runtime evidence, binding
 resolution or `SAFE_DELETE` verdict is created.
+
+### JSON source facts (opt-in, #867)
+
+Request `collectors=("json",)` with `includes=("*.json",)` (or combine with existing collectors). `JsonSourceCollector` validates strict UTF-8 JSON and emits `REFERENCES_FILE_CANDIDATE` edges from the source file to a `file_path_specifier` node for portable path-shaped whole-string values. Evidence preserves the RFC 6901 JSON Pointer, decoded literal, 1-based physical line, 0-based Unicode character column of the opening quote, Git revision/blob and parser version. Multiple occurrences remain separate edges; specifier IDs are stable across revisions and source documents. No key-name policy, numeric-array graph expansion, or new dependency is introduced.
+
+The v0.1 lexical predicate covers ASCII relative path-shaped strings with a letter-starting suffix (including bare filenames and `./`/`../` segments). It does **not** resolve the path against Git inventory or a working directory; basename, URI, prose, key-name, extensionless, other string and runtime interpretation remain outside the reference claim. Obvious nonportable/glob/template paths with suffixes are unresolved, not resolved target nodes. Depth (128) and reference count (10,000 per file) limits return PARTIAL without partial document facts. Duplicate keys, invalid encoding/syntax and nonstandard constants fail closed. COMPLETE only means the declared syntax/lexical observation contract succeeded, not file-reference closure. The `json` collector is accepted by the existing on-demand Harness scan route; default collectors, trigger events, Physics CI and Graph model are unchanged.
