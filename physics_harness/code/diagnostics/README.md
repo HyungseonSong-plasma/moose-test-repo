@@ -220,3 +220,35 @@ archives, authenticate Actions metadata, resolve dynamic includes, link
 individual Python call sites, establish native object instantiation, or
 prove complete consumer coverage. These remain P1b/P2–P5 obligations.
 No workflow, CLI, default scan or production behavior is changed.
+
+
+### Actions acquisition of generated inputs (#882, P1b acquisition)
+
+`verification/generated_input_actions.py` exposes
+`acquire_generated_input(request, provider, expected=..., workflow_path=...,
+job_id=..., artifact_name=..., manifest_path=..., expected_archive_sha256=...,
+required_step_names=..., source=...)`. It reuses the existing read-only
+`GitHubActionsRestReader` and the shared bounded in-memory ZIP member reader
+in `verification/naming_actions.py`. No new network client or HIT parser.
+
+The caller independently selects the source/producer/invocation/member
+identity, workflow and successful job/steps, exact artifact ID/name and
+archive SHA256. The API run, job, artifact owner, official digest and actual
+ZIP bytes must match. Only first-attempt completed successful runs are
+supported: reruns need an independent artifact-attempt binding. Metadata
+is re-read after acquisition. Archive members are selected by exact path;
+unsafe, duplicate, oversized or special entries fail closed.
+
+The pre-upload JSON manifest contains exactly `schema_version: 1`,
+`identity` (all GeneratedInputIdentity fields except artifact_id),
+`job_id`, and `workflow_path`. Artifact ID is assigned by GitHub only
+after upload. The manifest and HIT bytes are verified against the separately
+selected identity. The returned GeneratedActionsReceipt retains archive
+and manifest hashes, provenance source and P1a CollectionResult. An
+injected reader is explicitly non-authenticating. A real REST association
+is still not producer/job attestation: the manifest is an assertion,
+not proof of execution. Producer causality remains UNVERIFIED and
+no Native observation or global closure is promoted. Live artifact
+production/capture, trusted invocation binding and later attempts remain
+separate obligations. No workflow, CLI or production physics behavior
+is changed.
