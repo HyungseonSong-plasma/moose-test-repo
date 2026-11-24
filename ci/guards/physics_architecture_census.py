@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import argparse
 import ast
+import sys
 import json
 import re
 from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+from physics_harness.code.diagnostics.providers.python_ast import static_import_candidates
 HARNESS = ROOT / "physics_harness"
 OWNERSHIP_PATH = ROOT / "docs" / "development" / "2026-09-01_issue73_recipe_ownership.json"
 
@@ -143,35 +147,13 @@ def classify(path: Path, recipe_map: dict[str, dict]) -> str:
     return "UNCLASSIFIED"
 
 
-def _relative_import_base(path: Path, level: int, module: str | None) -> str:
-    package = path.relative_to(ROOT).with_suffix("").parts[:-1]
-    keep = max(0, len(package) - level + 1)
-    base = ".".join(package[:keep])
-    return ".".join(part for part in (base, module or "") if part)
-
-
 def import_references(path: Path) -> tuple[str, ...]:
     """Return static and literal dynamic import references used by ``path``."""
     tree = ast.parse(path.read_text(), filename=str(path))
     references: set[str] = set()
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            references.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
-            base = (
-                _relative_import_base(path, node.level, node.module)
-                if node.level
-                else (node.module or "")
-            )
-            if base:
-                references.add(base)
-            for alias in node.names:
-                if alias.name == "*":
-                    continue
-                candidate = ".".join(part for part in (base, alias.name) if part)
-                if candidate:
-                    references.add(candidate)
-        elif isinstance(node, ast.Call) and node.args:
+        references.update(static_import_candidates(node, path, ROOT))
+        if isinstance(node, ast.Call) and node.args:
             first = node.args[0]
             if not isinstance(first, ast.Constant) or not isinstance(first.value, str):
                 continue

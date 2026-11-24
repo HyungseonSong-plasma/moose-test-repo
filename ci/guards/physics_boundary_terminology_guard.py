@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+from physics_harness.code.diagnostics.providers.python_ast import static_import_candidates
 HARNESS = ROOT / "physics_harness"
 
 RETIRED_OWNER_PATHS = (
@@ -47,26 +51,11 @@ def _rel(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
 
 
-def _relative_import_base(path: Path, level: int, module: str | None) -> str:
-    package = path.relative_to(ROOT).with_suffix("").parts[:-1]
-    keep = max(0, len(package) - level + 1)
-    base = ".".join(package[:keep])
-    return ".".join(part for part in (base, module or "") if part)
-
-
 def _imports(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     refs: set[str] = set()
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            refs.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
-            base = _relative_import_base(path, node.level, node.module) if node.level else (node.module or "")
-            if base:
-                refs.add(base)
-            for alias in node.names:
-                if alias.name != "*":
-                    refs.add(".".join(part for part in (base, alias.name) if part))
+        refs.update(static_import_candidates(node, path, ROOT))
     return refs
 
 

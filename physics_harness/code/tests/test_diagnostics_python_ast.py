@@ -292,3 +292,42 @@ def test_static_generator_source_evidence_is_revision_bound(git_factory):
     second_node = next(n for n in second.graph.nodes if n.kind == "moose_type")
     assert first_node.id == second_node.id
     assert set(first_node.evidence_ids) != set(second_node.evidence_ids)
+
+
+
+def test_shared_static_import_candidates_preserve_guard_contract(tmp_path):
+    import ast
+    from physics_harness.code.diagnostics.providers.python_ast import static_import_candidates
+
+    path = tmp_path / "pkg" / "sub" / "module.py"
+    tree = ast.parse("""\
+import os as operating, json
+from math import sin as sine
+from . import sibling
+from ..core import thing as alias
+from ..base import *
+from ....far import name
+def nested():
+    import pkg.inner
+__import__("literal_dynamic")
+importlib.import_module("other_dynamic")
+""")
+    refs = {ref for node in ast.walk(tree)
+            for ref in static_import_candidates(node, path, tmp_path)}
+    assert refs == {
+        "os", "json", "math", "math.sin", "pkg.sub", "pkg.sub.sibling",
+        "pkg.core", "pkg.core.thing", "pkg.base", "far", "far.name",
+        "pkg.inner",
+    }
+
+
+def test_shared_static_import_candidates_absolute_without_relative_path(tmp_path):
+    import ast
+    from physics_harness.code.diagnostics.providers.python_ast import static_import_candidates
+
+    outside = tmp_path.parent / "outside.py"
+    node = ast.parse("import os").body[0]
+    assert static_import_candidates(node, outside, tmp_path) == {"os"}
+    relative = ast.parse("from . import member").body[0]
+    with pytest.raises(ValueError):
+        static_import_candidates(relative, outside, tmp_path)
