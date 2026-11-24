@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "physical-eV-r1-r2-transition-pr852-20261124",
-  "source_sha": "45d61586f30269052dbb396f5f31cc5fcb5ebc0f",
+  "request_id": "real-qvt-inventory-smoke-retirement-baseline-20261124",
+  "source_sha": "86fcbcb44752940d36b89618d40ff2f62eaff9a0",
   "includes": [
     "*.i",
     "*.py",
