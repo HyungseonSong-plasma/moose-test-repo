@@ -107,19 +107,15 @@ def main():
     print("FOUR_LIVE_Y_MATERIALS_FV_IC_AND_INLET_NATIVE_P2_PASS")
 
     # Workflow 3: H01-H05 source-bound Native syntax, EI direct Materials and
-    # all twenty species initial/inlet mutation cases. Use the existing
-    # representation-only H05 bridge, never change historical input bytes.
-    from physics_app.ci.check_issue402_json_rate_native_p2 import (
-        migrate_h05_physical_energy_to_log_molar_scratch,
-    )
+    # all twenty species initial/inlet mutation cases. H05 now emits
+    # canonical Material bindings at its source; no scratch conversion.
     from physics_app.ci.check_stage5_s5d_heavy_reactions import input_text
     from physics_app.ci.check_stage5_h05_runtime import runtime_input
     with TemporaryDirectory(prefix="issue541-core4-") as temp:
         root = Path(temp)
         for label, inp in (
             ("H01_H04", input_text(600.0)),
-            ("H05", migrate_h05_physical_energy_to_log_molar_scratch(
-                runtime_input())),
+            ("H05", runtime_input()),
         ):
             (root / f"{label}.i").write_text(inp)
             output = run([str(exe), "--check-input", "-i", f"{label}.i"], cwd=root)

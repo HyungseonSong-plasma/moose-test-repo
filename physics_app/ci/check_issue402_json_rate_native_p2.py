@@ -39,22 +39,9 @@ def run_check(executable: Path, source: Path, working_dir: Path) -> None:
         )
 
 
-def migrate_h05_physical_energy_to_log_molar_scratch(source: str) -> str:
-    """Exact representation bridge for the retired H05 P2-only fixture.
-
-    Retain physical FV n_e/mean_en and every H05 rate/source. The current
-    ElectronEnergyMaterial consumes their logarithms in molar units, giving
-    exp(log(mean_en/N_A)-log(n_e/N_A)) == mean_en/n_e [eV].
-    """
-    archived = """  [mean_energy]
-    type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
-  []"""
-    if source.count(archived) != 1 or source.count("physical_eV") != 1:
-        raise AssertionError("H05_RETIRED_STATE_SOURCE_IDENTITY_CHANGED")
-    projections = """  [h05_log_molar_density]
+def require_h05_canonical_energy(source: str) -> str:
+    """Validate the canonical H05 Material inputs without rewriting the deck."""
+    expected = """  [h05_log_molar_density]
     type = ADParsedFunctorMaterial
     property_name = h05_log_molar_density
     functor_names = 'n_e'
@@ -68,25 +55,25 @@ def migrate_h05_physical_energy_to_log_molar_scratch(source: str) -> str:
     functor_symbols = 'energy'
     expression = 'log(energy/6.02214076e23)'
   []
-"""
-    canonical = """  [mean_energy]
+  [mean_energy]
     type = ElectronEnergyMaterial
     electron_energy_density = h05_log_molar_energy
     electron_density = h05_log_molar_density
     state_form = log_molar_eV
   []"""
-    result = source.replace(archived, projections + canonical)
-    if "physical_eV" in result:
-        raise AssertionError("H05_UNMIGRATED_REPRESENTATION")
-    return result
+    if (source.count(expected) != 1
+            or source.count("state_form = log_molar_eV") != 1
+            or "physical_eV" in source):
+        raise AssertionError("H05_CANONICAL_ENERGY_CONTRACT_CHANGED")
+    return source
 
 
 def self_test() -> None:
     import math
     from physics_app.ci.check_stage5_h05_runtime import runtime_input
     original = runtime_input()
-    canonical = migrate_h05_physical_energy_to_log_molar_scratch(original)
-    assert "state_form = physical_eV" in original
+    canonical = require_h05_canonical_energy(original)
+    assert canonical == original
     assert "state_form = log_molar_eV" in canonical
     assert "type = FVCoupledForce" in canonical
     assert "v = S_e_h05" in canonical
@@ -98,8 +85,8 @@ def self_test() -> None:
         )
         assert math.isclose(actual, energy_density / number_density, rel_tol=1e-13)
     try:
-        migrate_h05_physical_energy_to_log_molar_scratch(
-            original.replace("state_form = physical_eV", "state_form = nonsensical")
+        require_h05_canonical_energy(
+            original.replace("state_form = log_molar_eV", "state_form = physical_eV")
         )
     except AssertionError:
         pass
@@ -162,14 +149,14 @@ def main() -> None:
         root = Path(tmp)
         for label, source in (
             ("H01_H04", input_text(600.0)),
-            ("H05", migrate_h05_physical_energy_to_log_molar_scratch(runtime_input())),
+            ("H05", require_h05_canonical_energy(runtime_input())),
         ):
             candidate = root / (label + ".i")
             candidate.write_text(source)
             run_check(args.executable, candidate, root)
             print(label + "_JSON_NATIVE_P2_PASS")
             if label == "H05":
-                print("H05_REPRESENTATION_ONLY_SCRATCH_BRIDGE_P2_PASS")
+                print("H05_CANONICAL_ENERGY_P2_PASS")
     run_check(args.executable, CI / "json_surface_rate_p2.i", CI)
     print("JSON_SURFACE_RATE_NATIVE_P2_PASS")
     print("ISSUE402_JSON_RATE_SHARED_NATIVE_P2_PASS_P3_NOT_RUN")
