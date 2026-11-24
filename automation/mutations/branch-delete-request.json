@@ -1,34 +1,39 @@
 {
   "targets": [
     {
-      "branch": "cleanup-774-retirement-refs-20261124-batch9",
-      "expected_sha": "7c458639b2635df22942fa7ebc535c6e84282c7f",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch9-7c458639b263"
+      "branch": "cleanup-774-retirement-refs-20261124-batch10",
+      "expected_sha": "7f1c632ad218c3dd9b50dc4aeb64c164794d63a2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch10-7f1c632ad218"
     },
     {
-      "branch": "issue-541-group-a-evidence-20261116",
-      "expected_sha": "3ffded32a0bd9d256c6a7f91a2fc624e04b6211a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-group-a-evidence-20261116-3ffded32a0bd"
+      "branch": "code4-retirement-pr-a-evidence-20261119",
+      "expected_sha": "642bb1a353cf1d4705ef8281e1df9f522c0b7649",
+      "archive_tag": "archive/oxygen-cleanup-20261106/code4-retirement-pr-a-evidence-20261119-642bb1a353cf"
     },
     {
-      "branch": "issue-541-parity-false-fail-20261116",
-      "expected_sha": "2447a4178cf6907b0d23671536c6ef01b857966a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-parity-false-fail-20261116-2447a4178cf6"
+      "branch": "code6/retirement-evidence-baseline-20261119",
+      "expected_sha": "181d4770386f0009e6c677c819c245b7fe8fe351",
+      "archive_tag": "archive/oxygen-cleanup-20261106/code6-retirement-evidence-baseline-20261119-181d4770386f"
     },
     {
-      "branch": "issue-541-samuel-pr-create-adoption-20261116",
-      "expected_sha": "bf1f8effadf722dc12208b332222fb178ce74d4e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-samuel-pr-create-adoption-20261116-bf1f8effadf7"
+      "branch": "issue-671-d8-caller-single-owner-native-20261118",
+      "expected_sha": "e68dc832e018aaa7e089d5a005d141d20974aed1",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-caller-single-owner-native-20261118-e68dc832e018"
     },
     {
-      "branch": "issue-633-fv-kernel-integration-20261117",
-      "expected_sha": "901e1c26a2ceed8898539241d278336ab0e68a18",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-fv-kernel-integration-20261117-901e1c26a2ce"
+      "branch": "issue-671-d8-full-s6-rf-actual-state-20261118",
+      "expected_sha": "24b4c40f39579927de2b3ceff4043a5565d682e2",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-d8-full-s6-rf-actual-state-20261118-24b4c40f3957"
     },
     {
-      "branch": "issue-743-guard-dependency-consolidation",
-      "expected_sha": "19c4f533dfc85d7b33ed6f892f44790ed7b38ae9",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-743-guard-dependency-consolidation-19c4f533dfc8"
+      "branch": "issue-671-p5-warehouse-inventory-receipt-20261118",
+      "expected_sha": "9e9b4f5ddb99bcbbf8c31746d7331587c9885a3f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-p5-warehouse-inventory-receipt-20261118-9e9b4f5ddb99"
+    },
+    {
+      "branch": "issue-671-rf-transfer-real-child-one-step-20261118",
+      "expected_sha": "240e055d7b60632beb4404a784d3e41bfa3aafd3",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-671-rf-transfer-real-child-one-step-20261118-240e055d7b60"
     }
   ]
 }
