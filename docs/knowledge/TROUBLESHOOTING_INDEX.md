@@ -1,12 +1,12 @@
 # Troubleshooting Index
 
-This index maps recurring symptoms to incident records and minimal regression cases.
+This index maps recurring symptoms to incident records and minimal regression cases. Status labels below describe the cited historical investigation, not the current runtime or an active work queue. Consult the owning issue and current source before reproducing a case.
 
 | Symptom / keyword | First reference | Status |
 |---|---|---|
 | `DIVERGED_LINE_SEARCH` on repeated transient solve of algebraic FV potential | `docs/incidents/m5_ion_drift_failure_history.md` | residual-floor mechanism CLOSED for pure `phi` case |
 | Solved-potential ion drift differs from prescribed-field reference | `docs/incidents/m5_ion_drift_failure_history.md` | investigation in progress |
-| Wall migration postprocessor is nonzero but transient inventory does not include the same loss | `tests/m5_plasma_charge/ion_wall_migration_state/` | isolated diagnostic cases |
+| Wall migration postprocessor is nonzero but transient inventory does not include the same loss | [`m5_wall_migration_evidence_log.md`](../incidents/m5_wall_migration_evidence_log.md) | historical diagnostic evidence; old test directory retired |
 | Global nonlinear solve reports convergence after one field-dominated correction while a coupled species invariant is still wrong | `docs/incidents/m5_phi_ic_sweep_decision_matrix.md` | root cause confirmed; subsystem convergence evidence required |
 | EOS identity appears to fail when `rho_avg` is approximated by `(rho_min + rho_max)/2` | `docs/incidents/step2_eos_validation_aggregation_error.md` | CLOSED; use matching spatial-average operators |
 | Source classifier reports ambiguous because one exact C++ declaration spelling is absent | `docs/incidents/r3_source_contract_classifier_false_ambiguous.md` | CLOSED; classify semantic capability, not formatting token sequence |
@@ -147,7 +147,7 @@ Syntax error in parameter 'Vars' given to FunctionParser::Parse()
 is:
 
 ```text
-python3 scripts/qpx.py preflight <input.i>
+python3 bin/physics.py preflight <input.i>
 ```
 
 Do not change physics or solver settings before this namespace check.

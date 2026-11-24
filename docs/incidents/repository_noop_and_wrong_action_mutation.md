@@ -1,7 +1,7 @@
 # Incident: Repository no-op and wrong-action mutations
 
 **Incident ID:** `INC-REPO-MUTATION-001`  
-**Status:** OPEN / ACTIVE PROCESS INCIDENT — session circuit breaker required  
+**Status:** HISTORICAL — Issue #25 CLOSED / PROCESS FIXED; original incident chronology and prevention evidence  
 **Associated work:** Issue #25 `Repository mutation safety + stale-state synchronization protocol`  
 **Failure class:** assistant-side repository/governance mutation; no QPX physics impact
 
@@ -264,6 +264,10 @@ no invented placeholder target can substitute for a server-assigned create targe
 file-delete intent can invoke only delete_file with the freshly fetched path/blob SHA; branch/ref mutation is forbidden
 a wrong-action mutation trips the session circuit breaker before any further intended/business mutation
 ```
+
+## Current routing
+
+For live mutations, use the pinned Samuel binding, `PROTOCOL_INDEX.md`, and the local `docs/protocols/repository_mutation.md` overlay. The historical rule IDs and circuit-breaker chronology above describe the original incident; the current routed owners control execution.
 
 ## History policy
 

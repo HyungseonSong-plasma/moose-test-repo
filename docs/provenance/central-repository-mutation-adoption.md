@@ -2,6 +2,8 @@
 
 Issue: #270
 
+**Status:** historical qualification record, not the active operating-system or mutation pin. The current authoritative binding is [docs/operating_system/README.md](../operating_system/README.md). Preserve the exact historical revision below.
+
 Qualified central source:
 
 `HyungseonSong-plasma/chatgpt-operation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca`
