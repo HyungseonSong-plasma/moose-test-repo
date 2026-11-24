@@ -192,3 +192,31 @@ The v0.1 lexical predicate covers ASCII relative path-shaped strings with a lett
 ### Python and HIT file reference candidates (#867 B02/B03)
 
 JSON, Python AST and HIT share a lexical classifier and a file-root reference fact emitter. Python whole-string values outside docstrings produce file candidates, with AST source span (UTF-8 byte columns) and context. Simple path operands/constructor arguments remain lexical candidates; nested composition fragments, observed path compositions, dynamic Path arguments and recognizable formatted/glob expressions are unresolved. No Python calls or path expressions are evaluated. HIT records single-token `!include`, `file`, `table_file` values with exact raw value, line and block path. Unsupported/multivalue/dynamic values are unresolved; existing include expansion remains unresolved and existing Factory and parameter facts remain. No default scope expansion, path-base inference or claim of exhaustive file references. The resolver requires explicitly supplied bases, not a guessed ROOT or working directory. Existing logical Node/Edge IDs remain; Python/HIT Evidence versions advance to v0.3. JSON existing fact identity is retained.
+
+
+### Generated HIT artifact evidence (#882, P1a)
+
+`providers/generated_input.py` exposes `GeneratedInputIdentity` and
+`collect_generated_input(request, provider, expected=..., receipt=..., content=...)`.
+The caller supplies a separately selected expected repository, source SHA,
+producer path/blob, run/attempt/artifact IDs, member path, member SHA256 and
+invocation SHA256. Actual member bytes are digest-checked; the producer
+blob is read from the exact local Git commit. Receipt mismatch fails closed.
+
+The existing HIT collector parses the bytes. Only the canonical type and
+path-specifier identities are shared with source facts. Generated artifact
+and block occurrences remain separate; generated relations are explicitly
+prefixed (`GENERATED_DECLARES_TYPE_USE`, etc.). The producer-to-artifact
+edge is a candidate, **not causal execution proof**. No generated file
+is represented as a tracked Git receipt. Assemble the returned FactBatch
+alongside the original source FactBatch and EvidenceReceipt using
+`GraphAssembler`; the existing consistency verifier checks the distinct
+artifact provenance and source receipt binding. The result is intentionally
+PARTIAL/UNVERIFIED until authenticated acquisition and producer execution
+binding are implemented. Invocation values are not stored or executed.
+
+P1a checks supplied byte identity and bounded syntax; it does not download
+archives, authenticate Actions metadata, resolve dynamic includes, link
+individual Python call sites, establish native object instantiation, or
+prove complete consumer coverage. These remain P1b/P2–P5 obligations.
+No workflow, CLI, default scan or production behavior is changed.

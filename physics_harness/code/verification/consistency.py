@@ -85,8 +85,44 @@ def verify_generated_artifact(
     if not included:
         unknown.add("EMPTY_SOURCE_SCOPE")
 
+    evidence_by_id = {item.id: item for item in graph.evidence}
     for evidence in graph.evidence:
         attrs = evidence.attributes
+        if evidence.kind == "GENERATED_INPUT":
+            # Artifact declarations are not tracked Git source and do not
+            # attest a successful generator run or Native instantiation.
+            from ..diagnostics.providers.generated_input import GeneratedInputIdentity
+            try:
+                identity = GeneratedInputIdentity(**dict(attrs["generated_input"]))
+                line = attrs["line"]
+                anchor_id = attrs["anchor_evidence_id"]
+                anchor = evidence_by_id[anchor_id]
+                anchor_attrs = anchor.attributes
+                producer = paths[identity.producer_path]
+                if (identity.repository != scope.repository or
+                        identity.source_sha != scope.revision or
+                        producer.blob_sha != identity.producer_blob_sha or
+                        producer.status == "EXCLUDED" or
+                        not producer.collectors or
+                        evidence.source_ref != identity.reference(line) or
+                        anchor.kind != "GENERATED_INPUT" or
+                        anchor_attrs.get("generated_input") != attrs["generated_input"] or
+                        anchor_attrs.get("line") != 0 or
+                        anchor_attrs.get("anchor_evidence_id") != anchor_id or
+                        anchor.source_ref != identity.reference(0) or
+                        anchor.observation_status != "INFERRED" or
+                        attrs.get("causal_binding") != "UNVERIFIED" or
+                        evidence.observation_status not in
+                        {"INFERRED", "SOURCE_DECLARED", "UNRESOLVED"} or
+                        (line == 0 and evidence.id != anchor_id) or
+                        (line > 0 and evidence.observation_status == "INFERRED")):
+                    raise ValueError("GENERATED_PROVENANCE_MISMATCH")
+            except (KeyError, TypeError, ValueError, AttributeError):
+                failures.add("GENERATED_INPUT_PROVENANCE_INVALID:" + evidence.id)
+            unknown.add("GENERATED_PRODUCER_CAUSAL_BINDING_UNVERIFIED")
+            if evidence.observation_status == "UNRESOLVED":
+                unknown.add("UNRESOLVED_GENERATED_INPUT_EVIDENCE")
+            continue
         if evidence.observation_status == "RUNTIME_OBSERVED":
             if attrs.get("source_sha") != scope.revision:
                 failures.add("CROSS_HEAD_RUNTIME_EVIDENCE:" + evidence.id)
@@ -144,6 +180,7 @@ def verify_generated_artifact(
         "UNSCANNED_REQUESTED_FILES" in unknown or
         "UNRESOLVED_SOURCE_EVIDENCE" in unknown or
         "RUNTIME_EXECUTION_NOT_INDEPENDENTLY_VERIFIED" in unknown or
+        "GENERATED_PRODUCER_CAUSAL_BINDING_UNVERIFIED" in unknown or
         "EMPTY_SOURCE_SCOPE" in unknown else "VERIFIED"
     )
     return VerificationReceipt(
