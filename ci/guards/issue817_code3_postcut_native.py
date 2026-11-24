@@ -10,9 +10,6 @@ import tempfile
 from ci.guards import issue817_code3_production_migration as gate
 from physics_app.ci import check_stage5_h05_runtime as h05
 from physics_app.ci import check_r2_o2_ionization_implementation as r2
-from physics_app.ci.check_issue402_json_rate_native_p2 import (
-    migrate_h05_physical_energy_to_log_molar_scratch,
-)
 ROOT = Path(__file__).resolve().parents[2]
 HEAD = os.environ["SOURCE_HEAD"]
 OCI = os.environ["OCI"]
@@ -35,37 +32,6 @@ def run_native(work, check):
     return {"rc": p.returncode, "syntax_ok": ("Syntax OK" in log) if check else None,
             "log_sha256": digest(log.encode()),
             "error_tail": log[-900:] if p.returncode else None}
-
-def r2_representation(source):
-    old = """  [mean_energy_bridge]
-    type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
-  []"""
-    new = """  [r2_log_molar_density]
-    type = ADParsedFunctorMaterial
-    property_name = r2_log_molar_density
-    functor_names = 'n_e'
-    functor_symbols = 'ne'
-    expression = 'log(ne/6.02214076e23)'
-  []
-  [r2_log_molar_energy]
-    type = ADParsedFunctorMaterial
-    property_name = r2_log_molar_energy
-    functor_names = 'mean_en'
-    functor_symbols = 'energy'
-    expression = 'log(energy/6.02214076e23)'
-  []
-  [mean_energy_bridge]
-    type = ElectronEnergyMaterial
-    electron_energy_density = r2_log_molar_energy
-    electron_density = r2_log_molar_density
-    state_form = log_molar_eV
-  []"""
-    if source.count(old) != 1:
-        raise ValueError("R2_ENERGY_BRIDGE_DRIFT")
-    return source.replace(old,new)
 
 def micro(sign, flipped=False):
     coef = (-1 if flipped else 1) / NREF
@@ -191,13 +157,13 @@ def execute():
         if binary.read_bytes()[:4]!=b"\x7fELF":
             raise ValueError("NO_COMPILED_POSTCUT_ELF")
         receipt["elf_sha256"]=digest(binary.read_bytes())
-        h=migrate_h05_physical_energy_to_log_molar_scratch(h05.runtime_input())
+        h=h05.runtime_input()
         olddb=str(h05.DATABASE.resolve())
         if h.count(olddb)!=1:
             raise ValueError("H05_DB_DRIFT")
         h=h.replace(olddb,"/workspace/physics_app/data/heavy_reactions/stage5_s5e_h05_oxygen_heavy.json")
         cases=[("EI01",(ROOT/"physics_app/ci/ei01_attachment_runtime_smoke.i").read_text(),False),
-               ("H05",h,False),("R2",r2_representation(r2.RUNTIME_INPUT),True)]
+               ("H05",h,False),("R2",r2.RUNTIME_INPUT,True)]
         for sign,label in ((1,"positive"),(-1,"negative")):
             cases.extend([("norm_"+label,micro(sign),False),
                           ("norm_"+label+"_flipped",micro(sign,True),False)])

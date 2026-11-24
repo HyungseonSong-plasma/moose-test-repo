@@ -18,25 +18,9 @@ from physics_app.ci import check_e8_ei10_energy_runtime as e10
 from physics_app.ci import check_e8_ei16_energy_runtime as e16
 
 
-def _canonical_p2_energy_bridge(source: str) -> str:
-    """P2-only representation bridge: preserve physical n_e/mean_en and rates.
-
-    The retired source uses physical electron density [1/m3] and physical
-    electron energy density [eV/m3]. Only the ElectronEnergyMaterial
-    *consumption* changes: exp(log(mean_en/N_A)-log(n_e/N_A))=mean_en/n_e.
-    No source-law/progress/charge coefficients or original inputs change.
-    """
-    archived = """  [mean_energy_bridge]
-    type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
-  []"""
-    if (source.count(archived) != 1
-            or source.count("state_form = physical_eV") != 1
-            or "[n_e]" not in source or "[mean_en]" not in source):
-        raise AssertionError("RETIRED_REACTION_P2_ENERGY_SOURCE_IDENTITY_CHANGED")
-    replacement = """  [flow_log_molar_electron_density]
+def _require_canonical_energy(source: str) -> str:
+    """Reject invalid state bindings; do not mutate the generated fixture."""
+    expected = """  [flow_log_molar_electron_density]
     type = ADParsedFunctorMaterial
     property_name = flow_log_molar_electron_density
     functor_names = 'n_e'
@@ -56,30 +40,32 @@ def _canonical_p2_energy_bridge(source: str) -> str:
     electron_density = flow_log_molar_electron_density
     state_form = log_molar_eV
   []"""
-    result = source.replace(archived, replacement)
-    if result.count("state_form = log_molar_eV") != 1 or "physical_eV" in result:
-        raise AssertionError("RETIRED_REACTION_P2_REPRESENTATION_NOT_MIGRATED")
-    if result.replace(replacement, archived, 1) != source:
-        raise AssertionError("UNRELATED_REACTION_RATE_SOURCE_MODIFIED")
-    return result
+    if (source.count(expected) != 1
+            or source.count("state_form = log_molar_eV") != 1
+            or "physical_eV" in source
+            or "[n_e]" not in source or "[mean_en]" not in source):
+        raise AssertionError("REACTION_P2_CANONICAL_ENERGY_CONTRACT_CHANGED")
+    return source
 
 
 def _bridge_self_test() -> None:
     with tempfile.TemporaryDirectory(prefix="flow-reaction-p2-selftest-") as temp:
-        originals = _fixtures(Path(temp), migrate=False)
+        originals = _fixtures(Path(temp))
         assert len(originals) == 4
         for name, path in originals:
             raw = path.read_text()
-            assert "state_form = physical_eV" in raw, name
-            converted = _canonical_p2_energy_bridge(raw)
+            converted = _require_canonical_energy(raw)
+            assert converted == raw, name
             assert "state_form = log_molar_eV" in converted, name
             assert "state_form = physical_eV" not in converted, name
             for broken in (
-                raw.replace("state_form = physical_eV", "state_form = nonsensical"),
-                raw.replace("electron_density = n_e", "electron_density = missing"),
+                raw.replace("state_form = log_molar_eV", "state_form = physical_eV"),
+                raw.replace("electron_density = flow_log_molar_electron_density",
+                            "electron_density = missing"),
+                raw.replace("log(ne/6.02214076e23)", "ne"),
             ):
                 try:
-                    _canonical_p2_energy_bridge(broken)
+                    _require_canonical_energy(broken)
                 except AssertionError:
                     pass
                 else:
@@ -93,33 +79,32 @@ def _bridge_self_test() -> None:
     print("ISSUE402_REACTION_REDUCTION_P2_BRIDGE_MUTATION_SELF_TEST=PASS")
 
 
-def _fixtures(root: Path, *, migrate: bool = True) -> list[tuple[str, Path]]:
+def _fixtures(root: Path) -> list[tuple[str, Path]]:
     """Materialize only pre-existing approved CI inputs, in isolated directories."""
     cases = []
     r2_dir = root / "r2_ionization"
     r2_dir.mkdir()
     r2._prepare_runtime_fixture(r2_dir)
     r2_input = r2_dir / "r2_o2_ionization_runtime.i"
-    if migrate:
-        r2_input.write_text(_canonical_p2_energy_bridge(r2_input.read_text()))
+    _require_canonical_energy(r2_input.read_text())
     cases.append(("R2_EI16", r2_input))
 
     r3_dir = root / "r3_excitation"
     r3_dir.mkdir()
     r3_input = r3_dir / "r3_o2s_excitation_runtime.i"
-    r3_input.write_text(_canonical_p2_energy_bridge(r3.RUNTIME_INPUT) if migrate else r3.RUNTIME_INPUT)
+    r3_input.write_text(_require_canonical_energy(r3.RUNTIME_INPUT))
     cases.append(("R3_EI10", r3_input))
 
     e10_dir = root / "e8_ei10"
     e10_dir.mkdir()
     e10_input = e10_dir / "e8_ei10_energy_runtime.i"
-    e10_input.write_text(_canonical_p2_energy_bridge(e10.RUNTIME_INPUT) if migrate else e10.RUNTIME_INPUT)
+    e10_input.write_text(_require_canonical_energy(e10.RUNTIME_INPUT))
     cases.append(("E8_EI10", e10_input))
 
     e16_dir = root / "e8_ei16"
     e16_dir.mkdir()
     e16_input = e16_dir / "e8_ei16_energy_runtime.i"
-    e16_input.write_text(_canonical_p2_energy_bridge(e16.RUNTIME_INPUT) if migrate else e16.RUNTIME_INPUT)
+    e16_input.write_text(_require_canonical_energy(e16.RUNTIME_INPUT))
     (e16_dir / "e8_ei16_runtime_table.txt").write_text(
         "".join(f"{x:.8g} {y:.17g}\n" for x, y in e16.RATE_TABLE)
     )

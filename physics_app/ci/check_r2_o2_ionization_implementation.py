@@ -82,11 +82,25 @@ RUNTIME_INPUT = f"""[Mesh]
     functor_symbols = 'dens wo2'
     expression = 'dens*wo2/0.031998'
   []
+  [flow_log_molar_electron_density]
+    type = ADParsedFunctorMaterial
+    property_name = flow_log_molar_electron_density
+    functor_names = 'n_e'
+    functor_symbols = 'ne'
+    expression = 'log(ne/6.02214076e23)'
+  []
+  [flow_log_molar_electron_energy]
+    type = ADParsedFunctorMaterial
+    property_name = flow_log_molar_electron_energy
+    functor_names = 'mean_en'
+    functor_symbols = 'energy'
+    expression = 'log(energy/6.02214076e23)'
+  []
   [mean_energy_bridge]
     type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
+    electron_energy_density = flow_log_molar_electron_energy
+    electron_density = flow_log_molar_electron_density
+    state_form = log_molar_eV
   []
   [r2_ionization_rate]
     type = EIRateCoefMaterial
