@@ -1,19 +1,34 @@
 {
   "targets": [
     {
-      "branch": "cleanup-774-retirement-refs-20261124-batch8",
-      "expected_sha": "e72ea914da9b7e638f1a23e9ab075a6c2462fc98",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch8-e72ea914da9b"
+      "branch": "cleanup-774-retirement-refs-20261124-batch9",
+      "expected_sha": "7c458639b2635df22942fa7ebc535c6e84282c7f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch9-7c458639b263"
     },
     {
-      "branch": "issue-769-evolutionary-naming-audit",
-      "expected_sha": "351ca200a2f0b7fa7f8ccdd99f99500f9e94231e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-769-evolutionary-naming-audit-351ca200a2f0"
+      "branch": "issue-541-group-a-evidence-20261116",
+      "expected_sha": "3ffded32a0bd9d256c6a7f91a2fc624e04b6211a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-group-a-evidence-20261116-3ffded32a0bd"
     },
     {
-      "branch": "issue-755-analysis-adapters",
-      "expected_sha": "1ea4377a2b89f874b14e027f9d9ca10c82e2cf82",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-755-analysis-adapters-1ea4377a2b89"
+      "branch": "issue-541-parity-false-fail-20261116",
+      "expected_sha": "2447a4178cf6907b0d23671536c6ef01b857966a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-parity-false-fail-20261116-2447a4178cf6"
+    },
+    {
+      "branch": "issue-541-samuel-pr-create-adoption-20261116",
+      "expected_sha": "bf1f8effadf722dc12208b332222fb178ce74d4e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-samuel-pr-create-adoption-20261116-bf1f8effadf7"
+    },
+    {
+      "branch": "issue-633-fv-kernel-integration-20261117",
+      "expected_sha": "901e1c26a2ceed8898539241d278336ab0e68a18",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-fv-kernel-integration-20261117-901e1c26a2ce"
+    },
+    {
+      "branch": "issue-743-guard-dependency-consolidation",
+      "expected_sha": "19c4f533dfc85d7b33ed6f892f44790ed7b38ae9",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-743-guard-dependency-consolidation-19c4f533dfc8"
     }
   ]
 }
