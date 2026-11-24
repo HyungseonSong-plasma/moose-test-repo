@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-817-code3-consumer-pair-d3",
-      "expected_sha": "97ecf94e7f4749602857942ce7b99c0ef43de1ba",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-consumer-pair-d3-97ecf94e7f47"
+      "branch": "issue-774-newonly-integration-validate-20261123",
+      "expected_sha": "edbdcf2ea4867e7fcbee4a0e40b6780f1acf2a06",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-newonly-integration-validate-20261123-edbdcf2ea486"
     },
     {
-      "branch": "issue-817-code3-newonly-retirement",
-      "expected_sha": "0772153070bb592d53d835d5fdb81da76280f77d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-newonly-retirement-0772153070bb"
+      "branch": "issue-774-newonly-integration-verified-evidence-20261123",
+      "expected_sha": "183fb3ca2945d0785f93d50fba68943cd0c881aa",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-newonly-integration-verified-evidence-20261123-183fb3ca2945"
     },
     {
-      "branch": "code3-retire-pr-a-evidence-parity-20261119",
-      "expected_sha": "63b8a05375744e3b51c8fc1005f1d26e1320e2f5",
-      "archive_tag": "archive/oxygen-cleanup-20261106/code3-retire-pr-a-evidence-parity-20261119-63b8a0537574"
+      "branch": "issue-774-d14-public-d-native-evidence-20261123",
+      "expected_sha": "216361e83810c380d566b09c9221fd16249d3293",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d14-public-d-native-evidence-20261123-216361e83810"
     },
     {
-      "branch": "issue-809-code1-newonly-retirement",
-      "expected_sha": "1e998ce46c8760fe3deb5284ed1f6eae3f1f4137",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-809-code1-newonly-retirement-1e998ce46c87"
+      "branch": "issue-774-d14-public-d-complete-staging-native-20261123",
+      "expected_sha": "581bdd03a6ab2e09c841903a6ac1761b54793753",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d14-public-d-complete-staging-native-20261123-581bdd03a6ab"
     },
     {
-      "branch": "issue-774-newonly-integration-clean-20261123",
-      "expected_sha": "c70d4b65c530b3d80f104b14d5a91daae5179f50",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-newonly-integration-clean-20261123-c70d4b65c530"
+      "branch": "issue-774-d13-public-d-causal-matrix-20261123",
+      "expected_sha": "166d9387c160bda0043be23c65a2172a52e680c3",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d13-public-d-causal-matrix-20261123-166d9387c160"
     }
   ]
 }
