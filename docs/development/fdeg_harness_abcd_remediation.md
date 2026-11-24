@@ -1,5 +1,7 @@
 # FDEG Harness A–D correctness remediation
 
+> **Historical design record (#881).** The standalone subsystem is being retired. Commands and contracts below describe the original implementation at [pre-retirement revision 7a119106](https://github.com/HyungseonSong-plasma/moose-test-repo/tree/7a119106a22f2de2ca5c761a4119f00509e0efdd); they are not current CI instructions. See [historical provenance](archive/issue881_fdeg/README.md) and [Harness Code](../../physics_harness/code/README.md).
+
 **Issue:** #718. **Implementation PR:** #719. **Prior canonical contract:** Structural v0.3, Functional v0.2, Transition v0.1. **Safety:** no Physics C++ changes and `SAFE_DELETE=HOLD`.
 
 ## A — Structural consumer accuracy (H01–H05)

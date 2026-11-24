@@ -56,8 +56,6 @@ jobs:
     name: Physics Code Validation
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      FDEG_CACHE_DIR: /tmp/fdeg-index-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,30 +81,19 @@ jobs:
           -r requirements-evidence-engine.txt
           -r requirements-ontology.txt
           -r physics_harness/code/requirements.txt
-      - name: Validate FDEG Structural Evidence P0
-        run: python3 -m unittest discover -s tests -p test_fdeg_structural.py -v
-      - name: Validate FDEG Functional Contract P0
-        run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
-      - name: Validate FDEG Transition Evidence P0
-        run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
-      - name: Validate FDEG Harness A-D P0
-        run: python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v
-      - name: Validate FDEG Scan Cache P0
-        run: python3 -m unittest discover -s tests -p test_fdeg_scan_cache.py -v
-      - name: Capture live FDEG graph and verify retired Factory archives
+      - name: Verify retired Factory archives and consumer invariants
         run: |
           set -euo pipefail
           head="$(git rev-parse HEAD)"
-          python3 ci/guards/fdeg_retirement_evidence.py --mode capture --target PhysicsFVLogMolarElectronReactionSource --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/live-electron"
-          python3 ci/guards/fdeg_retirement_evidence.py --mode verify-archive --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/live-electron"
-          python3 ci/guards/issue774_main_retirement.py --self-test --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/retired-factories"
-          python3 -m ci.guards.issue817_code3_production_migration --expected-head "$head" --phase postcut --output "$RUNNER_TEMP/fdeg-retirement-code7/retired-factories/code3_consumer_receipt.json"
-      - name: Upload live FDEG and frozen retired Factory evidence
+          python3 ci/guards/issue774_main_retirement.py --self-test --expected-head "$head" --output-dir "$RUNNER_TEMP/retired-factory-evidence"
+          python3 -m ci.guards.issue817_code3_production_migration --expected-head "$head" --phase postcut --output "$RUNNER_TEMP/retired-factory-evidence/code3_consumer_receipt.json"
+      - name: Upload retired Factory evidence
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: fdeg-retirement-code7-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/fdeg-retirement-code7/
+          name: retired-factory-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/retired-factory-evidence/
+          if-no-files-found: error
           retention-days: 14
       - name: Regression-test scoped Native P1 harness and Issue493 delegation
         shell: bash
@@ -157,14 +144,8 @@ jobs:
             tests/**/*.py
           if-no-files-found: error
           retention-days: 1
-      - name: Run Physics pytest (FDEG P0 suites already executed above)
-        run: >-
-          python -m pytest -q
-          --ignore=tests/test_fdeg_structural.py
-          --ignore=tests/test_fdeg_functional.py
-          --ignore=tests/test_fdeg_transition.py
-          --ignore=tests/test_fdeg_harness_abcd.py
-          --ignore=tests/test_fdeg_scan_cache.py
+      - name: Run Physics pytest
+        run: python -m pytest -q
       - name: Regression-test Issue493 canonical/archive Exodus P4 diagnostics
         run: python experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
       - name: Validate normalized-to-physical coupled equivalence fixture

@@ -35,7 +35,7 @@ completed successfully. A skipped required gate is **HOLD**, not PASS.
 
 | Owner | Source scope | Responsibilities |
 | --- | --- | --- |
-| `physics-code-ci.yml` | Physics, tests, experiments, domain guards/templates | FDEG and Physics Python tests, static physics rules, historical P0 source checks |
+| `physics-code-ci.yml` | Physics, tests, experiments, domain guards/templates | Physics Python tests, static physics rules, retired Factory archive and consumer invariants |
 | `physics-native-ci.yml` | Native Physics source, Native scenarios, selected related guards | Actual PhysicsApp build, MOOSE P1/P2, Native regression, Boltzmann C++ controls |
 | `harness-code.yml` | `physics_harness/code/**` | Harness Code unit/negative controls |
 | `repository-diagnostics.yml` | Manual `workflow_dispatch` only | Historical one-day Artifact CreateArtifact API probe |

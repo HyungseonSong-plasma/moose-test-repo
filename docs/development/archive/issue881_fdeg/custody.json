@@ -1,0 +1,27 @@
+{
+  "schema": "issue881.original_evidence_custody.v1",
+  "staging_run_id": 45485652803,
+  "staging_request_head": "571e9a3114264c1914d4e1cbe6ad8e8393ebec62",
+  "staging_receipt_artifact": 14964720381,
+  "staging_receipt_zip_sha256": "3514be69ad8e752f0421bbad00d3b19683a4cdf2bf5e456109baa23cb8bd0428",
+  "rows": [
+    {
+      "artifact_id": 14959988094,
+      "producer_run_id": 45476946329,
+      "source_head": "cee3dd7447e5ca776d85cd600944bbac287d6610",
+      "bytes": 49855,
+      "git_blob_sha": "a02d6adba2b65531c7452f85ff3f734615b0dd1a",
+      "zip_sha256": "f9d89f8313ba0a885f1a2cf10ab5d02d0e46f134414cab5266e41e362f37edf6",
+      "path": "docs/development/archive/issue881_fdeg/artifact-14959988094.zip"
+    },
+    {
+      "artifact_id": 14962467467,
+      "producer_run_id": 45484020418,
+      "source_head": "7a119106a22f2de2ca5c761a4119f00509e0efdd",
+      "bytes": 82889,
+      "git_blob_sha": "85ff04621fc5b17248e80e5298a93bc7f76fcd04",
+      "zip_sha256": "37238045a198628ac8d65a27e96cfda9cec245f45e1ede1d46924e9ca3bc301e",
+      "path": "docs/development/archive/issue881_fdeg/artifact-14962467467.zip"
+    }
+  ]
+}

@@ -9,7 +9,7 @@ generated while a workflow runs. Its authoritative template is
 The authoritative contract is [Repository Integration Contract Verification](REPOSITORY_INTEGRATION_CONTRACT.md).
 General `Repository CI` contains only unconditional `validate`, verifying shared
 integration contracts at the exact PR HEAD or main push. It has no
-`paths-ignore` filter. `physics-code-ci.yml` owns Physics/FDEG source tests,
+`paths-ignore` filter. `physics-code-ci.yml` owns Physics source tests and retired Factory invariants,
 `physics-native-ci.yml` owns expensive P1/P2 Native checks, and
 `repository-diagnostics.yml` is manual-only. There must be no
 PR-number-specific experiment jobs in Repository CI.

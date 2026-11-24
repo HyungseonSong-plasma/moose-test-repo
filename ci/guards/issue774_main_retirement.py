@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#774/#817/#713: exact-HEAD six retired Factory audit and frozen FDEG provenance.
+"""#774/#817/#713: exact-HEAD six retired Factory audit and frozen historical provenance.
 
 Source/registration/archival validation only. Does not assert global consumer
 zero, legacy input compatibility, P3/P4 physics parity, or release approval.
@@ -65,9 +65,9 @@ CODE4 = FACTORIES[5]
 S5R = "experiments/historical_recipe_support/issue192_s5r.py"
 JOULE_SMOKE = "physics_app/ci/electron_energy_joule_smoke.i"
 PINNED_PROVENANCE = {
-    "ci/baselines/fdeg_functional_contracts.json": "6f1a2948a852a9de9045e74fda72c99d105378aa",
-    "ci/baselines/fdeg_transition_contracts.json": "1bd17e05f17e8ac5942b946dfd45f6d023f1403f",
-    "ci/baselines/fdeg_historical_profiles_code1.json": "9a8b0d60a9511fe089ef6cb3d900f902123ee742",
+    "docs/development/archive/issue881_fdeg/fdeg_functional_contracts.json": "6f1a2948a852a9de9045e74fda72c99d105378aa",
+    "docs/development/archive/issue881_fdeg/fdeg_transition_contracts.json": "1bd17e05f17e8ac5942b946dfd45f6d023f1403f",
+    "docs/development/archive/issue881_fdeg/fdeg_historical_profiles_code1.json": "9a8b0d60a9511fe089ef6cb3d900f902123ee742",
     "docs/provenance/issue814_code2/electron_energy_joule_smoke.i.txt": "6c4901f843a98b74b450cc3a1fab09e8e1873b2c",
     "docs/provenance/issue817_code3/issue192_s5r_pre_migration.py.txt": "be9838b77dc2920b27a1f7065648062b630eacb5",
     S5R: "7dc29e5773b145d9f052d9898901eec61c904344",
@@ -108,7 +108,7 @@ CODE4_HISTORICAL = {
     ),
 }
 # Source-pinned class descriptions are non-executable reference metadata.
-# Do not modify these shared translation units or their frozen FDEG profiles.
+# Do not modify these shared translation units or their frozen historical profiles.
 CODE4_DESCRIPTIONS = {
     "physics_app/src/fvkernels/FVLogMolarTransport.C": (
         "a24208626b2e775c2af332e216d18cc91217dfa9",
@@ -200,14 +200,38 @@ def check_inventory(rows: list[dict], paths: set[str]):
     return {"source_files": len(rows), "registered_factory_types": len(seen)}
 
 
-def verify_post_cut_fdeg_capture(workflow: str):
-    """Accept retained shared electron FDEG; refuse capture of all retired Factories."""
-    stem = "fdeg_retirement_evidence.py --mode capture --target "
-    live_target = stem + "PhysicsFVLogMolarElectronReactionSource"
-    need("issue774_main_retirement.py" in workflow and
-         live_target in workflow and
-         all(stem + factory not in workflow for factory in FACTORIES),
-         "FDEG_POST_CUT_CI_STILL_CAPTURES_REMOVED_CPP")
+def verify_retirement_workflow(workflow: str):
+    """Require the independent retirement checks and uploaded receipt."""
+    import yaml
+
+    try:
+        doc = yaml.load(workflow, Loader=yaml.BaseLoader)
+        job = doc["jobs"]["physics_code_validate"]
+        steps = job["steps"]
+        verify = [step for step in steps
+                  if step.get("name") == "Verify retired Factory archives and consumer invariants"]
+        upload = [step for step in steps
+                  if step.get("name") == "Upload retired Factory evidence"]
+        expected = (
+            "set -euo pipefail",
+            "head=\"$(git rev-parse HEAD)\"",
+            "python3 ci/guards/issue774_main_retirement.py --self-test --expected-head \"$head\" --output-dir \"$RUNNER_TEMP/retired-factory-evidence\"",
+            "python3 -m ci.guards.issue817_code3_production_migration --expected-head \"$head\" --phase postcut --output \"$RUNNER_TEMP/retired-factory-evidence/code3_consumer_receipt.json\"",
+        )
+        need("if" not in job and job.get("continue-on-error", "false") == "false" and
+             len(verify) == 1 and "if" not in verify[0] and
+             verify[0].get("continue-on-error", "false") == "false" and
+             tuple(verify[0].get("run", "").splitlines()) == expected,
+             "RETIRED_FACTORY_CHECKS_MISSING_OR_CHANGED")
+        need(len(upload) == 1 and steps.index(verify[0]) < steps.index(upload[0]) and
+             upload[0].get("uses") == "actions/upload-artifact@v4" and
+             upload[0].get("if") == "success()" and
+             upload[0].get("continue-on-error", "false") == "false" and
+             upload[0].get("with", {}).get("path") == "${{ runner.temp }}/retired-factory-evidence/" and
+             upload[0].get("with", {}).get("if-no-files-found") == "error",
+             "RETIRED_FACTORY_RECEIPT_UPLOAD_MISSING_OR_CHANGED")
+    except (KeyError, TypeError, AttributeError, yaml.YAMLError) as exc:
+        raise ValueError("ISSUE774_MAIN_RETIRE_WORKFLOW_INVALID") from exc
 
 
 def audit(root: Path, expected_head: str):
@@ -291,7 +315,7 @@ def audit(root: Path, expected_head: str):
          "P6_OR_ARCH_RETAINED_NATIVE_REMOVED")
     need("issue541_arch_s6_hybrid_native_p2" not in jobs,
          "RETIRED_ARCH_DUPLICATE_JOB_RETURNED")
-    verify_post_cut_fdeg_capture(code)
+    verify_retirement_workflow(code)
     return {
         "schema": "issue774.main_combined_retirement.v0.3",
         "source_head": actual,

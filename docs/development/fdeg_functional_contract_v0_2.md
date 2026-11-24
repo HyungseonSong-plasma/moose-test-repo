@@ -1,5 +1,7 @@
 # FDEG Functional Contract Graph v0.2
 
+> **Historical design record (#881).** The standalone subsystem is being retired. Commands and contracts below describe the original implementation at [pre-retirement revision 7a119106](https://github.com/HyungseonSong-plasma/moose-test-repo/tree/7a119106a22f2de2ca5c761a4119f00509e0efdd); they are not current CI instructions. See [historical provenance](archive/issue881_fdeg/README.md) and [Harness Code](../../physics_harness/code/README.md).
+
 **Owner:** Issue #697; dependent on Structural v0.3 / Issue #696. **Evidence level:** P0 static, source-pinned, review-qualified semantic claims. `SAFE_DELETE=HOLD`.
 
 ## Purpose

@@ -1,5 +1,7 @@
 # Graph-only FDEG Migration Planning Acceptance v0.1
 
+> **Historical design record (#881).** The standalone subsystem is being retired. Commands and contracts below describe the original implementation at [pre-retirement revision 7a119106](https://github.com/HyungseonSong-plasma/moose-test-repo/tree/7a119106a22f2de2ca5c761a4119f00509e0efdd); they are not current CI instructions. See [historical provenance](archive/issue881_fdeg/README.md) and [Harness Code](../../physics_harness/code/README.md).
+
 **Issue:** #701. **Design objective:** independent GPT/human planner can propose a *conditional* migration plan for code1–7 using **only the serialized, identity-verified** Structural v0.3, Functional v0.2 and Transition v0.1 JSON reports, with no new source browsing.
 
 ## Evaluation separation
