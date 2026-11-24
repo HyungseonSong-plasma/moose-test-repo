@@ -252,3 +252,32 @@ no Native observation or global closure is promoted. Live artifact
 production/capture, trusted invocation binding and later attempts remain
 separate obligations. No workflow, CLI or production physics behavior
 is changed.
+
+
+### Explicit generator return capture (#882, P1c capture slice)
+
+`verification/generated_input_actions.py:capture_generated_return` invokes
+one explicitly selected, already-loaded, trusted top-level Python function
+that returns HIT text. Exact Git HEAD/blob, on-disk source bytes, loaded
+function code object and source location are checked before and after the
+call. Bind the actual arguments (including defaults) and retain only a
+canonical invocation digest; input values must be small finite JSON
+scalars and must not be secrets. Return UTF-8 HIT bytes and the P1b
+pre-upload manifest, without writing to the checkout or uploading.
+The caller supplies execution context; these IDs are not authenticated
+by local capture. No fake artifact ID is assigned.
+
+This is opt-in execution of vetted code, not a sandbox or static-analysis
+side effect. The time budget is checked after the call, not a hard timeout;
+the caller must choose a bounded callable in a governed environment.
+Globals/imports/dependency closure, external attestation and real
+job/upload ownership remain unproven. Only direct text-returning top-level
+functions are supported. Do not invoke a solver, unknown source, arbitrary
+CLI or production entrypoint merely for diagnostic resolution.
+
+The Code-only regression exercises the existing Code6 generator
+`physics_app/ci/check_stage5_ei20_runtime.py:runtime_input(mean=5.73276)`,
+then uses its real returned HIT and manifest through P1b with simulated
+Actions metadata. This is not a live uploaded Actions artifact or Native
+runtime claim. Actual authenticated upload/job correlation, later attempt
+binding, broader call-site observation and coverage remain open.
