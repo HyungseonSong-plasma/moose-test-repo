@@ -1,7 +1,7 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "physical-eV-retirement-impact-20261124",
-  "source_sha": "2bf977e17fa2e4eb84b24bce51a717bc76be60f7",
+  "request_id": "physical-eV-r1-r2-transition-pr852-20261124",
+  "source_sha": "45d61586f30269052dbb396f5f31cc5fcb5ebc0f",
   "includes": [
     "*.i",
     "*.py",
