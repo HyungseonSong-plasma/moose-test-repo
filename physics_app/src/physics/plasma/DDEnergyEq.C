@@ -281,17 +281,20 @@ DDEnergyEq::addFunctorMaterials()
     paramError("fem_potential",
                "Mixed legacy and canonical electron wall Functor names are forbidden.");
 
-  // The FEM state log_e stores ln(c_e [mol/m^3]); sheath physics consumes
-  // number density [1/m^3]. Construct a state-dependent AD Functor, not a
-  // constant value or another wall-flux implementation.
-  const std::string density_type = "ADParsedFunctorMaterial";
-  auto density = getFactory().getValidParams(density_type);
-  density.set<std::string>("property_name") = "n_e_physical";
-  density.set<std::vector<std::string>>("functor_names") = {"log_e"};
-  density.set<std::vector<std::string>>("functor_symbols") = {"c"};
-  density.set<std::string>("expression") = "6.02214076e23*exp(c)";
-  assignBlocks(density, _blocks);
-  getProblem().addFunctorMaterial(density_type, name() + "_number_density", density);
+  // Legacy sheath mode retains this exact density producer. When the new
+  // unified Poisson JSON is present, Continuity owns the SAME live
+  // n_e_physical Functor exactly once, independent of sheath activation.
+  if (!chemistryData().poisson())
+  {
+    const std::string density_type = "ADParsedFunctorMaterial";
+    auto density = getFactory().getValidParams(density_type);
+    density.set<std::string>("property_name") = "n_e_physical";
+    density.set<std::vector<std::string>>("functor_names") = {"log_e"};
+    density.set<std::vector<std::string>>("functor_symbols") = {"c"};
+    density.set<std::string>("expression") = "6.02214076e23*exp(c)";
+    assignBlocks(density, _blocks);
+    getProblem().addFunctorMaterial(density_type, name() + "_number_density", density);
+  }
 
   const std::string wall_type = "ESWallFluxMaterial";
   auto wall = getFactory().getValidParams(wall_type);

@@ -20,6 +20,7 @@ private:
   void checkIntegrity() const override;
   void addFEKernels() override;
   void addFEBCs() override;
+  void addMaterials() override;
   bool _created_potential_variable = false;
 };
 

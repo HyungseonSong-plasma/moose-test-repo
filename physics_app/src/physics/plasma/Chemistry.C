@@ -329,6 +329,132 @@ parseNVTransport(const Json & value, const std::string & file)
   return result;
 }
 
+// Strict opt-in Poisson schema. S6 geometry is explicit, never inferred from
+// transient assembled Mesh/BC state. Legacy multi-file mechanisms are untouched.
+PoissonRecord
+parsePoissonRecord(const Json & root, const std::string & file)
+{
+  const std::set<std::string> allowed_root = {
+      "species", "equations", "reactions", "ion_surface_current",
+      "drift_diffusion_boundaries", "poisson"};
+  if (root.size() != allowed_root.size())
+    fail(file, "POISSON_ROOT_KEYS_INVALID");
+  for (auto it = root.begin(); it != root.end(); ++it)
+    if (!allowed_root.count(it.key()))
+      fail(file, "POISSON_ROOT_KEYS_INVALID: " + it.key());
+
+  const auto & poisson = root.at("poisson");
+  if (!poisson.is_object() || poisson.size() != 2 ||
+      !poisson.contains("relative_permittivity") || !poisson.contains("boundaries"))
+    fail(file, "POISSON_FIELDS_INVALID");
+  const auto & eps = poisson.at("relative_permittivity");
+  // The first New-only S6 Poisson cutover is an exact Native parity gate,
+  // not a parameter sweep. Reject changed epsilon values in the runtime
+  // parser too, rather than relying solely on the Python P0 checker.
+  const std::map<std::string, double> expected_eps = {
+      {"plasma", 1.0}, {"cover", 3.6}, {"wafer", 12.5},
+      {"focus_ring", 8.0}, {"vacuum", 1.0},
+      {"coil1", 1.0}, {"coil2", 1.0}, {"coil3", 1.0}};
+  std::set<std::string> expected_blocks;
+  for (const auto & [block, value] : expected_eps)
+  {
+    (void)value;
+    expected_blocks.insert(block);
+  }
+  if (!eps.is_object() || eps.size() != expected_blocks.size())
+    fail(file, "POISSON_EPS_BLOCKS_INVALID");
+
+  PoissonRecord result;
+  for (auto it = eps.begin(); it != eps.end(); ++it)
+  {
+    if (!expected_blocks.count(it.key()))
+      fail(file, "POISSON_EPS_BLOCKS_INVALID: " + it.key());
+    if (!it.value().is_number())
+      fail(file, "POISSON_EPS_VALUE_INVALID: " + it.key());
+    const auto value = it.value().get<double>();
+    if (!std::isfinite(value) || value <= 0.0 ||
+        value != expected_eps.at(it.key()))
+      fail(file, "POISSON_EPS_VALUE_INVALID: " + it.key());
+    result.relative_permittivity.emplace(it.key(), value);
+  }
+  const auto & boundaries = poisson.at("boundaries");
+  if (!boundaries.is_object() || boundaries.size() != 2 ||
+      !boundaries.contains("ground") || !boundaries.contains("surface_charge"))
+    fail(file, "POISSON_BOUNDARY_FIELDS_INVALID");
+
+  const std::set<std::string> expected_ground = {
+      "inlet", "outlet", "plasma_electrode", "plasma_metal", "plasma_right",
+      "cover_outer_right", "wafer_electrode", "focus_ring_ground",
+      "vacuum_outer_ground", "cover_coil_ground", "vacuum_coil_ground"};
+  const auto & ground = boundaries.at("ground");
+  if (!ground.is_array() || ground.size() != expected_ground.size())
+    fail(file, "POISSON_GROUND_BOUNDARIES_INVALID");
+  std::set<std::string> unique_ground;
+  for (const auto & item : ground)
+  {
+    if (!item.is_string())
+      fail(file, "POISSON_GROUND_BOUNDARIES_INVALID");
+    const auto name = item.get<std::string>();
+    if (!expected_ground.count(name) || !unique_ground.insert(name).second)
+      fail(file, "POISSON_GROUND_BOUNDARIES_INVALID: " + name);
+    result.ground_boundaries.push_back(name);
+  }
+
+  const auto & surface = boundaries.at("surface_charge");
+  const std::map<std::string, std::string> expected_surface = {
+      {"plasma_cover", "sigma_s"}, {"plasma_wafer", "sigma_wafer"},
+      {"plasma_focus_ring", "sigma_focus_ring"}};
+  if (!surface.is_object() || surface.size() != expected_surface.size())
+    fail(file, "POISSON_SURFACE_CHARGE_INVALID");
+  for (auto it = surface.begin(); it != surface.end(); ++it)
+  {
+    const auto expected = expected_surface.find(it.key());
+    if (expected == expected_surface.end() || !it.value().is_string() ||
+        it.value().get<std::string>() != expected->second)
+      fail(file, "POISSON_SURFACE_CHARGE_INVALID: " + it.key());
+    result.surface_charge.emplace(it.key(), expected->second);
+  }
+
+  // The JSON species charge numbers are authoritative for the future G3
+  // producer; G1 records them without inventing any charge/source Functor.
+  for (const auto & [id, charge] :
+       std::map<std::string, int>{{"e", -1}, {"O2p", 1}, {"Om", -1}, {"Op", 1}})
+  {
+    const auto & species = root.at("species");
+    if (!species.contains(id) || !species.at(id).is_object() ||
+        !species.at(id).contains("charge_number") ||
+        !species.at(id).at("charge_number").is_number_integer() ||
+        species.at(id).at("charge_number").get<int>() != charge)
+      fail(file, "POISSON_CHARGED_SPECIES_SIGNS_INVALID: " + id);
+  }
+  return result;
+}
+
+// nlohmann::json normally silently keeps the last duplicate key; reject that
+// ambiguity for the opt-in single New-only JSON without changing legacy parse.
+void
+verifyUniquePoissonJsonKeys(const std::string & file)
+{
+  std::ifstream stream(file);
+  if (!stream)
+    fail(file, "POISSON_JSON_UNAVAILABLE");
+  std::vector<std::set<std::string>> object_keys;
+  const auto callback = [&object_keys, &file](int, Json::parse_event_t event, Json & parsed) {
+    if (event == Json::parse_event_t::object_start)
+      object_keys.emplace_back();
+    else if (event == Json::parse_event_t::key)
+    {
+      const auto name = parsed.get<std::string>();
+      if (object_keys.empty() || !object_keys.back().insert(name).second)
+        fail(file, "POISSON_JSON_DUPLICATE_KEY: " + name);
+    }
+    else if (event == Json::parse_event_t::object_end)
+      object_keys.pop_back();
+    return true;
+  };
+  (void)Json::parse(stream, callback);
+}
+
 } // namespace
 
 bool
@@ -392,6 +518,14 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         !root["species"].is_object() || !root["equations"].is_object() ||
         !root["reactions"].is_array())
       fail(file, "expected species object, equations object and reactions array");
+
+    if (root.contains("poisson"))
+    {
+      if (files.size() != 1)
+        fail(file, "POISSON_REQUIRES_SINGLE_UNIFIED_JSON");
+      verifyUniquePoissonJsonKeys(file);
+      _poisson = parsePoissonRecord(root, file);
+    }
 
     for (auto it = root["species"].begin(); it != root["species"].end(); ++it)
     {
@@ -1302,6 +1436,39 @@ Chemistry::addFunctorMaterials()
     params.set<std::string>("expression") = energy.expression();
     assignBlocks(params, _blocks);
     getProblem().addFunctorMaterial(type, "chemistry_e_energy_source", params);
+  }
+
+  // G3: only opt-in New-only Poisson obtains live charge projections.
+  // G5 must retire all three homonymous Native C0 producers before Native P2.
+  if (mechanism.poisson())
+  {
+    const auto add_charge_functor =
+        [this](const std::string & property,
+               const std::vector<std::string> & functors,
+               const std::vector<std::string> & symbols,
+               const std::string & expression)
+    {
+      const std::string type = "ADParsedFunctorMaterial";
+      auto params = getFactory().getValidParams(type);
+      params.set<std::string>("property_name") = property;
+      params.set<std::vector<std::string>>("functor_names") = functors;
+      params.set<std::vector<std::string>>("functor_symbols") = symbols;
+      params.set<std::string>("expression") = expression;
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(type, "plasma_" + property, params);
+    };
+
+    // G1 validates z(O2p)=z(Op)=+1 and z(e)=z(Om)=-1.
+    add_charge_functor("charge_number_density",
+                       {"O2p_number_density", "Op_number_density",
+                        "n_e_physical", "Om_number_density"},
+                       {"ni", "nop", "ne", "nm"}, "ni+nop-ne-nm");
+    add_charge_functor("charge_density_C_m3",
+                       {"charge_number_density"}, {"nq"},
+                       "1.602176634e-19*nq");
+    add_charge_functor("poisson_source",
+                       {"charge_number_density"}, {"nq"},
+                       "1.8095128179727827e-08*nq");
   }
 }
 } // namespace Plasma
