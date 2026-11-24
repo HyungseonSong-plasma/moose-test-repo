@@ -1,0 +1,231 @@
+# Evidence-only, never merge. Reuse #852's existing W1 binaries; no rebuild.
+name: Physical eV R1 R2 bounded Native evidence (CI ONLY NEVER MERGE)
+on:
+  push:
+    branches: [issue-713-r1-r2-native-p3-ci-only]
+    paths: [.github/workflows/physical-ev-r1-r2-native-evidence-ci-only.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      SOURCE_HEAD: 45d61586f30269052dbb396f5f31cc5fcb5ebc0f
+      W1_RUN: '45414114076'
+      W1_JOB: '138515531935'
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact PR source, not evidence branch
+        uses: actions/checkout@v4
+        with:
+          ref: 45d61586f30269052dbb396f5f31cc5fcb5ebc0f
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Await exact W1 job and artifact (bounded, read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          mkdir -p evidence
+          for i in $(seq 1 100); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$W1_JOB" > evidence/w1-job.json
+            status="$(jq -r .status evidence/w1-job.json)"
+            if [ "$status" = completed ]; then
+              jq -e --arg head "$SOURCE_HEAD" --arg run "$W1_RUN" '.head_sha==$head and (.run_id|tostring)==$run and .conclusion=="success"' evidence/w1-job.json
+              exit 0
+            fi
+            sleep 12
+          done
+          echo W1_WAIT_TIMEOUT
+          exit 1
+      - name: Download existing exact-head W1
+        uses: actions/download-artifact@v4
+        with:
+          name: p6-newonly-w1-45414114076-1-45d61586f30269052dbb396f5f31cc5fcb5ebc0f
+          run-id: 45414114076
+          github-token: ${{ github.token }}
+          path: w1
+      - name: Verify and restore byte-identical ELF and two app libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e physics_app/physics-opt
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess, tarfile
+          p=pathlib.Path
+          def sha(f):
+              d=hashlib.sha256()
+              with f.open('rb') as s:
+                  for block in iter(lambda:s.read(8*1024*1024),b''):
+                      d.update(block)
+              return d.hexdigest()
+          identity=p('w1/identity.json')
+          rec=json.loads(identity.read_text())
+          assert rec['source_head']==os.environ['SOURCE_HEAD']
+          assert rec['source_tree']==subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip()
+          assert rec['run_id']==os.environ['W1_RUN'] and rec['oci']==os.environ['OCI']
+          assert rec['build_count']==1 and rec['archive_roundtrip_check']=='PASS'
+          assert rec['native_check_input']=='NOT_RUN' and rec['private_data_bundled'] is False
+          assert rec['lock_sha256']==sha(p('physics_app/dependencies.lock'))
+          archive=p('w1/physics-opt-and-app-libs.tar.gz')
+          assert sha(archive)==rec['archive_sha256']
+          targets={'physics-opt':p('physics_app/physics-opt'),
+                   'lib/libphysics-opt.so.0':p('physics_app/lib/libphysics-opt.so.0'),
+                   'lib/libphysics_test-opt.so.0':p('physics_app/test/lib/libphysics_test-opt.so.0')}
+          entries={x['stored_path']:x for x in rec['file_records']}
+          assert set(entries)==set(targets) and len(rec['file_records'])==3
+          assert rec['binary_sha256']==entries['physics-opt']['sha256']
+          for name in ('libphysics-opt.so.0','libphysics_test-opt.so.0'):
+              assert rec['app_libraries'][name]['sha256']==entries['lib/'+name]['sha256']
+          with tarfile.open(archive,'r:gz') as tar:
+              assert set(tar.getnames())==set(targets) and len(tar.getmembers())==3
+              for name,dst in targets.items():
+                  m=tar.getmember(name)
+                  assert m.isfile() and m.size==entries[name]['bytes']
+                  dst.parent.mkdir(parents=True,exist_ok=True)
+                  with tar.extractfile(m) as src,dst.open('wb') as out:
+                      import shutil
+                      shutil.copyfileobj(src,out)
+                  assert sha(dst)==entries[name]['sha256']
+                  with dst.open('rb') as stream:
+                      assert stream.read(4)==b'\x7fELF'
+                  if name=='physics-opt': dst.chmod(0o755)
+          p('evidence/w1_identity.json').write_text(identity.read_text())
+          print('R1_R2_EXACT_W1_REUSE=PASS; BUILDS_THIS_RUN=0')
+          PY
+          docker pull "$OCI"
+      - name: P0 and bounded Native P2 P3 (existing independent checkers)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/ci
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" -e SOURCE_HEAD="$SOURCE_HEAD" -e OCI="$OCI" "$OCI" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            export PYTHONPATH=/workspace
+            export HOME=/tmp
+            python3 - <<'"'"'PY'"'"'
+          import csv, hashlib, json, math, os, pathlib, subprocess, sys
+          root=pathlib.Path("/workspace")
+          ev=root/"evidence"
+          exe=root/"physics_app/physics-opt"
+          ci=root/"physics_app/ci"
+          result={"schema":"physical-ev-r1-r2-native.v1","source_head":os.environ["SOURCE_HEAD"],
+                  "oci":os.environ["OCI"],"w1_run":45414114076,"build_count_this_run":0,
+                  "cases":{},"safe_delete":False,"science":"BOUNDED_FIXTURE_ONLY"}
+          def save():
+              (ev/"result.json").write_text(json.dumps(result,indent=2,sort_keys=True)+"\n")
+          def execute(name,phase,cmd,cwd=root,timeout=300):
+              entry=result["cases"].setdefault(name,{})
+              try:
+                  proc=subprocess.run([str(x) for x in cmd],cwd=cwd,capture_output=True,text=True,timeout=timeout)
+                  log=proc.stdout+proc.stderr
+                  (ev/f"{name}_{phase}.log").write_text(log)
+                  ok=proc.returncode==0 and (phase!="P2" or "Syntax OK" in log)
+                  entry[phase]="PASS" if ok else "FAIL"
+              except Exception as err:
+                  (ev/f"{name}_{phase}.log").write_text(repr(err))
+                  entry[phase]="FAIL"
+              save()
+              print(name,phase,entry[phase],flush=True)
+              return entry[phase]=="PASS"
+          scripts=[
+              ("H05","check_stage5_h05_runtime.py"),
+              ("R2","check_r2_o2_ionization_implementation.py"),
+              ("R3","check_r3_o2s_excitation_implementation.py"),
+              ("EI10","check_e8_ei10_energy_runtime.py"),
+              ("EI16","check_e8_ei16_energy_runtime.py"),
+              ("EDETACH","check_stage5_edetach_runtime.py"),
+              ("EI18","check_stage5_ei18_runtime.py"),
+              ("EI20","check_stage5_ei20_runtime.py"),
+              ("STANDARD_EI10_EI16","check_standard_moose_energy_projection.py")]
+          # Owners already execute actual P2 before P3; use their own numeric and
+          # strict-range oracles and evidence JSON, rather than duplicating them.
+          for name,script in scripts:
+              if execute(name,"P0",[sys.executable,ci/script,"--self-test"]):
+                  ok=execute(name,"P2_P3_ORACLE",[sys.executable,ci/script,"--executable",exe,
+                    "--evidence-out",ev/f"{name}.json","--repository-sha",os.environ["SOURCE_HEAD"],
+                    "--build-base-ref",os.environ["OCI"]],timeout=360)
+                  if ok and not (ev/f"{name}.json").is_file():
+                      result["cases"][name]["P2_P3_ORACLE"]="FAIL_MISSING_EVIDENCE"
+                      save()
+              else:
+                  result["cases"][name]["P2_P3_ORACLE"]="NOT_RUN_P0_FAIL"
+                  save()
+          def raw(name,deck,overrides=(),timeout=300):
+              source=ci/deck
+              dest=ev/"ci"/name
+              case=result["cases"].setdefault(name,{})
+              case["input_sha256"]=hashlib.sha256(source.read_bytes()).hexdigest()
+              case["cli_overrides"]=list(overrides)
+              (ev/f"{name}.i").write_bytes(source.read_bytes())
+              if not execute(name,"P0",[sys.executable,root/"bin/physics.py","preflight",source]):
+                  case["P2"]="NOT_RUN_P0_FAIL"; case["P3"]="NOT_RUN_P0_FAIL"; save();return None
+              args=[exe,"-i",source.name,*overrides,f"Outputs/file_base={dest}"]
+              if not execute(name,"P2",[exe,"--check-input",*args[1:]],ci,timeout):
+                  case["P3"]="NOT_RUN_P2_FAIL";save();return None
+              if not execute(name,"P3",args,ci,timeout): return None
+              path=dest.with_suffix(".csv")
+              if not path.is_file():
+                  case["P3"]="FAIL_NO_CSV";save();return None
+              return path
+          def check_time(rows,end):
+              assert len(rows)>=2 and math.isclose(float(rows[0]["time"]),0.0,abs_tol=1e-14)
+              assert math.isclose(float(rows[-1]["time"]),end,rel_tol=1e-10,abs_tol=1e-14)
+              assert all(float(a["time"])<float(b["time"]) for a,b in zip(rows,rows[1:]))
+          def rows(path):
+              with path.open(newline="") as f:return list(csv.DictReader(f))
+          path=raw("transport","electron_energy_transport_smoke.i")
+          if path:
+              try:
+                  data=rows(path);check_time(data,1e-8)
+                  n=101325.0/(1.380649e-23*300.0)
+                  expected={"e_energy_eV_avg":5.73276,"electron_mobility_avg":1e24/n,
+                    "electron_diffusion_avg":2e24/n,"electron_energy_mobility_avg":5/3*1e24/n,
+                    "electron_energy_diffusion_avg":5/3*2e24/n}
+                  for row in data:
+                      for k,v in expected.items():assert math.isclose(float(row[k]),v,rel_tol=1e-9,abs_tol=1e-12),(k,row[k],v)
+                  result["cases"]["transport"]["oracle"]="PASS"
+              except Exception as e:result["cases"]["transport"]["oracle"]="FAIL:"+repr(e)
+              save()
+          good=True
+          for label,scale in (("low",.5),("base",1.),("high",1.5)):
+              name="electron_energy_lookup_response_"+label
+              path=raw(name,"electron_energy_lookup_response_smoke.i",
+                  [f"Variables/mean_en/initial_condition={5.73276e16*scale:.17g}"])
+              try:
+                  assert path is not None
+                  check_time(rows(path),1e-8)
+              except Exception as e:
+                  result["cases"][name]["timeline"]="FAIL:"+repr(e);good=False
+              else: result["cases"][name]["timeline"]="PASS"
+              save()
+          if good:execute("lookup_response","oracle",[sys.executable,ci/"check_electron_energy_lookup_response.py"],ev)
+          path=raw("qvt_inventory","electron_energy_real_qvt_inventory_smoke.i",timeout=480)
+          if path:
+              try:check_time(rows(path),2e-4)
+              except Exception as e:result["cases"]["qvt_inventory"]["timeline"]="FAIL:"+repr(e);save()
+              else:execute("qvt_inventory","oracle",[sys.executable,ci/"check_electron_energy_real_qvt_inventory.py",path])
+          result["status"]="PASS_BOUNDED" if (
+              all(result["cases"][n].get("P2_P3_ORACLE")=="PASS" for n,_ in scripts)
+              and result["cases"].get("transport",{}).get("oracle")=="PASS"
+              and result["cases"].get("lookup_response",{}).get("oracle")=="PASS"
+              and result["cases"].get("qvt_inventory",{}).get("oracle")=="PASS") else "HOLD"
+          save()
+          print("R1_R2_NATIVE_RESULT="+result["status"],flush=True)
+          sys.exit(0 if result["status"]=="PASS_BOUNDED" else 1)
+          PY
+          '
+      - name: Preserve evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-ev-r1-r2-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30
