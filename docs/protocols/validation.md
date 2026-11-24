@@ -539,4 +539,70 @@ Repository-specific route defects may still include uncovered PR base edits, wor
 
 Do not use empty commits or irrelevant canonical mutations solely to trigger validation. The central throughput evaluator owns same-cycle launch confirmation and no-busy-poll behavior; this protocol continues to own the scientific meaning of any terminal evidence.
 
-This delegation does not weaken P0-P3, exact-head identity, review, runtime, or scientific acceptance requirements.
+This delegation does not weaken P0-P3, exact-head identity, applicable VAL-23 review, runtime, or scientific acceptance requirements.
+
+
+## VAL-23 — Risk-based independent review
+
+Independent review is **not a default per-PR, per-commit, or per-stage
+requirement**. Classify the accepted work scope by its highest applicable
+risk level (not effort, size, or test count), and record the level and reason
+in the owning issue/STATE or PR. Do not invent an approval gate merely
+because an independent reviewer is available.
+
+| Level | Change scope / risk | Independent review |
+| --- | --- | --- |
+| L1 | Documentation, evidence indexing, routine cleanup without an authority or semantic change | Not required |
+| L2 | Mechanical refactor, bounded extension of existing behavior, regression tests without changing acceptance meaning | Not required |
+| L3 | New bounded Harness capability or non-breaking tooling extension, with existing public identity, authority and scientific contracts preserved | Optional; nonblocking by default |
+| L4 | Material architecture, public interface/schema, security, mutation authority, or acceptance/validation-gate change; destructive change with material unresolved impact | Required before final integration |
+| L5 | Physical model, numerical method/regime, scientific acceptance meaning or production Physics behavior change | Required before final integration |
+
+Classification must be reassessed if the actual diff or failure evidence
+changes the risk. A change spanning levels uses the highest applicable one.
+An explicit owner-approved process-policy revision may be documented and
+integrated without an additional independent approval of the owner's
+decision, provided it does not weaken technical, security, scientific, or
+machine-enforced acceptance gates. This is not a waiver for L4/L5 technical
+changes.
+
+### Timing and escalation
+
+- L1/L2/L3 work may continue through accepted implementation and validation
+  stages without waiting for an optional reviewer. For L3, request review
+  only when a concrete risk merits it; the request alone does not block
+  progress. Never ignore material findings.
+- For L4/L5, consolidate independent review at the final integration boundary
+  of the bounded work package, before merging the change into the accepted
+  baseline. Repeat only if a material reviewed contract changes or the
+  repeated-failure escalation requires it. Earlier review is required only
+  if a concrete unresolved gate prevents safe continuation.
+- The existing [repeated-failure review gate](repeated_failure_review_gate.md)
+  remains mandatory when its trigger is met, regardless of level.
+- An independently necessary scientific discriminator, reviewer-blinded
+  evaluation, security control, branch protection or specifically
+  owner-approved issue acceptance obligation remains binding. This policy
+  does not waive it. If a material concern remains unresolved, stop the
+  affected path under Samuel ER-07; independent work may continue.
+- Existing generic per-PR/per-stage review boilerplate is superseded by this
+  policy, including active work after recording its risk classification and
+  disposition in STATE. Preserve historical evidence and specifically
+  necessary review obligations; do not reinterpret a missing review as a
+  completed review.
+
+### Acceptance and controller behavior
+
+Record the risk level, review disposition (NOT_REQUIRED, OPTIONAL,
+REQUIRED_PENDING, or REQUIRED_SATISFIED), rationale, exact candidate evidence
+and any actual blocker. A completed review must identify its independent
+reviewer and reviewed scope/revision, with material findings resolved or
+explicitly dispositioned by the owning authority. A reviewer request or CI
+PASS alone is not review evidence.
+
+Apply the same local policy to interactive and scheduled-controller work.
+An optional or not-required review must not become a controller HOLD or
+trigger a repeated request for permission to omit it. Do not confuse review
+disposition with mutation authorization: accepted work scope, required
+exact-head CI, P0-P3/runtime/scientific acceptance, branch protection,
+explicit merge authority, and Samuel's exact-SHA preconditions remain
+unchanged. This policy grants no new merge or execution authority.
