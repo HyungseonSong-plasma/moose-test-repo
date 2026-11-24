@@ -99,8 +99,10 @@ def test_ddmaterial_is_only_canonical_species_coefficient_publisher():
     assert "functor = poisson_charge_source" in fixture
 
 
-def test_current_fv_ion_drift_remains_and_old_heavy_correction_is_retired():
-    drift = text("physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C")
+def test_historical_fv_ion_drift_and_heavy_correction_are_retired():
+    assert not (ROOT / "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C").exists()
+    assert not (ROOT / "physics_app/include/fvkernels/PhysicsFVElectrostaticDrift.h").exists()
+    drift = text("docs/development/archive/issue774_retired_factories/PhysicsFVElectrostaticDrift.C.txt")
     assert 'const ADRealVectorValue electric_field =' in drift
     assert '-_potential.gradient(centered_face, state)' in drift
     assert 'const ADReal mobility_face = _mobility(centered_face, state);' in drift

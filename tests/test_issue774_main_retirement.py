@@ -17,9 +17,11 @@ def test_current_registered_owner_inventory_and_archived_evidence():
         ["git", "-C", str(module.ROOT), "rev-parse", "HEAD"],
         text=True).strip()
     receipt = module.audit(module.ROOT, head)
-    assert receipt["current_newonly"]["source_files"] == 8
-    assert receipt["current_newonly"]["registered_factory_types"] == 13
-    assert len(receipt["historical_original_blobs"]) == 10
+    assert receipt["current_newonly"]["source_files"] == 7
+    assert receipt["current_newonly"]["registered_factory_types"] == 12
+    assert len(receipt["historical_original_blobs"]) == 12
+    assert len(receipt["code4_historical_references"]) == 4
+    assert receipt["code4_exact_tracked_text_inventory"]
     assert receipt["reviewed_code3_assertions"] == {path: 1 for path in module.CODE3_ASSERTIONS}
     assert receipt["current_active_retired_symbol_references"] == []
     assert receipt["p3_p4_scientific_parity"] == "NOT_EVALUATED"

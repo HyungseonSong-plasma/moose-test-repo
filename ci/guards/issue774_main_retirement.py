@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#774/#817: exact-HEAD five retired Factory audit and frozen FDEG provenance.
+"""#774/#817/#713: exact-HEAD six retired Factory audit and frozen FDEG provenance.
 
 Source/registration/archival validation only. Does not assert global consumer
 zero, legacy input compatibility, P3/P4 physics parity, or release approval.
@@ -39,6 +39,10 @@ ORIGINALS = {
         "35ded0eab65ad7bed85baa0104261c90bc26bf3d",
     "physics_app/include/fvkernels/PhysicsFVElectronReactionSource.h":
         "5250b3500d6694481158e2abb896c7e1c6f349e9",
+    "physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C":
+        "8d61a535b4e0fbf0a008fabb98d45e723affe999",
+    "physics_app/include/fvkernels/PhysicsFVElectrostaticDrift.h":
+        "db061f6b5fd3e82039f6e1bb887a944603052c09",
 }
 PINNED_HISTORICAL_CONSUMERS = {
     "experiments/Issue282_e2a_rz_bridge/research_type_bridge.py":
@@ -54,8 +58,10 @@ FACTORIES = ("PhysicsFVThermalDiffusion",
              "PhysicsFVHeavyMassElectromigrationCorrection",
              "PhysicsFVElectronEnergyJouleHeating",
              "FVElectronResponseBandedCorrection",
-             "PhysicsFVElectronReactionSource")
+             "PhysicsFVElectronReactionSource",
+             "PhysicsFVElectrostaticDrift")
 CODE3 = FACTORIES[4]
+CODE4 = FACTORIES[5]
 S5R = "experiments/historical_recipe_support/issue192_s5r.py"
 JOULE_SMOKE = "physics_app/ci/electron_energy_joule_smoke.i"
 PINNED_PROVENANCE = {
@@ -79,6 +85,27 @@ CODE3_ASSERTIONS = {
         'if "PhysicsFVElectronReactionSource" in text:',
     "physics_app/ci/check_stage5_s5d_heavy_reactions.py":
         '"reaction_source_", "PhysicsFVElectronReactionSource",',
+}
+# Exact historical construction/projection/assertion lines, not a current
+# runtime compatibility waiver. Entire blobs are pinned.
+CODE4_HISTORICAL = {
+    S5R: (
+        "7dc29e5773b145d9f052d9898901eec61c904344",
+        ('"FVKernels/n_e_drift": "PhysicsFVElectrostaticDrift",',
+         'f"FVKernels/{species}_electrostatic_drift": "PhysicsFVElectrostaticDrift"'),
+    ),
+    "experiments/Issue282_e2a_rz_bridge/research_type_bridge.py": (
+        "fe82208e49c6f89b127f74fd54cf85cbb91f8fa4",
+        ('"QPXFVElectrostaticDrift": "PhysicsFVElectrostaticDrift",',),
+    ),
+    ".github/scripts/issue213_wall_drift.py": (
+        "b72a785760276508926bacb343ed6b8a0771c63a",
+        ('== "PhysicsFVElectrostaticDrift",',),
+    ),
+    "experiments/Issue27_surface_reactions/controlled_wall/issue215_sheath_particle_core.py": (
+        "10c83ef8dcaf0e8efa60a96508da2da872d3a7cc",
+        ('== "PhysicsFVElectrostaticDrift",',),
+    ),
 }
 TOKEN = re.compile(r"\b(?:" + "|".join(FACTORIES) + r")\b")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
@@ -125,8 +152,18 @@ def live_surface(path: str):
     return None
 
 
+def code4_surface(path: str):
+    if path.startswith(".github/scripts/") and path.endswith((".py", ".sh", ".json")):
+        return "RUNTIME_GENERATOR"
+    return live_surface(path)
+
+
 def reference_surface(path: str, line: str):
     tokens = set(TOKEN.findall(line))
+    if CODE4 in tokens:
+        if tokens == {CODE4} and line.strip() in CODE4_HISTORICAL.get(path, ("", ()))[1]:
+            return None
+        return code4_surface(path)
     if path == S5R and tokens == {FACTORIES[1]}:
         return None  # original and migrated blobs pinned independently
     if tokens == {CODE3} and CODE3_ASSERTIONS.get(path) == line.strip():
@@ -138,10 +175,10 @@ def reference_surface(path: str, line: str):
 
 def check_inventory(rows: list[dict], paths: set[str]):
     need(all(path not in paths for path in ORIGINALS), "RETIRED_CPP_REINTRODUCED")
-    need(len(rows) == 8, "FV_SOURCE_COUNT_NOT_EIGHT")
+    need(len(rows) == 7, "FV_SOURCE_COUNT_NOT_SEVEN")
     seen = [name for row in rows for name in row["registered_factory_types"]]
-    need(len(seen) == 13 and len(set(seen)) == 13 and
-         not set(FACTORIES).intersection(seen), "FV_FACTORY_COUNT_NOT_THIRTEEN")
+    need(len(seen) == 12 and len(set(seen)) == 12 and
+         not set(FACTORIES).intersection(seen), "FV_FACTORY_COUNT_NOT_TWELVE")
     counts = {x["source_file"]: len(x["registered_factory_types"]) for x in rows}
     need(counts.get("physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C") == 4,
          "ELECTRON_SHARED_OWNER_COUNT_DRIFT")
@@ -188,6 +225,14 @@ def audit(root: Path, expected_head: str):
         need(path in paths and paths[path][2] == sha,
              "HISTORICAL_CONSUMER_NOT_PINNED_" + path)
         need(blob((root / path).read_bytes()) == sha, "HISTORICAL_WORKTREE_DIRTY_" + path)
+    for path, (expected, lines) in CODE4_HISTORICAL.items():
+        need(path in paths and paths[path][2] == expected,
+             "CODE4_HISTORICAL_BLOB_DRIFT_" + path)
+        raw = (root / path).read_bytes()
+        need(blob(raw) == expected, "CODE4_HISTORICAL_WORKTREE_DIRTY_" + path)
+        actual_lines = [line.strip() for line in raw.decode("utf-8").splitlines()
+                        if CODE4 in TOKEN.findall(line)]
+        need(sorted(actual_lines) == sorted(lines), "CODE4_HISTORICAL_LINE_DRIFT_" + path)
     need(JOULE_SMOKE not in paths, "RETIRED_JOULE_SMOKE_REINTRODUCED")
     rows = source_owners(root / "physics_app/src/fvkernels")
     for row in rows:
@@ -198,13 +243,15 @@ def audit(root: Path, expected_head: str):
     actual_sources = []
     reviewed_assertions = {path: 0 for path in CODE3_ASSERTIONS}
     for rel, (mode, kind, sha) in paths.items():
-        if kind != "blob" or live_surface(rel) is None:
+        if kind != "blob" or code4_surface(rel) is None:
             continue
         raw = (root / rel).read_bytes()
         need(blob(raw) == sha, "ACTIVE_SOURCE_DIRTY_" + rel)
         for line in raw.decode("utf-8", errors="replace").splitlines():
             if not TOKEN.search(line):
                 continue
+            if live_surface(rel) is None and CODE4 not in TOKEN.findall(line):
+                continue  # preserve earlier retired-owner audit scope
             if CODE3_ASSERTIONS.get(rel) == line.strip():
                 reviewed_assertions[rel] += 1
             surface = reference_surface(rel, line)
@@ -214,6 +261,10 @@ def audit(root: Path, expected_head: str):
          "CODE3_ASSERTION_INVENTORY_DRIFT")
     need(not actual_sources, "RETIRED_FACTORY_ACTIVE_SOURCE_REFERENCE_" +
          ",".join(x["path"] for x in actual_sources[:5]))
+    grep = subprocess.run(
+        ["git", "-C", str(root), "grep", "-n", "-I", "-w", "-e", CODE4, "HEAD", "--"],
+        text=True, capture_output=True)
+    need(grep.returncode in (0, 1), "CODE4_TRACKED_TOKEN_INVENTORY_FAILED")
     native = (root / ".github/workflows/physics-native-ci.yml").read_text()
     code = (root / ".github/workflows/physics-code-ci.yml").read_text()
     general = (root / ".github/workflows/ci.yml").read_bytes()
@@ -229,7 +280,7 @@ def audit(root: Path, expected_head: str):
          "RETIRED_ARCH_DUPLICATE_JOB_RETURNED")
     verify_post_cut_fdeg_capture(code)
     return {
-        "schema": "issue774.main_combined_retirement.v0.2",
+        "schema": "issue774.main_combined_retirement.v0.3",
         "source_head": actual,
         "source_tree": subprocess.check_output(
             ["git", "-C", str(root), "rev-parse", "HEAD^{tree}"],
@@ -239,6 +290,8 @@ def audit(root: Path, expected_head: str):
         "historical_consumer_blobs": PINNED_HISTORICAL_CONSUMERS,
         "pinned_provenance_blobs": PINNED_PROVENANCE,
         "reviewed_code3_assertions": reviewed_assertions,
+        "code4_historical_references": CODE4_HISTORICAL,
+        "code4_exact_tracked_text_inventory": grep.stdout.splitlines(),
         "current_newonly": counts,
         "current_active_retired_symbol_references": actual_sources,
         "core_and_split_native_ci_preserved": True,
@@ -274,6 +327,15 @@ def self_test():
         need(reference_surface(path, assertion) is None, "ASSERTION_CLASSIFIER_LOST")
         need(reference_surface(path, "type = " + CODE3) is not None,
              "ACTIVE_CODE3_REINTRODUCTION_ACCEPTED")
+    for path, (_, lines) in CODE4_HISTORICAL.items():
+        for line in lines:
+            need(reference_surface(path, line) is None, "CODE4_PINNED_LINE_REJECTED")
+        need(reference_surface(path, "type = " + CODE4) is not None,
+             "CODE4_NEW_CONSUMER_ACCEPTED")
+    need(reference_surface(".github/scripts/new_consumer.py", "type = " + CODE4)
+         == "RUNTIME_GENERATOR", "CODE4_SCRIPT_SCOPE_LOST")
+    need(reference_surface("experiments/newonly/reintroduced.i", "type = " + CODE4)
+         == "MOOSE_INPUT", "CODE4_INPUT_SCOPE_LOST")
     try:
         check_inventory([], set())
     except ValueError:
