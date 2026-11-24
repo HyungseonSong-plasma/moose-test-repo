@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "issue-652-poisson-g8-matched-pilot-20261123",
-      "expected_sha": "73d0b1f4ab2d2d963f41f3ec95c1efb1c5c580de",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-poisson-g8-matched-pilot-20261123-73d0b1f4ab2d"
+      "branch": "issue-817-code3-consumer-pair-d3",
+      "expected_sha": "97ecf94e7f4749602857942ce7b99c0ef43de1ba",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-consumer-pair-d3-97ecf94e7f47"
     },
     {
-      "branch": "issue-652-poisson-g7-equivalence-ad-20261123",
-      "expected_sha": "131fc8319529d1e94103c7754542761818a834db",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-poisson-g7-equivalence-ad-20261123-131fc8319529"
+      "branch": "issue-817-code3-newonly-retirement",
+      "expected_sha": "0772153070bb592d53d835d5fdb81da76280f77d",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-newonly-retirement-0772153070bb"
     },
     {
-      "branch": "issue-652-g6b-publicd100-parallel-full100-20261123",
-      "expected_sha": "26e84a4a33cf93d9e278a4f0b2d78c53cae2d6ce",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-g6b-publicd100-parallel-full100-20261123-26e84a4a33cf"
+      "branch": "code3-retire-pr-a-evidence-parity-20261119",
+      "expected_sha": "63b8a05375744e3b51c8fc1005f1d26e1320e2f5",
+      "archive_tag": "archive/oxygen-cleanup-20261106/code3-retire-pr-a-evidence-parity-20261119-63b8a0537574"
     },
     {
-      "branch": "issue-817-code3-integrated-retirement-20261123",
-      "expected_sha": "7b52001a11e4035fafe0fd86d1d6c598196eefc8",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-integrated-retirement-20261123-7b52001a11e4"
+      "branch": "issue-809-code1-newonly-retirement",
+      "expected_sha": "1e998ce46c8760fe3deb5284ed1f6eae3f1f4137",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-809-code1-newonly-retirement-1e998ce46c87"
     },
     {
-      "branch": "issue-817-code3-s5r-native-d4",
-      "expected_sha": "238f9b7ba0f69072257c08b904a2366be389240e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-s5r-native-d4-238f9b7ba0f6"
+      "branch": "issue-774-newonly-integration-clean-20261123",
+      "expected_sha": "c70d4b65c530b3d80f104b14d5a91daae5179f50",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-newonly-integration-clean-20261123-c70d4b65c530"
     }
   ]
 }
