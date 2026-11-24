@@ -9,9 +9,13 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from hashlib import sha256
+import inspect
 import json
+from pathlib import Path
 import re
+import sys
 from time import monotonic
+from types import CodeType, FunctionType
 
 from ..diagnostics.collector import CollectionResult
 from ..diagnostics.providers.generated_input import (
@@ -230,4 +234,140 @@ def acquire_generated_input(
         source_kind, result, tuple(sorted(unresolved)))
 
 
-__all__ = ["GeneratedActionsReceipt", "acquire_generated_input"]
+@dataclass(frozen=True, slots=True)
+class GeneratedCapture:
+    """Locally observed return bytes and pre-upload producer assertion.
+
+    Not an authenticated runner/job/Artifact receipt. No output is written
+    to the checkout and no upload or Native execution is performed.
+    """
+    function_name: str
+    hit: bytes
+    manifest: bytes
+
+    @property
+    def producer_authenticated(self) -> bool:
+        return False
+
+
+def capture_generated_return(
+    request: ScanRequest, provider: GitSourceProvider, *,
+    producer_path: str, producer_blob_sha: str, function, arguments: dict,
+    artifact_path: str, run_id: int, attempt: int, job_id: int,
+    workflow_path: str,
+) -> GeneratedCapture:
+    """Explicitly invoke one vetted, top-level Python text-returning function.
+
+    Only use with a trusted, owner-authorized callable already loaded in the
+    current interpreter. This is not a sandbox, arbitrary-module loader,
+    process runner, tracer or dependency-closure proof. The time budget is a
+    post-call acceptance bound, not a preemptive timeout. No arbitrary code
+    is imported or executed by source scanning. Inputs are limited to small,
+    finite JSON scalars; only their digest (not values) enters the manifest.
+    Do not pass secrets. Globals/imports/default configuration, runner and
+    GitHub job/upload ownership are not attested.
+    """
+    started = monotonic()
+    if not isinstance(request, ScanRequest) or not isinstance(provider, GitSourceProvider):
+        raise TypeError("GENERATED_CAPTURE_SOURCE_REQUIRED")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", request.repository):
+        raise ValueError("GENERATED_REPOSITORY_INVALID")
+    for path in (producer_path, artifact_path, workflow_path):
+        normalized_path(path)
+    if (not producer_path.endswith(".py") or not request.selects(producer_path)
+            or not artifact_path.endswith(".i")
+            or not re.fullmatch(r"[A-Za-z0-9_.+/-]+", artifact_path)
+            or not workflow_path.startswith(".github/workflows/")
+            or not workflow_path.endswith((".yml", ".yaml"))):
+        raise ValueError("GENERATED_CAPTURE_PATH_INVALID")
+    if any(type(value) is not int or value < 1 for value in (run_id, attempt, job_id)):
+        raise ValueError("GENERATED_CAPTURE_CONTEXT_INVALID")
+    if type(function) is not FunctionType or function.__qualname__ != function.__name__:
+        raise TypeError("GENERATED_CAPTURE_TOP_LEVEL_FUNCTION_REQUIRED")
+    if function.__closure__ is not None or inspect.iscoroutinefunction(function) or inspect.isgeneratorfunction(function) or inspect.isasyncgenfunction(function):
+        raise ValueError("GENERATED_CAPTURE_FUNCTION_UNSUPPORTED")
+    if type(arguments) is not dict or any(type(k) is not str for k in arguments):
+        raise TypeError("GENERATED_CAPTURE_ARGUMENTS_REQUIRED")
+    signature = inspect.signature(function, follow_wrapped=False)
+    if any(p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD) for p in signature.parameters.values()):
+        raise ValueError("GENERATED_CAPTURE_VARIADIC_UNSUPPORTED")
+    bound = signature.bind(**arguments)
+    bound.apply_defaults()
+    if len(bound.arguments) > 32:
+        raise ValueError("GENERATED_CAPTURE_ARGUMENT_LIMIT")
+    for value in bound.arguments.values():
+        if type(value) not in (type(None), bool, int, float, str):
+            raise ValueError("GENERATED_CAPTURE_ARGUMENT_UNSUPPORTED")
+        if type(value) is str and len(value) > 4096:
+            raise ValueError("GENERATED_CAPTURE_ARGUMENT_LIMIT")
+        if type(value) is int and value.bit_length() > 256:
+            raise ValueError("GENERATED_CAPTURE_ARGUMENT_LIMIT")
+    invocation = json.dumps(
+        {"function": function.__name__, "arguments": dict(bound.arguments)},
+        sort_keys=True, ensure_ascii=True, allow_nan=False,
+        separators=(",", ":")).encode("ascii")
+    if len(invocation) > min(64_000, request.budget.max_bytes):
+        raise ValueError("GENERATED_CAPTURE_ARGUMENT_LIMIT")
+    invocation_digest = sha256(invocation).hexdigest()
+
+    def verify_source():
+        provider.assert_head(request.revision)
+        source = provider.read_at_revision(request.revision, producer_path)
+        if source.record.blob_sha != producer_blob_sha:
+            raise ValueError("GENERATED_PRODUCER_BLOB_MISMATCH")
+        if len(source.content) > request.budget.max_bytes:
+            raise ValueError("GENERATED_CAPTURE_SOURCE_BYTE_BUDGET")
+        filename = Path(function.__code__.co_filename)
+        expected_file = provider.root.resolve() / producer_path
+        if (filename.resolve() != expected_file or expected_file.is_symlink()
+                or expected_file.resolve() != expected_file):
+            raise ValueError("GENERATED_CAPTURE_FUNCTION_SOURCE_MISMATCH")
+        module_path = function.__globals__.get("__file__")
+        if not isinstance(module_path, str) or Path(module_path).resolve() != expected_file:
+            raise ValueError("GENERATED_CAPTURE_FUNCTION_SOURCE_MISMATCH")
+        with expected_file.open("rb") as stream:
+            actual = stream.read(request.budget.max_bytes + 1)
+        if actual != source.content:
+            raise ValueError("GENERATED_CAPTURE_WORKTREE_SOURCE_MISMATCH")
+        # Compile only (never exec): compare the loaded top-level code object
+        # against the exact Git source, including constants and nested code.
+        compiled = compile(source.content, function.__code__.co_filename, "exec",
+                           dont_inherit=True, optimize=sys.flags.optimize)
+        matches = [obj for obj in compiled.co_consts
+                   if isinstance(obj, CodeType) and obj.co_name == function.__name__]
+        if len(matches) != 1 or matches[0] != function.__code__:
+            raise ValueError("GENERATED_CAPTURE_CODE_MISMATCH")
+
+    def time_check():
+        if monotonic() - started > request.budget.max_seconds:
+            raise ValueError("GENERATED_CAPTURE_TIME_BUDGET_EXCEEDED")
+
+    verify_source()
+    time_check()
+    returned = function(*bound.args, **bound.kwargs)
+    time_check()
+    if type(returned) is not str:
+        raise TypeError("GENERATED_CAPTURE_TEXT_RETURN_REQUIRED")
+    if len(returned) > request.budget.max_bytes:
+        raise ValueError("GENERATED_CAPTURE_OUTPUT_BYTE_BUDGET")
+    hit = returned.encode("utf-8", "strict")
+    if not hit or len(hit) > request.budget.max_bytes:
+        raise ValueError("GENERATED_CAPTURE_OUTPUT_BYTE_BUDGET")
+    verify_source()
+    time_check()
+    identity = {
+        "repository": request.repository, "source_sha": request.revision,
+        "producer_path": producer_path, "producer_blob_sha": producer_blob_sha,
+        "run_id": run_id, "attempt": attempt, "artifact_path": artifact_path,
+        "artifact_sha256": sha256(hit).hexdigest(),
+        "invocation_sha256": invocation_digest,
+    }
+    manifest = json.dumps(
+        {"schema_version": 1, "identity": identity, "job_id": job_id,
+         "workflow_path": workflow_path},
+        sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return GeneratedCapture(function.__name__, hit, manifest)
+
+
+__all__ = ["GeneratedActionsReceipt", "acquire_generated_input",
+           "GeneratedCapture", "capture_generated_return"]
