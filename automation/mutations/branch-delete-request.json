@@ -1,39 +1,17 @@
 {
   "targets": [
     {
-      "branch": "issue-758-harness-p1-symbol-identity",
-      "expected_sha": "4e9c9eb4b19f668b9698e7e200c8c7b344ee314c"
+      "branch": "issue-758-lucidity-path-retirement",
+      "expected_sha": "436cb7b3210ed9423c3001c9c5f5c351f8f2219e"
     },
     {
-      "branch": "issue-758-harness-p2-git-tree",
-      "expected_sha": "03e0317ddc129147cdb71ee03bf884c2aa332589"
+      "branch": "issue-758-lucidity-retirement-validation",
+      "expected_sha": "41cd846f75fcb47772408db858531e4688198252",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-lucidity-retirement-validation-41cd846f75fc"
     },
     {
-      "branch": "issue-758-harness-p3-boundary-reads",
-      "expected_sha": "fe093f50b7a1a46fb8844e701e66b4045512c249"
-    },
-    {
-      "branch": "issue-758-harness-p4-coverage-adjacency",
-      "expected_sha": "ab84f1e0cd28c7940db389be4a02aaa053c4db0d"
-    },
-    {
-      "branch": "issue-758-harness-p6-local-simplification",
-      "expected_sha": "f868dfc1904b6717829d197de6f074fa5c43ced3"
-    },
-    {
-      "branch": "issue-758-harness-self-analysis-survey-1",
-      "expected_sha": "fdcbb55626b76b49311ac69336fa650482c0197e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-self-analysis-survey-1-fdcbb55626b7"
-    },
-    {
-      "branch": "issue-758-harness-self-analysis-survey-2",
-      "expected_sha": "a817519ca72917d276f80ba3a90ed075ecce8a2a",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-self-analysis-survey-2-a817519ca729"
-    },
-    {
-      "branch": "issue-758-harness-p1-receipt-parity",
-      "expected_sha": "9a4249fb6e5e93585c0030d21693f6a9893567b7",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-p1-receipt-parity-9a4249fb6e5e"
+      "branch": "cleanup-758-v05-final-refs",
+      "expected_sha": "3e0c38495a2c2e8353c007f75244009f57a8e32a"
     }
   ]
 }
