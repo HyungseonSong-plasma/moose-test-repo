@@ -70,8 +70,8 @@ This incident is distinct from `INC-ADF-JIT-001`. A `Vars` parse error is a pars
 Canonical enforcement is owned by `docs/protocols/validation.md` VAL-03 / VAL-19 and the unified CLI:
 
 ```text
-python3 scripts/qpx.py preflight --self-test
-python3 scripts/qpx.py preflight <generated-or-packaged-input.i>
+python3 bin/physics.py preflight --self-test
+python3 bin/physics.py preflight <generated-or-packaged-input.i>
 ```
 
 Hard checks before P2:
@@ -83,9 +83,9 @@ reject duplicate parser symbols
 reject invalid identifiers
 ```
 
-The reusable regression harness invokes the same parser-symbol preflight before QPX execution. Do not create a separate compatibility script for this check.
+The current guard is `physics_harness/adapters/moose/preflight.py`; the `bin/physics.py` fast path runs it before loading the full harness. Use this guard or an equivalent embedded guard before P2, as required by VAL-19. Do not create a separate compatibility script for this check.
 
-External overlay bundles that do not carry the repository `scripts/` tree must embed or invoke an equivalent guard in the case `prepare.py` before `qpx-opt --check-input`.
+External overlay bundles that do not carry the repository `bin/` entrypoint must embed or invoke an equivalent guard in the case `prepare.py` before `physics-opt --check-input`.
 
 ## Decision rule
 
@@ -105,4 +105,4 @@ Then inspect parser-symbol declarations before changing physics, data, timestep,
 
 ## Closure evidence
 
-Root cause is source-consistent, the #21 candidate was repaired without physics changes, the local overlay includes a reserved-symbol guard, and canonical repository validation is machine-enforced P0 prevention through the unified QPX harness.
+Root cause is source-consistent, the #21 candidate was repaired without physics changes, the local overlay includes a reserved-symbol guard, and canonical repository validation added machine-enforced P0 prevention (historical QPX harness; the current entrypoint is `bin/physics.py`).
