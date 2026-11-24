@@ -231,7 +231,9 @@ jobs:
           import issue652_g7_s6_directional as g7
           import issue652_g7_native_ad_jacobian as micro
           with micro.private_workspace() as work:
-              (work/"g7_micro_poisson.i").write_text(micro.generated_input())
+              fixture=micro.generated_input().replace("  type = Steady\n","  type = Steady\n  solve_type = NEWTON\n",1)
+              fixture += "\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n  []\n[]\n"
+              (work/"g7_micro_poisson.i").write_text(fixture)
               cmd=micro.docker_command(Path.cwd(),work,check=False)
               cmd[-1]=cmd[-1].replace("/workspace/physics_app/physics-opt",
                   "G7_JVP_MIN_DOF=1 LD_PRELOAD=/workspace/physics_app/g7_jvp_probe.so /workspace/physics_app/physics-opt")
