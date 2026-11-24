@@ -1,0 +1,75 @@
+name: P3b residual call attribution (one-shot)
+on:
+  push:
+    branches: [issue-758-harness-p1-receipt-parity]
+    paths: ['.github/workflows/harness-p1-receipt-parity-once.yml']
+permissions:
+  contents: read
+jobs:
+  trace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 758a3a8b74b0569ecefb1ddbfdb485fb48d8e695
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact revision and dependencies
+        run: |
+          test "$(git rev-parse HEAD)" = 758a3a8b74b0569ecefb1ddbfdb485fb48d8e695
+          python -m pip install 'pytest>=8,<9' -r physics_harness/code/requirements.txt
+      - name: Trace existing Safety Gate
+        run: |
+          PYTHONPATH="$PWD" python - <<'PY'
+          import ast, json, tempfile, time, statistics
+          from collections import Counter
+          from pathlib import Path
+          from unittest.mock import patch
+          from contextlib import ExitStack
+          from physics_harness.code.diagnostics.providers.git import GitSourceProvider
+          from physics_harness.code.tests.test_naming_boundary import history,case,bindings,extract_option,PATH
+          from physics_harness.code.tests.test_naming_candidate import third_commit,placements
+          from physics_harness.code.verification import naming_gates as gates, naming_behavior as behavior
+          from physics_harness.code.verification import naming_candidate as candidate,naming_boundary as boundary
+          from physics_harness.code.verification import naming_consumers as consumers,naming_semantic_review as blind
+          root,before,base=history.__wrapped__(Path(tempfile.mkdtemp()))
+          after=third_commit((root,before,base))
+          subject=case(before,base)
+          provider=GitSourceProvider(root)
+          opt=extract_option()
+          args=(subject,opt,provider,bindings(),after,PATH,placements())
+          def invoke():
+              return gates.evaluate_naming_safety_gates(*args)
+          expected=invoke()
+          times=[]
+          for _ in range(5):
+              t=time.perf_counter(); result=invoke(); times.append((time.perf_counter()-t)*1000)
+              assert result==expected
+          stack=[]; reads=Counter(); parses=Counter(); invocations=Counter(); durations=Counter(); by_path=Counter()
+          real_read=provider.read_at_revision; real_parse=ast.parse
+          def read(rev,path):
+              label=stack[-1] if stack else "other"
+              reads[label]+=1; by_path[(label,"before" if rev==base else "after" if rev==after else "historical",path)]+=1
+              return real_read(rev,path)
+          def parse(*a,**kw):
+              parses[stack[-1] if stack else "other"]+=1
+              return real_parse(*a,**kw)
+          def wrap(fn,label):
+              def run(*a,**kw):
+                  invocations[label]+=1; stack.append(label); t=time.perf_counter()
+                  try: return fn(*a,**kw)
+                  finally: durations[label]+=(time.perf_counter()-t)*1000; stack.pop()
+              return run
+          with ExitStack() as ctx:
+              for mod,name,label in [(gates,"verify_naming_candidate","gate_candidate"),(behavior,"verify_naming_candidate","behavior_candidate"),(candidate,"verify_naming_boundary","candidate_boundary"),(gates,"verify_naming_behavior_projection","behavior"),(gates,"audit_naming_consumers","consumers"),(gates,"build_blinded_semantic_packet","blind"),(blind,"verify_naming_boundary","blind_boundary")]:
+                  ctx.enter_context(patch.object(mod,name,side_effect=wrap(getattr(mod,name),label)))
+              ctx.enter_context(patch.object(provider,"read_at_revision",side_effect=read))
+              ctx.enter_context(patch.object(ast,"parse",side_effect=parse))
+              result=invoke()
+          assert result==expected
+          report={"source_revision":"758a3a8b74b0569ecefb1ddbfdb485fb48d8e695","scenario":"existing destination EXTRACT_KEEP fixture","source_reads":dict(reads),"ast_parses":dict(parses),"invocations":dict(invocations),"inclusive_timing_ms":dict(durations),"full_gate_uninstrumented_ms":times,"median_ms":statistics.median(times),"receipt_equal":True,"structural_status":result.structural.status,"behavior_status":result.behavior.status,"gate_status":result.status,"total_reads":sum(reads.values()),"total_parses":sum(parses.values()),"read_locations":[{"owner":k[0],"revision":k[1],"path":k[2],"count":v} for k,v in sorted(by_path.items())]}
+          print("P3B_TRACE="+json.dumps(report,sort_keys=True))
+          PY
