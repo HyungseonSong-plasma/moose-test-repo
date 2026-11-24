@@ -9,7 +9,6 @@ from pathlib import PurePosixPath
 from ..diagnostics import EvidenceReceipt, GitSourceProvider, ScanRequest, file_node_id
 from ..diagnostics.request import normalized_path
 from ..graph import GraphSnapshot
-from ..verification import verify_generated_artifact
 
 
 _BASES = frozenset({"REPOSITORY_ROOT", "OWNER_DIRECTORY"})
@@ -92,6 +91,8 @@ def resolve_file_references(
     """
     if not isinstance(provider, GitSourceProvider):
         raise TypeError("FILE_REFERENCE_GIT_PROVIDER_REQUIRED")
+    from ..verification.consistency import verify_generated_artifact
+
     verification = verify_generated_artifact(graph, receipt)
     if verification.failures:
         raise ValueError("FILE_REFERENCE_INVALID_SOURCE_RECEIPT")

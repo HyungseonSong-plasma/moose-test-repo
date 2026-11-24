@@ -92,3 +92,34 @@ def test_invalid_base_binding_rejected(git_factory):
     with pytest.raises(ValueError, match="UNKNOWN_FILE_REFERENCE_EDGE"):
         resolve_file_references(result.graph, result.receipt, provider,
                                 bases_by_edge={"bogus": ("REPOSITORY_ROOT",)})
+
+
+def test_nonregular_git_target_not_resolved(git_factory):
+    from .conftest import git
+
+    root, _ = git_factory({"ref.json": '"alias.i"', "real.i": "payload"})
+    (root / "alias.i").symlink_to("real.i")
+    git(root, "add", "alias.i")
+    git(root, "commit", "-q", "-m", "symlink negative control")
+    provider = GitSourceProvider(root)
+    result = run_scan(ScanRequest("example/repo", git(root, "rev-parse", "HEAD"),
+                                  ("*.json",), collectors=("json",)), provider)
+    row, = resolve(provider, result, ("REPOSITORY_ROOT",)).rows
+    assert row.status == "NON_REGULAR"
+    assert row.targets[0].mode == "120000"
+    assert row.targets[0].path == "alias.i"
+
+
+def test_root_path_resolution_is_bound_to_git_blob_not_worktree(git_factory):
+    from .conftest import git
+
+    provider, result = scan(git_factory, {
+        "docs/contract.json": '{"reference":"physics_app/ci/case.i"}',
+        "physics_app/ci/case.i": "original",
+    })
+    expected = git(provider.root, "rev-parse", "HEAD:physics_app/ci/case.i")
+    (provider.root / "physics_app/ci/case.i").write_text("uncommitted mutation")
+    row, = resolve(provider, result, ("REPOSITORY_ROOT",)).rows
+    assert row.status == "RESOLVED_CANDIDATE"
+    assert row.targets[0].blob_sha == expected
+    assert row.source_path == "docs/contract.json"
