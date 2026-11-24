@@ -61,19 +61,8 @@ def _git_source_paths(provider: GitSourceProvider, revision: str) -> tuple[str, 
         raise ValueError("INVALID_CONSUMER_REVISION")
     if provider._git("cat-file", "-t", revision).strip() != b"commit":
         raise ValueError("CONSUMER_REVISION_NOT_COMMIT")
-    rows = provider._git("ls-tree", "--full-tree", "-r", "-z", revision).split(b"\x00")
-    result = []
-    for row in rows:
-        if not row:
-            continue
-        meta, name = row.split(b"\t", 1)
-        mode, kind, _ = meta.decode("ascii").split()
-        if kind != "blob" or mode not in {"100644", "100755"}:
-            continue
-        path = name.decode("utf-8", "strict")
-        if PurePosixPath(path).suffix in _TEXT_EXTENSIONS:
-            result.append(path)
-    return tuple(sorted(result))
+    return tuple(sorted(path for path in provider._regular_tree_paths(revision)
+                        if PurePosixPath(path).suffix in _TEXT_EXTENSIONS))
 
 
 def _module_for(path: str) -> str:
