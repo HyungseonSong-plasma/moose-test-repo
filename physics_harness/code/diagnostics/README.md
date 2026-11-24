@@ -281,3 +281,42 @@ then uses its real returned HIT and manifest through P1b with simulated
 Actions metadata. This is not a live uploaded Actions artifact or Native
 runtime claim. Actual authenticated upload/job correlation, later attempt
 binding, broader call-site observation and coverage remain open.
+
+
+### Selected Python frame-call trace (#882, P2 first slice)
+
+`verification/python_call_trace.py:trace_generated_calls` is an explicit
+opt-in extension of the P1 generator capture. A caller selects a vetted
+text-returning entry function, an explicit tuple of exact-source loaded
+top-level caller/callee functions, canonical existing Python AST call-site
+IDs, and a unique trace occurrence ID. It reuses the P1 loaded-code
+verification and the AST collector's existing UTF-8 source-span identity.
+CPython 3.11+ current-thread profile events map the observed caller frame
+and exact instruction position to that existing call-site node. Selected
+callee code/global identity is checked against the separately chosen loaded
+function. The new `PYTHON_FRAME_CALL_OBSERVED` edge references the canonical
+callee symbol and carries `PYTHON_CALL_TRACE` RUNTIME_OBSERVED evidence,
+not a static inference or a Native object observation. Existing Graph
+schema and node identities are unchanged.
+
+The returned P1 capture and trace share invocation and HIT digests.
+Optional explicitly selected non-secret scalar callee arguments are
+hashed, not serialized into graph evidence. Assemble the trace FactBatch
+with existing exact-source AST facts and EvidenceReceipt (and optionally
+P1 generated HIT facts). The consistency verifier checks exact caller
+and callee blob receipts, declared endpoints, source span, canonical
+edge/evidence identity and the caller-supplied run/attempt/job context.
+A local trace URI is not an independently authenticated external record.
+
+The trace is always PARTIAL: unobserved sites, unselected callees,
+unsupported C calls/callbacks, unsupported arguments and event truncation
+remain explicit unresolved conditions. No global consumer closure is
+inferred. Only selected Python frame transitions in the current thread
+are observed; nested functions, arbitrary process/async/native tracing
+and unobserved branches remain outside this slice. Existing profiling or
+tracing hooks are refused; temporary profiling is removed in finally.
+Time acceptance is post-call, not a hard execution timeout. This is not
+a sandbox and must not execute unknown/unapproved code. Actual uploaded
+trace artifacts and authenticated runner provenance, broader call-site
+coverage, static alternatives (P3), Native observation (P4) and
+coverage integration (P5) remain separate obligations.
