@@ -1,16 +1,12 @@
 {
   "targets": [
     {
-      "branch": "issue-867-json-source-collector",
-      "expected_sha": "1474f6ebd3ae4da68d5b45c602a6c8fe17cb0c49"
+      "branch": "issue-875-docs-cleanup-b3",
+      "expected_sha": "6d268570af5abbc3faad5d3dac9b8589c1420086"
     },
     {
-      "branch": "issue-867-file-reference-resolution",
-      "expected_sha": "16446e3d5337955e27d762e62818a7ec2fc9f099"
-    },
-    {
-      "branch": "issue-867-python-hit-file-references",
-      "expected_sha": "218fc46cad0aa5c6697aafa7b053ce07e641b075"
+      "branch": "issue-875-docs-cleanup-b4",
+      "expected_sha": "7d129fc0b07dceb82bfb2c390af7dcbc2ad4767f"
     }
   ]
 }
