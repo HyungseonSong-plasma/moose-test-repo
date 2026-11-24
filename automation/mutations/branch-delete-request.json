@@ -1,24 +1,24 @@
 {
   "targets": [
     {
-      "branch": "cleanup-774-retirement-refs-20261124-batch13",
-      "expected_sha": "0c027183b09af63e2b575386b7c06b5bfafa771c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch13-0c027183b09a"
+      "branch": "cleanup-774-retirement-refs-20261124-batch14",
+      "expected_sha": "a480b33f167ada47426128a5f70ff79b84dedbb7",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch14-a480b33f167a"
     },
     {
-      "branch": "issue-673-newphysics-publicboltz-rates-100us-20261119",
-      "expected_sha": "03c0e29fba7e64dc8d3d98cb2b96b76d1ef10f44",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-newphysics-publicboltz-rates-100us-20261119-03c0e29fba7e"
+      "branch": "cleanup-issue535-s6-reference-20261115",
+      "expected_sha": "1b1a5c8bdb11a01589247bf55e7e71c8f5d15ddb",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-issue535-s6-reference-20261115-1b1a5c8bdb11"
     },
     {
-      "branch": "issue-673-p3p4-publicd100-9457191-checkpoint-recover-20261119",
-      "expected_sha": "e17dcfce089496fb842041d1a0a864b50dc7f445",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-p3p4-publicd100-9457191-checkpoint-recover-20261119-e17dcfce0894"
+      "branch": "cleanup-wave1-s6-p3-20261116",
+      "expected_sha": "6efeb8bbc519914099380e02ad60364b1c87032f",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-wave1-s6-p3-20261116-6efeb8bbc519"
     },
     {
-      "branch": "issue-673-publicd100-exodus-hpem-100us-20261119",
-      "expected_sha": "ee37266cf2f813de870d12594113bd257db7800b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-673-publicd100-exodus-hpem-100us-20261119-ee37266cf2f8"
+      "branch": "issue-541-s6-p2-closure-cutover-20261116",
+      "expected_sha": "b0f7967830ba290c55339918be3fac0c36397e7c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-541-s6-p2-closure-cutover-20261116-b0f7967830ba"
     }
   ]
 }
