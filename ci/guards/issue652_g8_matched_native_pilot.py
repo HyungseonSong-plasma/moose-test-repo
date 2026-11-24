@@ -4,8 +4,8 @@
 Identical exact-head PhysicsApp ELF and all physical inputs except the 15
 Poisson/charge owner handoff; preflight G8 source provenance must PASS.
 Run P2 then bounded 3ns pilot in independent private /dev/shm scratch trees.
-Compare nodal potential and independently reconstructed n_e/rho on identical
-plasma meshes at common Exodus time frames. NO full100, P4 or science acceptance.
+Compare nodal potential and independently reconstructed n_e/rho at matching
+nodal or elemental support on identical plasma meshes and Exodus time frames. NO full100, P4 or science acceptance.
 Protected rates, source decks, private logs and raw Exodus never uploaded.
 """
 from __future__ import annotations
@@ -138,52 +138,100 @@ def protected_files_for_case(root: Path, case: str, tables: dict) -> dict:
     }
 
 
-def exodus_read(path: Path) -> dict:
+def exodus_read(path: Path, observation=None) -> dict:
     import numpy as np
     from netCDF4 import Dataset
 
+    if observation is None:
+        observation = {}
     if path.is_symlink() or not path.is_file() or path.stat().st_size < 4096:
         raise MatchedHold("P3_EXODUS_NOT_FOUND")
+
     def strs(matrix):
-        a = np.asarray(matrix)
+        a = np.ma.filled(matrix, b"\x00")
         return [row.astype("S1").tobytes().decode("ascii", "ignore").strip("\0 ")
                 for row in a]
+
+    def numeric(variable, dtype=float):
+        data = np.ma.asarray(variable[:])
+        if np.ma.getmaskarray(data).any():
+            raise MatchedHold("P3_MASKED_FIELD_OR_MESH")
+        result = np.asarray(data, dtype=dtype)
+        if not np.isfinite(result).all():
+            raise MatchedHold("P3_NODAL_SHAPE_OR_NONFINITE")
+        return result
+
     with Dataset(path, "r") as ds:
-        times = np.asarray(ds.variables["time_whole"][:], dtype=float)
-        x = np.asarray(ds.variables["coordx"][:], dtype=float)
-        y = np.asarray(ds.variables["coordy"][:], dtype=float)
-        if (not np.all(np.isfinite(times)) or
-                not np.all(np.isfinite(x)) or not np.all(np.isfinite(y)) or
-                len(times) < 3 or abs(float(times[-1])-3e-9) > 1e-12):
+        times = numeric(ds.variables["time_whole"])
+        x = numeric(ds.variables["coordx"])
+        y = numeric(ds.variables["coordy"])
+        if (times.ndim != 1 or x.ndim != 1 or y.shape != x.shape
+                or len(times) < 3 or abs(float(times[-1])-3e-9) > 1e-12):
             raise MatchedHold("P3_EXODUS_TIME_OR_COORDS_INVALID")
         if not np.all(np.diff(times) > 0):
             raise MatchedHold("P3_EXODUS_NONMONOTONIC_TIME")
-        names = strs(ds.variables["name_nod_var"][:])
+        nodal = strs(ds.variables["name_nod_var"][:]) if "name_nod_var" in ds.variables else []
+        elemental = strs(ds.variables["name_elem_var"][:]) if "name_elem_var" in ds.variables else []
         required = ("potential",) + REQUIRED_LOGS
-        if any(names.count(key) != 1 for key in required):
-            raise MatchedHold("P3_REQUIRED_NODAL_FIELD_MISSING")
-        var = {}
-        for key in required:
-            data = np.asarray(ds.variables["vals_nod_var"+str(names.index(key)+1)][:],
-                              dtype=float)
-            if data.shape != (len(times), len(x)) or not np.all(np.isfinite(data)):
-                raise MatchedHold("P3_NODAL_SHAPE_OR_NONFINITE")
-            var[key] = data
+        # Emit only fixed public field keys and counts, never the complete name list.
+        observation["required_field_counts"] = {
+            key: {"nodal": nodal.count(key), "elemental": elemental.count(key)}
+            for key in required
+        }
         blocks = strs(ds.variables["eb_names"][:])
         if blocks.count("plasma") != 1:
             raise MatchedHold("P3_PLASMA_BLOCK_NOT_EXACTLY_ONCE")
-        conn = np.asarray(ds.variables["connect"+str(blocks.index("plasma")+1)][:],
-                          dtype=int)-1
+        block = blocks.index("plasma") + 1
+        conn = numeric(ds.variables["connect"+str(block)], dtype=int)-1
         nodes = np.unique(conn)
-        if not len(nodes) or nodes.min() < 0 or nodes.max() >= len(x):
+        if conn.ndim != 2 or not len(nodes) or nodes.min() < 0 or nodes.max() >= len(x):
             raise MatchedHold("P3_PLASMA_CONNECTIVITY_INVALID")
+        observation["plasma_nodes"] = int(len(nodes))
+        observation["plasma_elements"] = int(len(conn))
+
+        if any(nodal.count(key) > 1 or elemental.count(key) > 1 for key in required):
+            raise MatchedHold("P3_DUPLICATE_REQUIRED_FIELD")
+        if nodal.count("potential") != 1:
+            raise MatchedHold("P3_REQUIRED_NODAL_POTENTIAL_MISSING")
+
+        def read_nodal(key):
+            data = numeric(ds.variables["vals_nod_var"+str(nodal.index(key)+1)])
+            if data.shape != (len(times), len(x)):
+                raise MatchedHold("P3_NODAL_SHAPE_OR_NONFINITE")
+            return data
+
+        def read_elemental(key):
+            index = elemental.index(key)+1
+            if "elem_var_tab" in ds.variables:
+                truth = numeric(ds.variables["elem_var_tab"], dtype=int)
+                if truth.shape != (len(blocks), len(elemental)) or truth[block-1, index-1] != 1:
+                    raise MatchedHold("P3_PLASMA_ELEMENT_FIELD_INACTIVE")
+            varname = "vals_elem_var"+str(index)+"eb"+str(block)
+            if varname not in ds.variables:
+                raise MatchedHold("P3_PLASMA_ELEMENT_FIELD_MISSING")
+            data = numeric(ds.variables[varname])
+            if data.shape != (len(times), len(conn)):
+                raise MatchedHold("P3_ELEMENT_FIELD_SHAPE_INVALID")
+            return data
+
+        # Prefer actual cell data when all FV log states are available on plasma.
+        # A nodal-only representation is retained as a distinct observation class.
+        # Never interpolate or mix species centering to reconstruct charge.
+        if all(elemental.count(key) == 1 for key in REQUIRED_LOGS):
+            centering = "elemental"
+            logs = {key: read_elemental(key) for key in REQUIRED_LOGS}
+        elif (all(nodal.count(key) == 1 for key in REQUIRED_LOGS)
+              and not any(elemental.count(key) for key in REQUIRED_LOGS)):
+            centering = "nodal"
+            logs = {key: read_nodal(key)[:, nodes] for key in REQUIRED_LOGS}
+        else:
+            raise MatchedHold("P3_REQUIRED_LOG_FIELDS_MISSING_OR_MIXED_CENTERING")
+        observation["density_centering"] = centering
+        potential = read_nodal("potential")[:, nodes]
         other = {}
         for sigma in ("sigma_s", "sigma_wafer", "sigma_focus_ring"):
-            if sigma in names:
-                other[sigma] = np.asarray(
-                    ds.variables["vals_nod_var"+str(names.index(sigma)+1)][:],
-                    dtype=float)
-    logs = {k: var[k][:, nodes] for k in REQUIRED_LOGS}
+            if nodal.count(sigma) == 1:
+                other[sigma] = read_nodal(sigma)
     with np.errstate(over="ignore", under="ignore", invalid="ignore"):
         species = {key: NA*np.exp(value) for key, value in logs.items()}
     if any(not np.isfinite(array).all() or (array < 0).any()
@@ -191,8 +239,11 @@ def exodus_read(path: Path) -> dict:
         raise MatchedHold("P3_RECONSTRUCTED_DENSITY_INVALID")
     charge = ELEMENTARY_CHARGE*(species["log_O2p"]+species["log_Op"]
                                -species["log_e"]-species["log_Om"])
+    if not np.isfinite(charge).all():
+        raise MatchedHold("P3_RECONSTRUCTED_DENSITY_INVALID")
     return {"time": times, "x": x, "y": y, "conn": conn, "nodes": nodes,
-            "potential": var["potential"][:, nodes],
+            "density_centering": centering,
+            "potential": potential,
             "electron_density": species["log_e"],
             "charge_density": charge, "sigma": other,
             "filename_sha256": bytes_sha(path), "filename_size": path.stat().st_size}
@@ -214,9 +265,22 @@ def normalized_rms(old, new) -> dict:
     }
 
 
-def compare_exodus(old: Path, new: Path) -> dict:
+def compare_exodus(old: Path, new: Path, observation=None) -> dict:
     import numpy as np
-    a, b = exodus_read(old), exodus_read(new)
+    if observation is None:
+        observation = {}
+    arrays = {}
+    for mode, path in (("old", old), ("new", new)):
+        observation[mode] = {}
+        try:
+            arrays[mode] = exodus_read(path, observation[mode])
+        except Exception as exc:
+            observation[mode]["blocker_code"] = observation_blocker(exc)
+    if set(arrays) != {"old", "new"}:
+        raise MatchedHold("P3_EXODUS_OBSERVATION_INCOMPLETE")
+    a, b = arrays["old"], arrays["new"]
+    if a["density_centering"] != b["density_centering"]:
+        raise MatchedHold("OLD_NEW_DENSITY_CENTERING_MISMATCH")
     for key in ("time", "x", "y"):
         if a[key].shape != b[key].shape or not np.allclose(
                 a[key], b[key], atol=1e-13 if key != "time" else 1e-15,
@@ -244,6 +308,10 @@ def compare_exodus(old: Path, new: Path) -> dict:
         "time_points": len(a["time"]),
         "t_last_s": float(a["time"][-1]),
         "matched_nodes": len(a["nodes"]),
+        "matched_plasma_elements": len(a["conn"]),
+        "field_centering": {"potential": "nodal",
+                            "electron_density": a["density_centering"],
+                            "charge_density": a["density_centering"]},
         "matched_exodus_coordinates_and_plasma_connectivity": True,
         "fields": variables, "surface_charges": sigma,
         "same_time_and_mesh": "PASS",
@@ -254,6 +322,42 @@ def compare_exodus(old: Path, new: Path) -> dict:
         ),
         "fieldwise_100us": "NOT_RUN", "science": "SCIENCE_HOLD",
     }
+
+
+# The receipt is public: only fixed, allowlisted diagnostic codes can leave
+# the private scratch. Raw field names, exceptions, logs and Exodus stay private.
+OBSERVATION_BLOCKERS = frozenset({
+    "P3_EXODUS_NOT_FOUND", "P3_MASKED_FIELD_OR_MESH",
+    "P3_NODAL_SHAPE_OR_NONFINITE", "P3_EXODUS_TIME_OR_COORDS_INVALID",
+    "P3_EXODUS_NONMONOTONIC_TIME", "P3_PLASMA_BLOCK_NOT_EXACTLY_ONCE",
+    "P3_PLASMA_CONNECTIVITY_INVALID", "P3_DUPLICATE_REQUIRED_FIELD",
+    "P3_REQUIRED_NODAL_POTENTIAL_MISSING", "P3_PLASMA_ELEMENT_FIELD_INACTIVE",
+    "P3_PLASMA_ELEMENT_FIELD_MISSING", "P3_ELEMENT_FIELD_SHAPE_INVALID",
+    "P3_REQUIRED_LOG_FIELDS_MISSING_OR_MIXED_CENTERING",
+    "P3_RECONSTRUCTED_DENSITY_INVALID", "P3_EXODUS_OBSERVATION_INCOMPLETE",
+    "OLD_NEW_DENSITY_CENTERING_MISMATCH",
+    "OLD_NEW_PLASMA_CONNECTIVITY_NOT_IDENTICAL",
+    "FIELD_ARRAY_MISMATCH_OR_NONFINITE",
+    "OLD_NEW_MESH_OR_TIME_NOT_IDENTICAL:time",
+    "OLD_NEW_MESH_OR_TIME_NOT_IDENTICAL:x",
+    "OLD_NEW_MESH_OR_TIME_NOT_IDENTICAL:y",
+})
+
+
+def observation_blocker(exc):
+    code = str(exc)
+    return code if isinstance(exc, MatchedHold) and code in OBSERVATION_BLOCKERS else "P3_OBSERVATION_UNCLASSIFIED_HOLD"
+
+
+def record_comparison(record, old, new):
+    observation = record.setdefault("observation", {})
+    try:
+        record["comparison"] = compare_exodus(old, new, observation)
+    except Exception as exc:
+        record["comparison"] = {
+            "fieldwise_3ns_pilot": "HOLD_OBSERVATION",
+            "blocker_code": observation_blocker(exc),
+        }
 
 
 def run(*, before_g5: Path, after_g5: Path, stage_receipt: Path,
@@ -343,17 +447,25 @@ def run(*, before_g5: Path, after_g5: Path, stage_receipt: Path,
             if (len(ordered) != 11 or [Path(x).name for x in ordered][0] != C0
                     or len({Path(x).name for x in ordered}) != 11):
                 raise MatchedHold("G5_ELEVEN_LAYER_RUNTIME_ORDER_INVALID")
-            codes = {}
+            run_records = {"old": {}, "new": {}}
+            case_receipt = {
+                "old": run_records["old"], "new": run_records["new"],
+                "protected_EI_inputs": checked_tables["old"],
+                "same_case_protected_table_set": checked_tables["old"] == checked_tables["new"],
+                "comparison": {"fieldwise_3ns_pilot": "NOT_RUN"},
+                "science": "SCIENCE_HOLD",
+            }
+            result["cases"][case] = case_receipt
             for mode in ("old", "new"):
                 command = g6.docker_cmd(copies[mode], ordered, observe=False)
                 command[-1] += " --check-input"
                 log = private/(case+"-"+mode+"-p2.log")
                 code, digest = execute_privately(command, copies[mode], log, 360)
                 repair_private_permissions(private)
-                codes[mode] = code
-                if code != 0 or b"Syntax OK" not in log.read_bytes():
+                run_records[mode]["P2_rc"] = code
+                run_records[mode]["P2_syntax_ok"] = code == 0 and b"Syntax OK" in log.read_bytes()
+                if not run_records[mode]["P2_syntax_ok"]:
                     raise MatchedHold("NATIVE_P2_FAIL_"+mode.upper()+":"+case)
-            run_records = {}
             for mode in ("old", "new"):
                 command = g6.docker_cmd(
                     copies[mode], ordered + ["Outputs/file_base=g8_outputs/plasma"],
@@ -362,24 +474,22 @@ def run(*, before_g5: Path, after_g5: Path, stage_receipt: Path,
                     command, copies[mode], private/(case+"-"+mode+"-p3.log"),
                     MAX_SECONDS_PER_ARM)
                 repair_private_permissions(private)
+                run_records[mode]["P3_rc"] = code
                 if code:
                     raise MatchedHold("NATIVE_P3_FAIL_"+mode.upper()+":"+case)
                 exodus = copies[mode]/"g8_outputs/plasma.e"
                 if not exodus.is_file():
                     raise MatchedHold("G8_NO_NATIVE_P3_EXODUS_"+mode.upper())
-                run_records[mode]={"P2_rc":codes[mode],"P3_rc":code,
-                                   "exodus_sha256":file_sha(exodus),
-                                   "exodus_bytes":exodus.stat().st_size}
-            comparison=compare_exodus(
-                copies["old"]/"g8_outputs/plasma.e",
-                copies["new"]/"g8_outputs/plasma.e")
-            result["cases"][case] = {
-                "old":run_records["old"],"new":run_records["new"],
-                "comparison":comparison,"protected_EI_inputs":
-                    checked_tables["old"],
-                "same_case_protected_table_set":checked_tables["old"]==checked_tables["new"],
-                "science":"SCIENCE_HOLD",
-            }
+                run_records[mode].update({
+                    "exodus_sha256": file_sha(exodus),
+                    "exodus_bytes": exodus.stat().st_size,
+                })
+            # A comparator failure cannot erase successful solver receipts or
+            # prevent the next independent case from executing.
+            record_comparison(case_receipt, copies["old"]/"g8_outputs/plasma.e",
+                              copies["new"]/"g8_outputs/plasma.e")
+            print("G8_CASE_COMPARISON", case,
+                  case_receipt["comparison"]["fieldwise_3ns_pilot"], flush=True)
         result["P3_3ns"]=(
             "PASS_PROVISIONAL_3NS_BOTH" if set(result["cases"])==set(CASES)
             and all(v["comparison"]["fieldwise_3ns_pilot"]=="PASS_PROVISIONAL_3NS"

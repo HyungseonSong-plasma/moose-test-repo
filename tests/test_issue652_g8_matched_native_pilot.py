@@ -96,3 +96,91 @@ def test_preflight_success_reports_only_fixed_phase(capsys):
     with g8.preflight_phase("SHARED_ELF"):
         pass
     assert capsys.readouterr().out.strip() == "G8_PREFLIGHT_SHARED_ELF_PASS"
+
+
+def _synthetic_exodus(path, centering="elemental", omit=None, electron_shift=0.0):
+    import numpy as np
+    from netCDF4 import Dataset
+    with Dataset(path, "w") as ds:
+        for name, size in (("time_step", 4), ("num_nodes", 4), ("num_el_blk", 1),
+                           ("num_el_in_blk1", 2), ("num_nod_per_el1", 3), ("len_name", 33)):
+            ds.createDimension(name, size)
+        def put(name, dtype, dims, data):
+            ds.createVariable(name, dtype, dims)[:] = data
+        def names(name, dim, values):
+            ds.createDimension(dim, len(values))
+            # Explicit byte rows avoid library-version-dependent stringtochar.
+            rows = np.zeros((len(values), 33), dtype="S1")
+            for i, value in enumerate(values):
+                rows[i, :len(value)] = np.frombuffer(value.encode("ascii"), dtype="S1")
+            put(name, "S1", (dim, "len_name"), rows)
+        put("time_whole", "f8", ("time_step",), [0, 1e-9, 2e-9, 3e-9])
+        put("coordx", "f8", ("num_nodes",), [0, 1, 1, 0])
+        put("coordy", "f8", ("num_nodes",), [0, 0, 1, 1])
+        put("eb_names", "S1", ("num_el_blk", "len_name"),
+            np.array([list(b"plasma".decode()) + [""]*27], dtype="S1"))
+        put("connect1", "i4", ("num_el_in_blk1", "num_nod_per_el1"), [[1,2,3],[1,3,4]])
+        logs = [key for key in g8.REQUIRED_LOGS if key != omit]
+        nodal = ["potential"] + (logs if centering == "nodal" else [])
+        names("name_nod_var", "num_nod_var", nodal)
+        for i, key in enumerate(nodal, 1):
+            values = np.full((4,4), electron_shift if key == "log_e" else 0.0)
+            put("vals_nod_var"+str(i), "f8", ("time_step","num_nodes"), values)
+        if centering == "elemental":
+            names("name_elem_var", "num_elem_var", logs)
+            put("elem_var_tab", "i4", ("num_el_blk","num_elem_var"), np.ones((1,len(logs)),dtype=int))
+            for i, key in enumerate(logs, 1):
+                values = np.full((4,2), electron_shift if key == "log_e" else 0.0)
+                put("vals_elem_var"+str(i)+"eb1", "f8", ("time_step","num_el_in_blk1"), values)
+
+
+@pytest.mark.parametrize("centering", ["nodal", "elemental"])
+def test_real_exodus_same_support_parity(tmp_path, centering):
+    a, b = tmp_path/"a.e", tmp_path/"b.e"
+    _synthetic_exodus(a, centering)
+    _synthetic_exodus(b, centering)
+    result = g8.compare_exodus(a, b)
+    assert result["fieldwise_3ns_pilot"] == "PASS_PROVISIONAL_3NS"
+    assert result["field_centering"]["electron_density"] == centering
+    assert result["fields"]["charge_density"]["relative_rms"] == 0
+
+
+def test_elemental_difference_rejected_without_tolerance_change(tmp_path):
+    a, b = tmp_path/"a.e", tmp_path/"b.e"
+    _synthetic_exodus(a)
+    _synthetic_exodus(b, electron_shift=0.1)
+    result = g8.compare_exodus(a, b)
+    assert result["fieldwise_3ns_pilot"] == "HOLD_NUMERICAL_DIFFERENCE"
+
+
+def test_different_centering_rejected(tmp_path):
+    a, b = tmp_path/"a.e", tmp_path/"b.e"
+    _synthetic_exodus(a, "nodal")
+    _synthetic_exodus(b, "elemental")
+    with pytest.raises(g8.MatchedHold, match="CENTERING_MISMATCH"):
+        g8.compare_exodus(a,b)
+
+
+def test_missing_field_does_not_erase_native_receipts_or_block_next_comparison(tmp_path):
+    a, b = tmp_path/"a.e", tmp_path/"b.e"
+    _synthetic_exodus(a, omit="log_Om")
+    _synthetic_exodus(b)
+    record = {"old": {"P3_rc": 0}, "new": {"P3_rc": 0}}
+    g8.record_comparison(record, a, b)
+    assert record["old"]["P3_rc"] == record["new"]["P3_rc"] == 0
+    assert record["comparison"]["fieldwise_3ns_pilot"] == "HOLD_OBSERVATION"
+    assert record["observation"]["old"]["required_field_counts"]["log_Om"] == {"nodal":0,"elemental":0}
+    assert record["observation"]["new"]["density_centering"] == "elemental"
+    other = {}
+    g8.record_comparison(other, b, b)
+    assert other["comparison"]["fieldwise_3ns_pilot"] == "PASS_PROVISIONAL_3NS"
+
+
+def test_observation_exception_does_not_leak_private_text(monkeypatch):
+    def fail(*args):
+        raise ValueError("PRIVATE_NAME_SENTINEL")
+    monkeypatch.setattr(g8, "compare_exodus", fail)
+    record = {}
+    g8.record_comparison(record, Path("old"), Path("new"))
+    assert record["comparison"]["blocker_code"] == "P3_OBSERVATION_UNCLASSIFIED_HOLD"
+    assert "PRIVATE_NAME_SENTINEL" not in str(record)

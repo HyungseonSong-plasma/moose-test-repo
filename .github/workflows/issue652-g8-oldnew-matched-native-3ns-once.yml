@@ -1,4 +1,4 @@
-# G8 diagnostic retry: fixed non-secret preflight phases; no acceptance threshold changes.
+# G8 observation repair: compare native nodal/elemental support; preserve solver receipts.
 # G8: synchronize original P3-X Old scratch to pinned non-Poisson New-only template only.
 # G8: frozen G5/G6 native Python modules imported from exact 26e84a4 Physics checkout.
 name: Issue652 G8 S6-417 941 exact same ELF old/new Poisson native 3ns comparison
@@ -42,7 +42,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$G8_SOURCE"
           test "$(git -C g8-harness rev-parse HEAD)" = "$GITHUB_SHA"
           export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/ci/guards:$GITHUB_WORKSPACE/g8-harness/ci/guards"
-          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'numpy>=1.26,<3'
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'numpy>=1.26,<3' 'netCDF4>=1.7,<2'
           python3 -m pytest -q g8-harness/tests/test_issue652_g8_matched_stage.py g8-harness/tests/test_issue652_g8_matched_native_pilot.py
           python3 -m py_compile g8-harness/ci/guards/issue652_g8_matched_stage.py g8-harness/ci/guards/issue652_g8_matched_native_pilot.py
           echo G8_P0_ONLY_NO_PROTECTED_RATE_DATA
