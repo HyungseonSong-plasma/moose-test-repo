@@ -1,0 +1,7 @@
+name: @@NAME@@
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+@@JOBS@@

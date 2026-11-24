@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "Issue652 G6B PublicD100 417 and 941",
+  "profile": "parallel_cases",
+  "source_sha": "add83d41349fb59008488b88c82b706571035de9",
+  "oci_ref": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+  "cases": [
+    {
+      "id": "417"
+    },
+    {
+      "id": "941"
+    }
+  ],
+  "max_parallel": 2,
+  "timeout_minutes": 360,
+  "artifact_prefix": "issue652-g6b-publicd100",
+  "build_script": null,
+  "case_script": null,
+  "end_time_s": 0.0001,
+  "intervals": 460
+}

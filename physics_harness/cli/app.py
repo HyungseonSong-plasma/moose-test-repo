@@ -38,6 +38,7 @@ CANONICAL_COMMANDS = {
     "oxygen-profile": "extract plasma-region electron density/energy profiles from native Exodus",
     "default-plot": "auto-plot Exodus nodal fields with flexible layouts and optional input-variable filter",
     "research": "opt-in human research objective and evaluation-scope clarification before analysis",
+    "workflow": "plan, generate, dispatch and observe approved case-parallel CI",
 }
 
 COMMANDS = {
@@ -250,6 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         "oxygen-profile": lambda argv: import_module("experiments.Issue395_powered_chemistry_ladder.electron_profile_exodus").main(argv),
         "default-plot": lambda argv: import_module("physics_harness.adapters.moose.default_plot").main(argv),
         "research": lambda argv: import_module("physics_harness.cli.commands.research").main(argv),
+        "workflow": lambda argv: import_module("physics_harness.workflow.command").main(argv),
     }
     canonical = canonical_handlers.get(args[0])
     if canonical is not None:

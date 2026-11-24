@@ -106,6 +106,7 @@ class DependencyContract:
     legacy_packages: tuple[str, ...]
     forbidden_edges: tuple[DependencyRule, ...]
     repository_tool: str
+    repository_tool_allowed_sources: tuple[str, ...] = ()
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, object]) -> "DependencyContract":
@@ -120,6 +121,7 @@ class DependencyContract:
                     DependencyRule(**entry) for entry in value["forbidden_edges"]
                 ),
                 repository_tool=value["repository_tool"],
+                repository_tool_allowed_sources=tuple(value.get("repository_tool_allowed_sources", ())),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError("DEPENDENCY_CONTRACT_INVALID") from exc
@@ -127,6 +129,7 @@ class DependencyContract:
         if (not contract.package_root or not contract.repository_tool
                 or len(allowed) != len(contract.canonical_packages) + len(contract.legacy_packages)
                 or not contract.canonical_packages or not contract.forbidden_edges
+                or any(source not in contract.canonical_packages for source in contract.repository_tool_allowed_sources)
                 or any(rule.source not in allowed | {"*"} or rule.target not in allowed
                        or (rule.except_source and rule.except_source not in allowed)
                        or not rule.category or not rule.reason
@@ -276,6 +279,8 @@ def verify_dependencies(
                 witnesses.setdefault((src, dst), (path, line, record.blob_sha))
 
         for target, line in sorted(repository_refs.items()):
+            if src in contract.repository_tool_allowed_sources:
+                continue
             findings.append(DependencyFinding(
                 "repository", path, line, module, target, record.blob_sha,
                 "production source refers to repository tooling",

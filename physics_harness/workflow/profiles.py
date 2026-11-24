@@ -15,8 +15,8 @@ from pathlib import Path, PurePosixPath
 import re
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = Path("ci/workflow_profiles.json")
+ROOT = Path(__file__).resolve().parents[2]
+MANIFEST = Path("physics_harness/workflow/profiles.json")
 SPECIAL_OUTPUT = re.compile(r"^issue[1-9][0-9]*-[a-z0-9][a-z0-9-]*-once\.yml$")
 JOB = re.compile(r"^  ([a-z][a-z0-9-]*):\s*$", re.MULTILINE)
 ISSUE_JOB = re.compile(r"^  issue[1-9][0-9]*-[a-z0-9-]*:\s*$", re.MULTILINE)
@@ -50,7 +50,7 @@ def profiles(root: Path = ROOT) -> list[dict]:
         purpose = item.get("purpose")
         if not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9-]*", key):
             raise WorkflowContractError("WORKFLOW_PROFILE_KEY")
-        template = safe_relative(item.get("template"), prefix="ci/workflow_templates/")
+        template = safe_relative(item.get("template"), prefix="physics_harness/workflow/definitions/")
         output = safe_relative(item.get("output"), prefix=".github/workflows/")
         if key in keys or output in outputs:
             raise WorkflowContractError("WORKFLOW_PROFILE_DUPLICATE")
@@ -241,10 +241,10 @@ def self_test() -> None:
     )
     assert re.search(r"^  plasma_native_regression:\s*$", native, re.MULTILINE)
     # Reject path escape and noncanonical path spellings before writing YAML.
-    for unsafe in ("ci/workflow_templates/../workflow.yml",
-                   "ci/workflow_templates/sub//workflow.yml"):
+    for unsafe in ("physics_harness/workflow/definitions/../workflow.yml",
+                   "physics_harness/workflow/definitions/sub//workflow.yml"):
         try:
-            safe_relative(unsafe, prefix="ci/workflow_templates/")
+            safe_relative(unsafe, prefix="physics_harness/workflow/definitions/")
         except WorkflowContractError:
             pass
         else:

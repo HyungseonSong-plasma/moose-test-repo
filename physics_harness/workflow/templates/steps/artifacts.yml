@@ -1,0 +1,8 @@
+      - name: Publish only sanitized case receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: @@PREFIX@@-case-${{ matrix.case }}
+          path: ${{ runner.temp }}/physics-case-receipt-${{ matrix.case }}.json
+          if-no-files-found: error
+          retention-days: 14

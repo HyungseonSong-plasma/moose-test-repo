@@ -1,0 +1,7 @@
+      - name: Checkout exact reviewed source
+        uses: actions/checkout@v4
+        with:
+          ref: @@SOURCE_SHA@@
+      - name: Assert pinned source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "@@SOURCE_SHA@@"

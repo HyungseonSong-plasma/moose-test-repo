@@ -1,0 +1,14 @@
+      - name: Download source-bound shared build closure
+        uses: actions/download-artifact@v4
+        with:
+          name: @@PREFIX@@-shared-build
+          path: ${{ runner.temp }}/physics-workflow-build/
+      - name: Execute isolated native case
+        env:
+          PHYSICS_CASE_ID: ${{ matrix.case }}
+        run: |
+          python3 bin/physics.py workflow execute-case \
+            --spec @@SPEC_PATH@@ \
+            --case "$PHYSICS_CASE_ID" \
+            --build-dir "$RUNNER_TEMP/physics-workflow-build" \
+            --receipt "$RUNNER_TEMP/physics-case-receipt-$PHYSICS_CASE_ID.json"

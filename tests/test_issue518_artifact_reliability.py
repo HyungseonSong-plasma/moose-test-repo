@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_probe_is_manual_and_never_scientific_p3():
-    gen = (ROOT / "ci/workflow_templates/general-ci.yml").read_text()
+    gen = (ROOT / "physics_harness/workflow/definitions/general-ci.yml").read_text()
     core = (ROOT / ".github/workflows/ci.yml").read_text()
     workflow = (ROOT / ".github/workflows/repository-diagnostics.yml").read_text()
     assert gen == core

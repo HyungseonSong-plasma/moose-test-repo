@@ -29,7 +29,7 @@ The cache is **runner-local scratch data**, never a reusable CI evidence artifac
 
 ### CI wiring
 
-The canonical template `ci/workflow_templates/general-ci.yml` and generated workflow `.github/workflows/ci.yml` use:
+The canonical template `physics_harness/workflow/definitions/general-ci.yml` and generated workflow `.github/workflows/ci.yml` use:
 
 ```yaml
 validate:

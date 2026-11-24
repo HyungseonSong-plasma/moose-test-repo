@@ -38,8 +38,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 ci/workflow_harness.py --self-test
-          python3 ci/workflow_harness.py --check
+          python3 -m physics_harness.workflow.profiles --self-test
+          python3 -m physics_harness.workflow.profiles --check
+          python3 -m unittest discover -s physics_harness/workflow/tests -p "test_*.py" -v
       - name: Validate governed workflow surface
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
