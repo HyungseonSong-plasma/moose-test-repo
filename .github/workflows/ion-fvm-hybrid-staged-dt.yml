@@ -1,153 +1,145 @@
-name: Ion-FVM hybrid baseline regression
-
+name: Ion-FVM New-only S6 source P0 (no Native or science)
+# #633/P22: historical hybrid 150/200-step callers are retired from active CI.
+# Source-only S6-417/941 contracts; P1/P2/solver/science NOT_RUN.
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
+    # Include the active integration stack for exact-head P0 checks before merge.
+    branches: [main, issue-633-ion23-integration-20261117]
     paths:
       - '.github/workflows/ion-fvm-hybrid-staged-dt.yml'
-      - 'experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py'
-      - 'experiments/fem_fvm_plasma_discriminator/prepare_cases.py'
-      - 'experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py'
-      - 'experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py'
-      - 'experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_staged_dt.py'
-      - 'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
-      - 'physics_app/include/bcs/PhysicsFEMPlasmaWallBCs.h'
-      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C'
-      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC.C'
-      - 'physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C'
-      - 'physics_app/include/functormaterials/PhysicsIonWallFluxMaterial.h'
-      - 'physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C'
-      - 'physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h'
-      - 'physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C'
-      - 'physics_app/include/kernels/FEMPlasmaTransport.h'
-      - 'physics_app/src/kernels/FEMPlasmaTransport.C'
-      - 'physics_app/include/materials/PhysicsElectronMeanEnergyMaterial.h'
-      - 'physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C'
-      - 'physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h'
+      - 'experiments/Issue402_plasma_dsl_g1/chemistry/**'
+      - 'experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_*'
+      - 'physics_app/src/physics/plasma/**'
+      - 'physics_app/src/bcs/FEMElectron*'
+      - 'physics_app/src/functormaterials/IonWallFluxMaterial.C'
+      - 'physics_app/src/fvbcs/FVLogMolarDielectricFluxBC.C'
+      - 'ci/guards/issue633_c2_json_wiring.py'
+      - 'ci/p1_ion_new_only_preflight.py'
+      - 'tests/test_issue633_*.py'
+      - 'tests/test_p1_ion_new_only_preflight.py'
+      - 'tests/test_issue402_fem_electron_sheath_bc_retirement.py'
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - '.github/workflows/ion-fvm-hybrid-staged-dt.yml'
-      - 'experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py'
-      - 'experiments/fem_fvm_plasma_discriminator/prepare_cases.py'
-      - 'experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py'
-      - 'experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py'
-      - 'experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_staged_dt.py'
-      - 'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
-      - 'physics_app/include/bcs/PhysicsFEMPlasmaWallBCs.h'
-      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C'
-      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC.C'
-      - 'physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C'
-      - 'physics_app/include/functormaterials/PhysicsIonWallFluxMaterial.h'
-      - 'physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C'
-      - 'physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h'
-      - 'physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C'
-      - 'physics_app/include/kernels/FEMPlasmaTransport.h'
-      - 'physics_app/src/kernels/FEMPlasmaTransport.C'
-      - 'physics_app/include/materials/PhysicsElectronMeanEnergyMaterial.h'
-      - 'physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C'
-      - 'physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h'
-
+      - 'experiments/Issue402_plasma_dsl_g1/chemistry/**'
+      - 'experiments/Issue402_plasma_dsl_g1/issue633_newonly_s6_*'
+      - 'physics_app/src/physics/plasma/**'
+      - 'physics_app/src/bcs/FEMElectron*'
+      - 'physics_app/src/functormaterials/IonWallFluxMaterial.C'
+      - 'physics_app/src/fvbcs/FVLogMolarDielectricFluxBC.C'
+      - 'ci/guards/issue633_c2_json_wiring.py'
+      - 'ci/p1_ion_new_only_preflight.py'
+      - 'tests/test_issue633_*.py'
+      - 'tests/test_p1_ion_new_only_preflight.py'
+      - 'tests/test_issue402_fem_electron_sheath_bc_retirement.py'
+permissions:
+  contents: read
 jobs:
-  run:
+  newonly-source-contract:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - case: ion_fvm_hybrid_staged_1ns100_5ns100
-            label: 1ns100-5ns100
-            expected_steps: 200
-          - case: ion_fvm_hybrid_staged_1ns100_10ns50
-            label: 1ns100-10ns50
-            expected_steps: 150
-    name: ion-FVM-hybrid-${{ matrix.label }}
+        variant: ['417', '941']
+    name: ion-FVM-newonly-S6-${{ matrix.variant }}-P0-only
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 15
     env:
-      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
-
+      VARIANT: ${{ matrix.variant }}
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Pull build image
-        run: docker pull "$BUILD_BASE_REF"
-
-      - name: Build and run staged-dt baseline
+      - name: Checkout exact active source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: P0 - pinned New-only JSON, overlay, approved BC and staging contract
         shell: bash
-        env:
-          CASE: ${{ matrix.case }}
-          LABEL: ${{ matrix.label }}
-          EXPECTED_STEPS: ${{ matrix.expected_steps }}
         run: |
           set -euo pipefail
-          docker run --rm --entrypoint /bin/bash --user 0:0 \
-            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
-            -e CASE="$CASE" -e LABEL="$LABEL" -e EXPECTED_STEPS="$EXPECTED_STEPS" \
-            "$BUILD_BASE_REF" -lc '
-              set -euo pipefail
-              source /environment
-              git config --global --add safe.directory /workspace
-              git config --global --add safe.directory /opt/physics_vendor/moose
-              git config --global --add safe.directory /opt/physics_vendor/crane
-              git config --global --add safe.directory /opt/physics_vendor/squirrel
-              git config --global --add safe.directory /opt/physics_vendor/zapdos
-              export MOOSE_DIR=/opt/physics_vendor/moose
-              export CRANE_DIR=/opt/physics_vendor/crane
-              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
-              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
-              export METHOD=opt
-
-              # Match the established canonical native build: avoid duplicate anonymous
-              # namespace helper definitions in MOOSE utils_Unity.C.
-              make -C physics_app -j2 app_non_unity_dirs='%/utils'
-              cd experiments/fem_fvm_plasma_discriminator
-
-              OUTDIR="output_${CASE}"
-              rm -rf "$OUTDIR"
-              mkdir -p "$OUTDIR"
-
-              python3 generate_contour_mesh.py | tee "$OUTDIR/mesh_generation.log"
-              python3 prepare_ion_fvm_hybrid_staged_dt.py | tee "$OUTDIR/prepare.log"
-              cp plasma_contour_l3_4p5mm.msh "$OUTDIR/"
-              cp "${CASE}.i" "$OUTDIR/"
-
-              grep -q "type = TimeSequenceStepper" "${CASE}.i"
-              grep -q "use_element_gradient_for_potential = true" "${CASE}.i"
-              grep -q "type = MooseVariableFVReal" "${CASE}.i"
-
-              set +e
-              ../../physics_app/physics-opt -i "${CASE}.i" --check-input > "$OUTDIR/check_input.log" 2>&1
-              check_rc=$?
-              set -e
-              echo "check_rc=$check_rc" > "$OUTDIR/check_status.txt"
-              if [ "$check_rc" -ne 0 ]; then
-                cat "$OUTDIR/check_input.log"
-                exit "$check_rc"
-              fi
-
-              set +e
-              /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
-                -o "$OUTDIR/wall_time.txt" \
-                timeout --signal=TERM 35m stdbuf -oL -eL \
-                ../../physics_app/physics-opt -i "${CASE}.i" > "$OUTDIR/run.log" 2>&1
-              rc=$?
-              set -e
-
-              echo "run_rc=$rc" > "$OUTDIR/status.txt"
-              echo "expected_steps=$EXPECTED_STEPS" >> "$OUTDIR/status.txt"
-              cp "${CASE}_out.csv" "$OUTDIR/" 2>/dev/null || true
-              cp "${CASE}_out.e" "$OUTDIR/" 2>/dev/null || true
-              tail -n 2600 "$OUTDIR/run.log" > "$OUTDIR/tail.log" || true
-              exit "$rc"
-            '
-
-      - name: Upload result
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 - <<'PY'
+          from copy import deepcopy
+          from hashlib import sha256
+          import json
+          import os
+          from pathlib import Path
+          import sys
+          case = os.environ['VARIANT']
+          assert case in ('417', '941')
+          root = Path.cwd()
+          chem = root / 'experiments/Issue402_plasma_dsl_g1/chemistry'
+          sys.path.insert(0, str(chem))
+          from prepare_s6_newonly import PIN_HEAD, JSON_SHA, TEMPLATE_SHA
+          from ci.guards.issue633_c2_json_wiring import validate, C2ContractError
+          path = chem / f'unified_s6_{case}_newonly.json'
+          overlay = chem.parent / f'issue633_newonly_s6_{case}_continuity.template.i'
+          digest = lambda p: sha256(p.read_bytes()).hexdigest()
+          assert digest(path) == JSON_SHA[case], 'NEWONLY_JSON_SHA_MISMATCH'
+          assert digest(overlay) == TEMPLATE_SHA[case], 'NEWONLY_OVERLAY_SHA_MISMATCH'
+          doc = json.loads(path.read_text())
+          assert set(doc['equations']) == {'EI-02','EI-17','EI-415','EI-401','EI-407','EI-2069','H25',f'EI-{case}'}
+          assert len(doc['reactions']) == 8
+          assert {n:doc['species'][n]['charge_number'] for n in ('e','O2p','Om','Op')} == {'e':-1,'O2p':1,'Om':-1,'Op':1}
+          counts = validate(doc)
+          group = doc['drift_diffusion_boundaries']['plasma_electrode plasma_metal plasma_right']
+          assert group['e_wall'] == {'type':'FEMElectronSheathBC'}
+          assert group['e_energy_wall'] == {'type':'FEMElectronEnergySheathBC'}
+          for name in ('FEMElectronSheathBC','FEMElectronEnergySheathBC'):
+              source = (root/'physics_app/src/bcs'/f'{name}.C').read_text()
+              assert source.count(f'registerMooseObject("PhysicsApp", {name});') == 1
+          mutated = deepcopy(doc)
+          mutated['drift_diffusion_boundaries']['plasma_electrode plasma_metal plasma_right']['e_wall']['type'] = 'PhysicsFEMLogMolarElectronGroundedSheathBC'
+          try:
+              validate(mutated)
+          except C2ContractError:
+              pass
+          else:
+              raise AssertionError('RETIRED_GROUNDED_BC_NOT_REJECTED')
+          entry = (chem/'prepare_s6_run_input.py').read_text()
+          stage = (chem/'prepare_s6_newonly.py').read_text()
+          assert 'parser.add_argument("--newonly"' in entry
+          assert 'from prepare_s6_newonly import prepare_newonly' in entry
+          assert 'report = prepare_newonly(' in entry
+          for gate in ('retire_in_disposable_scratch(', 'retire_electron_in_disposable_scratch(', 'retire_p4_duplicate_owners('):
+              assert gate in stage, 'REQUIRED_STAGE_GATE_MISSING_' + gate
+          deck = overlay.read_text()
+          assert f"files = 'chemistry/unified_s6_{case}_newonly.json'" in deck
+          assert "fvm_species = 'O2p Om Op'" in deck
+          assert 'fem_species = e' in deck
+          assert 'wall_gradient = adjacent_element' in deck
+          receipt = {'status':'P0_SOURCE_ONLY_PASS', 'source_head':os.environ['EXPECTED_HEAD'],
+                     'historical_manifest_head':PIN_HEAD, 'case':case, 'json_sha256':digest(path),
+                     'overlay_sha256':digest(overlay), 'C2_static':counts,
+                     'P1':'NOT_RUN','P2':'NOT_RUN','P3':'NOT_RUN','P4':'NOT_RUN','science':'SCIENCE_HOLD'}
+          Path(f'ion_fvm_newonly_p0_{case}.json').write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+          print(f'ION_FVM_NEWONLY_S6_{case}_P0_PASS P1=NOT_RUN P2=NOT_RUN P3=NOT_RUN SCIENCE_HOLD')
+          PY
+      - name: P0 - focused source and negative-control tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_issue633_newonly_run_species_schema.py \
+            tests/test_issue633_s6_energy_owner_cutover.py \
+            tests/test_issue633_ion_wall_single_factory.py \
+            tests/test_p1_ion_new_only_preflight.py \
+            tests/test_issue402_fem_electron_sheath_bc_retirement.py
+          echo 'ION_FVM_NEWONLY_P0_TESTS_PASS P1=NOT_RUN P2=NOT_RUN P3=NOT_RUN SCIENCE_HOLD'
+      - name: Upload P0-only source receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ion-fvm-hybrid-${{ matrix.label }}
-          path: experiments/fem_fvm_plasma_discriminator/output_${{ matrix.case }}/**
+          name: ion-fvm-newonly-S6-${{ matrix.variant }}-P0-only
+          path: ion_fvm_newonly_p0_${{ matrix.variant }}.json
+          if-no-files-found: warn
           retention-days: 30

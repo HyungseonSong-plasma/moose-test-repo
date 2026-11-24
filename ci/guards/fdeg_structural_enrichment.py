@@ -28,7 +28,8 @@ TOKEN = re.compile(r'[A-Za-z_]\w*')
 
 def scope(path: str) -> str:
     if "/historical_" in path or path.startswith("archive/"):
-        return "HISTORICAL_SOURCE_NOT_PROVEN_ACTIVE"
+        # Directory prefix is LOCATION evidence, not accepted lifecycle or execution.
+        return "HISTORICAL_LOCATION_ACTIVITY_UNKNOWN"
     if path.startswith("tests/") or path.startswith("physics_app/ci/"):
         return "TEST_OR_CHECKER_ONLY"
     if path.startswith(".github/workflows/") or path.startswith("ci/workflow_templates/"):
@@ -108,6 +109,79 @@ def declared_providers(contents: dict) -> list[dict]:
     return sorted(providers, key=lambda x: (x["name"], x["path"], x["block_path"]))
 
 
+def _ast_ancestors(node: ast.AST, parents: dict):
+    parent = parents.get(node)
+    while parent is not None:
+        yield parent
+        parent = parents.get(parent)
+
+
+def python_template_instances(text: str, target: str, aliases: set[str]) -> list[dict]:
+    """Literal MOOSE [FVKernels] blocks inside Python strings: DECLARED only."""
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+    parents = {child: parent for parent in ast.walk(tree)
+               for child in ast.iter_child_nodes(parent)}
+    results = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Constant, ast.JoinedStr)):
+            continue
+        if isinstance(parents.get(node), ast.JoinedStr):
+            continue
+        raw = ast.get_source_segment(text, node)
+        if not raw or "[FVKernels]" not in raw or not re.search(r'\btype\s*=', raw):
+            continue
+        if any(isinstance(parent, (ast.Assert, ast.Compare))
+               for parent in _ast_ancestors(node, parents)):
+            continue
+        lines = raw.splitlines()
+        inside, block = False, None
+        for i, line in enumerate(lines):
+            cleaned = line.strip()
+            if cleaned == "[FVKernels]" or cleaned.endswith('"""[FVKernels]') or cleaned.endswith("'''[FVKernels]"):
+                inside, block = True, None
+                continue
+            if not inside:
+                continue
+            if cleaned.startswith("[") and cleaned.endswith("]"):
+                name = cleaned.strip("[]").strip()
+                if not name:
+                    block = None
+                elif name != "FVKernels":
+                    # MOOSE templates may indent blocks by one or more spaces.
+                    block = name if line[:1].isspace() else None
+                    if block is None:
+                        inside = False
+                continue
+            match = re.match(r'^\s*type\s*=\s*([A-Za-z_]\w*)\s*$', line)
+            if not match or match.group(1) not in aliases or block is None:
+                continue
+            line_no = node.lineno + i
+            bindings = [{"name": "type", "raw_value": match.group(1), "line": line_no}]
+            for j in range(i + 1, len(lines)):
+                other = lines[j]
+                if other.strip().startswith("["):
+                    break
+                assignment = ASSIGN.match(other)
+                if assignment and assignment.group(1) in {
+                        "variable", "rho", "state_form", "number_source",
+                        "potential", "temperature", "mobility", "diffusion",
+                        "thermal_diffusion_coefficient", "carrier"}:
+                    bindings.append({"name": assignment.group(1),
+                                     "raw_value": assignment.group(2).strip(),
+                                     "line": node.lineno + j})
+            results.append({
+                "factory_type": match.group(1),
+                "block_path": "FVKernels/" + block,
+                "type_line": line_no,
+                "bindings": bindings,
+                "source_kind": "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED",
+            })
+    return sorted(results, key=lambda x: (x["type_line"], x["block_path"]))
+
+
 def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
     routes = []
     for path, (text, _) in sorted(contents.items()):
@@ -119,6 +193,8 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
             tree = ast.parse(text, filename=path)
         except SyntaxError:
             continue  # Base scanner owns parse errors
+        parents = {child: parent for parent in ast.walk(tree)
+                   for child in ast.iter_child_nodes(parent)}
         taken = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.DictComp) and isinstance(node.value, ast.Constant):
@@ -131,6 +207,7 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                                    "generated_input_path": "UNKNOWN",
                                    "activation": "NOT_OBSERVED",
                                    "reference_scope": scope(path),
+                                   "source_role": "STATIC_SOURCE_NOT_LIFECYCLE",
                                    "evidence": witness(contents, path, line)})
                     taken.add((node.value.lineno, node.value.col_offset))
             if isinstance(node, ast.Dict):
@@ -145,6 +222,7 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                                    "generated_input_path": "UNKNOWN",
                                    "activation": "NOT_OBSERVED",
                                    "reference_scope": scope(path),
+                                   "source_role": "STATIC_SOURCE_NOT_LIFECYCLE",
                                    "evidence": witness(contents, path, line)})
                     taken.add((value.lineno, value.col_offset))
         for node in ast.walk(tree):
@@ -154,16 +232,29 @@ def python_routes(contents: dict, target: str, aliases: set[str]) -> list[dict]:
                 continue
             if not any(name in TOKEN.findall(node.value) for name in aliases):
                 continue
-            # Do not relabel a plain unit-test assertion as a generator.
-            if not (any("type = " + name in node.value for name in aliases)
-                    or "_insert_kernel(" in text or "upsert_parameter(" in text):
-                continue
+            writer = None
+            blocked = False
+            for parent in _ast_ancestors(node, parents):
+                if isinstance(parent, (ast.Assert, ast.Compare, ast.If, ast.While)):
+                    blocked = True
+                    break
+                if isinstance(parent, ast.Call):
+                    fn = parent.func
+                    name = fn.attr if isinstance(fn, ast.Attribute) else (
+                        fn.id if isinstance(fn, ast.Name) else "")
+                    if name in {"write_text", "write_bytes", "_insert_kernel",
+                                "upsert_parameter", "set_parameter"}:
+                        writer = name
+            if blocked or writer is None:
+                continue  # No writer/dataflow proof; never a generator edge.
             routes.append({"source": path, "line": node.lineno,
                            "factory_type": target, "block_path_expression": "UNKNOWN",
-                           "route_kind": "STATIC_TEMPLATE_OR_STRING",
+                           "route_kind": "STATIC_WRITER_ARGUMENT_CANDIDATE",
                            "generated_input_path": "UNKNOWN",
                            "activation": "NOT_OBSERVED",
                            "reference_scope": scope(path),
+                                   "source_role": "STATIC_SOURCE_NOT_LIFECYCLE",
+                           "writer": writer,
                            "evidence": witness(contents, path, node.lineno)})
     return sorted(routes, key=lambda x: (x["source"], x["line"],
                                           x["route_kind"], x["block_path_expression"]))

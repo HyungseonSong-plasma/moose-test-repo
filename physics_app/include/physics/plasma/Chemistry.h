@@ -24,6 +24,9 @@ struct DDTransportRecord
   std::string pressure;
   std::string gas_temperature;
   std::string bounds_policy = "error";
+  // New object-shaped transport requires [Plasmas] pressure/temperature, not
+  // per-species gas Functor name overrides. Legacy flat files remain readable.
+  bool root_owned_gas = false;
 
   bool equals(const DDTransportRecord & rhs) const;
 };
@@ -41,7 +44,21 @@ struct NVTransportRecord
   bool equals(const NVTransportRecord & rhs) const;
 };
 
-// One explicitly declared mesh sideset and its electron boundary owner.
+// The C2 wall law parameters belong to JSON; fvm_species remains the only
+// discretization/generation selector. Do not use neutral-mixture molar mass
+// for this independent ion wall loss law.
+struct IonWallRecord
+{
+  // JSON species.wall_* owns only physical wall-law parameters. Density and
+  // mobility names are derived from the selected species, potential/block
+  // come from Continuity and gas temperature from [Plasmas]/temperature.
+  double molar_mass = 0.0;
+  double sticking = 1.0;
+  double ion_temperature_eV = 0.0;
+  bool use_element_gradient_for_potential = true;
+};
+
+// One explicitly declared mesh sideset and its typed boundary owner.
 // Aliases such as wafer and inlet are labels, not inferred mesh names.
 // A verbatim supported MOOSE BC declaration moved from an existing .i
 // [BCs] block. Its name, type, variable, and material Functor links are
@@ -52,6 +69,11 @@ struct BoundaryBCRecord
   std::string variable;
   std::string wall_number_flux;
   std::string mean_energy;
+  // The two FV ion forms deliberately use different sign/unit contracts.
+  std::string functor;
+  std::string signed_number_flux;
+  double factor = 0.0;
+  // The enclosing normalized BoundaryRecord owns all physical mesh sides.
 };
 
 struct BoundaryRecord
@@ -66,6 +88,12 @@ struct SpeciesRecord
 {
   std::map<std::string, int> elements;
   int charge_number = 0;
+  // Common executable-run species metadata (even for e and neutrals).
+  // temperature_eV is k_B*T [eV], not a new independent energy PDE.
+  // 0 eV for a wall ion retains the existing gas-temperature fallback.
+  double molar_mass = 0.0;
+  std::optional<double> temperature_eV;
+  double sticking_coefficient = 0.0;
   // Needed only for rate laws evaluated from heavy-species mass fractions.
   double molar_mass_kg_mol = 0.0;
   // Initial number density [1/m^3] is required for every species selected
@@ -73,6 +101,7 @@ struct SpeciesRecord
   // Other species may omit it. Strictly positive (log-state cannot encode zero).
   // No external [Variables]/[ICs] fallback for selected continuity species.
   std::optional<double> initial_number_density;
+  std::optional<IonWallRecord> ion_wall;
   // Scenario-specific initial data, never the instantaneous solver state.
   // Missing is different from an explicitly zero concentration.
   std::optional<double> initial_vol_mass_fraction;
@@ -115,6 +144,15 @@ struct ReactionRecord
   int net(const std::string & species) const;
 };
 
+// G1: parsed opt-in Poisson settings. No Material, Kernel or BC is generated
+// until the independently reviewed Poisson Physics cutover (G4).
+struct PoissonRecord
+{
+  std::map<std::string, double> relative_permittivity;
+  std::vector<std::string> ground_boundaries;
+  std::map<std::string, std::string> surface_charge;
+};
+
 /** Immutable validated, shared plasma species and chemistry input contract. */
 class ChemistryData
 {
@@ -132,6 +170,9 @@ public:
   bool fluidElectronEnergyTransport() const { return _fluid_electron_energy_transport; }
   const NVTransportRecord * nvTransport() const;
   bool hasBoundaries() const { return _has_boundaries; }
+  bool hasIonWalls() const;
+  const PoissonRecord * poisson() const { return _poisson ? &*_poisson : nullptr; }
+  const std::string & surfaceElectronWallFlux() const { return _surface_electron_wall_flux; }
   const std::map<std::string, BoundaryRecord> & boundaries() const
   {
     return _boundaries;
@@ -146,6 +187,8 @@ private:
   std::unique_ptr<NVTransportRecord> _nv_transport;
   bool _has_boundaries = false;
   std::map<std::string, BoundaryRecord> _boundaries;
+  std::optional<PoissonRecord> _poisson;
+  std::string _surface_electron_wall_flux;
 };
 
 // Chemistry owns the Physics source projector and the validated JSON data model.

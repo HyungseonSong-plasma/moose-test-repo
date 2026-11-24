@@ -213,7 +213,7 @@ def inspect(root: Path, doc: dict) -> list[str]:
                 not in native_path.read_text(encoding="utf-8")
             ):
                 errors.append(id_ + " mandatory FLOW A-2 mutation contract disconnected")
-            ci_file = root / ".github/workflows/ci.yml"
+            ci_file = root / ".github/workflows/physics-code-ci.yml"
             expected_job = ("issue402_ideal_gas_p0" if id_ == "A3"
                             else "issue402_reaction_material_p0")
             if ci_file.is_file() and "  " + expected_job + ":" not in ci_file.read_text(encoding="utf-8"):
@@ -248,12 +248,16 @@ def inspect(root: Path, doc: dict) -> list[str]:
                         errors.append("S6 staged absent without approved source/replay receipt")
                 else:
                     errors.append("A1 associated ARCH DD P3 original changed/missing: " + p3name)
-            ci_file = root / ".github/workflows/ci.yml"
+            ci_file = root / ".github/workflows/physics-code-ci.yml"
+            native_file = root / ".github/workflows/physics-native-ci.yml"
             ci_text = ci_file.read_text(encoding="utf-8") if ci_file.is_file() else ""
-            for needed in ("  issue402_core_four_p0:", "  issue402_core_four_native_p2:",
+            native_text = native_file.read_text(encoding="utf-8") if native_file.is_file() else ""
+            if "  issue402_core_four_p0:" not in ci_text:
+                errors.append("A1 maintained P0 replacement route disconnected")
+            for needed in ("  issue402_core_four_native_p2:",
                            "run_issue541_core_four_native_p2.py", "make -C physics_app -j2"):
-                if needed not in ci_text:
-                    errors.append("A1 maintained P0/P1/P2 replacement route disconnected: " + needed)
+                if needed not in native_text:
+                    errors.append("A1 maintained Native P1/P2 replacement route disconnected: " + needed)
         elif id_ == "A2":
             # The approved absent P0-only A2; do not change its ownership.
             # Do not generalize this exception to A1 or the ARCH P3 originals.
@@ -261,7 +265,7 @@ def inspect(root: Path, doc: dict) -> list[str]:
                 errors.append("A2 legacy workflow reintroduced after verified shutdown")
             if record.get("a2_owner_retirement") != A2_OWNER_RETIREMENT:
                 errors.append("A2 source/owner/caller/P0/P3 release receipt missing or falsified")
-            ci_file = root / ".github/workflows/ci.yml"
+            ci_file = root / ".github/workflows/physics-code-ci.yml"
             ci_text = ci_file.read_text(encoding="utf-8") if ci_file.is_file() else ""
             for required in (
                 "  issue402_legacy_p0_inventory:",

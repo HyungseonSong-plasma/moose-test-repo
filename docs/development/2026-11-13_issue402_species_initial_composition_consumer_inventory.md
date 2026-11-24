@@ -1,3 +1,11 @@
+> **Historical snapshot — superseded 2026-11-18 for ion-wall Factory identity.**
+> The references below to `PhysicsIonWallFluxMaterial` describe the
+> implementation at the original audit date; they are *not* the current
+> PhysicsApp Factory contract. Maintained source uses one
+> `IonWallFluxMaterial` implementation, with the duplicate old class deleted.
+> Original historical observations are preserved rather than rewritten.
+> See [single ion-wall Factory migration](2026-11-18_issue633_ion_wall_single_factory_migration.md).
+>
 # Issue #402: species-owned initial volume / inlet composition consumer survey
 
 Status: **DRAFT / SCIENCE_HOLD**. Source-bound static P0 and Native P1/P2 gates are

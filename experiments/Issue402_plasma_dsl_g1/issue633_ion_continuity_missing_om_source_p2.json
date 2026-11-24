@@ -1,0 +1,87 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1,
+      "initial_number_density": 10000000000000000,
+      "transport_coef": "constant",
+      "mobility": 0.25,
+      "diffusivity": 0.125
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1,
+      "initial_number_density": 100000000000000,
+      "transport_coef": "constant",
+      "mobility": 0.15,
+      "diffusivity": 0.075
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1,
+      "initial_number_density": 1000000000000000,
+      "transport_coef": "constant",
+      "mobility": 0.35,
+      "diffusivity": 0.175
+    }
+  },
+  "equations": {
+    "EI-415": "e + O2 -> 2e + O2p",
+    "EI-417": "e + O2 -> 2e + Op + O"
+  },
+  "reactions": [
+    {
+      "id": "EI-415",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "O2p": 1
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      }
+    },
+    {
+      "id": "EI-417",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "Op": 1,
+        "O": 1
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": {
+        "model": "none"
+      }
+    }
+  ]
+}

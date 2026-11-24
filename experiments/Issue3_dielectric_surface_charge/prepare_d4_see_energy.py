@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
+NA = 6.02214076e23
 W0 = 1.0e16
 MEAN_E = 3.0
 DT = 1.0e-7
@@ -20,7 +22,7 @@ def build(see_flux: float) -> str:
     return f'''# Issue #3 D4 isolated dielectric SEE energy control.
 # Plasma is block 1 and dielectric is block 2. electron_energy exists only in plasma.
 # The internal plasma_dielectric sideset is therefore a boundary of the FV energy domain.
-# This discriminator isolates PhysicsFVElectronEnergyWallFluxBC from charge bookkeeping.
+# This discriminator isolates the log-molar wall-energy balance from charge bookkeeping.
 # SEE number flux is controlled directly: {see_flux:.17g} 1/(m^2 s).
 # dielectric_anchor and dielectric_material_anchor exist only to satisfy MOOSE
 # whole-mesh integrity checks; neither is coupled to electron_energy.
@@ -46,8 +48,8 @@ def build(see_flux: float) -> str:
 [Variables]
   [electron_energy]
     type = MooseVariableFVReal
-    initial_condition = {W0:.17g}
-    scaling = 1.0e-22
+    initial_condition = {math.log(W0/NA):.17g}
+    scaling = {NA*1.0e-22:.17g}
     block = 1
   []
   [dielectric_anchor]
@@ -58,6 +60,22 @@ def build(see_flux: float) -> str:
 []
 
 [FunctorMaterials]
+  [physical_energy_readback]
+    type = ADParsedFunctorMaterial
+    property_name = reconstructed_energy
+    functor_names = 'electron_energy'
+    functor_symbols = 'u'
+    expression = '{NA:.17g}*exp(u)'
+    block = 1
+  []
+  [electron_energy_dielectric_flux_outward_energy_flux]
+    type = ADParsedFunctorMaterial
+    property_name = electron_energy_dielectric_flux_outward_energy_flux
+    functor_names = 'electron_energy mean_energy see_number_flux'
+    functor_symbols = 'w eps gs'
+    expression = '(5.0/6.0)*sqrt(16.0*1.6021766339999999e-19*eps/(3.0*3.141592653589793238462643383279502884*9.1093837138999998e-31))*exp(w)-4*gs/{NA:.17g}'
+    block = 1
+  []
   [constants]
     type = ADGenericFunctorMaterial
     prop_names = 'mean_energy zero_diffusion see_number_flux'
@@ -74,12 +92,12 @@ def build(see_flux: float) -> str:
 
 [FVKernels]
   [energy_time]
-    type = FVTimeKernel
+    type = PhysicsFVLogMolarElectronTimeDerivative
     variable = electron_energy
     block = 1
   []
   [energy_zero_transport]
-    type = FVDiffusion
+    type = PhysicsFVLogMolarElectronDiffusion
     variable = electron_energy
     coeff = zero_diffusion
     block = 1
@@ -94,20 +112,18 @@ def build(see_flux: float) -> str:
 
 [FVBCs]
   [electron_energy_dielectric_flux]
-    type = PhysicsFVElectronEnergyWallFluxBC
+    type = FVFunctorNeumannBC
     variable = electron_energy
     boundary = plasma_dielectric
-    electron_energy_density = electron_energy
-    mean_electron_energy = mean_energy
-    see_number_flux = see_number_flux
-    state_form = physical_eV
+    functor = electron_energy_dielectric_flux_outward_energy_flux
+    factor = -1
   []
 []
 
 [Postprocessors]
   [energy_inventory]
     type = ADElementIntegralFunctorPostprocessor
-    functor = electron_energy
+    functor = reconstructed_energy
     block = 1
     execute_on = 'INITIAL TIMESTEP_END'
   []

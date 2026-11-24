@@ -123,11 +123,25 @@ def runtime_input():
     functor_symbols = 'rprog'
     expression = '{NA:.17g}*rprog'
   []
+  [h05_log_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = h05_log_molar_density
+    functor_names = 'n_e'
+    functor_symbols = 'ne'
+    expression = 'log(ne/6.02214076e23)'
+  []
+  [h05_log_molar_energy]
+    type = ADParsedFunctorMaterial
+    property_name = h05_log_molar_energy
+    functor_names = 'mean_en'
+    functor_symbols = 'energy'
+    expression = 'log(energy/6.02214076e23)'
+  []
   [mean_energy]
     type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
+    electron_energy_density = h05_log_molar_energy
+    electron_density = h05_log_molar_density
+    state_form = log_molar_eV
   []
 []
 [FVKernels]
@@ -136,10 +150,10 @@ def runtime_input():
     variable = n_e
   []
   [n_e_source]
-    type = PhysicsFVElectronReactionSource
+    type = FVCoupledForce
     variable = n_e
-    number_source = S_e_h05
-    state_form = physical
+    v = S_e_h05
+    coef = 1
   []
   [mean_en_time]
     type = FVTimeKernel
@@ -353,8 +367,9 @@ def self_test():
         "type = HRateCoefMaterial",
         "active_reactions = 'H05'",
         f"functor_names = '{PROGRESS}'",
-        "type = PhysicsFVElectronReactionSource",
-        "number_source = S_e_h05",
+        "type = FVCoupledForce",
+        "v = S_e_h05",
+        "coef = 1",
         "type = PhysicsFVSpeciesReactionSource",
         "source = S_O_h05",
         "source = S_Om_h05",
@@ -365,7 +380,7 @@ def self_test():
             raise AssertionError(f"runtime input missing {token}")
     if text.count("type = HRateCoefMaterial") != 1:
         raise AssertionError("H05 must have exactly one canonical progress owner")
-    for forbidden in ("PhysicsFVElectronReactionEnergySource", "FVCoupledForce", "S_epsilon_h05"):
+    for forbidden in ("PhysicsFVElectronReactionEnergySource", "S_epsilon_h05", "v = R_H05"):
         if forbidden in text:
             raise AssertionError(f"H05 zero-explicit-energy convention violated by {forbidden}")
     print("STAGE5_H05_RUNTIME_CHECKER_SELFTEST_PASS")
@@ -395,9 +410,11 @@ def static_gate():
     owner = (ROOT / "physics_app/src/materials/HRateCoefMaterial.C").read_text()
     if "reaction.progress" not in owner or "addFunctorProperty<ADReal>" not in owner:
         raise AssertionError("canonical R_H05 progress owner contract changed")
-    eproj = (ROOT / "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()
-    if 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' not in eproj:
-        raise AssertionError("electron projection dual-state semantics changed")
+    source = runtime_input()
+    if not all(token in source for token in (
+        "[n_e_source]", "type = FVCoupledForce", "v = S_e_h05", "coef = 1",
+    )):
+        raise AssertionError("standard electron source owner or signed rate binding changed")
     self_test()
     print("STAGE5_H05_IMPLEMENTATION_P0_PASS")
 

@@ -3,7 +3,7 @@
 This test compares a literal historical *equation specification* derived from
 PhysicsIonWallTotalFluxMaterial.C at original Git blob
 aec2d1f7547dacd9238663140f3f5bce8f23bfb9 with an independently expressed
-active six-output PhysicsIonWallFluxMaterial formula and C++ source features.
+active six-output IonWallFluxMaterial formula and C++ source features.
 It checks physical signs, default gates, units, sided normal conventions and
 edge conditions. This is NOT full native S6 trajectory equivalence.
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-APP = ROOT / "physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C"
+APP = ROOT / "physics_app/src/functormaterials/IonWallFluxMaterial.C"
 RETIRED = ROOT / "physics_app/src/functormaterials/PhysicsIonWallTotalFluxMaterial.C"
 # Physics.h shares these physical constants; use standard independent values.
 R_GAS = 8.31446261815324
@@ -81,7 +81,7 @@ def test_retired_vs_active_total_analytical_wall_flux(
 def test_retired_factory_absent_but_active_wall_has_same_defaults_and_faces():
     assert not RETIRED.exists(), "Parent PR #523 removed the duplicate factory"
     text = APP.read_text(encoding="utf-8")
-    assert 'registerMooseObject("PhysicsApp", PhysicsIonWallFluxMaterial)' in text
+    assert 'registerMooseObject("PhysicsApp", IonWallFluxMaterial)' in text
     for setting in ('"ion_temperature_eV",\n      0.0,',
                     '"migration_gate_smoothing_width",\n      0.0,',
                     '"sticking", 1.0,'):
@@ -116,7 +116,7 @@ def test_s6_archive_owner_type_changes_only_in_disposable_scratch():
     assert "S6_WALL_DENSITY_IDENTITY_UNPROVED" in text
     assert "S6_WALL_CHARGE_IDENTITY_UNPROVED" in text
     assert "S6_WALL_RETIRED_TYPE_STILL_PRESENT" in text
-    assert "PhysicsIonWallFluxMaterial" in text
+    assert "IonWallFluxMaterial" in text
 
     assert "source_type" in text and "consumer_and_reference_replacements" in text
 

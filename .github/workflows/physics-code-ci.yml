@@ -1,0 +1,679 @@
+name: Physics Code CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'physics_app/**'
+      - 'physics_harness/analysis/**'
+      - 'physics_harness/application/**'
+      - 'physics_harness/cli/**'
+      - 'physics_harness/evaluation/**'
+      - 'physics_harness/evidence/**'
+      - 'physics_harness/execution/**'
+      - 'physics_harness/validation/**'
+      - 'physics_harness/provenance/**'
+      - 'experiments/**'
+      - 'tests/**'
+      - 'ci/guards/**'
+      - 'ci/contracts/**'
+      - 'ci/workflow_templates/**'
+      - '.github/workflows/physics-code-ci.yml'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'physics_app/**'
+      - 'physics_harness/analysis/**'
+      - 'physics_harness/application/**'
+      - 'physics_harness/cli/**'
+      - 'physics_harness/evaluation/**'
+      - 'physics_harness/evidence/**'
+      - 'physics_harness/execution/**'
+      - 'physics_harness/validation/**'
+      - 'physics_harness/provenance/**'
+      - 'experiments/**'
+      - 'tests/**'
+      - 'ci/guards/**'
+      - 'ci/contracts/**'
+      - 'ci/workflow_templates/**'
+      - '.github/workflows/physics-code-ci.yml'
+
+permissions:
+  contents: read
+
+env:
+  PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
+
+concurrency:
+  group: physics-code-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  physics_code_validate:
+    name: Physics Code Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FDEG_CACHE_DIR: /tmp/fdeg-index-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact validation source HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          git fetch --no-tags --depth=1 origin 0755571b5d011f89a7473704337e23c042273381
+          test "$(git rev-parse 0755571b5d011f89a7473704337e23c042273381^{commit})" = "0755571b5d011f89a7473704337e23c042273381"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install validation dependencies
+        run: >-
+          python -m pip install
+          'pydantic>=2,<3'
+          'pytest>=8,<9'
+          'numpy>=1.26,<3'
+          'scipy>=1.14,<2'
+          'matplotlib>=3.8,<4'
+          -r requirements-evidence-engine.txt
+          -r requirements-ontology.txt
+          -r physics_harness/code/requirements.txt
+      - name: Validate FDEG Structural Evidence P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_structural.py -v
+      - name: Validate FDEG Functional Contract P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_functional.py -v
+      - name: Validate FDEG Transition Evidence P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_transition.py -v
+      - name: Validate FDEG Harness A-D P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v
+      - name: Validate FDEG Scan Cache P0
+        run: python3 -m unittest discover -s tests -p test_fdeg_scan_cache.py -v
+      - name: Capture live FDEG graph and verify retired Factory archives
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          python3 ci/guards/fdeg_retirement_evidence.py --mode capture --target PhysicsFVLogMolarElectronReactionSource --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/live-electron"
+          python3 ci/guards/fdeg_retirement_evidence.py --mode verify-archive --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/live-electron"
+          python3 ci/guards/issue774_main_retirement.py --self-test --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/retired-factories"
+          python3 -m ci.guards.issue817_code3_production_migration --expected-head "$head" --phase postcut --output "$RUNNER_TEMP/fdeg-retirement-code7/retired-factories/code3_consumer_receipt.json"
+      - name: Upload live FDEG and frozen retired Factory evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fdeg-retirement-code7-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fdeg-retirement-code7/
+          retention-days: 14
+      - name: Regression-test scoped Native P1 harness and Issue493 delegation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/unit -p test_native_build_harness.py -v
+          python3 experiments/Issue493_s6_boltzmann/test_run_issue493.py
+          python3 experiments/Issue493_s6_boltzmann/test_public_p3_run.py
+          python3 experiments/Issue493_s6_boltzmann/test_public_p3_diagnostic.py
+      - name: Validate central scientific semantics compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          central_revision="d7e5d16e1ed1b9d3561c25cc3b2f0d3533de4a87"
+          central_dir="$(mktemp -d)"
+          git -C "$central_dir" init -q
+          git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
+          git -C "$central_dir" fetch --quiet --depth=1 origin "$central_revision"
+          git -C "$central_dir" checkout --quiet FETCH_HEAD
+          python3 ci/guards/scientific_centralization_guard.py \
+            --central-root "$central_dir" \
+            --central-revision "$central_revision" \
+            --json-out scientific-centralization-compatibility.json
+          rm -rf "$central_dir"
+      - name: Upload scientific centralization compatibility evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-centralization-compatibility
+          path: scientific-centralization-compatibility.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Validate plasma semantic ownership
+        run: python ci/guards/physics_plasma_semantic_residue_guard.py
+      - name: Validate campaign/performance/scale ownership
+        run: python ci/guards/physics_campaign_residue_guard.py
+      - name: Validate numerical-method ownership
+        run: python ci/guards/physics_numerical_method_ownership_guard.py
+      - name: Validate model terminology and MOOSE boundary ownership
+        run: python ci/guards/physics_boundary_terminology_guard.py
+      - name: Upload migration source snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physics-migration-source
+          path: |
+            physics_harness/**/*.py
+            experiments/**/*.py
+            tests/**/*.py
+          if-no-files-found: error
+          retention-days: 1
+      - name: Run Physics pytest (FDEG P0 suites already executed above)
+        run: >-
+          python -m pytest -q
+          --ignore=tests/test_fdeg_structural.py
+          --ignore=tests/test_fdeg_functional.py
+          --ignore=tests/test_fdeg_transition.py
+          --ignore=tests/test_fdeg_harness_abcd.py
+          --ignore=tests/test_fdeg_scan_cache.py
+      - name: Regression-test Issue493 canonical/archive Exodus P4 diagnostics
+        run: python experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
+      - name: Validate normalized-to-physical coupled equivalence fixture
+        run: python physics_app/ci/check_physical_state_coupled_equivalence.py --self-test
+      - name: Validate n_epsilon-to-mean_en symbol equivalence fixture
+        run: python physics_app/ci/check_mean_en_symbol_equivalence.py --self-test
+      - name: Validate retired Gummel Action is absent
+        run: python physics_app/ci/check_retired_gummel_action_contract.py
+      - name: Validate #17 R1 EI01 attachment source contract
+        run: python physics_app/ci/check_ei01_attachment_source_contract.py
+      - name: Validate #17 R2 O2 ionization lookup and ownership contract
+        run: python physics_app/ci/check_r2_o2_ionization_contract.py
+      - name: Validate #176 R3 O2s excitation constant-surrogate ownership contract
+        run: python physics_app/ci/check_r3_o2s_excitation_contract.py
+      - name: Validate #26 E8 EI10 inelastic energy ownership contract
+        run: python physics_app/ci/check_e8_ei10_energy_contract.py
+      - name: Validate #26 E8 EI10 inelastic energy production implementation
+        run: python physics_app/ci/check_e8_ei10_energy_implementation.py
+      - name: Validate #26 E8 EI10 runtime discriminator logic
+        run: python physics_app/ci/check_e8_ei10_energy_runtime.py --self-test
+      - name: Validate #26 E8 EI16 ionization energy ownership contract
+        run: python physics_app/ci/check_e8_ei16_energy_contract.py
+      - name: Validate #26 E8 EI16 runtime discriminator logic
+        run: python physics_app/ci/check_e8_ei16_energy_runtime.py --self-test
+      - name: Validate #176 R3 O2s excitation production implementation
+        run: python physics_app/ci/check_r3_o2s_excitation_implementation.py
+      - name: Validate #17 R2 O2 ionization production implementation
+        run: python physics_app/ci/check_r2_o2_ionization_implementation.py
+      - name: Validate canonical electron molar representation contract
+        run: |
+          python physics_app/ci/check_electron_molar_representation_contract.py --self-test
+          python physics_app/ci/check_electron_molar_representation_contract.py
+      - name: Validate Issue 43/45 science refactor
+        run: python experiments/Issue43_45_science_refactor/final_guard.py
+      - name: Validate Issue 89 post-science canonicalization
+        run: python experiments/Issue89_post_science_canonicalization/final_guard.py
+      - name: Validate execution contract refactor
+        run: python experiments/execution_contract_refactor/guard.py
+  issue541_evidence_identity_p0:
+    name: Issue541 Wave1-E evidence identity P0 (no Native)
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      github.event.changes.base != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact Wave1-E validation source checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+      - name: Fail-closed PR HEAD / merge-commit evidence identity mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ci/guards/issue541_evidence_identity_guard.py
+          python3 ci/guards/issue541_evidence_identity_guard.py --self-test
+      # The #578 PR_HEAD live audit was accepted while the PR was OPEN.
+      # It is not a generic CI obligation after merge. Preserve that immutable
+      # source/run receipt; keep the fail-closed self-tests and merged-CI audit.
+      - name: Verify real historical merged-main CI and preserved ZIP (no Native)
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_evidence_identity_guard.py --audit-merged-ci \
+            --pr-number 523 --run-id 43588060442 --job-id 132426707768 \
+            --artifact-id 14111365673 \
+            --expected-sha e9aafe92f87f44193147cfc909cbab1de27e3b4d \
+            --output issue541-wave1e-historic-merge-ci.json
+      - name: Publish SHA-bound Wave1-E verification receipt (not global CI)
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-wave1e-provenance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            issue541-wave1e-historic-merge-ci.json
+          if-no-files-found: error
+          retention-days: 14
+  issue402_json_rate_p0:
+    name: Issue402 canonical JSON-rate and H01-H05 P0 (no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact source revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install historical P0 test dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run exact former JSON-rate P0 and mutation checker
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          test ! -e physics_app/include/utils/PhysicsReactionDatabase.h
+          test ! -e physics_app/src/utils/PhysicsReactionDatabase.C
+          for name in PhysicsReactionRateMaterial PhysicsSurfaceReactionMaterial; do
+            test ! -e "physics_app/include/materials/$name.h"
+            test ! -e "physics_app/src/materials/$name.C"
+          done
+          test ! -e physics_app/data/heavy_reactions/stage5_s5d_oxygen_heavy.txt
+          test ! -e physics_app/data/heavy_reactions/stage5_s5e_h05_oxygen_heavy.txt
+          test -f physics_app/src/materials/EIRateCoefMaterial.C
+          test -f physics_app/src/materials/HRateCoefMaterial.C
+          python3 -m py_compile physics_app/ci/check_issue402_json_rate_native_p2.py
+          python3 -m physics_app.ci.check_issue402_json_rate_native_p2 --self-test
+          python3 -m pip install --quiet 'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          python3 -m pytest -q tests/test_issue402_json_rate_unification.py
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --static
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --self-test
+          python3 physics_app/ci/check_stage5_h05_runtime.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
+          python3 -m pytest -q tests/characterization/test_issue192_s5r.py tests/characterization/test_issue192_s5r_runtime.py
+          echo ISSUE402_JSON_RATE_CANONICAL_P0_PASS
+
+  # Exact-head static receipt, independent of legacy workflow-surface failures.
+  # Actual P3/P4 archived ZIP bytes are verified offline with both --artifact flags.
+  issue402_s6_reference_receipt:
+    name: Issue402 S6 P3/P4 reference receipt (no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify pinned reference receipt, Python and mutation sentinels
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 -m py_compile \
+            ci/guards/verify_issue402_s6_hybrid_baseline.py \
+            experiments/Issue402_plasma_dsl_g1/verify_chemistry_p3_evidence.py
+          python3 ci/guards/verify_issue402_s6_hybrid_baseline.py --manifest-check --self-test
+          echo ISSUE402_S6_REFERENCE_STATIC_CONTRACT_PASS
+
+  # #541 FLOW P0 jobs imported from verified Draft #542; no Native/P3 execution.
+  issue402_legacy_p0_inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact event source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Assert source identity
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - name: Regress symbol inventory counting and detect mutation
+        run: python3 ci/guards/issue402_symbol_inventory.py --self-test
+      - name: Inventory tracked Issue402 symbols without rewriting sources
+        run: python3 ci/guards/issue402_symbol_inventory.py --check
+      - name: Install exact historical P0 test dependency
+        run: python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+      - name: Run eight canonical Issue402 static source regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pytest -q \
+            tests/test_issue402_dd_plasma_boundary_json.py \
+            tests/test_issue402_material_class_names.py \
+            tests/test_issue402_species_functor_naming.py \
+            tests/test_issue402_s6_wall_naming_staging.py \
+            tests/test_issue402_s6_electron_transport_compatibility.py \
+            tests/test_issue402_retired_plasma_closures.py \
+            tests/test_issue402_transport_material_consolidation.py \
+            tests/test_issue402_species_transport_rule.py
+          echo ISSUE402_CANONICAL_ENERGY_WALL_P0_PASS
+
+  # Source-bound FLOW P0 replacement for issue402-rate-coef-ideal-gas-native-once.yml.
+  # Native direct EI-material P2 remains CORE-owned, verified separately on #540.
+  # No P1/P2/P3, solver build, historical input rewrite, or one-shot retirement here.
+  issue402_ideal_gas_p0:
+    name: Issue402 ideal-gas and EI/H source P0 (no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Enforce exact source and mutation-detecting replacement contract
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 ci/guards/issue402_ideal_gas_p0_contract.py --self-test
+          python3 ci/guards/issue402_ideal_gas_p0_contract.py --check
+      - name: Verify original retired-source and canonical factory P0 invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e physics_app/include/utils/PhysicsReactionDatabase.h
+          test ! -e physics_app/src/utils/PhysicsReactionDatabase.C
+          for name in PhysicsReactionRateMaterial PhysicsSurfaceReactionMaterial; do
+            test ! -e "physics_app/include/materials/$name.h"
+            test ! -e "physics_app/src/materials/$name.C"
+          done
+          test ! -e physics_app/data/heavy_reactions/stage5_s5d_oxygen_heavy.txt
+          test ! -e physics_app/data/heavy_reactions/stage5_s5e_h05_oxygen_heavy.txt
+          test ! -e physics_app/physics-opt
+          test ! -e physics_app/src/materials/RateCoeffMaterial.C
+          test ! -e physics_app/src/materials/HeavyReactionRateMaterial.C
+          test -e physics_app/src/materials/EIRateCoefMaterial.C
+          test -e physics_app/src/materials/HRateCoefMaterial.C
+          echo "ISSUE402_IDEAL_GAS_FACTORY_SOURCE_P0_PASS; P3=NOT_RUN; SCIENCE_HOLD"
+      - name: Set up historical P0 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install legacy ideal-gas P0 test dependencies
+        run: python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+      - name: Execute all historical EI/H ideal-gas and Stage5 P0 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pytest -q \
+            tests/test_issue402_json_rate_unification.py \
+            tests/test_issue402_rate_coef_ideal_gas.py \
+            tests/test_electron_impact_rate_material_prefix.py \
+            tests/test_issue402_no_legacy_material_registration.py \
+            tests/test_issue402_reaction_reduction_p2_only.py \
+            tests/test_issue402_retired_plasma_closures.py \
+            tests/characterization/test_issue395_ei17_overlay.py
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --static
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --self-test
+          python3 physics_app/ci/check_stage5_h05_runtime.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
+          python3 -m pytest -q tests/characterization/test_issue192_s5r.py tests/characterization/test_issue192_s5r_runtime.py
+          echo "JSON_HEAVY_SURFACE_P0_PASS; P3=NOT_RUN; SCIENCE_HOLD"
+
+  # Reusable, governed CI gate for native plasma solver-object changes.
+  # Issue #541 CORE independent full replacement of four legacy branch-only
+  # P0/P1/P2 workflows. No P3, science acceptance, or automatic deletion.
+  issue402_core_four_p0:
+    name: Issue541 CORE four boundary SCCM composition inlet P0 (no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact event head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify source, all four original contracts and tamper mutations
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 ci/guards/issue541_core_four_contract.py --self-test
+          python3 ci/guards/issue541_core_four_contract.py --check
+          python3 ci/guards/issue541_artifact_evidence_guard.py --self-test
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-policy
+          test ! -e physics_app/src/physics/plasma/PlasmaDriftDiffusionBoundaryAction.C
+          test -e physics_app/src/physics/plasma/SCCMInletFlow.C
+          test -e physics_app/src/physics/plasma/IdealGasMixtureState.C
+          test -e physics_app/src/bcs/FEMElectronSheathBC.C
+          test -e physics_app/src/bcs/FEMElectronEnergySheathBC.C
+          test ! -e physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
+          test ! -e physics_app/src/materials/PhysicsElectronWallFluxMaterial.C
+          test ! -e physics_app/src/materials/RateCoeffMaterial.C
+          test ! -e physics_app/src/materials/HeavyReactionRateMaterial.C
+          test -e physics_app/src/materials/EIRateCoefMaterial.C
+          test -e physics_app/src/materials/HRateCoefMaterial.C
+          grep -Fq 'std::optional<double> initial_number_density;' physics_app/include/physics/plasma/Chemistry.h
+          grep -Fq 'bind_json_initial(fem, "fem_species", _fem_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq 'bind_json_initial(fvm, "fvm_species", _fvm_initial_number_densities);' physics_app/src/physics/plasma/DDContinuityEq.C
+          grep -Fq '"boundaries"' physics_app/src/physics/plasma/Chemistry.C
+          grep -Fq 'MooseEnum("log_molar_eV", "log_molar_eV")' physics_app/src/materials/ElectronEnergyMaterial.C
+          echo ISSUE541_CORE_FOUR_P0_SOURCE_PROVENANCE_PASS
+      - name: Set up historical P0 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install exact P0 scientific contract dependencies
+        run: python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+      - name: Run union of all four original P0 test targets and Stage5 controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pytest -q \
+            tests/test_issue402_dd_plasma_boundary_json.py \
+            tests/test_issue402_species_initial_density_pairs.py \
+            tests/test_issue402_dd_json_fem_fvm_wiring.py \
+            tests/test_issue402_species_transport_rule.py \
+            tests/test_issue402_material_class_names.py \
+            tests/test_issue402_s6_dd_review_package.py \
+            tests/test_issue402_energy_poisson_auto_variables.py \
+            tests/test_issue402_sccm_inlet_cpp.py \
+            tests/test_issue402_sccm_inlet_flow.py \
+            tests/test_issue402_species_initial_composition.py \
+            tests/test_issue402_species_live_ic_inlet.py \
+            tests/test_issue402_rate_coef_ideal_gas.py \
+            tests/test_issue402_fem_electron_sheath_bc_retirement.py \
+            tests/test_issue402_json_rate_unification.py \
+            tests/test_electron_impact_rate_material_prefix.py \
+            tests/test_issue402_no_legacy_material_registration.py \
+            tests/test_issue402_reaction_reduction_p2_only.py \
+            tests/test_issue402_retired_plasma_closures.py \
+            tests/characterization/test_issue395_ei17_overlay.py \
+            2>&1 | tee /tmp/issue541_core_four_p0.log
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --static
+          python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --self-test
+          python3 physics_app/ci/check_stage5_h05_runtime.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --static
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
+          python3 -m pytest -q \
+            tests/characterization/test_issue192_s5r.py \
+            tests/characterization/test_issue192_s5r_runtime.py
+          python3 physics_app/ci/audit_issue402_initial_composition_routes.py \
+            --json-output /tmp/issue541_core_four_routes.json \
+            --markdown-output /tmp/issue541_core_four_routes.md \
+            --fail-on-legacy
+          echo ISSUE541_CORE_FOUR_ALL_HISTORICAL_P0_PASS_P3_NOT_RUN
+      - name: Run recovered repository P0 tests before blocked global validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pytest -q \
+            tests/test_issue402_g1_external_species_binding.py \
+            tests/test_issue402_chemistry_mechanism_contract.py \
+            tests/test_issue541_native_exodus_parity_oracle.py \
+            tests/test_issue402_public_option_s6_p2.py \
+            tests/test_issue402_s6_chemistry_run_templates.py \
+            2>&1 | tee /tmp/issue541_recovered_p0.log
+          echo ISSUE541_RECOVERED_P0_PASS_P3_NOT_RUN
+      - name: Require complete CORE P0 artifact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_artifact_evidence_guard.py --check-core-p0
+      - name: Store four-workflow P0 and inventory evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-core-four-p0-${{ github.run_id }}
+          path: |
+            /tmp/issue541_core_four_p0.log
+            /tmp/issue541_core_four_routes.json
+            /tmp/issue541_core_four_routes.md
+            /tmp/issue541_recovered_p0.log
+          if-no-files-found: error
+          retention-days: 30
+  issue541_group_a_evidence:
+    name: Issue541 Group A evidence and negative controls (no Native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Bind Group A audit to exact source HEAD
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - name: Validate Group A evidence and rejection mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue541_group_a_retirement.py --self-test
+          python3 ci/guards/issue541_group_a_retirement.py --check
+      - name: Validate workflow generation and surface self-tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/workflow_harness.py --self-test
+          python3 ci/workflow_harness.py --check
+          python3 ci/guards/workflow_surface_guard.py --self-test
+      - name: Verify scoped DD/S6 archived originals absent and global guard clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .github/workflows/issue402-dd-json-p3-smoke-once.yml
+          test ! -e .github/workflows/issue402-hybrid-json-s6-p3-p4-once.yml
+          test -f docs/development/archive/issue402-dd-json-p3-smoke-once.yml.txt
+          test -f .github/workflows/issue541-arch-dd-p3-replay.yml
+          test -f .github/workflows/issue541-arch-s6-p3-p4-replay.yml
+          python3 ci/guards/workflow_surface_guard.py --check | tee /tmp/issue541_group_a_surface.log
+          grep -Fq 'WORKFLOW_SURFACE_GUARD=PASS' /tmp/issue541_group_a_surface.log
+          echo 'ISSUE541_GLOBAL_SURFACE_GUARD=PASS; DD_S6_STAGED_ABSENT; ARCHIVE_PROVEN; SCIENCE_HOLD; NO_WAIVER'
+      - name: Preserve source-bound Group A audit and guard output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue541-group-a-audit-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ci/baselines/issue541_group_a_retirement.json
+            /tmp/issue541_group_a_surface.log
+          if-no-files-found: warn
+          retention-days: 30
+  issue402_reaction_material_p0:
+    name: Issue402 canonical reaction-material P0 contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact event source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify source identity and replacement contract (with mutation self-test)
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 ci/guards/issue402_reaction_material_p0_contract.py --self-test
+          python3 ci/guards/issue402_reaction_material_p0_contract.py --check
+      - name: Install historical P0 dependencies
+        run: >-
+          python3 -m pip install --disable-pip-version-check --quiet
+          'pydantic>=2,<3' 'pytest>=8,<9' 'numpy>=1.26,<3'
+          'scipy>=1.14,<2' 'matplotlib>=3.8,<4'
+          -r requirements-evidence-engine.txt
+          -r requirements-ontology.txt
+      - name: Execute all former one-shot reaction-material P0 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pytest -q \
+            tests/characterization/test_issue192_s5r.py \
+            tests/characterization/test_issue192_s5r_runtime.py \
+            tests/test_issue402_s6_chemistry_run_templates.py \
+            tests/test_issue402_chemistry_mechanism_contract.py
+          python3 physics_app/ci/check_r2_o2_ionization_implementation.py
+          python3 physics_app/ci/check_r3_o2s_excitation_implementation.py
+          python3 physics_app/ci/check_e8_ei10_energy_contract.py
+          python3 physics_app/ci/check_e8_ei10_energy_implementation.py
+          python3 physics_app/ci/check_e8_ei10_energy_runtime.py --self-test
+          python3 physics_app/ci/check_e8_ei16_energy_contract.py
+          python3 physics_app/ci/check_e8_ei16_energy_runtime.py --self-test
+          python3 physics_app/ci/check_standard_moose_energy_projection.py --self-test
+          python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
+          python3 physics_app/ci/check_stage5_s5r_ei16_recovery.py
+          echo ISSUE402_REACTION_MATERIAL_P0_CANONICAL_PASS
+
+  # Reusable, governed CI gate for native plasma solver-object changes.
+  issue541_arch_replay_p0:
+    name: Issue541 ARCH independent P3 source and manual replay P0 (no Native)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify exact P3 source, retention, manual authorization, and negative mutations
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          python3 -m py_compile ci/guards/issue541_arch_replay_p0.py ci/guards/issue541_arch_dd_p3_result_gate.py
+          python3 ci/guards/issue541_arch_replay_p0.py --self-test --check
+          python3 ci/guards/issue541_arch_dd_p3_result_gate.py --self-test
+          python3 experiments/Issue402_plasma_dsl_g1/p3_chemistry_preflight.py --output "$RUNNER_TEMP/issue541_arch_s6_static_readiness.json"
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q tests/test_issue402_hybrid_json_s6_owner_preflight.py
+          python3 ci/guards/workflow_surface_guard.py --self-test
+          echo ISSUE541_ARCH_P3_REPLACEMENT_P0_PASS_NO_LIVE_P3_SCIENCE_HOLD

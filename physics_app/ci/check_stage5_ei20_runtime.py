@@ -109,11 +109,25 @@ def runtime_input(mean=EREF):
     functor_symbols = 'dens wo'
     expression = 'dens*wo/{MO:.17g}'
   []
+  [fixture_log_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = fixture_log_molar_density
+    functor_names = 'n_e'
+    functor_symbols = 'ne'
+    expression = 'log(ne/6.02214076e23)'
+  []
+  [fixture_log_molar_energy]
+    type = ADParsedFunctorMaterial
+    property_name = fixture_log_molar_energy
+    functor_names = 'mean_en'
+    functor_symbols = 'energy'
+    expression = 'log(energy/6.02214076e23)'
+  []
   [mean_energy_bridge]
     type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
+    electron_energy_density = fixture_log_molar_energy
+    electron_density = fixture_log_molar_density
+    state_form = log_molar_eV
   []
   [ei20_rate]
     type = EIRateCoefMaterial
@@ -151,10 +165,10 @@ def runtime_input(mean=EREF):
     variable = n_e
   []
   [n_e_source]
-    type = PhysicsFVElectronReactionSource
+    type = FVCoupledForce
     variable = n_e
-    number_source = electron_ei20_number_source
-    state_form = physical
+    v = electron_ei20_number_source
+    coef = 1
   []
   [mean_en_time]
     type = FVTimeKernel
@@ -300,7 +314,7 @@ def self_test():
     text=runtime_input()
     required=("type = EIRateCoefMaterial",f"reaction_progress = {PROGRESS}",
               "type = PhysicsFVSpeciesReactionSource","source = Op_ei20_mass_source",
-              "type = PhysicsFVElectronReactionSource","number_source = electron_ei20_number_source",
+              "type = FVCoupledForce","v = electron_ei20_number_source","coef = 1",
               "type = FVCoupledForce",f"v = {PROGRESS}","O_ei20_mass_source","Op_ei20_mass_source","electron_ei20_number_source")
     for token in required:
         if token not in text: raise AssertionError(f"runtime input missing {token}")
@@ -327,8 +341,8 @@ def static_gate():
     owner=(ROOT/"physics_app/src/materials/EIRateCoefMaterial.C").read_text()
     for token in ('addRequiredParam<std::string>("reaction_progress"',"return k_raw * (n_e / N_A) * c_target;","strict Stage-4 policy forbids clamp/floor"):
         if token not in owner: raise AssertionError(f"generic progress owner contract missing: {token}")
-    ek=(ROOT/"physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()
-    if 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' not in ek: raise AssertionError("electron source projection semantics changed")
+    if not all(token in runtime_input() for token in ("type = FVCoupledForce", "v = electron_ei20_number_source", "coef = 1")):
+        raise AssertionError("standard electron projection semantics changed")
     self_test(); print("STAGE5_EI20_IMPLEMENTATION_P0_PASS")
 
 def preflight(path):

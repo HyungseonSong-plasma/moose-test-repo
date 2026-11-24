@@ -20,8 +20,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[2]
 INPUT_ROOT = ROOT / "physics_app" / "ci"
 PAIRS = {
-    "electron_energy_transport_smoke.i": "f9e6dea2169436ea471ae2ab56190f7d35ccfc29",
-    "electron_energy_lookup_response_smoke.i": "e0581df939c128d95322e2d92853cfee23708b95",
+    "electron_energy_transport_smoke.i": "b7b3850cb111cce0fed9414e75a7b2d3454d9b4e",
+    "electron_energy_lookup_response_smoke.i": "12e775b24d2fb5bdfd46ba375a17d3cebca47991",
 }
 BEFORE = """  [energy_drift]
     type = PhysicsFVElectrostaticDrift

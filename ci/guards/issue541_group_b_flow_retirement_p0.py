@@ -95,13 +95,15 @@ def verify(m: dict, original: str, maintained: str, surface: str,
             "\n  push:" not in maintained, "MAINTAINED_EVENT")
     for required in (
         "FLOW_EI10_EI16_FOUR_FIXTURE_NATIVE_P2_PASS",
-        "FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS",
-        "--case both", "check_issue402_reaction_reduction_p2_only",
+        "FLOW_DBASE_LEGACY_P2_RETIRED_NEWONLY_P05_OWNS_417_941",
+        "check_issue402_reaction_reduction_p2_only",
         OLD_BLOB, OLD_REF, OCI_DIGEST,
-        '"417"', '"941"',
         "'"+REL+"'",
     ):
         require(required in maintained, "MAINTAINED_OBLIGATION_MISSING:" + required)
+    require("FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS" not in maintained and
+            "run_chemistry_s6_p2_only.py" not in maintained,
+            "RETIRED_FLOW_DBASE_REINTRODUCED")
     assert_claim = m["retirement"]
     require(assert_claim["action"] == "STAGED_DELETE_IN_ISOLATED_DRAFT" and
             assert_claim["acceptance"] ==

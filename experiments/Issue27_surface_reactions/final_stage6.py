@@ -42,7 +42,7 @@ def _promote_current_wall_object_types(text: str) -> str:
 
     The historical A8 construction intentionally retains QPXIonWallFluxMaterial
     names.  Governed #193 execution proved that the current production registry
-    equivalent is PhysicsIonWallFluxMaterial for each charged-heavy wall owner.
+    equivalent is IonWallFluxMaterial for each charged-heavy wall owner.
     """
     for species in CHARGED:
         path = f"FunctorMaterials/issue27_a6_{species}_wall_flux"
@@ -50,7 +50,7 @@ def _promote_current_wall_object_types(text: str) -> str:
             raise Issue27Stage6FinalError(
                 f"missing accepted A6 ion-wall material required for Physics promotion: {path}"
             )
-        text = mp.upsert_parameter(text, path, "type", "PhysicsIonWallFluxMaterial")
+        text = mp.upsert_parameter(text, path, "type", "IonWallFluxMaterial")
     return text
 
 

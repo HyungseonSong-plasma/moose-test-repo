@@ -31,8 +31,6 @@ RUNTIME_REF_RE = re.compile(
 
 RATE = Path("physics_app/src/materials/EIRateCoefMaterial.C")
 
-EK = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C")
-
 RUNTIME_INPUT = f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
@@ -84,11 +82,25 @@ RUNTIME_INPUT = f"""[Mesh]
     functor_symbols = 'dens wo2'
     expression = 'dens*wo2/0.031998'
   []
+  [flow_log_molar_electron_density]
+    type = ADParsedFunctorMaterial
+    property_name = flow_log_molar_electron_density
+    functor_names = 'n_e'
+    functor_symbols = 'ne'
+    expression = 'log(ne/6.02214076e23)'
+  []
+  [flow_log_molar_electron_energy]
+    type = ADParsedFunctorMaterial
+    property_name = flow_log_molar_electron_energy
+    functor_names = 'mean_en'
+    functor_symbols = 'energy'
+    expression = 'log(energy/6.02214076e23)'
+  []
   [mean_energy_bridge]
     type = ElectronEnergyMaterial
-    electron_energy_density = mean_en
-    electron_density = n_e
-    state_form = physical_eV
+    electron_energy_density = flow_log_molar_electron_energy
+    electron_density = flow_log_molar_electron_density
+    state_form = log_molar_eV
   []
   [r2_ionization_rate]
     type = EIRateCoefMaterial
@@ -141,10 +153,10 @@ RUNTIME_INPUT = f"""[Mesh]
     source = O2p_ionization_mass_source
   []
   [n_e_source]
-    type = PhysicsFVElectronReactionSource
+    type = FVCoupledForce
     variable = n_e
-    number_source = electron_ionization_number_source
-    state_form = physical
+    v = electron_ionization_number_source
+    coef = 1
   []
 []
 
@@ -378,7 +390,6 @@ def runtime_checker_self_test():
 
 def static_implementation_gate():
     rate = RATE.read_text()
-    electron_kernel = EK.read_text()
 
     assert 'registerMooseObject("PhysicsApp", EIRateCoefMaterial);' in rate
     assert 'reaction_progress' in rate
@@ -399,9 +410,10 @@ def static_implementation_gate():
     assert 'type = PhysicsElectronImpactIonizationMaterial' not in RUNTIME_INPUT
     assert 'type = PhysicsO2IonizationSourceMaterial' not in RUNTIME_INPUT
 
-    assert '_number_source(getFunctor<ADReal>("number_source"))' in electron_kernel
-    assert '_physical_state(getParam<MooseEnum>("state_form") == "physical")' in electron_kernel
-    assert 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' in electron_kernel
+    assert "type = FVCoupledForce" in RUNTIME_INPUT
+    assert "v = electron_ionization_number_source" in RUNTIME_INPUT
+    assert "coef = 1" in RUNTIME_INPUT
+    assert "type = PhysicsFVElectronReactionSource" not in RUNTIME_INPUT
 
     progress = 2.5
     s_o2 = -M_O2 * progress

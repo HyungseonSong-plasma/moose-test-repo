@@ -591,7 +591,7 @@ def test_actual_s6_native_wall_cutover_preserves_archive_and_rejects_charge_flip
         "e", "O2p", "Om", "Op"}
     assert report["P3"] == "NOT_RUN" and report["science"] == "SCIENCE_HOLD"
     assert "type = PhysicsIonWallTotalFluxMaterial" not in (staged / "layer_0.i").read_text()
-    assert "type = PhysicsIonWallFluxMaterial" in (staged / "layer_0.i").read_text()
+    assert "type = IonWallFluxMaterial" in (staged / "layer_0.i").read_text()
     assert "functor = Op_wall_number_flux" in (staged / "layer_1.i").read_text()
     assert (staged / "layer_0.i").read_bytes() != untouched["layer_0.i"]
 
@@ -729,7 +729,7 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     assert "NATIVE_RUNTIME_LINKER_ERROR" in script
     assert '"P3": "NOT_RUN"' in script and '"P4": "NOT_RUN"' in script
     assert "SCIENCE_HOLD" in script
-    workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+    workflow = (ROOT / ".github/workflows/physics-native-ci.yml").read_text()
     assert "preflight_public_option_s6.sh" in workflow
     assert "run_public_option_s6_p2.sh" in workflow
     assert "P0 - Public S6 environment and scratch-permission preflight" in workflow

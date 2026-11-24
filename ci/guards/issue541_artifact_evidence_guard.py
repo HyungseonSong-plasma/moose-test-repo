@@ -15,6 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CI = ROOT / ".github/workflows/ci.yml"
 TEMPLATE = ROOT / "ci/workflow_templates/general-ci.yml"
+PHYSICS_CODE_CI = ROOT / ".github/workflows/physics-code-ci.yml"
+PHYSICS_NATIVE_CI = ROOT / ".github/workflows/physics-native-ci.yml"
 CORE = "experiments/Issue402_plasma_dsl_g1/evidence/core_four"
 REGRESSION = "experiments/Issue402_plasma_dsl_g1/evidence"
 
@@ -27,7 +29,6 @@ P0_FILES = (
 NATIVE_FILES = ("p1_identity.json", "p1.log", "p2.log")
 REGRESSION_FILES = ("numerical_parity.json", "native_parity_negative_controls.json")
 MANDATORY_UPLOADS = (
-    "Upload directory-role audit",
     "Upload architecture census",
     "Upload migration source snapshot",
     "Upload C++ EEPF data, explicitly marked not real-gas parity",
@@ -35,6 +36,21 @@ MANDATORY_UPLOADS = (
     "Publish exact-head P1/P2 source-bound evidence (no P3)",
     "Upload native regression evidence",
 )
+UPLOAD_OWNERS = {
+    "Upload architecture census": "core",
+    "Upload migration source snapshot": "code",
+    "Upload C++ EEPF data, explicitly marked not real-gas parity": "native",
+    "Store four-workflow P0 and inventory evidence": "code",
+    "Publish exact-head P1/P2 source-bound evidence (no P3)": "native",
+    "Upload native regression evidence": "native",
+}
+CHECK_OWNERS = {
+    "Require complete CORE P0 artifact evidence": ("code", "--check-core-p0"),
+    "Require source-bound CORE Native P1/P2 artifact evidence": ("native", "--check-core-native"),
+    "Require actual native regression evidence before success": ("native", "--check-regression"),
+    "Require explicit Public D KEEP_HOLD evidence, not Native D PASS": ("native", "p6_legacy_hold_receipt.py --mode public"),
+}
+
 
 
 def require_file(path: Path) -> str:
@@ -79,21 +95,36 @@ def step_block(ci: str, name: str) -> str:
     return tail[:end.start()] if end else tail
 
 
-def check_policy(ci: str, template: str) -> None:
+def policy_sources(ci: str) -> dict[str, str]:
+    return {
+        "core": ci,
+        "code": PHYSICS_CODE_CI.read_text(encoding="utf-8"),
+        "native": PHYSICS_NATIVE_CI.read_text(encoding="utf-8"),
+    }
+
+
+def check_policy(
+    ci: str, template: str, *,
+    domain_sources: dict[str, str] | None = None,
+) -> None:
+    """Preserve every evidence lane across its authorized Workflow owner."""
     assert ci == template, "CI_TEMPLATE_SOURCE_DIVERGED"
+    sources = policy_sources(ci)
+    if domain_sources is not None:
+        sources.update(domain_sources)
     for name in MANDATORY_UPLOADS:
-        step = step_block(ci, name)
+        marker = "      - name: " + name + "\n"
+        assert sum(text.count(marker) for text in sources.values()) == 1, (
+            "UPLOAD_OWNER_MISSING_OR_DUPLICATED:" + name
+        )
+        step = step_block(sources[UPLOAD_OWNERS[name]], name)
         assert "uses: actions/upload-artifact@v4" in step, "UPLOAD_ACTION_MISSING:" + name
         assert "if-no-files-found: error" in step, "ARTIFACT_MISSING_MUST_FAIL:" + name
-    p0 = step_block(ci, "Store four-workflow P0 and inventory evidence")
+    p0 = step_block(sources["code"], "Store four-workflow P0 and inventory evidence")
     assert "/tmp/issue541_recovered_p0.log" in p0, "RECOVERED_P0_NOT_UPLOADED"
-    for name, check in (
-        ("Require complete CORE P0 artifact evidence", "--check-core-p0"),
-        ("Require source-bound CORE Native P1/P2 artifact evidence", "--check-core-native"),
-        ("Require actual native regression evidence before success", "--check-regression"),
-    ):
-        assert check in step_block(ci, name), "ARTIFACT_CHECKER_NOT_WIRED:" + name
-    assert "--self-test" in ci, "ARTIFACT_MUTATION_SELF_TEST_NOT_WIRED"
+    for name, (owner, check) in CHECK_OWNERS.items():
+        assert check in step_block(sources[owner], name), "ARTIFACT_CHECKER_NOT_WIRED:" + name
+    assert "--self-test" in "\n".join(sources.values()), "ARTIFACT_MUTATION_SELF_TEST_NOT_WIRED"
 
 
 def must_reject(fn, label: str) -> None:
@@ -171,12 +202,30 @@ def self_test() -> None:
     ci = CI.read_text(encoding="utf-8")
     template = TEMPLATE.read_text(encoding="utf-8")
     check_policy(ci, template)
+    source_by_owner = policy_sources(ci)
     for name in MANDATORY_UPLOADS:
+        owner = UPLOAD_OWNERS[name]
         marker = "      - name: " + name + "\n"
-        prefix, tail = ci.split(marker, 1)
-        altered = prefix + marker + tail.replace("if-no-files-found: error", "if-no-files-found: warn", 1)
-        must_reject(lambda: check_policy(altered, altered), "UPLOAD_WARNING_" + name)
-    must_reject(lambda: check_policy(ci, ci.replace("if-no-files-found: error", "if-no-files-found: warn", 1)), "TEMPLATE_DRIFT")
+        original = source_by_owner[owner]
+        before, after = original.split(marker, 1)
+        altered = before + marker + after.replace(
+            "if-no-files-found: error", "if-no-files-found: warn", 1
+        )
+        if owner == "core":
+            must_reject(lambda: check_policy(altered, altered),
+                        "UPLOAD_WARNING_" + name)
+        else:
+            must_reject(
+                lambda: check_policy(ci, template, domain_sources={owner: altered}),
+                "UPLOAD_WARNING_" + name,
+            )
+    must_reject(
+        lambda: check_policy(
+            ci, ci.replace("if-no-files-found: error",
+                           "if-no-files-found: warn", 1)
+        ),
+        "TEMPLATE_DRIFT",
+    )
     print("ISSUE541_ARTIFACT_EVIDENCE_MUTATION_SELF_TEST=PASS")
 
 

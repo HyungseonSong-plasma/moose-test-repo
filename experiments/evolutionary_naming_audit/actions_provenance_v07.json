@@ -1,0 +1,40 @@
+{
+  "schema": "evolutionary-naming-actions-audit-v0.7",
+  "observed_date_utc": "2026-11-22",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "pull_request": 770,
+  "head_sha": "3a8b67147fb59770e02cdf891b3cac150480cf91",
+  "observations": [
+    {
+      "run_id": 45081041451,
+      "workflow_name": "Harness Code CI",
+      "workflow_path": ".github/workflows/harness-code.yml",
+      "run_attempt": 1,
+      "run_status": "completed",
+      "run_conclusion": "success",
+      "job": "Harness Code pytest",
+      "job_conclusion": "success",
+      "exact_revision_step": "Verify exact source revision",
+      "artifact_names": [],
+      "junit_artifact_state": "NOT_PUBLISHED",
+      "source": "https://api.github.com/repos/HyungseonSong-plasma/moose-test-repo/actions/runs/45081041451"
+    },
+    {
+      "run_id": 45081041440,
+      "workflow_name": "Repository CI",
+      "workflow_path": ".github/workflows/ci.yml",
+      "run_attempt": 1,
+      "run_status": "completed",
+      "run_conclusion": "success",
+      "job": "validate",
+      "job_conclusion": "success",
+      "artifact_names": ["physics-architecture-census"],
+      "artifact_id": 14777176584,
+      "junit_artifact_state": "UNRELATED_ARCHIVE",
+      "source": "https://api.github.com/repos/HyungseonSong-plasma/moose-test-repo/actions/runs/45081041440"
+    }
+  ],
+  "conclusion": "HOLD_NO_HARNESS_JUNIT_ARTIFACT",
+  "source_credibility": "CURRENT_GITHUB_API_OBSERVATION_NOT_SIGNED_ATTESTATION",
+  "mutation_approved": false
+}

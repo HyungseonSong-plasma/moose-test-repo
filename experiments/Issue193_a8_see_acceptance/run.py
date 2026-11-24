@@ -95,12 +95,12 @@ def _promote_current_acceptance_types(text: str) -> tuple[str, dict[str, Any]]:
             )
         previous = mp.get_parameter(promoted, path, "type")
         promoted = mp.upsert_parameter(
-            promoted, path, "type", "PhysicsIonWallFluxMaterial"
+            promoted, path, "type", "IonWallFluxMaterial"
         )
         wall_promotions[species] = {
             "path": path,
             "from": previous,
-            "to": "PhysicsIonWallFluxMaterial",
+            "to": "IonWallFluxMaterial",
         }
 
     remaining_qpx_types = re.findall(
@@ -183,7 +183,7 @@ def _construction_audit(parameters: Mapping[str, Any]) -> dict[str, Any]:
         "current_object_namespace_clean_on": "type = QPX" not in promoted_on,
         "current_object_namespace_clean_off": "type = QPX" not in promoted_off,
         "current_ion_wall_types": all(
-            value == "PhysicsIonWallFluxMaterial" for value in current_ion_types.values()
+            value == "IonWallFluxMaterial" for value in current_ion_types.values()
         ),
     }
     return {

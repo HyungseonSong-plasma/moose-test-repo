@@ -61,7 +61,7 @@
     diffusivity = 0.003
   []
   [O2p_wall]
-    type = PhysicsIonWallFluxMaterial
+    type = IonWallFluxMaterial
     species_id = O2p
     ion_number_density = O2p_number_density
     potential = potential
@@ -72,7 +72,7 @@
     sticking = 1
   []
   [Op_wall]
-    type = PhysicsIonWallFluxMaterial
+    type = IonWallFluxMaterial
     species_id = Op
     ion_number_density = Op_number_density
     potential = potential
@@ -83,7 +83,7 @@
     sticking = 1
   []
   [Om_wall]
-    type = PhysicsIonWallFluxMaterial
+    type = IonWallFluxMaterial
     species_id = Om
     ion_number_density = Om_number_density
     potential = potential

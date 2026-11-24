@@ -1,0 +1,49 @@
+name: Harness Code CI
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'physics_harness/code/**'
+      - '.github/workflows/harness-code.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'physics_harness/code/**'
+      - '.github/workflows/harness-code.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harness-code-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness_code_pytest:
+    name: Harness Code pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+      - name: Install pytest
+        run: python -m pip install 'pytest>=8,<9' -r physics_harness/code/requirements.txt
+      - name: Run only harness_code tests
+        run: python -m pytest -q physics_harness/code/tests --junitxml="${{ runner.temp }}/harness-code-junit.xml" -o junit_logging=no
+      - name: Upload Harness Code JUnit
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-code-junit
+          path: ${{ runner.temp }}/harness-code-junit.xml
+          if-no-files-found: warn
+          retention-days: 7

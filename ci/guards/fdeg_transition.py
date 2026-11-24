@@ -164,6 +164,11 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
                   fact["reason"] + " at " + fact["path"] + ":" + str(fact["line"]),
                   "STRUCTURAL_RUNTIME_SCOPE", consumer=None,
                   origin=structural.stable_id("unresolved", fact))
+    for fact in structural_report.get("upstream_unresolved", []):
+        add_block("UPSTREAM_GENERATOR_OR_INPUT_UNRESOLVED",
+                  fact["reason"] + " at " + fact["path"] + ":" + str(fact["line"]),
+                  "UPSTREAM_GENERATOR_OR_INPUT_COVERAGE",
+                  origin=structural.stable_id("upstream-unresolved", fact))
     if structural_report["status"] == "INCOMPLETE" or structural_report.get("scan_errors"):
         add_block("INCOMPLETE_SCANNER", "Structural global scan incomplete; cannot assert coverage",
                   "STRUCTURAL_SCOPE")
@@ -204,6 +209,11 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
     if not candidate_records:
         add_block("NO_APPROVED_REPLACEMENT", "No reviewed candidate or approved replacement owner",
                   "OWNER_DECISION")
+        add_block("COMPATIBILITY_TERMINATION_NOT_APPROVED",
+                  "Direct retirement requires verified supported-scope absence, "
+                  "independent coverage/caller-zero, preserved history and explicit "
+                  "old-input current-binary compatibility termination approval",
+                  "INDEPENDENT_COVERAGE_AND_OWNER_APPROVAL")
 
     struct_edges = {e["edge_id"]: e for e in structural_report["edges"]}
     instances = {i["instance_id"]: i for i in structural_report["instances"]}
@@ -221,7 +231,22 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
             raise ValueError("TRANSITION_CONSUMER_INSTANCE_NOT_IN_STRUCTURAL")
         role = item["role"]
         historical = se.get("revision_scope") == "HISTORICAL_SOURCE_NOT_PROVEN_ACTIVE"
+        history_location_unknown = (
+            se.get("revision_scope") == "HISTORICAL_LOCATION_ACTIVITY_UNKNOWN")
         lexical = role == "LEXICAL_MENTION_NOT_CONSUMER"
+        declared_validation = item.get("declared_input_validation", {
+            "status": "UNKNOWN", "mode": "UNKNOWN", "invalid": [],
+            "unresolved": ["VALIDATION_NOT_AVAILABLE"]})
+        if declared_validation.get("status") == "INVALID":
+            add_block("INVALID_GENERATED_INPUT",
+                      "Invalid declared/local generated template for "
+                      + item["input_path"] + " "
+                      + str(declared_validation.get("invalid", [])),
+                      "SOURCE_INPUT_CONTRACT", consumer="consumer:" + sid)
+        if history_location_unknown and not lexical:
+            add_block("HISTORICAL_LOCATION_CURRENT_USE_UNRESOLVED",
+                      "Source path looks historical but may be current generator/CI consumer",
+                      "CURRENT_ENTRYPOINT_COMPATIBILITY", consumer="consumer:" + sid)
         disposition = ("PRESERVE_HISTORICAL" if historical else
                        "REFERENCE_ONLY" if lexical else "HOLD_UNKNOWN")
         proposal = ("PRESERVE_HISTORY" if historical else
@@ -234,7 +259,26 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
             "source_node": item["source_node"], "role": role,
             "evidence_strength": item["evidence_strength"],
             "reference_scope": se.get("revision_scope"),
+            "source_role": se.get("source_role", "SOURCE_ROLE_UNKNOWN"),
             "input_path": item["input_path"], "block_path": item["block_path"],
+            "instance_kind": item.get("instance_kind", "NO_INSTANCE"),
+            "declared_input_validation": declared_validation,
+            "disposition_options": (
+                ["PRESERVE_FROZEN_SOURCE", "CURRENT_CONSUMER_MIGRATION_REQUIRED_OR_HOLD"]
+                if history_location_unknown else
+                ["PRESERVE_HISTORICAL", "CURRENT_BINARY_COMPATIBILITY_SEPARATE"]
+                if historical else
+                ["REFERENCE_ONLY"] if lexical else
+                ["REWIRE_WITH_INDEPENDENT_PARITY", "RETAIN"]
+                if candidate_records else
+                ["RETAIN", "RETIRE_UNSUPPORTED_CONSUMER_WITH_EXPLICIT_APPROVAL"]),
+            "direct_retirement_preconditions": (
+                ["SUPPORTED_SCOPE_PROVEN_NO_ACTIVE_CONSUMERS",
+                 "EXTERNAL_AND_GENERATED_CONSUMER_COVERAGE",
+                 "CURRENT_BINARY_OLD_INPUT_COMPATIBILITY_TERMINATION_APPROVAL",
+                 "HISTORICAL_RECEIPT_FROZEN",
+                 "OWNER_ACCEPTANCE_AND_POST_CUT_NATIVE_CI"]
+                if not candidate_records else []),
             "before": {"type": target, "bindings": item["declared_bindings"],
                        "declared_mode": item["declared_mode"],
                        "effective_provider": "UNKNOWN",
@@ -245,7 +289,12 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
             "disposition": disposition,
             "disposition_proposal": proposal,
             "proposed_only": True,
-            "affected_paths": [item["input_path"]],
+            "affected_paths": (
+                [item["input_path"]] if not historical and not lexical
+                and candidate_records and not history_location_unknown else []),
+            "protected_or_reference_paths": (
+                [item["input_path"]] if historical or lexical
+                or history_location_unknown else []),
             "function_to_preserve_if_active": None if lexical else item.get("functional_effect_if_removed"),
             "functional_claim_ids": ([] if lexical else functional_report["preservation_contract"]["claim_ids"]),
             "evidence_status": "STATIC_DECLARATION_NOT_EXECUTION",
@@ -260,6 +309,10 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
             current["blocking_obligation_ids"] = [bid]
         else:
             current["blocking_obligation_ids"] = []
+        current["blocking_obligation_ids"] = sorted(set(
+            current["blocking_obligation_ids"] +
+            [b["obligation_id"] for b in blockers
+             if b.get("consumer") == current["consumer_id"]]))
         consumers.append(current)
         edges.append(edge(incident, "HAS_DISPOSITION", current["consumer_id"], {
             "disposition": disposition, "status": "PLANNED_ONLY",
@@ -280,8 +333,9 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
                   "COVERAGE_SCOPE")
 
     declared_sites = sorted(set(
-        c["input_path"] for c in consumers if c["input_path"]
-    ))
+        p for c in consumers for p in c["affected_paths"]))
+    protected_or_reference_sites = sorted(set(
+        p for c in consumers for p in c["protected_or_reference_paths"]))
     generators = functional_report.get("generator_consumer_routes", [])
     generator_sites = sorted({g["source"] for g in generators})
     generated_candidates = sorted({
@@ -317,7 +371,7 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
         "PIN_EVIDENCE": [],
         "RESOLVE_CONSUMER_SCOPE": declared_sites + generator_sites + generated_candidates,
         "QUALIFY_REPLACEMENT": source_owners,
-        "REWIRE_DECLARED_CONSUMERS": declared_sites + generator_sites,
+        "REWIRE_DECLARED_CONSUMERS": declared_sites,
         "VERIFY_FUNCTION_AND_HISTORY": declared_sites + generated_candidates,
         "REBUILD_AND_COMPARE_GRAPHS": declared_sites + generator_sites + workflows,
         "REVIEW_SOURCE_RETIREMENT": source_owners,
@@ -351,7 +405,7 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
                 task_id = "step:" + verb + ":" + consumer["structural_edge_id"]
                 parents = (["step:RESOLVE_CONSUMER_SCOPE"] if is_history else
                            ["step:QUALIFY_REPLACEMENT"])
-                paths = [] if is_history or not candidate_records else [consumer["input_path"]]
+                paths = consumer["affected_paths"]
                 gates = (["PINNED_HISTORICAL_REPLAY_SEPARATE",
                           "CURRENT_BINARY_COMPATIBILITY_INDEPENDENT"] if is_history else
                          ["APPROVED_REPLACEMENT_OR_EXPLICIT_REMOVAL_OWNER",
@@ -487,6 +541,7 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
         "candidate_rewiring_options": candidate_records,
         "change_sites": {
             "declared_input_and_other_consumer_paths": declared_sites,
+            "protected_or_reference_no_edit_paths": protected_or_reference_sites,
             "generator_paths": generator_sites,
             "generated_output_candidates_not_observed": generated_candidates,
             "workflow_paths": workflows,
@@ -494,6 +549,16 @@ def compose(structural_report: dict, functional_report: dict, policy: dict,
         },
         "protected_resources": protected,
         "shared_owner_contract": shared,
+        "shared_owner_aggregate_requirement": (
+            {"source_path": shared["source_path"],
+             "registered_classes": sorted(shared["co_registered_classes"]),
+             "all_registered_owners_must_be_disconnected": True,
+             "target_owner": target,
+             "target_owner_status": "HOLD_UNKNOWN",
+             "other_owner_verification": "NOT_INCLUDED_IN_THIS_TARGET_GRAPH",
+             "required_external_manifest": "FOUR_S_F_T_REPORTS_SAME_EXACT_HEAD",
+             "whole_file_safe_delete": "HOLD"}
+            if shared else None),
         "historical_gates": profile["historical"],
         "blocking_obligations": blockers,
         "steps": steps,

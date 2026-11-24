@@ -227,7 +227,16 @@ def _check(data: dict, *, reintroduced: frozenset[str] = frozenset()) -> None:
         for ref in x["replacement"]["routes"]:
             file_name, sep, job = ref.partition("#")
             assert sep and job and file_name.startswith(".github/workflows/")
-            text = (ROOT / file_name).read_text(encoding="utf-8")
+            # Preserve the immutable historic route receipt, but require
+            # the migrated job to exist at its current owner (#749).
+            live = file_name
+            if file_name == ".github/workflows/ci.yml":
+                live = (
+                    ".github/workflows/physics-native-ci.yml"
+                    if job == "issue402_core_four_native_p2"
+                    else ".github/workflows/physics-code-ci.yml"
+                )
+            text = (ROOT / live).read_text(encoding="utf-8")
             assert re.search(r"(?m)^  " + re.escape(job) + r":\s*$", text), (
                 "REPLACEMENT_JOB_LOST:" + ident + ":" + job
             )

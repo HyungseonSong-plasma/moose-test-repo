@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
+    paths:
+      - 'physics_harness/ontology/**'
+      - '.github/workflows/sol-runtime-integration.yml'
   push:
     branches: [main]
     paths:

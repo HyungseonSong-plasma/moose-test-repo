@@ -1,29 +1,17 @@
 {
   "targets": [
     {
-      "branch": "issue-667-p1-0-final11-byte-pin-20261117",
-      "expected_sha": "9c15a4f0e2cf8042cb0d4b2f18af31511021d168",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-final11-byte-pin-20261117-9c15a4f0e2cf"
+      "branch": "issue-758-lucidity-path-retirement",
+      "expected_sha": "436cb7b3210ed9423c3001c9c5f5c351f8f2219e"
     },
     {
-      "branch": "issue-667-p1-0-sourcepin-9c15a4f-20261117",
-      "expected_sha": "9f96db79611e469ee25d7b498ce1ee22f26f81d4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-sourcepin-9c15a4f-20261117-9f96db79611e"
+      "branch": "issue-758-lucidity-retirement-validation",
+      "expected_sha": "41cd846f75fcb47772408db858531e4688198252",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-lucidity-retirement-validation-41cd846f75fc"
     },
     {
-      "branch": "issue-667-p1-0-s6-byte-census-20261117",
-      "expected_sha": "aa1e414d669c3e0269feb6dce5d31ca0e09924a6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-s6-byte-census-20261117-aa1e414d669c"
-    },
-    {
-      "branch": "issue-667-p1-0-exact-s6-inputs-20261117",
-      "expected_sha": "9691f7f7741566fda93e1ee6f3fcb603e6532261",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-0-exact-s6-inputs-20261117-9691f7f77415"
-    },
-    {
-      "branch": "issue-667-p1-b6-private-rate-hash-20261117",
-      "expected_sha": "aece3c3c2a1f3561fd246a3d22fdbd23f105737e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-667-p1-b6-private-rate-hash-20261117-aece3c3c2a1f"
+      "branch": "cleanup-758-v05-final-refs",
+      "expected_sha": "3e0c38495a2c2e8353c007f75244009f57a8e32a"
     }
   ]
 }
