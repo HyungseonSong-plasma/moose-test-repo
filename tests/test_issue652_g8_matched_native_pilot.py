@@ -98,12 +98,28 @@ def test_preflight_success_reports_only_fixed_phase(capsys):
     assert capsys.readouterr().out.strip() == "G8_PREFLIGHT_SHARED_ELF_PASS"
 
 
-def _synthetic_exodus(path, centering="elemental", omit=None, electron_shift=0.0):
+def _synthetic_exodus(path, centering="elemental", omit=None, electron_shift=0.0, large=False):
     import numpy as np
     from netCDF4 import Dataset
+    if large:
+        # Match the observed production support counts without using private mesh bytes.
+        x, y = np.meshgrid(np.linspace(0, 1, 53), np.linspace(0, 1, 19))
+        x, y = x.ravel(), y.ravel()
+        first, second = [], []
+        for j in range(18):
+            for i in range(52):
+                a = 53*j+i+1
+                first.append([a, a+1, a+53])
+                second.append([a+1, a+54, a+53])
+        dropped = {j*52+i for j in (1,2) for i in range(1,38)}
+        conn = first + [cell for i, cell in enumerate(second) if i not in dropped]
+        assert len(x) == 1007 and len(conn) == 1798 and len(np.unique(conn)) == 1007
+    else:
+        x, y, conn = [0,1,1,0], [0,0,1,1], [[1,2,3],[1,3,4]]
+    n, m = len(x), len(conn)
     with Dataset(path, "w") as ds:
-        for name, size in (("time_step", 4), ("num_nodes", 4), ("num_el_blk", 1),
-                           ("num_el_in_blk1", 2), ("num_nod_per_el1", 3), ("len_name", 33)):
+        for name, size in (("time_step", 4), ("num_nodes", n), ("num_el_blk", 1),
+                           ("num_el_in_blk1", m), ("num_nod_per_el1", 3), ("len_name", 33)):
             ds.createDimension(name, size)
         def put(name, dtype, dims, data):
             ds.createVariable(name, dtype, dims)[:] = data
@@ -115,22 +131,26 @@ def _synthetic_exodus(path, centering="elemental", omit=None, electron_shift=0.0
                 rows[i, :len(value)] = np.frombuffer(value.encode("ascii"), dtype="S1")
             put(name, "S1", (dim, "len_name"), rows)
         put("time_whole", "f8", ("time_step",), [0, 1e-9, 2e-9, 3e-9])
-        put("coordx", "f8", ("num_nodes",), [0, 1, 1, 0])
-        put("coordy", "f8", ("num_nodes",), [0, 0, 1, 1])
+        put("coordx", "f8", ("num_nodes",), x)
+        put("coordy", "f8", ("num_nodes",), y)
         put("eb_names", "S1", ("num_el_blk", "len_name"),
             np.array([list(b"plasma".decode()) + [""]*27], dtype="S1"))
-        put("connect1", "i4", ("num_el_in_blk1", "num_nod_per_el1"), [[1,2,3],[1,3,4]])
+        put("connect1", "i4", ("num_el_in_blk1", "num_nod_per_el1"), conn)
+        ds.variables["connect1"].elem_type = "TRI3"
         logs = [key for key in g8.REQUIRED_LOGS if key != omit]
-        nodal = ["potential"] + (logs if centering == "nodal" else [])
+        nodal = ["potential"] + (logs if centering == "nodal" else
+                                  [key for key in logs if key == "log_e"] if centering == "mixed" else [])
         names("name_nod_var", "num_nod_var", nodal)
         for i, key in enumerate(nodal, 1):
-            values = np.full((4,4), electron_shift if key == "log_e" else 0.0)
+            values = np.full((4,n), electron_shift if key == "log_e" else 0.0)
             put("vals_nod_var"+str(i), "f8", ("time_step","num_nodes"), values)
-        if centering == "elemental":
+        if centering in ("elemental", "mixed"):
+            if centering == "mixed":
+                logs = [key for key in logs if key != "log_e"]
             names("name_elem_var", "num_elem_var", logs)
             put("elem_var_tab", "i4", ("num_el_blk","num_elem_var"), np.ones((1,len(logs)),dtype=int))
             for i, key in enumerate(logs, 1):
-                values = np.full((4,2), electron_shift if key == "log_e" else 0.0)
+                values = np.full((4,m), electron_shift if key == "log_e" else 0.0)
                 put("vals_elem_var"+str(i)+"eb1", "f8", ("time_step","num_el_in_blk1"), values)
 
 
@@ -184,3 +204,57 @@ def test_observation_exception_does_not_leak_private_text(monkeypatch):
     g8.record_comparison(record, Path("old"), Path("new"))
     assert record["comparison"]["blocker_code"] == "P3_OBSERVATION_UNCLASSIFIED_HOLD"
     assert "PRIVATE_NAME_SENTINEL" not in str(record)
+
+
+def test_rz_exp_log_analytic_triangle():
+    import numpy as np
+    # r=x, log_e=x on the unit right triangle. The exact weighted mean
+    # of exp(x) is 6*(3-exp(1)), not exp(mean(log_e)) or a nodal average.
+    value, volume, error = g8.rz_electron_cell_average(
+        np.array([[0.,1.,0.]]), [0.,1.,0.], [0.,0.,1.], [[0,1,2]], "TRI3")
+    assert value[0,0]/g8.NA == pytest.approx(6*(3-np.e), rel=1e-12)
+    assert volume[0] == pytest.approx(np.pi/3)
+    assert error <= g8.RZ_QUADRATURE_REL_LIMIT
+
+
+def test_rz_constant_quad_and_invalid_topology():
+    import numpy as np
+    args = (np.zeros((1,4)), [0.,1.,1.,0.], [0.,0.,1.,1.], [[0,1,2,3]])
+    value, volume, _ = g8.rz_electron_cell_average(*args, "QUAD4")
+    assert value[0,0] == pytest.approx(g8.NA)
+    assert volume[0] == pytest.approx(np.pi)
+    with pytest.raises(g8.MatchedHold, match="UNSUPPORTED_FIRST_ORDER_TOPOLOGY"):
+        g8.rz_electron_cell_average(*args, "QUAD8")
+
+
+def test_actual_support_counts_mixed_exodus(tmp_path):
+    a, b = tmp_path/"a.e", tmp_path/"b.e"
+    _synthetic_exodus(a, "mixed", large=True)
+    _synthetic_exodus(b, "mixed", large=True)
+    obs = {}
+    r = g8.compare_exodus(a,b,obs)
+    assert r["matched_nodes"] == 1007 and r["matched_plasma_elements"] == 1798
+    assert r["fieldwise_3ns_pilot"] == "PASS_PROVISIONAL_3NS"
+    assert r["field_centering"] == {"potential":"nodal", "electron_density":"nodal", "charge_density":"RZ_cell_average"}
+    assert r["fields"]["charge_density"]["relative_rms"] == 0
+    assert obs["old"]["charge_reconstruction"]["max_relative_quadrature_error"] <= g8.RZ_QUADRATURE_REL_LIMIT
+
+
+def test_mixed_exodus_electron_difference(tmp_path):
+    a, b = tmp_path/"a.e", tmp_path/"b.e"
+    _synthetic_exodus(a, "mixed")
+    _synthetic_exodus(b, "mixed", electron_shift=0.1)
+    r = g8.compare_exodus(a,b)
+    assert r["fieldwise_3ns_pilot"] == "HOLD_NUMERICAL_DIFFERENCE"
+    assert r["fields"]["electron_density"]["relative_rms"] > g8.REL_RMS_LIMIT["electron_density"]
+    assert r["fields"]["charge_density"]["relative_rms"] > g8.REL_RMS_LIMIT["charge_density"]
+
+
+def test_mixed_exodus_missing_ion_still_fails_closed(tmp_path):
+    a, b = tmp_path/"a.e", tmp_path/"b.e"
+    _synthetic_exodus(a, "mixed", omit="log_Om")
+    _synthetic_exodus(b, "mixed")
+    receipt = {}
+    g8.record_comparison(receipt, a,b)
+    assert receipt["comparison"]["fieldwise_3ns_pilot"] == "HOLD_OBSERVATION"
+    assert receipt["observation"]["old"]["blocker_code"] == "P3_REQUIRED_LOG_FIELDS_MISSING_OR_MIXED_CENTERING"

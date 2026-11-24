@@ -138,6 +138,71 @@ def protected_files_for_case(root: Path, case: str, tables: dict) -> dict:
     }
 
 
+# Source-pinned S6 uses RZ about Y, first-order FEM electron log state,
+# and cell-constant FV ion states. This independent reconstruction is not
+# the assembled Poisson quadrature/residual. Check integration convergence
+# separately from the unchanged old/new RMS acceptance thresholds.
+RZ_QUADRATURE_ORDERS = (8, 16)
+RZ_QUADRATURE_REL_LIMIT = 1e-10
+
+
+def rz_electron_cell_average(log_e, x, y, conn, topology):
+    import numpy as np
+    log_e, x, y, conn = map(np.asarray, (log_e, x, y, conn))
+    if (log_e.ndim != 2 or x.ndim != 1 or y.shape != x.shape
+            or log_e.shape[1] != len(x) or conn.ndim != 2 or not conn.size
+            or conn.min() < 0 or conn.max() >= len(x)
+            or not np.isfinite(log_e).all() or not np.isfinite(x).all()
+            or not np.isfinite(y).all() or (x[conn] < 0).any()):
+        raise MatchedHold("P3_RZ_GEOMETRY_OR_STATE_INVALID")
+    tri = topology in ("TRI", "TRI3", "TRIANGLE") and conn.shape[1] == 3
+    quad = topology in ("QUAD", "QUAD4", "QUADRILATERAL") and conn.shape[1] == 4
+    if not (tri or quad):
+        raise MatchedHold("P3_RZ_UNSUPPORTED_FIRST_ORDER_TOPOLOGY")
+    r, z = x[conn], y[conn]
+    state = log_e[:, conn]
+    if any(len(set(row)) != conn.shape[1] for row in conn):
+        raise MatchedHold("P3_RZ_GEOMETRY_OR_STATE_INVALID")
+
+    def integrate(order):
+        q, weights = np.polynomial.legendre.leggauss(order)
+        q, weights = (q+1)/2, weights/2
+        total = np.zeros((log_e.shape[0], len(conn)))
+        volume = np.zeros(len(conn))
+        sign = None
+        with np.errstate(over="ignore", invalid="ignore", under="ignore"):
+            for u, wu in zip(q, weights):
+                for v, wv in zip(q, weights):
+                    if tri:
+                        shape = np.array([(1-u)*(1-v), u, (1-u)*v])
+                        du = np.array([-(1-v), 1, -v])
+                        dv = np.array([-(1-u), 0, 1-u])
+                    else:
+                        shape = np.array([(1-u)*(1-v), u*(1-v), u*v, (1-u)*v])
+                        du = np.array([-(1-v), 1-v, v, -v])
+                        dv = np.array([-(1-u), -u, u, 1-u])
+                    det = (r@du)*(z@dv)-(r@dv)*(z@du)
+                    if sign is None:
+                        sign = np.sign(det)
+                    if (not np.isfinite(det).all() or (det == 0).any()
+                            or not np.array_equal(np.sign(det), sign)):
+                        raise MatchedHold("P3_RZ_DEGENERATE_OR_FOLDED_CELL")
+                    weight = wu*wv*np.abs(det)*(r@shape)
+                    volume += weight
+                    total += np.exp(state@shape)*weight
+        if (not np.isfinite(total).all() or not np.isfinite(volume).all()
+                or (volume <= 0).any() or (total <= 0).any()):
+            raise MatchedHold("P3_RZ_GEOMETRY_OR_STATE_INVALID")
+        return NA*(total/volume), 2*np.pi*volume
+
+    low, _ = integrate(RZ_QUADRATURE_ORDERS[0])
+    high, volumes = integrate(RZ_QUADRATURE_ORDERS[1])
+    error = float(np.max(np.abs(high-low)/np.maximum(np.abs(high), 1e-30)))
+    if not np.isfinite(high).all() or not np.isfinite(error) or error > RZ_QUADRATURE_REL_LIMIT:
+        raise MatchedHold("P3_RZ_QUADRATURE_NOT_CONVERGED")
+    return high, volumes, error
+
+
 def exodus_read(path: Path, observation=None) -> dict:
     import numpy as np
     from netCDF4 import Dataset
@@ -194,9 +259,16 @@ def exodus_read(path: Path, observation=None) -> dict:
         if nodal.count("potential") != 1:
             raise MatchedHold("P3_REQUIRED_NODAL_POTENTIAL_MISSING")
 
-        def read_nodal(key):
-            data = numeric(ds.variables["vals_nod_var"+str(nodal.index(key)+1)])
-            if data.shape != (len(times), len(x)):
+        def read_nodal(key, indices=None):
+            variable = ds.variables["vals_nod_var"+str(nodal.index(key)+1)]
+            if variable.shape != (len(times), len(x)):
+                raise MatchedHold("P3_NODAL_SHAPE_OR_NONFINITE")
+            # Block-restricted variables may be masked outside their own support.
+            data = np.ma.asarray(variable[:, indices] if indices is not None else variable[:])
+            if np.ma.getmaskarray(data).any():
+                raise MatchedHold("P3_MASKED_FIELD_OR_MESH")
+            data = np.asarray(data, dtype=float)
+            if not np.isfinite(data).all():
                 raise MatchedHold("P3_NODAL_SHAPE_OR_NONFINITE")
             return data
 
@@ -214,20 +286,43 @@ def exodus_read(path: Path, observation=None) -> dict:
                 raise MatchedHold("P3_ELEMENT_FIELD_SHAPE_INVALID")
             return data
 
-        # Prefer actual cell data when all FV log states are available on plasma.
-        # A nodal-only representation is retained as a distinct observation class.
-        # Never interpolate or mix species centering to reconstruct charge.
-        if all(elemental.count(key) == 1 for key in REQUIRED_LOGS):
+        ions = tuple(key for key in REQUIRED_LOGS if key != "log_e")
+        topology = str(getattr(ds.variables["connect"+str(block)], "elem_type", "")).upper().strip()
+        volumes = None
+        if (nodal.count("log_e") == 1 and elemental.count("log_e") == 0
+                and all(elemental.count(key) == 1 and nodal.count(key) == 0 for key in ions)):
+            centering = "mixed_fem_e_fv_ions"
+            logs = {"log_e": read_nodal("log_e", nodes)}
+            logs.update({key: read_elemental(key) for key in ions})
+            # Use the actual global->local plasma node map, never interpolate ions.
+            electron_cell, volumes, error = rz_electron_cell_average(
+                logs["log_e"], x[nodes], y[nodes], np.searchsorted(nodes, conn), topology)
+            observation["charge_reconstruction"] = {
+                "method": "RZ_Y_FE_EXP_LOG_CELL_AVERAGE_PLUS_FV_IONS",
+                "quadrature_orders": list(RZ_QUADRATURE_ORDERS),
+                "max_relative_quadrature_error": error,
+                "relative_quadrature_limit": RZ_QUADRATURE_REL_LIMIT,
+                "element_family": "TRI3" if conn.shape[1] == 3 else "QUAD4",
+            }
+        elif all(elemental.count(key) == 1 for key in REQUIRED_LOGS):
             centering = "elemental"
             logs = {key: read_elemental(key) for key in REQUIRED_LOGS}
         elif (all(nodal.count(key) == 1 for key in REQUIRED_LOGS)
               and not any(elemental.count(key) for key in REQUIRED_LOGS)):
             centering = "nodal"
-            logs = {key: read_nodal(key)[:, nodes] for key in REQUIRED_LOGS}
+            logs = {key: read_nodal(key, nodes) for key in REQUIRED_LOGS}
         else:
             raise MatchedHold("P3_REQUIRED_LOG_FIELDS_MISSING_OR_MIXED_CENTERING")
         observation["density_centering"] = centering
-        potential = read_nodal("potential")[:, nodes]
+        potential = read_nodal("potential", nodes)
+        # Existing native charge_integral is an optional independent diagnostic.
+        native_charge_integral = None
+        if "name_glo_var" in ds.variables and "vals_glo_var" in ds.variables:
+            global_names = strs(ds.variables["name_glo_var"][:])
+            if global_names.count("charge_integral") == 1:
+                g = numeric(ds.variables["vals_glo_var"])
+                if g.shape == (len(times), len(global_names)):
+                    native_charge_integral = g[:, global_names.index("charge_integral")]
         other = {}
         for sigma in ("sigma_s", "sigma_wafer", "sigma_focus_ring"):
             if nodal.count(sigma) == 1:
@@ -237,8 +332,9 @@ def exodus_read(path: Path, observation=None) -> dict:
     if any(not np.isfinite(array).all() or (array < 0).any()
            for array in species.values()):
         raise MatchedHold("P3_RECONSTRUCTED_DENSITY_INVALID")
+    electron_for_charge = electron_cell if centering == "mixed_fem_e_fv_ions" else species["log_e"]
     charge = ELEMENTARY_CHARGE*(species["log_O2p"]+species["log_Op"]
-                               -species["log_e"]-species["log_Om"])
+                               -electron_for_charge-species["log_Om"])
     if not np.isfinite(charge).all():
         raise MatchedHold("P3_RECONSTRUCTED_DENSITY_INVALID")
     return {"time": times, "x": x, "y": y, "conn": conn, "nodes": nodes,
@@ -246,6 +342,9 @@ def exodus_read(path: Path, observation=None) -> dict:
             "potential": potential,
             "electron_density": species["log_e"],
             "charge_density": charge, "sigma": other,
+            "species": species,
+            "reconstructed_charge_integral": charge@volumes if volumes is not None else None,
+            "native_charge_integral": native_charge_integral,
             "filename_sha256": bytes_sha(path), "filename_size": path.stat().st_size}
 
 
@@ -298,6 +397,17 @@ def compare_exodus(old: Path, new: Path, observation=None) -> dict:
             values["relative_rms"] <= REL_RMS_LIMIT[key] else
             "ABOVE_PREDECLARED_PILOT_THRESHOLD")
         variables[key] = values
+    ions = {key: normalized_rms(a["species"][key], b["species"][key])
+            for key in REQUIRED_LOGS if key != "log_e"}
+    integral = {"status": "NATIVE_INTEGRAL_NOT_BOTH_RECORDED"}
+    if a["native_charge_integral"] is not None and b["native_charge_integral"] is not None:
+        integral = {"status": "DIAGNOSTIC_ONLY",
+                    "old_new": normalized_rms(a["native_charge_integral"], b["native_charge_integral"])}
+        if a["reconstructed_charge_integral"] is not None and b["reconstructed_charge_integral"] is not None:
+            integral["old_reconstructed_vs_native"] = normalized_rms(
+                a["native_charge_integral"], a["reconstructed_charge_integral"])
+            integral["new_reconstructed_vs_native"] = normalized_rms(
+                b["native_charge_integral"], b["reconstructed_charge_integral"])
     sigma = {}
     for name in ("sigma_s", "sigma_wafer", "sigma_focus_ring"):
         if name in a["sigma"] and name in b["sigma"]:
@@ -310,8 +420,10 @@ def compare_exodus(old: Path, new: Path, observation=None) -> dict:
         "matched_nodes": len(a["nodes"]),
         "matched_plasma_elements": len(a["conn"]),
         "field_centering": {"potential": "nodal",
-                            "electron_density": a["density_centering"],
-                            "charge_density": a["density_centering"]},
+                            "electron_density": "nodal" if a["density_centering"] == "mixed_fem_e_fv_ions" else a["density_centering"],
+                            "charge_density": "RZ_cell_average" if a["density_centering"] == "mixed_fem_e_fv_ions" else a["density_centering"]},
+        "ion_density_diagnostics": ions,
+        "native_charge_integral_diagnostics": integral,
         "matched_exodus_coordinates_and_plasma_connectivity": True,
         "fields": variables, "surface_charges": sigma,
         "same_time_and_mesh": "PASS",
@@ -335,6 +447,8 @@ OBSERVATION_BLOCKERS = frozenset({
     "P3_PLASMA_ELEMENT_FIELD_MISSING", "P3_ELEMENT_FIELD_SHAPE_INVALID",
     "P3_REQUIRED_LOG_FIELDS_MISSING_OR_MIXED_CENTERING",
     "P3_RECONSTRUCTED_DENSITY_INVALID", "P3_EXODUS_OBSERVATION_INCOMPLETE",
+    "P3_RZ_GEOMETRY_OR_STATE_INVALID", "P3_RZ_UNSUPPORTED_FIRST_ORDER_TOPOLOGY",
+    "P3_RZ_DEGENERATE_OR_FOLDED_CELL", "P3_RZ_QUADRATURE_NOT_CONVERGED",
     "OLD_NEW_DENSITY_CENTERING_MISMATCH",
     "OLD_NEW_PLASMA_CONNECTIVITY_NOT_IDENTICAL",
     "FIELD_ARRAY_MISMATCH_OR_NONFINITE",
