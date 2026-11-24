@@ -1439,6 +1439,10 @@ jobs:
           cp -a "$RUNNER_TEMP/p05-in/staged" "$RUNNER_TEMP/p05-in/g5-staged"
           G5_EXPECTED_SOURCE_HEAD="$BASE_HEAD" python3 ci/guards/issue652_g5_native_p2.py \
             --staged "$RUNNER_TEMP/p05-in/g5-staged" --output "$RUNNER_TEMP/g5-out" --stage-only
+          python3 ci/guards/issue652_g6b_publicd100_stage.py \
+            --staged "$RUNNER_TEMP/p05-in/g5-staged" \
+            --g5-receipt "$RUNNER_TEMP/g5-out/g5_stage_receipt.json" \
+            --output "$RUNNER_TEMP/g5-out/g6b_publicd100_stage_receipt.json"
           python3 - "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-in/p4_receipt.json" <<'PY'
           from pathlib import Path
           import sys,json,hashlib
@@ -1983,10 +1987,6 @@ jobs:
           umask 077
           test "$(git rev-parse HEAD)" = "$BASE_HEAD"
           sha256sum -c "$RUNNER_TEMP/p05-in/physics-opt.sha256"
-          python3 ci/guards/issue652_g6b_publicd100_stage.py \
-            --staged "$RUNNER_TEMP/p05-in/g5-staged" \
-            --g5-receipt "$RUNNER_TEMP/g5-out/g5_stage_receipt.json" \
-            --output "$RUNNER_TEMP/g5-out/g6b_publicd100_stage_receipt.json"
           python3 ci/guards/issue652_g5_native_p2.py \
             --staged "$RUNNER_TEMP/p05-in/g5-staged" --output "$RUNNER_TEMP/g5-out" \
             --native-only --lookup-rows 100
