@@ -1,5 +1,5 @@
 # Bounded evidence only. Never merge. No compile.
-name: Code6 H05 rebaseline Native A-B (CI ONLY NEVER MERGE)
+name: Code6 Stage5 EDetach EI18 EI20 Native A-B (CI ONLY NEVER MERGE)
 on:
   push:
     branches: [issue-704-code6-h05-rebaseline-ci-only]
@@ -70,11 +70,11 @@ jobs:
           P('evidence/w1_identity.json').write_text(json.dumps(rec,indent=2))
           PY
           docker pull "$OCI"
-      - name: Run rebaselined H05 A-B on identical source and binary
+      - name: Run seven Stage5 pairs on identical source and binary
         shell: bash
         run: |
           set -euo pipefail
-          cp control/ci/guards/code6_h05_rebaseline.py target/physics_app/ci/code6_ab_pilot.py
+          cp control/ci/guards/code6_stage5_native_ab.py target/physics_app/ci/code6_stage5_native_ab.py
           docker run --rm --network none --entrypoint /bin/bash --user 0:0 -v "$PWD/target:/workspace" -v "$PWD/evidence:/evidence" -e SOURCE_HEAD -e OCI --workdir /workspace "$OCI" -lc '
             set -euo pipefail
             source /environment
@@ -83,13 +83,13 @@ jobs:
             ldd /workspace/physics_app/physics-opt | tee /evidence/ldd.log
             if grep -F "not found" /evidence/ldd.log; then exit 1; fi
             /workspace/physics_app/physics-opt --version | tee /evidence/version.log
-            python3 physics_app/ci/code6_ab_pilot.py --self-test --mode native --expected-head "$SOURCE_HEAD" --output-dir /evidence/h05 --executable /workspace/physics_app/physics-opt --build-base-ref "$OCI"
+            python3 physics_app/ci/code6_stage5_native_ab.py
           '
       - name: Preserve evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: code6-h05-rebaseline-${{ github.run_id }}-${{ github.run_attempt }}
+          name: code6-stage5-native-ab-${{ github.run_id }}-${{ github.run_attempt }}
           path: evidence/
           retention-days: 30
           if-no-files-found: error
