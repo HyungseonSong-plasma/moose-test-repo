@@ -12,6 +12,10 @@ For one bounded issue/claim and one implementation branch, enter the review gate
 
 A failure counts when the governed workflow reaches the branch-specific validation path and concludes failure, including harness/construction, staging, MOOSE input, build, runtime, solver, or scientific-gate failures.
 
+## Controller exception (VAL-23)
+
+For explicitly delegated Controller work, the independent-review step is exempt under `validation.md` VAL-23. Do not create a review PR or wait for CodeRabbit. Preserve both runs, stop blind retries, classify and diagnose the failures, use targeted Harness regressions and causal evidence, and resolve the actual blocker before resuming. The failure counter resets only after the affected validation category passes. Escalate unresolved material issues to the owner; absence of an independent reviewer is not a blocker. The remaining procedure below applies to non-exempt interactive work.
+
 ## Gate protocol
 
 1. Stop implementation changes after the second consecutive failure.
