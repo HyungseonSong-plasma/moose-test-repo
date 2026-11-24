@@ -1,0 +1,126 @@
+# Validation-only child of #833; never merge this workflow.
+name: Issue817 main bounded Native reuse exact W1
+on:
+  pull_request:
+    branches: [issue-817-main-combined-retirement-20261124]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  bounded_native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      BASE_HEAD: d7f1e2606211aad5cc922a46348fdbaf3abdbc13
+      SOURCE_HEAD: d7f1e2606211aad5cc922a46348fdbaf3abdbc13
+      W1_RUN_ID: '45358717311'
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d7f1e2606211aad5cc922a46348fdbaf3abdbc13
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact source and scoped P0
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test "$(git hash-object physics_app/dependencies.lock)" = 0aae0ffb5699fcd5c17e8ebe9ea4f2effde9ff47
+          grep -Fqx "PHYSICS_BUILD_BASE=$OCI" physics_app/dependencies.lock
+          python -m pip install -r requirements-evidence-engine.txt -r requirements-ontology.txt 'pytest>=8,<9'
+          mkdir -p evidence
+          python -m unittest discover -s tests -p test_issue817_code3_production_migration.py -v
+          python -m ci.guards.issue817_code3_production_migration --expected-head "$SOURCE_HEAD" --phase postcut --output evidence/current_signed_source_census.json
+      - name: Download immutable exact-head W1 archive from successful native CI (no rebuild)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/p05-in/w1bundle"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14904520282/zip" \
+            --output "$RUNNER_TEMP/p05-in/w1.zip"
+          echo "ad45f935e7da32fad87cb01bbace969dde74ba185576909c5a504e2c475c1d57  $RUNNER_TEMP/p05-in/w1.zip" | sha256sum -c -
+          python - "$RUNNER_TEMP/p05-in/w1.zip" "$RUNNER_TEMP/p05-in/w1bundle" <<'PY'
+          from pathlib import Path
+          import sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              expected = {"identity.json", "physics-opt-and-app-libs.tar.gz", "sha256sums.txt", "toolchain.log", "build.log"}
+              assert len(z.namelist()) == len(expected) and set(z.namelist()) == expected
+              z.extractall(Path(sys.argv[2]))
+          PY
+      - name: Verify actual ELF and both application libraries against W1 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test "$(git rev-parse HEAD)" = "$BASE_HEAD"
+          test ! -e physics_app/physics-opt
+          test -s "$RUNNER_TEMP/p05-in/w1bundle/identity.json"
+          test -s "$RUNNER_TEMP/p05-in/w1bundle/physics-opt-and-app-libs.tar.gz"
+          mkdir -p "$RUNNER_TEMP/p05-in/w1"
+          cp "$RUNNER_TEMP/p05-in/w1bundle/identity.json" "$RUNNER_TEMP/p05-in/w1_identity.json"
+          python3 - "$RUNNER_TEMP/p05-in/w1_identity.json" "$RUNNER_TEMP/p05-in/w1bundle/physics-opt-and-app-libs.tar.gz" "$RUNNER_TEMP/p05-in/w1" "$BASE_HEAD" "$OCI" "$W1_RUN_ID" <<'PY'
+          import hashlib,json,pathlib,sys,tarfile
+          record=json.loads(pathlib.Path(sys.argv[1]).read_text())
+          bundle=pathlib.Path(sys.argv[2]); directory=pathlib.Path(sys.argv[3])
+          head,oci,run_id=sys.argv[4:]
+          assert record["source_head"]==head and record["oci"]==oci and record["run_id"]==run_id
+          assert record["build_count"]==1 and record["native_check_input"]=="NOT_RUN"
+          assert record["archive_member_count"]==3 and record["archive_roundtrip_check"]=="PASS"
+          assert record["private_data_bundled"] is False
+          assert hashlib.sha256(bundle.read_bytes()).hexdigest()==record["archive_sha256"]
+          expected={"physics-opt","lib/libphysics-opt.so.0","lib/libphysics_test-opt.so.0"}
+          entries={obj["stored_path"]:obj for obj in record["file_records"]}
+          assert set(entries)==expected and record["binary_sha256"]==entries["physics-opt"]["sha256"]
+          for soname in ("libphysics-opt.so.0","libphysics_test-opt.so.0"):
+              assert record["app_libraries"][soname]["sha256"]==entries["lib/"+soname]["sha256"]
+          with tarfile.open(bundle,"r:gz") as tar:
+              assert set(tar.getnames())==expected
+              for name in sorted(expected):
+                  entry=tar.getmember(name)
+                  assert entry.isfile() and entry.size==entries[name]["bytes"]
+                  data=tar.extractfile(entry).read()
+                  assert hashlib.sha256(data).hexdigest()==entries[name]["sha256"]
+                  dst=directory/name
+                  dst.parent.mkdir(parents=True,exist_ok=True)
+                  dst.write_bytes(data)
+          assert (directory/"physics-opt").read_bytes()[:4]==b"\x7fELF"
+          (directory.parent/"physics-opt.sha256").write_text(record["binary_sha256"]+"  physics_app/physics-opt\n")
+          print("P6_NEWONLY_EXACT_HEAD_ONE_W1_THREE_BINARY_BYTES_VERIFIED",record["binary_sha256"])
+          PY
+          mkdir -p physics_app/lib physics_app/test/lib
+          cp "$RUNNER_TEMP/p05-in/w1/physics-opt" physics_app/physics-opt
+          cp "$RUNNER_TEMP/p05-in/w1/lib/libphysics-opt.so.0" physics_app/lib/libphysics-opt.so.0
+          cp "$RUNNER_TEMP/p05-in/w1/lib/libphysics_test-opt.so.0" physics_app/test/lib/libphysics_test-opt.so.0
+          chmod 0755 physics_app/physics-opt
+          sha256sum -c "$RUNNER_TEMP/p05-in/physics-opt.sha256"
+          docker pull "$OCI"
+          echo P6_NEWONLY_ONE_ELF_REUSED
+      - name: Verify pinned binary and run seven bounded Native cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "0aa8e74083e513112cf4093475e8712cab130536352bfdb4897e3528cd8041bd  physics_app/physics-opt" | sha256sum -c -
+          for pair in 'moose MOOSE' 'crane CRANE' 'squirrel SQUIRREL' 'zapdos ZAPDOS'; do
+            read -r key envname <<< "$pair"
+            expected="$(sed -n "s/^$envname=//p" physics_app/dependencies.lock)"
+            actual="$(docker image inspect "$OCI" --format "{{ index .Config.Labels \"io.physics.$key.sha\" }}")"
+            test -n "$expected" && test "$expected" = "$actual"
+          done
+          python -m ci.guards.issue817_code3_postcut_native
+      - name: Upload scoped receipts, never the shared binary again
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue817-main-bounded-native-${{ github.run_id }}-${{ github.run_attempt }}-d7f1e2606211aad5cc922a46348fdbaf3abdbc13
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30
