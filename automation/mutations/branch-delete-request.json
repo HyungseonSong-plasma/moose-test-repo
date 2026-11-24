@@ -1,24 +1,39 @@
 {
   "targets": [
     {
-      "branch": "cleanup-774-retirement-refs-20261124-batch15",
-      "expected_sha": "481d6830e5525a0f5be2f05fa820905c78db04fb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch15-481d6830e552"
+      "branch": "issue-758-harness-p1-symbol-identity",
+      "expected_sha": "4e9c9eb4b19f668b9698e7e200c8c7b344ee314c"
     },
     {
-      "branch": "issue-402-electron-fem-only-20261114",
-      "expected_sha": "226f87a6f8022f28ae6ccf5181b4db17ab68ad15",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-electron-fem-only-20261114-226f87a6f802"
+      "branch": "issue-758-harness-p2-git-tree",
+      "expected_sha": "03e0317ddc129147cdb71ee03bf884c2aa332589"
     },
     {
-      "branch": "issue-402-fv-log-molar-transport-retirement-20261114",
-      "expected_sha": "7b2ddb34f36d6fdf4cac1394a390a7a260707c37",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-402-fv-log-molar-transport-retirement-20261114-7b2ddb34f36d"
+      "branch": "issue-758-harness-p3-boundary-reads",
+      "expected_sha": "fe093f50b7a1a46fb8844e701e66b4045512c249"
     },
     {
-      "branch": "issue-633-p6c3-newonly-guard-rebase-20261118",
-      "expected_sha": "381de40e46c92582669e867d90cb4ce0a170e116",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-633-p6c3-newonly-guard-rebase-20261118-381de40e46c9"
+      "branch": "issue-758-harness-p4-coverage-adjacency",
+      "expected_sha": "ab84f1e0cd28c7940db389be4a02aaa053c4db0d"
+    },
+    {
+      "branch": "issue-758-harness-p6-local-simplification",
+      "expected_sha": "f868dfc1904b6717829d197de6f074fa5c43ced3"
+    },
+    {
+      "branch": "issue-758-harness-self-analysis-survey-1",
+      "expected_sha": "fdcbb55626b76b49311ac69336fa650482c0197e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-self-analysis-survey-1-fdcbb55626b7"
+    },
+    {
+      "branch": "issue-758-harness-self-analysis-survey-2",
+      "expected_sha": "a817519ca72917d276f80ba3a90ed075ecce8a2a",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-self-analysis-survey-2-a817519ca729"
+    },
+    {
+      "branch": "issue-758-harness-p1-receipt-parity",
+      "expected_sha": "9a4249fb6e5e93585c0030d21693f6a9893567b7",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-p1-receipt-parity-9a4249fb6e5e"
     }
   ]
 }
