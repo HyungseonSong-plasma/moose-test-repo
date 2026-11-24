@@ -109,6 +109,17 @@ def validate(workflow: str, template: str, dd_source: str,
          in d and "stage_public_d_physics" in d and
          "PUBLIC_D_100ROW_TWO_CASES_STAGED_EXACT_PHYSICS_NO_REBUILD_PASS" in d,
          "PUBLIC_D_100ROW_ORIGINAL_SOURCE")
+    for block, rows in ((n, 42), (d, 100)):
+        need(all(token in block for token in (
+            'cp -a "$RUNNER_TEMP/p05-in/staged" "$RUNNER_TEMP/p05-in/g5-staged"',
+            "ci/guards/issue652_g5_native_p2.py",
+            "--native-only --lookup-rows " + str(rows),
+            "G5_BOTH_CASES_NATIVE_P2_" + str(rows) + "ROW_PASS",
+            'assert result["private_cleanup_verified"] is True',
+            'assert result["science"] == "SCIENCE_HOLD"',
+        )), "G5_STAGE_NATIVE_AND_CLEANUP_" + str(rows))
+    need("ci/guards/issue652_g6b_publicd100_stage.py" in d,
+         "G5_PUBLIC_D_ORIGINAL100_STAGE_REQUIRED")
     regression = job_block(native, "plasma_native_regression")
     need("P6_PUBLIC_B_PASS_D_KEEP_HOLD_EVIDENCE_NOT_NATIVE_D_PASS" in regression
          and "p6_legacy_hold_receipt.py --mode public" in regression
@@ -205,7 +216,13 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "HISTORICAL_D_NATIVE_P2_PASS"))
     add("DD_P05_removed", dd=dd_source.replace(
         "P05 FV Native/Physics duplicate or unexpected owner", "P05_DISABLED", 1))
-    need(len(cases) == 29, "NEGATIVE_COUNT_NOT_29")
+    add("g5_newonly_native_missing", nat=edit(
+        P6[1], "G5_BOTH_CASES_NATIVE_P2_42ROW_PASS", "G5_SKIPPED"))
+    add("g5_publicd_native_missing", nat=edit(
+        P6[2], "G5_BOTH_CASES_NATIVE_P2_100ROW_PASS", "G5_SKIPPED"))
+    add("g5_publicd_stage_missing", nat=edit(
+        P6[2], "ci/guards/issue652_g6b_publicd100_stage.py", "g5_unverified_stage.py"))
+    need(len(cases) == 32, "NEGATIVE_COUNT_NOT_32")
     for label, ci, tpl, nat, dd in cases:
         need((ci, tpl, nat, dd) != (workflow, template, native, dd_source),
              "NEGATIVE_NO_MUTATION_" + label)
@@ -214,7 +231,7 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         except ValueError:
             continue
         raise ValueError("P6_SPLIT_CI_FALSE_PASS_" + label)
-    print("P6_SPLIT_CI_29_NEGATIVES_REJECTED")
+    print("P6_SPLIT_CI_32_NEGATIVES_REJECTED")
     return len(cases)
 
 

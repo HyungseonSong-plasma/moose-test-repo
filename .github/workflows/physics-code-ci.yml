@@ -67,6 +67,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          git fetch --no-tags --depth=1 origin 0755571b5d011f89a7473704337e23c042273381
+          test "$(git rev-parse 0755571b5d011f89a7473704337e23c042273381^{commit})" = "0755571b5d011f89a7473704337e23c042273381"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -91,12 +93,15 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_fdeg_harness_abcd.py -v
       - name: Validate FDEG Scan Cache P0
         run: python3 -m unittest discover -s tests -p test_fdeg_scan_cache.py -v
-      - name: Capture FDEG exact-HEAD retirement evidence (code7 P0 only)
+      - name: Capture live FDEG graph and verify retired Factory archives
         run: |
+          set -euo pipefail
           head="$(git rev-parse HEAD)"
-          python3 ci/guards/fdeg_retirement_evidence.py --mode capture --target PhysicsFVThermalDiffusion --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7"
-          python3 ci/guards/fdeg_retirement_evidence.py --mode verify-archive --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7"
-      - name: Upload exact-HEAD FDEG retirement snapshot
+          python3 ci/guards/fdeg_retirement_evidence.py --mode capture --target PhysicsFVLogMolarElectronReactionSource --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/live-electron"
+          python3 ci/guards/fdeg_retirement_evidence.py --mode verify-archive --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/live-electron"
+          python3 ci/guards/issue774_main_retirement.py --self-test --expected-head "$head" --output-dir "$RUNNER_TEMP/fdeg-retirement-code7/retired-factories"
+          python3 -m ci.guards.issue817_code3_production_migration --expected-head "$head" --phase postcut --output "$RUNNER_TEMP/fdeg-retirement-code7/retired-factories/code3_consumer_receipt.json"
+      - name: Upload live FDEG and frozen retired Factory evidence
         if: success()
         uses: actions/upload-artifact@v4
         with:

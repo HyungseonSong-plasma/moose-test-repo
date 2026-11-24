@@ -188,7 +188,9 @@ class FunctionalAndTransitionCP0Test(unittest.TestCase):
         import fdeg_functional as functional
         registry = functional.load_registry(ROOT)
         profile = registry["profiles"]["PhysicsFVElectronEnergyJouleHeating"]
-        params = functional.extract_parameters(ROOT, profile)
+        from test_fdeg_functional import pinned_historical_source_root
+        with pinned_historical_source_root(profile) as old_root:
+            params = functional.extract_parameters(old_root, profile)
         mode = next(p for p in params if p["name"] == "state_form")
         self.assertEqual(mode["allowed_enum_values"], ["normalized", "physical_eV"])
         sample = {
@@ -330,17 +332,29 @@ class RetirementEvidenceDP0Test(unittest.TestCase):
             self.assertEqual(result["caller_zero_reverified_here"],
                              "NOT_PROVEN_BY_THIS_STATIC_GUARD")
 
-    def test_exact_head_code7_capture_archive_has_valid_graph_joins(self):
-        head = structural.git(ROOT, "rev-parse", "HEAD")
-        receipt, docs = self.retire.capture(ROOT, "PhysicsFVThermalDiffusion", head)
+    def test_exact_historical_electron_capture_and_archive_graph_joins(self):
+        from test_fdeg_functional import pinned_historical_graph_root, HISTORICAL_HEAD
+        with pinned_historical_graph_root() as old_root:
+            receipt, docs = self.retire.capture(old_root, "PhysicsFVElectronReactionSource",
+                                                 HISTORICAL_HEAD)
         self.retire.verify_snapshot(receipt, docs)
         self.assertEqual(receipt["safe_delete"], "HOLD")
-        self.assertEqual(receipt["baseline_head"], head)
-        self.assertIn("physics_app/src/fvkernels/PhysicsFVThermalDiffusion.C",
+        self.assertEqual(receipt["baseline_head"], HISTORICAL_HEAD)
+        self.assertIn("physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C",
                       receipt["source_blobs"])
         docs["transition"]["safe_delete"] = "PASS"
         with self.assertRaisesRegex(ValueError, "RETIREMENT_GRAPH_CONTENT_MISMATCH"):
             self.retire.verify_snapshot(receipt, docs)
+
+    def test_exact_head_live_shared_electron_capture_keeps_hold(self):
+        head = structural.git(ROOT, "rev-parse", "HEAD")
+        receipt, docs = self.retire.capture(ROOT, "PhysicsFVLogMolarElectronReactionSource", head)
+        self.retire.verify_snapshot(receipt, docs)
+        self.assertEqual(receipt["baseline_head"], head)
+        self.assertEqual(receipt["safe_delete"], "HOLD")
+        self.assertEqual(len(receipt["registered_owners"]), 4)
+        self.assertIn("physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C",
+                      receipt["source_blobs"])
 
 
 if __name__ == "__main__":

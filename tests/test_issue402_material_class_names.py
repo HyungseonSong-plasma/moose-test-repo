@@ -68,7 +68,6 @@ def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
     assert 'getFunctorByName<ADReal>("e_energy_eV")' in dd
     for fixture in ("electron_energy_transport_smoke.i",
                     "electron_energy_lookup_response_smoke.i",
-                    "electron_energy_joule_smoke.i",
                     "electron_energy_real_qvt_inventory_smoke.i"):
         text = (BASE / "ci" / fixture).read_text()
         assert "type = DDTransportMaterial" in text
@@ -82,6 +81,23 @@ def test_only_ddmaterial_lookup_types_exercised_by_native_p2_controls():
     assert (BASE / "src/materials/NVTransportMaterial.C").is_file()
     assert not (BASE / "src/materials/SpeciesTransportAliasMaterial.C").exists()
     assert not (BASE / "include/materials/SpeciesTransportAliasMaterial.h").exists()
+
+
+def test_retired_joule_smoke_preserves_material_contract_as_frozen_evidence():
+    # Retired input is not a live current-binary smoke test. Preserve the
+    # material assertions against the byte-identical historical input.
+    path = ROOT / "docs/provenance/issue814_code2/electron_energy_joule_smoke.i.txt"
+    raw = path.read_bytes()
+    identity = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+    assert identity == "6c4901f843a98b74b450cc3a1fab09e8e1873b2c"
+    assert not (BASE / "ci/electron_energy_joule_smoke.i").exists()
+    text = raw.decode()
+    assert "type = DDTransportMaterial" in text
+    assert "model = lookup" in text
+    assert "table_file =" in text
+    for obsolete in ("PhysicsElectronTransportLookupMaterial",
+                     "property_table_file", "mean_energy ="):
+        assert obsolete not in text
 
 
 def test_moose_physics_action_and_immutability_boundary_stay_separate():

@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+from contextlib import contextmanager
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,7 +17,71 @@ assert spec and spec.loader
 functional = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(functional)
 structural = functional.structural
+HISTORICAL_HEAD = "0755571b5d011f89a7473704337e23c042273381"
 
+
+@contextmanager
+def pinned_historical_graph_root():
+    """Exact pre-cut main worktree: never restore retired code into active PhysicsApp."""
+    try:
+        observed = structural.git(ROOT, "rev-parse", HISTORICAL_HEAD + "^{commit}")
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError("Fetch exact historical FDEG commit " + HISTORICAL_HEAD) from exc
+    if observed != HISTORICAL_HEAD:
+        raise ValueError("FDEG_HISTORICAL_HEAD_DRIFT")
+    with tempfile.TemporaryDirectory(prefix="fdeg-history-") as directory:
+        root = Path(directory) / "source"
+        subprocess.run(["git", "-C", str(ROOT), "worktree", "add", "--detach",
+                        str(root), HISTORICAL_HEAD], check=True, capture_output=True)
+        try:
+            if structural.git(root, "rev-parse", "HEAD") != HISTORICAL_HEAD:
+                raise ValueError("FDEG_HISTORICAL_HEAD_DRIFT")
+            yield root
+        finally:
+            subprocess.run(["git", "-C", str(ROOT), "worktree", "remove",
+                            str(root)], check=True, capture_output=True)
+
+
+@contextmanager
+def pinned_historical_source_root(profile):
+    """Verify both live and retired claim blobs without restoring a Factory.
+
+    If a profile cites retired C++ source, materialize only its pinned
+    historical witnesses in an isolated temporary tree. This never changes
+    the production PhysicsApp or treats retired evidence as live support.
+    """
+    origins = [profile["source"]] + [
+        claim.get("source", profile["source"]) for claim in profile["claims"]]
+    missing = [origin for origin in origins
+               if not (ROOT / origin["path"]).is_file()]
+    if not missing:
+        yield ROOT
+        return
+    archived_names = {
+        "PhysicsFVThermalDiffusion.C",
+        "PhysicsFVHeavyMassElectromigrationCorrection.C",
+        "FVElectronResponseBandedCorrection.C",
+        "PhysicsFVElectronEnergyJouleHeating.C",
+        "PhysicsFVElectronReactionSource.C",
+    }
+    archive_root = ROOT / "docs/development/archive/issue774_retired_factories"
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        for origin in origins:
+            relative = origin["path"]
+            source = ROOT / relative
+            if not source.is_file():
+                if (not relative.startswith("physics_app/src/fvkernels/")
+                        or Path(relative).name not in archived_names):
+                    raise ValueError("FDEG_UNPINNED_RETIRED_CLAIM_SOURCE:" + relative)
+                source = archive_root / (Path(relative).name + ".txt")
+            raw = source.read_bytes()
+            if structural.blob_sha(raw) != origin["blob_sha"]:
+                raise ValueError("FDEG_HISTORIC_CLAIM_BLOB_DRIFT:" + relative)
+            dest = root / relative
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(raw)
+        yield root
 
 class FunctionalP0Test(unittest.TestCase):
     def setUp(self):
@@ -266,7 +332,9 @@ class LiveContractsP0Test(unittest.TestCase):
         for target, profile in sorted(registry["profiles"].items()):
             with self.subTest(target=target):
                 functional.validate_registry_profile(profile)
-                witnesses, blobs = functional.source_witnesses(ROOT, profile)
+                with pinned_historical_source_root(profile) as source_root:
+                    witnesses, blobs = functional.source_witnesses(source_root, profile)
+                    parameters = functional.extract_parameters(source_root, profile)
                 self.assertTrue(witnesses)
                 self.assertIn(profile["source"]["path"], blobs)
                 self.assertTrue(all(w["line_start"] >= 1 for w in witnesses))
@@ -274,7 +342,27 @@ class LiveContractsP0Test(unittest.TestCase):
                 self.assertTrue(profile["unresolved_semantics"])
                 self.assertEqual(set(profile["required_discriminators"]),
                                  set(profile["discriminator_contracts"]))
-                self.assertTrue(functional.extract_parameters(ROOT, profile))
+                self.assertTrue(parameters)
+
+    def test_retired_claim_sources_are_historical_and_sha_pinned(self):
+        registry = functional.load_registry(ROOT)["profiles"]
+        for target in ("PhysicsFVThermalDiffusion", "PhysicsFVElectrostaticDrift",
+                       "FVElectronResponseBandedCorrection",
+                       "PhysicsFVElectronEnergyJouleHeating",
+                       "PhysicsFVElectronReactionSource"):
+            profile = registry[target]
+            with pinned_historical_source_root(profile) as isolated_root:
+                self.assertNotEqual(isolated_root, ROOT)
+                witnesses, blobs = functional.source_witnesses(isolated_root, profile)
+                self.assertTrue(witnesses)
+                self.assertIn(profile["source"]["path"], blobs)
+        bad = copy.deepcopy(registry["PhysicsFVElectrostaticDrift"])
+        for claim in bad["claims"]:
+            if claim["id"] == "mass_correction":
+                claim["source"]["blob_sha"] = "0" * 40
+        with self.assertRaisesRegex(ValueError, "FDEG_HISTORIC_CLAIM_BLOB_DRIFT"):
+            with pinned_historical_source_root(bad):
+                pass
 
     def test_v02_live_candidate_source_witness_and_variable_density_blocker(self):
         registry = functional.load_registry(ROOT)
@@ -346,23 +434,29 @@ class LiveContractsP0Test(unittest.TestCase):
 
     def test_optional_description_is_not_default(self):
         doc = functional.load_registry(ROOT)
-        source = functional.extract_parameters(
-            ROOT, doc["profiles"]["PhysicsFVElectronReactionSource"])
+        with pinned_historical_source_root(
+                doc["profiles"]["PhysicsFVElectronReactionSource"]) as old_root:
+            source = functional.extract_parameters(
+                old_root, doc["profiles"]["PhysicsFVElectronReactionSource"])
         params = {p["name"]: p for p in source}
         self.assertTrue(params["state_form"]["has_explicit_source_default"])
         self.assertFalse(params["n_ref"]["has_explicit_source_default"])
         self.assertFalse(params["number_source"]["has_explicit_source_default"])
         self.assertTrue(params["number_source"]["required"])
-        thermal = functional.extract_parameters(
-            ROOT, doc["profiles"]["PhysicsFVThermalDiffusion"])
+        with pinned_historical_source_root(
+                doc["profiles"]["PhysicsFVThermalDiffusion"]) as old_root:
+            thermal = functional.extract_parameters(
+                old_root, doc["profiles"]["PhysicsFVThermalDiffusion"])
         switch = next(p for p in thermal if p["name"] == "include_thermal_diffusion")
         self.assertTrue(switch["has_explicit_source_default"])
 
     def test_real_source_signed_projection_graph_join(self):
         target = "PhysicsFVElectronReactionSource"
-        graph = structural.scan(ROOT, target)
-        result = functional.assemble(ROOT, graph, target,
-                                     functional.load_registry(ROOT))
+        with pinned_historical_graph_root() as old_root:
+            graph = structural.scan(old_root, target, HISTORICAL_HEAD)
+            result = functional.assemble(old_root, graph, target,
+                                         functional.load_registry(old_root), HISTORICAL_HEAD)
+        self.assertEqual(result["source_identity"]["repository_head"], HISTORICAL_HEAD)
         self.assertEqual(result["capability"],
                          "SIGNED_ELECTRON_NUMBER_SOURCE_PROJECTION")
         self.assertTrue(any(e["relation"] == "IMPLEMENTS" and

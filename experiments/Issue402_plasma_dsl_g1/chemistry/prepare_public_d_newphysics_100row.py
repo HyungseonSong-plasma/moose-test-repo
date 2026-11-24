@@ -17,12 +17,24 @@ import os
 from pathlib import Path
 import re
 
-from prepare_s6_newonly import JSON_SHA, TEMPLATE_SHA, ELECTRON_MOMENTS_SHA
+from prepare_s6_newonly import TEMPLATE_SHA, ELECTRON_MOMENTS_SHA
 from retire_s6_p4_duplicate_owners import C0, AFTER_SHA
 
 REPO = Path(__file__).resolve().parents[3]
 PILOT = REPO / "experiments" / "Issue402_plasma_dsl_g1"
 CASE_IDS = ("417", "941")
+# P6-D4 is the pre-G5 regression lane, not a G5 Poisson qualification.
+# Its exact five-key mechanism and old Native Poisson owner remain paired.
+JSON_SHA = {
+    "417": "ed99493d992c71b30e7a4120646af388894032d262b9af5bf299522629fe24ef",
+    "941": "2a7d6b191eddf6a92a6bcf74fc818ade8f30836fdd857dc70516f3aa57fa5dde",
+}
+P6_D4_MECHANISM_ROOT = REPO / "docs/provenance/issue652_pre_g5"
+def p6_d4_mechanism_path(case: str) -> Path:
+    if case not in CASE_IDS:
+        raise PublicDHold("PUBLIC_D_UNSUPPORTED_S6_CASE")
+    return P6_D4_MECHANISM_ROOT / ("unified_s6_" + case + "_newonly.json.txt")
+
 ORIGINAL_TABLE = REPO / "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
 ORIGINAL_TABLE_SHA256 = "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
 ORIGINAL_TABLE_GIT_BLOB = "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a"
@@ -159,10 +171,10 @@ def stage_public_d_physics(
     chemistry = folder / "chemistry"
     newonly_json = chemistry / ("unified_s6_" + case + "_newonly.json")
     newonly_template = PILOT / ("issue633_newonly_s6_" + case + "_continuity.template.i")
-    source_json = PILOT / "chemistry" / newonly_json.name
+    source_json = p6_d4_mechanism_path(case)
     template = checked(newonly_template, TEMPLATE_SHA[case], "NEW_PHYSICS_TEMPLATE")
     original_mechanism = checked(newonly_json, JSON_SHA[case], "PINNED_8_REACTION_MECHANISM")
-    checked(source_json, JSON_SHA[case], "REPOSITORY_8_REACTION_MECHANISM")
+    checked(source_json, JSON_SHA[case], "PINNED_PRE_G5_8_REACTION_MECHANISM")
     mechanism = json.loads(original_mechanism)
     check_mechanism(case, mechanism)
     template_text = template.decode("utf-8")

@@ -88,7 +88,9 @@ def self_test() -> None:
     canonical = migrate_h05_physical_energy_to_log_molar_scratch(original)
     assert "state_form = physical_eV" in original
     assert "state_form = log_molar_eV" in canonical
-    assert "type = PhysicsFVElectronReactionSource" in canonical
+    assert "type = FVCoupledForce" in canonical
+    assert "v = S_e_h05" in canonical
+    assert "coef = 1" in canonical
     for number_density, energy_density in ((1e15, 3e15), (2e19, 8e19)):
         actual = math.exp(
             math.log(energy_density / 6.02214076e23)

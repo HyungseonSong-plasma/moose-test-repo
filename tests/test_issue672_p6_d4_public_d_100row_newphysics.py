@@ -20,7 +20,7 @@ import prepare_public_d_newphysics_100row as public_d  # noqa: E402
 
 
 def _mechanism(case):
-    target = PILOT / "chemistry" / f"unified_s6_{case}_newonly.json"
+    target = public_d.p6_d4_mechanism_path(case)
     blob = target.read_bytes()
     assert hashlib.sha256(blob).hexdigest() == public_d.JSON_SHA[case]
     return json.loads(blob)
@@ -40,6 +40,20 @@ def test_both_new_physics_8reaction_owner_graphs_preserve_original_lookup(case):
     assert "transport_coefficient = fluid" in template
     assert "fvm_species = 'O2p Om Op'" in template
     assert "dont_create_kernels" not in template
+
+
+@pytest.mark.parametrize("case", ["417", "941"])
+def test_pre_g5_regression_and_current_g5_mechanism_are_separate(case):
+    historical = _mechanism(case)
+    current = json.loads((PILOT / "chemistry" /
+                          f"unified_s6_{case}_newonly.json").read_bytes())
+    assert "poisson" not in historical
+    assert "poisson" in current
+    from poisson_contract import validate_poisson
+    validate_poisson(current)
+    assert {k: v for k, v in current.items() if k != "poisson"} == historical
+    with pytest.raises(public_d.PublicDHold, match="SCHEMA_REQUIRED"):
+        public_d.check_mechanism(case, current)
 
 
 def test_original_100row_table_is_still_the_repository_source():

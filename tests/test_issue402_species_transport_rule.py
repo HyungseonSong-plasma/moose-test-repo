@@ -99,18 +99,19 @@ def test_ddmaterial_is_only_canonical_species_coefficient_publisher():
     assert "functor = poisson_charge_source" in fixture
 
 
-def test_fv_ion_and_heavy_mass_correction_do_not_consume_derived_velocities():
+def test_current_fv_ion_drift_remains_and_old_heavy_correction_is_retired():
     drift = text("physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C")
-    heavy = text("physics_app/src/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.C")
     assert 'const ADRealVectorValue electric_field =' in drift
     assert '-_potential.gradient(centered_face, state)' in drift
     assert 'const ADReal mobility_face = _mobility(centered_face, state);' in drift
     assert '_charge_number * mobility_face * (electric_field * _normal)' in drift
     assert 'ion_drift_velocity_' not in drift
-    assert 'heavy_mass_correction_velocity' not in heavy
-    assert '(*_ion_mobilities[i])(centered_face, state)' in heavy
-    assert 'const ADReal correction_mass_flux_normal =' in heavy
-    assert '-direct_mass_flux_normal;' in heavy
+
+    # Historical #15 correction formula belongs to original blob/run evidence.
+    # It is not a current New-only registered Factory or an alternative drift.
+    assert not (ROOT / "physics_app/src/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.C").exists()
+    assert not (ROOT / "physics_app/include/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.h").exists()
+    assert 'PhysicsFVHeavyMassElectromigrationCorrection' not in drift
 
 
 def test_accepted_path_b_heavy_correction_reaches_solved_neutral_species():
