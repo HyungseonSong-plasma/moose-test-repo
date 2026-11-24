@@ -126,7 +126,12 @@ def audit_a7_ownership(text, meta):
 
 
 def current_runtime_input(*, charge_number, field_sign):
-    text = (SOURCE / 'migration_only_exact_phi_ic.i').read_text()
+    source = SOURCE / 'migration_only_exact_phi_ic.i'
+    if sha256(source) != '10a33e1dd52401474ee6527b8ef2a5322a8ca171014a0053fbf5183f81dfd7ee':
+        raise RuntimeError('H3 fixture changed; constant-velocity qualification must be refreshed')
+    if charge_number not in (-1, 1) or field_sign not in (-1, 1):
+        raise ValueError('H3 qualification covers only the four signed controls')
+    text = source.read_text()
     text = replace_scalar(text, 'z_i', int(charge_number))
     if field_sign > 0:
         text = replace_scalar(text, 'phi_left', 20000)
@@ -140,10 +145,30 @@ def current_runtime_input(*, charge_number, field_sign):
     replacements = {
         'FunctorMaterials/ion_wall_flux': 'IonWallFluxMaterial',
         'FVKernels/ion_time': 'PhysicsFVMassFractionTimeDerivative',
-        'FVKernels/ion_electrostatic_drift': 'PhysicsFVElectrostaticDrift',
     }
     for path, object_type in replacements.items():
         text = mp.upsert_parameter(text, path, 'type', object_type)
+    # H3 only: rho=1, mu=0.01, uncharged linear potential on [0, 1].
+    # Preserve the separate wall-loss owners and exact upwind boundary policy.
+    # Qualified by #45450219225: all four signed controls, not coupled Poisson.
+    old_block = """    type = QPXFVElectrostaticDrift
+    variable = w_O2_plus
+    potential = phi
+    mobility = ion_mobility
+    carrier = rho
+    charge_number = ${z_i}
+    advected_interp_method = upwind
+    boundaries_to_avoid = 'left right'"""
+    if text.count(old_block) != 1:
+        raise RuntimeError('H3 legacy drift block identity changed')
+    velocity = charge_number * field_sign * 200
+    new_block = f"""    type = FVAdvection
+    variable = w_O2_plus
+    velocity = '{velocity:.17g} 0 0'
+    advected_interp_method = upwind
+    boundaries_to_avoid = 'left right'"""
+    text = text.replace(old_block, new_block)
+    replacements['FVKernels/ion_electrostatic_drift'] = 'FVAdvection'
     text = mp.upsert_parameter(text, 'Executioner', 'end_time', '1.0e-5')
     text = mp.upsert_parameter(text, 'Executioner', 'nl_rel_tol', '1.0e-16')
     return text, replacements
