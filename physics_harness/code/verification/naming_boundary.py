@@ -9,10 +9,12 @@ ranking. Source inventory is read from the Git commit tree, never the worktree.
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 import re
 
+from ..diagnostics.collector import SourceInput
 from ..diagnostics.providers.git import GitSourceProvider
 from ..diagnostics.request import normalized_path
 from ..refactor.naming import NamingCase, NamingOption, review_naming_option
@@ -148,9 +150,16 @@ def _key_in_scope(key: str, kind: str, path: str, name: str) -> bool:
 def _symbol_inventory(provider: GitSourceProvider, revision: str,
                       paths: tuple[str, ...], *, ambiguous: set[str] | None = None
                       ) -> tuple[OwnedSymbol, ...]:
+    return _observed_symbols(
+        (provider.read_at_revision(revision, path) for path in paths),
+        ambiguous=ambiguous)
+
+
+def _observed_symbols(sources: Iterable[SourceInput], *,
+                      ambiguous: set[str] | None = None) -> tuple[OwnedSymbol, ...]:
     observed = []
-    for path in paths:
-        source = provider.read_at_revision(revision, path)
+    for source in sources:
+        path = source.record.path
         body = ast.parse(source.content.decode("utf-8", "strict"), filename=path)
         sha = source.record.blob_sha
         declarations, collisions = _declaration_inventory(body, path)
@@ -261,17 +270,20 @@ def verify_naming_boundary(
         elif len(scope) > max_files:
             unresolved.add("SOURCE_FILE_BUDGET_EXCEEDED")
         else:
-            # Read exact source once through Git objects to bound scan cost.
+            # Retain only budget-admitted immutable inputs for this invocation.
+            # Complete budget checks before parsing, as in the original scan.
             total = 0
+            sources: list[SourceInput] = []
             for path in scope:
-                record = provider.read_at_revision(case.revision, path)
-                total += len(record.content)
+                source = provider.read_at_revision(case.revision, path)
+                total += len(source.content)
                 if total > max_bytes:
                     unresolved.add("SOURCE_BYTE_BUDGET_EXCEEDED")
                     break
+                sources.append(source)
             if not any(x.endswith("BUDGET_EXCEEDED") for x in unresolved):
-                observed = _relevant_symbols(case, _symbol_inventory(
-                    provider, case.revision, scope, ambiguous=ambiguous))
+                observed = _relevant_symbols(case, _observed_symbols(
+                    sources, ambiguous=ambiguous))
                 if not observed:
                     unresolved.add("TARGET_DECLARATIONS_UNRESOLVED")
     except (ValueError, UnicodeError, SyntaxError) as exc:
