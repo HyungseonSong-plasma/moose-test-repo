@@ -6,18 +6,12 @@ from bisect import bisect_right
 import json
 import re
 
-from ...graph import Edge, Evidence, Node
-from ..collector import (
-    CollectionResult, FactBatch, SourceInput, SourceRecord, UnresolvedTarget,
-    file_node_id, graph_edge_id, stable_id,
-)
+from ..collector import CollectionResult, FactBatch, SourceInput, SourceRecord, stable_id
+from .file_reference_facts import FileReferenceFacts, path_kind
 from ..request import ScanRequest
 
 
 _SPACE = re.compile(r"[ \t\r\n]*")
-_LITERAL_PATH = re.compile(r"(?:[A-Za-z0-9_.@+-]+/)*[A-Za-z0-9_.@+-]+\.[A-Za-z][A-Za-z0-9_.+-]*\Z")
-_PATH_SUFFIX = re.compile(r"\.[A-Za-z][A-Za-z0-9_.+-]*\Z")
-_URI = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://")
 _MAX_DEPTH = 128
 _MAX_REFERENCES = 10000
 
@@ -102,19 +96,6 @@ def _string_values(text: str):
         raise ValueError("JSON_TRAILING_DATA")
 
 
-def _path_kind(value: str) -> str | None:
-    """Conservative lexical discriminator, not a repository path resolver."""
-    if _URI.match(value):
-        return None
-    if _LITERAL_PATH.fullmatch(value):
-        return "literal"
-    if (_PATH_SUFFIX.search(value) and not any(ch in value for ch in "\r\n\t")
-            and (value.startswith(("/", "~", "$")) or "/" in value or "\\" in value
-                 or any(ch in value for ch in "*?{}[]"))):
-        return "unresolved"
-    return None
-
-
 class JsonSourceCollector:
     name = "json"
     version = "json-source-static-v0.1"
@@ -132,7 +113,7 @@ class JsonSourceCollector:
             # Parse the entire document before returning any observations.
             references = []
             for pointer, value, offset in _string_values(text):
-                kind = _path_kind(value)
+                kind = path_kind(value)
                 if kind is not None:
                     if len(references) >= _MAX_REFERENCES:
                         raise _Limit("JSON_REFERENCE_LIMIT")
@@ -144,42 +125,25 @@ class JsonSourceCollector:
             return CollectionResult(FactBatch(), "FAILED", (f"INVALID_JSON:{detail}",))
 
         line_starts = [0] + [match.end() for match in re.finditer(r"\r\n|\r|\n", text)]
-        owner = file_node_id(request.repository, record.path)
-        nodes, edges, evidence, unknown_targets = [], [], [], []
-        unresolved = set()
+        facts = FileReferenceFacts(request, record, scope_id, self.version)
         for pointer, value, offset, kind in references:
             line = bisect_right(line_starts, offset)
             column = offset - line_starts[line - 1]
-            discriminator = "json:" + pointer
-            unknown = kind == "unresolved"
-            target_kind = "json_path_expression" if unknown else "file_path_specifier"
-            target = stable_id("node", request.repository, target_kind, value)
-            relation = "JSON_FILE_REFERENCE_UNRESOLVED" if unknown else "REFERENCES_FILE_CANDIDATE"
             eid = stable_id(
                 "evidence", request.repository, request.revision, record.path,
                 record.blob_sha, self.version, pointer, value, line, column,
             )
-            evidence.append(Evidence(
-                id=eid, kind="STRUCTURAL", source_ref=f"{record.path}:{line}@{record.blob_sha}",
-                method=self.version, scope_id=scope_id,
-                observation_status="UNRESOLVED" if unknown else "SOURCE_DECLARED",
-                attributes={"path": record.path, "blob_sha": record.blob_sha,
-                            "source_sha": request.revision, "line": line, "column": column,
-                            "json_pointer": pointer, "literal": value,
-                            "parser_version": self.version},
-            ))
-            if unknown:
-                unknown_targets.append(UnresolvedTarget(target, value, eid))
-                unresolved.add(f"JSON_PATH_EXPRESSION_UNRESOLVED:{record.path}:{line}:{column}")
-            else:
-                nodes.append(Node(id=target, kind=target_kind, name=value, evidence_ids=(eid,)))
-            edges.append(Edge(
-                id=graph_edge_id(owner, target, relation, discriminator),
-                source_id=owner, target_id=target, relation=relation,
-                discriminator=discriminator, evidence_ids=(eid,),
-            ))
-        batch = FactBatch(nodes=tuple(nodes), edges=tuple(edges), evidence=tuple(evidence),
-                          unresolved_targets=tuple(unknown_targets),
+            facts.add(
+                value, line, "json:" + pointer, unknown=kind == "unresolved",
+                details={"column": column, "json_pointer": pointer},
+                evidence_id=eid, unknown_relation="JSON_FILE_REFERENCE_UNRESOLVED",
+                unknown_kind="json_path_expression",
+                unresolved_reason=f"JSON_PATH_EXPRESSION_UNRESOLVED:{record.path}:{line}:{column}",
+            )
+        unresolved = facts.unresolved
+        batch = FactBatch(nodes=tuple(facts.nodes), edges=tuple(facts.edges),
+                          evidence=tuple(facts.evidence),
+                          unresolved_targets=tuple(facts.unknown_targets),
                           unresolved=tuple(sorted(unresolved)))
         return CollectionResult(batch, "PARTIAL" if unresolved else "COMPLETE")
 
