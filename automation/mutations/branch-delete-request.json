@@ -1,29 +1,29 @@
 {
   "targets": [
     {
-      "branch": "remove-legacy-hu-code-use-cu-only",
-      "expected_sha": "3b6352ad62efe61afd0c0321b984d37716b1b5ef",
-      "archive_tag": "archive/oxygen-cleanup-20261106/remove-legacy-hu-code-use-cu-only-3b6352ad62ef"
+      "branch": "issue-817-main-combined-retirement-20261124",
+      "expected_sha": "a35da81ff2956a38de566d03bd5779b033e2856e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-main-combined-retirement-20261124-a35da81ff295"
     },
     {
-      "branch": "issue-697-fdeg-functional-v02",
-      "expected_sha": "3d9e382b90afacd98e02af8511071a6e5e950291",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-697-fdeg-functional-v02-3d9e382b90af"
+      "branch": "issue-774-main-thermal-heavy-retirement-20261123",
+      "expected_sha": "19b6fa4c6a8e964cfa80674d8b6daa267f52fafc",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-main-thermal-heavy-retirement-20261123-19b6fa4c6a8e"
     },
     {
-      "branch": "test/harness-code-real-source-dryrun-20261119",
-      "expected_sha": "34e3598672c572a70da691408d11cb7fbbd92e14",
-      "archive_tag": "archive/oxygen-cleanup-20261106/test-harness-code-real-source-dryrun-20261119-34e3598672c5"
+      "branch": "issue-809-code1-verified-integration-20261123",
+      "expected_sha": "383b46665c0a5fbc0aa344081bfa7cbaf9890665",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-809-code1-verified-integration-20261123-383b46665c0a"
     },
     {
-      "branch": "issue-708-code4-native-evidence-ci-only",
-      "expected_sha": "909b878af143501fda67a98bceca21c519b8190c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-708-code4-native-evidence-ci-only-909b878af143"
+      "branch": "issue-817-code3-verified-retirement-stage-20261123",
+      "expected_sha": "a2e896bf0fd0667c1e6935552edaef83bc517eaa",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-code3-verified-retirement-stage-20261123-a2e896bf0fd0"
     },
     {
-      "branch": "issue-758-harness-scan-dispatch",
-      "expected_sha": "4bdc3c47b1b801c8078276105ee12de55bb8ad11",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-758-harness-scan-dispatch-4bdc3c47b1b8"
+      "branch": "issue-817-combined-retirement-20261124",
+      "expected_sha": "4a177e4d38a40b99998b1e46680a8c59be621cef",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-817-combined-retirement-20261124-4a177e4d38a4"
     }
   ]
 }
