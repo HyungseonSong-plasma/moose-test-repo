@@ -57,9 +57,10 @@ Detailed milestone semantics are owned by `docs/protocols/milestone_delivery.md`
 
 Independent review is risk-based, not a routine approval gate. Apply
 `docs/protocols/validation.md` VAL-23 to active work, including scheduled
-controller work. Only its applicable mandatory review or a concrete
-unresolved material gate may block continuation; an optional review must
-not block it. Existing scientific, security, CI and mutation-authorization
+controller work. Delegated Controller work is exempt from independent
+engineering review at all levels, including integration and repeated-failure
+review; actual unresolved gates still block the affected path. Interactive
+work retains applicable risk-based review. Existing scientific, security, CI and mutation-authorization
 requirements remain binding.
 
 ## Samuel composition
