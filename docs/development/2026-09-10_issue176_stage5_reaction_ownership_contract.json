@@ -15,7 +15,6 @@
   "representative_real_qvt_basis": {
     "geometry": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
     "heavy_state_reference": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
-    "electron_energy_chemistry_off_oracle": "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i",
     "gas_temperature_binding": "Reuse the accepted heavy-state T_g functor. Stage-5 electron-energy chemistry must not create a separate local T_gas state.",
     "note": "The accepted real-QVT heavy reference currently supplies T_g through the heavy-state provider. This is distinct from the isolated Stage-4 hot/equality/reversed discriminator constants."
   },
@@ -184,7 +183,6 @@
     "user-uploaded o_excitation_1d.txt recovered from File Library on 2026-09-10",
     "user-uploaded o_ionization.txt recovered from File Library on 2026-09-10",
     "user-uploaded Ar_O2_plasma_chemistry.txt recovered from File Library on 2026-09-10",
-    "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
-    "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i"
+    "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"
   ]
 }
