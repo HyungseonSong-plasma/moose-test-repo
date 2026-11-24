@@ -208,7 +208,7 @@ jobs:
           print("G8_SAME_PHYSICSAPP_ELF_HASHED_FOR_BOTH_POISSON_ARMS")
           PY
           chmod u+x physics_app/physics-opt
-      - name: Compile only external PETSc observer in immutable OCI; secret-free Native probe gate
+      - name: Resolve ELF-linked PETSc SDK and compile only external observer
         shell: bash
         run: |
           set -euo pipefail
@@ -218,12 +218,13 @@ jobs:
             --mount "type=bind,src=$PWD,dst=/workspace" "$OCI" -lc '
             set -euo pipefail
             source /environment
-            if pkg-config --exists PETSc; then PKG=PETSc; else PKG=petsc; fi
-            mpicxx -std=c++17 -fPIC -shared $(pkg-config --cflags "$PKG") \
-              /workspace/g8-harness/ci/guards/issue652_g7_jvp_probe.cc \
-              -o /workspace/physics_app/g7_jvp_probe.so $(pkg-config --libs "$PKG") -ldl
+            python3 /workspace/g8-harness/ci/guards/issue652_g7_petsc_sdk.py
             chmod a+r /workspace/physics_app/g7_jvp_probe.so
             '
+      - name: Secret-free Native fixed-state probe gate
+        shell: bash
+        run: |
+          set -euo pipefail
           export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/g8-harness/ci/guards:$GITHUB_WORKSPACE/ci/guards"
           python3 - <<'PY'
           import os, subprocess, tempfile
@@ -266,6 +267,7 @@ jobs:
         with:
           name: issue652-g7-s6-fixed-state-directional-receipts
           path: |
+            g7_petsc_sdk_receipt.json
             g7_synthetic_probe_receipt.json
             g7_s6_directional_receipt.json
           if-no-files-found: warn
