@@ -17,7 +17,7 @@ After the workflow is integrated into `main`:
 
 1. Open **Actions → Harness Code Source Scan → Run workflow**.
 2. Choose the source branch or revision in the standard dispatch selector.
-3. Set include/exclude globs, collectors and budgets; select **Run**. For current Code and metrics sources, explicitly set `physics_harness/code/*.py,libs/code_lucidity/*.py`: the existing UI default still contains the retired `libs/hu` path.
+3. Set include/exclude globs, collectors and budgets; select **Run**. The default scope is `physics_harness/code/*.py,libs/code_lucidity/*.py`; narrow or extend it for the requested analysis.
 
 This route uses `workflow_dispatch`. No ordinary `main` push, PR update or
 schedule starts it.

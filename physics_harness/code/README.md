@@ -21,7 +21,6 @@ Human evaluations are optional evidence, not a metric prerequisite.
 `analysis/adapters/lucidity_adapter.py` transports source facts and results;
 `analysis/adapters/lucidity_interpretation.py` interprets their meaning.
 Planning, not the engine, decides how to compare refactor options.
-Obsolete `libs/hu/` and `analysis/hu_*` compatibility modules have been removed.
 
 ## Scope and evidence guarantees
 
