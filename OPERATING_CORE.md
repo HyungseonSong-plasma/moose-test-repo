@@ -53,6 +53,16 @@ A milestone is a capability boundary; an issue is the semantic implementation/ro
 
 Detailed milestone semantics are owned by `docs/protocols/milestone_delivery.md`.
 
+### PCORE-07 — Risk-based review authority
+
+Independent review is risk-based, not a routine approval gate. Apply
+`docs/protocols/validation.md` VAL-23 to active work, including scheduled
+controller work. Delegated Controller work is exempt from independent
+engineering review at all levels, including integration and repeated-failure
+review; actual unresolved gates still block the affected path. Interactive
+work retains applicable risk-based review. Existing scientific, security, CI and mutation-authorization
+requirements remain binding.
+
 ## Samuel composition
 
 For technical work:

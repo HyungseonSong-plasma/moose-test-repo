@@ -128,7 +128,7 @@ Each issue remains an independent semantic/rollback boundary; milestone acceptan
 
 Trigger central `state-refresh`, `controller-throughput`, and `controller-lifecycle` from the exact Samuel pin.
 
-When the durable generic controller itself owns the immediate obligation, trigger `research-controller`. Central controller mechanics decide generic liveness/lifecycle behavior. This repository decides Physics dependency readiness, resource meaning, and scientific HOLD/PASS semantics.
+When the durable generic controller itself owns the immediate obligation, trigger `research-controller`. Central controller mechanics decide generic liveness/lifecycle behavior. This repository decides Physics dependency readiness, resource meaning, and scientific HOLD/PASS semantics. Apply the VAL-23 Controller exception; refresh local policy when its canonical revision changes.
 
 ### ROUTE-14 — GitHub Actions execution
 
@@ -153,6 +153,8 @@ If the exact source cannot be established, stop the affected path as `ARTIFACT_L
 ### ROUTE-17 — Pull-request merge
 
 Trigger `GITHUB_PR_MERGE` / central `pull-request-merge` when an accepted work item is ready for PR integration.
+
+Apply `docs/protocols/validation.md` VAL-23 for risk-based independent review at planning, implementation, validation, controller continuation and final integration. Controller-delegated work is exempt from independent engineering review at every level, including repeated-failure review; diagnose and resolve actual blockers instead. Interactive work retains risk-based review. Do not turn optional or exempt review into a HOLD.
 
 Samuel capability routing and native merge safety own the generic merge mechanics: fresh PR state, exact expected head SHA, mergeability, CI success, mutation, read-back, and rejected-merge recovery. Physics acceptance and the decision that a change is scientifically ready remain local.
 
