@@ -51,10 +51,11 @@ jobs:
           ("R04","verification/naming_boundary.py","_symbol_inventory","Disambiguate declarations or fail closed"),
           ("R05","diagnostics/assemble.py","assemble","Reduce package initialization coupling"),
           ("R06","verification/naming_consumers.py","_scan_revision","Simplify deep conditionals"),
-          ("R11","diagnostics/collector.py","run_scan","Preserve coordinator boundary")]
+          ("CONTROL","diagnostics/collector.py","run_scan","Preserve coordinator boundary"),
+          ("R11","code_lucidity/metrics.py","derive_indicators","Keep numerical model isolated")]
           rows=[]
           for rid,suffix,name,proposal in specs:
-              target=next((n for n in graph.nodes if n.location and n.location.path.endswith("/"+suffix) and n.name==name),None)
+              target=next((n for n in graph.nodes if n.kind in {"python_function","python_async_function","python_class"} and n.location and n.location.path.endswith("/"+suffix) and n.name==name),None)
               if target is None:
                   rows.append({"id":rid,"error":"TARGET_NOT_FOUND"}); continue
               a=assess_code_understandability(scan,target.id)
@@ -68,6 +69,28 @@ jobs:
               rows.append(row)
               print("SURVEY_PLAN="+json.dumps(row,sort_keys=True),flush=True)
           result["planning"]=rows
+          # Exact single-file comparison avoids treating unrelated scope uncertainty as a target defect.
+          local=[]
+          for row in rows:
+              if not row.get("symbol"): continue
+              narrow=run_scan(ScanRequest(repository=repo,revision=rev,includes=(row["path"],),collectors=("python_ast",),budget=ScanBudget(max_files=500,max_bytes=20000000,max_seconds=180)),GitSourceProvider(root))
+              n=next(n for n in narrow.graph.nodes if n.qualified_name==row["symbol"])
+              a=assess_code_understandability(narrow,n.id)
+              ctx=build_planning_context(narrow,n.id,objectives=("Clarity",),assessments=(summarize_understandability(a),interpret_understandability_indicators(a)))
+              opts=(PlanningAlternative("keep","KEEP","Preserve"),PlanningAlternative("change","CHANGE","Candidate only",affected_paths=(row["path"],),evidence_ids=n.evidence_ids,expected_benefits=("Potential clarity",),risks=("Contract drift",)))
+              rr=review_alternatives(ctx,opts)
+              item={"id":row["id"],"symbol":n.qualified_name,"scan":narrow.status,"verification":narrow.verification.status,"review":[x.disposition for x in rr.results],"recommended":rr.recommended_id,"unknown_count":len(ctx.unknowns)}
+              local.append(item); print("SURVEY_NARROW="+json.dumps(item),flush=True)
+          result["narrow"]=local
+          # Tracked repository string evidence, including documentation and dynamic literal candidates.
+          legacy=("libs.code_understandability","analysis.understandability_adapter","analysis.understandability_interpretation","analysis.lucidity_adapter","analysis.lucidity_interpretation","verification.naming_replay","verification.naming_replay_execution")
+          consumers={}
+          for token in legacy:
+              proc=subprocess.run(["git","grep","-n","-F",token,rev,"--"],capture_output=True,text=True)
+              if proc.returncode not in (0,1): raise RuntimeError("GIT_GREP_FAILED")
+              consumers[token]=[x[:300] for x in proc.stdout.splitlines()]
+              print("SURVEY_CONSUMERS="+json.dumps({"token":token,"hits":consumers[token]}),flush=True)
+          result["consumers"]=consumers
           # Observed operation counts/timing on original API; no proposed implementation.
           targets=tuple(n.id for n in graph.nodes if n.kind=="python_function" and n.location and "/tests/" not in n.location.path)[:50]
           times=[]
