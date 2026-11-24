@@ -108,7 +108,7 @@ PhysicsFVLogMolarElectrostaticDrift::validParams()
   auto params = FVFluxKernel::validParams();
   params.addClassDescription(
       "Electrostatic FV drift reconstructed from c_e=exp(log_e), preserving "
-      "signed electric-field face/upwind semantics and returning molar flux. "
+      "PhysicsFVElectrostaticDrift face/upwind semantics and returning molar flux. "
       "For a continuous FEM potential, use_element_gradient_for_potential averages the two "
       "adjacent element gradients at an interior FV face instead of requesting a FaceArg gradient.");
   params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");

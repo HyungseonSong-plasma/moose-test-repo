@@ -21,6 +21,7 @@ def test_current_registered_owner_inventory_and_archived_evidence():
     assert receipt["current_newonly"]["registered_factory_types"] == 12
     assert len(receipt["historical_original_blobs"]) == 12
     assert len(receipt["code4_historical_references"]) == 4
+    assert len(receipt["code4_nonexecuting_description_references"]) == 2
     assert receipt["code4_exact_tracked_text_inventory"]
     assert receipt["reviewed_code3_assertions"] == {path: 1 for path in module.CODE3_ASSERTIONS}
     assert receipt["current_active_retired_symbol_references"] == []

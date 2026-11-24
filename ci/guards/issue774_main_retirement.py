@@ -107,6 +107,19 @@ CODE4_HISTORICAL = {
         ('== "PhysicsFVElectrostaticDrift",',),
     ),
 }
+# Source-pinned class descriptions are non-executable reference metadata.
+# Do not modify these shared translation units or their frozen FDEG profiles.
+CODE4_DESCRIPTIONS = {
+    "physics_app/src/fvkernels/FVLogMolarTransport.C": (
+        "a24208626b2e775c2af332e216d18cc91217dfa9",
+        ('"PhysicsFVElectrostaticDrift face/upwind semantics and returning molar flux. "',),
+    ),
+    "physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C": (
+        "0a7e72d64e6d9f7f059046a9abc1a7607757111f",
+        ('"PhysicsFVElectrostaticDrift face/upwind semantics and returning molar flux. "',),
+    ),
+}
+CODE4_REVIEWED_REFERENCES = {**CODE4_HISTORICAL, **CODE4_DESCRIPTIONS}
 TOKEN = re.compile(r"\b(?:" + "|".join(FACTORIES) + r")\b")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 P6 = {"p6_newonly_s6_build", "p6_newonly_s6_native_p2",
@@ -161,7 +174,7 @@ def code4_surface(path: str):
 def reference_surface(path: str, line: str):
     tokens = set(TOKEN.findall(line))
     if CODE4 in tokens:
-        if tokens == {CODE4} and line.strip() in CODE4_HISTORICAL.get(path, ("", ()))[1]:
+        if tokens == {CODE4} and line.strip() in CODE4_REVIEWED_REFERENCES.get(path, ("", ()))[1]:
             return None
         return code4_surface(path)
     if path == S5R and tokens == {FACTORIES[1]}:
@@ -225,7 +238,7 @@ def audit(root: Path, expected_head: str):
         need(path in paths and paths[path][2] == sha,
              "HISTORICAL_CONSUMER_NOT_PINNED_" + path)
         need(blob((root / path).read_bytes()) == sha, "HISTORICAL_WORKTREE_DIRTY_" + path)
-    for path, (expected, lines) in CODE4_HISTORICAL.items():
+    for path, (expected, lines) in CODE4_REVIEWED_REFERENCES.items():
         need(path in paths and paths[path][2] == expected,
              "CODE4_HISTORICAL_BLOB_DRIFT_" + path)
         raw = (root / path).read_bytes()
@@ -291,6 +304,7 @@ def audit(root: Path, expected_head: str):
         "pinned_provenance_blobs": PINNED_PROVENANCE,
         "reviewed_code3_assertions": reviewed_assertions,
         "code4_historical_references": CODE4_HISTORICAL,
+        "code4_nonexecuting_description_references": CODE4_DESCRIPTIONS,
         "code4_exact_tracked_text_inventory": grep.stdout.splitlines(),
         "current_newonly": counts,
         "current_active_retired_symbol_references": actual_sources,
@@ -327,7 +341,7 @@ def self_test():
         need(reference_surface(path, assertion) is None, "ASSERTION_CLASSIFIER_LOST")
         need(reference_surface(path, "type = " + CODE3) is not None,
              "ACTIVE_CODE3_REINTRODUCTION_ACCEPTED")
-    for path, (_, lines) in CODE4_HISTORICAL.items():
+    for path, (_, lines) in CODE4_REVIEWED_REFERENCES.items():
         for line in lines:
             need(reference_surface(path, line) is None, "CODE4_PINNED_LINE_REJECTED")
         need(reference_surface(path, "type = " + CODE4) is not None,

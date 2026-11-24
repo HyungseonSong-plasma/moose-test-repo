@@ -1,8 +1,6 @@
 # Diagnostics v0.1 — source-bound, read-only fact collection
 
-**Status:** implemented D1–D5 core and first GitHub Actions Workflow static
-collector. This is a general-purpose Graph evidence layer, **not a CI-specific
-decision engine**. Issue [#721](https://github.com/HyungseonSong-plasma/moose-test-repo/issues/721).
+**Status:** implemented source-bound Diagnostics core, five opt-in source collector types (Workflow, Python AST, C++, MOOSE HIT, JSON), and separate read-only GitHub Actions observations. This is a general-purpose Graph evidence layer, **not a CI-specific decision engine**. See [#721](https://github.com/HyungseonSong-plasma/moose-test-repo/issues/721) and [#867](https://github.com/HyungseonSong-plasma/moose-test-repo/issues/867).
 
 ## Modules
 
@@ -14,9 +12,9 @@ decision engine**. Issue [#721](https://github.com/HyungseonSong-plasma/moose-te
 | `receipt.py` | `EvidenceReceipt` with per-file coverage, collector version, file/byte/time budget, attempt count, elapsed time, unresolved and scope completeness |
 | `providers/git.py` | Tracked source inventory and exact blob bytes from a verified HEAD; no worktree fallback |
 | `providers/workflow.py` | Static GitHub Actions Workflow/Job/Step/needs/event/run/uses source facts |
-| `providers/python_ast.py` | Python syntax-only declaration, import, call-site and name/attribute reference candidates |
+| `providers/python_ast.py` | Python syntax-only declaration, import, call-site, name/attribute and file-reference candidates |
 | `providers/cpp.py` | C++ class/include/Factory macro source-declaration candidates |
-| `providers/moose_input.py` | MOOSE HIT `.i` blocks, type reference and unresolved include syntax |
+| `providers/moose_input.py` | MOOSE HIT `.i` blocks, type references and file/include candidates |
 | `providers/json_source.py` | Strict JSON string-value file-path candidates with JSON Pointer and exact source witnesses |
 | `providers/github_actions.py` | Read-only external Run/Attempt/Job/Step observation with exact source SHA and pagination controls |
 
@@ -74,20 +72,14 @@ boolean conversion). YAML merge keys, duplicate keys and unsupported types
 fail closed. Matrix expansion, expression evaluation, nested reusable
 workflows, actual Runs/costs, and CI waste verdicts are **not implemented**.
 
-### Validation and next steps
+### Validation and scope
 
-All acceptance tests are under `physics_harness/code/tests/` and run solely
-through **Harness Code CI** using `pytest`. Existing FDEG scanners and
-Physics workflows are unchanged. Future external GitHub Actions Run providers
-must record `run_id`, `attempt`, source revision and artifact identities
-separately, then connect to Claims in `../analysis/` without cross-HEAD
-promotion or automatic deletion.
+Code Diagnostics regression tests are under `physics_harness/code/tests/` and are run by **Harness Code CI** using `pytest`. External Run/Attempt observations are supported by the injected provider described below; artifact custody and native/semantic verification are separate obligations. Existing FDEG scanners remain separate. Do not promote observations across source revisions or infer automatic deletion.
 
 ### Python AST source facts (P1/P2)
 
 Select `collectors=("python_ast",)` and `includes=("src/*.py",)` to
-scan tracked Python files at the exact local HEAD. The built-in registry now
-includes `python_ast`, alongside the existing `workflow` collector.
+scan tracked Python files at the exact local HEAD. The built-in registry includes `python_ast`, `workflow`, `cpp`, `moose_input` and `json`.
 
 The Python AST collector emits `DEFINES`, `IMPORTS_CANDIDATE`,
 `CALLS_CANDIDATE`, and `REFERENCES_CANDIDATE` edges with source-line/blob

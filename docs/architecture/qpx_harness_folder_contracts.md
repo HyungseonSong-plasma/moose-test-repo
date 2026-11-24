@@ -1,22 +1,24 @@
 # Physics Harness Folder Contracts
 
-Status: canonical package responsibility contract for `development`.
+Status: current package responsibility locator for `main`; the semantic execution boundary follows the canonical SOL request/runtime architecture.
 
 This file path is retained for compatibility with historical references. The current canonical product/harness naming is `Physics` / `physics_harness`.
 
-## Canonical root
+## Primary source and support roots
 
 ```text
 repo/
-├── bin/
-├── physics_harness/
-├── experiments/
-├── tests/
-├── docs/
-└── .github/
+├── bin/               # CLI entry
+├── physics_app/       # local Physics application source
+├── physics_harness/   # reusable harness
+├── libs/              # independent libraries, including code_lucidity
+├── experiments/      # experiment assets
+├── tests/            # regression tests
+├── docs/             # contracts, guidance and evidence
+└── .github/          # repository automation
 ```
 
-Other long-lived architectural roots are non-canonical and require an explicit bounded exception or retirement plan.
+This is a responsibility locator, not an exhaustive allowlist of root directories. Repository automation, CI, operational support, specifications, studies, reports and retained historical material have separate scopes.
 
 ## Internal responsibility hierarchy
 
@@ -31,6 +33,9 @@ physics_harness/
 ├── observation/
 │   └── source_code/
 ├── analysis/
+├── evaluation/
+├── evidence/
+├── code/
 ├── reasoning/
 │   └── engines/
 ├── validation/
@@ -88,9 +93,9 @@ Forbidden: execution compiler imports MOOSE implementation details.
 
 ## `adapters/moose`
 
-Purpose: realize solver-independent ExecutionPlan as structured MOOSE target IR and deterministic `.i` text.
+Purpose: local MOOSE input, preflight, runtime observation and regression utilities. Existing target/IR helpers do not authorize the retired canonical local-lowering route.
 
-May own: MOOSE block/object names, serialization, MOOSE-specific PETSc realization when assigned by responsibility.
+Canonical semantic execution uses explicit `CanonicalRealizationModel` and Physics-to-SOL capability mapping to prepare a SOL request through `application/gateway.py`. The pinned SOL runtime consumer and external `sol-adapter-moose` own the canonical runtime and native realization boundary. The CLI does not silently fall back to local lowering. See [current tutorial](../guides/physics_harness_tutorials.md) and [pinned runtime consumer](../sol-runtime-consumer-v02.md).
 
 Must not own: ScientificPolicy meaning, generic reasoning, claim acceptance.
 
@@ -111,6 +116,12 @@ Purpose: deterministic quantitative derivation and aggregation.
 May own: DerivedFact computation, numerical summaries.
 
 Must not own: source-faithful acquisition, causal diagnosis, target lowering.
+
+## `evaluation`, `evidence`, `code`
+
+- `evaluation/` owns statistics data contracts.
+- `evidence/` owns evidence schema, identity, artifact records, storage and normalization.
+- [`code/`](../../physics_harness/code/README.md) owns source-bound graph diagnostics, code analysis, refactor planning and verification. Source evidence does not establish scientific acceptance or automatic safe deletion.
 
 ## `reasoning`
 
@@ -175,7 +186,8 @@ ontology -> adapters.moose                        FORBID by default
 planning -> adapters.moose                        FORBID
 execution compiler -> planning policy contract    ALLOW
 execution compiler -> MOOSE internals             FORBID
-adapters.moose -> ExecutionPlan contract          ALLOW
+local MOOSE utility -> explicit local contract    ALLOW
+canonical semantic gateway -> local MOOSE lowering FORBID
 adapter -> redefine semantic meaning              FORBID
 observation -> domain interpretation              FORBID by default
 domain rule -> backend-neutral reasoning IR       ALLOW

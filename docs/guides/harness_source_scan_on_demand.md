@@ -17,7 +17,7 @@ After the workflow is integrated into `main`:
 
 1. Open **Actions → Harness Code Source Scan → Run workflow**.
 2. Choose the source branch or revision in the standard dispatch selector.
-3. Set optional include/exclude globs, collectors and budgets; select **Run**.
+3. Set include/exclude globs, collectors and budgets; select **Run**. The default scope is `physics_harness/code/*.py,libs/code_lucidity/*.py`; narrow or extend it for the requested analysis.
 
 This route uses `workflow_dispatch`. No ordinary `main` push, PR update or
 schedule starts it.
@@ -48,7 +48,7 @@ currently approved workflow revision. The request schema is:
   "schema": "harness.source_scan.v1",
   "request_id": "issue758-g0-002",
   "source_sha": "<exact-40-hex-main-commit-sha>",
-  "includes": ["physics_harness/code/*.py", "libs/hu/*.py"],
+  "includes": ["physics_harness/code/*.py", "libs/code_lucidity/*.py"],
   "excludes": [],
   "collectors": ["python_ast"],
   "max_files": 500,
@@ -64,7 +64,8 @@ SHA). Do not add new branches or tags per run. Fetch the desired source SHA
 immediately before each request; never confuse the request **commit SHA**
 with the separately pinned **source SHA**.
 
-Accepted collectors: `python_ast`, `workflow`, `cpp`, `moose_input`.
+Accepted collectors: `python_ast`, `workflow`, `cpp`, `moose_input`, `json`.
+For JSON documents select `json` and matching `.json` globs explicitly. The Python/HIT/JSON collectors report file-reference candidates; the source scan does not automatically run the separate exact-inventory [`resolve_file_references`](../../physics_harness/code/analysis/README.md) analysis. Markdown and shell are not implemented source collectors.
 A request may select multiple collectors and a scoped union of file patterns.
 Maximum budgets: 1,500 files, 100,000,000 tracked-source bytes and 600
 seconds. `ScanRequest` and the existing collectors still validate scopes and

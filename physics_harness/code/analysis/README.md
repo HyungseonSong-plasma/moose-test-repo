@@ -12,13 +12,12 @@ diagnostic source collectors. It uses the existing immutable `GraphSnapshot`,
 | `parameter_contract.py` | MOOSE input-to-C++ parameter comparison, separately scoped with unchanged source-only verdicts; original `assessment` exports retained |
 | `diff.py` | Compare stable Node/Edge semantics, source-bound Evidence changes, and Scope/coverage changes |
 | `usage_matrix.py` | Read-only multi-target one-hop Usage Matrix; selected typed relations, source witnesses, scoped coverage, conservative screening, JSON and Markdown views |
+| `file_references.py` | Resolve observed file path candidates against exact tracked Git inventory with caller-declared bases; preserve ambiguity and unresolved cases |
 | `adapters/lucidity_adapter.py` | Transport Diagnostics data and optional human observations into the general metrics engine |
 | `adapters/lucidity_interpretation.py` | Interpret code-understandability indicators and caveats; no metric formulas or auto-refactor verdict |
 
 `adapters/` contains the specialized integrations. Direct legacy adapter module
 paths have been retired; the public Analysis API and Diagnostics providers remain unchanged.
-
-| `usage_matrix.py` | Read-only multi-target one-hop Usage Matrix; selected typed relations, source witnesses, scoped coverage, conservative screening, JSON and Markdown views |
 
 ## Usage Matrix v0.1
 
