@@ -1,0 +1,573 @@
+{
+  "status": "research evidence; not an approval",
+  "source_revision": "2bf977e17fa2e4eb84b24bce51a717bc76be60f7",
+  "workflow_revision": "6b1f53e0dff88d9d80367f664d83746050dc7937",
+  "run_id": 45417861526,
+  "job_id": 138528913826,
+  "artifact_id": 14931164970,
+  "artifact_zip_sha256": "9d259ca5b4f8c1342a1357f00a5ba1b72fe2e4579430ab85dd4241be99ebf932",
+  "provenance": "Exact JSON observations from GitHub job logs, not byte-for-byte artifact JSON; downloaded artifact ZIP independently hash-checked.",
+  "observations": {
+    "SCAN": [
+      {
+        "coverage": {
+          "SCANNED": 91,
+          "UNRESOLVED": 19
+        },
+        "edges": 34208,
+        "evidence": 34318,
+        "nodes": 11847,
+        "python": "3.11.18 (main, Oct 26 2026, 02:48:34) [GCC 13.3.0]",
+        "revision": "2bf977e17fa2e4eb84b24bce51a717bc76be60f7",
+        "scan_seconds": 2.305138365999994,
+        "scan_status": "PARTIAL",
+        "scope_id": "scope:32f77b3d23dbea3882fe19257c3328103deba8f75b787d14d26ff2fc5ee38414",
+        "unresolved": 94,
+        "verification_failures": [],
+        "verification_status": "UNVERIFIED"
+      }
+    ],
+    "PLAN": [
+      {
+        "evidence_ids": [
+          "evidence:15a0535eeacbbc6b969ed510a8a39006c80c24c561c4cd38007f7de149efe126"
+        ],
+        "id": "R01",
+        "indicators": {
+          "branch_density": 0.2962962962962963,
+          "candidate_call_density": 0.8148148148148148
+        },
+        "line": "SourceLocation(path='physics_harness/code/diagnostics/providers/git.py', start_line=35, end_line=61)",
+        "metrics": {
+          "branches": 8,
+          "loc": 27,
+          "max_branch_nesting": 3
+        },
+        "path": "physics_harness/code/diagnostics/providers/git.py",
+        "provenance": "UNVERIFIED",
+        "recommended": null,
+        "review": [
+          {
+            "disposition": "HOLD",
+            "required_checks": []
+          },
+          {
+            "disposition": "HOLD",
+            "required_checks": [
+              "EXACT_BEFORE_AFTER_RECEIPT_PARITY",
+              "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD",
+              "VERIFY_BEHAVIORAL_COMPATIBILITY",
+              "VERIFY_POST_CHANGE_GRAPH_DIFF"
+            ]
+          }
+        ],
+        "source_status": "SCANNED",
+        "symbol": "physics_harness/code/diagnostics/providers/git.py:GitSourceProvider.inventory",
+        "unknown_count": 104
+      },
+      {
+        "evidence_ids": [
+          "evidence:5130ab47c03c420e8e9ee46751a5e5c22abe053403fdd908cdbde4daa7019003"
+        ],
+        "id": "R02",
+        "indicators": {
+          "branch_density": 0.08333333333333333,
+          "candidate_call_density": 0.5666666666666667
+        },
+        "line": "SourceLocation(path='physics_harness/code/verification/naming_gates.py', start_line=51, end_line=110)",
+        "metrics": {
+          "branches": 5,
+          "loc": 60,
+          "max_branch_nesting": 2
+        },
+        "path": "physics_harness/code/verification/naming_gates.py",
+        "provenance": "UNVERIFIED",
+        "recommended": null,
+        "review": [
+          {
+            "disposition": "HOLD",
+            "required_checks": []
+          },
+          {
+            "disposition": "HOLD",
+            "required_checks": [
+              "EXACT_BEFORE_AFTER_RECEIPT_PARITY",
+              "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD",
+              "VERIFY_BEHAVIORAL_COMPATIBILITY",
+              "VERIFY_POST_CHANGE_GRAPH_DIFF"
+            ]
+          }
+        ],
+        "source_status": "SCANNED",
+        "symbol": "physics_harness/code/verification/naming_gates.py:evaluate_naming_safety_gates",
+        "unknown_count": 104
+      },
+      {
+        "evidence_ids": [
+          "evidence:49c0f1582577317b825cb0c1b748a408c9614eb5c491d4d7a76b9d0fc15cb309"
+        ],
+        "id": "R03",
+        "indicators": {
+          "branch_density": 0.1875,
+          "candidate_call_density": 0.4791666666666667
+        },
+        "line": "SourceLocation(path='physics_harness/code/analysis/usage_matrix.py', start_line=131, end_line=274)",
+        "metrics": {
+          "branches": 27,
+          "loc": 144,
+          "max_branch_nesting": 5
+        },
+        "path": "physics_harness/code/analysis/usage_matrix.py",
+        "provenance": "UNVERIFIED",
+        "recommended": null,
+        "review": [
+          {
+            "disposition": "HOLD",
+            "required_checks": []
+          },
+          {
+            "disposition": "HOLD",
+            "required_checks": [
+              "EXACT_BEFORE_AFTER_RECEIPT_PARITY",
+              "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD",
+              "VERIFY_BEHAVIORAL_COMPATIBILITY",
+              "VERIFY_POST_CHANGE_GRAPH_DIFF"
+            ]
+          }
+        ],
+        "source_status": "SCANNED",
+        "symbol": "physics_harness/code/analysis/usage_matrix.py:build_usage_matrix",
+        "unknown_count": 104
+      },
+      {
+        "evidence_ids": [
+          "evidence:1d56a8808cb9c309e2ac983db8561a68f23e759bd451846634f370d39fbdc5ba"
+        ],
+        "id": "R04",
+        "indicators": {
+          "branch_density": 0.1935483870967742,
+          "candidate_call_density": 0.3548387096774194
+        },
+        "line": "SourceLocation(path='physics_harness/code/verification/naming_boundary.py', start_line=95, end_line=125)",
+        "metrics": {
+          "branches": 6,
+          "loc": 31,
+          "max_branch_nesting": 6
+        },
+        "path": "physics_harness/code/verification/naming_boundary.py",
+        "provenance": "UNVERIFIED",
+        "recommended": null,
+        "review": [
+          {
+            "disposition": "HOLD",
+            "required_checks": []
+          },
+          {
+            "disposition": "HOLD",
+            "required_checks": [
+              "EXACT_BEFORE_AFTER_RECEIPT_PARITY",
+              "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD",
+              "VERIFY_BEHAVIORAL_COMPATIBILITY",
+              "VERIFY_POST_CHANGE_GRAPH_DIFF"
+            ]
+          }
+        ],
+        "source_status": "SCANNED",
+        "symbol": "physics_harness/code/verification/naming_boundary.py:_symbol_inventory",
+        "unknown_count": 104
+      },
+      {
+        "evidence_ids": [
+          "evidence:674ce0881035aad98a893cd7e387bc76b0b1605a9e1386ea2d3a65602abbca9b"
+        ],
+        "id": "R05",
+        "indicators": {
+          "branch_density": 0.203125,
+          "candidate_call_density": 0.5078125
+        },
+        "line": "SourceLocation(path='physics_harness/code/diagnostics/assemble.py', start_line=35, end_line=162)",
+        "metrics": {
+          "branches": 26,
+          "loc": 128,
+          "max_branch_nesting": 4
+        },
+        "path": "physics_harness/code/diagnostics/assemble.py",
+        "provenance": "UNVERIFIED",
+        "recommended": null,
+        "review": [
+          {
+            "disposition": "HOLD",
+            "required_checks": []
+          },
+          {
+            "disposition": "HOLD",
+            "required_checks": [
+              "EXACT_BEFORE_AFTER_RECEIPT_PARITY",
+              "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD",
+              "VERIFY_BEHAVIORAL_COMPATIBILITY",
+              "VERIFY_POST_CHANGE_GRAPH_DIFF"
+            ]
+          }
+        ],
+        "source_status": "SCANNED",
+        "symbol": "physics_harness/code/diagnostics/assemble.py:GraphAssembler.assemble",
+        "unknown_count": 104
+      },
+      {
+        "evidence_ids": [
+          "evidence:4a9015b673741b9661703475b1e4a58f624ae70bc96c275093dbba6e7ff72416"
+        ],
+        "id": "R06",
+        "indicators": {
+          "branch_density": 0.3283582089552239,
+          "candidate_call_density": 0.6716417910447762
+        },
+        "line": "SourceLocation(path='physics_harness/code/verification/naming_consumers.py', start_line=99, end_line=165)",
+        "metrics": {
+          "branches": 22,
+          "loc": 67,
+          "max_branch_nesting": 9
+        },
+        "path": "physics_harness/code/verification/naming_consumers.py",
+        "provenance": "UNVERIFIED",
+        "recommended": null,
+        "review": [
+          {
+            "disposition": "HOLD",
+            "required_checks": []
+          },
+          {
+            "disposition": "HOLD",
+            "required_checks": [
+              "EXACT_BEFORE_AFTER_RECEIPT_PARITY",
+              "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD",
+              "VERIFY_BEHAVIORAL_COMPATIBILITY",
+              "VERIFY_POST_CHANGE_GRAPH_DIFF"
+            ]
+          }
+        ],
+        "source_status": "SCANNED",
+        "symbol": "physics_harness/code/verification/naming_consumers.py:_scan_revision",
+        "unknown_count": 104
+      },
+      {
+        "evidence_ids": [
+          "evidence:4b91ed889c5fb1e32a90f74401ff6e097c7164f5992bc8e6ba583d1cceb7ded1"
+        ],
+        "id": "CONTROL",
+        "indicators": {
+          "branch_density": 0.18274111675126903
+        },
+        "line": "SourceLocation(path='physics_harness/code/diagnostics/collector.py', start_line=140, end_line=336)",
+        "metrics": {
+          "branches": 36,
+          "loc": 197,
+          "max_branch_nesting": 4
+        },
+        "path": "physics_harness/code/diagnostics/collector.py",
+        "provenance": "UNVERIFIED",
+        "recommended": null,
+        "review": [
+          {
+            "disposition": "HOLD",
+            "required_checks": []
+          },
+          {
+            "disposition": "HOLD",
+            "required_checks": [
+              "EXACT_BEFORE_AFTER_RECEIPT_PARITY",
+              "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD",
+              "VERIFY_BEHAVIORAL_COMPATIBILITY",
+              "VERIFY_POST_CHANGE_GRAPH_DIFF"
+            ]
+          }
+        ],
+        "source_status": "UNRESOLVED",
+        "symbol": "physics_harness/code/diagnostics/collector.py:run_scan",
+        "unknown_count": 106
+      },
+      {
+        "evidence_ids": [
+          "evidence:37ea2807f88476f6c8e3e701b6824426564b2051b68b11194ce145a96f2534b3"
+        ],
+        "id": "R11",
+        "indicators": {
+          "branch_density": 0.10526315789473684,
+          "candidate_call_density": 0.4473684210526316
+        },
+        "line": "SourceLocation(path='libs/code_lucidity/metrics.py', start_line=31, end_line=68)",
+        "metrics": {
+          "branches": 4,
+          "loc": 38,
+          "max_branch_nesting": 2
+        },
+        "path": "libs/code_lucidity/metrics.py",
+        "provenance": "UNVERIFIED",
+        "recommended": null,
+        "review": [
+          {
+            "disposition": "HOLD",
+            "required_checks": []
+          },
+          {
+            "disposition": "HOLD",
+            "required_checks": [
+              "EXACT_BEFORE_AFTER_RECEIPT_PARITY",
+              "REPLAY_IMPACTED_TESTS_AT_AFTER_HEAD",
+              "VERIFY_BEHAVIORAL_COMPATIBILITY",
+              "VERIFY_POST_CHANGE_GRAPH_DIFF"
+            ]
+          }
+        ],
+        "source_status": "SCANNED",
+        "symbol": "libs/code_lucidity/metrics.py:derive_indicators",
+        "unknown_count": 104
+      }
+    ],
+    "NARROW": [
+      {
+        "id": "R01",
+        "symbol": "physics_harness/code/diagnostics/providers/git.py:GitSourceProvider.inventory",
+        "scan": "COMPLETE",
+        "verification": "VERIFIED",
+        "review": [
+          "ADMISSIBLE",
+          "ADMISSIBLE"
+        ],
+        "recommended": null,
+        "unknown_count": 4
+      },
+      {
+        "id": "R02",
+        "symbol": "physics_harness/code/verification/naming_gates.py:evaluate_naming_safety_gates",
+        "scan": "COMPLETE",
+        "verification": "VERIFIED",
+        "review": [
+          "ADMISSIBLE",
+          "ADMISSIBLE"
+        ],
+        "recommended": null,
+        "unknown_count": 4
+      },
+      {
+        "id": "R03",
+        "symbol": "physics_harness/code/analysis/usage_matrix.py:build_usage_matrix",
+        "scan": "COMPLETE",
+        "verification": "VERIFIED",
+        "review": [
+          "ADMISSIBLE",
+          "ADMISSIBLE"
+        ],
+        "recommended": null,
+        "unknown_count": 4
+      },
+      {
+        "id": "R04",
+        "symbol": "physics_harness/code/verification/naming_boundary.py:_symbol_inventory",
+        "scan": "COMPLETE",
+        "verification": "VERIFIED",
+        "review": [
+          "ADMISSIBLE",
+          "ADMISSIBLE"
+        ],
+        "recommended": null,
+        "unknown_count": 4
+      },
+      {
+        "id": "R05",
+        "symbol": "physics_harness/code/diagnostics/assemble.py:GraphAssembler.assemble",
+        "scan": "COMPLETE",
+        "verification": "VERIFIED",
+        "review": [
+          "ADMISSIBLE",
+          "ADMISSIBLE"
+        ],
+        "recommended": null,
+        "unknown_count": 4
+      },
+      {
+        "id": "R06",
+        "symbol": "physics_harness/code/verification/naming_consumers.py:_scan_revision",
+        "scan": "COMPLETE",
+        "verification": "VERIFIED",
+        "review": [
+          "ADMISSIBLE",
+          "ADMISSIBLE"
+        ],
+        "recommended": null,
+        "unknown_count": 4
+      },
+      {
+        "id": "CONTROL",
+        "symbol": "physics_harness/code/diagnostics/collector.py:run_scan",
+        "scan": "PARTIAL",
+        "verification": "UNVERIFIED",
+        "review": [
+          "HOLD",
+          "HOLD"
+        ],
+        "recommended": null,
+        "unknown_count": 15
+      },
+      {
+        "id": "R11",
+        "symbol": "libs/code_lucidity/metrics.py:derive_indicators",
+        "scan": "COMPLETE",
+        "verification": "VERIFIED",
+        "review": [
+          "ADMISSIBLE",
+          "ADMISSIBLE"
+        ],
+        "recommended": null,
+        "unknown_count": 4
+      }
+    ],
+    "CONSUMERS": [
+      {
+        "token": "libs.code_understandability",
+        "hits": [
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:libs/code_understandability/README.md:5:The old `libs.code_understandability` package and its `evaluation`,",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:13:        (\"libs.code_understandability\", \"libs.code_lucidity\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:15:        (\"libs.code_understandability.evaluation\", \"libs.code_lucidity.evaluation\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:17:        (\"libs.code_understandability.metrics\", \"libs.code_lucidity.metrics\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:19:        (\"libs.code_understandability.model\", \"libs.code_lucidity.model\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:46:    from libs.code_understandability import UnderstandabilityInput"
+        ]
+      },
+      {
+        "token": "analysis.understandability_adapter",
+        "hits": [
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:21:        (\"physics_harness.code.analysis.understandability_adapter\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:47:    from physics_harness.code.analysis.understandability_adapter import assess_code_understandability"
+        ]
+      },
+      {
+        "token": "analysis.understandability_interpretation",
+        "hits": [
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:24:        (\"physics_harness.code.analysis.understandability_interpretation\","
+        ]
+      },
+      {
+        "token": "analysis.lucidity_adapter",
+        "hits": [
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/analysis/understandability_adapter.py:1:\"\"\"Legacy import path. Use analysis.lucidity_adapter for new integrations.\"\"\"",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/refactor/README.md:48:from physics_harness.code.analysis.lucidity_adapter import assess_code_understandability, summarize_understandability",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:22:         \"physics_harness.code.analysis.lucidity_adapter\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_understandability_adapter.py:8:from physics_harness.code.analysis.lucidity_adapter import assess_code_understandability",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_understandability_adapter.py:80:    from physics_harness.code.analysis.lucidity_adapter import summarize_understandability",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_understandability_adapter.py:90:    from physics_harness.code.analysis.lucidity_adapter import summarize_understandability",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_understandability_adapter.py:101:    from physics_harness.code.analysis.lucidity_adapter import summarize_understandability",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_understandability_adapter.py:111:    from physics_harness.code.analysis.lucidity_adapter import summarize_understandability",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_understandability_run_scan_integration.py:7:from physics_harness.code.analysis.lucidity_adapter import assess_code_understandability, summarize_understandability"
+        ]
+      },
+      {
+        "token": "analysis.lucidity_interpretation",
+        "hits": [
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/analysis/understandability_interpretation.py:1:\"\"\"Legacy import path. Use analysis.lucidity_interpretation for new integrations.\"\"\"",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/refactor/README.md:49:from physics_harness.code.analysis.lucidity_interpretation import interpret_understandability_indicators",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:25:         \"physics_harness.code.analysis.lucidity_interpretation\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_understandability_interpretation.py:6:from physics_harness.code.analysis.lucidity_interpretation import interpret_understandability_indicators",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_understandability_run_scan_integration.py:8:from physics_harness.code.analysis.lucidity_interpretation import interpret_understandability_indicators"
+        ]
+      },
+      {
+        "token": "verification.naming_replay",
+        "hits": [
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:27:        (\"physics_harness.code.verification.naming_replay\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:30:        (\"physics_harness.code.verification.naming_replay_execution\",",
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:48:    from physics_harness.code.verification.naming_replay import ReplayArtifact"
+        ]
+      },
+      {
+        "token": "verification.naming_replay_execution",
+        "hits": [
+          "2bf977e17fa2e4eb84b24bce51a717bc76be60f7:physics_harness/code/tests/test_naming_legacy_imports.py:30:        (\"physics_harness.code.verification.naming_replay_execution\","
+        ]
+      }
+    ],
+    "TIMING": [
+      {
+        "targets": 1,
+        "samples_s": [
+          0.034249570999975276,
+          0.022706921999997576,
+          0.020949449999989156
+        ],
+        "median_s": 0.022706921999997576,
+        "full_edge_pass_items_lower_bound": 68416,
+        "rows": 1
+      },
+      {
+        "targets": 10,
+        "samples_s": [
+          0.07555554800001119,
+          0.07743825299999685,
+          0.07829842200001735
+        ],
+        "median_s": 0.07743825299999685,
+        "full_edge_pass_items_lower_bound": 376288,
+        "rows": 10
+      },
+      {
+        "targets": 50,
+        "samples_s": [
+          0.32359496699999113,
+          0.3998418319999928,
+          0.32666440399998464
+        ],
+        "median_s": 0.32666440399998464,
+        "full_edge_pass_items_lower_bound": 1744608,
+        "rows": 50
+      }
+    ],
+    "IDENTITY": [
+      {
+        "duplicate": false,
+        "boundary_status": "STRUCTURE_WITNESSED",
+        "boundary_unresolved": [],
+        "observed": [
+          {
+            "key": "sample.py::function:transform",
+            "ref": "sample.py:1@73bca47390c4e0c82369c06ecaad4ae2dc427a4f"
+          }
+        ],
+        "packet_unresolved": [],
+        "excerpts": [
+          {
+            "source_ref": "sample.py:1@73bca47390c4e0c82369c06ecaad4ae2dc427a4f",
+            "code": "def transform(x):\n    return x + 1"
+          }
+        ],
+        "behavior_selected_line": 1
+      },
+      {
+        "duplicate": true,
+        "boundary_status": "STRUCTURE_WITNESSED",
+        "boundary_unresolved": [],
+        "observed": [
+          {
+            "key": "sample.py::function:transform",
+            "ref": "sample.py:1@b4298735b38d0b804cbbc5cd2d2edc19f6a54347"
+          },
+          {
+            "key": "sample.py::function:transform",
+            "ref": "sample.py:4@b4298735b38d0b804cbbc5cd2d2edc19f6a54347"
+          }
+        ],
+        "packet_unresolved": [],
+        "excerpts": [
+          {
+            "source_ref": "sample.py:1@b4298735b38d0b804cbbc5cd2d2edc19f6a54347",
+            "code": "def transform(x):\n    return x + 1"
+          },
+          {
+            "source_ref": "sample.py:4@b4298735b38d0b804cbbc5cd2d2edc19f6a54347",
+            "code": "def transform(x):\n    return x + 1"
+          }
+        ],
+        "behavior_selected_line": 4
+      }
+    ]
+  }
+}
