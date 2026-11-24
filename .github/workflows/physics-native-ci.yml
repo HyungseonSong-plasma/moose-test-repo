@@ -1444,7 +1444,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$BASE_HEAD"
-          test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/prepare_public_d_newphysics_100row.py)" = 2ca7105616eef280838e2308966d56e8944af6d9
+          test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/prepare_public_d_newphysics_100row.py)" = 8a90e50e8fb37ed16901a7f9b7dc07749c667d62
           echo "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387  experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt" | sha256sum -c -
           python3 -m py_compile experiments/Issue402_plasma_dsl_g1/chemistry/prepare_public_d_newphysics_100row.py
           python3 - "$RUNNER_TEMP/p05-in/p4_receipt.json" "$RUNNER_TEMP/p05-in/staged" "$GITHUB_WORKSPACE" "$RUNNER_TEMP/p05-out" <<'PY'
