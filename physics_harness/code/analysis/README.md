@@ -104,3 +104,7 @@ not adjacent to the target, because their relevance is unproven.
 This deliberately does not implement `ScanRequest.roots` filtering, a
 target-consumer universe certificate, or semantic equivalence verification.
 Those require separately evidenced later contracts.
+
+## File reference resolution (#867)
+
+`resolve_file_references(graph, receipt, GitSourceProvider(root), bases_by_edge=...)` resolves observed file-reference candidates against the exact checked-out Git revision. Supply an explicit tuple of `REPOSITORY_ROOT` and/or `OWNER_DIRECTORY` for each evidence edge; missing base declarations are UNRESOLVED. The same literal in two documents can resolve differently. No basename search or ambient working-directory fallback. Multiple tracked candidates are AMBIGUOUS, absent exact paths MISSING, nonregular targets NON_REGULAR, and dynamic or escaping paths UNRESOLVED. RESOLVED_CANDIDATE identifies an exact tracked path/blob under the supplied base assumptions, not executable use. Target coverage (including OUT_OF_SCOPE) is independent of path existence. The original Graph and Receipt are unchanged; the report is an analysis projection, not global closure or deletion approval. Existing source metadata verification is checked and receipt file blobs must agree with the Git inventory; independent parser replay and runtime interpretation remain outside this contract.

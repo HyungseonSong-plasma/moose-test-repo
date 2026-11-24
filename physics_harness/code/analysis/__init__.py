@@ -10,6 +10,10 @@ from .parameter_contract import (
     assess_input_parameter_contract,
 )
 from .diff import GraphDiff, compare_graphs
+from .file_references import (
+    FileReferenceTarget, FileReferenceResolution, FileReferenceReport,
+    resolve_file_references,
+)
 from .usage_matrix import (
     UsageRelation, UsageWitness, UsageReference, UsageRow,
     UsageMatrix, build_usage_matrix,
@@ -26,6 +30,8 @@ __all__ = [
     "ParameterBlockAssessment", "ParameterContractAssessment",
     "assess_input_parameter_contract",
     "GraphDiff", "compare_graphs",
+    "FileReferenceTarget", "FileReferenceResolution", "FileReferenceReport",
+    "resolve_file_references",
     "UsageRelation", "UsageWitness", "UsageReference", "UsageRow",
     "UsageMatrix", "build_usage_matrix",
     "assess_code_understandability", "summarize_understandability",
