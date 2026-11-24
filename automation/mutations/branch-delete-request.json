@@ -1,54 +1,54 @@
 {
   "targets": [
     {
-      "branch": "issue-774-d12-public-d-native-evidence-20261123",
-      "expected_sha": "674e4287088e9b1889776eb6ea4f5cfacbcb7711",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d12-public-d-native-evidence-20261123-674e4287088e"
+      "branch": "issue-774-d7-legacy-compat-evidence-20261123",
+      "expected_sha": "d73eda04b954b86a2f2321ad412b54e3b6c75e66",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d7-legacy-compat-evidence-20261123-d73eda04b954"
     },
     {
-      "branch": "issue-774-d12-public-d-native-p2-20261123",
-      "expected_sha": "945679c1470695a19c10feae0f336e8606bcbbe4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d12-public-d-native-p2-20261123-945679c14706"
+      "branch": "issue-774-d7-legacy-binary-compat-ab-20261123",
+      "expected_sha": "6c240d9f8b324d07b0e31eebaea1b9cbb60e8a6e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d7-legacy-binary-compat-ab-20261123-6c240d9f8b32"
     },
     {
-      "branch": "issue-774-d11-public-generator-evidence-20261123",
-      "expected_sha": "207133760c9f4517da5beda473833e3ae61c8ca1",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d11-public-generator-evidence-20261123-207133760c9f"
+      "branch": "issue-652-poisson-g6-registration-p3-20261123",
+      "expected_sha": "23e95942d1b6059e80e0e97d5fe6e252d850ec36",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-poisson-g6-registration-p3-20261123-23e95942d1b6"
     },
     {
-      "branch": "issue-774-d11-public-d-generator-rollback-20261123",
-      "expected_sha": "6c4b99b5798fa6636fa3d13e1edaefe3bd601612",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d11-public-d-generator-rollback-20261123-6c4b99b5798f"
+      "branch": "issue-774-d6-thermal-evidence-20261123",
+      "expected_sha": "abf36bed7aab1a285ffc07a52dbd76e70cb0a864",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d6-thermal-evidence-20261123-abf36bed7aab"
     },
     {
-      "branch": "issue-774-d10-native-evidence-20261123",
-      "expected_sha": "11da1178d77b47650bd2d389e187748ea0e83cec",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d10-native-evidence-20261123-11da1178d77b"
+      "branch": "issue-774-d6-thermal-consumer-compat-20261123",
+      "expected_sha": "a0c325e0fd7f1d871a60f4f179dfea71ddaf1413",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d6-thermal-consumer-compat-20261123-a0c325e0fd7f"
     },
     {
-      "branch": "issue-774-d10-newonly-exact-head-native-20261123",
-      "expected_sha": "05a3cf85bc5ed7d9c258b1377bd66d68d70f4e3e",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d10-newonly-exact-head-native-20261123-05a3cf85bc5e"
+      "branch": "issue-774-d5-ab-verified-evidence-20261123",
+      "expected_sha": "054c3fb4a95f9455c3da398b4c1aaccbc59c5f16",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d5-ab-verified-evidence-20261123-054c3fb4a95f"
     },
     {
-      "branch": "issue-774-d9-newonly-retirement-evidence-20261123",
-      "expected_sha": "b8c40fb14d30dd176c73a60783d10d01651ee3b6",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d9-newonly-retirement-evidence-20261123-b8c40fb14d30"
+      "branch": "issue-652-poisson-g5-native-retirement-20261123",
+      "expected_sha": "80c73754e3c6451884e6c22ec4bdb54a351d38b6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-poisson-g5-native-retirement-20261123-80c73754e3c6"
     },
     {
-      "branch": "issue-774-d9-newonly-fvkernel-retirement-closure-20261123",
-      "expected_sha": "87b7d97113ce6e75081dd15c56c86bc159bde6c9",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d9-newonly-fvkernel-retirement-closure-20261123-87b7d97113ce"
+      "branch": "issue-774-d5-newonly-thermal-ab",
+      "expected_sha": "c77d2f773eee96c30eeca49d7486fea22ea8e557",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d5-newonly-thermal-ab-c77d2f773eee"
     },
     {
-      "branch": "issue-774-d8-thermal-ci-evidence-20261123",
-      "expected_sha": "a91ef47e5d460f97ab4f4215c93a252cdb6db0bb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d8-thermal-ci-evidence-20261123-a91ef47e5d46"
+      "branch": "issue-652-poisson-g4-fem-20261123",
+      "expected_sha": "55732448882e4199717eb1da45d7425e4ffc7446",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-652-poisson-g4-fem-20261123-55732448882e"
     },
     {
-      "branch": "issue-774-d8-thermal-ci-contract-cleanup-20261123",
-      "expected_sha": "13b61931d06f176c73dfe4a6f939b89aa79a484b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d8-thermal-ci-contract-cleanup-20261123-13b61931d06f"
+      "branch": "issue-774-d5-newonly-native-source-census",
+      "expected_sha": "6c4eef073038ad69a0710e7c8555b5e03b9ad6ba",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-774-d5-newonly-native-source-census-6c4eef073038"
     }
   ]
 }
