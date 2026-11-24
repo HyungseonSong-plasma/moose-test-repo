@@ -1,0 +1,260 @@
+{
+  "schema_version": "0.2",
+  "revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631",
+  "measurement_type": "exploratory_lexical_source_proxy",
+  "readme_used": false,
+  "target_name_used_for_role_inference": false,
+  "source_mode": "frozen_public_api_snapshot",
+  "results": [
+    {
+      "path": "physics_harness/code/graph",
+      "status": "MEASURED_LEXICAL_PROXY",
+      "role": "REPRESENT",
+      "evidence_level": "PUBLIC_API_DECLARED",
+      "clauses": [
+        {
+          "concept": "claim",
+          "source_refs": [
+            "physics_harness/code/graph/__init__.py@7568d3c83123a21a7faa210eeb7bddfd1d239a56"
+          ]
+        },
+        {
+          "concept": "evidence",
+          "source_refs": [
+            "physics_harness/code/graph/__init__.py@7568d3c83123a21a7faa210eeb7bddfd1d239a56"
+          ]
+        },
+        {
+          "concept": "node",
+          "source_refs": [
+            "physics_harness/code/graph/__init__.py@7568d3c83123a21a7faa210eeb7bddfd1d239a56"
+          ]
+        },
+        {
+          "concept": "edge",
+          "source_refs": [
+            "physics_harness/code/graph/__init__.py@7568d3c83123a21a7faa210eeb7bddfd1d239a56"
+          ]
+        }
+      ],
+      "reasons": [
+        "LEXICAL_API_SIGNATURE_NOT_BEHAVIORAL_PROOF"
+      ],
+      "metrics": {
+        "DEB": 2,
+        "DEB_denominator": 4,
+        "DEB_fraction": 0.5,
+        "MRC_extra_cues": 1,
+        "MRC_tier": 3,
+        "MRC_cues": [
+          "api:ClaimEvidenceRef"
+        ],
+        "unpredicted_baseline": [
+          "claim",
+          "evidence"
+        ],
+        "not_recoverable_in_scope": []
+      },
+      "target_id": "T1",
+      "source_revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631"
+    },
+    {
+      "path": "physics_harness/code/diagnostics",
+      "status": "MEASURED_LEXICAL_PROXY",
+      "role": "COLLECT",
+      "evidence_level": "PUBLIC_API_DECLARED",
+      "clauses": [
+        {
+          "concept": "scan",
+          "source_refs": [
+            "physics_harness/code/diagnostics/__init__.py@224d8d554dbcf2aefbcfcd32d134e994fdb1082c"
+          ]
+        },
+        {
+          "concept": "source",
+          "source_refs": [
+            "physics_harness/code/diagnostics/__init__.py@224d8d554dbcf2aefbcfcd32d134e994fdb1082c"
+          ]
+        },
+        {
+          "concept": "fact",
+          "source_refs": [
+            "physics_harness/code/diagnostics/__init__.py@224d8d554dbcf2aefbcfcd32d134e994fdb1082c"
+          ]
+        }
+      ],
+      "reasons": [
+        "LEXICAL_API_SIGNATURE_NOT_BEHAVIORAL_PROOF"
+      ],
+      "metrics": {
+        "DEB": 3,
+        "DEB_denominator": 3,
+        "DEB_fraction": 1.0,
+        "MRC_extra_cues": 3,
+        "MRC_tier": 3,
+        "MRC_cues": [
+          "api:CppSourceCollector",
+          "api:FactBatch",
+          "api:ScanBudget"
+        ],
+        "unpredicted_baseline": [
+          "scan",
+          "source",
+          "fact"
+        ],
+        "not_recoverable_in_scope": []
+      },
+      "target_id": "T2",
+      "source_revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631"
+    },
+    {
+      "path": "physics_harness/code/analysis",
+      "status": "MEASURED_LEXICAL_PROXY",
+      "role": "ANALYZE",
+      "evidence_level": "PUBLIC_API_DECLARED",
+      "clauses": [
+        {
+          "concept": "analyze",
+          "source_refs": [
+            "physics_harness/code/analysis/__init__.py@e682eb5e1618f21db1c6e234fcf2c94926af0396"
+          ]
+        },
+        {
+          "concept": "assess",
+          "source_refs": [
+            "physics_harness/code/analysis/__init__.py@e682eb5e1618f21db1c6e234fcf2c94926af0396"
+          ]
+        },
+        {
+          "concept": "impact",
+          "source_refs": [
+            "physics_harness/code/analysis/__init__.py@e682eb5e1618f21db1c6e234fcf2c94926af0396"
+          ]
+        }
+      ],
+      "reasons": [
+        "LEXICAL_API_SIGNATURE_NOT_BEHAVIORAL_PROOF"
+      ],
+      "metrics": {
+        "DEB": 1,
+        "DEB_denominator": 3,
+        "DEB_fraction": 0.3333333333333333,
+        "MRC_extra_cues": 1,
+        "MRC_tier": 2,
+        "MRC_cues": [
+          "module:impact"
+        ],
+        "unpredicted_baseline": [
+          "impact"
+        ],
+        "not_recoverable_in_scope": []
+      },
+      "target_id": "T3",
+      "source_revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631"
+    },
+    {
+      "path": "physics_harness/code/refactor",
+      "status": "MEASURED_LEXICAL_PROXY",
+      "role": "PLAN",
+      "evidence_level": "PUBLIC_API_DECLARED",
+      "clauses": [
+        {
+          "concept": "planning",
+          "source_refs": [
+            "physics_harness/code/refactor/__init__.py@4d71340b449e267d945e8b7b081f7dce729de675"
+          ]
+        },
+        {
+          "concept": "alternative",
+          "source_refs": [
+            "physics_harness/code/refactor/__init__.py@4d71340b449e267d945e8b7b081f7dce729de675"
+          ]
+        },
+        {
+          "concept": "review",
+          "source_refs": [
+            "physics_harness/code/refactor/__init__.py@4d71340b449e267d945e8b7b081f7dce729de675"
+          ]
+        }
+      ],
+      "reasons": [
+        "LEXICAL_API_SIGNATURE_NOT_BEHAVIORAL_PROOF"
+      ],
+      "metrics": {
+        "DEB": 3,
+        "DEB_denominator": 3,
+        "DEB_fraction": 1.0,
+        "MRC_extra_cues": 2,
+        "MRC_tier": 3,
+        "MRC_cues": [
+          "api:AlternativeReview",
+          "api:PlanValidation"
+        ],
+        "unpredicted_baseline": [
+          "planning",
+          "alternative",
+          "review"
+        ],
+        "not_recoverable_in_scope": []
+      },
+      "target_id": "T4",
+      "source_revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631"
+    },
+    {
+      "path": "physics_harness/code/verification",
+      "status": "MEASURED_LEXICAL_PROXY",
+      "role": "VERIFY",
+      "evidence_level": "PUBLIC_API_DECLARED",
+      "clauses": [
+        {
+          "concept": "verification",
+          "source_refs": [
+            "physics_harness/code/verification/__init__.py@4fb075320e1239c715eb4c84e25327de8ec7bcaf"
+          ]
+        },
+        {
+          "concept": "verify",
+          "source_refs": [
+            "physics_harness/code/verification/__init__.py@4fb075320e1239c715eb4c84e25327de8ec7bcaf"
+          ]
+        },
+        {
+          "concept": "dependency",
+          "source_refs": [
+            "physics_harness/code/verification/__init__.py@4fb075320e1239c715eb4c84e25327de8ec7bcaf"
+          ]
+        }
+      ],
+      "reasons": [
+        "LEXICAL_API_SIGNATURE_NOT_BEHAVIORAL_PROOF"
+      ],
+      "metrics": {
+        "DEB": 1,
+        "DEB_denominator": 3,
+        "DEB_fraction": 0.3333333333333333,
+        "MRC_extra_cues": 1,
+        "MRC_tier": 2,
+        "MRC_cues": [
+          "module:dependencies"
+        ],
+        "unpredicted_baseline": [
+          "dependency"
+        ],
+        "not_recoverable_in_scope": []
+      },
+      "target_id": "T5",
+      "source_revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631"
+    },
+    {
+      "path": "physics_harness/code/delete",
+      "status": "UNRESOLVED",
+      "role": null,
+      "reasons": [
+        "NO_MATCHING_ROLE"
+      ],
+      "metrics": null,
+      "target_id": "T6",
+      "source_revision": "4f873e71f8503943c9fce2dd30fcc96c28d6f631"
+    }
+  ]
+}

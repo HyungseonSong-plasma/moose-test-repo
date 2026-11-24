@@ -1,0 +1,473 @@
+{
+  "automatic_change_authorized": false,
+  "candidate_count": 10,
+  "cases": [
+    {
+      "assessment": {
+        "benchmark_target": "GRAPH_MODEL",
+        "decisions": [
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 1.7369655941662063,
+            "tier": 0,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_RELATION_INTERPRETATION",
+              "CONTROL_RELATION_SERIALIZATION",
+              "GRAPH_MODEL"
+            ]
+          },
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 1.7369655941662063,
+            "tier": 1,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_RELATION_INTERPRETATION",
+              "CONTROL_RELATION_SERIALIZATION",
+              "GRAPH_MODEL"
+            ]
+          },
+          {
+            "chosen": "GRAPH_MODEL",
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 3.321928094887362,
+            "tier": 2,
+            "top_score": 2,
+            "winning_candidates": [
+              "GRAPH_MODEL"
+            ]
+          },
+          {
+            "chosen": "GRAPH_MODEL",
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 3.321928094887362,
+            "tier": 3,
+            "top_score": 2,
+            "winning_candidates": [
+              "GRAPH_MODEL"
+            ]
+          }
+        ],
+        "final_correct": true,
+        "human_cu_calibrated": false,
+        "minimum_correct_tier": 2,
+        "minimum_cue_labels": [
+          "module:node"
+        ],
+        "minimum_extra_cues": 1,
+        "name_only_correct": false,
+        "rule_version": "contrastive-definition-v0.5",
+        "source_reference": "physics_harness/code/graph/edge.py:25@a3cf19f4d416cae10d604284d78cce995164466c",
+        "stable_correct_tier": 2,
+        "status": "DISTINCT"
+      },
+      "counterfactual_names": {
+        "blank_final_correct": true,
+        "blank_name_only_correct": false,
+        "original": "graph",
+        "source_role_invariant": true,
+        "substituted": "diagnostics",
+        "swapped_final_correct": true,
+        "swapped_name_only_correct": false
+      },
+      "source_facets": [
+        {
+          "concept": "record",
+          "evidence_ids": [
+            "physics_harness/code/graph/edge.py:25@a3cf19f4d416cae10d604284d78cce995164466c"
+          ]
+        },
+        {
+          "concept": "relation",
+          "evidence_ids": [
+            "physics_harness/code/graph/edge.py:25@a3cf19f4d416cae10d604284d78cce995164466c"
+          ]
+        }
+      ],
+      "source_role": "GRAPH_MODEL",
+      "status": "DISTINCT",
+      "target": "graph"
+    },
+    {
+      "assessment": {
+        "benchmark_target": "SOURCE_FACT_COLLECTION",
+        "decisions": [
+          {
+            "chosen": null,
+            "margin_to_next": null,
+            "surrogate_gain_bits": null,
+            "tier": 0,
+            "top_score": 0,
+            "winning_candidates": []
+          },
+          {
+            "chosen": null,
+            "margin_to_next": null,
+            "surrogate_gain_bits": null,
+            "tier": 1,
+            "top_score": 0,
+            "winning_candidates": []
+          },
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 2,
+            "top_score": 1,
+            "winning_candidates": [
+              "SOURCE_FACT_COLLECTION",
+              "SOURCE_VERIFICATION"
+            ]
+          },
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 3,
+            "top_score": 2,
+            "winning_candidates": [
+              "GRAPH_MODEL",
+              "SOURCE_FACT_COLLECTION"
+            ]
+          }
+        ],
+        "final_correct": false,
+        "human_cu_calibrated": false,
+        "minimum_correct_tier": null,
+        "minimum_cue_labels": [
+          "module:collector"
+        ],
+        "minimum_extra_cues": 1,
+        "name_only_correct": false,
+        "rule_version": "contrastive-definition-v0.5",
+        "source_reference": "physics_harness/code/diagnostics/providers/python_ast.py:68@8a4de081c3b3f722ca3d651e84b6e01dc14c7978",
+        "stable_correct_tier": null,
+        "status": "AMBIGUOUS"
+      },
+      "counterfactual_names": {
+        "blank_final_correct": false,
+        "blank_name_only_correct": false,
+        "original": "diagnostics",
+        "source_role_invariant": true,
+        "substituted": "graph",
+        "swapped_final_correct": false,
+        "swapped_name_only_correct": false
+      },
+      "source_facets": [
+        {
+          "concept": "parse",
+          "evidence_ids": [
+            "physics_harness/code/diagnostics/providers/python_ast.py:68@8a4de081c3b3f722ca3d651e84b6e01dc14c7978"
+          ]
+        },
+        {
+          "concept": "evidence",
+          "evidence_ids": [
+            "physics_harness/code/diagnostics/providers/python_ast.py:94@8a4de081c3b3f722ca3d651e84b6e01dc14c7978"
+          ]
+        }
+      ],
+      "source_role": "SOURCE_FACT_COLLECTION",
+      "status": "AMBIGUOUS",
+      "target": "diagnostics"
+    },
+    {
+      "assessment": {
+        "benchmark_target": "GRAPH_ANALYSIS",
+        "decisions": [
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 0,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_RELATION_INTERPRETATION",
+              "GRAPH_ANALYSIS"
+            ]
+          },
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 1,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_RELATION_INTERPRETATION",
+              "GRAPH_ANALYSIS"
+            ]
+          },
+          {
+            "chosen": "GRAPH_ANALYSIS",
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 3.321928094887362,
+            "tier": 2,
+            "top_score": 2,
+            "winning_candidates": [
+              "GRAPH_ANALYSIS"
+            ]
+          },
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 3,
+            "top_score": 2,
+            "winning_candidates": [
+              "CONTROL_RELATION_INTERPRETATION",
+              "GRAPH_ANALYSIS"
+            ]
+          }
+        ],
+        "final_correct": false,
+        "human_cu_calibrated": false,
+        "minimum_correct_tier": 2,
+        "minimum_cue_labels": [
+          "module:assessment"
+        ],
+        "minimum_extra_cues": 1,
+        "name_only_correct": false,
+        "rule_version": "contrastive-definition-v0.5",
+        "source_reference": "physics_harness/code/analysis/impact.py:53@6772dbef8a19813fbcb288e4195ea1631189e019",
+        "stable_correct_tier": null,
+        "status": "AMBIGUOUS"
+      },
+      "counterfactual_names": {
+        "blank_final_correct": false,
+        "blank_name_only_correct": false,
+        "original": "analysis",
+        "source_role_invariant": true,
+        "substituted": "graph",
+        "swapped_final_correct": false,
+        "swapped_name_only_correct": false
+      },
+      "source_facets": [
+        {
+          "concept": "interpret",
+          "evidence_ids": [
+            "physics_harness/code/analysis/impact.py:53@6772dbef8a19813fbcb288e4195ea1631189e019"
+          ]
+        },
+        {
+          "concept": "result",
+          "evidence_ids": [
+            "physics_harness/code/analysis/impact.py:69@6772dbef8a19813fbcb288e4195ea1631189e019"
+          ]
+        }
+      ],
+      "source_role": "GRAPH_ANALYSIS",
+      "status": "AMBIGUOUS",
+      "target": "analysis"
+    },
+    {
+      "assessment": {
+        "benchmark_target": "CHANGE_PLANNING",
+        "decisions": [
+          {
+            "chosen": "CONTROL_CHANGE_EXECUTION",
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 3.321928094887362,
+            "tier": 0,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_CHANGE_EXECUTION"
+            ]
+          },
+          {
+            "chosen": "CONTROL_CHANGE_EXECUTION",
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 3.321928094887362,
+            "tier": 1,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_CHANGE_EXECUTION"
+            ]
+          },
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 2,
+            "top_score": 1,
+            "winning_candidates": [
+              "CHANGE_PLANNING",
+              "CONTROL_CHANGE_EXECUTION"
+            ]
+          },
+          {
+            "chosen": "CHANGE_PLANNING",
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 3.321928094887362,
+            "tier": 3,
+            "top_score": 2,
+            "winning_candidates": [
+              "CHANGE_PLANNING"
+            ]
+          }
+        ],
+        "final_correct": true,
+        "human_cu_calibrated": false,
+        "minimum_correct_tier": 3,
+        "minimum_cue_labels": [
+          "api:0:AlternativeReview"
+        ],
+        "minimum_extra_cues": 1,
+        "name_only_correct": false,
+        "rule_version": "contrastive-definition-v0.5",
+        "source_reference": "physics_harness/code/refactor/alternatives.py:32@0c0986dee3e7cb6b3dd07d8a69636830b81bcea3",
+        "stable_correct_tier": 3,
+        "status": "DISTINCT"
+      },
+      "counterfactual_names": {
+        "blank_final_correct": true,
+        "blank_name_only_correct": false,
+        "original": "refactor",
+        "source_role_invariant": true,
+        "substituted": "graph",
+        "swapped_final_correct": true,
+        "swapped_name_only_correct": false
+      },
+      "source_facets": [
+        {
+          "concept": "option",
+          "evidence_ids": [
+            "physics_harness/code/refactor/alternatives.py:32@0c0986dee3e7cb6b3dd07d8a69636830b81bcea3"
+          ]
+        },
+        {
+          "concept": "validate",
+          "evidence_ids": [
+            "physics_harness/code/refactor/alternatives.py:48@0c0986dee3e7cb6b3dd07d8a69636830b81bcea3"
+          ]
+        }
+      ],
+      "source_role": "CHANGE_PLANNING",
+      "status": "DISTINCT",
+      "target": "refactor"
+    },
+    {
+      "assessment": {
+        "benchmark_target": "SOURCE_VERIFICATION",
+        "decisions": [
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 0,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_PROVENANCE_LOGGING",
+              "SOURCE_VERIFICATION"
+            ]
+          },
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 1,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_PROVENANCE_LOGGING",
+              "SOURCE_VERIFICATION"
+            ]
+          },
+          {
+            "chosen": null,
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 2.321928094887362,
+            "tier": 2,
+            "top_score": 1,
+            "winning_candidates": [
+              "CONTROL_PROVENANCE_LOGGING",
+              "SOURCE_VERIFICATION"
+            ]
+          },
+          {
+            "chosen": "SOURCE_VERIFICATION",
+            "margin_to_next": 1,
+            "surrogate_gain_bits": 3.321928094887362,
+            "tier": 3,
+            "top_score": 2,
+            "winning_candidates": [
+              "SOURCE_VERIFICATION"
+            ]
+          }
+        ],
+        "final_correct": true,
+        "human_cu_calibrated": false,
+        "minimum_correct_tier": 3,
+        "minimum_cue_labels": [
+          "api:1:VerificationReceipt"
+        ],
+        "minimum_extra_cues": 1,
+        "name_only_correct": false,
+        "rule_version": "contrastive-definition-v0.5",
+        "source_reference": "physics_harness/code/verification/consistency.py:51@42e8caa55d8289b6c2b1005d744702c11ba54770",
+        "stable_correct_tier": 3,
+        "status": "DISTINCT"
+      },
+      "counterfactual_names": {
+        "blank_final_correct": true,
+        "blank_name_only_correct": false,
+        "original": "verification",
+        "source_role_invariant": true,
+        "substituted": "graph",
+        "swapped_final_correct": true,
+        "swapped_name_only_correct": false
+      },
+      "source_facets": [
+        {
+          "concept": "provenance",
+          "evidence_ids": [
+            "physics_harness/code/verification/consistency.py:51@42e8caa55d8289b6c2b1005d744702c11ba54770"
+          ]
+        },
+        {
+          "concept": "receipt",
+          "evidence_ids": [
+            "physics_harness/code/verification/consistency.py:149@42e8caa55d8289b6c2b1005d744702c11ba54770"
+          ]
+        }
+      ],
+      "source_role": "SOURCE_VERIFICATION",
+      "status": "DISTINCT",
+      "target": "verification"
+    },
+    {
+      "assessment": null,
+      "source_role": null,
+      "status": "NO_INDEPENDENT_SOURCE_REFERENCE",
+      "target": "delete"
+    }
+  ],
+  "discriminator_version": "contrastive-definition-v0.5",
+  "full_source_reparsed": false,
+  "human_cu_calibrated": false,
+  "input_evidence_kind": "selected_witness_lines_from_v04_source_probe_not_full_ast_replay",
+  "metrics": {
+    "DDA_proxy_full_context_blank_name": 0.6,
+    "DDA_proxy_full_context_swapped_name": 0.6,
+    "DDA_source_reference_proxy_full_context": 0.6,
+    "DDA_source_reference_proxy_name_only": 0.0,
+    "abstain_final": 0,
+    "ambiguous_final": 2,
+    "distinct_final": 3,
+    "eligible_cases": 5,
+    "name_advantage_over_blank_count": 0,
+    "name_advantage_over_swap_count": 0,
+    "wrong_final": 0
+  },
+  "name_readme_used_in_definition_inference": false,
+  "ontology_version": "contrastive-concepts-v0.5-precalibration",
+  "reference_definitions": 5,
+  "reference_kind": "behavior_rules_source_proxy_NOT_independent_human_ground_truth",
+  "schema_version": "0.5",
+  "source_files": 37,
+  "source_provider": "GIT_TREE_EXACT_BLOB",
+  "source_python_scope": "tracked production python under bounded code folders",
+  "source_revision": "40d5af8819c1b27fd5b5903ec07910669a37748a",
+  "synthetic_contrast_definitions": 5
+}

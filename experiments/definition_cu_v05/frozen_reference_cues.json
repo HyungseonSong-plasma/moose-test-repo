@@ -1,0 +1,249 @@
+{
+  "schema_version": "0.5-curated-anchored-frozen-cues",
+  "source_revision": "40d5af8819c1b27fd5b5903ec07910669a37748a",
+  "source_provider": "GIT_TREE_EXACT_BLOB",
+  "reference_kind": "selected_witness_lines_from_v04_source_probe_not_full_ast_replay",
+  "readme_used": false,
+  "target_name_used_for_definition_inference": false,
+  "cases": [
+    {
+      "target": "graph",
+      "folder": "physics_harness/code/graph",
+      "definition": "GRAPH_MODEL",
+      "python_source_scope": "COMPLETE_TRACKED_PYTHON_ONLY",
+      "scanned_files": 8,
+      "source_evidence": [
+        {
+          "kind": "FROZEN_RECORD",
+          "source_ref": "physics_harness/code/graph/edge.py:25@a3cf19f4d416cae10d604284d78cce995164466c"
+        },
+        {
+          "kind": "RELATIONAL_FIELDS",
+          "source_ref": "physics_harness/code/graph/edge.py:25@a3cf19f4d416cae10d604284d78cce995164466c"
+        }
+      ],
+      "cues": {
+        "name": "graph",
+        "parent": "code",
+        "modules": [
+          "claim",
+          "context",
+          "edge",
+          "evidence",
+          "node",
+          "scope"
+        ],
+        "api": [
+          "Claim",
+          "ClaimEvidenceRef",
+          "Context",
+          "Edge",
+          "Evidence",
+          "GraphSnapshot",
+          "HierarchyView",
+          "Node",
+          "NodeOccurrence",
+          "RelationSelector",
+          "RelationSpec",
+          "Scope",
+          "SourceLocation",
+          "unfold_context"
+        ],
+        "init_blob": "7568d3c83123a21a7faa210eeb7bddfd1d239a56"
+      }
+    },
+    {
+      "target": "diagnostics",
+      "folder": "physics_harness/code/diagnostics",
+      "definition": "SOURCE_FACT_COLLECTION",
+      "python_source_scope": "COMPLETE_TRACKED_PYTHON_ONLY",
+      "scanned_files": 12,
+      "source_evidence": [
+        {
+          "kind": "SOURCE_PARSE",
+          "source_ref": "physics_harness/code/diagnostics/providers/python_ast.py:68@8a4de081c3b3f722ca3d651e84b6e01dc14c7978"
+        },
+        {
+          "kind": "GRAPH_FACT_CONSTRUCTION",
+          "source_ref": "physics_harness/code/diagnostics/providers/python_ast.py:94@8a4de081c3b3f722ca3d651e84b6e01dc14c7978"
+        }
+      ],
+      "cues": {
+        "name": "diagnostics",
+        "parent": "code",
+        "modules": [
+          "assemble",
+          "collector",
+          "receipt",
+          "request"
+        ],
+        "api": [
+          "ScanBudget",
+          "ScanRequest",
+          "CollectionResult",
+          "FactBatch",
+          "SourceInput",
+          "SourceRecord",
+          "UnresolvedTarget",
+          "file_node_id",
+          "graph_edge_id",
+          "run_scan",
+          "scan_scope_id",
+          "stable_id",
+          "DiagnosticResult",
+          "GraphAssembler",
+          "EvidenceReceipt",
+          "FileCoverage",
+          "GitSourceProvider",
+          "WorkflowCollector",
+          "PythonAstCollector",
+          "CppSourceCollector",
+          "MooseInputCollector",
+          "GitHubActionsRunProvider"
+        ],
+        "init_blob": "224d8d554dbcf2aefbcfcd32d134e994fdb1082c"
+      }
+    },
+    {
+      "target": "analysis",
+      "folder": "physics_harness/code/analysis",
+      "definition": "GRAPH_ANALYSIS",
+      "python_source_scope": "COMPLETE_TRACKED_PYTHON_ONLY",
+      "scanned_files": 10,
+      "source_evidence": [
+        {
+          "kind": "GRAPH_TRAVERSAL",
+          "source_ref": "physics_harness/code/analysis/impact.py:53@6772dbef8a19813fbcb288e4195ea1631189e019"
+        },
+        {
+          "kind": "ANALYSIS_RESULT",
+          "source_ref": "physics_harness/code/analysis/impact.py:69@6772dbef8a19813fbcb288e4195ea1631189e019"
+        }
+      ],
+      "cues": {
+        "name": "analysis",
+        "parent": "code",
+        "modules": [
+          "assessment",
+          "definition_inference",
+          "diff",
+          "findings",
+          "impact",
+          "parameter_contract",
+          "result",
+          "understandability_adapter",
+          "understandability_interpretation"
+        ],
+        "api": [
+          "ImpactResult",
+          "analyze_impact",
+          "TargetCoverage",
+          "analyze_target_coverage",
+          "propose_finding",
+          "Assessment",
+          "assess_finding",
+          "ParameterBlockAssessment",
+          "ParameterContractAssessment",
+          "assess_input_parameter_contract",
+          "GraphDiff",
+          "compare_graphs",
+          "assess_code_understandability",
+          "summarize_understandability",
+          "interpret_understandability_indicators"
+        ],
+        "init_blob": "e682eb5e1618f21db1c6e234fcf2c94926af0396"
+      }
+    },
+    {
+      "target": "refactor",
+      "folder": "physics_harness/code/refactor",
+      "definition": "CHANGE_PLANNING",
+      "python_source_scope": "COMPLETE_TRACKED_PYTHON_ONLY",
+      "scanned_files": 3,
+      "source_evidence": [
+        {
+          "kind": "OPTIONS_ITERATION",
+          "source_ref": "physics_harness/code/refactor/alternatives.py:32@0c0986dee3e7cb6b3dd07d8a69636830b81bcea3"
+        },
+        {
+          "kind": "OPTION_VALIDATION",
+          "source_ref": "physics_harness/code/refactor/alternatives.py:48@0c0986dee3e7cb6b3dd07d8a69636830b81bcea3"
+        }
+      ],
+      "cues": {
+        "name": "refactor",
+        "parent": "code",
+        "modules": [
+          "alternatives",
+          "planning"
+        ],
+        "api": [
+          "AlternativeReview",
+          "ConstraintCheck",
+          "HardConstraint",
+          "PlanValidation",
+          "PlanningAlternative",
+          "PlanningAssessment",
+          "PlanningContext",
+          "build_planning_context",
+          "review_alternatives",
+          "validate_alternative"
+        ],
+        "init_blob": "4d71340b449e267d945e8b7b081f7dce729de675"
+      }
+    },
+    {
+      "target": "verification",
+      "folder": "physics_harness/code/verification",
+      "definition": "SOURCE_VERIFICATION",
+      "python_source_scope": "COMPLETE_TRACKED_PYTHON_ONLY",
+      "scanned_files": 3,
+      "source_evidence": [
+        {
+          "kind": "PROVENANCE_COMPARISON",
+          "source_ref": "physics_harness/code/verification/consistency.py:51@42e8caa55d8289b6c2b1005d744702c11ba54770"
+        },
+        {
+          "kind": "VERIFICATION_RESULT",
+          "source_ref": "physics_harness/code/verification/consistency.py:149@42e8caa55d8289b6c2b1005d744702c11ba54770"
+        }
+      ],
+      "cues": {
+        "name": "verification",
+        "parent": "code",
+        "modules": [
+          "consistency",
+          "dependencies"
+        ],
+        "api": [
+          "ChangeVerificationPlan",
+          "VerificationReceipt",
+          "plan_change_verification",
+          "verify_generated_artifact",
+          "DependencyContract",
+          "DependencyFinding",
+          "DependencyRule",
+          "DependencyVerification",
+          "verify_dependencies",
+          "verify_dependency_repository"
+        ],
+        "init_blob": "4fb075320e1239c715eb4c84e25327de8ec7bcaf"
+      }
+    },
+    {
+      "target": "delete",
+      "folder": "physics_harness/code/delete",
+      "definition": null,
+      "python_source_scope": "COMPLETE_TRACKED_PYTHON_ONLY",
+      "scanned_files": 1,
+      "source_evidence": [],
+      "cues": {
+        "name": "delete",
+        "parent": "code",
+        "modules": [],
+        "api": [],
+        "init_blob": "2bb6122ec304ceb19f524e302d4e31f52a6a9a58"
+      }
+    }
+  ]
+}

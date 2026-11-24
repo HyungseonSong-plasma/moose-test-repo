@@ -11,3 +11,8 @@ New code should import `libs.code_lucidity`. These shims protect the
 previously tracked Python module entry points, but are **not** proof that
 all external/dynamic consumers, serialized artifacts, or file-path users
 have been inventoried. No automated rename/extraction is approved.
+
+The experimental `definition_metrics` and `definition_discrimination`
+submodules are also legacy import bridges to `libs.code_lucidity`. These
+bridges preserve public class/function identity, not historical source paths
+or external compatibility for all consumers.

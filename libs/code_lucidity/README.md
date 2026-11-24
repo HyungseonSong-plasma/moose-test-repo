@@ -52,3 +52,15 @@ Use `libs.code_lucidity` and the canonical Analysis entry points.
 The persisted `hu_density_v1` measurement-method identifier remains unchanged
 only as **historical data identity** for comparing earlier measurements. Its
 spelling does not imply human evaluation is required.
+
+## Exploratory Definition CU (Issue #767, Draft)
+
+`definition_metrics.py` and `definition_discrimination.py` provide source-linked,
+lexical Definition Explanation Burden (DEB), Minimum Required Context (MRC)
+and contrastive definition controls. They are **uncalibrated research proxies**,
+not human comprehension evidence, naming acceptance criteria, or authority to
+rename, compress, remove, or refactor production code. Frozen historical
+measurements retain their original exact-source provenance.
+
+Old imports under `libs.code_understandability.definition_*` remain
+identity-preserving compatibility re-exports; new code should use this package.
