@@ -19,6 +19,20 @@
 []
 
 [FunctorMaterials]
+  [thermal_wall_outward_energy_flux]
+    type = ADParsedFunctorMaterial
+    property_name = thermal_wall_outward_energy_flux
+    functor_names = 'energy_thermal mean_en zero_flux'
+    functor_symbols = 'w eps gs'
+    expression = '(5.0/6.0)*sqrt(16.0*1.6021766339999999e-19*eps/(3.0*3.141592653589793238462643383279502884*9.1093837138999998e-31))*w-4*gs'
+  []
+  [see_wall_outward_energy_flux]
+    type = ADParsedFunctorMaterial
+    property_name = see_wall_outward_energy_flux
+    functor_names = 'energy_see mean_en finite_see'
+    functor_symbols = 'w eps gs'
+    expression = '(5.0/6.0)*sqrt(16.0*1.6021766339999999e-19*eps/(3.0*3.141592653589793238462643383279502884*9.1093837138999998e-31))*w-4*gs'
+  []
   [wall_contract]
     type = ADGenericFunctorMaterial
     prop_names = 'mean_en zero_flux finite_see'
@@ -49,22 +63,18 @@
 
 [FVBCs]
   [thermal_wall]
-    type = PhysicsFVElectronEnergyWallFluxBC
+    type = FVFunctorNeumannBC
     variable = energy_thermal
     boundary = right
-    electron_energy_density = energy_thermal
-    mean_electron_energy = mean_en
-    see_number_flux = zero_flux
-    state_form = physical_eV
+    functor = thermal_wall_outward_energy_flux
+    factor = -1
   []
   [see_wall]
-    type = PhysicsFVElectronEnergyWallFluxBC
+    type = FVFunctorNeumannBC
     variable = energy_see
     boundary = right
-    electron_energy_density = energy_see
-    mean_electron_energy = mean_en
-    see_number_flux = finite_see
-    state_form = physical_eV
+    functor = see_wall_outward_energy_flux
+    factor = -1
   []
 []
 
