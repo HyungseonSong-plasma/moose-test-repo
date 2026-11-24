@@ -16,7 +16,6 @@
   "representative_identity": {
     "geometry": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
     "heavy_state_reference": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
-    "electron_energy_reference": "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i",
     "electron_transport_table": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
     "required_heavy_temperature_functor": "T_g",
     "required_density_functor": "rho_mat",
