@@ -578,7 +578,8 @@ changes.
   repeated-failure escalation requires it. Earlier review is required only
   if a concrete unresolved gate prevents safe continuation.
 - The existing [repeated-failure review gate](repeated_failure_review_gate.md)
-  remains mandatory when its trigger is met, regardless of level.
+  remains mandatory when its trigger is met, regardless of level, subject
+  to the Controller exception below.
 - An independently necessary scientific discriminator, reviewer-blinded
   evaluation, security control, branch protection or specifically
   owner-approved issue acceptance obligation remains binding. This policy
@@ -593,13 +594,37 @@ changes.
 ### Acceptance and controller behavior
 
 Record the risk level, review disposition (NOT_REQUIRED, OPTIONAL,
-REQUIRED_PENDING, or REQUIRED_SATISFIED), rationale, exact candidate evidence
+REQUIRED_PENDING, REQUIRED_SATISFIED, or CONTROLLER_EXEMPT), rationale, exact candidate evidence
 and any actual blocker. A completed review must identify its independent
 reviewer and reviewed scope/revision, with material findings resolved or
 explicitly dispositioned by the owning authority. A reviewer request or CI
 PASS alone is not review evidence.
 
-Apply the same local policy to interactive and scheduled-controller work.
+### Controller exception (owner-approved)
+
+For work explicitly delegated to a scheduled or durable Samuel Controller,
+independent engineering/code review is NOT_REQUIRED at every risk level
+(L1–L5), including final integration. This exception supersedes generic
+issue/PR review requirements and the independent-review step of the
+repeated-failure procedure. Do not request a review, wait for an external
+reviewer, or seek repeated permission to omit review. Record
+`review_disposition = CONTROLLER_EXEMPT` with the delegation and exact scope;
+never record an unperformed review as satisfied.
+
+After repeated failures, preserve exact-head logs/artifacts, stop blind
+retries, classify and diagnose the failure, and disposition material findings
+using existing Harness evidence, targeted regressions and causal analysis.
+Resume only when the actual blocker has been resolved and a bounded
+discriminator is ready. Escalate concrete unresolved technical or authority
+questions to the owner, not the absence of an independent reviewer.
+The Controller may continue unrelated unlocked work.
+
+This exception removes process review, not independently necessary scientific
+evidence (including blinded evaluation when it is the experiment itself),
+security controls, branch protection, or actual acceptance criteria. It is
+not a grant of extra execution or merge authority. Interactive work retains
+the risk-based policy above.
+
 An optional or not-required review must not become a controller HOLD or
 trigger a repeated request for permission to omit it. Do not confuse review
 disposition with mutation authorization: accepted work scope, required
