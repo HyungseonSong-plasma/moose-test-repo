@@ -63,6 +63,7 @@ def pinned_historical_source_root(profile):
         "FVElectronResponseBandedCorrection.C",
         "PhysicsFVElectronEnergyJouleHeating.C",
         "PhysicsFVElectronReactionSource.C",
+        "PhysicsFVElectrostaticDrift.C",
     }
     archive_root = ROOT / "docs/development/archive/issue774_retired_factories"
     with tempfile.TemporaryDirectory() as directory:

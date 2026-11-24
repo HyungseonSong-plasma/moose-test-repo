@@ -128,7 +128,7 @@ def test_independent_scalar_check_rejects_no_smoothing_and_nonconservation() -> 
     assert independent_scalar_checks(bad_energy)["candidate_scalar_gates_met"] is False
     assert independent_scalar_checks({})["status"] == "INCONCLUSIVE_DATA_MISSING"
 
-def test_research_type_projection_is_exact_reversible_and_source_registered() -> None:
+def test_research_type_projection_is_exact_reversible_and_source_evidenced() -> None:
     """Registration-name bridge is an *audit*, never a science-equivalence verdict."""
     import re
 
@@ -148,6 +148,11 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
     assert len(HISTORICAL_TO_CURRENT_TYPE) == 7
     assert all(row["instances"] > 0 for row in report["mappings"].values())
 
+    retired_factory_blobs = {
+        "PhysicsFVHeavyMassElectromigrationCorrection": "79bf6045942369bb483ab4e7480a08a5d1040d65",
+        "PhysicsFVElectrostaticDrift": "8d61a535b4e0fbf0a008fabb98d45e723affe999",
+    }
+    assert set(retired_factory_blobs) <= set(HISTORICAL_TO_CURRENT_TYPE.values())
     for historical, current in HISTORICAL_TO_CURRENT_TYPE.items():
         assert historical in original
         assert current in projected
@@ -159,22 +164,22 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
         retired_lookup = current == "PhysicsElectronTransportLookupMaterial"
         canonical = "DDTransportMaterial" if retired_lookup else current
         candidate = ROOT / "physics_app" / "src" / dirname / f"{canonical}.C"
-        if current == "PhysicsFVHeavyMassElectromigrationCorrection":
-            # The historical seven-token projection stays reversible; the
-            # retired Heavy Mass factory is evidenced only by its exact
-            # pre-cut archive, not by the current binary or an alias.
-            assert not candidate.exists(), "retired Heavy Mass source reintroduced"
+        if current in retired_factory_blobs:
+            # Preserve the reversible projection, not current registration.
+            # Retired owners are evidenced by exact pre-cut archive bytes.
+            assert not candidate.exists(), f"retired source reintroduced: {current}"
+            assert not (ROOT / "physics_app/include" / dirname / f"{current}.h").exists()
             archive = (ROOT / "docs/development/archive/issue774_retired_factories"
                        / f"{current}.C.txt")
             raw = archive.read_bytes()
             blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
-            assert blob == "79bf6045942369bb483ab4e7480a08a5d1040d65"
+            assert blob == retired_factory_blobs[current]
             # No live implementation or alias may reuse the retired name.
             for live in (ROOT / "physics_app" / "src").rglob("*.C"):
                 assert not re.search(
                     rf'\bregister(?:AD)?MooseObject(?:Aliased)?\s*\([^;]*\b{re.escape(current)}\b[^;]*\)\s*;',
                     live.read_text(encoding="utf-8"),
-                ), f"retired Heavy Mass registration in {live}"
+                ), f"retired {current} registration in {live}"
             source = raw.decode("utf-8")
         else:
             assert candidate.is_file(), f"missing current PhysicsApp source: {candidate}"

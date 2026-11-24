@@ -52,6 +52,8 @@ def test_legacy_fv_poisson_source_is_wired_independently_of_old_assembler():
     assert "type = QPXPlasmaChargeDensityMaterial" in legacy
     assert "type = FVCoupledForce" in legacy
     assert "v = poisson_charge_source" in legacy
-    source = (APP / "src/fvkernels/PhysicsFVElectrostaticDrift.C").read_text()
+    assert not (APP / "src/fvkernels/PhysicsFVElectrostaticDrift.C").exists()
+    assert not (APP / "include/fvkernels/PhysicsFVElectrostaticDrift.h").exists()
+    source = (ROOT / "docs/development/archive/issue774_retired_factories/PhysicsFVElectrostaticDrift.C.txt").read_text()
     assert "-_potential.gradient(centered_face, state)" in source
     assert "electric_field_magnitude" not in source
