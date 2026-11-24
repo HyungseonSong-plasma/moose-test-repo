@@ -1,0 +1,117 @@
+name: Harness Survey 02 isolated evidence
+on:
+  push:
+    branches: [issue-758-harness-self-analysis-survey-2]
+    paths: ['.github/workflows/harness-survey-02-once.yml']
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 2bf977e17fa2e4eb84b24bce51a717bc76be60f7
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r physics_harness/code/requirements.txt
+      - name: Exact-source Harness survey
+        run: |
+          python - <<'PY'
+          import json, os, subprocess, tempfile, time, statistics, sys
+          from pathlib import Path
+          from collections import Counter
+          from physics_harness.code.diagnostics import GitSourceProvider, ScanRequest, ScanBudget, run_scan
+          from physics_harness.code.analysis.adapters.lucidity_adapter import assess_code_understandability, summarize_understandability
+          from physics_harness.code.analysis.adapters.lucidity_interpretation import interpret_understandability_indicators
+          from physics_harness.code.analysis.usage_matrix import UsageRelation, build_usage_matrix
+          from physics_harness.code.refactor import PlanningAlternative, build_planning_context, review_alternatives
+          from physics_harness.code.refactor.naming import NamingCase, NamingEvidence, NamingOption
+          from physics_harness.code.verification.naming_boundary import ResponsibilityBinding, verify_naming_boundary
+          from physics_harness.code.verification.naming_behavior import _ast_symbols
+          from physics_harness.code.verification.naming_semantic_review import build_blinded_semantic_packet
+          def git(root,*args):
+              return subprocess.check_output(["git","-C",str(root),*args],text=True).strip()
+          root=Path.cwd()
+          rev=git(root,"rev-parse","HEAD")
+          assert rev=="2bf977e17fa2e4eb84b24bce51a717bc76be60f7"
+          repo="HyungseonSong-plasma/moose-test-repo"
+          start=time.perf_counter()
+          scan=run_scan(ScanRequest(repository=repo,revision=rev,includes=("physics_harness/code/*.py","libs/*.py"),collectors=("python_ast",),budget=ScanBudget(max_files=500,max_bytes=20000000,max_seconds=180)),GitSourceProvider(root))
+          graph=scan.graph
+          result={"revision":rev,"python":sys.version,"scope_id":graph.scope.id,"scan_seconds":time.perf_counter()-start,"coverage":dict(Counter(f.status for f in scan.receipt.files if f.status!="EXCLUDED")),"scan_status":scan.status,"verification_status":scan.verification.status,"verification_failures":list(scan.verification.failures),"nodes":len(graph.nodes),"edges":len(graph.edges),"evidence":len(graph.evidence),"unresolved":len(scan.receipt.unresolved)}
+          print("SURVEY_SCAN="+json.dumps(result,sort_keys=True),flush=True)
+          specs=[
+          ("R01","diagnostics/providers/git.py","inventory","Provider-owned revision inventory"),
+          ("R02","verification/naming_gates.py","evaluate_naming_safety_gates","Reuse exact source observations, not judgments"),
+          ("R03","analysis/usage_matrix.py","build_usage_matrix","Reuse query index in a batch"),
+          ("R04","verification/naming_boundary.py","_symbol_inventory","Disambiguate declarations or fail closed"),
+          ("R05","diagnostics/assemble.py","assemble","Reduce package initialization coupling"),
+          ("R06","verification/naming_consumers.py","_scan_revision","Simplify deep conditionals"),
+          ("R11","diagnostics/collector.py","run_scan","Preserve coordinator boundary")]
+          rows=[]
+          for rid,suffix,name,proposal in specs:
+              target=next((n for n in graph.nodes if n.location and n.location.path.endswith("/"+suffix) and n.name==name),None)
+              if target is None:
+                  rows.append({"id":rid,"error":"TARGET_NOT_FOUND"}); continue
+              a=assess_code_understandability(scan,target.id)
+              summary=summarize_understandability(a)
+              interpretation=interpret_understandability_indicators(a)
+              context=build_planning_context(scan,target.id,objectives=("Clarity","Evidence integrity"),assessments=(summary,interpretation))
+              keep=PlanningAlternative("keep","KEEP","Preserve current behavior")
+              change=PlanningAlternative("change","CHANGE",proposal,affected_paths=(target.location.path,),evidence_ids=target.evidence_ids,expected_benefits=("Potential responsibility clarity",),risks=("Existing evidence or API behavior could change",),required_checks=("EXACT_BEFORE_AFTER_RECEIPT_PARITY",))
+              review=review_alternatives(context,(keep,change))
+              row={"id":rid,"path":target.location.path,"symbol":target.qualified_name,"line":target.location.line_start if hasattr(target.location,"line_start") else str(target.location),"evidence_ids":list(target.evidence_ids),"metrics":dict((m.name,m.value) for m in a.structural_metrics),"indicators":dict((m.name,m.value) for m in a.indicators),"source_status":context.source_status,"provenance":context.provenance_status,"unknown_count":len(context.unknowns),"review":[{"disposition":x.disposition,"required_checks":list(x.required_checks)} for x in review.results],"recommended":review.recommended_id}
+              rows.append(row)
+              print("SURVEY_PLAN="+json.dumps(row,sort_keys=True),flush=True)
+          result["planning"]=rows
+          # Observed operation counts/timing on original API; no proposed implementation.
+          targets=tuple(n.id for n in graph.nodes if n.kind=="python_function" and n.location and "/tests/" not in n.location.path)[:50]
+          times=[]
+          for count in (1,10,50):
+              samples=[]
+              for _ in range(3):
+                  t=time.perf_counter()
+                  matrix=build_usage_matrix(graph,scan.receipt,targets[:count],(UsageRelation("CALLS_CANDIDATE","call-site","FORWARD"),),required_paths=("physics_harness/code/analysis/usage_matrix.py",),unverified_surfaces=("external consumers","runtime"),ignored_relations=("DEFINES",))
+                  samples.append(time.perf_counter()-t)
+              row={"targets":count,"samples_s":samples,"median_s":statistics.median(samples),"full_edge_pass_items_lower_bound":len(graph.edges)*(count+1),"rows":len(matrix.rows)}
+              times.append(row)
+              print("SURVEY_TIMING="+json.dumps(row),flush=True)
+          result["timings"]=times
+          # Full public Naming boundary -> blinded packet counterexample; unique declaration control.
+          cases=[]
+          for duplicate in (False,True):
+              with tempfile.TemporaryDirectory() as td:
+                  p=Path(td); git(p,"init","-q"); git(p,"config","user.name","Survey Fixture"); git(p,"config","user.email","survey@example.invalid")
+                  src="def transform(x):\n    return x + 1\n"
+                  if duplicate: src+="\ndef transform(x):\n    return x - 1\n"
+                  (p/"sample.py").write_text(src)
+                  git(p,"add","."); git(p,"commit","-qm","fixture")
+                  sha=git(p,"rev-parse","HEAD"); blob=git(p,"rev-parse","HEAD:sample.py")
+                  line=4 if duplicate else 1
+                  anchor=f"sample.py:{line}@{blob}"
+                  ev=tuple(NamingEvidence(i,k,i,(anchor,),sha) for i,k in (("r","RESPONSIBILITY"),("b","BOUNDARY"),("c","CONTEXT")))
+                  case=NamingCase("fixture/repo",sha,"FILE","sample","sample","sample.py",("r",),ev,"RESOLVED","COHERENT","VALID")
+                  bindings=(ResponsibilityBinding("r",("sample.py::function:transform",)),)
+                  provider=GitSourceProvider(p)
+                  boundary=verify_naming_boundary(case,NamingOption("keep","KEEP","Keep observed responsibility"),provider,bindings)
+                  packet=build_blinded_semantic_packet(case,provider,bindings)
+                  symbols,_=_ast_symbols(src.encode(),"sample.py")
+                  evidence=[{"source_ref":x.source_ref,"code":x.code if hasattr(x,"code") else str(x)} for x in packet.excerpts]
+                  row={"duplicate":duplicate,"boundary_status":boundary.status,"boundary_unresolved":list(boundary.unresolved),"observed":[{"key":s.key,"ref":s.source_ref} for s in boundary.observed_symbols],"packet_unresolved":list(packet.unresolved),"excerpts":evidence,"behavior_selected_line":symbols["sample.py::function:transform"].lineno}
+                  cases.append(row)
+                  print("SURVEY_IDENTITY="+json.dumps(row),flush=True)
+          result["identity"]=cases
+          Path(os.environ["RUNNER_TEMP"],"survey-02.json").write_text(json.dumps(result,indent=2,sort_keys=True))
+          
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: harness-survey-02-evidence
+          path: ${{ runner.temp }}/survey-02.json
+          if-no-files-found: warn
+          retention-days: 30
