@@ -189,7 +189,8 @@ def verify_naming_candidate(
         expected_path = candidate_owner_path if p.owner_id == "original" else unit_by_id[p.owner_id].destination_path
         if expected_path is None or not p.after_symbol.startswith(expected_path + "::"):
             blocked.add("PLACEMENT_ON_WRONG_OWNER_PATH:" + p.after_symbol)
-        if p.before_symbol in before_ambiguities or p.after_symbol in after_ambiguities:
+        if (p.before_symbol in before_ambiguities or p.after_symbol in after_ambiguities
+                or (p.owner_id != "original" and p.after_symbol in before_ambiguities)):
             continue  # never validate a placement using an arbitrary declaration
         old = key_set.get(p.before_symbol)
         current = after_symbols.get(p.after_symbol)

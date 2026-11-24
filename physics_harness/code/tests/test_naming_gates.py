@@ -101,7 +101,6 @@ from dataclasses import replace
 import pytest
 from physics_harness.code.tests.test_naming_boundary import NEW, DEST, git, digest, keep
 from physics_harness.code.verification.naming_boundary import verify_naming_boundary
-from physics_harness.code.verification.naming_candidate import verify_naming_candidate
 from physics_harness.code.verification.naming_semantic_review import build_blinded_semantic_packet
 
 
@@ -183,3 +182,79 @@ def test_p1_competing_conditional_declaration_holds(history):
     assert boundary.status == "HOLD"
     assert any("AMBIGUOUS" in x for x in boundary.unresolved)
     assert "python="+PATH+"::function:python_decode" not in boundary.verified_bindings
+
+
+def test_p1_new_destination_duplicate_is_not_validated(history):
+    root, before, base = history
+    third_commit(history)
+    new_path = "diagnostics/providers/new.py"
+    (root / new_path).write_text("def python_decode(source): return source\ndef python_decode(source): return None\n")
+    git(root, "add", ".")
+    git(root, "commit", "-qm", "new destination collision")
+    after = git(root, "rev-parse", "HEAD")
+    mapped = placements()[:-1] + (replace(placements()[-1], after_symbol=new_path+"::function:python_decode"),)
+    result = evaluate_naming_safety_gates(
+        case(before, base), extract_option(dest=new_path, existing=False),
+        GitSourceProvider(root), bindings(), after, PATH, mapped)
+    assert result.structural.status == "HOLD"
+    assert "AMBIGUOUS_DECLARATION:"+new_path+"::function:python_decode" in result.structural.unresolved
+    assert mapped[-1] not in result.structural.validated_placements
+    assert not result.behavior.comparisons
+
+
+def test_p1_duplicate_candidate_class_cannot_validate_owner(history):
+    root, before, base = history
+    third_commit(history)
+    p = root / PATH
+    p.write_text(p.read_text() + "\nclass Collector:\n    def other(self): return None\n")
+    git(root, "add", ".")
+    git(root, "commit", "-qm", "candidate owner collision")
+    after = git(root, "rev-parse", "HEAD")
+    result = evaluate_naming_safety_gates(case(before, base), extract_option(),
+        GitSourceProvider(root), bindings(), after, PATH, placements())
+    assert result.structural.status == "HOLD"
+    assert placements()[0] not in result.structural.validated_placements
+    assert not result.behavior.comparisons
+
+
+@pytest.mark.parametrize("extra,ambiguous_key", [
+    ("\nfrom typing import overload\n@overload\ndef python_decode(source): ...\n",
+     "::function:python_decode"),
+    ("\nclass Holder:\n    @property\n    def value(self): return 1\n"
+     "    @value.setter\n    def value(self, v): pass\n", "::method:Holder.value"),
+])
+def test_p1_valid_python_repeated_keys_are_unresolved_not_invalid(history, extra, ambiguous_key):
+    history, subject = _duplicate_baseline(history, extra)
+    provider = GitSourceProvider(history[0])
+    boundary = verify_naming_boundary(subject, keep(), provider, bindings())
+    packet = build_blinded_semantic_packet(subject, provider, bindings())
+    assert boundary.status == "HOLD"
+    assert not boundary.blockers
+    assert "AMBIGUOUS_DECLARATION:"+PATH+ambiguous_key in boundary.unresolved
+    assert not any(e.symbol == PATH+ambiguous_key for e in packet.excerpts)
+
+
+def test_p1_unique_control_excerpt_matches_exact_source_anchor(history):
+    root, before, base = history
+    packet = build_blinded_semantic_packet(case(before, base), GitSourceProvider(root), bindings())
+    excerpt = next(e for e in packet.excerpts if e.symbol == PATH+"::function:python_decode")
+    assert excerpt.source_ref == f"{PATH}:4@{digest(NEW)}"
+    assert excerpt.code == "def python_decode(source):\n    return source"
+    assert not packet.unresolved
+
+
+def test_p1_mismatched_observed_anchor_cannot_be_a_blinded_excerpt(history, monkeypatch):
+    # Inject a corrupted intermediate receipt, keeping real Git source immutable.
+    from physics_harness.code.verification import naming_semantic_review as semantic
+    root, before, base = history
+    provider = GitSourceProvider(root)
+    subject = case(before, base)
+    gate = verify_naming_boundary(subject, keep(), provider, bindings())
+    forged = tuple(replace(s, source_ref=f"{PATH}:7@{digest(NEW)}")
+                   if s.key == PATH+"::function:python_decode" else s
+                   for s in gate.observed_symbols)
+    monkeypatch.setattr(semantic, "verify_naming_boundary", lambda *a, **kw:
+                        replace(gate, observed_symbols=forged))
+    packet = build_blinded_semantic_packet(subject, provider, bindings())
+    assert "BLINDED_DECLARATION_ANCHOR_MISMATCH:"+PATH+"::function:python_decode" in packet.unresolved
+    assert not any(e.symbol == PATH+"::function:python_decode" for e in packet.excerpts)

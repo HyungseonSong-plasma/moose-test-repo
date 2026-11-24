@@ -92,22 +92,24 @@ def _tree_paths(provider: GitSourceProvider, revision: str) -> frozenset[str]:
     return frozenset(paths)
 
 
-def _declaration_nodes(tree: ast.Module, path: str) -> tuple[dict[str, ast.AST], set[str]]:
-    """Resolve only unique supported declaration keys; never select a collision.
+def _declaration_inventory(tree: ast.Module, path: str) -> tuple[list[tuple[str, ast.AST]], set[str]]:
+    """Keep direct declarations and identify keys that cannot bind uniquely.
 
     Conditional declarations are not supported bindings. Record their keys as
     unresolved, including when they compete with an otherwise direct declaration.
     Nested local functions are not module/class owner declarations.
     """
-    nodes: dict[str, ast.AST] = {}
+    declarations: list[tuple[str, ast.AST]] = []
+    seen: set[str] = set()
     ambiguous: set[str] = set()
     functions = (ast.FunctionDef, ast.AsyncFunctionDef)
 
     def add(key: str, node: ast.AST, direct: bool) -> None:
-        if not direct or key in nodes:
+        if not direct or key in seen:
             ambiguous.add(key)
-        if direct and key not in nodes:
-            nodes[key] = node
+        if direct:
+            seen.add(key)
+            declarations.append((key, node))
 
     def visit(node: ast.AST, owner: str | None = None, direct: bool = False) -> None:
         if isinstance(node, functions):
@@ -128,12 +130,17 @@ def _declaration_nodes(tree: ast.Module, path: str) -> tuple[dict[str, ast.AST],
 
     for stmt in tree.body:
         visit(stmt, direct=True)
-    for key in tuple(nodes):
+    for key in seen:
         if "::method:" in key:
             parent = key.split("::method:", 1)[1].split(".", 1)[0]
             if path + "::class:" + parent in ambiguous:
                 ambiguous.add(key)
-    return {key: node for key, node in nodes.items() if key not in ambiguous}, ambiguous
+    return declarations, ambiguous
+
+
+def _declaration_nodes(tree: ast.Module, path: str) -> tuple[dict[str, ast.AST], set[str]]:
+    declarations, ambiguous = _declaration_inventory(tree, path)
+    return {key: node for key, node in declarations if key not in ambiguous}, ambiguous
 
 
 def _key_in_scope(key: str, kind: str, path: str, name: str) -> bool:
@@ -157,8 +164,8 @@ def _symbol_inventory(provider: GitSourceProvider, revision: str,
         source = provider.read_at_revision(revision, path)
         body = ast.parse(source.content.decode("utf-8", "strict"), filename=path)
         sha = source.record.blob_sha
+        declarations, collisions = _declaration_inventory(body, path)
         if ambiguous is not None:
-            _, collisions = _declaration_nodes(body, path)
             ambiguous.update(collisions)
         def declare(key: str, node: ast.AST, *, args: ast.AST | None = None):
             # Method/function signatures are compared structurally, not executed.
@@ -172,17 +179,11 @@ def _symbol_inventory(provider: GitSourceProvider, revision: str,
                                   signature, ast.dump(node.returns, include_attributes=False)
                                   if node.returns is not None else None,
                                   tuple(ast.dump(d, include_attributes=False) for d in node.decorator_list)))
-            observed.append(OwnedSymbol(path + "::" + key,
+            observed.append(OwnedSymbol(key,
                          f"{path}:{node.lineno}@{sha}", signature))
-        for stmt in body.body:
-            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                declare("function:" + stmt.name, stmt, args=stmt.args)
-            elif isinstance(stmt, ast.ClassDef):
-                declare("class:" + stmt.name, stmt)
-                for item in stmt.body:
-                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                        declare("method:" + stmt.name + "." + item.name,
-                                item, args=item.args)
+        for key, node in declarations:
+            declare(key, node, args=node.args if isinstance(
+                node, (ast.FunctionDef, ast.AsyncFunctionDef)) else None)
     return tuple(sorted(observed, key=lambda x: x.key))
 
 
