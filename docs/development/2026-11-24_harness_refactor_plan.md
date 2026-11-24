@@ -1,8 +1,10 @@
 # Harness Code / Libs — Refactor 계획안
 
-**Status:** RESEARCH / proposal v0.3 — Accuracy, Responsibility & Simplicity. Not implementation, architecture acceptance or merge authorization.
+**Status:** RESEARCH / proposal v0.4 — Accuracy, Responsibility & Simplicity. Not implementation, architecture acceptance or merge authorization.
 **Scope:** `physics_harness/code/`, `libs/` — Python implementation, package entry points and tests.
-**Evidence baseline:** [main@2bf977e17](https://github.com/HyungseonSong-plasma/moose-test-repo/commit/2bf977e17fa2e4eb84b24bce51a717bc76be60f7), 2026-11-24.
+**Evidence baseline:** [main@2bf977e17](https://github.com/HyungseonSong-plasma/moose-test-repo/commit/2bf977e17fa2e4eb84b24bce51a717bc76be60f7), 2026-11-24. Current main at preflight: `de51d59d250cac730f24b4a5937c531d27c1e233` (#852), with 17 changed paths outside both source-scope roots. Evidence remains bound to the original SHA; refresh before implementation.
+
+**Evidence authority:** [Survey #2 / PR #855](https://github.com/HyungseonSong-plasma/moose-test-repo/pull/855), pinned [report](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/a817519ca72917d276f80ba3a90ed075ecce8a2a/docs/development/2026-11-24_harness_self_analysis_survey_2.md) and [structured observations](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/a817519ca72917d276f80ba3a90ed075ecce8a2a/docs/development/2026-11-24_harness_self_analysis_survey_2_evidence.json). Survey #1 is preserved at `f5d6cb4`; v0.4 consolidates the reviewed v0.3 proposal with Survey #2 rather than replacing historical evidence.
 
 ## 1. Objective and intent
 
@@ -31,7 +33,14 @@ Target census: 110 Python files, 91 SCANNED / 19 UNRESOLVED. Baseline `4f873e71f
 
 Python tracked bytes 370,626 → 683,226 (+84.3%); files +69.2%. Verification/tests account for 33/45 additions. Naming implementation: 15 files/159,138 bytes; naming tests: 18 files/123,371 bytes. Growth is descriptive, not a quality verdict.
 
-Preliminary derived figures (892 functions, 125 classes, 1,036 import candidates, 6,676 call candidates, 721 internal import candidates, 278 cross-file edges / 168 non-test edges, 22-module SCC including deferred imports, zero top-level-only SCC) remain preliminary; script/witness set not preserved. Eager initialization and deferred imports must be distinguished; global runtime closure is unproven. Reproduce exact witnesses before using counts as acceptance evidence.
+### Survey #2 execution and structural evidence
+
+- [Run #45417660394](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45417660394) and corrected [Run #45417861526](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45417861526) both SUCCESS, exact checkout of the original source. The first run selected call-site nodes for R04/R06; only the corrected declaration metrics are authoritative for these targets. [Artifact #14931164970](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/45417861526/artifacts/14931164970), ZIP SHA-256 `9d259ca5b4f8c1342a1357f00a5ba1b72fe2e4579430ab85dd4241be99ebf932`, hash verified in Survey #2. Durable JSON contains log-derived observations, not an identical artifact copy. The branch-only workflow was removed; the exact executed script remains in history.
+- Scoped python_ast scan: 110 files (91 SCANNED / 19 UNRESOLVED), 11,847 nodes / 34,208 edges / 34,318 evidence, 94 unresolved entries, zero verification failures, PARTIAL/UNVERIFIED. Full repository and scoped counts are not interchangeable.
+- Actual Lucidity and Planning API evaluation: eight KEEP/CHANGE pairs HOLD/HOLD at full survey scope; seven individual files COMPLETE/VERIFIED and both alternatives ADMISSIBLE, no recommendation; run_scan still PARTIAL/UNVERIFIED and HOLD/HOLD. Neither ADMISSIBLE nor VERIFIED proves behavior or improvement. _symbol_inventory: 31 LOC, 6 branches, depth 6; _scan_revision: 67 LOC, 22 branches, depth 9; run_scan: 197 LOC, 36 branches, depth 4; derive_indicators: 38 LOC, 4 branches, depth 2. These are source-derived traits, not a human comprehension score.
+- Prior broad-Graph static derivation: 721 internal import candidates, 278 distinct non-self cross-file pairs, 168 non-test pairs. SCC: one 22-file group with all candidate relations, two groups (7 and 2) after excluding package __init__ endpoints, none under column-zero-only proxy. This is not runtime import resolution; exact edge witness list and executable derivation must be preserved before making this a new acceptance gate. Seven-module collector/assembler/receipt/provider composition coupling and two-module naming/provenance coupling are distinct; no demand to eliminate SCCs.
+- Exact tracked-repository git grep and bounded owner-indexed search completed (Survey #2 section 6). Eight legacy paths remain HOLD; two documented stable lucidity adapter paths KEEP. No global external/dynamic/serialized consumer closure.
+- R04 duplicate-declaration source binding defect reproduced twice with unique declaration negative control; see P1. R03 baseline timing measured twice; see P4. Other candidate benefits remain hypotheses.
 
 ## 3. Architecture and responsibility boundary (KEEP)
 
@@ -48,84 +57,127 @@ Preliminary derived figures (892 functions, 125 classes, 1,036 import candidates
 
 Conceptual fact flow: Diagnostics → Graph → Analysis (uses Libs metric engine) → Refactor → Verification. This is not a new import-layer policy; source-consistency verification remains mandatory during Diagnostics assembly. Retain existing layout, public API, canonical Graph IDs, Lucidity formulas/models and compatibility bridges. No new Framework or common library by default.
 
-## 4. Selected work packages
+## 4. Selected work packages (proposal only)
 
-Paths relative to `physics_harness/code/` unless otherwise indicated. Source anchors are at the pinned survey baseline. All packages are proposals, not implementation permission.
+Paths below are relative to `physics_harness/code/`. Source anchors refer to the original survey SHA. ADOPT means a recommended design direction, not permission to edit. Each package has a KEEP alternative, bounded scope, explicit discriminator and independent acceptance. No new framework, layout or model change by default.
 
-### P1 — AST Symbol Identity
+### P1 — AST Symbol Identity (ADOPT, first; correctness repair, not pure refactor)
 
-- `diagnostics/providers/python_ast.py:137-141` distinguishes repeated declarations using occurrence; `verification/naming_boundary.py:95-126` can emit repeated keys; `verification/naming_behavior.py:53-64` stores declarations by key (last wins); `verification/naming_semantic_review.py:84-142` uses first matching declaration. A duplicated `def calculate(x)` with different bodies can make reviewers and behavior verification assess different declarations.
-- Reuse existing declaration/source extraction primitives in the appropriate owner, without making an AST Framework. Preserve existing canonical IDs and normal unambiguous inputs. For ambiguous legacy Naming keys, fail closed as UNRESOLVED/HOLD rather than select an arbitrary declaration. Explicitly distinguish declaration identity from Python runtime rebinding semantics.
-- Preserve decoding, type_comments, scope, nested/async symbols, method/class keys, source locations and signatures. Test duplicate functions/classes/methods, conditional/nested declarations and first/last divergence, invalid encoding/syntax; demonstrate normal-input receipt parity.
+**Observed defect (R04/S02):** `diagnostics/providers/python_ast.py:137-141` distinguishes repeated declarations; `verification/naming_boundary.py:95-126,225` emits duplicate keys and indexes last declaration; `naming_behavior.py:53-64` also selects last; `naming_semantic_review.py:100-142` selects first. Actual immutable Git fixture: `def transform(x): return x + 1` at line 1 and `def transform(x): return x - 1` at line 4. Boundary returns STRUCTURE_WITNESSED and packet has no unresolved entries, but its line-4 reference carries line-1 code; behavior selector selects line 4. Duplicate blob `b4298735b38d0b804cbbc5cd2d2edc19f6a54347`; unique control `73bca47390c4e0c82369c06ecaad4ae2dc427a4f` returns matching code. Both executions reproduce. This is a source-evidence defect, not proof of current Harness runtime incompatibility.
 
-### P2 — Git Source Provider responsibility
+**Alternatives:** KEEP leaves defect; full AST unification overreaches; preferred minimal repair validates exact declaration anchors and fails closed on ambiguous legacy Naming keys. Use existing occurrence identity or exact source position where compatible; no new global Symbol ID model. A local common declaration lookup is justified only if consumers share its semantics. Do not equate declaration identity with Python runtime rebinding.
 
-- `diagnostics/providers/git.py:19-120`, `verification/naming_boundary.py:74-94`, `verification/naming_consumers.py:59-77`, candidate ancestry and other private Git calls repeat tree/read/ancestry mechanics.
-- Reuse provider-owned primitives for exact revision inventory, blob verification, historical source and ancestry. Do not collapse HEAD-bound `inventory()` into historical reads or silently alter regular-file filters, error categories, budgets, ordering or stale-SHA handling.
-- No `libs/git`. Test exact SHA, missing commit, symlink/submodule, nonregular path, malformed tree, shallow history, changed HEAD, ancestry and byte identity.
+**Bounded scope:** naming_boundary, naming_behavior, naming_semantic_review, candidate/gates only where propagation is necessary, focused tests. Diagnostics canonical IDs remain unchanged. Preserve each consumer's supported syntax, decoding and type_comments behavior; do not silently broaden unsupported nested/conditional declarations. Normal overloads and property getter/setter are not automatically invalid Python; distinguish declarations or explicitly HOLD when a legacy key cannot disambiguate them.
 
-### P3 — Naming Verification repeated work
+**Acceptance:**
+- Reproduce old mismatch on baseline; corrected line-4 excerpt must match line-4 immutable blob declaration, or emit explicit ambiguity and omit the untrustworthy excerpt. No STRUCTURE_WITNESSED on ambiguous binding; no behavior match derived from arbitrary first/last; gate cannot promote unresolved evidence.
+- Unique declarations: same normal keys, source refs, signatures, executable body projections, receipt fields, exception/budget behavior. Graph IDs unchanged. Compare semantic receipt fields after normalizing only legitimate revision-dependent metadata; never compare different HEADs as if identical.
+- Negative/control matrix: duplicate functions/classes/methods, overloads, getter/setter, nested/conditional declarations, async, signature and encoding/syntax errors; exact anchor and excerpt match, tampered blob/location rejected or HOLD. Exercise public Boundary, candidate/behavior and blinded packet/gate integration, not only private AST helpers.
+- Review explicit intended status changes independently of any later deduplication. No semantic PASS claim.
 
-- `verification/naming_gates.py:51-113` calls candidate and behavior; `naming_behavior.py:106-175` calls candidate again; `naming_candidate.py:55-201` invokes boundary; blinded semantic review separately performs baseline KEEP boundary and reads/parses source again.
-- Within one trusted invocation, reuse exact source bytes, parsed AST, declaration locations and revision/blob identity where parse options and budgets match. Keep structural, behavior, consumer, semantic and reviewer-authority judgments independent, including baseline KEEP vs candidate-specific judgments.
-- No global/persistent cache, untrusted caller-supplied PASS receipts or leakage of candidate names into blind review. Preserve standalone APIs, statuses, blockers, evidence witnesses, truncation and budget semantics. Measure actual Git/AST calls and compare receipts under positives/negatives.
+### P2 — Git Source Provider responsibility (ADOPT, minimal internal seam)
 
-### P4 — Graph Index reuse
+**Observed (R01):** `diagnostics/providers/git.py:19-120` already owns assert_head, inventory, read and read_at_revision. Boundary and consumer inventory helpers (`verification/naming_boundary.py:74-94`, `naming_consumers.py:59-77`) duplicate tree traversal; other modules use private _git for commit/ancestry.
 
-- `analysis/usage_matrix.py:166-184` already builds adjacency; `analysis/impact.py:108-201` reconstructs node/evidence/file lookup and scans all edges per target.
-- Reuse the existing adjacency and source-scope-bound lookup information inside the multi-target analysis; retain standalone coverage API. No new Graph Query Engine or Graph schema changes.
-- For T targets on recorded E=316,742 edges, full edge-pass count approximately (T+1)*E → E plus incident-edge processing. Not a wall-time or memory benchmark. Preserve one-hop semantics, self-reference, ordering, unknown/unscanned surfaces, missing evidence and scope mismatches. Compare all fields of coverage/matrix receipts and measure time/memory on the same graph and targets.
+**Alternatives:** KEEP repeated Git mechanics vs reuse existing provider primitives. Prefer extracting common internal tree-row reading and immutable revision validation first; add narrow public methods only if real consumers need them. No separate Git library or raw command exposure. Provider obtains authenticated Git facts, consumers select regular Python/text paths and own domain-specific errors and budgets. HEAD-bound inventory must stay distinct from historical reads.
 
-### P5 — Dependency Verification scope
+**Acceptance:** exact SHA/blob/size, deterministic ordering, HEAD mismatch, historical commit absent, invalid object, malformed tree, symlink/submodule/nonregular path and shallow history fixtures. Ancestry must distinguish proved ancestor, proved non-ancestor and unproven/unavailable history; no boolean collapse of unknown into false or true. Preserve existing callers' error categories/fail-closed dispositions unless an explicitly reviewed correctness correction requires a change. Compare selected inventories and source bytes; measure actual duplicate Git calls before and after. Stop if abstraction adds public complexity without reducing genuine duplicate mechanics. P2 can be designed independently of P1; serialize overlapping edits.
 
-- `verification/dependencies.py:161-165,203-276` checks declared higher-level packages and absolute imports; relative imports and detailed internal module relations are outside current contract. PASS is not proof of internal dependency completeness.
-- Reuse existing analyzer and Python AST facts for explicit internal module/relative-import resolution. Distinguish eager top-level, package `__init__` effects, function-local/deferred, and unresolved dynamic imports. Do not turn a preliminary 22-module SCC into an architecture violation.
-- Preserve current package-policy results; report additional observed relations separately until explicit approval of any new forbidden-edge policy. Test relative import levels, reexports, module/package ambiguity, deferred imports, genuine eager cycles and unresolved dynamic imports. No second dependency engine.
+### P3 — Naming repeated observations (conditional ADOPT after P1/P2)
 
-### P6 — Local implementation and tests
+**Observed (R02):** `verification/naming_gates.py:51-113` calls candidate and behavior; behavior calls candidate again; candidate calls boundary; blinded review calls boundary using a separate KEEP option and reparses source. Some redundancy defends against untrusted receipts.
 
-- Preliminary complexity screening: verify_naming_boundary 54 branches, verify_naming_candidate 53, _scan_revision nesting 9. Reproduce metrics before relying on them.
-- After P1–P5, simplify remaining functions only where responsibilities become clearer; remove duplicate operations, reduce unnecessary nesting, extract coherent local operations. Do not split files solely because a function is long.
-- Reuse repository test fixtures/setup where equivalent; preserve actual Git witnesses, independent assertions, negative controls and exception/validation ordering. Maintain full test coverage obligations.
+**Alternatives:** KEEP if duplicate work is small; global cache/receipt reuse rejected; prefer existing orchestrator with one internal execution-lifetime observation reuse seam. Start by eliminating duplicate source reads within a single boundary call. Then instrument full gate and compare a minimal internal reuse path. Existing standalone APIs remain independently verifying, no caller-managed cache or caller-provided PASS. Share verified immutable observations only (repository, revision, path, blob, parser options and applicable budget); do not share candidate-specific judgments or leak names into blinded review. Budget checks must still run per intended consumer even on reuse; no mutable AST cross-consumer side effects.
+
+**Acceptance:** baseline and candidate call counts for Git reads and AST parses, same fixtures/options, receipt field parity across KEEP, EXTRACT/RENAME, unresolved and error cases; preserve source and option identity, separate independent judgments, reviewer authority, truncation and fail-closed semantics. Explicitly show P1 ambiguity repair remains effective. If repeated work cannot be safely reduced without changing APIs or independent contracts, KEEP.
+
+### P4 — Graph index reuse (CONDITIONAL, medium priority)
+
+**Observed (R03):** `analysis/usage_matrix.py:166-184` creates adjacency while `analysis/impact.py:108-201` rebuilds indexes and scans edges per target. Scoped actual baseline, 34,208 edges, 3 repetitions per target count, same deterministic non-test targets, CALLS_CANDIDATE FORWARD, DEFINES ignored:
+
+| Targets | Run 1 median ms | Run 2 median ms |
+|---:|---:|---:|
+| 1 | 19.4 | 22.7 |
+| 10 | 71.6 | 77.4 |
+| 50 | 310.1 | 326.7 |
+
+Scaling exists but local absolute cost is modest. Broad 316,742-edge graph pass count is a theoretical (T+1)*E, not a measured runtime. No optimized speedup demonstrated.
+
+**Alternatives:** KEEP for ordinary workloads; prefer reusing existing batch adjacency in private coverage logic if small and direct. Do not introduce Graph Query Engine, persistent indexes, Graph model state or user-managed index. Extend to Lucidity/Planning only if their measured workload justifies it.
+
+**Acceptance / stop rule:** reproduce same workloads and representative larger usage (if relevant), report elapsed time, peak memory and traversal counts under repeated identical conditions; verify entire rows and receipts, scope mismatch, ordering, one-hop, missing and unresolved surfaces, ignored/unclassified edges, runtime cross-HEAD and self-reference. Proceed only if a repeatable benefit or clearly reduced repeated work is shown without disproportionate memory/API/maintenance cost. Record workload/threshold rationale before implementation; no invented universal speed threshold. Otherwise KEEP. P4 is independent of P3.
+
+### P5 — Dependency observation and policy boundary (RESEARCH; not implementation ADOPT)
+
+**Observed (R05/R12):** existing contract in `ci/contracts/harness_dependencies.json` targets outer packages; `verification/dependencies.py:161-165,203-276` checks absolute imports against declared policy, not Code-internal relative/dynamic closure. This is an explicit coverage gap, not proof of incorrect existing PASS. Static 22/7+2/0 SCC counts do not mandate new violations. `diagnostics/assemble.py:158` requires source consistency; package __init__ loads unrelated verification modules. A submodule import alone does not bypass Python package initialization.
+
+**Ownership hypothesis:** Diagnostics collects source import observations and resolution candidates; Graph preserves facts/evidence; Analysis derives scoped dependency relationships/SCCs; Verification evaluates explicit DependencyContract. Check existing graph/provider consumers and available import facts before deciding where minimal resolution belongs. Existing naming/provenance and collector composition relationships may be legitimate. No blanket lazy imports or physical relocation.
+
+**Research exit gate:** document existing vs needed import facts, representative relative levels, reexports, ambiguous modules, eager/deferred and conditional imports, dynamic uncertainty, actual package initialization and source-consistency independence. Compare KEEP vs narrow observation/reporting addition; retain separate old policy results. A new forbidden-edge/CI contract, dependency engine, owner relocation or API change requires separate approval. No dependency on P5 for P1/P2/P3 unless new evidence shows one.
+
+### P6 — Local implementation and tests (SELECTIVE)
+
+Use actual declaration metrics as screening, not a quality threshold. _scan_revision depth 9 and _symbol_inventory depth 6 justify individual inspection; run_scan is a negative control (length alone insufficient). Prefer local guard clauses, linear flow, and coherent named operations only where they clarify actual responsibility. Recheck after relevant earlier work; independent local changes need not wait for unrelated P4/P5. Reuse existing git_factory where equivalent. Preserve tests' independent assertions, Git witnesses and validation/error order. No test deletion, generic fixture framework, file-count target or automatic extraction.
+
+**Acceptance:** candidate-specific before/after source and receipt evidence; unchanged tests plus targeted negative controls, exact revision replay; reduced actual duplication or clearer responsibilities/call paths, not simply fewer lines. KEEP if no demonstrated benefit.
 
 ## 5. Explicit dispositions
 
 | Candidate | Decision | Package / rationale |
 |---|---|---|
-| Git | ADOPT | P2 |
-| Naming repetition | ADOPT | P3 |
-| Graph repetition | ADOPT | P4 |
-| AST | ADOPT / STRENGTHEN | P1 |
-| import coupling | HOLD | Re-evaluate ownership after dependency evidence; no indiscriminate lazy imports |
-| complexity | SELECTIVE | P6 |
-| tests | SELECTIVE | P6 |
-| REST transport | HOLD | Review redirects vs signed archive redirects, credentials, pagination and attempts differ |
-| compatibility bridges | HOLD | 10 import-only bridges / 1,632 bytes reported; external/dynamic/serialized consumers unverified |
-| Graph model | KEEP | No demonstrated redesign need |
-| Lucidity model | KEEP | Existing metric engine |
-| dependency scope | ADOPT | P5, no new policy without approval |
+| R04 AST identity | ADOPT FIRST | P1 reproduced correctness repair |
+| R01 Git | ADOPT MINIMAL | P2 provider ownership, preserve contracts |
+| R02 Naming repetition | CONDITIONAL ADOPT | P3 after P1/P2, measured safe reuse |
+| R03 Graph repetition | CONDITIONAL | P4 small current latency; no generic cache |
+| R05 import coupling | RESEARCH/HOLD | P5 ownership review; no lazy-import expansion |
+| R06 complexity | SELECTIVE | P6 |
+| R07 tests | SELECTIVE | P6 |
+| R08 REST transport | HOLD | Redirect/credentials/attempt/security contracts differ |
+| R09 compatibility | HOLD / KEEP | Eight legacy paths HOLD; two documented stable APIs KEEP |
+| R10 Graph model | KEEP | No redesign evidence |
+| R11 Lucidity | KEEP | Preserve independent formulas/models and public API |
+| R12 dependency scope | RESEARCH | P5 observation/policy boundary; no CI change |
 
-Libs: keep `libs/code_lucidity` independent; retain `libs/code_understandability` compatibility bridge and HU/AU/CU calculations. Only simplify demonstrably redundant Analysis adapter conversions with identical outputs; no new aggregate score, new research prerequisite or new library. Direct Lucidity/Planning API measurement remains outstanding.
+Libs: `libs/code_lucidity` is a KEEP baseline (actual derive_indicators evaluation, independent numerical model). No formula or metric change. Internal implementation only if concrete duplication is independently demonstrated; Analysis adapter conversion only if equivalent output and consumers justify it. `libs/code_understandability` bridge HOLD; documented stable Analysis adapter paths KEEP. No new aggregate score, new model or library. Actual Lucidity indicators do not measure semantic cohesion or human comprehension.
 
-## 6. Recommended sequence and acceptance
+## 6. Execution dependencies and acceptance
 
-P1 → P5 → P2 → P3 → P4 → P6. P1/P5 correct accuracy and must be independently reviewed, not disguised as behavior-preserving refactors. Other packages are bounded, independently reversible changes; recheck their dependencies and exact main when implementing.
+```text
+Approve bounded implementation scope (not this document edit)
+  P1 (first correctness repair) ----+
+  P2 (independent design; serialize overlapping edits) --+--> P3 conditional design/reuse
+  P4 (independent; workload/benefit gate)
+  P5 (independent research only; separate policy/implementation approval)
+  P6 (selective, after relevant changes; not a mandatory final sweep)
+```
+
+Recommended first implementation candidate: P1, after exact-head baseline and explicit approval. P2 separately; P3 depends on verified P1 identity and P2 acquisition contracts. P4/P5 are independent options, not gates on all other work. P6 is local and justified by remaining evidence. No forced execution of all packages. Design decisions remain proposals; user approves package scope separately.
 
 | Gate | Required evidence |
 |---|---|
-| Baseline | Exact source SHA, reproducible structural witnesses, receipt status/unknowns preserved; baseline Harness tests |
-| Identity/API | Normal-input Graph IDs and public interfaces unchanged; deliberate P1/P5 corrections explicitly enumerated |
-| Evidence parity | All applicable receipt fields, source refs, ordering, statuses, blockers and budgets compared; no false PASS |
-| Model parity | Same Lucidity inputs produce same indicators; no change to formulas or Graph schema |
-| Independence | Negative tests, blind review, verifier/reviewer authority and separate judgments preserved |
-| Simplification | Actual duplicate operations/implementation reduced; responsibility and code readability examined without forced LOC/file targets |
-| Performance | Same Graph/targets, repeatable measurement of calls/time/memory where relevant; theoretical counts not benchmarks |
-| Integration | Exact-head existing Harness CI and Repository CI; external/unknown consumer limits retained; separate approval for mutation/merge |
+| Baseline | Refresh exact main, inspect changed scope and dependencies, reproduce exact target witnesses and run baseline Harness tests. Keep broad/narrow unknowns separate |
+| Identity/API | Normal-input Graph IDs/public interfaces preserved; explicitly enumerate intended P1 correctness deltas; no silent changes in error or budget behavior |
+| Evidence parity | Compare all applicable semantic receipt fields and ordering with documented normalization of revision-bound IDs/metadata; preserve unresolved and blockers; no false PASS |
+| Model parity | Identical Lucidity input facts yield identical indicators, no Graph schema/formula change |
+| Independence | Negative controls, blind review, verifier/reviewer authority and purpose-specific judgments preserved |
+| Simplicity | Compare KEEP vs candidate; show reduced actual operations or clearer responsibilities without new user-facing concepts; avoid forced LOC targets |
+| Performance | P2/P3 operation counts and P4 repeated time/memory/traversals, same workload; no theoretical speedup claim |
+| Integration | Existing exact-head Harness CI and Repository CI; independently review intended corrections and impacted tests; retain external/unknown limits |
+| Rollback | Separate bounded package/PR, no unrelated edits; explicit revert path, recheck dependent packages |
+| Authorization | Implementation and merge separately approved; research completion or ADMISSIBLE is not mutation permission |
 
-No implementation, test deletion, workflow change, CI weakening or production Physics changes authorized by this proposal. No new Framework, Graph redesign or Lucidity model change.
+## 7. Review response and remaining uncertainty
 
-## 7. Evidence uncertainty
+| Finding | v0.4 response |
+|---|---|
+| F01 stale evidence | Section 2 integrates Survey #2 actual runs, timing, API evaluation and bounded consumer search |
+| F02 P1 | Explicit anchor/excerpt invariant, ambiguity HOLD and public gate controls |
+| F03 P5 | Observation vs analysis vs policy ownership; research-only decision |
+| F04 P3 | Orchestrator-private reuse, per-consumer budgets and independent judgments; P1/P2 prerequisites |
+| F05 P4 | Actual modest latency, conditional benefit gate, KEEP option |
+| F06 sequencing / Git | Independent work graph and precise Git contract, no mandatory serial chain |
+| F07 Libs | KEEP model, HOLD legacy, selective internal work only on evidence |
 
-The proposal is based on the existing scan and selected exact-revision source checks. The full Harness was not rerun, full graph derivation/SCC reproduction and external consumer checks are pending, Lucidity and Planning were not directly benchmarked, and no before/after performance or semantic parity is claimed. P1–P6 priorities and sequence are the consolidated design proposal, not accepted results.
+Survey #2 ran the existing Harness and directly evaluated Lucidity/Planning, reproduced the duplicate declaration bug, measured baseline Usage Matrix timing, and performed bounded consumer search. No candidate implementation, full pytest replay, before/after parity, optimized performance, global consumer closure or measured human comprehension has been established. Static SCC derivation is not canonical runtime resolution. Confirm exact source and dependency state before starting a package. No implementation, test deletion, workflow/CI policy change, physics changes, merge or architecture acceptance authorized by this document.
 
-**Next gate:** approve the proposed research direction; then separately authorize a bounded implementation/validation package. Keep this PR documentation-only and draft pending review.
+**Next gate:** review v0.4, then separately authorize a bounded P1 implementation/validation package. Keep this PR documentation-only and draft. Survey #2 remains a separate evidence PR.
