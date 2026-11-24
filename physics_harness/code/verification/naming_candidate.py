@@ -159,13 +159,14 @@ def verify_naming_candidate(
             after_symbols = {s.key: s for s in after_inventory
                              if s.key not in after_ambiguities}
             selected = {p.after_symbol for p in placements}
+            retained_source_keys = {p.before_symbol for p in placements if p.owner_id != "original"}
             # Full ownership scans cover all affected files. Bounded class/function
             # cases additionally cover the renamed target and enclosing class.
-            target_name = (option.proposed_name if option.variant == "RENAME"
+            target_name = (option.proposed_name if option.variant in {"RENAME", "EXTRACT_RENAME"}
                            else case.current_name) or case.current_name
             relevant = {key for key in after_ambiguities
                         if case.target_kind in {"FILE", "FOLDER"}
-                        or key in selected
+                        or key in selected or key in retained_source_keys
                         or _key_in_scope(key, case.target_kind,
                                          candidate_owner_path, target_name)
                         or any(key.startswith(p + "::method:" + n + ".")
@@ -189,6 +190,9 @@ def verify_naming_candidate(
         expected_path = candidate_owner_path if p.owner_id == "original" else unit_by_id[p.owner_id].destination_path
         if expected_path is None or not p.after_symbol.startswith(expected_path + "::"):
             blocked.add("PLACEMENT_ON_WRONG_OWNER_PATH:" + p.after_symbol)
+        if (p.owner_id != "original" and p.before_symbol in after_ambiguities):
+            unknown.add("EXTRACTED_SOURCE_SYMBOL_STILL_DECLARED:" + p.before_symbol)
+            continue  # an ambiguous residual source is not proof of extraction
         if (p.before_symbol in before_ambiguities or p.after_symbol in after_ambiguities
                 or (p.owner_id != "original" and p.after_symbol in before_ambiguities)):
             continue  # never validate a placement using an arbitrary declaration

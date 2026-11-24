@@ -160,6 +160,9 @@ def review_semantic_challenge(
     blocked = set()
     unresolved = set(packet.unresolved)
     observed = set(packet.observed_symbol_keys)
+    ambiguous = {x.split(":", 1)[1] for x in packet.unresolved
+                 if x.startswith("AMBIGUOUS_DECLARATION:")}
+    reviewable = {excerpt.symbol for excerpt in packet.excerpts} & observed - ambiguous
     covered = set()
     for h in hypotheses:
         if not (h.label.strip() and h.symbol_keys and h.positive_responsibility.strip()
@@ -169,7 +172,10 @@ def review_semantic_challenge(
             blocked.add("REVIEW_DUPLICATE_SYMBOL_BINDING")
         if set(h.symbol_keys) - observed:
             blocked.add("REVIEW_REFERENCES_UNKNOWN_SOURCE_SYMBOL")
-        covered.update(s for s in h.symbol_keys if s in observed)
+        # Observed keys are an inventory, not proof of an available declaration.
+        unresolved.update("REVIEW_SYMBOL_WITHOUT_VERIFIED_EXCERPT:" + key
+                          for key in h.symbol_keys if key in observed and key not in reviewable)
+        covered.update(key for key in h.symbol_keys if key in reviewable)
     if set(packet.observed_symbol_keys) - covered:
         unresolved.add("REVIEW_DID_NOT_ADDRESS_ALL_OBSERVED_DECLARATIONS")
     if challenge.option_id != option.id:

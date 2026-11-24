@@ -258,3 +258,76 @@ def test_p1_mismatched_observed_anchor_cannot_be_a_blinded_excerpt(history, monk
     packet = build_blinded_semantic_packet(subject, provider, bindings())
     assert "BLINDED_DECLARATION_ANCHOR_MISMATCH:"+PATH+"::function:python_decode" in packet.unresolved
     assert not any(e.symbol == PATH+"::function:python_decode" for e in packet.excerpts)
+
+
+def test_p1_second_pass_cannot_credit_ambiguous_observation(history):
+    from physics_harness.code.verification.naming_semantic_review import review_semantic_challenge
+    history, subject = _duplicate_baseline(
+        history, "\ndef python_decode(source):\n    return None\n", evidence_line=10)
+    provider = GitSourceProvider(history[0])
+    packet = build_blinded_semantic_packet(subject, provider, bindings())
+    opt = extract_option()
+    receipt = review_semantic_challenge(packet, hypotheses(packet), challenge(opt), opt)
+    key = PATH+"::function:python_decode"
+    assert key in packet.observed_symbol_keys
+    assert key not in receipt.verified_symbol_coverage
+    assert "REVIEW_SYMBOL_WITHOUT_VERIFIED_EXCERPT:"+key in receipt.unresolved
+    assert receipt.status == "HOLD"
+
+
+def test_p1_second_pass_cannot_credit_omitted_excerpt(history):
+    from physics_harness.code.verification.naming_semantic_review import review_semantic_challenge
+    root, before, base = history
+    packet = build_blinded_semantic_packet(case(before, base), GitSourceProvider(root),
+                                          bindings(), max_excerpts=1)
+    opt = extract_option()
+    receipt = review_semantic_challenge(packet, hypotheses(packet), challenge(opt), opt)
+    assert set(receipt.verified_symbol_coverage) == {e.symbol for e in packet.excerpts}
+    assert receipt.status == "HOLD"
+
+
+def test_p1_residual_ambiguous_extracted_source_is_not_a_valid_placement(history):
+    root, before, base = history
+    candidate = third_commit(history, source=False)
+    p = root / PATH
+    p.write_bytes(p.read_bytes() + b"\ndef python_decode(source): return None\n")
+    git(root, "add", ".")
+    git(root, "commit", "-qm", "ambiguous residual source")
+    candidate = git(root, "rev-parse", "HEAD")
+    result = pipeline(history, candidate=candidate)
+    assert result.structural.status == "HOLD"
+    assert "EXTRACTED_SOURCE_SYMBOL_STILL_DECLARED:"+PATH+"::function:python_decode" in result.structural.unresolved
+    assert placements()[-1] not in result.structural.validated_placements
+    assert not result.behavior.comparisons
+
+
+def test_p1_folder_ambiguity_preserves_unique_other_owners(history):
+    history, subject = _duplicate_baseline(history, "\ndef python_decode(source): return None\n")
+    subject = replace(subject, target_kind="FOLDER", current_path="diagnostics", current_name="diagnostics")
+    provider = GitSourceProvider(history[0])
+    boundary = verify_naming_boundary(subject, keep(), provider, bindings())
+    packet = build_blinded_semantic_packet(subject, provider, bindings())
+    assert boundary.status == "HOLD"
+    assert "AMBIGUOUS_DECLARATION:"+PATH+"::function:python_decode" in boundary.unresolved
+    assert not any(e.symbol == PATH+"::function:python_decode" for e in packet.excerpts)
+    assert any(e.symbol == DEST+"::class:PythonProvider" for e in packet.excerpts)
+
+
+def test_p1_nested_local_name_does_not_create_module_owner_collision(history):
+    history, subject = _duplicate_baseline(history,
+        "\ndef outer():\n    def python_decode(source): return None\n    return python_decode\n")
+    subject = replace(subject, target_kind="FUNCTION", current_name="python_decode",
+                      responsibility_ids=("python",))
+    provider = GitSourceProvider(history[0])
+    boundary = verify_naming_boundary(subject, keep(), provider, (bindings()[1],))
+    assert boundary.status == "STRUCTURE_WITNESSED"
+
+
+@pytest.mark.parametrize("first,second", [("return 1", "return 2"), ("return 2", "return 1")])
+def test_p1_duplicate_order_never_selects_a_body(history, first, second):
+    history, subject = _duplicate_baseline(history,
+        f"\ndef python_decode(source): {first}\ndef python_decode(source): {second}\n")
+    provider = GitSourceProvider(history[0])
+    packet = build_blinded_semantic_packet(subject, provider, bindings())
+    assert "AMBIGUOUS_DECLARATION:"+PATH+"::function:python_decode" in packet.unresolved
+    assert not any(e.symbol == PATH+"::function:python_decode" for e in packet.excerpts)
