@@ -29,6 +29,12 @@ _MOOSE_TYPE_LINE = re.compile(r"(?m)^[ \t]*type[ \t]*=[ \t]*([^\n#]*)")
 _MOOSE_IDENTIFIER = re.compile(r"[A-Za-z_]\w*(?:::\w+)*\Z")
 
 
+def python_call_site_id(repository, path, line, column, end_line, end_column):
+    """Canonical existing Python AST call-site identity (UTF-8 byte columns)."""
+    return stable_id("node", repository, "python_call_site", path,
+                     line, column, end_line, end_column)
+
+
 def _body_metrics(node: ast.AST) -> tuple[int, int]:
     """Count branches and maximum branch nesting, excluding nested declarations."""
     branches = 0
@@ -210,9 +216,8 @@ class PythonAstCollector:
 
             def visit_Call(self, item: ast.Call) -> None:
                 name = ast.unparse(item.func)
-                call_id = stable_id(
-                    "node", request.repository, "python_call_site", record.path,
-                    item.lineno, item.col_offset,
+                call_id = python_call_site_id(
+                    request.repository, record.path, item.lineno, item.col_offset,
                     item.end_lineno, item.end_col_offset,
                 )
                 eid = witness(item, "CALLS_CANDIDATE", name)

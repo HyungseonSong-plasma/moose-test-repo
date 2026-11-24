@@ -250,6 +250,49 @@ class GeneratedCapture:
         return False
 
 
+def verify_loaded_python_function(request: ScanRequest, provider: GitSourceProvider,
+                                  producer_path: str, producer_blob_sha: str, function):
+    """Check an explicitly loaded top-level callable against exact tracked source.
+
+    Compile for code-object comparison only; never import or execute source.
+    This does not attest globals, dependencies or runner identity.
+    """
+    if (type(function) is not FunctionType or function.__qualname__ != function.__name__
+            or function.__closure__ is not None or inspect.iscoroutinefunction(function)
+            or inspect.isgeneratorfunction(function) or inspect.isasyncgenfunction(function)):
+        raise ValueError("GENERATED_CAPTURE_FUNCTION_UNSUPPORTED")
+    if not producer_path.endswith(".py") or not request.selects(producer_path):
+        raise ValueError("GENERATED_CAPTURE_PATH_INVALID")
+    provider.assert_head(request.revision)
+    source = provider.read_at_revision(request.revision, producer_path)
+    if source.record.blob_sha != producer_blob_sha:
+        raise ValueError("GENERATED_PRODUCER_BLOB_MISMATCH")
+    if len(source.content) > request.budget.max_bytes:
+        raise ValueError("GENERATED_CAPTURE_SOURCE_BYTE_BUDGET")
+    filename = Path(function.__code__.co_filename)
+    expected_file = provider.root.resolve() / producer_path
+    if (filename.resolve() != expected_file or expected_file.is_symlink()
+            or expected_file.resolve() != expected_file):
+        raise ValueError("GENERATED_CAPTURE_FUNCTION_SOURCE_MISMATCH")
+    module_path = function.__globals__.get("__file__")
+    if not isinstance(module_path, str) or Path(module_path).resolve() != expected_file:
+        raise ValueError("GENERATED_CAPTURE_FUNCTION_SOURCE_MISMATCH")
+    with expected_file.open("rb") as stream:
+        actual = stream.read(request.budget.max_bytes + 1)
+    if actual != source.content:
+        raise ValueError("GENERATED_CAPTURE_WORKTREE_SOURCE_MISMATCH")
+    # Compile only (never exec): compare the loaded top-level code object
+    # against the exact Git source, including constants and nested code.
+    compiled = compile(source.content, function.__code__.co_filename, "exec",
+                       dont_inherit=True, optimize=sys.flags.optimize)
+    matches = [obj for obj in compiled.co_consts
+               if isinstance(obj, CodeType) and obj.co_name == function.__name__]
+    if len(matches) != 1 or matches[0] != function.__code__:
+        raise ValueError("GENERATED_CAPTURE_CODE_MISMATCH")
+
+    return source
+
+
 def capture_generated_return(
     request: ScanRequest, provider: GitSourceProvider, *,
     producer_path: str, producer_blob_sha: str, function, arguments: dict,
@@ -310,39 +353,12 @@ def capture_generated_return(
         raise ValueError("GENERATED_CAPTURE_ARGUMENT_LIMIT")
     invocation_digest = sha256(invocation).hexdigest()
 
-    def verify_source():
-        provider.assert_head(request.revision)
-        source = provider.read_at_revision(request.revision, producer_path)
-        if source.record.blob_sha != producer_blob_sha:
-            raise ValueError("GENERATED_PRODUCER_BLOB_MISMATCH")
-        if len(source.content) > request.budget.max_bytes:
-            raise ValueError("GENERATED_CAPTURE_SOURCE_BYTE_BUDGET")
-        filename = Path(function.__code__.co_filename)
-        expected_file = provider.root.resolve() / producer_path
-        if (filename.resolve() != expected_file or expected_file.is_symlink()
-                or expected_file.resolve() != expected_file):
-            raise ValueError("GENERATED_CAPTURE_FUNCTION_SOURCE_MISMATCH")
-        module_path = function.__globals__.get("__file__")
-        if not isinstance(module_path, str) or Path(module_path).resolve() != expected_file:
-            raise ValueError("GENERATED_CAPTURE_FUNCTION_SOURCE_MISMATCH")
-        with expected_file.open("rb") as stream:
-            actual = stream.read(request.budget.max_bytes + 1)
-        if actual != source.content:
-            raise ValueError("GENERATED_CAPTURE_WORKTREE_SOURCE_MISMATCH")
-        # Compile only (never exec): compare the loaded top-level code object
-        # against the exact Git source, including constants and nested code.
-        compiled = compile(source.content, function.__code__.co_filename, "exec",
-                           dont_inherit=True, optimize=sys.flags.optimize)
-        matches = [obj for obj in compiled.co_consts
-                   if isinstance(obj, CodeType) and obj.co_name == function.__name__]
-        if len(matches) != 1 or matches[0] != function.__code__:
-            raise ValueError("GENERATED_CAPTURE_CODE_MISMATCH")
 
     def time_check():
         if monotonic() - started > request.budget.max_seconds:
             raise ValueError("GENERATED_CAPTURE_TIME_BUDGET_EXCEEDED")
 
-    verify_source()
+    verify_loaded_python_function(request, provider, producer_path, producer_blob_sha, function)
     time_check()
     returned = function(*bound.args, **bound.kwargs)
     time_check()
@@ -353,7 +369,7 @@ def capture_generated_return(
     hit = returned.encode("utf-8", "strict")
     if not hit or len(hit) > request.budget.max_bytes:
         raise ValueError("GENERATED_CAPTURE_OUTPUT_BYTE_BUDGET")
-    verify_source()
+    verify_loaded_python_function(request, provider, producer_path, producer_blob_sha, function)
     time_check()
     identity = {
         "repository": request.repository, "source_sha": request.revision,

@@ -86,6 +86,7 @@ def verify_generated_artifact(
         unknown.add("EMPTY_SOURCE_SCOPE")
 
     evidence_by_id = {item.id: item for item in graph.evidence}
+    nodes_by_id = {item.id: item for item in graph.nodes}
     for evidence in graph.evidence:
         attrs = evidence.attributes
         if evidence.kind == "GENERATED_INPUT":
@@ -122,6 +123,15 @@ def verify_generated_artifact(
             unknown.add("GENERATED_PRODUCER_CAUSAL_BINDING_UNVERIFIED")
             if evidence.observation_status == "UNRESOLVED":
                 unknown.add("UNRESOLVED_GENERATED_INPUT_EVIDENCE")
+            continue
+        if evidence.kind == "PYTHON_CALL_TRACE":
+            from .python_call_trace import validate_python_trace_metadata
+            try:
+                validate_python_trace_metadata(
+                    evidence, scope, paths, nodes_by_id, graph.edges, evidence_by_id)
+            except (KeyError, TypeError, ValueError, AttributeError):
+                failures.add("PYTHON_TRACE_PROVENANCE_INVALID:" + evidence.id)
+            unknown.add("RUNTIME_EXECUTION_NOT_INDEPENDENTLY_VERIFIED")
             continue
         if evidence.observation_status == "RUNTIME_OBSERVED":
             if attrs.get("source_sha") != scope.revision:
