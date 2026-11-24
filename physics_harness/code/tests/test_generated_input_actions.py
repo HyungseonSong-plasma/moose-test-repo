@@ -299,7 +299,7 @@ def test_capture_rejects_wrong_blob_before_call(git_factory):
 @pytest.mark.parametrize("value", [{"unsafe": 1}, float("nan"), "x" * 4097])
 def test_capture_rejects_unbounded_or_nonfinite_arguments(git_factory, value):
     request, provider, options, capture = capture_fixture(git_factory)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="GENERATED_CAPTURE_ARGUMENT|Out of range float"):
         capture(request, provider, **dict(options, arguments={"kind": value}))
 
 
