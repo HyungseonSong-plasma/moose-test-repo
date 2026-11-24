@@ -1,14 +1,19 @@
 {
   "targets": [
     {
-      "branch": "cleanup-774-retirement-refs-20261124-batch7",
-      "expected_sha": "14644d9d63b3735f7fc0587cc5e4338488e1ab0d",
-      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch7-14644d9d63b3"
+      "branch": "cleanup-774-retirement-refs-20261124-batch8",
+      "expected_sha": "e72ea914da9b7e638f1a23e9ab075a6c2462fc98",
+      "archive_tag": "archive/oxygen-cleanup-20261106/cleanup-774-retirement-refs-20261124-batch8-e72ea914da9b"
     },
     {
-      "branch": "issue-772-usage-matrix",
-      "expected_sha": "f76dd7a3c5d0df9b676592a537fc9f85997d9a06",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-772-usage-matrix-f76dd7a3c5d0"
+      "branch": "issue-769-evolutionary-naming-audit",
+      "expected_sha": "351ca200a2f0b7fa7f8ccdd99f99500f9e94231e",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-769-evolutionary-naming-audit-351ca200a2f0"
+    },
+    {
+      "branch": "issue-755-analysis-adapters",
+      "expected_sha": "1ea4377a2b89f874b14e027f9d9ca10c82e2cf82",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-755-analysis-adapters-1ea4377a2b89"
     }
   ]
 }
