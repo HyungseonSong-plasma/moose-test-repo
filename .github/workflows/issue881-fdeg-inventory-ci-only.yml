@@ -1,4 +1,4 @@
-name: Issue881 FDEG exact tracked inventory (one-shot)
+name: Issue881 FDEG Code6 Harness comparison (one-shot)
 on:
   push:
     branches: [issue-881-fdeg-inventory-ci-only]
@@ -8,7 +8,7 @@ permissions:
 jobs:
   inventory:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,9 +62,84 @@ jobs:
           (root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
           print(json.dumps(summary, indent=2, sort_keys=True))
           PY
+      - name: Install existing Harness Code dependency
+        run: python3 -m pip install -r physics_harness/code/requirements.txt
+      - name: Compare Code6 declared templates with current Harness candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import collections, hashlib, json, os, pathlib, re, subprocess, sys
+          root = pathlib.Path.cwd()
+          out = pathlib.Path(os.environ["RUNNER_TEMP"]) / "issue881"
+          target = "PhysicsFVMassFractionTimeDerivative"
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert head == "7a119106a22f2de2ca5c761a4119f00509e0efdd"
+          sys.path.insert(0, str(root / "ci/guards"))
+          import fdeg_structural
+          from physics_harness.code.diagnostics import ScanBudget, ScanRequest, GitSourceProvider, run_scan
+          legacy = fdeg_structural.scan(root, target, expected_head=head)
+          rows = [row for row in legacy["instances"]
+                  if row.get("instance_kind") == "PYTHON_GENERATED_INPUT_TEMPLATE_NOT_EXECUTED"]
+          expected = collections.Counter()
+          for row in rows:
+              path, line = row["input_path"], row["type_line"]
+              raw = subprocess.check_output(["git", "show", f"{head}:{path}"])
+              blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+              assert row["evidence"]["blob_sha"] == blob
+              assert re.fullmatch(r"\s*type\s*=\s*" + target + r"\s*", raw.decode().splitlines()[line-1])
+              assert row["runtime_activation"] == "NOT_OBSERVED"
+              expected[(path, line)] += 1
+          paths = tuple(sorted({p for p, _ in expected}))
+          assert paths, "Legacy source template inventory missing"
+          scan = run_scan(ScanRequest(repository="HyungseonSong-plasma/moose-test-repo",
+                          revision=head, includes=paths, collectors=("python_ast",),
+                          budget=ScanBudget(max_files=100, max_bytes=10000000, max_seconds=120)),
+                          GitSourceProvider(root))
+          targets = {n.id for n in scan.graph.nodes if n.kind == "moose_type" and n.name == target}
+          witnesses = {e.id: e for e in scan.graph.evidence}
+          observed = []
+          candidates = collections.Counter()
+          for edge in scan.graph.edges:
+              if edge.target_id not in targets:
+                  continue
+              for eid in edge.evidence_ids:
+                  ev = witnesses[eid]
+                  at = dict(ev.attributes)
+                  assert at["source_sha"] == head
+                  assert ev.observation_status != "RUNTIME_OBSERVED"
+                  observed.append({"edge_id": edge.id, "relation": edge.relation, "source": at,
+                                   "observation_status": ev.observation_status})
+                  if edge.relation in ("MAY_GENERATE_INPUT", "DECLARES_GENERATOR_TEMPLATE_CANDIDATE"):
+                      candidates[(at["path"], at["line"])] += 1
+          def counts(c):
+              return [{"path": p, "line": l, "count": n} for (p,l), n in sorted(c.items())]
+          payload = {
+              "schema": "issue881.code6_source_candidate_comparison.v1",
+              "source_head": head, "scope": list(paths),
+              "legacy_instance_count": len(rows),
+              "legacy_source_template_census": legacy["source_template_census"],
+              "legacy_instances": rows,
+              "harness_target_candidate_count": sum(candidates.values()),
+              "harness_target_edges": observed,
+              "matched_legacy_locations": sum((expected & candidates).values()),
+              "unmatched_legacy_locations": counts(expected - candidates),
+              "additional_candidate_locations": counts(candidates - expected),
+              "harness_coverage": scan.receipt.completeness,
+              "harness_unresolved": list(scan.receipt.unresolved),
+              "harness_files": [{"path": f.path, "blob_sha": f.blob_sha, "status": f.status}
+                                for f in scan.receipt.files],
+              "legacy_block_path_and_bindings_preserved_by_this_comparison": False,
+              "runtime_coverage": "NOT_PROVEN",
+              "global_consumer_closed": False,
+              "retirement_authorized": False,
+          }
+          (out / "code6-comparison.json").write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+          print(json.dumps({k:v for k,v in payload.items() if k not in {"legacy_instances","harness_target_edges","harness_unresolved","harness_files"}}, indent=2))
+          PY
       - uses: actions/upload-artifact@v4
         with:
-          name: issue881-fdeg-inventory-${{ github.run_id }}-${{ github.run_attempt }}
+          name: issue881-fdeg-code6-comparison-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/issue881/
           if-no-files-found: error
           retention-days: 30
