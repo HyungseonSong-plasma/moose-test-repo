@@ -1,26 +1,18 @@
 {
   "schema": "harness.source_scan.v1",
-  "request_id": "code4-r6-canonical-rewire-candidate-20261124",
-  "source_sha": "1cd5cbd79137791e1acdd13ac17c15c61e55f242",
+  "request_id": "issue867-real-contract-json-qualification-20261124",
+  "source_sha": "16446e3d5337955e27d762e62818a7ec2fc9f099",
   "includes": [
-    "*.i",
-    "*.py",
-    "*.C",
-    "*.h",
-    "*.cc",
-    "*.cpp",
-    "*.hpp",
-    ".github/workflows/*.yml",
-    ".github/workflows/*.yaml"
+    "docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json",
+    "docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json",
+    "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i"
   ],
   "excludes": [],
   "collectors": [
-    "cpp",
-    "moose_input",
-    "python_ast",
-    "workflow"
+    "json",
+    "moose_input"
   ],
-  "max_files": 1500,
-  "max_bytes": 80000000,
-  "max_seconds": 480
+  "max_files": 10,
+  "max_bytes": 2000000,
+  "max_seconds": 90
 }
