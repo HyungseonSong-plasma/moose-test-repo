@@ -1,0 +1,270 @@
+name: Issue652 G7 actual S6 fixed-state central directional Jacobian (branch-only)
+on:
+  push:
+    branches: [issue-652-poisson-g8-matched-pilot-20261123]
+    paths: [.github/workflows/issue652-g7-s6-directional-once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue652-g7-s6-fixed-state-directional
+  cancel-in-progress: false
+jobs:
+  matched-stage:
+    name: Actual assembled Newton Jv and central residual directional 417/941
+    if: github.repository == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      G8_SOURCE: 26e84a4a33cf93d9e278a4f0b2d78c53cae2d6ce
+      G8_NATIVE_SOURCE_ROOT: ${{ github.workspace }}
+    steps:
+      - name: Checkout unchanged full100 PhysicsApp source
+        uses: actions/checkout@v4
+        with:
+          ref: 26e84a4a33cf93d9e278a4f0b2d78c53cae2d6ce
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Checkout G8 exact analysis harness separately
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: g8-harness
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Exact source and G8 negative P0 tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$G8_SOURCE"
+          test "$(git -C g8-harness rev-parse HEAD)" = "$GITHUB_SHA"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/ci/guards:$GITHUB_WORKSPACE/g8-harness/ci/guards"
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'numpy>=1.26,<3' 'netCDF4>=1.7,<2'
+          python3 -m pytest -q g8-harness/tests/test_issue652_g8_matched_stage.py g8-harness/tests/test_issue652_g8_matched_native_pilot.py g8-harness/tests/test_issue652_g7_s6_directional.py
+          python3 -m py_compile g8-harness/ci/guards/issue652_g8_matched_stage.py g8-harness/ci/guards/issue652_g8_matched_native_pilot.py
+          echo G8_P0_ONLY_NO_PROTECTED_RATE_DATA
+      - name: Checkout SHA-pinned historical public mesh source
+        uses: actions/checkout@v4
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Prepare historical public 400W mesh with pinned public precursor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            'pytest>=8,<9' 'pydantic>=2,<3' numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2 \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt
+          (
+            cd historical
+            SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+            DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+            echo "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b  $SRC" | sha256sum --check -
+            cp "$SRC" "$DST"
+            export CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
+            export OXYGEN_RESEARCH_400=1
+            bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400
+            python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+            echo "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc  experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" | sha256sum --check -
+          )
+          echo G6B_HISTORICAL_MESH_SOURCE_SHA_PASS
+      - name: Download SHA-pinned public P3-X artifact and exact staging helper
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/g8-input"
+          curl --fail --location --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/14406746397/zip" \
+            --output "$RUNNER_TEMP/g8-input/p3x-source.zip"
+          echo "592a7c82834bab841f6a2e1807db305d0eff1e953f50a0dcc6d7e21ff8820111  $RUNNER_TEMP/g8-input/p3x-source.zip" | sha256sum --check -
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://raw.githubusercontent.com/HyungseonSong-plasma/moose-test-repo/41ab61e442a497db2388c025075237bd24cfd025/ci/issue671_p5_d8_native_probe.py" \
+            --output "$RUNNER_TEMP/g8-input/stager.py"
+          test "$(git hash-object "$RUNNER_TEMP/g8-input/stager.py")" = 8bf49b7807c9f9b3eed8e622e72062f2b5c822bc
+          python3 -m py_compile "$RUNNER_TEMP/g8-input/stager.py"
+          echo G6B_PINNED_PUBLIC_ARTIFACT_STAGER_PASS
+      - name: Preserve old P3-X scratch BEFORE G5 and build new exact G5 scratch
+        shell: bash
+        run: |
+          set -euo pipefail
+          export G5_EXPECTED_SOURCE_HEAD="$G8_SOURCE"
+          python3 "$RUNNER_TEMP/g8-input/stager.py" \
+            --source "$GITHUB_WORKSPACE" --repo-head "$G8_SOURCE" \
+            --artifact "$RUNNER_TEMP/g8-input/p3x-source.zip" \
+            --historical-mesh "$GITHUB_WORKSPACE/historical/experiments/Issue395_powered_chemistry_ladder/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            --historical-support-root "$GITHUB_WORKSPACE/historical" \
+            --output "$RUNNER_TEMP/g8-input/staged" --stage-only
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, shutil
+          original=Path(os.environ["RUNNER_TEMP"])/"g8-input/staged"
+          previous=Path(os.environ["RUNNER_TEMP"])/"g8-input/before-g5"
+          assert original.is_dir() and not previous.exists()
+          shutil.copytree(original,previous,symlinks=False)
+          print("G8_PRE_G5_OLD_SOURCE_SCRATCH_CAPTURED")
+          PY
+          python3 ci/guards/issue652_g5_native_p2.py \
+            --staged "$RUNNER_TEMP/g8-input/staged" \
+            --output "$RUNNER_TEMP/g8-input/g5-result" --stage-only
+          echo G6B_G5_REAL_11_LAYER_PUBLIC_SOURCE_PASS
+      - name: Convert only disposable electron lookup to original Public D 100 rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/guards/issue652_g6b_publicd100_stage.py \
+            --staged "$RUNNER_TEMP/g8-input/staged" \
+            --g5-receipt "$RUNNER_TEMP/g8-input/g5-result/g5_stage_receipt.json" \
+            --output "$RUNNER_TEMP/g8-input/g6b_public100_receipt.json"
+          python3 - "$RUNNER_TEMP/g8-input/g6b_public100_receipt.json" <<'PY'
+          import json,sys
+          r=json.load(open(sys.argv[1]))
+          assert r["original_publicd_lookup_sha256"]=="994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+          assert set(r["cases"])=={"417","941"}
+          for c in r["cases"].values():
+              assert c["P0"]=="PASS_SCRATCH_ONLY_100ROW_PROVENANCE"
+              assert c["time"]["intervals"]==460 and c["time"]["time_points"]==461
+              assert c["P3_100us"]=="NOT_RUN" and c["science"]=="SCIENCE_HOLD"
+              assert len(c["unchanged_11_layer_sha256"])==11
+          assert r["protected_rate_data_in_receipt"] is False
+          print("G6B_BOTH_REAL_PUBLIC_11_LAYER_100ROW_STAGE_P0_PASS")
+          PY
+          cp "$RUNNER_TEMP/g8-input/g6b_public100_receipt.json" g6b_public100_receipt.json
+      - name: Source-bound paired old P4 and new G5 after exact Public D100 staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/ci/guards:$GITHUB_WORKSPACE/g8-harness/ci/guards"
+          python3 g8-harness/ci/guards/issue652_g8_matched_stage.py \
+            --before-g5 "$RUNNER_TEMP/g8-input/before-g5" \
+            --after-g5 "$RUNNER_TEMP/g8-input/staged" \
+            --g5-receipt "$RUNNER_TEMP/g8-input/g5-result/g5_stage_receipt.json" \
+            --output g8_s6_oldnew_matched_input_stage.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open("g8_s6_oldnew_matched_input_stage.json"))
+          assert r["same_input_stage"]=="PASS"
+          assert r["non_poisson_dynamical_input"]=="SHA_IDENTICAL"
+          assert set(r["cases"])=={"417","941"}
+          assert all(c["source_equal_except_poisson_owner_contract"]=="PASS"
+                     for c in r["cases"].values())
+          assert r["native_same_elf_p2"]=="NOT_RUN"
+          assert r["old_new_native_3ns"]=="NOT_RUN"
+          assert r["science"]=="SCIENCE_HOLD"
+          print("G8_S6_417_941_PAIRED_SCRATCH_SAME_INPUT_VERIFIED_NATIVE_HOLD")
+          PY
+      - name: Install only NetCDF reader for two 3ns Exodus pairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check 'netCDF4>=1.7,<2'
+          python3 - <<'PY'
+          import numpy,netCDF4
+          print("G8_3NS_EXODUS_ANALYZER_READY")
+          PY
+      - name: Download one original exact-head shared ELF bundle from finished Full100
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 45216929109
+          name: issue652-g6b-shared-26e84a4a33cf93d9e278a4f0b2d78c53cae2d6ce
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/g8-shared
+      - name: Recheck immutable OCI PhysicsApp ELF/SHA; forbid secret or source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$G8_SOURCE"
+          (cd "$RUNNER_TEMP/g8-shared" && sha256sum --check bundle.sha256)
+          python3 - "$RUNNER_TEMP/g8-shared/bundle.tar.gz" <<'PY'
+          import sys,tarfile
+          expected={"physics_app/physics-opt",
+                    "physics_app/g6_owner_tracer.so",
+                    "physics_app/lib/libphysics-opt.so.0",
+                    "physics_app/test/lib/libphysics_test-opt.so.0"}
+          with tarfile.open(sys.argv[1],"r:gz") as f:
+              members=f.getmembers()
+              assert {x.name for x in members}==expected
+              assert all(x.isfile() and not x.issym() for x in members)
+          print("G8_OLDNEW_SINGLE_REUSED_ELF_ONLY_ARCHIVE_PASS")
+          PY
+          tar -xzf "$RUNNER_TEMP/g8-shared/bundle.tar.gz"
+          python3 - "$RUNNER_TEMP/g8-shared/manifest.json" <<'PY'
+          import hashlib,json,os,pathlib,sys
+          m=json.load(open(sys.argv[1]))
+          assert m["schema_version"]==1
+          assert m["source_sha"]==os.environ["G8_SOURCE"]
+          assert m["oci_ref"]=="ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+          assert m["protected_input_in_build_bundle"] is False
+          for name,digest in m["files"].items():
+              f=pathlib.Path(name)
+              assert f.is_file() and not f.is_symlink()
+              assert f.open("rb").read(4)==b"\x7fELF"
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==digest
+          print("G8_SAME_PHYSICSAPP_ELF_HASHED_FOR_BOTH_POISSON_ARMS")
+          PY
+          chmod u+x physics_app/physics-opt
+      - name: Compile only external PETSc observer in immutable OCI; secret-free Native probe gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          OCI=ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+          docker pull "$OCI"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --mount "type=bind,src=$PWD,dst=/workspace" "$OCI" -lc '
+            set -euo pipefail
+            source /environment
+            if pkg-config --exists PETSc; then PKG=PETSc; else PKG=petsc; fi
+            mpicxx -std=c++17 -fPIC -shared $(pkg-config --cflags "$PKG") \
+              /workspace/g8-harness/ci/guards/issue652_g7_jvp_probe.cc \
+              -o /workspace/physics_app/g7_jvp_probe.so $(pkg-config --libs "$PKG") -ldl
+            chmod a+r /workspace/physics_app/g7_jvp_probe.so
+            '
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/g8-harness/ci/guards:$GITHUB_WORKSPACE/ci/guards"
+          python3 - <<'PY'
+          import os, subprocess, tempfile
+          from pathlib import Path
+          import issue652_g7_s6_directional as g7
+          import issue652_g7_native_ad_jacobian as micro
+          with micro.private_workspace() as work:
+              (work/"g7_micro_poisson.i").write_text(micro.generated_input())
+              cmd=micro.docker_command(Path.cwd(),work,check=False)
+              cmd[-1]=cmd[-1].replace("/workspace/physics_app/physics-opt",
+                  "G7_JVP_MIN_DOF=1 LD_PRELOAD=/workspace/physics_app/g7_jvp_probe.so /workspace/physics_app/physics-opt")
+              cmd[-1]=cmd[-1].replace(" -snes_test_jacobian","")
+              rc=g7.run_native(cmd,work,work/"synthetic.log","g7-jvp-synthetic",240)
+              subprocess.run(["sudo","chown","-Rh",f"{os.getuid()}:{os.getgid()}","--",str(work)],check=True)
+              report=g7.interpret((work/"synthetic.log").read_text(errors="replace"),1)
+              import json
+              Path("g7_synthetic_probe_receipt.json").write_text(json.dumps(report,indent=2)+"\n")
+              print("G7_SECRET_FREE_PROBE",rc,report["status"])
+              assert rc==0 and report["status"]=="PASS_FIXED_STATE_DIRECTIONAL"
+          PY
+      - name: Protected actual S6 new Poisson 3ns directional Jacobian diagnostic
+        shell: bash
+        env:
+          PROTECTED_ARCHIVE_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+          G6_EXPECTED_SOURCE_SHA: 26e84a4a33cf93d9e278a4f0b2d78c53cae2d6ce
+        run: |
+          set -euo pipefail
+          test -n "$PROTECTED_ARCHIVE_B64"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/ci/guards:$GITHUB_WORKSPACE/g8-harness/ci/guards"
+          python3 g8-harness/ci/guards/issue652_g7_s6_directional.py \
+            --staged "$RUNNER_TEMP/g8-input/staged" \
+            --stage-receipt g8_s6_oldnew_matched_input_stage.json \
+            --manifest "$RUNNER_TEMP/g8-shared/manifest.json" \
+            --output g7_s6_directional_receipt.json --authorize-protected-native
+      - name: Upload only sanitized directional receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue652-g7-s6-fixed-state-directional-receipts
+          path: |
+            g7_synthetic_probe_receipt.json
+            g7_s6_directional_receipt.json
+          if-no-files-found: warn
+          retention-days: 90
