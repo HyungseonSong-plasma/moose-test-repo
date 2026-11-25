@@ -32,6 +32,8 @@ REUSABLE = {
 # are not required until their separately verified implementation is merged.
 # No historical branch-only one-shot policy is waived.
 OPTIONAL_ENTRYPOINTS = {
+    # On-demand policy/identity receipts; not a mandatory CI validation job.
+    "connector-preflight.yml": {"workflow_dispatch"},
     # FLOW #548: source-bound P0/P1/P2 only (no push).
     "issue402-flow-native-p2-regression.yml": {"pull_request", "workflow_dispatch"},
 }
