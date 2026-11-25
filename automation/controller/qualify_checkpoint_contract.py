@@ -31,7 +31,10 @@ def qualify(root, env, junit):
     require(env.get("GITHUB_REPOSITORY") == "HyungseonSong-plasma/moose-test-repo", "REPOSITORY_MISMATCH")
     head = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
     require(re.fullmatch(r"[a-f0-9]{40}", head) and head == env.get("EXPECTED_MAIN_SHA") == env.get("GITHUB_SHA"), "SOURCE_SHA_MISMATCH")
-    sources = {p: digest(root / p) for p in (CONTRACT, TEST, WORKFLOW, SCRIPT, PIN, RECEIPT_TEST, VERIFIER, VERIFIER_TEST)}
+    sources = {p: digest(root / p) for p in (CONTRACT, TEST, WORKFLOW, SCRIPT, PIN, RECEIPT_TEST, VERIFIER, VERIFIER_TEST,
+               "physics_harness/execution/controller_contract_ingress.py",
+               "automation/controller/dispatch_checkpoint_request.py",
+               "physics_harness/code/tests/test_controller_contract_ingress.py")}
     require(sources[CONTRACT] == env.get("EXPECTED_CONTRACT_SHA256"), "CONTRACT_HASH_MISMATCH")
     pin = json.loads((root / PIN).read_text())["operating_system"]["revision"]
     require(re.fullmatch(r"[a-f0-9]{40}", pin) and pin == env.get("EXPECTED_SAMUEL_PIN"), "SAMUEL_PIN_MISMATCH")
