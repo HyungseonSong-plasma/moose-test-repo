@@ -17,7 +17,7 @@ This file supplies MOOSE/Physics-specific sources, routing inputs, and report ad
 2. read central_skills.json + CENTRAL_SKILLS.md;
 3. verify the exact central revision and OS = Samuel;
 4. verify/read central ESSENTIAL_RULES.md;
-5. load session-bootstrap + state-refresh from that same revision;
+5. load session-bootstrap + state-refresh + problem-oriented-response (README and contract.json) from that same revision;
 6. verify/read pinned skills/catalog.json and skills/capability-registry.json, and record capability routing readiness independently from visible tools;
 7. read OPERATING_CORE.md;
 8. recover the active issue/bounded-work STATE and immediate obligation;
@@ -43,7 +43,9 @@ GITHUB_MUTATION_PREFLIGHT=TRIGGER_REQUIRED
 
 For **every** GitHub state-changing operation, even after successful init and even after a context reset: resolve the owning Samuel trigger in the verified catalog, load its central skill, resolve ordered providers from the verified capability registry, and refresh target identity/permissions before choosing the provider. Rehydrate this routing after any context loss rather than relying on chat memory. A connector's visibility does not grant an exception.
 
-If a connector lacks a particular operation, that is only provider-local evidence. Before claiming any GitHub mutation is globally unavailable, trigger `GITHUB_MUTATION_CAPABILITY_VERDICT` / `repository-mutation` and satisfy registry exhaustion using `assert_capability_exhausted` where required. Do not invent alternate workflows or redirect the user to manual changes until the registered native provider has been evaluated.
+If a connector lacks a particular operation, that is only provider-local evidence. Before claiming any GitHub mutation is globally unavailable, trigger `GITHUB_MUTATION_CAPABILITY_VERDICT` / `repository-mutation` and satisfy registry exhaustion using `assert_capability_exhausted` where required. Evaluate only providers actually registered for the concrete capability; never invent a native fallback.
+
+For `GITHUB_BRANCH_CREATE`, `GITHUB_FILE_CREATE`, `GITHUB_PR_CREATE`, and `GITHUB_COMMENT_CREATE`, resolve the single `github-connector` provider from the pinned registry, discover its live action schema, check current target identity and authorization, execute, and read back. No native fallback for these four. Other capabilities retain their registered provider order. Hard denials stop the affected operation; do not bypass them.
 
 Example: `GITHUB_BRANCH_DELETE` resolves to Samuel's `repository-native` exact-SHA `github-branch-delete` contract before its connector fallback. The consumer already has `.github/workflows/samuel-branch-delete.yml`, triggered by `automation/mutations/branch-delete-request.json`; verify this current route instead of assuming deletion is unavailable. Never delete during initialization.
 
@@ -73,6 +75,9 @@ OS = Samuel
 exact central revision
 essential rules loaded
 init skills loaded
+response_contract = samuel.problem-first-response.v1
+response_mode = problem_first
+detail_policy = on_request
 capability registry verified
 GITHUB_CAPABILITY_ROUTING=READY|BLOCKED
 GITHUB_MUTATION_PREFLIGHT=TRIGGER_REQUIRED

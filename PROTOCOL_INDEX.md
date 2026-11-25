@@ -27,6 +27,10 @@ Central skill/capability triggers:
 
 ```text
 MUTATE                         -> repository-mutation
+GITHUB_BRANCH_CREATE           -> repository-mutation -> github-connector only
+GITHUB_FILE_CREATE             -> repository-mutation -> github-connector only
+GITHUB_COMMENT_CREATE          -> repository-mutation -> github-connector only
+GITHUB_PR_CREATE               -> pull-request-create -> github-connector only
 GITHUB_BRANCH_DELETE           -> repository-mutation -> registry-ordered GITHUB_BRANCH_DELETE providers
 GITHUB_MUTATION_CAPABILITY_VERDICT -> repository-mutation -> registry-exhaustion guard
 GITHUB_WORKFLOW_DISPATCH       -> capability registry -> ordered registered providers
@@ -102,7 +106,7 @@ Historical incident records are evidence, not current STATE.
 
 `moose-test-init` must establish `GITHUB_CAPABILITY_ROUTING=READY` by reading and verifying the pinned Samuel catalog and capability registry. A later GitHub state-changing task must re-resolve the Samuel trigger/skill and ordered providers before selecting a tool, even across context resets. Catalog indexing is not mutation authorization.
 
-Trigger central `repository-mutation` before the actual write. `GITHUB_BRANCH_DELETE` and `GITHUB_MUTATION_CAPABILITY_VERDICT` are explicit triggers; a connector's missing operation is not a global capability verdict. Follow the registered Samuel-native provider (e.g. existing `samuel-branch-delete.yml`) and apply `assert_capability_exhausted` before a capability-unavailable claim.
+Trigger central `repository-mutation` before the actual write. `GITHUB_BRANCH_DELETE` and `GITHUB_MUTATION_CAPABILITY_VERDICT` are explicit triggers; a connector's missing operation is not a global capability verdict. Follow only the registered provider chain (e.g. existing `samuel-branch-delete.yml` for branch deletion) and apply `assert_capability_exhausted` before a capability-unavailable claim.
 
 The local `repository_mutation.md` file, when consulted, supplies consumer policy/authorization only; deterministic mutation mechanics come from the central skill.
 

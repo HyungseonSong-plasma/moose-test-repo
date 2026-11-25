@@ -3,7 +3,7 @@
 **Status:** Samuel consumer binding  
 **Consumer:** `HyungseonSong-plasma/moose-test-repo`  
 **Canonical OS repository:** `HyungseonSong-plasma/chatgpt-operation`  
-**Pinned central revision:** `9b335e3fbb9c5e8e323e382daeec56fa25336822`  
+**Pinned central revision:** `20827ec81ab0eac4dd7560a22ee4212e274113a5`  
 **Expected OS:** Samuel
 
 ## Central authority
@@ -12,7 +12,7 @@ Resolve exactly:
 
 ```text
 repository          = HyungseonSong-plasma/chatgpt-operation
-revision            = 9b335e3fbb9c5e8e323e382daeec56fa25336822
+revision            = 20827ec81ab0eac4dd7560a22ee4212e274113a5
 OS index            = docs/operating_system/README.md
 essential rules     = docs/operating_system/ESSENTIAL_RULES.md
 session bootstrap   = skills/session-bootstrap/README.md
@@ -53,7 +53,7 @@ Central Samuel rules/skills/controller mechanics do not establish scientific PAS
 ```text
 1. verify this exact Samuel binding;
 2. verify/read the Samuel OS index and ESSENTIAL_RULES;
-3. load session-bootstrap + state-refresh from the same revision;
+3. load session-bootstrap + state-refresh + problem-oriented-response (README and contract.json) from the same revision;
 4. verify/read skills/catalog.json and skills/capability-registry.json from the exact pinned revision; report GITHUB_CAPABILITY_ROUTING=READY|BLOCKED independently from provider visibility;
 5. restore the Physics-local operating core and current STATE;
 6. resolve immediate-obligation trigger(s) and load matching central skill plus registry-ordered providers, including GITHUB_BRANCH_DELETE and GITHUB_MUTATION_CAPABILITY_VERDICT when triggered;
@@ -63,7 +63,11 @@ Central Samuel rules/skills/controller mechanics do not establish scientific PAS
 
 Initialization does not itself authorize mutation, workflow execution, merge, or semantic acceptance.
 
-After init, any GitHub state-changing request re-enters **Samuel trigger → skill → capability registry → ordered providers → fresh evidence → mutation → read-back**. Rehydrate after context loss. A missing connector operation is not global capability exhaustion; evaluate the registered native provider and central negative-verdict guard first.
+After init, any GitHub state-changing request re-enters **Samuel trigger → skill → capability registry → ordered providers → fresh evidence → mutation → read-back**. Rehydrate after context loss. A missing connector operation is not global capability exhaustion; evaluate only the registered providers and central negative-verdict guard.
+
+For `GITHUB_BRANCH_CREATE`, `GITHUB_FILE_CREATE`, `GITHUB_PR_CREATE`, and `GITHUB_COMMENT_CREATE`, resolve the single `github-connector` provider from the pinned registry, discover its live action schema, check current target identity and authorization, execute, and read back. No native fallback for these four. Other capabilities retain their registered provider order. Hard denials stop the affected operation; do not bypass them.
+
+The required branch preflight policy path `automation/samuel/repository-mutation-policy.json` is an exact JSON mirror of `.chatgpt-operation.json`, not independent authorization. Repository CI rejects drift.
 
 ## Samuel controller continuation
 

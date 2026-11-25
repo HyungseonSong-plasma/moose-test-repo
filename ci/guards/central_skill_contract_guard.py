@@ -48,6 +48,17 @@ def validate(manifest: dict, catalog: dict) -> dict:
             raise CentralSkillContractError(f"{name}: revision differs from OS pin")
         if consumer.get("path") != central.get("path"):
             raise CentralSkillContractError(f"{name}: path differs from central catalog")
+        central_contract = central.get("contract_path")
+        consumer_contract = consumer.get("contract")
+        if central_contract is not None:
+            if (not isinstance(consumer_contract, dict)
+                    or consumer_contract.get("path") != central_contract
+                    or not isinstance(consumer_contract.get("expected_blob_sha"), str)
+                    or len(consumer_contract["expected_blob_sha"]) != 40
+                    or any(ch not in "0123456789abcdef" for ch in consumer_contract["expected_blob_sha"])):
+                raise CentralSkillContractError(f"{name}: machine contract identity missing or mismatched")
+        elif consumer_contract is not None:
+            raise CentralSkillContractError(f"{name}: unexpected machine contract")
         if consumer.get("load_on") != central.get("load_on"):
             raise CentralSkillContractError(f"{name}: load_on differs from central catalog")
 

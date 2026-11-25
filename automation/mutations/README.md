@@ -2,9 +2,9 @@
 
 Checked-in JSON files in this directory declare deterministic repository mutations executed by the central portable Samuel skill:
 
-`HyungseonSong-plasma/chatgpt-operation@9b335e3fbb9c5e8e323e382daeec56fa25336822`
+`HyungseonSong-plasma/chatgpt-operation@20827ec81ab0eac4dd7560a22ee4212e274113a5`
 
-Use the canonical `Governed refactor entrypoint` with task `repository_mutation`. The consumer policy is `.chatgpt-operation.json`.
+Use the canonical `Governed refactor entrypoint` with task `repository_mutation` only for independently authorized native operations; do not use it as fallback for Connector-only branch/file/PR/comment creation. The consumer policy is `.chatgpt-operation.json`.
 
 Portable v1 supports:
 

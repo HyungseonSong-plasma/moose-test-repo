@@ -62,9 +62,9 @@ jobs:
           test -f docs/operating_system/README.md
           test -f docs/operating_system/CENTRAL_SKILLS.md
           test -f docs/operating_system/central_skills.json
-          grep -Fq '9b335e3fbb9c5e8e323e382daeec56fa25336822' docs/operating_system/README.md
+          grep -Fq '20827ec81ab0eac4dd7560a22ee4212e274113a5' docs/operating_system/README.md
           grep -Fq 'Expected OS:** Samuel' docs/operating_system/README.md
-          grep -Fq '9b335e3fbb9c5e8e323e382daeec56fa25336822' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq '20827ec81ab0eac4dd7560a22ee4212e274113a5' docs/operating_system/CENTRAL_SKILLS.md
 
           # Calvin operating metrics remain archive-only under Samuel.
           test ! -e docs/metrics
@@ -73,9 +73,9 @@ jobs:
           test -f archive/operating_metrics/calvin/metrics_closure.md
 
           # Executable central actions use the same exact Samuel revision.
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@9b335e3fbb9c5e8e323e382daeec56fa25336822' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@9b335e3fbb9c5e8e323e382daeec56fa25336822' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@9b335e3fbb9c5e8e323e382daeec56fa25336822' .github/workflows/experiment.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@20827ec81ab0eac4dd7560a22ee4212e274113a5' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@20827ec81ab0eac4dd7560a22ee4212e274113a5' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@20827ec81ab0eac4dd7560a22ee4212e274113a5' .github/workflows/experiment.yml
 
           python3 - <<'PY'
           import json
@@ -85,12 +85,12 @@ jobs:
           assert manifest["schema_version"] == 2
           assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
           os_meta=manifest["operating_system"]
-          revision="9b335e3fbb9c5e8e323e382daeec56fa25336822"
+          revision="20827ec81ab0eac4dd7560a22ee4212e274113a5"
           assert os_meta["revision"] == revision
           assert os_meta["expected_version"] == "Samuel"
           assert os_meta["index"] == {
               "path": "docs/operating_system/README.md",
-              "expected_blob_sha": "77448ab850a06c141b16976c1c75353e7224973d",
+              "expected_blob_sha": "a5fdc9985affe32e455b6e0a09398047497ba0b4",
           }
           assert os_meta["essential_rules"] == {
               "path": "docs/operating_system/ESSENTIAL_RULES.md",
@@ -98,17 +98,18 @@ jobs:
           }
           assert manifest["skill_catalog"] == {
               "path": "skills/catalog.json",
-              "expected_blob_sha": "9bee98efd28235ccafdcffde18da06dcc0386702",
+              "expected_blob_sha": "73c7a5799bf265c79295880bad168cfe0a0798c9",
           }
           assert manifest["capability_registry"] == {
               "path": "skills/capability-registry.json",
-              "expected_blob_sha": "aa87d20fa68dc6e171ffd3240b4e4bc6d3bf28be",
+              "expected_blob_sha": "fb05ad1de6f690943bfd6be3cf77957b9aebf456",
           }
 
           entries={item["name"]: item for item in manifest["skills"]}
           expected_names={
               "session-bootstrap",
               "state-refresh",
+              "problem-oriented-response",
               "repository-mutation",
               "governed-work",
               "controller-throughput",
@@ -117,6 +118,7 @@ jobs:
               "github-actions-observation",
               "artifact-staging",
               "scientific-discriminator-controller",
+              "pull-request-create",
               "pull-request-merge",
               "research-controller",
           }
@@ -125,7 +127,8 @@ jobs:
               assert item["revision"] == revision
           assert entries["session-bootstrap"]["load_on"] == ["INIT"]
           assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
-          assert entries["repository-mutation"]["load_on"] == ["MUTATE","GITHUB_BRANCH_DELETE","GITHUB_MUTATION_CAPABILITY_VERDICT"]
+          assert entries["problem-oriented-response"]["load_on"] == ["INIT"]
+          assert entries["repository-mutation"]["load_on"] == ["MUTATE","GITHUB_BRANCH_DELETE","GITHUB_MUTATION_CAPABILITY_VERDICT","GITHUB_FILE_CREATE","GITHUB_FILE_UPDATE","GITHUB_BRANCH_CREATE","GITHUB_BRANCH_FAST_FORWARD","GITHUB_COMMENT_CREATE"]
           assert entries["governed-work"]["load_on"] == ["GOVERNED_WORK"]
           assert entries["controller-throughput"]["load_on"] == ["SCHEDULED_CONTROLLER"]
           assert entries["controller-lifecycle"]["load_on"] == ["SCHEDULED_CONTROLLER"]
@@ -133,12 +136,15 @@ jobs:
           assert entries["github-actions-observation"]["load_on"] == ["GITHUB_ACTIONS_OBSERVATION"]
           assert entries["artifact-staging"]["load_on"] == ["ARTIFACT_STAGING"]
           assert entries["scientific-discriminator-controller"]["load_on"] == ["SCIENTIFIC_DISCRIMINATOR_CONTROLLER"]
+          assert entries["pull-request-create"]["load_on"] == ["GITHUB_PR_CREATE"]
           assert entries["pull-request-merge"]["load_on"] == ["GITHUB_PR_MERGE"]
           assert entries["research-controller"]["load_on"] == ["RESEARCH_CONTROLLER"]
+          assert entries["problem-oriented-response"]["contract"] == {"path":"skills/problem-oriented-response/contract.json","expected_blob_sha":"a49fd5e7513bcbdf354fcff127c8709e0365ec01"}
 
           policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
           assert policy["schema_version"] == 1
           assert policy["repository"] == "HyungseonSong-plasma/moose-test-repo"
+          assert json.loads(Path("automation/samuel/repository-mutation-policy.json").read_text(encoding="utf-8")) == policy
           assert policy["validation_gate"]["mode"] == "named_workflows"
           assert "Repository CI" in policy["validation_gate"]["workflows"]
           PY
@@ -180,6 +186,8 @@ jobs:
               for item in manifest["skills"]
           ]
 
+          expected += [item["contract"] for item in manifest["skills"] if "contract" in item]
+
           for item in expected:
               actual=subprocess.check_output(
                   ["git","-C",root,"rev-parse",f'{revision}:{item["path"]}'],
@@ -199,6 +207,14 @@ jobs:
               text=True,
           )
           assert essential.startswith("# Samuel Essential Rules")
+          registry=json.loads(subprocess.check_output(["git","-C",root,"show",f"{revision}:skills/capability-registry.json"],text=True))
+          for capability in ("GITHUB_BRANCH_CREATE","GITHUB_FILE_CREATE","GITHUB_PR_CREATE","GITHUB_COMMENT_CREATE"):
+              assert registry["capabilities"][capability]["providers"] == [{"name":"github-connector","kind":"external","priority":10}]
+          response=json.loads(subprocess.check_output(["git","-C",root,"show",f"{revision}:skills/problem-oriented-response/contract.json"],text=True))
+          assert response["contract_id"] == "samuel.problem-first-response.v1"
+          assert response["mode"] == "problem_first"
+          assert response["detail_policy"] == "on_request"
+          assert response["human_review_requires_question"] is True
           PY
           rm -rf "$central_dir"
       - uses: actions/setup-python@v5
