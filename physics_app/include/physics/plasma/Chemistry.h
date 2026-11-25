@@ -114,11 +114,16 @@ struct SpeciesRecord
 };
 
 // Validated executable rate law. Empty model means the reaction progress
-// must be provided independently (e.g. an electron-impact lookup table).
+// is still provided independently by a historical input. An explicit lookup
+// is generated exclusively by the Chemistry Action.
 struct RateRecord
 {
   std::string model;
   std::string basis;
+  // Strict EI lookup: table path resolved relative to the declaring JSON,
+  // neutral target derived from validated stoichiometry (never user override).
+  std::string table_file;
+  std::string lookup_target;
   double A_input = 0.0;
   double A_molar = 0.0;
   double T_ref = 300.0;

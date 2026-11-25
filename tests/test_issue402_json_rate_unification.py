@@ -165,3 +165,33 @@ def test_surface_json_keeps_wall_mass_flux_separate_from_volume_sources():
     assert 'reaction.progress' in material
     assert 'reaction.net(species)' in material
     assert '"surface_mass_flux_" + species' in material
+
+
+
+def test_explicit_ei_lookup_is_generated_by_existing_chemistry_owner():
+    from physics_app.ci.check_issue402_json_rate_native_p2 import lookup_fixture
+
+    document, deck = lookup_fixture()
+    assert {r["id"] for r in document["reactions"]} == {"EI-415", "EI-407"}
+    assert all(r["reactants"] == {"e": 1, "O2": 1} for r in document["reactions"])
+    for reaction in document["reactions"]:
+        rate = reaction["rate"]
+        assert set(rate) == {"model", "file", "basis", "bounds_policy"}
+        assert rate["model"] == "lookup" and rate["basis"] == "molar"
+        assert rate["bounds_policy"] == "strict"
+        assert (APP / "database" / Path(rate["file"]).name).is_file()
+    assert "type = EIRateCoefMaterial" not in deck
+    assert "reaction_progress =" not in deck
+    parser = (APP / "src/physics/plasma/Chemistry.C").read_text()
+    for marker in ("EI lookup requires one electron and one neutral reactant",
+                   "EI lookup requires molar coefficient basis",
+                   "EI lookup requires strict bounds_policy",
+                   'law.table_file = resolveDataFile',
+                   'law.lookup_target = id',
+                   'if (reaction.rate.model == "lookup")',
+                   'const std::string type = "EIRateCoefMaterial"',
+                   '"c_" + reaction.rate.lookup_target + "_molar"',
+                   'params.set<std::string>("reaction_progress") = reaction.progress'):
+        assert marker in parser
+    assert '"e_energy_eV"' in parser and '"n_e_physical"' in parser
+    assert "reaction.rate.model != \"lookup\"" in parser
