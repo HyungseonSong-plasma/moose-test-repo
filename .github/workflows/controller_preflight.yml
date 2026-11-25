@@ -1,11 +1,11 @@
-name: Connector Preflight (read-only)
-run-name: connector-preflight:${{ inputs.request_sha256 }}
+name: Controller Preflight (read-only)
+run-name: controller-preflight:${{ inputs.request_sha256 }}
 
 on:
   workflow_dispatch:
     inputs:
       request_json:
-        description: Exact file-create/update request descriptor JSON (no credentials or file content)
+        description: Controller cycle identity and exact source/target revisions JSON
         type: string
         required: true
       request_sha256:
@@ -26,7 +26,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Evaluate pinned policy and exact target identity
+      - name: Check controller INIT identities and pinned central contracts
         env:
           GH_TOKEN: ${{ github.token }}
           PREFLIGHT_REQUEST: ${{ inputs.request_json }}
@@ -35,11 +35,11 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = refs/heads/main
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python3 -m physics_harness.execution.connector_policy_probe
-      - name: Upload policy-only receipt
+          python3 -m physics_harness.execution.controller_preflight
+      - name: Upload controller startup observation
         uses: actions/upload-artifact@v4
         with:
-          name: connector-preflight-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/connector-policy-receipt.json
+          name: controller-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/controller-preflight-receipt.json
           if-no-files-found: error
           retention-days: 7
