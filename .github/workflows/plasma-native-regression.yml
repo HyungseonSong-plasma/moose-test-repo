@@ -46,6 +46,7 @@ jobs:
           test "$APPROVAL" = NATIVE_VALIDATION_APPROVED
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$REQUESTED_SHA" = "$GITHUB_SHA"
+          [[ "$GITHUB_REF" == refs/heads/* ]]
           if [[ "$GITHUB_REF" == refs/heads/main ]]; then
             test -z "$REQUESTED_PR"
             test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$REQUESTED_SHA"
