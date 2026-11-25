@@ -1665,6 +1665,18 @@ jobs:
             "$OCI" -lc 'set -euo pipefail; source /environment; P5X_REGISTER_LOG=/probe/preload-ready.log LD_PRELOAD=/workspace/physics_app/p5x_owner_tracer.so /workspace/physics_app/physics-opt --version >/probe/version.txt; test -s /probe/version.txt; grep -Fxq P5X_PRELOAD_READY /probe/preload-ready.log'
           # Trace marker remains root-owned 0600: validation happens in-container, not via host.
           echo P5X_PRELOAD_ELF_LOADER_PASS_NO_PRIVATE_RATE
+      - name: Verify public EI New-only candidate 417 and 941 without protected rates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BASE_HEAD"
+          sha256sum -c "$RUNNER_TEMP/p05-in/physics-opt.sha256"
+          python3 ci/guards/issue898_public_ei_candidate.py \
+            --staged "$RUNNER_TEMP/p05-in/staged" \
+            --receipt "$RUNNER_TEMP/p05-in/p4_receipt.json" \
+            --output "$RUNNER_TEMP/p05-out/public-ei-candidate.json" \
+            --head "$BASE_HEAD"
+          sha256sum -c "$RUNNER_TEMP/p05-in/physics-opt.sha256"
       - name: Protected original EI Rate, clean controls, and N1-N8 actual Native mutants
         shell: bash
         env:
@@ -2013,6 +2025,7 @@ jobs:
             ${{ runner.temp }}/p05-out/p05_negative_receipt.json
             ${{ runner.temp }}/p05-out/public-d-417.json
             ${{ runner.temp }}/p05-out/public-d-941.json
+            ${{ runner.temp }}/p05-out/public-ei-candidate.json
             ${{ runner.temp }}/p05-in/p4_receipt.json
             ${{ runner.temp }}/p05-in/physics-opt.sha256
             ${{ runner.temp }}/p05-in/w1_identity.json
