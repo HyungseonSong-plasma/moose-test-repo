@@ -23,7 +23,7 @@ import sys
 BASE = pathlib.Path(__file__).resolve().parent
 DECKS = pathlib.Path('experiments/Issue493_s6_boltzmann/public_p2_decks')
 CHEM = pathlib.Path('experiments/Issue395_powered_chemistry_ladder')
-RATES = pathlib.Path('physics_app/data/electron_impact/boltz')
+RATES = pathlib.Path('physics_app/database')
 VARIANTS = ('B', 'C')
 CASES = ('417', '941')
 PACK_SHA = '9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240'

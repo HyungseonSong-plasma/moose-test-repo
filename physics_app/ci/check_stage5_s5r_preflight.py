@@ -16,13 +16,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json"
-HEAVY = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"
+HEAVY = ROOT / "experiments/Issue91_real_qvt_r3/r3_econst/heavy_base.i"
 OWNERSHIP = ROOT / "docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json"
 E8 = ROOT / "docs/development/2026-09-10_issue26_e8_closure_surface_contract.json"
 E8_ELASTIC = ROOT / "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json"
 H05 = ROOT / "docs/development/2026-09-11_issue191_stage5_h05_contract.json"
 EI01_RECOVERY = ROOT / "docs/development/2026-09-11_issue192_s5r_ei01_attachment_recovery.json"
-EI01_TABLE = ROOT / "physics_app/data/electron_impact/o2_attachment.txt"
+EI01_TABLE = ROOT / "physics_app/database/o2_attachment.txt"
 
 EXPECTED_LEDGER = [
     "EI01",
@@ -271,13 +271,27 @@ def check() -> None:
     }
     if ident != expected_identity:
         raise AssertionError("representative identity/state binding changed")
-    for relative in (
-        ident["geometry"],
-        ident["heavy_state_reference"],
-        ident["electron_transport_table"],
-    ):
-        if not (ROOT / relative).is_file():
+    # Keep the frozen representative identity above as provenance. Resolve
+    # its byte-identical shared assets from their current source owners.
+    relocated_dependencies = {
+        ident["geometry"]: "experiments/Issue91_real_qvt_r3/r3_econst/qvt.msh",
+        ident["heavy_state_reference"]: "experiments/Issue91_real_qvt_r3/r3_econst/heavy_base.i",
+        ident["electron_transport_table"]: "physics_app/database/electron_moments.txt",
+    }
+    expected_blobs = {
+        ident["geometry"]: "28ff31220904ff81f426d0c2ed8dd18a7fd40b9e",
+        ident["heavy_state_reference"]: "fcfd8fe8e2ecf04af045a617e19479469a99c5b0",
+        ident["electron_transport_table"]: "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+    }
+    for original, relative in relocated_dependencies.items():
+        path = ROOT / relative
+        if not path.is_file():
             raise AssertionError(f"missing representative dependency: {relative}")
+        raw = path.read_bytes()
+        actual_blob = hashlib.sha1(
+            b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+        if actual_blob != expected_blobs[original]:
+            raise AssertionError(f"relocated representative dependency changed: {relative}")
 
     gate = contract.get("construction_gate", {})
     if gate.get("next_artifact") != "canonical executable S5-R representative input/checker surface":

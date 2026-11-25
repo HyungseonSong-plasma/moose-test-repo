@@ -13,7 +13,7 @@ CONTRACT = ROOT / "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.
 OWNER_H = ROOT / "physics_app/include/materials/EIRateCoefMaterial.h"
 OWNER_C = ROOT / "physics_app/src/materials/EIRateCoefMaterial.C"
 RUNTIME_CHECKER = ROOT / "physics_app/ci/check_e8_elastic_ei19_runtime.py"
-DATA_DIR = ROOT / "physics_app/data/electron_impact"
+DATA_DIR = ROOT / "physics_app/database"
 
 EXPECTED_TABLES = {
     "o2_elastic.txt": {

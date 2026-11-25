@@ -133,7 +133,7 @@ def active_inputs() -> list[dict]:
         item.update(case=name, tracked_consumer=path,
                     input_sha256=hashlib.sha256(original.encode()).hexdigest())
         records.append(item)
-    base_path = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"
+    base_path = ROOT / "experiments/Issue91_real_qvt_r3/r3_econst/heavy_base.i"
     assembled, meta = build_s5r_input(base_path.read_text())
     if audit_s5r_input(assembled)["status"] != "PASS" or meta["audit"]["status"] != "PASS":
         fail("S5R_CHEMISTRY_AUDIT")

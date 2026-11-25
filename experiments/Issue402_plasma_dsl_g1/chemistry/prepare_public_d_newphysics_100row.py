@@ -35,7 +35,7 @@ def p6_d4_mechanism_path(case: str) -> Path:
         raise PublicDHold("PUBLIC_D_UNSUPPORTED_S6_CASE")
     return P6_D4_MECHANISM_ROOT / ("unified_s6_" + case + "_newonly.json.txt")
 
-ORIGINAL_TABLE = REPO / "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+ORIGINAL_TABLE = REPO / "physics_app/database/electron_moments.txt"
 ORIGINAL_TABLE_SHA256 = "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
 ORIGINAL_TABLE_GIT_BLOB = "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a"
 EXPECTED_IONS = {

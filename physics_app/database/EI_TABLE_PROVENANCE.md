@@ -1,6 +1,6 @@
 # Independently calculated S6 Boltzmann electron-impact rates
 
-This directory contains the **19 independent new Boltzmann lookup tables** used
+The 19 `EI-*.txt` files in this directory are the **independent new Boltzmann lookup tables** used
 for experimental S6 comparisons in Issue #493. These tables are **not** the
 original protected S6 rate tables, nor a copy or interpolation of MCS.OUT data.
 They do not represent accepted scientific parity with original reactions.
@@ -26,6 +26,4 @@ They do not represent accepted scientific parity with original reactions.
 - The original S6 protected coefficients, comparison MCS data, raw private
   solver traces, and restricted experimental package are **not stored here**.
 
-When using the tables, point experimental input lookups explicitly at this
-`boltz/` directory. Do not overwrite or silently replace the original
-`physics_app/data/electron_impact/` reference data or production defaults.
+The directory name `boltz` has been retired; all 19 coefficient files are directly under `physics_app/database/`. The numerical tables are unchanged. Select them by explicit reaction ID and verified digest; never infer scientific acceptance from their location. They must not silently replace the protected S6 data or the existing elastic EI-02/EI-17 tables.

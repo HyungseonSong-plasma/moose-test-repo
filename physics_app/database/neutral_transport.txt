@@ -1,5 +1,4 @@
 # =============================================================================
-# QPX canonical candidate: full-oxygen seven-heavy-species transport database
 #
 # Active species:
 #   O2 O2s O2p O Om Op Os

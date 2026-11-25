@@ -51,7 +51,7 @@ from physics_harness.execution.runtime import (  # noqa: E402
 )
 
 SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0"
-ELECTRON_DATA = ROOT / "physics_app/data/electron_impact"
+ELECTRON_DATA = ROOT / "physics_app/database"
 HEAVY_DATA = ROOT / "physics_app/data/heavy_reactions"
 
 BASELINE_DT_S = 1.0e-4

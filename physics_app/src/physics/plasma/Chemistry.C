@@ -1131,7 +1131,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         auto & law = reaction.rate;
         law.model = rate.at("model").get<std::string>();
         const bool surface = reaction.domain == "surface";
-        if (!surface && law.model != "constant" && law.model != "power_law")
+        const bool lookup = law.model == "lookup";
+        if (!surface && !lookup && law.model != "constant" && law.model != "power_law")
           fail(file, reaction.id + ": unsupported volume rate model");
         if (surface && law.model != "thermal_sticking" &&
             law.model != "deferred_charged_flux")
@@ -1139,7 +1140,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
 
         const std::set<std::string> accepted = surface
             ? std::set<std::string>{"model", "sticking"}
-            : std::set<std::string>{"model", "A", "basis", "T_ref", "exponent"};
+            : lookup ? std::set<std::string>{"model", "file", "basis", "bounds_policy"}
+                     : std::set<std::string>{"model", "A", "basis", "T_ref", "exponent"};
         for (auto it = rate.begin(); it != rate.end(); ++it)
           if (!accepted.count(it.key()))
             fail(file, reaction.id + ": unsupported rate key " + it.key());
@@ -1151,6 +1153,30 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           law.sticking = rate.at("sticking").get<double>();
           if (!std::isfinite(law.sticking) || law.sticking < 0.0)
             fail(file, reaction.id + ": sticking must be finite and nonnegative");
+        }
+        else if (lookup)
+        {
+          // EIRateCoefMaterial implements exactly one electron and one
+          // neutral reactant. Do not silently fit higher-order kinetics or
+          // charged targets into that bimolecular neutral rate contract.
+          const auto electron = reaction.reactants.find("e");
+          if (reaction.id.rfind("EI-", 0) != 0 || reaction.reactants.size() != 2 ||
+              electron == reaction.reactants.end() || electron->second != 1)
+            fail(file, reaction.id + ": EI lookup requires one electron and one neutral reactant");
+          for (const auto & [id, count] : reaction.reactants)
+            if (id != "e")
+            {
+              const auto target = _species.find(id);
+              if (count != 1 || target == _species.end() || target->second.charge_number != 0)
+                fail(file, reaction.id + ": EI lookup requires one electron and one neutral reactant");
+              law.lookup_target = id;
+            }
+          law.basis = requiredText(rate, "basis", file);
+          if (law.basis != "molar")
+            fail(file, reaction.id + ": EI lookup requires molar coefficient basis");
+          if (requiredText(rate, "bounds_policy", file) != "strict")
+            fail(file, reaction.id + ": EI lookup requires strict bounds_policy");
+          law.table_file = resolveDataFile(requiredText(rate, "file", file), file);
         }
         else
         {
@@ -1195,7 +1221,7 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
 
       // Executable heavy and surface rate laws must provide physical molar
       // masses for every heavy reactant/product, not silently omit wall flux.
-      if (!reaction.rate.model.empty())
+      if (!reaction.rate.model.empty() && reaction.rate.model != "lookup")
       {
         std::set<std::string> involved;
         for (const auto & item : reaction.reactants)
@@ -1346,7 +1372,7 @@ Chemistry::validParams()
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
       "Generates one source Functor per species and one electron-energy source "
-      "from validated [Plasmas]/files reaction channels; kinetic progress remains separately owned.");
+      "from validated [Plasmas]/files reaction channels; explicit EI lookup progress is generated here.");
   return params;
 }
 
@@ -1373,7 +1399,8 @@ Chemistry::addFunctorMaterials()
   SourceExpression energy;
 
   // The shared mechanism merges reactions from every [Plasmas]/files entry.
-  // For each reaction ID, project its independently owned progress R_k onto
+  // For each reaction ID, generate an explicit EI lookup when requested and
+  // project the single progress R_k onto
   // species production (nu_s,k * R_k) and signed electron energy transfer
   // (delta_epsilon_k * R_k). Even identical equations remain separate channels.
   // After this loop, all electron contributions form ONE Q_e_molar_eV Functor;
@@ -1383,6 +1410,23 @@ Chemistry::addFunctorMaterials()
     // Boundary reactions must not be projected into volumetric RHS kernels.
     if (reaction.domain == "surface")
       continue;
+    if (reaction.rate.model == "lookup")
+    {
+      // A single progress producer for each explicit JSON lookup. Live
+      // state and neutral concentration are supplied by their respective
+      // Continuity, Energy and mixture owners; no frozen density or mass
+      // fallback and no reaction-specific native concentration aliases.
+      const std::string type = "EIRateCoefMaterial";
+      auto params = getFactory().getValidParams(type);
+      params.set<FileName>("rate_table_file") = reaction.rate.table_file;
+      params.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
+      params.set<MooseFunctorName>("electron_number_density") = "n_e_physical";
+      params.set<MooseFunctorName>("target_molar_concentration") =
+          "c_" + reaction.rate.lookup_target + "_molar";
+      params.set<std::string>("reaction_progress") = reaction.progress;
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(type, "chemistry_" + reaction.progress + "_lookup", params);
+    }
     std::set<std::string> touched;
     for (const auto & [id, coefficient] : reaction.reactants)
       touched.insert(id);

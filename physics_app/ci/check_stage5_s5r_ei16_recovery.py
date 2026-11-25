@@ -14,11 +14,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 RECOVERY = ROOT / "docs/development/2026-09-11_issue192_s5r_ei16_ionization_recovery.json"
-TABLE = ROOT / "physics_app/data/electron_impact/o2_ionization.txt"
+TABLE = ROOT / "physics_app/database/o2_ionization.txt"
 EI16 = ROOT / "docs/development/2026-09-10_issue26_e8_ei16_energy_contract.json"
 COMPANIONS = (
-    ROOT / "physics_app/data/electron_impact/o_ionization.txt",
-    ROOT / "physics_app/data/electron_impact/o2_elastic.txt",
+    ROOT / "physics_app/database/o_ionization.txt",
+    ROOT / "physics_app/database/o2_elastic.txt",
 )
 
 
