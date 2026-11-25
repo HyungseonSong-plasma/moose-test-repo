@@ -1,0 +1,45 @@
+name: Controller Preflight (read-only)
+run-name: controller-preflight:${{ inputs.request_sha256 }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_json:
+        description: Controller cycle identity and exact source/target revisions JSON
+        type: string
+        required: true
+      request_sha256:
+        description: SHA256 of the exact UTF-8 request_json input
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted default-branch source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Check controller INIT identities and pinned central contracts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREFLIGHT_REQUEST: ${{ inputs.request_json }}
+          PREFLIGHT_REQUEST_SHA256: ${{ inputs.request_sha256 }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m physics_harness.execution.controller_preflight
+      - name: Upload controller startup observation
+        uses: actions/upload-artifact@v4
+        with:
+          name: controller-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/controller-preflight-receipt.json
+          if-no-files-found: error
+          retention-days: 7
