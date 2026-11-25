@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'physics_app/**'
+      - 'physics'
       - 'physics_harness/analysis/**'
       - 'physics_harness/application/**'
       - 'physics_harness/execution/**'
@@ -13,10 +14,12 @@ on:
       - 'tests/boltzmann/**'
       - 'ci/guards/issue541_artifact_evidence_guard.py'
       - 'ci/guards/issue402_*'
-      - 'ci/guards/p6_*'
-      - 'ci/guards/issue671_*'
-      - 'ci/contracts/repository_ci_scope_v1.json'
+      - 'ci/physics-build-base/**'
+      - 'ci/physics-runtime-image/**'
       - '.github/workflows/physics-native-ci.yml'
+      - '!physics_harness/execution/controller_*.py'
+      - '!physics_harness/execution/connector_policy_probe.py'
+      - '!**/*.md'
 
 permissions:
   contents: read
