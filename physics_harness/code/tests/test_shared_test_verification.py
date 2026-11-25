@@ -3,7 +3,8 @@ from hashlib import sha256
 
 import pytest
 
-from libs.test_verification import compare_case_outcomes, parse_junit, run_pytest
+from libs.test_verification import compare_case_outcomes, parse_junit
+from physics_harness.code.verification.pytest_revision_runner import run_pytest
 from physics_harness.code.verification.junit_compare import (
     ReplayArtifact, compare_replay_artifacts,
 )
