@@ -10,6 +10,7 @@
         "Assert exact validation source HEAD",
         "Enforce Repository CI job and validation ownership",
         "Install validation dependencies",
+        "Inventory complete Git changes and classify Physics impact",
         "Regression-test Harness dependency contract",
         "Regression-test central Skill manifest contract",
         "Regression-test moose-test-init capability restoration",
