@@ -29,11 +29,14 @@ jobs:
     name: "P6 mandatory New-only W1 exact HEAD / ELF and 2 app libs (no Native)"
     runs-on: ubuntu-24.04
     timeout-minutes: 95
+    outputs:
+      w1_artifact_name: ${{ steps.freeze.outputs.artifact_name }}
     permissions:
       contents: read
       pull-requests: read
     env:
       SOURCE_HEAD: ${{ github.sha }}
+      SOURCE_PR: ${{ inputs.pr_number }}
       OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
     steps:
       - name: Verify explicit manual approval and current source scope
@@ -50,6 +53,7 @@ jobs:
           test "$APPROVAL" = NATIVE_VALIDATION_APPROVED
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$REQUESTED_SHA" = "$GITHUB_SHA"
+          [[ "$GITHUB_REF" == refs/heads/* ]]
           if [[ "$GITHUB_REF" == refs/heads/main ]]; then
             test -z "$REQUESTED_PR"
             test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$REQUESTED_SHA"
@@ -118,6 +122,7 @@ jobs:
           test -s physics_app/physics-opt
           echo P5_0_ONE_COMPILE_PASS
       - name: Freeze and roundtrip verify actual ELF and all app shared libraries
+        id: freeze
         shell: bash
         run: |
           set -euo pipefail
@@ -195,7 +200,9 @@ jobs:
           assert total<2_000_000_000, "Unexpectedly large app-only binaries"
           info={"schema":"issue671.p5_0.exact_head_single_build_app_shared_libraries.v1",
                 "source_repository":"HyungseonSong-plasma/moose-test-repo",
-                "source_pr":665,
+                "source_pr":int(os.environ["SOURCE_PR"]) if os.environ["SOURCE_PR"] else None,
+                "producer_attempt":os.environ["GITHUB_RUN_ATTEMPT"],
+                "w1_artifact_name":"p6-newonly-w1-"+os.environ["GITHUB_RUN_ID"]+"-"+os.environ["GITHUB_RUN_ATTEMPT"]+"-"+head,
                 "source_head":head, "source_tree":tree,
                 "branch_workflow_sha":os.environ["GITHUB_SHA"],
                 "run_id":os.environ["GITHUB_RUN_ID"],
@@ -252,11 +259,12 @@ jobs:
               "archive_size":info["archive_size"],
               "files":len(files)},indent=2))
           PY
+          printf 'artifact_name=p6-newonly-w1-%s-%s-%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$SOURCE_HEAD" >> "$GITHUB_OUTPUT"
       - name: Upload app ELF + libraries + manifest, without private inputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: p6-newonly-w1-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          name: ${{ steps.freeze.outputs.artifact_name }}
           path: |
             evidence/physics-opt-and-app-libs.tar.gz
             evidence/identity.json
@@ -279,6 +287,8 @@ jobs:
       actions: read
     env:
       BASE_HEAD: ${{ github.sha }}
+      SOURCE_PR: ${{ inputs.pr_number }}
+      W1_ARTIFACT_NAME: ${{ needs.p6_newonly_s6_build.outputs.w1_artifact_name }}
       OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
     steps:
       - name: Verify explicit manual approval and current source scope
@@ -295,6 +305,7 @@ jobs:
           test "$APPROVAL" = NATIVE_VALIDATION_APPROVED
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$REQUESTED_SHA" = "$GITHUB_SHA"
+          [[ "$GITHUB_REF" == refs/heads/* ]]
           if [[ "$GITHUB_REF" == refs/heads/main ]]; then
             test -z "$REQUESTED_PR"
             test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$REQUESTED_SHA"
@@ -426,7 +437,7 @@ jobs:
       - name: Download one exact-head W1 from this CI run (never rebuild)
         uses: actions/download-artifact@v4
         with:
-          name: p6-newonly-w1-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          name: ${{ needs.p6_newonly_s6_build.outputs.w1_artifact_name }}
           path: ${{ runner.temp }}/p05-in/w1bundle
       - name: Verify actual ELF and both application libraries against W1 manifest
         shell: bash
@@ -440,11 +451,15 @@ jobs:
           mkdir -p "$RUNNER_TEMP/p05-in/w1"
           cp "$RUNNER_TEMP/p05-in/w1bundle/identity.json" "$RUNNER_TEMP/p05-in/w1_identity.json"
           python3 - "$RUNNER_TEMP/p05-in/w1_identity.json" "$RUNNER_TEMP/p05-in/w1bundle/physics-opt-and-app-libs.tar.gz" "$RUNNER_TEMP/p05-in/w1" "$BASE_HEAD" "$OCI" "$GITHUB_RUN_ID" <<'PY'
-          import hashlib,json,pathlib,sys,tarfile
+          import hashlib,json,os,pathlib,sys,tarfile
           record=json.loads(pathlib.Path(sys.argv[1]).read_text())
           bundle=pathlib.Path(sys.argv[2]); directory=pathlib.Path(sys.argv[3])
           head,oci,run_id=sys.argv[4:]
           assert record["source_head"]==head and record["oci"]==oci and record["run_id"]==run_id
+          assert record["source_pr"]==(int(os.environ["SOURCE_PR"]) if os.environ["SOURCE_PR"] else None)
+          attempt=record["producer_attempt"]
+          assert isinstance(attempt,str) and attempt.isdecimal() and 1<=int(attempt)<=int(os.environ["GITHUB_RUN_ATTEMPT"])
+          assert record["w1_artifact_name"]==os.environ["W1_ARTIFACT_NAME"]=="p6-newonly-w1-"+run_id+"-"+attempt+"-"+head
           assert record["build_count"]==1 and record["native_check_input"]=="NOT_RUN"
           assert record["archive_member_count"]==3 and record["archive_roundtrip_check"]=="PASS"
           assert record["private_data_bundled"] is False
@@ -927,6 +942,8 @@ jobs:
       actions: read
     env:
       BASE_HEAD: ${{ github.sha }}
+      SOURCE_PR: ${{ inputs.pr_number }}
+      W1_ARTIFACT_NAME: ${{ needs.p6_newonly_s6_build.outputs.w1_artifact_name }}
       OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
     steps:
       - name: Verify explicit manual approval and current source scope
@@ -943,6 +960,7 @@ jobs:
           test "$APPROVAL" = NATIVE_VALIDATION_APPROVED
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$REQUESTED_SHA" = "$GITHUB_SHA"
+          [[ "$GITHUB_REF" == refs/heads/* ]]
           if [[ "$GITHUB_REF" == refs/heads/main ]]; then
             test -z "$REQUESTED_PR"
             test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$REQUESTED_SHA"
@@ -1115,7 +1133,7 @@ jobs:
       - name: Download one exact-head W1 from this CI run (never rebuild)
         uses: actions/download-artifact@v4
         with:
-          name: p6-newonly-w1-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          name: ${{ needs.p6_newonly_s6_build.outputs.w1_artifact_name }}
           path: ${{ runner.temp }}/p05-in/w1bundle
       - name: Verify actual ELF and both application libraries against W1 manifest
         shell: bash
@@ -1129,11 +1147,15 @@ jobs:
           mkdir -p "$RUNNER_TEMP/p05-in/w1"
           cp "$RUNNER_TEMP/p05-in/w1bundle/identity.json" "$RUNNER_TEMP/p05-in/w1_identity.json"
           python3 - "$RUNNER_TEMP/p05-in/w1_identity.json" "$RUNNER_TEMP/p05-in/w1bundle/physics-opt-and-app-libs.tar.gz" "$RUNNER_TEMP/p05-in/w1" "$BASE_HEAD" "$OCI" "$GITHUB_RUN_ID" <<'PY'
-          import hashlib,json,pathlib,sys,tarfile
+          import hashlib,json,os,pathlib,sys,tarfile
           record=json.loads(pathlib.Path(sys.argv[1]).read_text())
           bundle=pathlib.Path(sys.argv[2]); directory=pathlib.Path(sys.argv[3])
           head,oci,run_id=sys.argv[4:]
           assert record["source_head"]==head and record["oci"]==oci and record["run_id"]==run_id
+          assert record["source_pr"]==(int(os.environ["SOURCE_PR"]) if os.environ["SOURCE_PR"] else None)
+          attempt=record["producer_attempt"]
+          assert isinstance(attempt,str) and attempt.isdecimal() and 1<=int(attempt)<=int(os.environ["GITHUB_RUN_ATTEMPT"])
+          assert record["w1_artifact_name"]==os.environ["W1_ARTIFACT_NAME"]=="p6-newonly-w1-"+run_id+"-"+attempt+"-"+head
           assert record["build_count"]==1 and record["native_check_input"]=="NOT_RUN"
           assert record["archive_member_count"]==3 and record["archive_roundtrip_check"]=="PASS"
           assert record["private_data_bundled"] is False
@@ -1380,7 +1402,7 @@ jobs:
           assert receipt["binary_sha256"]==identity["binary_sha256"]
           receipt["one_build_bundle"]={
                   "source_head":identity["source_head"],
-                  "W1_artifact_name":"p6-newonly-w1-"+os.environ["GITHUB_RUN_ID"]+"-"+os.environ["GITHUB_RUN_ATTEMPT"]+"-"+head,
+                  "W1_artifact_name":identity["w1_artifact_name"],
                   "W1_tar_archive_sha256":identity["archive_sha256"],
                   "W1_elf_sha256":identity["binary_sha256"],
                   "libphysics_opt_sha256":identity["app_libraries"]["libphysics-opt.so.0"]["sha256"],
