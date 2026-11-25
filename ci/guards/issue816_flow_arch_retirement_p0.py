@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 FLOW = ".github/workflows/issue402-flow-native-p2-regression.yml"
 NATIVE = ".github/workflows/physics-native-ci.yml"
 P6_MANUAL = ".github/workflows/physics-p6-validation.yml"
+REGRESSION_MANUAL = ".github/workflows/plasma-native-regression.yml"
 CONTRACT = "ci/contracts/repository_ci_scope_v1.json"
 ARCHIVED = {
     "ci/baselines/issue541_group_a2_flow_retirement.json": "e9d5af65d912e12022ca1844bcafb4ea7d561b76",
@@ -42,7 +43,7 @@ def blob(raw):
     ).hexdigest()
 
 
-def validate(flow, native, p6, contract, frozen):
+def validate(flow, native, p6, regression, contract, frozen):
     for path, sha in ARCHIVED.items():
         need(path in frozen and blob(frozen[path]) == sha,
              "ARCHIVE_BLOB_MISMATCH_" + path)
@@ -66,9 +67,15 @@ def validate(flow, native, p6, contract, frozen):
     need(P6 == p6_jobs and not (P6 & jobs) and
          {"issue541_arch_dd_native_p2", "issue402_core_four_native_p2"} <= jobs,
          "CURRENT_NATIVE_GATES_MISSING")
-    need(all(marker in p6 for marker in (
-        "P05_NEGATIVES", "P6_NEWONLY", "P6_PUBLIC")),
-        "P6_PROTECTED_NATIVE_GATES_MISSING")
+    # Keep positive/negative evidence scoped to the actual owner and lane.
+    newonly, public_d = p6.split("\n  p6_newonly_s6_native_p2:\n", 1)[1].split(
+        "\n  p6_public_d_100row_native_p2:\n", 1)
+    for lane, marker in ((newonly, "G5_BOTH_CASES_NATIVE_P2_42ROW_PASS"),
+                         (public_d, "G5_BOTH_CASES_NATIVE_P2_100ROW_PASS")):
+        need(all(token in lane for token in ("P05_NEGATIVES", "P6_NEWONLY", marker)),
+             "P6_PROTECTED_NATIVE_GATES_MISSING")
+    need("P6_PUBLIC_B_PASS_D_KEEP_HOLD_EVIDENCE_NOT_NATIVE_D_PASS" in regression,
+         "P6_LEGACY_D_HOLD_EVIDENCE_MISSING")
     owned = contract["workflow_owners"][NATIVE]["jobs"]
     need(len(owned) == 4 and set(owned) == jobs and
          set(contract["workflow_owners"][P6_MANUAL]["jobs"]) == p6_jobs,
@@ -80,34 +87,39 @@ def load():
         (ROOT / FLOW).read_text(encoding="utf-8"),
         (ROOT / NATIVE).read_text(encoding="utf-8"),
         (ROOT / P6_MANUAL).read_text(encoding="utf-8"),
+        (ROOT / REGRESSION_MANUAL).read_text(encoding="utf-8"),
         json.loads((ROOT / CONTRACT).read_text(encoding="utf-8")),
         {name: (ROOT / name).read_bytes() for name in ARCHIVED},
     )
 
 
 def self_test():
-    f, n, p, c, a = load()
-    validate(f, n, p, c, a)
+    f, n, p, r, c, a = load()
+    validate(f, n, p, r, c, a)
     mutants = [
-        ("old_flow", f + "run_chemistry_s6_p2_only.py", n, p, c, a),
-        ("old_marker", f + "FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS", n, p, c, a),
-        ("lost_ei", f.replace(FLOW_ACTIVE[2], "LOST_EI", 1), n, p, c, a),
-        ("old_arch_job", f, n + "\n  " + RETIRED_ARCH + ":\n", p, c, a),
+        ("old_flow", f + "run_chemistry_s6_p2_only.py", n, p, r, c, a),
+        ("old_marker", f + "FLOW_PINNED_DBASE_417_941_NATIVE_P2_PASS", n, p, r, c, a),
+        ("lost_ei", f.replace(FLOW_ACTIVE[2], "LOST_EI", 1), n, p, r, c, a),
+        ("old_arch_job", f, n + "\n  " + RETIRED_ARCH + ":\n", p, r, c, a),
         ("lost_arch_dd", f, n.replace("  issue541_arch_dd_native_p2:",
-                    "  removed_arch_dd_native_p2:", 1), p, c, a),
+                    "  removed_arch_dd_native_p2:", 1), p, r, c, a),
         ("lost_p6", f, n, p.replace("  p6_newonly_s6_native_p2:",
-                    "  removed_p6_newonly_s6_native_p2:", 1), c, a),
+                    "  removed_p6_newonly_s6_native_p2:", 1), r, c, a),
     ]
+    for marker in ("G5_BOTH_CASES_NATIVE_P2_42ROW_PASS", "G5_BOTH_CASES_NATIVE_P2_100ROW_PASS"):
+        mutants.append(("lost_" + marker, f, n, p.replace(marker, "MISSING_GATE"), r, c, a))
+    mutants.append(("lost_legacy_d_hold", f, n, p,
+                    r.replace("P6_PUBLIC_B_PASS_D_KEEP_HOLD_EVIDENCE_NOT_NATIVE_D_PASS", "MISSING_GATE"), c, a))
     bad_contract = copy.deepcopy(c)
     bad_contract["workflow_owners"][NATIVE]["jobs"].append(RETIRED_ARCH)
-    mutants.append(("scope_reverted", f, n, p, bad_contract, a))
+    mutants.append(("scope_reverted", f, n, p, r, bad_contract, a))
     for path in ARCHIVED:
         changed = dict(a)
         changed[path] += b"\n# mutated historical bytes"
-        mutants.append(("archive_mutation_" + path, f, n, p, c, changed))
-    for name, flow, native, p6, contract, frozen in mutants:
+        mutants.append(("archive_mutation_" + path, f, n, p, r, c, changed))
+    for name, flow, native, p6, regression, contract, frozen in mutants:
         try:
-            validate(flow, native, p6, contract, frozen)
+            validate(flow, native, p6, regression, contract, frozen)
         except (ValueError, KeyError, IndexError):
             continue
         raise AssertionError("ISSUE816_UNREJECTED_MUTATION_" + name)
