@@ -7,6 +7,7 @@ Static source checks never claim runtime, scientific or semantic equivalence.
 from __future__ import annotations
 
 import argparse
+from fnmatch import fnmatchcase
 import json
 import re
 from pathlib import Path
@@ -25,6 +26,48 @@ def job_block(source: str, name: str) -> str:
     tail = source[match.start():]
     second = JOBS.search(tail, match.end() - match.start())
     return tail[:second.start()] if second else tail
+
+
+def event_paths(source: str, event: str) -> list[str] | None:
+    """Read the ordered path filters of one event in the canonical YAML layout."""
+    header = source.split("\npermissions:\n", 1)[0]
+    if "\non:\n" not in header:
+        return None
+    trigger = header.split("\non:\n", 1)[1]
+    match = re.search(r"(?m)^  " + re.escape(event) + r":\n", trigger)
+    if match is None:
+        return None
+    block = re.split(r"(?m)^  [a-z_]+:", trigger[match.end():], maxsplit=1)[0]
+    if block.count("    paths:\n") != 1 or "paths-ignore:" in block:
+        return None
+    # Parse the entire indented list, not just a valid-looking prefix.
+    tail = block.split("    paths:\n", 1)[1]
+    items = []
+    for line in tail.splitlines():
+        if not line.strip():
+            continue
+        if not line.startswith("      "):
+            if line.startswith("    ") and not line.startswith("     "):
+                break
+            return None
+        entry = re.fullmatch(r"      - '([^'\n]+)'", line)
+        if entry is None:
+            return None
+        items.append(entry.group(1))
+    return items or None
+
+
+def sample_path_matches(path: str, patterns: list[str]) -> bool:
+    """Ordered inclusion/exclusion samples for these simple canonical globs.
+
+    This is not an implementation of GitHub's changed-files enumeration or its
+    entire glob language; it only exercises the path classes used below.
+    """
+    included = False
+    for pattern in patterns:
+        if fnmatchcase(path, pattern.removeprefix("!")):
+            included = not pattern.startswith("!")
+    return included
 
 
 def inspect(sources: dict[str, str], contract: dict) -> list[str]:
@@ -85,13 +128,62 @@ def inspect(sources: dict[str, str], contract: dict) -> list[str]:
     if exact_ref not in main_job:
         problems.append("CORE_NOT_EXACT_HEAD")
 
-    for workflow, required_paths in contract["domain_required_path_coverage"].items():
+    code = ".github/workflows/physics-code-ci.yml"
+    native = ".github/workflows/physics-native-ci.yml"
+    domain_events = {code: ("push", "pull_request"), native: ("pull_request",)}
+    scope = contract["domain_required_path_coverage"]
+    if set(scope) != set(domain_events):
+        problems.append("PHYSICS_SCOPE_OWNER_MISMATCH")
+    excluded_samples = (
+        "physics_harness/execution/controller_orchestrator.py",
+        "physics_harness/execution/controller_durable_state.py",
+        "physics_harness/execution/controller_future.py",
+        "physics_harness/execution/connector_policy_probe.py",
+        "physics_harness/code/tests/test_controller_orchestrator.py",
+        "libs/command_execution/preflight.py",
+        "ci/guards/repository_ci_scope.py",
+        "ci/guards/workflow_surface_guard.py",
+        "ci/contracts/harness_dependencies.json",
+        "ci/contracts/repository_ci_scope_v1.json",
+        "ci/workflow_templates/general-ci.yml",
+        ".github/workflows/controller_preflight.yml",
+        "docs/protocols/controller_preflight.md",
+        "experiments/example/README.md",
+    )
+    required_samples = (
+        "physics_app/src/physics/plasma/DDContinuityEq.C",
+        "physics_app/dependencies.lock",
+        "physics_harness/execution/native_build.py",
+        "physics_harness/execution/runtime.py",
+        "experiments/Issue402_plasma_dsl_g1/chemistry/example.json",
+        "tests/boltzmann/example.C",
+        "ci/physics-build-base/Dockerfile",
+        "ci/physics-runtime-image/Dockerfile",
+    )
+    for workflow, events in domain_events.items():
         contents = sources[workflow]
         if "    types: [opened, synchronize, reopened]" not in contents:
             problems.append(f"{workflow}: CONTENT_PR_EVENTS_MISSING")
-        for pattern in required_paths:
-            if f"      - '{pattern}'" not in contents:
-                problems.append(f"{workflow}: CHANGED_SOURCE_PATH_UNROUTED:{pattern}")
+        for event in events:
+            patterns = event_paths(contents, event)
+            if patterns is None or patterns != scope.get(workflow) or len(patterns) != len(set(patterns)):
+                problems.append(f"{workflow}: {event}: EXACT_DOMAIN_PATH_FILTER_MISMATCH")
+                continue
+            for path in excluded_samples:
+                if sample_path_matches(path, patterns):
+                    problems.append(f"{workflow}: {event}: NON_PHYSICS_PATH_ROUTED:{path}")
+            for path in required_samples + (("ci/workflow_templates/issue493-public-p3-job.yml",) if workflow == code else ()):
+                if not sample_path_matches(path, patterns):
+                    problems.append(f"{workflow}: {event}: PHYSICS_PATH_UNROUTED:{path}")
+    manual_expected = {".github/workflows/physics-p6-validation.yml", ".github/workflows/plasma-native-regression.yml"}
+    if set(contract.get("manual_validation_workflows", ())) != manual_expected:
+        problems.append("MANUAL_NATIVE_OWNER_CONTRACT_MISMATCH")
+    for path in manual_expected:
+        source = sources.get(path, "")
+        header = source.split("\npermissions:", 1)[0]
+        trigger = header.split("\non:\n", 1)[1] if "\non:\n" in header else ""
+        if re.findall(r"(?m)^  ([A-Za-z_]+):", trigger) != ["workflow_dispatch"]:
+            problems.append(f"{path}: MANUAL_NATIVE_TRIGGER_REQUIRED")
     diagnostics = sources[".github/workflows/repository-diagnostics.yml"]
     if "  workflow_dispatch:\n" not in diagnostics:
         problems.append("DIAGNOSTIC_MANUAL_TRIGGER_ABSENT")
@@ -133,6 +225,28 @@ def self_test(sources: dict[str, str], contract: dict) -> None:
         1,
     )
     assert "REPOSITORY_CI_MUST_RUN_FOR_ALL_CHANGES" in inspect(mutated, contract)
+    # A contract+workflow co-edit cannot silently restore broad Controller routing.
+    for path in (".github/workflows/physics-code-ci.yml", ".github/workflows/physics-native-ci.yml"):
+        event = "pull_request"
+        baseline = event_paths(sources[path], event)
+        assert baseline
+        changed = dict(sources)
+        changed[path] = sources[path].replace("      - '!physics_harness/execution/controller_*.py'\n", "")
+        assert any("EXACT_DOMAIN_PATH_FILTER_MISMATCH" in item for item in inspect(changed, contract))
+        widened = json.loads(json.dumps(contract))
+        widened["domain_required_path_coverage"][path].remove("!physics_harness/execution/controller_*.py")
+        assert any("NON_PHYSICS_PATH_ROUTED:" in item for item in inspect(changed, widened))
+        changed = dict(sources)
+        changed[path] = sources[path].replace("      - 'physics_app/**'\n", "", 1)
+        assert any("EXACT_DOMAIN_PATH_FILTER_MISMATCH" in item for item in inspect(changed, contract))
+        changed[path] = sources[path].replace("      - '!**/*.md'\n", "      - '!**/*.md'\n      - \"**\"\n", 1)
+        assert any("EXACT_DOMAIN_PATH_FILTER_MISMATCH" in item for item in inspect(changed, contract))
+    for path in contract["manual_validation_workflows"]:
+        mutated = dict(sources)
+        mutated[path] = sources[path].replace("  workflow_dispatch:\n", "  pull_request:\n  workflow_dispatch:\n", 1)
+        assert f"{path}: MANUAL_NATIVE_TRIGGER_REQUIRED" in inspect(mutated, contract)
+        mutated[path] = sources[path].replace("  workflow_dispatch:\n", "  release:\n  workflow_dispatch:\n", 1)
+        assert f"{path}: MANUAL_NATIVE_TRIGGER_REQUIRED" in inspect(mutated, contract)
 
 
 def main() -> int:

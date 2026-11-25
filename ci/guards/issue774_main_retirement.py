@@ -303,6 +303,8 @@ def audit(root: Path, expected_head: str):
         text=True, capture_output=True)
     need(grep.returncode in (0, 1), "CODE4_TRACKED_TOKEN_INVENTORY_FAILED")
     native = (root / ".github/workflows/physics-native-ci.yml").read_text()
+    p6 = (root / ".github/workflows/physics-p6-validation.yml").read_text()
+    regression = (root / ".github/workflows/plasma-native-regression.yml").read_text()
     code = (root / ".github/workflows/physics-code-ci.yml").read_text()
     general = (root / ".github/workflows/ci.yml").read_bytes()
     template = (root / "ci/workflow_templates/general-ci.yml").read_bytes()
@@ -310,10 +312,16 @@ def audit(root: Path, expected_head: str):
     need("\njobs:\n" in native, "NATIVE_JOBS_MISSING")
     jobs = set(re.findall(r"(?m)^  ([a-z][a-z0-9_-]*):\s*$",
                           native.split("\njobs:\n", 1)[1]))
-    need(P6 <= jobs and "issue541_arch_dd_native_p2" in jobs and
+    p6_jobs = set(re.findall(r"(?m)^  ([a-z][a-z0-9_-]*):\s*$",
+                             p6.split("\njobs:\n", 1)[1]))
+    need(P6 == p6_jobs and not (P6 & jobs)
+         and "plasma_native_regression" not in jobs
+         and "\n  plasma_native_regression:\n" in regression
+         and "issue541_arch_dd_native_p2" in jobs and
          "issue402_core_four_native_p2" in jobs,
          "P6_OR_ARCH_RETAINED_NATIVE_REMOVED")
-    need("issue541_arch_s6_hybrid_native_p2" not in jobs,
+    need("issue541_arch_s6_hybrid_native_p2" not in jobs | p6_jobs
+         and "issue541_arch_s6_hybrid_native_p2" not in regression,
          "RETIRED_ARCH_DUPLICATE_JOB_RETURNED")
     verify_retirement_workflow(code)
     return {

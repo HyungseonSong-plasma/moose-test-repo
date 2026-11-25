@@ -6,6 +6,8 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'physics_harness/code/**'
+      - 'physics_harness/execution/controller_*.py'
+      - 'physics_harness/execution/connector_policy_probe.py'
       - 'libs/command_execution/**'
       - 'libs/git_evidence/**'
       - 'libs/test_verification/**'
@@ -14,6 +16,8 @@ on:
     branches: [main]
     paths:
       - 'physics_harness/code/**'
+      - 'physics_harness/execution/controller_*.py'
+      - 'physics_harness/execution/connector_policy_probe.py'
       - 'libs/command_execution/**'
       - 'libs/git_evidence/**'
       - 'libs/test_verification/**'

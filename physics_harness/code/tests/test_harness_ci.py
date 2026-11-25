@@ -1,6 +1,8 @@
 """Scope checks for the dedicated harness_code CI route."""
 
 from pathlib import Path
+from fnmatch import fnmatchcase
+import re
 import unittest
 
 
@@ -18,6 +20,29 @@ class HarnessCodeCITests(unittest.TestCase):
         self.assertEqual(source.count("      - name: Run only harness_code tests"), 1)
         self.assertNotIn("physics-opt", source)
         self.assertNotIn("cargo ", source)
+
+    def test_controller_execution_control_plane_changes_trigger_code_tests(self):
+        source = WORKFLOW.read_text(encoding="utf-8")
+        header = source.split("\npermissions:", 1)[0]
+        for event in ("push", "pull_request"):
+            section = header.split(f"\n  {event}:\n", 1)[1]
+            section = re.split(r"(?m)^  [a-z_]+:", section, maxsplit=1)[0]
+            entries = section.split("    paths:\n", 1)[1].strip("\n").splitlines()
+            patterns = []
+            for entry in entries:
+                if not entry.strip():
+                    continue
+                match = re.fullmatch(r"      - '([^'\n]+)'", entry)
+                self.assertIsNotNone(match, entry)
+                patterns.append(match.group(1))
+            for path in ("physics_harness/execution/controller_orchestrator.py",
+                         "physics_harness/execution/controller_durable_state.py",
+                         "physics_harness/execution/connector_policy_probe.py"):
+                included = False
+                for pattern in patterns:
+                    if fnmatchcase(path, pattern.removeprefix("!")):
+                        included = not pattern.startswith("!")
+                self.assertTrue(included, f"{event}: {path}")
 
     def test_shared_cli_library_changes_trigger_code_consumer_tests(self):
         source = WORKFLOW.read_text(encoding="utf-8")

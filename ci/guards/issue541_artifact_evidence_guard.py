@@ -17,6 +17,7 @@ CI = ROOT / ".github/workflows/ci.yml"
 TEMPLATE = ROOT / "ci/workflow_templates/general-ci.yml"
 PHYSICS_CODE_CI = ROOT / ".github/workflows/physics-code-ci.yml"
 PHYSICS_NATIVE_CI = ROOT / ".github/workflows/physics-native-ci.yml"
+PLASMA_REGRESSION = ROOT / ".github/workflows/plasma-native-regression.yml"
 CORE = "experiments/Issue402_plasma_dsl_g1/evidence/core_four"
 REGRESSION = "experiments/Issue402_plasma_dsl_g1/evidence"
 
@@ -42,13 +43,13 @@ UPLOAD_OWNERS = {
     "Upload C++ EEPF data, explicitly marked not real-gas parity": "native",
     "Store four-workflow P0 and inventory evidence": "code",
     "Publish exact-head P1/P2 source-bound evidence (no P3)": "native",
-    "Upload native regression evidence": "native",
+    "Upload native regression evidence": "regression",
 }
 CHECK_OWNERS = {
     "Require complete CORE P0 artifact evidence": ("code", "--check-core-p0"),
     "Require source-bound CORE Native P1/P2 artifact evidence": ("native", "--check-core-native"),
-    "Require actual native regression evidence before success": ("native", "--check-regression"),
-    "Require explicit Public D KEEP_HOLD evidence, not Native D PASS": ("native", "p6_legacy_hold_receipt.py --mode public"),
+    "Require actual native regression evidence before success": ("regression", "--check-regression"),
+    "Require explicit Public D KEEP_HOLD evidence, not Native D PASS": ("regression", "p6_legacy_hold_receipt.py --mode public"),
 }
 
 
@@ -100,6 +101,7 @@ def policy_sources(ci: str) -> dict[str, str]:
         "core": ci,
         "code": PHYSICS_CODE_CI.read_text(encoding="utf-8"),
         "native": PHYSICS_NATIVE_CI.read_text(encoding="utf-8"),
+        "regression": PLASMA_REGRESSION.read_text(encoding="utf-8"),
     }
 
 

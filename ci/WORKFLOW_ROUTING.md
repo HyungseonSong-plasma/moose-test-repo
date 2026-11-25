@@ -127,3 +127,24 @@ The prior B-only completion workflow is removed and its profile set to
 deferred, so it cannot be retriggered by the new merge. The old full four-arm
 profile also remains deferred. Retire this one-shot via a future cleanup
 after results are preserved.
+
+## Manual Native validation split
+
+The existing P6 W1 + both P2 lanes now have one manual owner, `.github/workflows/physics-p6-validation.yml`. The existing `plasma_native_regression` job has one manual owner, `.github/workflows/plasma-native-regression.yml`. Neither starts on PR, push, or schedule. Select main or an open same-repository PR branch into main and provide exact HEAD SHA, PR number where applicable, and `NATIVE_VALIDATION_APPROVED`. The live source scope is checked before checkout/build. No changes to test coverage or P3/P4 acceptance. Required source-impact evidence must still be obtained when applicable; record N/A with rationale for unrelated changes.
+
+## Physics impact routing (owner-approved)
+
+Keep Repository CI unconditional. Route Controller-only execution modules and
+Controller tests to Harness Code CI, not Physics Code/Native CI. Physics source,
+scientific inputs, execution and validation changes remain domain-scoped;
+changes to repository-only guards, contracts, templates and Markdown must not
+trigger the two automatic Physics workflows. Ordered per-event filters and
+positive/negative representative paths are enforced by `repository_ci_scope.py`.
+Do not infer scientific PASS from a non-applicable domain check. A mixed PR
+containing a Physics-owned change still needs its applicable validation.
+
+## Complete Git inventory and deferred manual qualification
+
+Repository CI now runs the lightweight full Git change-inventory classifier on every supported event. It evaluates both base and candidate paths, including changed/deleted/renamed Physics inputs, and emits exact-base/head applicability receipts. A large Controller-only change stays non-Physics; a large mixed change cannot be called N/A merely because GitHub's first-300-file path filter missed it. Applicable missing evidence is HOLD: split the PR or obtain separately approved exact-source equivalent domain execution evidence. Do not trigger the entire Physics suite as a fallback. The inventory reports applicability, not CI completion; server-side protection and acceptance checks remain distinct.
+
+Initial manual Workflow registration is static/routing integration only under owner approval. Runtime qualification is NOT_RUN until the next applicable Physics change. P3-X durable source qualification and the targeted N5 diagnostic are prerequisites for that affected manual validation, not reasons to initiate a standalone Physics campaign now. See the Repository Integration Contract for source provenance and HOLD conditions.
