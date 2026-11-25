@@ -12,7 +12,7 @@ table content, the protected historical lookup tables, MCS.OUT, original
 user ZIP, archived Exodus output or new generated results. Before native run,
 `public_p2_check.py` authenticates the input archive, validates every deck
 against its SHA, and verifies that the 19 individual rate files it reads from
-`physics_app/database/boltz/` match the original new-only
+`physics_app/database/` match the original new-only
 experiment manifest. The case/variant workspace copies just its active five
 public `.txt` files into `private_rates/` (the path name expected by the
 original archived deck, **not** a source of private data).

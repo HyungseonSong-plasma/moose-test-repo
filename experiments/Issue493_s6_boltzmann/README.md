@@ -113,7 +113,7 @@ It is **not** an installed GitHub Actions workflow, so no P2/P3/P4 work
 automatically starts after integration into `main`.
 
 The independently generated **19 public Boltzmann rates** now live under
-`physics_app/database/boltz/` as 100-row MOOSE molar lookup tables.
+`physics_app/database/` as 100-row MOOSE molar lookup tables.
 The original private/archived rates and original MCS source are not published.
 The offline comparison runner still needs isolated prepared S6 B/C input layers
 and local trusted execution; merely publishing the rates does not cause a
