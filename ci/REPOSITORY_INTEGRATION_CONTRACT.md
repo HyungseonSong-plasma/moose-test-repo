@@ -39,14 +39,25 @@ completed successfully. A skipped required gate is **HOLD**, not PASS.
 | `physics-native-ci.yml` | Native Physics source, Native scenarios, selected related guards | CORE/ARCH Native P1/P2, runtime smoke, Boltzmann C++ controls |
 | `physics-p6-validation.yml` | Manual only | Same W1 and both New-only 42/100-row P2 lanes |
 | `plasma-native-regression.yml` | Manual only | Existing broad Plasma Native regression and legacy HOLD evidence |
-| `harness-code.yml` | `physics_harness/code/**` | Harness Code unit/negative controls |
+| `harness-code.yml` | Harness Code, shared libraries, Controller execution control plane | Harness Code and Controller unit/negative controls |
 | `repository-diagnostics.yml` | Manual `workflow_dispatch` only | Historical one-day Artifact CreateArtifact API probe |
 | Existing scientific Workflows | Explicitly authorized input/trigger | Scientific P3/P4 and special-run evidence |
 
-The `physics-native-ci.yml` path filter is intentionally restricted to
-Native-relevant changes. In particular, a Harness Code-only PR is **not**
-automatically a native rebuild. When influence outside these paths is newly
-discovered, extend its routing surface before declaring it out of scope.
+Physics Code and Physics Native CI are automatically routed only for their
+Physics-owned implementation, scientific Harness execution/analysis, experiment,
+test and validation surfaces. Controller orchestration, preflight and durable
+state modules named `physics_harness/execution/controller_*.py`, plus
+`connector_policy_probe.py`, belong to the control plane and trigger Harness
+Code CI instead. Controller/Harness management, repository-only integration
+guards/contracts/templates, and Markdown-only documentation changes must not
+start Physics CI. Root `tests/` is the Physics test suite; Controller tests
+remain under `physics_harness/code/tests/`. A mixed change with any applicable
+Physics path still requires the relevant domain CI. The ordered path filters
+are checked per event against the contract; future changes must classify newly
+discovered Physics dependencies rather than using a broad repository trigger.
+Changing a Physics validation workflow itself can require its source/domain
+qualification. The separate FLOW and ion-FVM workflows retain their specific
+Physics source/test triggers; P6 and Plasma regression remain manual-only.
 
 These independent domain workflows retain their acceptance requirements.
 **Repository CI PASS does not replace a failed or omitted applicable domain
