@@ -36,6 +36,8 @@ REUSABLE = {
 OPTIONAL_ENTRYPOINTS = {
     # On-demand policy/identity receipts; not a mandatory CI validation job.
     "controller_preflight.yml": {"workflow_dispatch"},
+    # Read-only Controller checkpoint contract qualification, manual dispatch only.
+    "controller-checkpoint-contract.yml": {"workflow_dispatch"},
     # FLOW #548: source-bound P0/P1/P2 only (no push).
     "issue402-flow-native-p2-regression.yml": {"pull_request", "workflow_dispatch"},
 }
