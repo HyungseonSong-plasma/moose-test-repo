@@ -131,3 +131,14 @@ after results are preserved.
 ## Manual Native validation split
 
 The existing P6 W1 + both P2 lanes now have one manual owner, `.github/workflows/physics-p6-validation.yml`. The existing `plasma_native_regression` job has one manual owner, `.github/workflows/plasma-native-regression.yml`. Neither starts on PR, push, or schedule. Select main or an open same-repository PR branch into main and provide exact HEAD SHA, PR number where applicable, and `NATIVE_VALIDATION_APPROVED`. The live source scope is checked before checkout/build. No changes to test coverage or P3/P4 acceptance. Required source-impact evidence must still be obtained when applicable; record N/A with rationale for unrelated changes.
+
+## Physics impact routing (owner-approved)
+
+Keep Repository CI unconditional. Route Controller-only execution modules and
+Controller tests to Harness Code CI, not Physics Code/Native CI. Physics source,
+scientific inputs, execution and validation changes remain domain-scoped;
+changes to repository-only guards, contracts, templates and Markdown must not
+trigger the two automatic Physics workflows. Ordered per-event filters and
+positive/negative representative paths are enforced by `repository_ci_scope.py`.
+Do not infer scientific PASS from a non-applicable domain check. A mixed PR
+containing a Physics-owned change still needs its applicable validation.
