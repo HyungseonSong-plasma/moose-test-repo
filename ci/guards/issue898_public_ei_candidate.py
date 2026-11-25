@@ -23,6 +23,16 @@ ROOT = Path(__file__).resolve().parents[2]
 CHEM = Path("experiments/Issue395_powered_chemistry_ladder")
 DB = Path("physics_app/database")
 CASES = ("417", "941")
+# Exact canonical data identities; the historical 42-row lookup is distinct.
+TABLE_BLOBS = {
+    "electron_moments.txt": "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a",
+    "neutral_transport.txt": "751bfd5fc32887f1a3ea6e9da771aeb3bb732363",
+}
+OLD_ELECTRON = "../../Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+TABLE_FILE = re.compile(
+    rb"(?m)^([ \t]*(transport_data_file|property_table_file)[ \t]*=[ \t]*)"
+    rb"(['\"]?)([^'\"\r\n \t#]+)\3([ \t]*(?:#[^\r\n]*)?)(\r?)$"
+)
 OCI = ("ghcr.io/hyungseonsong-plasma/physics-build-base@"
        "sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008")
 PUBLIC_BLOBS = {
@@ -64,6 +74,88 @@ def load_rates(root):
     return result
 
 
+def load_transport_tables(root):
+    tables = {}
+    for name, expected in TABLE_BLOBS.items():
+        file = root / DB / name
+        if file.is_symlink() or not file.is_file():
+            raise ValueError("PUBLIC_DB_SOURCE_NOT_REGULAR")
+        raw = file.read_bytes()
+        if blob_sha(raw) != expected:
+            raise ValueError("PUBLIC_DB_SOURCE_PIN")
+        tables[name] = raw
+    if len(tables["electron_moments.txt"].splitlines()) != 100:
+        raise ValueError("PUBLIC_DB_ORIGINAL100_REQUIRED")
+    return tables
+
+
+def transport_records(raw):
+    """Ignore full-line comments only; no coefficient or whitespace reformat."""
+    return [line for line in raw.splitlines()
+            if line.strip() and not line.lstrip().startswith(b"#")]
+
+
+def rebind_database(source, layers, mechanism_bytes, tables):
+    """Qualify path-only database ownership in a separate disposable case."""
+    source = source.resolve(strict=True)
+    chem = source / CHEM
+    retired = set()
+    counts = {"electron_moments.txt": 0, "neutral_transport.txt": 0}
+
+    def check_old(base, token, name):
+        path = (base / token).resolve(strict=True)
+        try:
+            relative = path.relative_to(source)
+        except ValueError as exc:
+            raise ValueError("PUBLIC_DB_PATH_OUTSIDE_SCRATCH") from exc
+        if not path.is_file():
+            raise ValueError("PUBLIC_DB_SOURCE_NOT_REGULAR")
+        old = path.read_bytes()
+        canonical = tables[name]
+        equivalent = (old == canonical if name == "electron_moments.txt"
+                      else transport_records(old) == transport_records(canonical))
+        if not equivalent:
+            raise ValueError("PUBLIC_DB_SOURCE_DATA_MISMATCH:" + name)
+        if relative != DB / name:
+            retired.add(relative)
+        counts[name] += 1
+
+    mechanism = json.loads(mechanism_bytes)
+    transport = mechanism["species"]["e"]["transport_coef"]
+    if transport.get("type") != "lookup" or transport.get("file") != OLD_ELECTRON:
+        raise ValueError("PUBLIC_DB_ELECTRON_BINDING_DRIFT")
+    check_old(chem / "chemistry", OLD_ELECTRON, "electron_moments.txt")
+    token = json.dumps(OLD_ELECTRON).encode()
+    replacement = "../../../physics_app/database/electron_moments.txt"
+    if mechanism_bytes.count(token) != 1:
+        raise ValueError("PUBLIC_DB_EXACT_JSON_TOKEN_REQUIRED")
+    changed_json = mechanism_bytes.replace(token, json.dumps(replacement).encode())
+    transport["file"] = replacement
+    if json.loads(changed_json) != mechanism:
+        raise ValueError("PUBLIC_DB_UNEXPECTED_JSON_CHANGE")
+
+    changed = {}
+    for layer, raw in layers.items():
+        def replace(match):
+            parameter = match.group(2)
+            value = match.group(4).decode("utf-8")
+            if parameter == b"transport_data_file":
+                name = "neutral_transport.txt"
+            elif Path(value).name == "electron_moments.txt":
+                name = "electron_moments.txt"
+            else:
+                return match.group()
+            check_old(chem, value, name)
+            return (match.group(1) + match.group(3) +
+                    b"../../physics_app/database/" + name.encode() +
+                    match.group(3) + match.group(5) + match.group(6))
+
+        changed[layer] = TABLE_FILE.sub(replace, raw)
+    if not counts["neutral_transport.txt"]:
+        raise ValueError("PUBLIC_DB_NEUTRAL_BINDING_MISSING")
+    return changed, changed_json, retired, counts
+
+
 def rebind(case, layers):
     """Change only the five exact protected lookup path tokens."""
     if case not in REQUIRED:
@@ -85,7 +177,7 @@ def rebind(case, layers):
     return changed
 
 
-def stage_case(source, target, case, receipt, rates):
+def stage_case(source, target, case, receipt, rates, tables):
     if target.exists() or target.is_symlink() or source.is_symlink():
         raise ValueError("PUBLIC_EI_SCRATCH_DESTINATION_CONFLICT")
     if any(p.is_symlink() or p.name == "private_rates" for p in source.rglob("*")):
@@ -105,12 +197,24 @@ def stage_case(source, target, case, receipt, rates):
             or receipt.get("original_table_rows") != 100):
         raise ValueError("PUBLIC_EI_MECHANISM_OR_LOOKUP_DRIFT")
     rewritten = rebind(case, layers)
+    rewritten, candidate_json, retired_tables, table_counts = rebind_database(
+        source, rewritten, mechanism_bytes, tables)
     for name in REQUIRED[case]:
         if blob_sha(rates[name]) != PUBLIC_BLOBS[name]:
             raise ValueError("PUBLIC_EI_RATE_DRIFT")
     shutil.copytree(source, target, symlinks=False)
     database = target / DB
     database.mkdir(parents=True, exist_ok=True)
+    for name, raw in tables.items():
+        file = database / name
+        if file.exists():
+            if file.read_bytes() != raw:
+                raise ValueError("PUBLIC_DB_TARGET_DATA_CONFLICT")
+        else:
+            with file.open("xb") as stream:
+                stream.write(raw)
+        if file.read_bytes() != raw:
+            raise ValueError("PUBLIC_DB_TARGET_READBACK")
     for name in REQUIRED[case]:
         file = database / name
         with file.open("xb") as stream:
@@ -122,14 +226,26 @@ def stage_case(source, target, case, receipt, rates):
             (target / CHEM / n).write_bytes(raw)
         if (target / CHEM / n).read_bytes() != raw:
             raise ValueError("PUBLIC_EI_LAYER_READBACK")
-    if (target / CHEM / mechanism).read_bytes() != mechanism_bytes:
-        raise ValueError("PUBLIC_EI_JSON_CHANGED")
+    candidate_mechanism = target / CHEM / mechanism
+    candidate_mechanism.write_bytes(candidate_json)
+    if candidate_mechanism.read_bytes() != candidate_json:
+        raise ValueError("PUBLIC_DB_JSON_READBACK")
+    # Remove legacy table copies only inside the disposable candidate; Native
+    # P2 must succeed with no dependency on those previous paths.
+    for relative in retired_tables:
+        (target / relative).unlink()
+        if (target / relative).exists() or not (source / relative).is_file():
+            raise ValueError("PUBLIC_DB_DISPOSABLE_RETIREMENT_READBACK")
     return {
         "case": case, "ordered": ordered,
         "source_layer_sha256": receipt["11_layer_sha256"],
         "candidate_layer_sha256": {n: sha(v) for n, v in rewritten.items()},
         "changed_layers": sorted(n for n in names if layers[n] != rewritten[n]),
-        "json_sha256": sha(mechanism_bytes),
+        "source_json_sha256": sha(mechanism_bytes),
+        "json_sha256": sha(candidate_json),
+        "database_sha256": {n: sha(raw) for n, raw in sorted(tables.items())},
+        "database_binding_counts": table_counts,
+        "retired_disposable_paths": sorted(p.as_posix() for p in retired_tables),
         "rates_sha256": {n: sha(rates[n]) for n in sorted(REQUIRED[case])},
         "rate_source": "PUBLIC_INDEPENDENT_100ROW",
         "native_p2": "NOT_RUN", "science": "SCIENCE_HOLD",
@@ -152,10 +268,11 @@ def main():
     binary = ROOT / "physics_app/physics-opt"
     binary_sha = sha(binary.read_bytes())
     rates = load_rates(ROOT)
+    tables = load_transport_tables(ROOT)
     source_receipt = json.loads(args.receipt.read_text())
     if set(source_receipt) != set(CASES):
         raise ValueError("PUBLIC_EI_SOURCE_CASE_SET")
-    result = {"schema": "issue898.public_ei_newonly_candidate.v1",
+    result = {"schema": "issue898.public_ei_newonly_candidate.v2",
               "source_head": head, "binary_sha256": binary_sha,
               "science": "SCIENCE_HOLD", "cases": {}, "native_p2": "HOLD"}
     try:
@@ -163,7 +280,7 @@ def main():
             for case in CASES:
                 target = Path(tmp) / case
                 rec = stage_case(args.staged / "scratch" / case, target,
-                                 case, source_receipt[case], rates)
+                                 case, source_receipt[case], rates, tables)
                 result["cases"][case] = rec
                 command = ("set -euo pipefail; source /environment; exec "
                            "/workspace/physics_app/physics-opt --check-input -i " +
