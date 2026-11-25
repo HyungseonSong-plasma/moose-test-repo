@@ -21,8 +21,7 @@ PREPARER = (ROOT / "experiments/Issue402_plasma_dsl_g1/chemistry/"
             "prepare_s6_run_input.py")
 ARCHIVE = (ROOT / "experiments/Issue493_s6_boltzmann/"
            "public_p2_decks.tar.xz.b64")
-TABLE = (ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/"
-         "electron_moments.txt")
+TABLE = ROOT / "physics_app/database/electron_moments.txt"
 ARCHIVE_HASH = "9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240"
 TABLE_GIT_BLOB = "bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a"
 PREPARED_TABLE_GIT_BLOB = "aa05aadde111e4ba435185954a64a4b7dbbf2d45"

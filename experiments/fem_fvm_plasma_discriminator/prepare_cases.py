@@ -161,7 +161,7 @@ COMMON_MATERIALS = f'''[FunctorMaterials]
   [electron_transport]
     type = DDMaterial
     model = lookup
-    table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
+    table_file = '../../physics_app/database/electron_moments.txt'
     pressure = p_fixed
     gas_temperature = T_g_fixed
     bounds_policy = clamp
