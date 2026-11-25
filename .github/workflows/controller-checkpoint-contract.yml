@@ -1,0 +1,61 @@
+name: Controller Checkpoint Contract CI (read-only)
+run-name: checkpoint-contract:${{ inputs.correlation_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      correlation_id:
+        description: Unique Samuel dispatch correlation ID
+        required: true
+        type: string
+      expected_main_sha:
+        description: Exact trusted main source SHA
+        required: true
+        type: string
+      expected_contract_sha256:
+        description: SHA256 of exact contract bytes
+        required: true
+        type: string
+      expected_samuel_pin:
+        description: Exact central pin from trusted source
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CORRELATION_ID: ${{ inputs.correlation_id }}
+      EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+      EXPECTED_CONTRACT_SHA256: ${{ inputs.expected_contract_sha256 }}
+      EXPECTED_SAMUEL_PIN: ${{ inputs.expected_samuel_pin }}
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate source identity
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_SHA" = "$EXPECTED_MAIN_SHA"
+      - name: Install pytest
+        run: python -m pip install 'pytest>=8,<9'
+      - name: Qualify local Git CAS
+        run: python -m pytest -q physics_harness/code/tests/test_checkpoint_cas_contract.py --junitxml="$RUNNER_TEMP/checkpoint-cas.xml"
+      - name: Test receipt binding and fail-closed handling
+        run: python -m pytest -q physics_harness/code/tests/test_checkpoint_contract_receipt.py physics_harness/code/tests/test_controller_contract_receipt.py
+      - name: Emit exact-source receipt
+        run: python automation/controller/qualify_checkpoint_contract.py "$RUNNER_TEMP/checkpoint-cas.xml" "$RUNNER_TEMP/checkpoint-contract-receipt.json"
+      - name: Upload qualification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint-contract-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/checkpoint-contract-receipt.json
+            ${{ runner.temp }}/checkpoint-cas.xml
+          if-no-files-found: error
+          retention-days: 7
