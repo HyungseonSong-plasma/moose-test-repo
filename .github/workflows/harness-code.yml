@@ -7,12 +7,14 @@ on:
     paths:
       - 'physics_harness/code/**'
       - 'libs/command_execution/**'
+      - 'libs/git_evidence/**'
       - '.github/workflows/harness-code.yml'
   push:
     branches: [main]
     paths:
       - 'physics_harness/code/**'
       - 'libs/command_execution/**'
+      - 'libs/git_evidence/**'
       - '.github/workflows/harness-code.yml'
 
 permissions:
