@@ -23,6 +23,10 @@ class HarnessCodeCITests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="utf-8")
         self.assertEqual(source.count("      - 'libs/command_execution/**'"), 2)
 
+    def test_shared_evidence_library_changes_trigger_code_consumer_tests(self):
+        source = WORKFLOW.read_text(encoding="utf-8")
+        self.assertEqual(source.count("      - 'libs/git_evidence/**'"), 2)
+
     def test_repository_integration_runs_for_harness_only_and_sol_is_scoped(self):
         general = GENERAL.read_text(encoding="utf-8")
         sol = SOL.read_text(encoding="utf-8")

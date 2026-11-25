@@ -23,7 +23,7 @@ from ..diagnostics.providers.generated_input import (
 )
 from ..diagnostics.providers.git import GitSourceProvider
 from ..diagnostics.request import ScanRequest, normalized_path
-from .naming_actions import (
+from libs.git_evidence import (
     ActionsReadSource, GitHubActionsRestReader, read_actions_archive_members,
 )
 
