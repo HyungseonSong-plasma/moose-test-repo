@@ -7,9 +7,9 @@ Those obligations are intentionally returned as unresolved requirements.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from hashlib import sha256
 import re
-from xml.etree import ElementTree as ET
+
+from libs.test_verification.junit import parse_junit, compare_case_outcomes
 
 _SHA = re.compile(r"[0-9a-f]{40}\Z")
 
@@ -50,34 +50,9 @@ def _parse(artifact: ReplayArtifact, *, max_bytes: int) -> tuple[dict[str, str],
         blocked.add("INVALID_ARTIFACT_DIGEST")
     if not artifact.run_reference.strip():
         unresolved.add("MISSING_RUN_REFERENCE")
-    if len(artifact.junit_xml) > max_bytes:
-        return {}, blocked, unresolved | {"JUNIT_SIZE_LIMIT"}
-    if sha256(artifact.junit_xml).hexdigest() != artifact.expected_sha256:
-        return {}, blocked | {"JUNIT_DIGEST_MISMATCH"}, unresolved
-    # Reject DTD/entity declarations rather than trusting XML parser configuration.
-    if b"<!DOCTYPE" in artifact.junit_xml.upper() or b"<!ENTITY" in artifact.junit_xml.upper():
-        return {}, blocked | {"UNTRUSTED_XML_DECLARATION"}, unresolved
-    try:
-        root = ET.fromstring(artifact.junit_xml)
-    except ET.ParseError:
-        return {}, blocked | {"INVALID_JUNIT_XML"}, unresolved
-    if root.tag not in {"testsuite", "testsuites"}:
-        return {}, blocked | {"UNEXPECTED_JUNIT_ROOT"}, unresolved
-    cases: dict[str, str] = {}
-    for case in root.iter("testcase"):
-        key = case.get("classname", "") + "::" + case.get("name", "")
-        if not case.get("name") or key in cases:
-            blocked.add("MISSING_OR_DUPLICATE_TEST_ID")
-            continue
-        status = "PASSED"
-        for tag in ("failure", "error", "skipped"):
-            if case.find(tag) is not None:
-                status = tag.upper()
-                break
-        cases[key] = status
-    if not cases:
-        unresolved.add("NO_JUNIT_TESTCASES")
-    return cases, blocked, unresolved
+    cases, findings, gaps = parse_junit(
+        artifact.junit_xml, artifact.expected_sha256, max_bytes=max_bytes)
+    return cases, blocked | findings, unresolved | gaps
 
 
 def compare_replay_artifacts(
@@ -102,18 +77,9 @@ def compare_replay_artifacts(
     unresolved = u1 | u2
     if baseline.revision == candidate.revision:
         blocked.add("CANDIDATE_REVISION_NOT_DISTINCT")
-    for key in sorted(before.keys() - after.keys()):
-        blocked.add("BASELINE_TEST_MISSING:" + key)
-    for key in sorted(after.keys() - before.keys()):
-        unresolved.add("NEW_CANDIDATE_TEST:" + key)
-    for key, status in before.items():
-        if status != "PASSED":
-            unresolved.add("BASELINE_NOT_GREEN:" + key)
-    for key, status in after.items():
-        if status in {"FAILURE", "ERROR"}:
-            blocked.add("CANDIDATE_TEST_FAILED:" + key)
-        elif status == "SKIPPED":
-            unresolved.add("CANDIDATE_TEST_SKIPPED:" + key)
+    findings, gaps = compare_case_outcomes(before, after)
+    blocked.update(findings)
+    unresolved.update(gaps)
     unresolved.update({
         "AUTHENTICATE_CI_PRODUCER_AND_ARTIFACT_ORIGIN",
         "VERIFY_EXACT_CHECKOUT_TOOLCHAIN_AND_TEST_COMMAND",
