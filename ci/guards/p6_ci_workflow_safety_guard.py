@@ -76,8 +76,8 @@ def validate(workflow: str, template: str, dd_source: str,
          "NO_MANUAL_NATIVE_JOBS_IN_AUTOMATIC_CI")
     for source, expected in ((p6, set(P6)), (regression_source, {"plasma_native_regression"})):
         parts = source.split("\njobs:\n", 1)
-        need(len(parts) == 2 and "\non:\n  workflow_dispatch:\n" in parts[0]
-             and not re.search(r"(?m)^  (?:push|pull_request|pull_request_target|schedule|workflow_call|workflow_run):", parts[0]),
+        trigger = parts[0].split("\non:\n", 1)[1].split("\npermissions:", 1)[0] if "\non:\n" in parts[0] else ""
+        need(len(parts) == 2 and re.findall(r"(?m)^  ([A-Za-z_]+):", trigger) == ["workflow_dispatch"],
              "MANUAL_ONLY_TRIGGER")
         need(set(re.findall(r"(?m)^  ([a-z][a-z0-9_-]*):\s*$", parts[1])) == expected,
              "MANUAL_EXACT_JOB_OWNERS")
@@ -86,7 +86,7 @@ def validate(workflow: str, template: str, dd_source: str,
             need(all(token in block for token in (
                 HEAD_SCOPE, CHECKED_HEAD, 'test "$GITHUB_EVENT_NAME" = workflow_dispatch',
                 'test "$APPROVAL" = NATIVE_VALIDATION_APPROVED',
-                'test "$REQUESTED_SHA" = "$GITHUB_SHA"', '.state == "open"',
+                'test "$REQUESTED_SHA" = "$GITHUB_SHA"', '[[ "$GITHUB_REF" == refs/heads/* ]]', '.state == "open"',
                 '.base.repo.full_name == $repo', '.base.ref == "main"',
                 'test -z "$REQUESTED_PR"', 'git/ref/heads/main',
                 'persist-credentials: false')),
@@ -112,7 +112,10 @@ def validate(workflow: str, template: str, dd_source: str,
     need(all(v in w1 for v in (
         '"build_count":1', "physics-opt-and-app-libs.tar.gz",
         "SOURCE_HEAD", "persist-credentials: false",
-        "archive_roundtrip_check", "sha256sums.txt")),
+        "archive_roundtrip_check", "sha256sums.txt", "id: freeze",
+        "w1_artifact_name:", '"source_pr":int(os.environ["SOURCE_PR"])',
+        '"producer_attempt":os.environ["GITHUB_RUN_ATTEMPT"]',
+        "name: ${{ steps.freeze.outputs.artifact_name }}")),
         "W1_SINGLE_BUILD_AND_SAME_HEAD_CUSTODY")
     need("make -C physics_app" in w1,
          "W1_BUILD_MISSING")
@@ -122,6 +125,10 @@ def validate(workflow: str, template: str, dd_source: str,
     for name, block in ((P6[1], n), (P6[2], d)):
         need(all(v in block for v in (
             "needs: p6_newonly_s6_build", "actions/download-artifact@v4",
+            "name: ${{ needs.p6_newonly_s6_build.outputs.w1_artifact_name }}",
+            'record["w1_artifact_name"]==os.environ["W1_ARTIFACT_NAME"]',
+            'record["source_pr"]==(int(os.environ["SOURCE_PR"])',
+            'attempt=record["producer_attempt"]',
             "P6_NEWONLY_EXACT_HEAD_ONE_W1_THREE_BINARY_BYTES_VERIFIED",
             "PROTECTED_ARCHIVE_B64:", "PASS_16_INTENDED_NATIVE_REJECTIONS",
             TYPE_COUNT, "tmpfs_cleanup_verified", "source_restoration",
@@ -257,7 +264,13 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
     add("p6_stale_head", man=edit(P6[1], 'test "$REQUESTED_SHA" = "$GITHUB_SHA"', 'echo ignored'))
     add("p6_fork_scope", man=edit(P6[2], HEAD_SCOPE, '.head.sha == $sha'))
     add("regression_wrong_ref", reg=edit("plasma_native_regression", '.base.ref == "main"', '.base.ref != "main"'))
-    need(len(cases) == 38, "NEGATIVE_COUNT_NOT_38")
+    add("p6_release_trigger", man=p6.replace("  workflow_dispatch:\n", "  release:\n  workflow_dispatch:\n", 1))
+    add("regression_release_trigger", reg=regression.replace("  workflow_dispatch:\n", "  release:\n  workflow_dispatch:\n", 1))
+    add("p6_non_branch_ref", man=edit(P6[0], '[[ "$GITHUB_REF" == refs/heads/* ]]', 'echo ignored'))
+    add("regression_non_branch_ref", reg=edit("plasma_native_regression", '[[ "$GITHUB_REF" == refs/heads/* ]]', 'echo ignored'))
+    add("w1_fixed_pr", man=edit(P6[0], '"source_pr":int(os.environ["SOURCE_PR"])', '"source_pr":665'))
+    add("consumer_wrong_artifact_name", man=edit(P6[2], 'record["w1_artifact_name"]==os.environ["W1_ARTIFACT_NAME"]', 'True'))
+    need(len(cases) == 44, "NEGATIVE_COUNT_NOT_44")
     for label, ci, tpl, nat, dd, man, reg in cases:
         need((ci, tpl, nat, dd, man, reg) != (workflow, template, native, dd_source, p6, regression),
              "NEGATIVE_NO_MUTATION_" + label)
@@ -266,7 +279,7 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         except ValueError:
             continue
         raise ValueError("P6_SPLIT_CI_FALSE_PASS_" + label)
-    print("P6_SPLIT_CI_38_NEGATIVES_REJECTED")
+    print("P6_SPLIT_CI_44_NEGATIVES_REJECTED")
     return len(cases)
 
 
