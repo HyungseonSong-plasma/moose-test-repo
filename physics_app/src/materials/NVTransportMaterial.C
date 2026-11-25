@@ -84,6 +84,10 @@ NVTransportMaterial::validParams()
       "species",
       "Ordered active species names. Each name must exist in transport_data_file.");
 
+  params.addParam<std::vector<Real>>(
+      "molar_masses", "Externally owned molar masses [kg/mol] in active species order. "
+                      "Requires alias-only database species rows.");
+
   params.addRequiredParam<std::vector<MooseFunctorName>>(
       "mass_fractions",
       "Mass-fraction functors in exactly the same order as 'species'.");
@@ -126,6 +130,9 @@ NVTransportMaterial::NVTransportMaterial(
   loadTransportDatabase(_transport_data_file);
 
   const auto n = _species_names.size();
+  const bool input_masses = isParamValid("molar_masses");
+  if (input_masses && getParam<std::vector<Real>>("molar_masses").size() != n)
+    paramError("molar_masses", "Provide exactly one mass per active species.");
 
   _molar_masses.resize(n);
   _transport_aliases.resize(n);
@@ -142,10 +149,12 @@ NVTransportMaterial::NVTransportMaterial(
                  _transport_data_file,
                  "'.");
 
-    if (it->second.molar_mass <= 0.0)
+    const Real mass = input_masses ? getParam<std::vector<Real>>("molar_masses")[i]
+                                  : it->second.molar_mass;
+    if (!std::isfinite(mass) || mass <= 0.0)
       mooseError("Invalid molar mass for species '", _species_names[i], "'.");
 
-    _molar_masses[i] = it->second.molar_mass;
+    _molar_masses[i] = mass;
     _transport_aliases[i] = it->second.transport_alias;
     _mass_fractions.push_back(&getFunctorByName<ADReal>(_mass_fraction_names[i]));
   }
@@ -320,7 +329,13 @@ NVTransportMaterial::loadTransportDatabase(const FileName & filename)
         Real molar_mass = 0.0;
         std::string alias;
 
-        if (!(iss >> name >> molar_mass >> alias))
+        if (isParamValid("molar_masses"))
+        {
+          std::string extra;
+          if (!(iss >> name >> alias) || (iss >> extra))
+            mooseError("External molar masses require alias-only species rows: species <name> <transport_alias>");
+        }
+        else if (!(iss >> name >> molar_mass >> alias))
           mooseError("Malformed species line in '",
                      filename,
                      "' at line ",

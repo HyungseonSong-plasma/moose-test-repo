@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "physics_app/data/electron_impact"
+DATA_DIR = ROOT / "physics_app/database"
 
 N_A = 6.02214076e23
 ELECTRON_MASS_KG = 9.1093837139e-31

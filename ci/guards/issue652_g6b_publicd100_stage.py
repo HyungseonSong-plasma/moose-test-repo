@@ -24,7 +24,7 @@ from retire_s6_p4_duplicate_owners import C0  # canonical 11-layer Chemistry C0
 CASES = ("417", "941")
 OLD_42_SHA256 = "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
 PUBLIC_D_100_SHA256 = "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
-SOURCE_100 = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt"
+SOURCE_100 = ROOT / "physics_app/database/electron_moments.txt"
 TABLE_RELATIVE = Path("experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt")
 CHEM_RELATIVE = Path("experiments/Issue395_powered_chemistry_ladder")
 

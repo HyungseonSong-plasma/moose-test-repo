@@ -24,7 +24,7 @@ export BUILD_BASE_REF=ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3
 export CHEM=experiments/Issue395_powered_chemistry_ladder
 export DIEL=experiments/Issue3_dielectric_surface_charge
 export BASE=experiments/fem_fvm_plasma_discriminator
-export TABLE=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+export TABLE=physics_app/database/electron_moments.txt
 export RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns"
 export INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns.i"
 export PARENT="$CHEM/rf_elastic_multiapp_parent_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
@@ -133,7 +133,7 @@ audit.write_text(json.dumps({"one_change": "Maxwell Steady nl_abs_tol",
 print("ISSUE397_MAXWELL_SINGLE_TOLERANCE_CHANGE_PASS")
 PY
 
-cp physics_app/data/electron_impact/o2_elastic.txt "$CHEM/o2_elastic.txt"
+cp physics_app/database/o2_elastic.txt "$CHEM/o2_elastic.txt"
 python3 "$CHEM/build_o2_elastic_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$ELASTIC" \
@@ -145,33 +145,33 @@ python3 "$CHEM/build_o2_dissociation_overlay.py" \
   --output "$DISS" \
   | tee "$RESULT/prep/dissociation_overlay.log"
 
-cp physics_app/data/electron_impact/o2_ionization.txt "$CHEM/o2_ionization.txt"
+cp physics_app/database/o2_ionization.txt "$CHEM/o2_ionization.txt"
 python3 "$CHEM/build_o2_ionization_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$ION" \
   --ei16-table o2_ionization.txt \
   | tee "$RESULT/prep/o2_ionization_overlay.log"
 
-cp physics_app/data/electron_impact/o_ionization.txt "$CHEM/o_ionization.txt"
+cp physics_app/database/o_ionization.txt "$CHEM/o_ionization.txt"
 python3 "$CHEM/build_o_ionization_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$ION_O" \
   --ei20-table o_ionization.txt \
   | tee "$RESULT/prep/o_ionization_ei20_overlay.log"
 
-cp physics_app/data/electron_impact/o2_attachment.txt "$CHEM/o2_attachment.txt"
+cp physics_app/database/o2_attachment.txt "$CHEM/o2_attachment.txt"
 python3 "$CHEM/build_o2_attachment_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$ATTACH" \
   --attachment-table o2_attachment.txt \
   | tee "$RESULT/prep/o2_attachment_ei01_overlay.log"
 
-cp physics_app/data/electron_impact/o_elastic.txt "$CHEM/o_elastic.txt"
+cp physics_app/database/o_elastic.txt "$CHEM/o_elastic.txt"
 python3 "$CHEM/build_o_elastic_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$OELASTIC" \
   --elastic-table o_elastic.txt \
-  --source-table physics_app/data/electron_impact/o_elastic.txt \
+  --source-table physics_app/database/o_elastic.txt \
   | tee "$RESULT/prep/o_elastic_ei17_overlay.log"
 
 # Verify original signed wafer-current owner without injecting any AuxKernels.

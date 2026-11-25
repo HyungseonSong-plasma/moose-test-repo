@@ -332,7 +332,8 @@ parseNVTransport(const Json & value, const std::string & file)
 // Strict opt-in Poisson schema. S6 geometry is explicit, never inferred from
 // transient assembled Mesh/BC state. Legacy multi-file mechanisms are untouched.
 PoissonRecord
-parsePoissonRecord(const Json & root, const std::string & file)
+parsePoissonRecord(const Json & root, const std::string & file,
+                   const std::map<std::string, SpeciesRecord> & input_species)
 {
   const std::set<std::string> allowed_root = {
       "species", "equations", "reactions", "ion_surface_current",
@@ -415,16 +416,19 @@ parsePoissonRecord(const Json & root, const std::string & file)
     result.surface_charge.emplace(it.key(), expected->second);
   }
 
-  // The JSON species charge numbers are authoritative for the future G3
-  // producer; G1 records them without inventing any charge/source Functor.
+  // Validate the same resolved charge identity used by the reaction and
+  // transport owners; keep legacy JSON signs for the historical lane.
   for (const auto & [id, charge] :
        std::map<std::string, int>{{"e", -1}, {"O2p", 1}, {"Om", -1}, {"Op", 1}})
   {
     const auto & species = root.at("species");
+    const auto input = input_species.find(id);
     if (!species.contains(id) || !species.at(id).is_object() ||
-        !species.at(id).contains("charge_number") ||
-        !species.at(id).at("charge_number").is_number_integer() ||
-        species.at(id).at("charge_number").get<int>() != charge)
+        (input != input_species.end()
+             ? input->second.charge_number != charge
+             : !species.at(id).contains("charge_number") ||
+               !species.at(id).at("charge_number").is_number_integer() ||
+               species.at(id).at("charge_number").get<int>() != charge))
       fail(file, "POISSON_CHARGED_SPECIES_SIGNS_INVALID: " + id);
   }
   return result;
@@ -487,7 +491,8 @@ ReactionRecord::net(const std::string & species) const
          (reactant == reactants.end() ? 0 : reactant->second);
 }
 
-ChemistryData::ChemistryData(const std::vector<std::string> & files)
+ChemistryData::ChemistryData(const std::vector<std::string> & files,
+                             const std::map<std::string, SpeciesRecord> & input_species)
 {
   std::set<std::string> reaction_ids;
   std::set<std::string> progresses;
@@ -524,21 +529,39 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       if (files.size() != 1)
         fail(file, "POISSON_REQUIRES_SINGLE_UNIFIED_JSON");
       verifyUniquePoissonJsonKeys(file);
-      _poisson = parsePoissonRecord(root, file);
+      _poisson = parsePoissonRecord(root, file, input_species);
     }
 
     for (auto it = root["species"].begin(); it != root["species"].end(); ++it)
     {
       const auto & record = it.value();
+      const auto input = input_species.find(it.key());
+      const bool input_owned = input != input_species.end();
       if (!record.is_object() || !record.contains("elements") ||
-          !record["elements"].is_object() || !record.contains("charge_number") ||
-          !record["charge_number"].is_number_integer())
-        fail(file, "species '" + it.key() + "' requires elements and integer charge_number");
+          !record["elements"].is_object() ||
+          (input_species.empty() && !record.contains("charge_number")) ||
+          (record.contains("charge_number") && !record["charge_number"].is_number_integer()))
+        fail(file, "species '" + it.key() + "' requires elements and integer charge_number in legacy JSON");
+      if (input_owned)
+      {
+        for (const auto * key : {"charge_number", "molar_mass", "molar_mass_kg_mol",
+                                 "temperature_eV", "initial_number_density",
+                                 "sticking_coefficient", "wall_molar_mass", "wall_sticking",
+                                 "wall_ion_temperature_eV", "wall_use_element_gradient_for_potential",
+                                 "ion_wall"})
+          if (record.contains(key))
+            fail(file, "Duplicate JSON physical owner for Continuity species " + it.key() + ": " + key);
+        _input_species.insert(it.key());
+      }
+      else if (!input_species.empty() && record.contains("charge_number") &&
+               record.at("charge_number").get<int>() != 0)
+        fail(file, "Charged species missing from named Continuity metadata: " + it.key());
       if (record.contains("boundaries_to_avoid"))
         fail(file, "species." + it.key() +
                        ".boundaries_to_avoid is unsupported; use the boundaries BC catalogue");
-      SpeciesRecord species;
-      species.charge_number = record["charge_number"].get<int>();
+      SpeciesRecord species = input_owned ? input->second : SpeciesRecord{};
+      if (!input_owned && record.contains("charge_number"))
+        species.charge_number = record["charge_number"].get<int>();
       for (auto atom = record["elements"].begin(); atom != record["elements"].end(); ++atom)
       {
         if (atom.key().empty() || !atom.value().is_number_integer() ||
@@ -554,9 +577,10 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
       // species with transport enabled obtains a Wall Material; its common
       // gradient method belongs exclusively in [Plasmas].
       const bool new_species_schema =
-          record.contains("molar_mass") || record.contains("temperature_eV") ||
-          record.contains("sticking_coefficient") ||
-          (record.contains("transport_coef") && record.at("transport_coef").is_object());
+          !input_owned &&
+          (record.contains("molar_mass") || record.contains("temperature_eV") ||
+           record.contains("sticking_coefficient") ||
+           (record.contains("transport_coef") && record.at("transport_coef").is_object()));
       if (new_species_schema)
       {
         if (record.contains("wall_use_element_gradient_for_potential"))
@@ -595,7 +619,16 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           species.ion_wall = wall;
         }
       }
-      // A continuity species' initial particle number density is JSON-owned,
+      if (input_owned && it.key() != "e" &&
+          (root.contains("ion_surface_current") || root.contains("drift_diffusion_boundaries")))
+      {
+        IonWallRecord wall;
+        wall.molar_mass = species.molar_mass;
+        wall.sticking = species.sticking_coefficient;
+        wall.ion_temperature_eV = species.temperature_eV.value_or(0.0);
+        species.ion_wall = wall;
+      }
+      // A legacy continuity species' initial particle number density is JSON-owned,
       // independent of heavy-gas mass fractions and energy-density ICs.
       if (record.contains("initial_number_density") &&
           !(new_species_schema && record.at("initial_number_density").is_null()))
@@ -1131,7 +1164,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         auto & law = reaction.rate;
         law.model = rate.at("model").get<std::string>();
         const bool surface = reaction.domain == "surface";
-        if (!surface && law.model != "constant" && law.model != "power_law")
+        const bool lookup = law.model == "lookup";
+        if (!surface && !lookup && law.model != "constant" && law.model != "power_law")
           fail(file, reaction.id + ": unsupported volume rate model");
         if (surface && law.model != "thermal_sticking" &&
             law.model != "deferred_charged_flux")
@@ -1139,7 +1173,8 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
 
         const std::set<std::string> accepted = surface
             ? std::set<std::string>{"model", "sticking"}
-            : std::set<std::string>{"model", "A", "basis", "T_ref", "exponent"};
+            : lookup ? std::set<std::string>{"model", "file", "basis", "bounds_policy"}
+                     : std::set<std::string>{"model", "A", "basis", "T_ref", "exponent"};
         for (auto it = rate.begin(); it != rate.end(); ++it)
           if (!accepted.count(it.key()))
             fail(file, reaction.id + ": unsupported rate key " + it.key());
@@ -1151,6 +1186,30 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           law.sticking = rate.at("sticking").get<double>();
           if (!std::isfinite(law.sticking) || law.sticking < 0.0)
             fail(file, reaction.id + ": sticking must be finite and nonnegative");
+        }
+        else if (lookup)
+        {
+          // EIRateCoefMaterial implements exactly one electron and one
+          // neutral reactant. Do not silently fit higher-order kinetics or
+          // charged targets into that bimolecular neutral rate contract.
+          const auto electron = reaction.reactants.find("e");
+          if (reaction.id.rfind("EI-", 0) != 0 || reaction.reactants.size() != 2 ||
+              electron == reaction.reactants.end() || electron->second != 1)
+            fail(file, reaction.id + ": EI lookup requires one electron and one neutral reactant");
+          for (const auto & [id, count] : reaction.reactants)
+            if (id != "e")
+            {
+              const auto target = _species.find(id);
+              if (count != 1 || target == _species.end() || target->second.charge_number != 0)
+                fail(file, reaction.id + ": EI lookup requires one electron and one neutral reactant");
+              law.lookup_target = id;
+            }
+          law.basis = requiredText(rate, "basis", file);
+          if (law.basis != "molar")
+            fail(file, reaction.id + ": EI lookup requires molar coefficient basis");
+          if (requiredText(rate, "bounds_policy", file) != "strict")
+            fail(file, reaction.id + ": EI lookup requires strict bounds_policy");
+          law.table_file = resolveDataFile(requiredText(rate, "file", file), file);
         }
         else
         {
@@ -1195,7 +1254,7 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
 
       // Executable heavy and surface rate laws must provide physical molar
       // masses for every heavy reactant/product, not silently omit wall flux.
-      if (!reaction.rate.model.empty())
+      if (!reaction.rate.model.empty() && reaction.rate.model != "lookup")
       {
         std::set<std::string> involved;
         for (const auto & item : reaction.reactants)
@@ -1237,6 +1296,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     if (!equation_ids.empty())
       fail(file, "equation without matching reaction ID: " + *equation_ids.begin());
   }
+  for (const auto & [id, record] : input_species)
+    if (!_input_species.count(id))
+      fail("<merged plasma mechanism>", "Named Continuity species is absent from JSON: " + id);
   if (_fluid_electron_energy_transport && _dd_transport.find("e") == _dd_transport.end())
     fail("<merged plasma mechanism>",
          "species.e.energy_transport_coef=fluid requires species.e.transport_coef");
@@ -1346,20 +1408,20 @@ Chemistry::validParams()
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
       "Generates one source Functor per species and one electron-energy source "
-      "from validated [Plasmas]/files reaction channels; kinetic progress remains separately owned.");
+      "from validated [Plasmas]/files reaction channels; explicit EI lookup progress is generated here.");
   return params;
 }
 
 Chemistry::Chemistry(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
-  if (chemistryData().reactions().empty())
-    mooseError("Activated [Transport]/[Chemistry] requires reactions in [Plasmas]/files");
 }
 
 void
 Chemistry::checkIntegrity() const
 {
+  if (chemistryData().reactions().empty())
+    mooseError("Activated [Transport]/[Chemistry] requires reactions in [Plasmas]/files");
   // The shared PlasmaMechanism constructor validates all ID <-> equation,
   // elemental and charge conservation, unique rate owners, signed energy
   // changes, and referenced species before any generated source is used.
@@ -1369,11 +1431,14 @@ void
 Chemistry::addFunctorMaterials()
 {
   const auto & mechanism = chemistryData();
+  if (mechanism.reactions().empty())
+    mooseError("Activated [Transport]/[Chemistry] requires reactions in [Plasmas]/files");
   std::map<std::string, SourceExpression> particle;
   SourceExpression energy;
 
   // The shared mechanism merges reactions from every [Plasmas]/files entry.
-  // For each reaction ID, project its independently owned progress R_k onto
+  // For each reaction ID, generate an explicit EI lookup when requested and
+  // project the single progress R_k onto
   // species production (nu_s,k * R_k) and signed electron energy transfer
   // (delta_epsilon_k * R_k). Even identical equations remain separate channels.
   // After this loop, all electron contributions form ONE Q_e_molar_eV Functor;
@@ -1383,6 +1448,23 @@ Chemistry::addFunctorMaterials()
     // Boundary reactions must not be projected into volumetric RHS kernels.
     if (reaction.domain == "surface")
       continue;
+    if (reaction.rate.model == "lookup")
+    {
+      // A single progress producer for each explicit JSON lookup. Live
+      // state and neutral concentration are supplied by their respective
+      // Continuity, Energy and mixture owners; no frozen density or mass
+      // fallback and no reaction-specific native concentration aliases.
+      const std::string type = "EIRateCoefMaterial";
+      auto params = getFactory().getValidParams(type);
+      params.set<FileName>("rate_table_file") = reaction.rate.table_file;
+      params.set<MooseFunctorName>("mean_energy") = "e_energy_eV";
+      params.set<MooseFunctorName>("electron_number_density") = "n_e_physical";
+      params.set<MooseFunctorName>("target_molar_concentration") =
+          "c_" + reaction.rate.lookup_target + "_molar";
+      params.set<std::string>("reaction_progress") = reaction.progress;
+      assignBlocks(params, _blocks);
+      getProblem().addFunctorMaterial(type, "chemistry_" + reaction.progress + "_lookup", params);
+    }
     std::set<std::string> touched;
     for (const auto & [id, coefficient] : reaction.reactants)
       touched.insert(id);
@@ -1514,13 +1596,7 @@ PlasmasAction::validParams()
 }
 
 PlasmasAction::PlasmasAction(const InputParameters & params)
-  : Action(params),
-    _data([this]() {
-      std::vector<std::string> paths;
-      for (const auto & filename : getParam<std::vector<FileName>>("files"))
-        paths.emplace_back(filename);
-      return paths;
-    }())
+  : Action(params)
 {
   if (isParamValid("pressure") != isParamValid("temperature"))
     paramError("pressure", "Specify both pressure [Pa] and temperature [K] at [Plasmas].");
@@ -1556,9 +1632,105 @@ PlasmasAction::PlasmasAction(const InputParameters & params)
                "standard_molar_volume must be finite and strictly positive.");
 }
 
+const Plasma::ChemistryData &
+PlasmasAction::data() const
+{
+  if (_mechanism)
+    return *_mechanism;
+
+  std::map<std::string, Plasma::SpeciesRecord> records;
+  const auto continuity = _awh.getActions<Plasma::DDContinuityEq>();
+  const std::vector<std::string> keys = {"species_molar_mass", "species_charge",
+      "species_initial_density", "species_sticking_coef", "species_temperature_eV"};
+  for (const auto & action : continuity)
+  {
+    bool named = false;
+    for (const auto & key : keys)
+      named = named || action->isParamValid(key);
+    if (!named)
+      continue;
+    if (continuity.size() != 1)
+      mooseError("Named Continuity metadata requires exactly one Continuity Action.");
+    std::set<std::string> selected;
+    for (const auto * option : {"fem_species", "fvm_species"})
+      for (const auto & id : action->getParam<std::vector<std::string>>(option))
+        if (!selected.insert(id).second)
+          mooseError("Repeated named Continuity species: ", id);
+
+    const auto read = [&](const std::string & key, bool complete)
+    {
+      std::map<std::string, double> values;
+      if (!action->isParamValid(key))
+      {
+        if (complete)
+          mooseError("Missing required named Continuity parameter: ", key);
+        return values;
+      }
+      for (const auto & item : action->getParam<std::vector<std::string>>(key))
+      {
+        const auto colon = item.find(':');
+        if (colon == std::string::npos || colon == 0 || colon + 1 == item.size() ||
+            item.find(':', colon + 1) != std::string::npos)
+          mooseError("Expected species:value in ", key, ": ", item);
+        const auto id = item.substr(0, colon);
+        if (!selected.count(id) || values.count(id))
+          mooseError("Unknown or repeated species in ", key, ": ", id);
+        const auto value = item.substr(colon + 1);
+        std::size_t consumed = 0;
+        double number = 0.0;
+        try { number = std::stod(value, &consumed); }
+        catch (const std::exception &) { mooseError("Invalid number in ", key, ": ", item); }
+        if (consumed != value.size() || !std::isfinite(number))
+          mooseError("Invalid finite number in ", key, ": ", item);
+        values.emplace(id, number);
+      }
+      if (complete && values.size() != selected.size())
+        mooseError("Incomplete named Continuity coverage: ", key);
+      return values;
+    };
+    const auto masses = read(keys[0], true);
+    const auto charges = read(keys[1], true);
+    const auto densities = read(keys[2], true);
+    const auto sticking = read(keys[3], true);
+    const auto temperatures = read(keys[4], false);
+    for (const auto & id : selected)
+    {
+      Plasma::SpeciesRecord record;
+      record.molar_mass = masses.at(id);
+      const double charge = charges.at(id);
+      if (charge == 0.0 || std::trunc(charge) != charge ||
+          charge < std::numeric_limits<int>::min() || charge > std::numeric_limits<int>::max() ||
+          (id == "e" && charge != -1.0))
+        mooseError("Invalid named Continuity charge: ", id);
+      record.charge_number = static_cast<int>(charge);
+      record.initial_number_density = densities.at(id);
+      record.sticking_coefficient = sticking.at(id);
+      if (record.molar_mass <= 0.0 || *record.initial_number_density <= 0.0 ||
+          record.sticking_coefficient < 0.0 || record.sticking_coefficient > 1.0)
+        mooseError("Nonphysical named Continuity mass, density or sticking: ", id);
+      const auto temp = temperatures.find(id);
+      if (temp != temperatures.end())
+      {
+        if (temp->second < 0.0 || (id == "e" && temp->second == 0.0))
+          mooseError("Invalid named Continuity temperature: ", id);
+        record.temperature_eV = temp->second;
+      }
+      if (id == "e" && !record.temperature_eV)
+        mooseError("Named Continuity electron requires positive species_temperature_eV.");
+      records.emplace(id, record);
+    }
+  }
+  std::vector<std::string> paths;
+  for (const auto & filename : getParam<std::vector<FileName>>("files"))
+    paths.emplace_back(filename);
+  _mechanism = std::make_unique<const Plasma::ChemistryData>(paths, records);
+  return *_mechanism;
+}
+
 void
 PlasmasAction::act()
 {
+  const auto & _data = data();
   // C2 is an opt-in JSON surface, with NO independent ownership-mode flag.
   // DDContinuityEq.fvm_species is the only discretization selector. Old Native
   // FV Kernel/BC owners must already have been removed from disposable Scratch.
