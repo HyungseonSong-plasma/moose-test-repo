@@ -92,6 +92,15 @@ def inspect(sources: dict[str, str], contract: dict) -> list[str]:
         for pattern in required_paths:
             if f"      - '{pattern}'" not in contents:
                 problems.append(f"{workflow}: CHANGED_SOURCE_PATH_UNROUTED:{pattern}")
+    manual_expected = {".github/workflows/physics-p6-validation.yml", ".github/workflows/plasma-native-regression.yml"}
+    if set(contract.get("manual_validation_workflows", ())) != manual_expected:
+        problems.append("MANUAL_NATIVE_OWNER_CONTRACT_MISMATCH")
+    for path in manual_expected:
+        source = sources.get(path, "")
+        header = source.split("\npermissions:", 1)[0]
+        if ("\non:\n  workflow_dispatch:\n" not in header
+                or re.search(r"^  (?:push|pull_request|pull_request_target|schedule|workflow_call|workflow_run):", header, re.MULTILINE)):
+            problems.append(f"{path}: MANUAL_NATIVE_TRIGGER_REQUIRED")
     diagnostics = sources[".github/workflows/repository-diagnostics.yml"]
     if "  workflow_dispatch:\n" not in diagnostics:
         problems.append("DIAGNOSTIC_MANUAL_TRIGGER_ABSENT")
@@ -133,6 +142,10 @@ def self_test(sources: dict[str, str], contract: dict) -> None:
         1,
     )
     assert "REPOSITORY_CI_MUST_RUN_FOR_ALL_CHANGES" in inspect(mutated, contract)
+    for path in contract["manual_validation_workflows"]:
+        mutated = dict(sources)
+        mutated[path] = sources[path].replace("  workflow_dispatch:\n", "  pull_request:\n  workflow_dispatch:\n", 1)
+        assert f"{path}: MANUAL_NATIVE_TRIGGER_REQUIRED" in inspect(mutated, contract)
 
 
 def main() -> int:
