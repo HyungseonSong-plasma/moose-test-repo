@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
-from libs.command_execution.git import run_git
+from libs.command_execution.runner import run_command_bytes
 from libs.git_evidence.git import git_blob_sha1, parse_long_tree_row, regular_tree_paths
 
 from ..collector import SourceRecord, SourceInput
@@ -19,7 +19,12 @@ class GitSourceProvider:
         self.root = Path(root)
 
     def _git(self, *args: str) -> bytes:
-        return run_git(self.root, *args)
+        result = run_command_bytes(("git", "-C", str(self.root), *args),
+                                   timeout_seconds=30)
+        if result.returncode:
+            raise ValueError("GIT_SOURCE_UNAVAILABLE: " +
+                             result.stderr.decode("utf-8", "replace").strip()[:250])
+        return result.stdout
 
     def assert_head(self, revision: str) -> None:
         actual = self._git("rev-parse", "--verify", "HEAD").decode("ascii").strip()
