@@ -55,10 +55,43 @@ Analysis and Planning are **read-only**. They do not execute edits, approve
 mutations, remove old code, or rank changes using a hard-coded universal
 refactoring strategy.
 
+## Controller / CI command interface
+
+From the repository root, using an exact Git checkout and the Code requirements:
+
+```bash
+python -m physics_harness.code.cli scan \
+    --repository HyungseonSong-plasma/moose-test-repo \
+    --root . --revision "$(git rev-parse HEAD)" \
+    --include 'physics_harness/code/*.py' --collector python_ast \
+    --max-files 100 --max-bytes 5000000 --max-seconds 30 \
+    --output code-scan-receipt.json
+```
+
+`libs/command_execution` owns domain-independent command dispatch and strict
+JSON serialization. The thin Code CLI owns argument binding and delegates to
+the existing `run_scan` API; no new graph or collector engine is introduced.
+The output includes the request, GraphSnapshot, EvidenceReceipt and source
+VerificationReceipt. A repository label is caller-supplied; Git commit and
+blob identities are checked locally. Use a new output path for each invocation.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | COMPLETE requested scope and VERIFIED source metadata |
+| 2 | Invalid input, unavailable exact HEAD, serialization or invocation error |
+| 3 | PARTIAL collection or UNVERIFIED metadata; inspect the output receipt |
+| 4 | FAILED source verification; inspect the output receipt |
+
+No exit code proves semantic compatibility, global consumer closure, safe
+deletion, or Controller task completion. The existing on-demand historical
+source-scan workflow and Physics CLI retain their current interfaces. This
+first Code CLI release exposes `scan` only; other analysis/planning commands
+are future extensions.
+
 ## Tests and CI ownership
 
 `Harness Code CI` runs the Code self-tests when files under
-`physics_harness/code/**` or the dedicated Workflow change:
+`physics_harness/code/**`, `libs/command_execution/**` or the dedicated Workflow change:
 
 ```bash
 python -m pytest -q physics_harness/code/tests
