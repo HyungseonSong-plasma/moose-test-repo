@@ -3,7 +3,6 @@ import subprocess
 
 import pytest
 
-from libs.command_execution.git import run_git
 from libs.git_evidence import git_blob_sha1, parse_long_tree_row, regular_tree_paths
 from physics_harness.code.diagnostics import GitSourceProvider
 
@@ -11,7 +10,7 @@ from physics_harness.code.diagnostics import GitSourceProvider
 def test_exact_blob_identity_and_dirty_checkout(git_factory):
     original = b"tracked\x00bytes\n"
     root, head = git_factory({"data.bin": original})
-    sha = run_git(root, "rev-parse", "HEAD:data.bin").decode().strip()
+    sha = GitSourceProvider(root)._git("rev-parse", "HEAD:data.bin").decode().strip()
     assert git_blob_sha1(original) == sha
     (root / "data.bin").write_bytes(b"dirty")
     assert GitSourceProvider(root).read_at_revision(head, "data.bin").content == original
@@ -47,7 +46,7 @@ def test_regular_tree_preserves_order_and_excludes_nonregular():
 def test_local_git_runner_retains_failure_and_timeout_contract(git_factory, monkeypatch):
     root, _ = git_factory({"a.py": "pass\n"})
     with pytest.raises(ValueError, match="GIT_SOURCE_UNAVAILABLE"):
-        run_git(root, "cat-file", "-t", "0" * 40)
+        GitSourceProvider(root)._git("cat-file", "-t", "0" * 40)
     def timed_out(*args, **kwargs):
         assert kwargs["timeout"] == 30
         raise subprocess.TimeoutExpired(args[0], 30)

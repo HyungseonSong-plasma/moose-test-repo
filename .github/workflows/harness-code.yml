@@ -8,6 +8,7 @@ on:
       - 'physics_harness/code/**'
       - 'libs/command_execution/**'
       - 'libs/git_evidence/**'
+      - 'libs/test_verification/**'
       - '.github/workflows/harness-code.yml'
   push:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - 'physics_harness/code/**'
       - 'libs/command_execution/**'
       - 'libs/git_evidence/**'
+      - 'libs/test_verification/**'
       - '.github/workflows/harness-code.yml'
 
 permissions:

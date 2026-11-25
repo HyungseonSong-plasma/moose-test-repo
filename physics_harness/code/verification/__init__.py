@@ -8,6 +8,7 @@ from .dependencies import (
     ChangeVerificationPlan, DependencyContract, DependencyFinding,
     DependencyRule, DependencyVerification, plan_change_verification,
     verify_dependencies, verify_dependency_repository,
+    DependencyObservation, DependencyDesignReport, analyze_independent_dependencies,
 )
 from .naming_provenance import (
     NamingSourceVerification, verify_naming_evidence_sources,
@@ -24,6 +25,7 @@ __all__ = [
     "DependencyContract", "DependencyFinding", "DependencyRule",
     "DependencyVerification", "verify_dependencies",
     "verify_dependency_repository",
+    "DependencyObservation", "DependencyDesignReport", "analyze_independent_dependencies",
     "NamingSourceVerification", "verify_naming_evidence_sources",
 ]
 

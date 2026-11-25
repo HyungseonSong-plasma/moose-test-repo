@@ -106,6 +106,7 @@ class DependencyContract:
     legacy_packages: tuple[str, ...]
     forbidden_edges: tuple[DependencyRule, ...]
     repository_tool: str
+    independent_packages: tuple[str, ...] = ()
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, object]) -> "DependencyContract":
@@ -120,13 +121,19 @@ class DependencyContract:
                     DependencyRule(**entry) for entry in value["forbidden_edges"]
                 ),
                 repository_tool=value["repository_tool"],
+                independent_packages=tuple(value.get("independent_packages", ())),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError("DEPENDENCY_CONTRACT_INVALID") from exc
         allowed = set(contract.canonical_packages) | set(contract.legacy_packages)
         if (not contract.package_root or not contract.repository_tool
                 or len(allowed) != len(contract.canonical_packages) + len(contract.legacy_packages)
-                or not contract.canonical_packages or not contract.forbidden_edges
+                or not contract.canonical_packages
+                or (not contract.forbidden_edges and not contract.independent_packages)
+                or len(set(contract.independent_packages)) != len(contract.independent_packages)
+                or not set(contract.independent_packages) <= set(contract.canonical_packages)
+                or any(not isinstance(p, str) or not p.isidentifier()
+                       for p in contract.independent_packages)
                 or any(rule.source not in allowed | {"*"} or rule.target not in allowed
                        or (rule.except_source and rule.except_source not in allowed)
                        or not rule.category or not rule.reason
@@ -210,6 +217,8 @@ def verify_dependencies(
     """
     if not isinstance(contract, DependencyContract):
         raise TypeError("DEPENDENCY_CONTRACT_REQUIRED")
+    if contract.independent_packages:
+        raise ValueError("DESIGN_ONLY_DEPENDENCY_CONTRACT")
     if not isinstance(sources, tuple) or any(
         not isinstance(item, SourceInput) for item in sources
     ):
@@ -328,8 +337,195 @@ def verify_dependency_repository(
     return verify_dependencies(sources, contract)
 
 
+@dataclass(frozen=True, slots=True)
+class DependencyObservation:
+    """A source-declared import, execution or resource candidate; not runtime proof."""
+    category: str
+    path: str
+    line: int
+    source: str
+    target: str
+    blob_sha: str
+    evidence_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class DependencyDesignReport:
+    revision: str
+    scope_id: str
+    status: str
+    observations: tuple[DependencyObservation, ...]
+    findings: tuple[DependencyFinding, ...]
+    cycle: tuple[str, ...]
+    unknowns: tuple[str, ...]
+    required_paths: tuple[str, ...]
+
+    @property
+    def runtime_independence_proven(self) -> bool:
+        return False
+
+    @property
+    def mutation_approved(self) -> bool:
+        return False
+
+
+def _design_import(specifier, path, contract, stdlib, repository_roots):
+    """Classify the existing collector's module[:member] syntax."""
+    module, _, member = specifier.partition(":")
+    source = _package(path[:-3].replace("/", "."), contract)
+    if module.startswith("."):
+        level = len(module) - len(module.lstrip("."))
+        package = path.split("/")[:-1]
+        if level > len(package):
+            return "UNRESOLVED_RELATIVE", None
+        suffix = module[level:]
+        module = ".".join(package[:len(package) - level + 1]
+                          + ([suffix] if suffix else []))
+    parts = module.split(".")
+    if not module or not all(part.isidentifier() for part in parts):
+        return "UNRESOLVED_IMPORT", None
+    if parts[0] == contract.package_root:
+        if len(parts) == 1 and member.isidentifier():
+            module += "." + member
+        target = _package(module, contract)
+        if target is None:
+            return "UNRESOLVED_PACKAGE_ROOT", None
+        return ("SAME_PACKAGE" if source == target else "CROSS_PACKAGE"), target
+    if parts[0] in repository_roots or parts[0] == contract.repository_tool:
+        return "REPOSITORY_DEPENDENCY", None
+    if parts[0] in stdlib:
+        return "STDLIB_CANDIDATE", None
+    return "NON_STDLIB_OR_UNRESOLVED", None
+
+
+def analyze_independent_dependencies(
+    graph: GraphSnapshot, receipt: EvidenceReceipt, contract: DependencyContract,
+    *, required_paths: tuple[str, ...], stdlib_modules: frozenset[str],
+    repository_roots: frozenset[str],
+) -> DependencyDesignReport:
+    """Advisory design analysis; never called by the legacy CI verifier.
+
+    Reuse PythonAstCollector import, call, dynamic and file reference edges. The
+    caller supplies the exact inventory (including parent __init__.py where
+    present) and target interpreter's standard-library names. Neither runtime
+    imports nor standalone installation/extraction are proven by this report.
+    Call and resource observations are lexical candidates; they do not prove
+    external tool identity, actual access, or a violation. Aliases and indirect
+    calls may evade lexical matching and need separate design review.
+    """
+    if not isinstance(contract, DependencyContract) or not contract.independent_packages:
+        raise ValueError("INDEPENDENT_PACKAGE_CONTRACT_REQUIRED")
+    if not isinstance(required_paths, tuple) or not required_paths or len(set(required_paths)) != len(required_paths):
+        raise ValueError("EXACT_REQUIRED_PATHS_REQUIRED")
+    for names in (stdlib_modules, repository_roots):
+        if not isinstance(names, frozenset) or any(not isinstance(n, str) or not n.isidentifier() for n in names):
+            raise ValueError("MODULE_NAME_INVENTORY_REQUIRED")
+    if not stdlib_modules:
+        raise ValueError("TARGET_STDLIB_INVENTORY_REQUIRED")
+    from ..diagnostics.request import normalized_path
+    root = contract.package_root + "/"
+    parent_init = root + "__init__.py"
+    for path in required_paths:
+        normalized_path(path)
+        if not path.startswith(root) or not path.endswith(".py") or (
+            path != parent_init and _package(path[:-3].replace("/", "."), contract)
+            not in contract.independent_packages
+        ):
+            raise ValueError("INDEPENDENT_SCOPE_PATH_INVALID")
+    verification = verify_generated_artifact(graph, receipt)
+    if verification.failures:
+        raise ValueError("DEPENDENCY_EVIDENCE_INCONSISTENT:" + ",".join(verification.failures))
+    coverage = {f.path: f for f in receipt.files}
+    requested = set(required_paths)
+    unknowns = set(graph.scope.unresolved) | set(receipt.unresolved)
+    if graph.scope.completeness != "COMPLETE" or receipt.completeness != "COMPLETE":
+        unknowns.add("INCOMPLETE_SCAN")
+    for path in requested:
+        item = coverage.get(path)
+        if item is None or item.status != "SCANNED" or "python_ast" not in item.collectors:
+            unknowns.add("SOURCE_NOT_FULLY_SCANNED:" + path)
+    for path in coverage:
+        if path == parent_init or (path.endswith(".py") and _package(path[:-3].replace("/", "."), contract) in contract.independent_packages):
+            if path not in requested:
+                unknowns.add("SOURCE_OUTSIDE_DECLARED_INVENTORY:" + path)
+    for package in contract.independent_packages:
+        if not any(p.startswith(root + package + "/") or p == root + package + ".py" for p in requested):
+            unknowns.add("PACKAGE_INVENTORY_MISSING:" + package)
+    nodes, evidence = graph.nodes_by_id(), graph.evidence_by_id()
+    observations = set()
+    findings = set()
+    adjacency = {name: set() for name in contract.independent_packages}
+    for edge in graph.edges:
+        if edge.relation not in {"IMPORTS_CANDIDATE", "DYNAMIC_REFERENCE_CANDIDATE",
+                                 "CALLS_CANDIDATE", "REFERENCES_FILE_CANDIDATE",
+                                 "FILE_REFERENCE_UNRESOLVED", "REFERENCES_CANDIDATE"}:
+            continue
+        if not edge.evidence_ids:
+            unknowns.add("DEPENDENCY_EVIDENCE_MISSING:" + edge.id)
+        for eid in edge.evidence_ids:
+            ev = evidence[eid]
+            path = ev.attributes.get("path")
+            if path not in requested:
+                continue
+            line, blob = ev.attributes.get("line"), ev.attributes.get("blob_sha")
+            if type(line) is not int or line < 1 or path not in coverage or blob != coverage[path].blob_sha:
+                unknowns.add("DEPENDENCY_WITNESS_INVALID:" + eid)
+                continue
+            source = _package(path[:-3].replace("/", "."), contract) or contract.package_root
+            target = nodes[edge.target_id]
+            if edge.relation == "DYNAMIC_REFERENCE_CANDIDATE":
+                category, other = "DYNAMIC_UNRESOLVED", None
+            elif edge.relation == "CALLS_CANDIDATE":
+                callee = target.attributes.get("callee_expression", "")
+                if not isinstance(callee, str):
+                    unknowns.add("CALL_EXPRESSION_INVALID:" + eid)
+                    continue
+                # Lexical names only: no alias resolution or runtime assertion.
+                if callee in {"subprocess.run", "subprocess.Popen", "subprocess.call",
+                              "subprocess.check_call", "subprocess.check_output",
+                              "os.system", "os.popen", "asyncio.create_subprocess_exec",
+                              "asyncio.create_subprocess_shell"} or callee.startswith(
+                                  ("os.exec", "os.spawn", "os.posix_spawn")):
+                    category, other = "EXECUTION_CANDIDATE", None
+                elif callee in {"open", "io.open", "os.open", "os.getenv",
+                                "urllib.request.urlopen", "urlopen", "socket.create_connection"}:
+                    category, other = "RESOURCE_ACCESS_CANDIDATE", None
+                else:
+                    continue
+            elif edge.relation in {"REFERENCES_FILE_CANDIDATE", "FILE_REFERENCE_UNRESOLVED"}:
+                category, other = ("RESOURCE_REFERENCE_CANDIDATE" if
+                    edge.relation == "REFERENCES_FILE_CANDIDATE" else
+                    "RESOURCE_REFERENCE_UNRESOLVED"), None
+            elif edge.relation == "REFERENCES_CANDIDATE":
+                if target.kind != "python_attribute_specifier" or target.name not in {
+                    "os.environ", "os.environb", "sys.path", "sys.argv"
+                }:
+                    continue
+                category, other = "RESOURCE_ACCESS_CANDIDATE", None
+            elif target.kind != "python_import_specifier" or ev.observation_status != "SOURCE_DECLARED":
+                category, other = "UNRESOLVED_IMPORT", None
+            else:
+                category, other = _design_import(target.name, path, contract, stdlib_modules, repository_roots)
+            observations.add(DependencyObservation(category, path, line, source, target.name, blob, eid))
+            if category == "CROSS_PACKAGE" and source in adjacency and other in adjacency:
+                adjacency[source].add(other)
+            if category in {"CROSS_PACKAGE", "REPOSITORY_DEPENDENCY", "NON_STDLIB_OR_UNRESOLVED"}:
+                findings.add(DependencyFinding(category, path, line, source, target.name, blob,
+                    "Independent packages may use only their own modules and the target standard library"))
+            if category not in {"STDLIB_CANDIDATE", "SAME_PACKAGE", "CROSS_PACKAGE", "REPOSITORY_DEPENDENCY"}:
+                unknowns.add(category + ":" + eid)
+    cycle = _cycle(adjacency)
+    status = ("DESIGN_VIOLATION_OBSERVED" if findings else
+              "REVIEW_REQUIRED" if unknowns else "NO_STATIC_VIOLATION_OBSERVED")
+    return DependencyDesignReport(receipt.revision, receipt.scope_id, status,
+        tuple(sorted(observations, key=lambda f: (f.path, f.line, f.target, f.evidence_id))),
+        tuple(sorted(findings, key=lambda f: (f.path, f.line, f.target, f.category))),
+        cycle, tuple(sorted(unknowns)), tuple(sorted(requested)))
+
+
 __all__ = [
     "ChangeVerificationPlan", "DependencyContract", "DependencyFinding",
     "DependencyRule", "DependencyVerification", "plan_change_verification",
     "verify_dependencies", "verify_dependency_repository",
+    "DependencyObservation", "DependencyDesignReport", "analyze_independent_dependencies",
 ]
