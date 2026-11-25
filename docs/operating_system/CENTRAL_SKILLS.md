@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Samuel  
-**Central revision:** `9b335e3fbb9c5e8e323e382daeec56fa25336822`
+**Central revision:** `20827ec81ab0eac4dd7560a22ee4212e274113a5`
 
 The machine-readable exact identities are in `central_skills.json`.
 
@@ -15,6 +15,8 @@ docs/operating_system/README.md
 docs/operating_system/ESSENTIAL_RULES.md
 skills/session-bootstrap/README.md
 skills/state-refresh/README.md
+skills/problem-oriented-response/README.md
+skills/problem-oriented-response/contract.json
 skills/catalog.json              # trigger metadata index
 skills/capability-registry.json  # capability provider metadata
 ```
@@ -28,6 +30,14 @@ Load only when triggered:
 ```text
 MUTATE
   -> skills/repository-mutation/README.md
+
+GITHUB_BRANCH_CREATE / GITHUB_FILE_CREATE / GITHUB_COMMENT_CREATE
+  -> skills/repository-mutation/README.md
+  -> github-connector only
+
+GITHUB_PR_CREATE
+  -> skills/pull-request-create/README.md
+  -> github-connector only
 
 GITHUB_BRANCH_DELETE
   -> skills/repository-mutation/README.md
@@ -65,6 +75,8 @@ SCIENTIFIC_DISCRIMINATOR_CONTROLLER
 Do not preload controller execution paths during an ordinary interactive init.
 
 For GitHub state-changing work, provider visibility never bypasses the owning Samuel trigger/skill/capability resolution. A provider-specific missing operation is not a capability verdict until the registered provider chain is exhausted.
+
+For `GITHUB_BRANCH_CREATE`, `GITHUB_FILE_CREATE`, `GITHUB_PR_CREATE`, and `GITHUB_COMMENT_CREATE`, resolve the single `github-connector` provider from the pinned registry, discover its live action schema, check current target identity and authorization, execute, and read back. No native fallback for these four. Other capabilities retain their registered provider order. Hard denials stop the affected operation; do not bypass them.
 
 ## Samuel controller authority
 

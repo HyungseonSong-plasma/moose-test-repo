@@ -23,6 +23,10 @@ The central skill owns target identity checks, stale-SHA handling, retry-safe de
 
 Do not recreate those mechanics here.
 
+For `GITHUB_BRANCH_CREATE`, `GITHUB_FILE_CREATE`, `GITHUB_PR_CREATE`, and `GITHUB_COMMENT_CREATE`, resolve the single `github-connector` provider from the pinned registry, discover its live action schema, check current target identity and authorization, execute, and read back. No native fallback for these four. Other capabilities retain their registered provider order. Hard denials stop the affected operation; do not bypass them.
+
+The registered Connector-only creation routes must not fall back to the native `repository_mutation` workflow. Existing native engine contracts for independently authorized non-Connector-only operations remain separate.
+
 ## Local policy owner
 
 `.chatgpt-operation.json` owns consumer authorization:
@@ -32,6 +36,8 @@ Do not recreate those mechanics here.
 - allowed/denied branch names;
 - allowed portable actions;
 - local validation-gate workflow names.
+
+The required branch preflight path `automation/samuel/repository-mutation-policy.json` mirrors the canonical `.chatgpt-operation.json`; CI verifies exact JSON equality and this mirror grants no extra authority.
 
 Samuel ER-03/ER-05/ER-07/ER-08/ER-10 remain applicable.
 

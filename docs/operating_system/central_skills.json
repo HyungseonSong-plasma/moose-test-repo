@@ -2,11 +2,11 @@
   "schema_version": 2,
   "source_repository": "HyungseonSong-plasma/chatgpt-operation",
   "operating_system": {
-    "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+    "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
     "expected_version": "Samuel",
     "index": {
       "path": "docs/operating_system/README.md",
-      "expected_blob_sha": "77448ab850a06c141b16976c1c75353e7224973d"
+      "expected_blob_sha": "a5fdc9985affe32e455b6e0a09398047497ba0b4"
     },
     "essential_rules": {
       "path": "docs/operating_system/ESSENTIAL_RULES.md",
@@ -16,95 +16,149 @@
   "skills": [
     {
       "name": "session-bootstrap",
-      "load_on": ["INIT"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "INIT"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/session-bootstrap/README.md",
-      "expected_blob_sha": "de554ce4ba3a73089a3539b4b8726cd89b340c46"
+      "expected_blob_sha": "6a7a3c23a05907677d0a75ba5412973da37eae54"
     },
     {
       "name": "state-refresh",
-      "load_on": ["INIT", "SCHEDULED_CONTROLLER"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "INIT",
+        "SCHEDULED_CONTROLLER"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/state-refresh/README.md",
       "expected_blob_sha": "4efe6135b93456f2cc9da31786967f5f6ac80033"
     },
     {
+      "name": "problem-oriented-response",
+      "load_on": [
+        "INIT"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
+      "path": "skills/problem-oriented-response/README.md",
+      "expected_blob_sha": "c0d255134664a35db2250fa62bf3b06b3d8e3313",
+      "contract": {
+        "path": "skills/problem-oriented-response/contract.json",
+        "expected_blob_sha": "a49fd5e7513bcbdf354fcff127c8709e0365ec01"
+      }
+    },
+    {
       "name": "repository-mutation",
-      "load_on": ["MUTATE", "GITHUB_BRANCH_DELETE", "GITHUB_MUTATION_CAPABILITY_VERDICT"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "MUTATE",
+        "GITHUB_BRANCH_DELETE",
+        "GITHUB_MUTATION_CAPABILITY_VERDICT",
+        "GITHUB_FILE_CREATE",
+        "GITHUB_FILE_UPDATE",
+        "GITHUB_BRANCH_CREATE",
+        "GITHUB_BRANCH_FAST_FORWARD",
+        "GITHUB_COMMENT_CREATE"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/repository-mutation/README.md",
-      "expected_blob_sha": "7c1805da3942da5a94c49556d9400ca378161142"
+      "expected_blob_sha": "9d49125e10b293b5c3fe7adc38ff3b9f5c020608"
     },
     {
       "name": "governed-work",
-      "load_on": ["GOVERNED_WORK"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "GOVERNED_WORK"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/governed-work/README.md",
       "expected_blob_sha": "5ba4d1be80a4c3019fd9c21fe017468b87315a71"
     },
     {
       "name": "controller-throughput",
-      "load_on": ["SCHEDULED_CONTROLLER"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "SCHEDULED_CONTROLLER"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/controller-throughput/README.md",
       "expected_blob_sha": "bdfbdadddcdf833fd9c396b615a106bef36fa9fd"
     },
     {
       "name": "controller-lifecycle",
-      "load_on": ["SCHEDULED_CONTROLLER"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "SCHEDULED_CONTROLLER"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/controller-lifecycle/README.md",
       "expected_blob_sha": "28f512d80d380ecd415bb4d8d60be4778d464c47"
     },
     {
       "name": "github-actions-execution",
-      "load_on": ["GITHUB_ACTIONS_EXECUTION"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "GITHUB_ACTIONS_EXECUTION"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/github-actions-execution/README.md",
       "expected_blob_sha": "73b067c2816af1311c2d47fec2faff4f3cc63923"
     },
     {
       "name": "github-actions-observation",
-      "load_on": ["GITHUB_ACTIONS_OBSERVATION"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "GITHUB_ACTIONS_OBSERVATION"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/github-actions-observation/README.md",
       "expected_blob_sha": "90f87fc4df84fe85ce04080b419896f8f060a23a"
     },
     {
       "name": "artifact-staging",
-      "load_on": ["ARTIFACT_STAGING"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "ARTIFACT_STAGING"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/artifact-staging/README.md",
       "expected_blob_sha": "17c251379462d9251293e2fde6aabd45e527ee82"
     },
     {
       "name": "scientific-discriminator-controller",
-      "load_on": ["SCIENTIFIC_DISCRIMINATOR_CONTROLLER"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "SCIENTIFIC_DISCRIMINATOR_CONTROLLER"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/scientific-discriminator-controller/README.md",
       "expected_blob_sha": "e3e607f48ef70bf2d307f4a2f48dbee1352b080c"
     },
     {
+      "name": "pull-request-create",
+      "load_on": [
+        "GITHUB_PR_CREATE"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
+      "path": "skills/pull-request-create/README.md",
+      "expected_blob_sha": "38b53644b2c9a846cab9387afb7c8c7fcdb8c7a4"
+    },
+    {
       "name": "pull-request-merge",
-      "load_on": ["GITHUB_PR_MERGE"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "GITHUB_PR_MERGE"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/pull-request-merge/README.md",
       "expected_blob_sha": "8220e71ee5b7badc31690c50978180ddf521bfcc"
     },
     {
       "name": "research-controller",
-      "load_on": ["RESEARCH_CONTROLLER"],
-      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
+      "load_on": [
+        "RESEARCH_CONTROLLER"
+      ],
+      "revision": "20827ec81ab0eac4dd7560a22ee4212e274113a5",
       "path": "skills/research-controller/README.md",
       "expected_blob_sha": "aa7e99bc7c7dab678e6a0e36a2d5bdfd546b22c5"
     }
   ],
   "skill_catalog": {
     "path": "skills/catalog.json",
-    "expected_blob_sha": "9bee98efd28235ccafdcffde18da06dcc0386702"
+    "expected_blob_sha": "73c7a5799bf265c79295880bad168cfe0a0798c9"
   },
   "capability_registry": {
     "path": "skills/capability-registry.json",
-    "expected_blob_sha": "aa87d20fa68dc6e171ffd3240b4e4bc6d3bf28be"
+    "expected_blob_sha": "fb05ad1de6f690943bfd6be3cf77957b9aebf456"
   }
 }

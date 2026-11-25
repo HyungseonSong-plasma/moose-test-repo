@@ -38,9 +38,16 @@ Read exact identities from `central_skills.json`; capability provider order come
 INIT
   -> session-bootstrap
   -> state-refresh
+  -> problem-oriented-response (README and machine contract)
 
 MUTATE
   -> repository-mutation
+
+GITHUB_BRANCH_CREATE / GITHUB_FILE_CREATE / GITHUB_COMMENT_CREATE
+  -> repository-mutation -> github-connector only
+
+GITHUB_PR_CREATE
+  -> pull-request-create -> github-connector only
 
 GOVERNED_WORK
   -> governed-work

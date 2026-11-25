@@ -12,7 +12,7 @@ moose-test-init
 
  `BOOTSTRAP.md` applies the exact pinned Samuel OS and central `session-bootstrap` mechanics, then restores Physics-local authority/current state.
 
-**Cross-session GitHub gate:** `moose-test-init` must report `GITHUB_CAPABILITY_ROUTING=READY` only after reading and verifying the pinned Samuel catalog **and** capability registry. Before any GitHub state-changing operation, even after context reset, re-resolve the owning Samuel skill and ordered registry providers before choosing a connected tool. A missing connector operation is not global unavailability; evaluate the Samuel-native provider. `BOOTSTRAP.md` owns the `GITHUB_MUTATION_PREFLIGHT` gate. Initialization remains read-only.
+**Cross-session GitHub gate:** `moose-test-init` must report `GITHUB_CAPABILITY_ROUTING=READY` only after reading and verifying the pinned Samuel catalog **and** capability registry. Before any GitHub state-changing operation, even after context reset, re-resolve the owning Samuel skill and ordered registry providers before choosing a connected tool. A missing connector operation is not global unavailability; evaluate only the providers registered for the concrete capability. Branch/file creation, PR creation and ordinary comment creation are Connector-only. `BOOTSTRAP.md` owns the `GITHUB_MUTATION_PREFLIGHT` gate. Initialization remains read-only.
 
 ## Samuel operating stack
 
@@ -20,7 +20,7 @@ moose-test-init
 docs/operating_system/README.md
   -> exact Samuel binding
 
-central ESSENTIAL_RULES + session-bootstrap/state-refresh
+central ESSENTIAL_RULES + session-bootstrap/state-refresh/problem-oriented-response
   -> generic authority/bootstrap mechanics
 
 central catalog + capability registry
