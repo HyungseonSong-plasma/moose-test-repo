@@ -36,8 +36,8 @@ REUSABLE = {
 OPTIONAL_ENTRYPOINTS = {
     # On-demand policy/identity receipts; not a mandatory CI validation job.
     "controller_preflight.yml": {"workflow_dispatch"},
-    # Read-only Controller checkpoint contract qualification, manual dispatch only.
-    "controller-checkpoint-contract.yml": {"workflow_dispatch"},
+    # Qualification and a narrow, main-trusted request ingress after Repository CI.
+    "controller-checkpoint-contract.yml": {"workflow_dispatch", "workflow_run"},
     # FLOW #548: source-bound P0/P1/P2 only (no push).
     "issue402-flow-native-p2-regression.yml": {"pull_request", "workflow_dispatch"},
 }
@@ -181,6 +181,16 @@ def check(root: Path) -> list[str]:
             )
             if expected_push not in workflow_text:
                 errors.append("harness-code-scan.yml: unauthorized request branch/path")
+        if name == "controller-checkpoint-contract.yml":
+            workflow_text = path.read_text(encoding="utf-8")
+            expected_ingress = (
+                "  workflow_run:\n"
+                "    workflows: [Repository CI]\n"
+                "    types: [completed]\n"
+                "    branches: [issue-888-checkpoint-qualification-*]\n"
+            )
+            if expected_ingress not in workflow_text:
+                errors.append(f"{name}: unauthorized qualification request ingress")
         if name == "ci.yml":
             workflow_text = path.read_text(encoding="utf-8")
             pr_types = pull_request_types(workflow_text)
@@ -328,8 +338,19 @@ def self_test() -> int:
             body = "name: staged\non:\n" + "".join(
                 f"  {event}:\n" for event in sorted(allowed_events)
             ) + "jobs: {}\n"
+            if name == "controller-checkpoint-contract.yml":
+                body = body.replace("  workflow_run:\n", (
+                    "  workflow_run:\n"
+                    "    workflows: [Repository CI]\n"
+                    "    types: [completed]\n"
+                    "    branches: [issue-888-checkpoint-qualification-*]\n"
+                ))
             path.write_text(body, encoding="utf-8")
             assert not check(root), (name, check(root))
+            if name == "controller-checkpoint-contract.yml":
+                path.write_text(body.replace("branches: [issue-888-checkpoint-qualification-*]", "branches: [main]"), encoding="utf-8")
+                assert any("unauthorized qualification request ingress" in error for error in check(root))
+                path.write_text(body, encoding="utf-8")
             # A previously approved route with an extra push must fail.
             path.write_text(body.replace("on:\n", "on:\n  push:\n", 1), encoding="utf-8")
             assert any(f"{name}: events=" in error for error in check(root)), name

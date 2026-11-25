@@ -23,7 +23,10 @@ SOURCE_PATHS = frozenset((CONTRACT, WORKFLOW,
     "physics_harness/code/tests/test_checkpoint_cas_contract.py",
     "physics_harness/code/tests/test_checkpoint_contract_receipt.py",
     "physics_harness/execution/controller_contract_receipt.py",
-    "physics_harness/code/tests/test_controller_contract_receipt.py"))
+    "physics_harness/code/tests/test_controller_contract_receipt.py",
+    "physics_harness/execution/controller_contract_ingress.py",
+    "automation/controller/dispatch_checkpoint_request.py",
+    "physics_harness/code/tests/test_controller_contract_ingress.py"))
 TESTS = frozenset(("test_exact_parent_single_path", "test_independent_pr_parallel",
     "test_same_pr_race_exactly_one_wins", "test_intervening_code_commit_is_preserved",
     "test_lost_response_requires_readback_not_replay", "test_record_cannot_be_overwritten",
