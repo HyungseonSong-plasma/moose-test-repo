@@ -729,7 +729,7 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     assert "NATIVE_RUNTIME_LINKER_ERROR" in script
     assert '"P3": "NOT_RUN"' in script and '"P4": "NOT_RUN"' in script
     assert "SCIENCE_HOLD" in script
-    workflow = (ROOT / ".github/workflows/physics-native-ci.yml").read_text()
+    workflow = (ROOT / ".github/workflows/plasma-native-regression.yml").read_text()
     assert "preflight_public_option_s6.sh" in workflow
     assert "run_public_option_s6_p2.sh" in workflow
     assert "P0 - Public S6 environment and scratch-permission preflight" in workflow
