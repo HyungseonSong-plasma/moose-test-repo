@@ -9,7 +9,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "experiments/Issue395_powered_chemistry_ladder/build_o_elastic_overlay.py"
-TABLE = REPO / "physics_app/data/electron_impact/o_elastic.txt"
+TABLE = REPO / "physics_app/database/o_elastic.txt"
 BASE = """[Variables]
   [log_ne]
   []

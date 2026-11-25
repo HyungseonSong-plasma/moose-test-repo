@@ -28,4 +28,4 @@ They do not represent accepted scientific parity with original reactions.
 
 When using the tables, point experimental input lookups explicitly at this
 `boltz/` directory. Do not overwrite or silently replace the original
-`physics_app/data/electron_impact/` reference data or production defaults.
+`physics_app/database/` reference data or production defaults.

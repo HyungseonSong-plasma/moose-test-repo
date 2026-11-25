@@ -24,7 +24,7 @@ SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0"
 CONTRACT = ROOT / "docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json"
 EI01_RECOVERY = ROOT / "docs/development/2026-09-11_issue192_s5r_ei01_attachment_recovery.json"
 EI16_RECOVERY = ROOT / "docs/development/2026-09-11_issue192_s5r_ei16_ionization_recovery.json"
-ELECTRON_DATA = ROOT / "physics_app/data/electron_impact"
+ELECTRON_DATA = ROOT / "physics_app/database"
 HEAVY_DATA = ROOT / "physics_app/data/heavy_reactions"
 
 from experiments.historical_recipe_support.issue192_s5r import (  # noqa: E402

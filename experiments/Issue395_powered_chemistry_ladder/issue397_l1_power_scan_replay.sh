@@ -133,7 +133,7 @@ audit.write_text(json.dumps({"one_change": "Maxwell Steady nl_abs_tol",
 print("ISSUE397_MAXWELL_SINGLE_TOLERANCE_CHANGE_PASS")
 PY
 
-cp physics_app/data/electron_impact/o2_elastic.txt "$CHEM/o2_elastic.txt"
+cp physics_app/database/o2_elastic.txt "$CHEM/o2_elastic.txt"
 python3 "$CHEM/build_o2_elastic_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$ELASTIC" \
@@ -145,33 +145,33 @@ python3 "$CHEM/build_o2_dissociation_overlay.py" \
   --output "$DISS" \
   | tee "$RESULT/prep/dissociation_overlay.log"
 
-cp physics_app/data/electron_impact/o2_ionization.txt "$CHEM/o2_ionization.txt"
+cp physics_app/database/o2_ionization.txt "$CHEM/o2_ionization.txt"
 python3 "$CHEM/build_o2_ionization_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$ION" \
   --ei16-table o2_ionization.txt \
   | tee "$RESULT/prep/o2_ionization_overlay.log"
 
-cp physics_app/data/electron_impact/o_ionization.txt "$CHEM/o_ionization.txt"
+cp physics_app/database/o_ionization.txt "$CHEM/o_ionization.txt"
 python3 "$CHEM/build_o_ionization_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$ION_O" \
   --ei20-table o_ionization.txt \
   | tee "$RESULT/prep/o_ionization_ei20_overlay.log"
 
-cp physics_app/data/electron_impact/o2_attachment.txt "$CHEM/o2_attachment.txt"
+cp physics_app/database/o2_attachment.txt "$CHEM/o2_attachment.txt"
 python3 "$CHEM/build_o2_attachment_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$ATTACH" \
   --attachment-table o2_attachment.txt \
   | tee "$RESULT/prep/o2_attachment_ei01_overlay.log"
 
-cp physics_app/data/electron_impact/o_elastic.txt "$CHEM/o_elastic.txt"
+cp physics_app/database/o_elastic.txt "$CHEM/o_elastic.txt"
 python3 "$CHEM/build_o_elastic_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
   --output "$OELASTIC" \
   --elastic-table o_elastic.txt \
-  --source-table physics_app/data/electron_impact/o_elastic.txt \
+  --source-table physics_app/database/o_elastic.txt \
   | tee "$RESULT/prep/o_elastic_ei17_overlay.log"
 
 # Verify original signed wafer-current owner without injecting any AuxKernels.

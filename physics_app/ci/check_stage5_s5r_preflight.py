@@ -22,7 +22,7 @@ E8 = ROOT / "docs/development/2026-09-10_issue26_e8_closure_surface_contract.jso
 E8_ELASTIC = ROOT / "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json"
 H05 = ROOT / "docs/development/2026-09-11_issue191_stage5_h05_contract.json"
 EI01_RECOVERY = ROOT / "docs/development/2026-09-11_issue192_s5r_ei01_attachment_recovery.json"
-EI01_TABLE = ROOT / "physics_app/data/electron_impact/o2_attachment.txt"
+EI01_TABLE = ROOT / "physics_app/database/o2_attachment.txt"
 
 EXPECTED_LEDGER = [
     "EI01",

@@ -1,16 +1,10 @@
 # Physics material databases
 
-`transport_data.txt` is the canonical heavy-species collision-integral
-database for new Physics/Plasmas Navier–Stokes integration (#896).
-It retains the seven species and nine static collision pairs from
-`experiments/Issue21_qvt_six_species_bulk_advection/transport_data.txt`.
-Only the obsolete QPX candidate header comment was removed; all remaining
-bytes are identical to the historical source (Git blob
-`bcbb0a5939ca77a9c3b718fc1cc2ef7f2d45820f`).
-The old file is retained solely as a hash-pinned experiment fixture.
-Do not change archived experiment manifests to point here.
+Canonical data location for new Physics/Plasmas inputs (#896).
 
-The New-only JSON binding and Scratch staging are a separate integration
-step. Existing Native inputs and frozen experiments continue to use their
-original paths until their owning contracts explicitly migrate.
-This is a location/provenance change, not a scientific coefficient update.
+- `neutral_transport.txt`: seven heavy species, nine static collision pairs; original Issue21 Git blob `bcbb0a5939ca77a9c3b718fc1cc2ef7f2d45820f`, with only obsolete QPX candidate header removed. Physical data unchanged.
+- `electron_moments.txt`: exact original Issue91/r3_e0 electron transport table (Git blob `bedcaf17fb3ef93ba8973cc6b32aa6e783e2292a`).
+- Seven reference electron-impact tables relocated byte-for-byte from physics_app/data/electron_impact.
+- `boltz/`: 19 independently calculated research candidate EI tables; not original S6 protected rates and not accepted scientific parity. See its README.
+
+Old experiment-local transport/electron files remain only until exact consumer and scratch staging migration; do not treat them as alternate New-only canonical databases. Historical receipts retain their original paths and hashes. Heavy-reaction data/H25 are outside this migration. No coefficient changes or private-rate replacement are implied by moving files.

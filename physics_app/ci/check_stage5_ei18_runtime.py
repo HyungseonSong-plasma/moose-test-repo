@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json"
-TABLE = ROOT / "physics_app/data/electron_impact/o_excitation_1d.txt"
+TABLE = ROOT / "physics_app/database/o_excitation_1d.txt"
 
 N_A = 6.02214076e23
 N_E0 = 1.0e16

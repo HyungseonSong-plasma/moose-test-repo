@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 CONTRACT=ROOT/"docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json"
-TABLE=ROOT/"physics_app/data/electron_impact/o_ionization.txt"
+TABLE=ROOT/"physics_app/database/o_ionization.txt"
 NA=6.02214076e23
 NE0=1e16
 EREF=5.73276

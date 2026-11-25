@@ -6,7 +6,7 @@ One strict tabulated progress R_elastic_O, zero particle stoichiometry.
 Electron-energy exchange per collision [eV]:
   delta_eps = 3*m_e/(M_O/N_A) * ((2/3)*mean_en_solved-(kB/e)*T_g).
 The same progress drives the unique energy source -delta_eps * R_elastic_O.
-Source rate table is the existing physics_app/data/electron_impact/o_elastic.txt.
+Source rate table is the existing physics_app/database/o_elastic.txt.
 """
 from __future__ import annotations
 
