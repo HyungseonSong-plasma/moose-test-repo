@@ -8,18 +8,80 @@ runner's self-reported receipt is permission to rename or merge code.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import sys
 import tempfile
 
-from libs.test_verification.pytest_runner import run_pytest
+from libs.command_execution.runner import capture_command
 
 from ..diagnostics.providers.git import GitSourceProvider
 from ..diagnostics.request import normalized_path
 
 _SHA = re.compile(r"[0-9a-f]{40}\Z")
+
+
+@dataclass(frozen=True, slots=True)
+class _PytestRun:
+    command: tuple[str, ...]
+    exit_code: int | None
+    passed_tests: int
+    stdout_sha256: str
+    stderr_sha256: str
+    timed_out: bool
+    output_truncated: bool
+    junit_xml: bytes
+    junit_sha256: str
+
+
+def run_pytest(path: str, workspace: Path, home: Path, timeout_seconds: int,
+               max_output_bytes: int, junit_destination: Path) -> _PytestRun:
+    """Execute one caller-selected relative pytest module; report observations."""
+    if (not isinstance(path, str) or not path or path.startswith("-")
+            or Path(path).is_absolute() or ".." in Path(path).parts
+            or not path.endswith(".py")):
+        raise ValueError("INVALID_PYTEST_TARGET")
+    if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= 120:
+        raise ValueError("INVALID_REPLAY_TIMEOUT")
+    if type(max_output_bytes) is not int or not 1024 <= max_output_bytes <= 5_000_000:
+        raise ValueError("INVALID_REPLAY_OUTPUT_LIMIT")
+    if junit_destination.exists() or junit_destination.is_symlink():
+        raise ValueError("PYTEST_JUNIT_DESTINATION_ALREADY_EXISTS")
+    command = (sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+               "--disable-warnings", "--junitxml=" + str(junit_destination), path)
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": str(home),
+        "PYTHONPATH": str(workspace),
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONNOUSERSITE": "1",
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+        "PYTEST_ADDOPTS": "",
+        "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+    }
+    if os.name == "nt":
+        env["SYSTEMROOT"] = os.environ.get("SYSTEMROOT", "")
+    observed = capture_command(command, cwd=workspace, env=env,
+                               timeout_seconds=timeout_seconds,
+                               max_output_bytes=max_output_bytes)
+    code = observed.exit_code
+    out_preview = observed.stdout_preview
+    output_truncated = observed.output_truncated
+    count = 0
+    if code == 0 and not output_truncated:
+        match = re.search(rb"(?<!\d)(\d+) passed(?:\s|\b)", out_preview)
+        count = int(match.group(1)) if match else 0
+    junit = b""
+    if junit_destination.is_file():
+        with junit_destination.open("rb") as xml:
+            junit = xml.read(8_000_001)
+    return _PytestRun(command, code, count, observed.stdout_sha256,
+                      observed.stderr_sha256, observed.timed_out, output_truncated, junit,
+                     hashlib.sha256(junit).hexdigest() if junit else "")
+
 
 
 @dataclass(frozen=True, slots=True)
