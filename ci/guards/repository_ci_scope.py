@@ -38,10 +38,23 @@ def event_paths(source: str, event: str) -> list[str] | None:
     if match is None:
         return None
     block = re.split(r"(?m)^  [a-z_]+:", trigger[match.end():], maxsplit=1)[0]
-    paths = re.search(r"(?m)^    paths:\n((?:      - '[^\n]+'\n)+)", block)
-    if paths is None or "paths-ignore:" in block:
+    if block.count("    paths:\n") != 1 or "paths-ignore:" in block:
         return None
-    return re.findall(r"(?m)^      - '([^'\n]+)'$", paths.group(1))
+    # Parse the entire indented list, not just a valid-looking prefix.
+    tail = block.split("    paths:\n", 1)[1]
+    items = []
+    for line in tail.splitlines():
+        if not line.strip():
+            continue
+        if not line.startswith("      "):
+            if line.startswith("    ") and not line.startswith("     "):
+                break
+            return None
+        entry = re.fullmatch(r"      - '([^'\n]+)'", line)
+        if entry is None:
+            return None
+        items.append(entry.group(1))
+    return items or None
 
 
 def sample_path_matches(path: str, patterns: list[str]) -> bool:
@@ -159,7 +172,7 @@ def inspect(sources: dict[str, str], contract: dict) -> list[str]:
             for path in excluded_samples:
                 if sample_path_matches(path, patterns):
                     problems.append(f"{workflow}: {event}: NON_PHYSICS_PATH_ROUTED:{path}")
-            for path in required_samples:
+            for path in required_samples + (("ci/workflow_templates/issue493-public-p3-job.yml",) if workflow == code else ()):
                 if not sample_path_matches(path, patterns):
                     problems.append(f"{workflow}: {event}: PHYSICS_PATH_UNROUTED:{path}")
     manual_expected = {".github/workflows/physics-p6-validation.yml", ".github/workflows/plasma-native-regression.yml"}
@@ -168,8 +181,8 @@ def inspect(sources: dict[str, str], contract: dict) -> list[str]:
     for path in manual_expected:
         source = sources.get(path, "")
         header = source.split("\npermissions:", 1)[0]
-        if ("\non:\n  workflow_dispatch:\n" not in header
-                or re.search(r"^  (?:push|pull_request|pull_request_target|schedule|workflow_call|workflow_run):", header, re.MULTILINE)):
+        trigger = header.split("\non:\n", 1)[1] if "\non:\n" in header else ""
+        if re.findall(r"(?m)^  ([A-Za-z_]+):", trigger) != ["workflow_dispatch"]:
             problems.append(f"{path}: MANUAL_NATIVE_TRIGGER_REQUIRED")
     diagnostics = sources[".github/workflows/repository-diagnostics.yml"]
     if "  workflow_dispatch:\n" not in diagnostics:
@@ -226,9 +239,13 @@ def self_test(sources: dict[str, str], contract: dict) -> None:
         changed = dict(sources)
         changed[path] = sources[path].replace("      - 'physics_app/**'\n", "", 1)
         assert any("EXACT_DOMAIN_PATH_FILTER_MISMATCH" in item for item in inspect(changed, contract))
+        changed[path] = sources[path].replace("      - '!**/*.md'\n", "      - '!**/*.md'\n      - \"**\"\n", 1)
+        assert any("EXACT_DOMAIN_PATH_FILTER_MISMATCH" in item for item in inspect(changed, contract))
     for path in contract["manual_validation_workflows"]:
         mutated = dict(sources)
         mutated[path] = sources[path].replace("  workflow_dispatch:\n", "  pull_request:\n  workflow_dispatch:\n", 1)
+        assert f"{path}: MANUAL_NATIVE_TRIGGER_REQUIRED" in inspect(mutated, contract)
+        mutated[path] = sources[path].replace("  workflow_dispatch:\n", "  release:\n  workflow_dispatch:\n", 1)
         assert f"{path}: MANUAL_NATIVE_TRIGGER_REQUIRED" in inspect(mutated, contract)
 
 
