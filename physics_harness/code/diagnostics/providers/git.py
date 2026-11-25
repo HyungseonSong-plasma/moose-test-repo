@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-import hashlib
 from pathlib import Path
-import subprocess
+
+from libs.command_execution.git import run_git
+from libs.git_evidence.git import git_blob_sha1, parse_long_tree_row, regular_tree_paths
 
 from ..collector import SourceRecord, SourceInput
 from ..request import ScanRequest, normalized_path
@@ -18,15 +19,7 @@ class GitSourceProvider:
         self.root = Path(root)
 
     def _git(self, *args: str) -> bytes:
-        result = subprocess.run(
-            ["git", "-C", str(self.root), *args],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            check=False, timeout=30,
-        )
-        if result.returncode:
-            raise ValueError("GIT_SOURCE_UNAVAILABLE: " +
-                             result.stderr.decode("utf-8", "replace").strip()[:250])
-        return result.stdout
+        return run_git(self.root, *args)
 
     def assert_head(self, revision: str) -> None:
         actual = self._git("rev-parse", "--verify", "HEAD").decode("ascii").strip()
@@ -39,14 +32,8 @@ class GitSourceProvider:
         No HEAD check, path normalization, domain filtering or consumer error
         translation: those remain the responsibility of the calling operation.
         """
-        rows = self._git("ls-tree", "--full-tree", "-r", "-z", revision).split(b"\0")
-        for row in rows:
-            if not row:
-                continue
-            meta, filename = row.split(b"\t", 1)
-            mode, kind, _ = meta.decode("ascii").split()
-            if kind == "blob" and mode in {"100644", "100755"}:
-                yield filename.decode("utf-8", "strict")
+        yield from regular_tree_paths(
+            self._git("ls-tree", "--full-tree", "-r", "-z", revision))
 
     def inventory(self, request: ScanRequest) -> tuple[SourceRecord, ...]:
         if not isinstance(request, ScanRequest):
@@ -59,9 +46,7 @@ class GitSourceProvider:
             if not row:
                 continue
             try:
-                meta, filename = row.split(b"\t", 1)
-                mode, typ, sha, size = meta.decode("ascii").split()
-                path = filename.decode("utf-8", "strict")
+                mode, typ, sha, size, path = parse_long_tree_row(row)
                 normalized_path(path)
                 if typ not in {"blob", "commit"}:
                     raise ValueError("INVALID_GIT_ENTRY_TYPE")
@@ -80,9 +65,7 @@ class GitSourceProvider:
         if record.mode not in {"100644", "100755"}:
             raise ValueError("GIT_SOURCE_NON_REGULAR")
         data = self._git("cat-file", "blob", record.blob_sha)
-        actual = hashlib.sha1(
-            b"blob " + str(len(data)).encode("ascii") + b"\0" + data
-        ).hexdigest()
+        actual = git_blob_sha1(data)
         if actual != record.blob_sha or len(data) != record.size:
             raise ValueError("GIT_SOURCE_BLOB_MISMATCH")
         return data
@@ -113,9 +96,7 @@ class GitSourceProvider:
         if len(rows) != 1:
             raise ValueError("HISTORY_SOURCE_UNRESOLVED")
         try:
-            meta, filename = rows[0].split(b"\t", 1)
-            mode, kind, sha, size = meta.decode("ascii").split()
-            observed = filename.decode("utf-8", "strict")
+            mode, kind, sha, size, observed = parse_long_tree_row(rows[0])
             if observed != path or kind != "blob" or mode not in {"100644", "100755"}:
                 raise ValueError("HISTORY_NOT_REGULAR_FILE")
             record = SourceRecord(path=path, blob_sha=sha.lower(), mode=mode, size=int(size))
