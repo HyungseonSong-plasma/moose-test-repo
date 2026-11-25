@@ -104,7 +104,7 @@ jobs:
           print('SAMUEL_ARCHIVE_TAG=PASS tag='+tag+' sha='+sha)
           PY
       - name: Delete branch through Samuel lease-guarded capability
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/branch-delete@20827ec81ab0eac4dd7560a22ee4212e274113a5
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/branch-delete@094b0c57ba78494e3ec7f4c9aa24eaf9afc98103
         with:
           repository: HyungseonSong-plasma/moose-test-repo
           branch: ${{ matrix.branch }}
