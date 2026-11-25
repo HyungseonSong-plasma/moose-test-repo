@@ -36,7 +36,9 @@ completed successfully. A skipped required gate is **HOLD**, not PASS.
 | Owner | Source scope | Responsibilities |
 | --- | --- | --- |
 | `physics-code-ci.yml` | Physics, tests, experiments, domain guards/templates | Physics Python tests, static physics rules, retired Factory archive and consumer invariants |
-| `physics-native-ci.yml` | Native Physics source, Native scenarios, selected related guards | Actual PhysicsApp build, MOOSE P1/P2, Native regression, Boltzmann C++ controls |
+| `physics-native-ci.yml` | Native Physics source, Native scenarios, selected related guards | CORE/ARCH Native P1/P2, runtime smoke, Boltzmann C++ controls |
+| `physics-p6-validation.yml` | Manual only | Same W1 and both New-only 42/100-row P2 lanes |
+| `plasma-native-regression.yml` | Manual only | Existing broad Plasma Native regression and legacy HOLD evidence |
 | `harness-code.yml` | `physics_harness/code/**` | Harness Code unit/negative controls |
 | `repository-diagnostics.yml` | Manual `workflow_dispatch` only | Historical one-day Artifact CreateArtifact API probe |
 | Existing scientific Workflows | Explicitly authorized input/trigger | Scientific P3/P4 and special-run evidence |
@@ -79,3 +81,7 @@ Domain CI may require further checks for a specific change. Runtime scientific
 claims remain bound to separately approved Physics validation contracts.
 
 Related issue: #749.
+
+## Manual Native qualification
+
+P6 and Plasma Native Regression are separate manual workflows, not automatic PR checks. Select the exact same-repository branch, enter its 40-character HEAD SHA, the open PR number (empty only for main), and `NATIVE_VALIDATION_APPROVED`. Main or an open internal PR into main must match the live source identity. Execute relevant manual checks before accepting changes affecting their Physics/Native contracts; unrelated changes may record explicit N/A, not PASS. A skipped/unrun manual check is never evidence of native or scientific success. Preserve existing OCI, W1 custody, protected-data cleanup, negative controls, and SCIENCE_HOLD. Server-side required checks and independent review must be reconciled before rollout; do not silently weaken branch protection.
