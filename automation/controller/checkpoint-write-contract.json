@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "contract_id": "moose-checkpoint-cas-v1",
+  "scope": "independent same-repository open work PR, append-only checkpoint only",
+  "provider": "github-connector",
+  "sequence": ["read_exact_head_and_absent_record", "create_tree_single_new_record", "create_commit_single_expected_parent", "verify_commit_tree_and_parent", "update_ref_expected_sha_nonforce", "read_back_and_reconcile"],
+  "record_prefix": "automation/controller-state/pr-",
+  "force": false,
+  "qualification_scope": "local_git_only",
+  "production_authority": "separate_registered_route_and_live_provider_qualification_required"
+}
