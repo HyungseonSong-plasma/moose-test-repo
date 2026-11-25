@@ -22,4 +22,4 @@ def test_p6_ci_trigger_artifact_p05_source_contract():
 
 
 def test_p6_ci_mutations_fail_closed():
-    assert G["self_test"](*_sources()) == 32
+    assert G["self_test"](*_sources()) == 44

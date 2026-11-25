@@ -11,6 +11,8 @@ ENTRYPOINTS = {
     "harness-code-scan.yml": {"push", "workflow_dispatch"},
     "physics-code-ci.yml": {"push", "pull_request"},
     "physics-native-ci.yml": {"pull_request"},
+    "physics-p6-validation.yml": {"workflow_dispatch"},
+    "plasma-native-regression.yml": {"workflow_dispatch"},
     "repository-diagnostics.yml": {"workflow_dispatch"},
     "experiment.yml": {"workflow_dispatch"},
     "refactor.yml": {"workflow_dispatch"},
