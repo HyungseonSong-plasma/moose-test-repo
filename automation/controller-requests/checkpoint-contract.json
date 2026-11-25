@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "expected_main_sha": "e6fe3db548b961f74f7ca7f4df617fb03b02779c",
+  "expected_contract_sha256": "322452ef1da45dee119026636ea6eb24c43e75f097e14ee1b499b94c74cd3800",
+  "expected_samuel_pin": "094b0c57ba78494e3ec7f4c9aa24eaf9afc98103"
+}
