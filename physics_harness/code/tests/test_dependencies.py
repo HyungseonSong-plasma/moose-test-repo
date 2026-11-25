@@ -126,7 +126,7 @@ def _independence_contract():
     return DependencyContract.from_mapping({
         "schema_version": 1, "package_root": "libs",
         "canonical_packages": ["alpha", "beta"], "legacy_packages": [],
-        "repository_tool": "ci", "forbidden_edges": [],
+        "repository_tool": "build_tools", "forbidden_edges": [],
         "independent_packages": ["alpha", "beta"],
     })
 
