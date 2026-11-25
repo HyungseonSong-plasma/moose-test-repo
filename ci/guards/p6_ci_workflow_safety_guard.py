@@ -3,7 +3,7 @@
 
 The old 3,000-line ci.yml does not own Native jobs after repository CI
 migration. Preserve the main-only general CI/template and require the three
-actual P6 W1/New-only/Public-D jobs in physics-native-ci.yml. Source-only:
+actual P6 W1/New-only/Public-D jobs in the manual P6 workflow. Source-only:
 never launches an OCI build, private EI data, or a scientific solve.
 """
 from __future__ import annotations
@@ -16,14 +16,16 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github/workflows/ci.yml"
 TEMPLATE = ROOT / "ci/workflow_templates/general-ci.yml"
 NATIVE = ROOT / ".github/workflows/physics-native-ci.yml"
+P6_MANUAL = ROOT / ".github/workflows/physics-p6-validation.yml"
+REGRESSION_MANUAL = ROOT / ".github/workflows/plasma-native-regression.yml"
 DD = ROOT / "physics_app/src/physics/plasma/DDContinuityEq.C"
 
 P6 = ("p6_newonly_s6_build", "p6_newonly_s6_native_p2",
       "p6_public_d_100row_native_p2")
-HEAD_SCOPE = "github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'"
+HEAD_SCOPE = '.head.repo.full_name == $repo and .head.sha == $sha and .head.ref == $ref'
 EXPECTED_OCI = "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
 TYPE_COUNT = "assert len(expected_kernels)==12 and len(expected_bc)==12 and len(expected_e)==8"
-CHECKED_HEAD = "github.event.pull_request.head.sha"
+CHECKED_HEAD = "github.sha"
 NETWORKLESS = "--network none"
 REGRESSION_STEP = "Require explicit Public D KEEP_HOLD evidence, not Native D PASS"
 
@@ -45,8 +47,11 @@ def job_block(text: str, name: str) -> str:
 
 
 def validate(workflow: str, template: str, dd_source: str,
-             *, native_source: str | None = None) -> None:
+             *, native_source: str | None = None, p6_source: str | None = None,
+             regression_source: str | None = None) -> None:
     native = NATIVE.read_text() if native_source is None else native_source
+    p6 = P6_MANUAL.read_text() if p6_source is None else p6_source
+    regression_source = REGRESSION_MANUAL.read_text() if regression_source is None else regression_source
     need(workflow == template, "CANONICAL_BYTE_PARITY")
     need("  push:\n    branches: [main]" in workflow and
          "  pull_request:\n    branches: [main]" in workflow,
@@ -67,13 +72,32 @@ def validate(workflow: str, template: str, dd_source: str,
          and "  schedule:" not in header[0], "NO_UNAPPROVED_NATIVE_TRIGGER")
     native_jobs = set(re.findall(r"(?m)^  ([a-z][a-z0-9_-]*):\s*$",
                                  header[1]))
-    need(set(P6) <= native_jobs, "ALL_P6_JOBS_REQUIRED")
+    need(not (set(P6) & native_jobs) and "plasma_native_regression" not in native_jobs,
+         "NO_MANUAL_NATIVE_JOBS_IN_AUTOMATIC_CI")
+    for source, expected in ((p6, set(P6)), (regression_source, {"plasma_native_regression"})):
+        parts = source.split("\njobs:\n", 1)
+        need(len(parts) == 2 and "\non:\n  workflow_dispatch:\n" in parts[0]
+             and not re.search(r"(?m)^  (?:push|pull_request|pull_request_target|schedule|workflow_call|workflow_run):", parts[0]),
+             "MANUAL_ONLY_TRIGGER")
+        need(set(re.findall(r"(?m)^  ([a-z][a-z0-9_-]*):\s*$", parts[1])) == expected,
+             "MANUAL_EXACT_JOB_OWNERS")
+        for name in expected:
+            block = job_block(source, name)
+            need(all(token in block for token in (
+                HEAD_SCOPE, CHECKED_HEAD, 'test "$GITHUB_EVENT_NAME" = workflow_dispatch',
+                'test "$APPROVAL" = NATIVE_VALIDATION_APPROVED',
+                'test "$REQUESTED_SHA" = "$GITHUB_SHA"', '.state == "open"',
+                '.base.repo.full_name == $repo', '.base.ref == "main"',
+                'test -z "$REQUESTED_PR"', 'git/ref/heads/main',
+                'persist-credentials: false')),
+                "SOURCE_HEAD_AND_INTERNAL_PR_SCOPE_" + name)
+            need("Verify explicit manual approval and current source scope" in block
+                 and "uses: actions/checkout@v4" in block
+                 and block.index("Verify explicit manual approval and current source scope")
+                 < block.index("uses: actions/checkout@v4"), "MANUAL_SCOPE_BEFORE_CHECKOUT_" + name)
 
     for name in P6:
-        block = job_block(native, name)
-        need(HEAD_SCOPE in block and CHECKED_HEAD in block
-             and "github.event_name == 'pull_request'" in block,
-             "SOURCE_HEAD_AND_INTERNAL_PR_SCOPE_" + name)
+        block = job_block(p6, name)
         need(EXPECTED_OCI in block, "OCI_PIN_MISSING_" + name)
         need("if-no-files-found: error" in block,
              "MISSING_EVIDENCE_MUST_FAIL_" + name)
@@ -84,7 +108,7 @@ def validate(workflow: str, template: str, dd_source: str,
             need(forbidden not in block,
                  "UNSAFE_BYPASS_" + name + "_" + forbidden[:12])
 
-    w1 = job_block(native, P6[0])
+    w1 = job_block(p6, P6[0])
     need(all(v in w1 for v in (
         '"build_count":1', "physics-opt-and-app-libs.tar.gz",
         "SOURCE_HEAD", "persist-credentials: false",
@@ -93,8 +117,8 @@ def validate(workflow: str, template: str, dd_source: str,
     need("make -C physics_app" in w1,
          "W1_BUILD_MISSING")
 
-    n = job_block(native, P6[1])
-    d = job_block(native, P6[2])
+    n = job_block(p6, P6[1])
+    d = job_block(p6, P6[2])
     for name, block in ((P6[1], n), (P6[2], d)):
         need(all(v in block for v in (
             "needs: p6_newonly_s6_build", "actions/download-artifact@v4",
@@ -120,7 +144,7 @@ def validate(workflow: str, template: str, dd_source: str,
         )), "G5_STAGE_NATIVE_AND_CLEANUP_" + str(rows))
     need("ci/guards/issue652_g6b_publicd100_stage.py" in d,
          "G5_PUBLIC_D_ORIGINAL100_STAGE_REQUIRED")
-    regression = job_block(native, "plasma_native_regression")
+    regression = job_block(regression_source, "plasma_native_regression")
     need("P6_PUBLIC_B_PASS_D_KEEP_HOLD_EVIDENCE_NOT_NATIVE_D_PASS" in regression
          and "p6_legacy_hold_receipt.py --mode public" in regression
          and "P6 FAIL_CLOSED: required S6-417/941 input gate is missing" in regression
@@ -138,21 +162,26 @@ def validate(workflow: str, template: str, dd_source: str,
 
 def self_test(workflow: str, template: str, dd_source: str) -> int:
     native = NATIVE.read_text()
-    validate(workflow, template, dd_source, native_source=native)
-    cases: list[tuple[str, str, str, str, str]] = []
+    p6 = P6_MANUAL.read_text()
+    regression = REGRESSION_MANUAL.read_text()
+    validate(workflow, template, dd_source, native_source=native, p6_source=p6, regression_source=regression)
+    cases = []
 
     def add(label: str, *, ci: str | None = None, tpl: str | None = None,
-            nat: str | None = None, dd: str | None = None) -> None:
+            nat: str | None = None, dd: str | None = None,
+            man: str | None = None, reg: str | None = None) -> None:
         cases.append((label, workflow if ci is None else ci,
                       template if tpl is None else tpl,
                       native if nat is None else nat,
-                      dd_source if dd is None else dd))
+                      dd_source if dd is None else dd,
+                      p6 if man is None else man, regression if reg is None else reg))
 
     def edit(name: str, old: str, new: str) -> str:
-        part = job_block(native, name)
+        source = p6 if name in P6 else regression
+        part = job_block(source, name)
         need(old in part and old != new,
              "NEGATIVE_FIXTURE_" + name + "_" + old[:16])
-        return native.replace(part, part.replace(old, new), 1)
+        return source.replace(part, part.replace(old, new), 1)
 
     add("template_drift", tpl=template + "\n# unreviewed drift\n")
     add("core_not_main", ci=workflow.replace(
@@ -170,68 +199,74 @@ def self_test(workflow: str, template: str, dd_source: str) -> int:
         "\njobs:\n", "  workflow_dispatch:\n\njobs:\n", 1))
     for name in P6:
         add("missing_job_" + name,
-            nat=native.replace("  " + name + ":\n",
+            man=p6.replace("  " + name + ":\n",
                                "  disabled_" + name + ":\n", 1))
-    add("missing_build_count", nat=edit(P6[0], "build_count", "build_counter_unverified"))
-    add("missing_w1_tar", nat=edit(P6[0], "physics-opt-and-app-libs.tar.gz",
+    add("missing_build_count", man=edit(P6[0], "build_count", "build_counter_unverified"))
+    add("missing_w1_tar", man=edit(P6[0], "physics-opt-and-app-libs.tar.gz",
                                    "not_the_same_W1.tar.gz"))
-    add("w1_upload_optional", nat=edit(P6[0], "if-no-files-found: error",
+    add("w1_upload_optional", man=edit(P6[0], "if-no-files-found: error",
                                       "if-no-files-found: warn"))
-    add("p05_no_dependency", nat=edit(P6[1], "needs: p6_newonly_s6_build",
+    add("p05_no_dependency", man=edit(P6[1], "needs: p6_newonly_s6_build",
                                       "needs: runtime-smoke"))
-    add("p05_no_download", nat=edit(P6[1], "actions/download-artifact@v4",
+    add("p05_no_download", man=edit(P6[1], "actions/download-artifact@v4",
                                     "actions/upload-artifact@v4"))
-    add("p05_no_elf_verification", nat=edit(
+    add("p05_no_elf_verification", man=edit(
         P6[1], "P6_NEWONLY_EXACT_HEAD_ONE_W1_THREE_BINARY_BYTES_VERIFIED",
         "BINARY_VERIFICATION_BYPASSED"))
-    add("p05_no_private_rates", nat=edit(P6[1], "PROTECTED_ARCHIVE_B64:",
+    add("p05_no_private_rates", man=edit(P6[1], "PROTECTED_ARCHIVE_B64:",
                                          "NO_PROTECTED_RATE_SOURCE:"))
-    add("p05_no_negative_controls", nat=edit(
+    add("p05_no_negative_controls", man=edit(
         P6[1], "PASS_16_INTENDED_NATIVE_REJECTIONS", "NEGATIVES_SKIPPED"))
-    add("p05_no_typed_32", nat=edit(P6[1], TYPE_COUNT,
+    add("p05_no_typed_32", man=edit(P6[1], TYPE_COUNT,
                                    "assert len(expected_kernels)>0"))
-    add("p05_no_cleanup", nat=edit(P6[1], "tmpfs_cleanup_verified",
+    add("p05_no_cleanup", man=edit(P6[1], "tmpfs_cleanup_verified",
                                    "cleanup_not_observed"))
-    add("publicd_no_dependency", nat=edit(P6[2], "needs: p6_newonly_s6_build",
+    add("publicd_no_dependency", man=edit(P6[2], "needs: p6_newonly_s6_build",
                                           "needs: plasma_native_regression"))
-    add("publicd_no_download", nat=edit(P6[2], "actions/download-artifact@v4",
+    add("publicd_no_download", man=edit(P6[2], "actions/download-artifact@v4",
                                         "actions/upload-artifact@v4"))
-    add("publicd_table_sha_missing", nat=edit(
+    add("publicd_table_sha_missing", man=edit(
         P6[2], "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
         "unverified_100row_source"))
-    add("publicd_generated_stage_skipped", nat=edit(
+    add("publicd_generated_stage_skipped", man=edit(
         P6[2], "PUBLIC_D_100ROW_TWO_CASES_STAGED_EXACT_PHYSICS_NO_REBUILD_PASS",
         "PUBLIC_D_GENERATION_SKIPPED"))
-    add("publicd_negative_controls_missing", nat=edit(
+    add("publicd_negative_controls_missing", man=edit(
         P6[2], "PASS_16_INTENDED_NATIVE_REJECTIONS", "NEGATIVES_SKIPPED"))
-    add("publicd_cleanup_not_checked", nat=edit(
+    add("publicd_cleanup_not_checked", man=edit(
         P6[2], "tmpfs_cleanup_verified", "cleanup_not_observed"))
-    add("publicd_upload_optional", nat=edit(
+    add("publicd_upload_optional", man=edit(
         P6[2], "if-no-files-found: error", "if-no-files-found: warn"))
-    add("p05_continue_on_error", nat=edit(
+    add("p05_continue_on_error", man=edit(
         P6[1], "    steps:\n", "    continue-on-error: true\n    steps:\n"))
-    add("historical_D_falsely_promoted", nat=edit(
+    add("historical_D_falsely_promoted", reg=edit(
         "plasma_native_regression",
         "P6_PUBLIC_B_PASS_D_KEEP_HOLD_EVIDENCE_NOT_NATIVE_D_PASS",
         "HISTORICAL_D_NATIVE_P2_PASS"))
     add("DD_P05_removed", dd=dd_source.replace(
         "P05 FV Native/Physics duplicate or unexpected owner", "P05_DISABLED", 1))
-    add("g5_newonly_native_missing", nat=edit(
+    add("g5_newonly_native_missing", man=edit(
         P6[1], "G5_BOTH_CASES_NATIVE_P2_42ROW_PASS", "G5_SKIPPED"))
-    add("g5_publicd_native_missing", nat=edit(
+    add("g5_publicd_native_missing", man=edit(
         P6[2], "G5_BOTH_CASES_NATIVE_P2_100ROW_PASS", "G5_SKIPPED"))
-    add("g5_publicd_stage_missing", nat=edit(
+    add("g5_publicd_stage_missing", man=edit(
         P6[2], "ci/guards/issue652_g6b_publicd100_stage.py", "g5_unverified_stage.py"))
-    need(len(cases) == 32, "NEGATIVE_COUNT_NOT_32")
-    for label, ci, tpl, nat, dd in cases:
-        need((ci, tpl, nat, dd) != (workflow, template, native, dd_source),
+    add("p6_auto_trigger", man=p6.replace("  workflow_dispatch:\n", "  push:\n  workflow_dispatch:\n", 1))
+    add("regression_auto_trigger", reg=regression.replace("  workflow_dispatch:\n", "  pull_request:\n  workflow_dispatch:\n", 1))
+    add("p6_missing_approval", man=edit(P6[0], 'test "$APPROVAL" = NATIVE_VALIDATION_APPROVED', 'echo ignored'))
+    add("p6_stale_head", man=edit(P6[1], 'test "$REQUESTED_SHA" = "$GITHUB_SHA"', 'echo ignored'))
+    add("p6_fork_scope", man=edit(P6[2], HEAD_SCOPE, '.head.sha == $sha'))
+    add("regression_wrong_ref", reg=edit("plasma_native_regression", '.base.ref == "main"', '.base.ref != "main"'))
+    need(len(cases) == 38, "NEGATIVE_COUNT_NOT_38")
+    for label, ci, tpl, nat, dd, man, reg in cases:
+        need((ci, tpl, nat, dd, man, reg) != (workflow, template, native, dd_source, p6, regression),
              "NEGATIVE_NO_MUTATION_" + label)
         try:
-            validate(ci, tpl, dd, native_source=nat)
+            validate(ci, tpl, dd, native_source=nat, p6_source=man, regression_source=reg)
         except ValueError:
             continue
         raise ValueError("P6_SPLIT_CI_FALSE_PASS_" + label)
-    print("P6_SPLIT_CI_32_NEGATIVES_REJECTED")
+    print("P6_SPLIT_CI_38_NEGATIVES_REJECTED")
     return len(cases)
 
 
