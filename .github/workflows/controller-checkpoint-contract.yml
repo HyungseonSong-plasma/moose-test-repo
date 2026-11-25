@@ -1,5 +1,5 @@
 name: Controller Checkpoint Contract CI (read-only)
-run-name: checkpoint-contract:${{ inputs.correlation_id }}
+run-name: ${{ github.event_name == 'workflow_run' && format('checkpoint-ingress:{0}', github.event.workflow_run.head_sha) || format('checkpoint-contract:{0}', inputs.correlation_id) }}
 on:
   workflow_dispatch:
     inputs:
@@ -19,10 +19,15 @@ on:
         description: Exact central pin from trusted source
         required: true
         type: string
+  workflow_run:
+    workflows: [Repository CI]
+    types: [completed]
+    branches: [issue-888-checkpoint-qualification-*]
 permissions:
   contents: read
 jobs:
   qualify:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -47,7 +52,7 @@ jobs:
       - name: Qualify local Git CAS
         run: python -m pytest -q physics_harness/code/tests/test_checkpoint_cas_contract.py --junitxml="$RUNNER_TEMP/checkpoint-cas.xml"
       - name: Test receipt binding and fail-closed handling
-        run: python -m pytest -q physics_harness/code/tests/test_checkpoint_contract_receipt.py physics_harness/code/tests/test_controller_contract_receipt.py
+        run: python -m pytest -q physics_harness/code/tests/test_checkpoint_contract_receipt.py physics_harness/code/tests/test_controller_contract_receipt.py physics_harness/code/tests/test_controller_contract_ingress.py
       - name: Emit exact-source receipt
         run: python automation/controller/qualify_checkpoint_contract.py "$RUNNER_TEMP/checkpoint-cas.xml" "$RUNNER_TEMP/checkpoint-contract-receipt.json"
       - name: Upload qualification evidence
@@ -59,3 +64,46 @@ jobs:
             ${{ runner.temp }}/checkpoint-cas.xml
           if-no-files-found: error
           retention-days: 7
+  request-ingress:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: write
+    concurrency:
+      group: checkpoint-request-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout trusted main only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Obtain exact pinned Samuel runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          pin=$(python -c 'import json; print(json.load(open("docs/operating_system/central_skills.json"))["operating_system"]["revision"])')
+          [[ "$pin" =~ ^[0-9a-f]{40}$ ]]
+          central="$RUNNER_TEMP/checkpoint-samuel"
+          git init -q "$central"
+          git -C "$central" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
+          git -C "$central" fetch --quiet --depth=1 origin "$pin"
+          git -C "$central" checkout --detach --quiet FETCH_HEAD
+          test "$(git -C "$central" rev-parse HEAD)" = "$pin"
+      - name: Validate request data and dispatch through Samuel
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: PYTHONPATH="$PWD:$RUNNER_TEMP/checkpoint-samuel/src" python automation/controller/dispatch_checkpoint_request.py
+      - name: Preserve dispatch receipt (including unknown outcome)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint-dispatch-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/checkpoint-dispatch.json
+          if-no-files-found: warn
+          retention-days: 30
