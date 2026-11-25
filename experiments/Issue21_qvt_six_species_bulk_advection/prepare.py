@@ -6,14 +6,28 @@ exp=json.loads((HERE/'expected.json').read_text())
 
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 fail=[]
-for fn,key in [('qvt.msh','qvt_sha256'),('mesh.i','mesh_i_sha256'),('transport_data.txt','transport_data_sha256')]:
+for fn,key in [('qvt.msh','qvt_sha256'),('mesh.i','mesh_i_sha256')]:
     p=HERE/fn
     if not p.is_file(): fail.append(f'missing {fn}')
     elif sha(p)!=exp[key]: fail.append(f'{fn} SHA mismatch')
+# Canonical data is checked against the original frozen digest by restoring
+# only the removed comment in memory; no legacy data file is regenerated.
+database = HERE.parents[1] / 'physics_app/database/neutral_transport.txt'
+if not database.is_file():
+    fail.append('missing canonical neutral_transport.txt')
+else:
+    content = database.read_bytes()
+    first, sep, rest = content.partition(b'\n')
+    historical = first + sep + b'# QPX canonical candidate: full-oxygen seven-heavy-species transport database\n' + rest
+    if hashlib.sha256(historical).hexdigest() != exp['transport_data_sha256']:
+        fail.append('canonical neutral transport data SHA mismatch')
 # Rebuild exact input from fixed mesh.i + candidate physics.i
 if (HERE/'mesh.i').is_file() and (HERE/'physics.i').is_file():
     (HERE/'input.i').write_bytes((HERE/'mesh.i').read_bytes()+b'\n'+(HERE/'physics.i').read_bytes())
-if sha(HERE/'input.i')!=exp['input_sha256']:
+historical_input = (HERE/'input.i').read_bytes().replace(
+    b'transport_data_file = ../../physics_app/database/neutral_transport.txt',
+    b'transport_data_file = transport_data.txt', 1)
+if hashlib.sha256(historical_input).hexdigest()!=exp['input_sha256']:
     fail.append('rebuilt input.i SHA mismatch')
 t=(HERE/'physics.i').read_text()
 # Structural contract
