@@ -142,3 +142,9 @@ trigger the two automatic Physics workflows. Ordered per-event filters and
 positive/negative representative paths are enforced by `repository_ci_scope.py`.
 Do not infer scientific PASS from a non-applicable domain check. A mixed PR
 containing a Physics-owned change still needs its applicable validation.
+
+## Complete Git inventory and deferred manual qualification
+
+Repository CI now runs the lightweight full Git change-inventory classifier on every supported event. It evaluates both base and candidate paths, including changed/deleted/renamed Physics inputs, and emits exact-base/head applicability receipts. A large Controller-only change stays non-Physics; a large mixed change cannot be called N/A merely because GitHub's first-300-file path filter missed it. Applicable missing evidence is HOLD: split the PR or obtain separately approved exact-source equivalent domain execution evidence. Do not trigger the entire Physics suite as a fallback. The inventory reports applicability, not CI completion; server-side protection and acceptance checks remain distinct.
+
+Initial manual Workflow registration is static/routing integration only under owner approval. Runtime qualification is NOT_RUN until the next applicable Physics change. P3-X durable source qualification and the targeted N5 diagnostic are prerequisites for that affected manual validation, not reasons to initiate a standalone Physics campaign now. See the Repository Integration Contract for source provenance and HOLD conditions.
