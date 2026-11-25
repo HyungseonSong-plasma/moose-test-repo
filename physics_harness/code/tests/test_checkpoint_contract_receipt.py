@@ -17,7 +17,10 @@ spec.loader.exec_module(q)
 def evidence(tmp_path):
     root = tmp_path / "repo"
     root.mkdir()
-    for name in (q.CONTRACT, q.TEST, q.WORKFLOW, q.SCRIPT, q.PIN, q.RECEIPT_TEST, q.VERIFIER, q.VERIFIER_TEST):
+    for name in (q.CONTRACT, q.TEST, q.WORKFLOW, q.SCRIPT, q.PIN, q.RECEIPT_TEST, q.VERIFIER, q.VERIFIER_TEST,
+                 "physics_harness/execution/controller_contract_ingress.py",
+                 "automation/controller/dispatch_checkpoint_request.py",
+                 "physics_harness/code/tests/test_controller_contract_ingress.py"):
         p = root / name
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes((ROOT / name).read_bytes() if name != q.PIN else json.dumps({"operating_system": {"revision": "a"*40}}).encode())
