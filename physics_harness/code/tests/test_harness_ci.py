@@ -19,6 +19,12 @@ class HarnessCodeCITests(unittest.TestCase):
         self.assertNotIn("physics-opt", source)
         self.assertNotIn("cargo ", source)
 
+    def test_controller_execution_control_plane_changes_trigger_code_tests(self):
+        source = WORKFLOW.read_text(encoding="utf-8")
+        for pattern in ("physics_harness/execution/controller_*.py",
+                        "physics_harness/execution/connector_policy_probe.py"):
+            self.assertEqual(source.count(f"      - '{pattern}'"), 2)
+
     def test_shared_cli_library_changes_trigger_code_consumer_tests(self):
         source = WORKFLOW.read_text(encoding="utf-8")
         self.assertEqual(source.count("      - 'libs/command_execution/**'"), 2)
