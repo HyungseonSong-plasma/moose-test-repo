@@ -1,0 +1,45 @@
+name: Connector Preflight (read-only)
+run-name: connector-preflight:${{ inputs.request_sha256 }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_json:
+        description: Exact file-create/update request descriptor JSON (no credentials or file content)
+        type: string
+        required: true
+      request_sha256:
+        description: SHA256 of the exact UTF-8 request_json input
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted default-branch source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Evaluate pinned policy and exact target identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREFLIGHT_REQUEST: ${{ inputs.request_json }}
+          PREFLIGHT_REQUEST_SHA256: ${{ inputs.request_sha256 }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m physics_harness.execution.connector_policy_probe
+      - name: Upload policy-only receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: connector-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/connector-policy-receipt.json
+          if-no-files-found: error
+          retention-days: 7
