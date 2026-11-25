@@ -744,7 +744,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$BASE_HEAD"
           test "$GITHUB_EVENT_NAME" = "pull_request"
           test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 98ad4267aa530c9b2e06402530c3d4a43807429f
-          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 951e1056cfdaf2531d6f604862c1224240e0b848
+          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 97fb6331bb7f2670db4c98822159ce0af235cfe4
           test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
           test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
           test ! -e physics_app/physics-opt
@@ -1372,7 +1372,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$BASE_HEAD"
           test "$GITHUB_EVENT_NAME" = "pull_request"
           test "$(git hash-object physics_app/src/physics/plasma/DDContinuityEq.C)" = 98ad4267aa530c9b2e06402530c3d4a43807429f
-          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 951e1056cfdaf2531d6f604862c1224240e0b848
+          test "$(git hash-object physics_app/src/physics/plasma/Chemistry.C)" = 97fb6331bb7f2670db4c98822159ce0af235cfe4
           test "$(git hash-object experiments/Issue402_plasma_dsl_g1/chemistry/retire_s6_p4_duplicate_owners.py)" = a3f9d93ea1095c9d00053e5104bb7326d1af8f31
           test "$(git hash-object ci/guards/issue671_secure_ei_rate_scratch.py)" = cd75238df8083f54b5b08330e46f88276ff8370a
           test ! -e physics_app/physics-opt
