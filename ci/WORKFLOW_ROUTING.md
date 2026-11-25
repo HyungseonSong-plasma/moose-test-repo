@@ -127,3 +127,7 @@ The prior B-only completion workflow is removed and its profile set to
 deferred, so it cannot be retriggered by the new merge. The old full four-arm
 profile also remains deferred. Retire this one-shot via a future cleanup
 after results are preserved.
+
+## Manual Native validation split
+
+The existing P6 W1 + both P2 lanes now have one manual owner, `.github/workflows/physics-p6-validation.yml`. The existing `plasma_native_regression` job has one manual owner, `.github/workflows/plasma-native-regression.yml`. Neither starts on PR, push, or schedule. Select main or an open same-repository PR branch into main and provide exact HEAD SHA, PR number where applicable, and `NATIVE_VALIDATION_APPROVED`. The live source scope is checked before checkout/build. No changes to test coverage or P3/P4 acceptance. Required source-impact evidence must still be obtained when applicable; record N/A with rationale for unrelated changes.
