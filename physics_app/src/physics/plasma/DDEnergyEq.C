@@ -70,12 +70,6 @@ DDEnergyEq::DDEnergyEq(const InputParameters & parameters)
   {
     if (getParam<VariableName>("fem_potential").empty())
       paramError("fem_potential", "Full FEM electron energy requires a nonempty potential.");
-    const auto & mechanism = chemistryData();
-    if (!mechanism.ddTransport("e") ||
-        getParam<MooseEnum>("transport_coefficient") != "fluid")
-      paramError("fem_potential",
-                 "Full FEM electron energy requires species.e.transport_coef "
-                 "and [Energy] transport_coefficient = fluid.");
   }
   saveSolverVariableName(energyStateName("e"));
   addRequiredPhysicsTask("add_variables_physics");
@@ -85,9 +79,22 @@ DDEnergyEq::DDEnergyEq(const InputParameters & parameters)
 void
 DDEnergyEq::addSolverVariables()
 {
+  const auto & mechanism = chemistryData();
+  if (isParamValid("fem_potential") &&
+      (!mechanism.ddTransport("e") ||
+       getParam<MooseEnum>("transport_coefficient") != "fluid"))
+    paramError("fem_potential",
+               "Full FEM electron energy requires species.e.transport_coef "
+               "and [Energy] transport_coefficient = fluid.");
+  if (mechanism.inputOwnsSpecies("e") && isParamValid("initial_molar_energy_density_eV"))
+    paramError("initial_molar_energy_density_eV",
+               "Named Continuity metadata exclusively owns initial electron energy.");
   const auto variable = energyStateName("e");
   if (variableExists(variable, /*error_if_aux=*/true))
   {
+    if (mechanism.inputOwnsSpecies("e"))
+      paramError("initial_molar_energy_density_eV",
+                 "Named Continuity electron energy conflicts with an existing log_e_energy variable.");
     if (isParamValid("initial_molar_energy_density_eV"))
       paramError("initial_molar_energy_density_eV",
                  "An externally declared log_e_energy retains its own initial condition.");

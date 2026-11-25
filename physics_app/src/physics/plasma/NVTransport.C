@@ -27,9 +27,6 @@ NVTransport::validParams()
 NVTransport::NVTransport(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
-  if (!chemistryData().nvTransport())
-    mooseError("Activated [Transport]/[NavierStokes] requires "
-               "transport_coefficients.navier_stokes in [Plasmas]/files");
 }
 
 void
@@ -37,7 +34,8 @@ NVTransport::addFunctorMaterials()
 {
   const auto * config = chemistryData().nvTransport();
   if (!config)
-    mooseError("Missing navier_stokes transport configuration");
+    mooseError("Activated [Transport]/[NavierStokes] requires "
+               "transport_coefficients.navier_stokes in [Plasmas]/files");
   const std::string type = "NVTransportMaterial";
   auto params = getFactory().getValidParams(type);
   params.set<FileName>("transport_data_file") = config->transport_data_file;

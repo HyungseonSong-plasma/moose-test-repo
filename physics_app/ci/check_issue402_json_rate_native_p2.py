@@ -360,6 +360,79 @@ def check_named_neutral_mass_native(executable: Path, root: Path) -> None:
     print("ISSUE896_NAMED_NEUTRAL_MASS_NEGATIVE_PASS")
 
 
+
+def named_charged_species_fixture() -> tuple[dict, str]:
+    pilot = ROOT / "experiments/Issue402_plasma_dsl_g1"
+    mechanism = json.loads((pilot / "plasma_species_initial_p2.json").read_text())
+    # Include a real charge-balance catalogue, but no Chemistry source
+    # producers or solver timesteps in this binding-only P2 fixture.
+    reactions = json.loads((pilot / "issue633_ion_continuity_newonly_p2.json").read_text())
+    mechanism["equations"] = reactions["equations"]
+    mechanism["reactions"] = reactions["reactions"]
+    for record in mechanism["species"].values():
+        record.pop("charge_number")
+        record.pop("initial_number_density", None)
+    deck = (pilot / "species_density_pairs_p2.i").read_text()
+    marker = "          fvm_species = 'O2p Om Op'\n"
+    named = """          species_molar_mass = 'e:5.485799096195737e-7 O2p:0.032 Om:0.016 Op:0.016'
+          species_charge = 'e:-1 O2p:1 Om:-1 Op:1'
+          species_temperature_eV = 'e:2.6666666666666665'
+          species_initial_density = 'e:1e16 O2p:1e16 Om:1e14 Op:1e15'
+          species_sticking_coef = 'e:1 O2p:1 Om:1 Op:1'
+"""
+    if deck.count(marker) != 1:
+        raise AssertionError("charged fixture anchor changed")
+    deck = deck.replace(marker, marker + named)
+    # Energy uses the very same Continuity metadata for its auto-created
+    # initial state. No independent energy-density IC in the input.
+    marker = "          fem_potential = potential\n        []\n"
+    if deck.count(marker) != 1:
+        raise AssertionError("charged fixture energy insertion anchor changed")
+    deck = deck.replace(marker, marker + """        [Energy]
+          fem_species = e
+          dont_create_kernels = true
+        []
+""")
+    return mechanism, deck
+
+
+def check_named_charged_species_native(executable: Path, root: Path) -> None:
+    mechanism, deck = named_charged_species_fixture()
+    source = root / "named_charged.i"
+    doc = root / "plasma_species_initial_p2.json"
+    source.write_text(deck)
+    doc.write_text(json.dumps(mechanism))
+    run_check(executable, source, root)
+    print("ISSUE896_NAMED_CHARGED_SPECIES_P2_PASS")
+    for old, new, expected in (
+        ("e:-1 O2p:1 Om:-1 Op:1", "e:-1 O2p:1 Om:1 Op:1", "charge conservation failed"),
+        ("e:1e16 O2p:1e16 Om:1e14 Op:1e15", "e:1e16 O2p:1e16 Om:1e14", "Incomplete named Continuity coverage"),
+        ("e:1 O2p:1 Om:1 Op:1", "e:1 O2p:1 Om:1 Op:2", "Nonphysical named Continuity"),
+        ("e:2.6666666666666665", "e:0", "Invalid named Continuity temperature"),
+    ):
+        source.write_text(deck.replace(old, new))
+        result = subprocess.run([str(executable), "--check-input", "-i", source.name],
+                                cwd=root, capture_output=True, text=True, check=False)
+        output = result.stdout + result.stderr
+        if result.returncode == 0 or expected not in output:
+            raise AssertionError("ISSUE896_CHARGED_MUTATION_NOT_REJECTED:" + expected + ":" + output[-3000:])
+    source.write_text(deck.replace("        [Energy]\n",
+                                   "        [Energy]\n          initial_molar_energy_density_eV = 1e-8\n"))
+    result = subprocess.run([str(executable), "--check-input", "-i", source.name],
+                            cwd=root, capture_output=True, text=True, check=False)
+    if result.returncode == 0 or "Named Continuity metadata exclusively owns initial electron energy" not in (
+            result.stdout + result.stderr):
+        raise AssertionError("ISSUE896_DUPLICATE_ENERGY_IC_NOT_REJECTED")
+    source.write_text(deck)
+    mechanism["species"]["e"]["charge_number"] = -1
+    doc.write_text(json.dumps(mechanism))
+    result = subprocess.run([str(executable), "--check-input", "-i", source.name],
+                            cwd=root, capture_output=True, text=True, check=False)
+    if result.returncode == 0 or "Duplicate JSON physical owner" not in result.stdout + result.stderr:
+        raise AssertionError("ISSUE896_DUPLICATE_CHARGED_OWNER_NOT_REJECTED")
+    print("ISSUE896_NAMED_CHARGED_SPECIES_NEGATIVE_PASS")
+
+
 def self_test() -> None:
     import math
     from physics_app.ci.check_stage5_h05_runtime import runtime_input
@@ -413,6 +486,12 @@ def self_test() -> None:
                for row in named["species"].values())
     assert alias_only_transport("species O 0.016 O\npair O O 1 2\n") == (
         "species O O\npair O O 1 2\n")
+    charged, charged_deck = named_charged_species_fixture()
+    assert all("charge_number" not in row and "initial_number_density" not in row
+               for row in charged["species"].values())
+    assert "species_charge = 'e:-1 O2p:1 Om:-1 Op:1'" in charged_deck
+    assert "[Energy]" in charged_deck and "initial_molar_energy_density_eV" not in charged_deck
+    assert len(charged["reactions"]) == 3
     print("ISSUE402_JSON_RATE_P2_MUTATION_SELF_TEST=PASS")
 
 
@@ -464,6 +543,8 @@ def main() -> None:
         check_lookup_native(args.executable, Path(tmp))
     with tempfile.TemporaryDirectory(prefix="issue896-named-neutral-p2-") as tmp:
         check_named_neutral_mass_native(args.executable, Path(tmp))
+    with tempfile.TemporaryDirectory(prefix="issue896-named-charged-p2-") as tmp:
+        check_named_charged_species_native(args.executable, Path(tmp))
     run_check(args.executable, CI / "json_surface_rate_p2.i", CI)
     print("JSON_SURFACE_RATE_NATIVE_P2_PASS")
     print("ISSUE402_JSON_RATE_SHARED_NATIVE_P2_PASS_P3_NOT_RUN")

@@ -57,6 +57,11 @@ DDContinuityEq::validParams()
       "fem_species", {}, "FEM species IDs only; initial number densities [1/m^3] belong in species JSON.");
   params.addParam<std::vector<std::string>>(
       "fvm_species", {}, "FVM species IDs only; initial number densities [1/m^3] belong in species JSON.");
+  for (const auto * key : {"species_molar_mass", "species_charge",
+                           "species_initial_density", "species_sticking_coef",
+                           "species_temperature_eV"})
+    params.addParam<std::vector<std::string>>(key, "Named species:value physical metadata; "
+        "mass/charge/density/sticking require exact selected species coverage.");
   params.addParam<VariableName>(
       "fem_potential", "Potential for selected FEM and FVM drift-diffusion transport.");
   // Numerical wall gate control belongs to this MOOSE input, not species
@@ -100,6 +105,19 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
         paramError("fvm_species", "Invalid species ID for automatic naming: ", species);
   }
 
+  for (const auto & id : fem)
+    saveSolverVariableName(continuityStateName(id));
+  for (const auto & id : fvm)
+    saveSolverVariableName(continuityStateName(id));
+  addRequiredPhysicsTask("add_variables_physics");
+  addRequiredPhysicsTask("add_ics_physics");
+}
+
+void
+DDContinuityEq::addSolverVariables()
+{
+  const auto & fem = _fem_species;
+  const auto & fvm = _fvm_species;
   // Every selected FEM/FVM continuity state must be explicitly initialized
   // by species.<id>.initial_number_density in Chemistry JSON. No fallback
   // to user-declared [Variables]/[ICs] or implicit zero state is supported.
@@ -119,13 +137,10 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
                    ".initial_number_density in Chemistry JSON [1/m^3]; "
                    "external [Variables]/[ICs] cannot replace it.");
       destinations.emplace(id, *found->second.initial_number_density);
-      saveSolverVariableName(continuityStateName(id));
     }
   };
   bind_json_initial(fem, "fem_species", _fem_initial_number_densities);
   bind_json_initial(fvm, "fvm_species", _fvm_initial_number_densities);
-  addRequiredPhysicsTask("add_variables_physics");
-  addRequiredPhysicsTask("add_ics_physics");
 
   // Selection is driven exclusively by fem_species/fvm_species and the JSON
   // species IDs, never by the presence of a Native kernel or an ownership mode.
@@ -188,12 +203,7 @@ DDContinuityEq::DDContinuityEq(const InputParameters & parameters)
                    "Selected FV species '", id,
                    "' requires a nonzero volume reaction source in Chemistry JSON.");
   }
-}
-
-void
-DDContinuityEq::addSolverVariables()
-{
-  // JSON is the sole initial-state owner; reject competing external variables/ICs.
+  // A single resolved metadata owner supplies the initial state; reject competing variables/ICs.
   const auto generate = [this](const std::map<std::string, Real> & densities,
                                const bool finite_volume,
                                const std::string & option) {
@@ -201,11 +211,16 @@ DDContinuityEq::addSolverVariables()
     {
       const auto variable = continuityStateName(species);
       if (variableExists(variable, /*error_if_aux=*/true))
+      {
+        if (chemistryData().inputOwnsSpecies(species))
+          paramError(option, "Named Continuity initial density conflicts with an existing solver variable: ",
+                     variable);
         paramError(option,
                    "Species '", species, "' has JSON initial_number_density and an "
                    "existing solver variable '", variable,
                    "'. Remove the conflicting [Variables]/[ICs] declaration; "
                    "JSON is the sole initial-state owner.");
+      }
       const std::string type = finite_volume ? "MooseVariableFVReal" : "MooseVariable";
       auto params = getFactory().getValidParams(type);
       assignBlocks(params, _blocks);

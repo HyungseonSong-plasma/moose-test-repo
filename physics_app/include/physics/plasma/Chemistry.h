@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -163,7 +164,9 @@ class ChemistryData
 {
 public:
   ChemistryData() = default;
-  explicit ChemistryData(const std::vector<std::string> & files);
+  explicit ChemistryData(const std::vector<std::string> & files,
+                         const std::map<std::string, SpeciesRecord> & input_species = {});
+  bool inputOwnsSpecies(const std::string & id) const { return _input_species.count(id) != 0; }
 
   const SpeciesRecord & species(const std::string & id) const;
   const std::map<std::string, SpeciesRecord> & speciesRecords() const { return _species; }
@@ -186,6 +189,7 @@ public:
 
 private:
   std::map<std::string, SpeciesRecord> _species;
+  std::set<std::string> _input_species;
   std::vector<ReactionRecord> _reactions;
   std::map<std::string, DDTransportRecord> _dd_transport;
   bool _fluid_electron_energy_transport = false;
@@ -220,8 +224,9 @@ public:
 
   bool gasStateEnabled() const { return isParamValid("pressure") && isParamValid("temperature"); }
 
-  const Plasma::ChemistryData & data() const { return _data; }
+  const Plasma::ChemistryData & data() const;
 
 private:
-  const Plasma::ChemistryData _data;
+  // Resolve once after all child Action parameters have been registered.
+  mutable std::unique_ptr<const Plasma::ChemistryData> _mechanism;
 };
