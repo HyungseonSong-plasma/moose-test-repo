@@ -163,11 +163,12 @@ def run_scan(
         from .providers.cpp import CppSourceCollector
         from .providers.moose_input import MooseInputCollector
         from .providers.json_source import JsonSourceCollector
-        from .providers.python_ast import PythonAstCollector
+        from .providers.python_ast import PythonAstCollector, PythonStaticCollector
         from .providers.workflow import WorkflowCollector
         registry = {
             "workflow": WorkflowCollector(),
             "python_ast": PythonAstCollector(),
+            "python_static": PythonStaticCollector(),
             "cpp": CppSourceCollector(),
             "moose_input": MooseInputCollector(),
             "json": JsonSourceCollector(),

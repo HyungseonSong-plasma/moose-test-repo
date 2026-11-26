@@ -124,6 +124,56 @@ def verify_generated_artifact(
             if evidence.observation_status == "UNRESOLVED":
                 unknown.add("UNRESOLVED_GENERATED_INPUT_EVIDENCE")
             continue
+        if evidence.kind == "PYTHON_STATIC_ALTERNATIVE":
+            from ..diagnostics.collector import stable_id, graph_edge_id
+            from ..diagnostics.providers.python_ast import (
+                python_call_site_id, static_alternative_evidence_id,
+            )
+            try:
+                span = attrs["position"]
+                relation = attrs["relation"]
+                source = nodes_by_id[attrs["source_id"]]
+                target = nodes_by_id[attrs["target_id"]]
+                if (evidence.observation_status != "INFERRED"
+                        or evidence.method != "python-finite-v0.1"
+                        or attrs["model"] != "BOUNDED_LEXICAL_CANDIDATE"
+                        or evidence.id != static_alternative_evidence_id(scope.id, attrs)
+                        or len(span) != 4 or any(type(n) is not int for n in span)
+                        or span[0] != attrs["line"] or span[1] != attrs["column"]
+                        or span[0] < 1 or span[2] < span[0] or min(span[1], span[3]) < 0
+                        or (span[0] == span[2] and span[3] <= span[1])
+                        or "python_static" not in paths[attrs["path"]].collectors
+                        or target.name != attrs["alternative"]
+                        or source.location.path != attrs["path"]):
+                    raise ValueError("STATIC_ALTERNATIVE_METADATA")
+                if relation == "STATIC_CALL_ALTERNATIVE":
+                    if (source.kind != "python_call_site"
+                            or source.id != python_call_site_id(scope.repository, attrs["path"], *span)
+                            or source.location.start_line != span[0]
+                            or target.kind != "python_function"
+                            or target.location.path != attrs["path"]
+                            or target.id != stable_id("node", scope.repository, "python_symbol",
+                                                      attrs["path"], target.name)):
+                        raise ValueError("STATIC_CALL_ENDPOINT")
+                elif relation == "STATIC_RETURN_TYPE_ALTERNATIVE":
+                    if (source.kind != "python_function"
+                            or not source.location.start_line <= span[0] <= source.location.end_line
+                            or source.id != stable_id("node", scope.repository, "python_symbol",
+                                                      attrs["path"], source.name)
+                            or target.kind != "moose_type"
+                            or target.id != stable_id("node", scope.repository, "moose_type", target.name)):
+                        raise ValueError("STATIC_RETURN_ENDPOINT")
+                else:
+                    raise ValueError("STATIC_ALTERNATIVE_RELATION")
+                matches = [e for e in graph.edges if evidence.id in e.evidence_ids]
+                if (len(matches) != 1 or matches[0].source_id != source.id
+                        or matches[0].target_id != target.id or matches[0].relation != relation
+                        or matches[0].discriminator != evidence.id
+                        or matches[0].id != graph_edge_id(source.id, target.id, relation, evidence.id)):
+                    raise ValueError("STATIC_ALTERNATIVE_EDGE")
+            except (KeyError, TypeError, ValueError, AttributeError):
+                failures.add("PYTHON_STATIC_PROVENANCE_INVALID:" + evidence.id)
+            unknown.add("PYTHON_STATIC_LEXICAL_MODEL_NOT_GLOBAL_CLOSURE")
         if evidence.kind == "PYTHON_CALL_TRACE":
             from .python_call_trace import validate_python_trace_metadata
             try:
@@ -191,6 +241,7 @@ def verify_generated_artifact(
         "UNRESOLVED_SOURCE_EVIDENCE" in unknown or
         "RUNTIME_EXECUTION_NOT_INDEPENDENTLY_VERIFIED" in unknown or
         "GENERATED_PRODUCER_CAUSAL_BINDING_UNVERIFIED" in unknown or
+        "PYTHON_STATIC_LEXICAL_MODEL_NOT_GLOBAL_CLOSURE" in unknown or
         "EMPTY_SOURCE_SCOPE" in unknown else "VERIFIED"
     )
     return VerificationReceipt(

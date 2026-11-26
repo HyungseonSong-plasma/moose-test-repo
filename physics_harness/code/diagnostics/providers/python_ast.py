@@ -59,6 +59,7 @@ def _body_metrics(node: ast.AST) -> tuple[int, int]:
 class PythonAstCollector:
     name = "python_ast"
     version = "python-ast-v0.3"
+    finite_alternatives = False
 
     def supports(self, record: SourceRecord) -> bool:
         return record.path.endswith(".py")
@@ -404,6 +405,82 @@ class PythonAstCollector:
 
         SyntaxVisitor().visit(root)
         file_facts.merge_into(nodes, edges, evidence, unresolved_targets, unresolved)
+        if self.finite_alternatives:
+            from .python_finite import analyze_finite_python, FiniteBudgetExceeded
+            try:
+                inferred = analyze_finite_python(root, max_seconds=request.budget.max_seconds)
+            except FiniteBudgetExceeded as exc:
+                unresolved.add(str(exc))
+            else:
+                unresolved.update(inferred.unresolved)
+                call_nodes = {n.id for n in nodes if n.kind == "python_call_site"}
+                symbol_nodes = {n.id for n in nodes if n.kind == "python_function"}
+                represented = set()
+
+                def inferred_link(item, source_id, target_id, relation, name):
+                    span = (item.lineno, item.col_offset, item.end_lineno, item.end_col_offset)
+                    attrs = {
+                        "path": record.path, "blob_sha": record.blob_sha,
+                        "source_sha": request.revision, "line": item.lineno,
+                        "column": item.col_offset, "position": span,
+                        "source_id": source_id, "target_id": target_id,
+                        "relation": relation, "alternative": name,
+                        "model": "BOUNDED_LEXICAL_CANDIDATE",
+                    }
+                    eid = static_alternative_evidence_id(scope_id, attrs)
+                    evidence.append(Evidence(
+                        id=eid, kind="PYTHON_STATIC_ALTERNATIVE",
+                        source_ref=f"{record.path}:{item.lineno}@{record.blob_sha}",
+                        method="python-finite-v0.1", scope_id=scope_id,
+                        observation_status="INFERRED", attributes=attrs))
+                    link(source_id, target_id, relation, eid, eid)
+                    return eid
+
+                for item, value in inferred.calls:
+                    site = python_call_site_id(
+                        request.repository, record.path, item.lineno, item.col_offset,
+                        item.end_lineno, item.end_col_offset)
+                    if site not in call_nodes:
+                        unresolved.add("PYTHON_STATIC_SITE_NOT_DECLARED:" + site)
+                        continue
+                    represented.add(site)
+                    emitted = False
+                    for kind, name in sorted(value.atoms):
+                        if kind != "fn":
+                            continue
+                        target = stable_id("node", request.repository, "python_symbol",
+                                           record.path, name)
+                        if target not in symbol_nodes:
+                            continue
+                        inferred_link(item, site, target, "STATIC_CALL_ALTERNATIVE", name)
+                        emitted = True
+                    if not emitted or value.unknown or any(k != "fn" for k, _ in value.atoms):
+                        unresolved.add("PYTHON_STATIC_CALLEE_UNRESOLVED:" + site)
+                unresolved.update("PYTHON_STATIC_SITE_NOT_MODELED:" + site
+                                  for site in call_nodes - represented)
+                for function, item, value in inferred.returns:
+                    owner = stable_id("node", request.repository, "python_symbol",
+                                      record.path, function.name)
+                    if owner not in symbol_nodes:
+                        continue
+                    names = set()
+                    for kind, text_value in value.atoms:
+                        if kind != "str":
+                            continue
+                        for match in _MOOSE_TYPE_LINE.finditer(text_value):
+                            name = match.group(1).strip().strip("'\"")
+                            if _MOOSE_IDENTIFIER.fullmatch(name):
+                                names.add(name)
+                            else:
+                                unresolved.add(f"PYTHON_STATIC_RETURN_TYPE_UNRESOLVED:{record.path}:{item.lineno}")
+                    for name in sorted(names):
+                        target = stable_id("node", request.repository, "moose_type", name)
+                        eid = inferred_link(item, owner, target,
+                                            "STATIC_RETURN_TYPE_ALTERNATIVE", name)
+                        nodes.append(Node(id=target, kind="moose_type", name=name,
+                                          evidence_ids=(eid,)))
+                    if value.unknown:
+                        unresolved.add(f"PYTHON_STATIC_RETURN_UNRESOLVED:{record.path}:{item.lineno}")
         return CollectionResult(
             FactBatch(
                 nodes=tuple(nodes), edges=tuple(edges), evidence=tuple(evidence),
@@ -414,4 +491,15 @@ class PythonAstCollector:
         )
 
 
-__all__ = ["PythonAstCollector"]
+def static_alternative_evidence_id(scope_id, attrs):
+    return stable_id("evidence", scope_id, "python-finite-v0.1", dict(attrs))
+
+
+class PythonStaticCollector(PythonAstCollector):
+    """Explicit finite alternative analysis on the same canonical AST graph."""
+    name = "python_static"
+    version = "python-ast-static-v0.1"
+    finite_alternatives = True
+
+
+__all__ = ["PythonAstCollector", "PythonStaticCollector"]

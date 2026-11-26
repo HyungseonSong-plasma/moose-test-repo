@@ -320,3 +320,38 @@ a sandbox and must not execute unknown/unapproved code. Actual uploaded
 trace artifacts and authenticated runner provenance, broader call-site
 coverage, static alternatives (P3), Native observation (P4) and
 coverage integration (P5) remain separate obligations.
+
+
+### Bounded static Python alternatives (#882, P3 first slice)
+
+Select `collectors=("python_static",)` on the existing ScanRequest/run_scan
+API. This explicit collector reuses the canonical PythonAstCollector syntax,
+call-site and symbol IDs; the default `python_ast` behavior remains unchanged.
+Use both collectors when joining a P2 trace that requires `python_ast`.
+No source is imported or executed.
+
+The lexical model supports unique undecorated top-level function names,
+uniquely assigned module string/boolean constants, local simple assignments,
+if/else, conditional expressions, literal string concatenation, plain string
+f-string interpolation and inline literal string-key dictionary selection.
+Unknown conditions contribute both alternatives; literal boolean conditions
+select a branch. Unbound locals and missing/unknown keys remain unknown.
+Return text with finite type names uses the same canonical MOOSE type node
+identity as the HIT and C++ collectors. The new edges
+`STATIC_CALL_ALTERNATIVE` and `STATIC_RETURN_TYPE_ALTERNATIVE` carry
+`PYTHON_STATIC_ALTERNATIVE` / `INFERRED` source-bound evidence.
+The existing verifier checks source receipt, canonical endpoints, span and
+edge/evidence identity. A matching P2 edge remains distinct runtime evidence.
+
+The model is deliberately not a Python semantic interpreter. Decorated or
+rebound names, arbitrary call return values, reflection, attributes,
+nonlocal/global mutation, nested scopes, unsupported statements and
+unmodeled sites remain unresolved. No file/env configuration is loaded.
+Budgets cap AST nodes (6000), eligible functions (64), interpretation steps
+(4096), depth (32), alternative count (8), string length (8192) and elapsed
+time. Budget exhaustion discards inferred alternatives but keeps baseline
+syntax facts. Conditions and bindings are lexical candidates, not proof of
+reachability or exhaustive target sets: external rebinding, side effects,
+runtime configuration and unexecuted paths remain outside the model.
+The opt-in result is always PARTIAL even for a finite resolved subset.
+Native/runtime compatibility and deletion authority are not established.
