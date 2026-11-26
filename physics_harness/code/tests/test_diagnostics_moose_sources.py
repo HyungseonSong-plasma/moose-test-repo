@@ -369,3 +369,27 @@ def test_parameter_values_and_enum_evidence_bound_to_original_sources(git_factor
             assert ev.observation_status == "SOURCE_DECLARED"
     assert any("inputs/joule.i:" in ev.source_ref
                for ev in result.graph.evidence)
+
+
+
+@pytest.mark.parametrize("source,comment_only,full", [
+    ('a/*bc*/d//e\nf', 'a      d   \nf', 'a      d   \nf'),
+    ('"//" /*x*/', '"//"      ', '          '),
+    ("'{'//x\n}", "'{'   \n}", "      \n}"),
+    ('"a\\"b"//x', '"a\\"b"   ', '         '),
+    ('R"t(a " //x\n)t"', 'R"t(a "    \n)t"', '           \n   '),
+    ('a/*x\nz', 'a   \n ', 'a   \n '),
+    ('"x\\', '"x\\', '   '),
+    ('x//q\r\ny', 'x    \ny', 'x    \ny'),
+])
+def test_shared_cpp_mask_retains_distinct_legacy_modes(source, comment_only, full):
+    from physics_harness.code.diagnostics.providers.cpp import _without_comments
+    from physics_harness.observation.source_code.cpp import mask_cpp
+
+    assert _without_comments(source) == comment_only
+    assert mask_cpp(source) == full
+    for masked in (comment_only, full):
+        assert len(masked) == len(source)
+        assert [i for i, c in enumerate(masked) if c == "\n"] == [
+            i for i, c in enumerate(source) if c == "\n"
+        ]
