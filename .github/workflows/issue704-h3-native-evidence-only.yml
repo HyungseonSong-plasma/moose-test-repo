@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 30
     env:
       SOURCE_HEAD: 19cb056d48d82c856ccf703ddd69860bc0789ac8
-      OBSERVER_HEAD: 6d7ebb46ac8bae05bf92fb5c1761944d456793ee
+      OBSERVER_HEAD: b005ed74536a75d8884f51218212655182c3d440
       W1_SOURCE_HEAD: 1cd5cbd79137791e1acdd13ac17c15c61e55f242
       W1_SOURCE_TREE: e45aa72b23fc57963da5db5dacb24f450ae803ba
       W1_RUN: '45441439096'
@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 6d7ebb46ac8bae05bf92fb5c1761944d456793ee
+          ref: b005ed74536a75d8884f51218212655182c3d440
           path: control
           persist-credentials: false
       - uses: actions/checkout@v4
