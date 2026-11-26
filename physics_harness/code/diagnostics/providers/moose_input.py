@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from ...graph import Edge, Evidence, Node, SourceLocation
+from ...hit_lexical import collector_block_token, is_block_close, strip_child_prefix
 from ..collector import (
     CollectionResult, FactBatch, SourceInput, SourceRecord, UnresolvedTarget,
     file_node_id, graph_edge_id, stable_id,
@@ -92,9 +93,9 @@ class MooseInputCollector:
                 )
                 continue
 
-            if line.startswith("[") and line.endswith("]"):
-                token = line[1:-1].strip()
-                if token in {"", "../"}:
+            token = collector_block_token(line)
+            if token is not None:
+                if is_block_close(token):
                     if not stack:
                         raise ValueError(f"MOOSE_UNBALANCED_CLOSE:{line_number}")
                     stack.pop()
@@ -107,8 +108,8 @@ class MooseInputCollector:
                     unresolved.add(
                         f"MOOSE_RELATIVE_PATH_UNVERIFIED:{record.path}:{line_number}"
                     )
-                elif token.startswith("./"):
-                    token = token[2:]
+                else:
+                    token = strip_child_prefix(token)
                 if not token or "[" in token or "]" in token:
                     raise ValueError(f"MOOSE_INVALID_BLOCK:{line_number}")
                 parent_path = blocks[stack[-1]]["path"] if stack else ()
