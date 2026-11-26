@@ -11,6 +11,7 @@ import ast
 import re
 from collections import Counter
 from io import BytesIO
+from pathlib import Path
 import tokenize
 
 from ...graph import Edge, Evidence, Node, SourceLocation
@@ -33,6 +34,30 @@ def python_call_site_id(repository, path, line, column, end_line, end_column):
     """Canonical existing Python AST call-site identity (UTF-8 byte columns)."""
     return stable_id("node", repository, "python_call_site", path,
                      line, column, end_line, end_column)
+
+
+def static_import_candidates(node: ast.AST, path: Path, root: Path) -> set[str]:
+    """Return legacy path-based import candidates, not resolved module identities.
+
+    Preserve the two architecture guards' relative-path convention, including
+    over-depth relative imports. Dynamic calls and caller policy are separate.
+    """
+    if isinstance(node, ast.Import):
+        return {alias.name for alias in node.names}
+    if not isinstance(node, ast.ImportFrom):
+        return set()
+    if node.level:
+        package = path.relative_to(root).with_suffix("").parts[:-1]
+        keep = max(0, len(package) - node.level + 1)
+        prefix = ".".join(package[:keep])
+        base = ".".join(part for part in (prefix, node.module or "") if part)
+    else:
+        base = node.module or ""
+    refs = {base} if base else set()
+    for alias in node.names:
+        if alias.name != "*":
+            refs.add(".".join(part for part in (base, alias.name) if part))
+    return refs
 
 
 def _body_metrics(node: ast.AST) -> tuple[int, int]:
