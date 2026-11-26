@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 
+from ...cpp_lexical import mask_cpp
 from ...graph import Edge, Evidence, Node, SourceLocation
 from ..collector import (
     CollectionResult, FactBatch, SourceInput, SourceRecord,
@@ -53,47 +54,7 @@ _CPP_ENUM = re.compile(
 
 def _without_comments(text: str) -> str:
     """Mask comments without changing offsets or newlines; keep literals."""
-    chars = list(text)
-    position = 0
-    state = "code"
-    while position < len(chars):
-        value = chars[position]
-        next_char = chars[position + 1] if position + 1 < len(chars) else ""
-        if state in {"string", "char"}:
-            if value == "\\":
-                position += 2
-                continue
-            if value == ('"' if state == "string" else "'"):
-                state = "code"
-        elif state == "line":
-            if value == "\n":
-                state = "code"
-            else:
-                chars[position] = " "
-        elif state == "block":
-            if value == "*" and next_char == "/":
-                chars[position] = chars[position + 1] = " "
-                position += 2
-                state = "code"
-                continue
-            if value != "\n":
-                chars[position] = " "
-        elif value == '"':
-            state = "string"
-        elif value == "'":
-            state = "char"
-        elif value == "/" and next_char == "/":
-            chars[position] = chars[position + 1] = " "
-            position += 2
-            state = "line"
-            continue
-        elif value == "/" and next_char == "*":
-            chars[position] = chars[position + 1] = " "
-            position += 2
-            state = "block"
-            continue
-        position += 1
-    return "".join(chars)
+    return mask_cpp(text, mask_literals=False)
 
 
 def _closing_brace(text: str, opening: int) -> int | None:
