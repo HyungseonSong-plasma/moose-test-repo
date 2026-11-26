@@ -6,6 +6,8 @@ from dataclasses import dataclass
 import re
 from typing import Iterable, Mapping
 
+from physics_harness.code.hit_lexical import adapter_block_token, is_block_close, strip_child_prefix
+
 
 class MooseInputError(RuntimeError):
     pass
@@ -16,9 +18,6 @@ class BlockSpan:
     path: str
     start: int
     end: int  # exclusive
-
-
-_BLOCK_RE = re.compile(r"^\s*\[([^\]]*)\]\s*(?:#.*)?$")
 
 
 class MooseInput:
@@ -34,18 +33,16 @@ class MooseInput:
         blocks: list[BlockSpan] = []
         offset = 0
         for line in text.splitlines(keepends=True):
-            match = _BLOCK_RE.match(line.rstrip("\r\n"))
-            if match:
-                token = match.group(1).strip()
-                if token in {"", "../"}:
+            token = adapter_block_token(line)
+            if token is not None:
+                if is_block_close(token):
                     if not stack:
                         raise MooseInputError(f"unmatched closing block at byte {offset}")
                     names = [name for name, _ in stack]
                     _, start = stack.pop()
                     blocks.append(BlockSpan("/".join(names), start, offset + len(line)))
                 else:
-                    if token.startswith("./"):
-                        token = token[2:]
+                    token = strip_child_prefix(token)
                     stack.append((token, offset))
             offset += len(line)
 
