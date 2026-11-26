@@ -15,12 +15,16 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from types import SimpleNamespace
+from typing import Any
 
 BASE = '19cb056d48d82c856ccf703ddd69860bc0789ac8'
 DRIVER = '.github/scripts/issue197_h3_migration_audit.py'
 SOURCE = 'experiments/Issue1_reactor_o2plus_integration/migration_only_exact_phi_ic'
 FIXTURE = 'migration_only_exact_phi_ic.i'
+Q0_RUN = 'experiments/Issue31_r4_q0_all_ground/run.py'
 BLOBS = {
+    Q0_RUN: '626a154274d3a660d5f8c3b961a43f37c8782ecd',
     DRIVER: 'd07adea4ef644b039d77ea9b885a3cd9461bfdd6',
     SOURCE + '/' + FIXTURE: '9906040c450e28b3f1de8628c3936cf3ad1dec74',
     'physics_app/src/fvkernels/PhysicsFVMassFractionTimeDerivative.C':
@@ -71,9 +75,25 @@ def main():
         require(gitblob(root / path) == expected, 'source blob mismatch: ' + path)
     require(sha256(exe) == W1_SHA, 'W1 executable digest mismatch')
     sys.path.insert(0, str(root))
-    from experiments.Issue31_r4_q0_all_ground import run as q0_run
     from physics_harness.adapters.moose import parameters as mp
+    from physics_harness.adapters.moose.nonlinear_solver import (
+        failure_signature, runtime_core_facts,
+    )
     from physics_harness.execution.cases import stage_case
+    from physics_harness.execution.runtime import run_physics
+
+    # The exact Q0 functions require only the execution/solver boundary.
+    # Do not import the unrelated experiment and Evidence/Polars stack.
+    q0_names = {'_p2', '_runtime'}
+    q0_nodes = [node for node in ast.parse((root / Q0_RUN).read_text()).body
+                if isinstance(node, ast.FunctionDef) and node.name in q0_names]
+    require(len(q0_nodes) == 2 and {n.name for n in q0_nodes} == q0_names,
+            'Q0 runner function surface mismatch')
+    q0_ns = dict(Path=Path, Any=Any, run_physics=run_physics,
+                 failure_signature=failure_signature, runtime_core_facts=runtime_core_facts)
+    exec(compile(ast.Module(body=q0_nodes, type_ignores=[]),
+                 str(root / Q0_RUN), 'exec'), q0_ns)
+    q0_run = SimpleNamespace(_p2=q0_ns['_p2'], _runtime=q0_ns['_runtime'])
     cases, logs = out / 'cases', out / 'logs'
     cases.mkdir(parents=True)
     logs.mkdir()
