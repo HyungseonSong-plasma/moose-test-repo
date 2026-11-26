@@ -1,0 +1,170 @@
+{
+  "schema": "au-pilot-task-manifest-v0.1",
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "revision": "2765d192f383d18dfe2c77dc100dfd66e23d3750",
+  "context_policy": "For baseline S0, give only the target function and definitions strictly necessary for it to parse; no tests, oracle, issue discussion or prior ratings.",
+  "functions": [
+    {
+      "id": "F01",
+      "path": "physics_harness/code/analysis/assessment.py",
+      "symbol": "assess_finding",
+      "start_line": 23,
+      "end_line": 100
+    },
+    {
+      "id": "F02",
+      "path": "physics_harness/code/analysis/impact.py",
+      "symbol": "analyze_target_coverage",
+      "start_line": 79,
+      "end_line": 215
+    },
+    {
+      "id": "F03",
+      "path": "physics_harness/code/verification/dependencies.py",
+      "symbol": "verify_dependencies",
+      "start_line": 196,
+      "end_line": 300
+    },
+    {
+      "id": "F04",
+      "path": "physics_harness/code/verification/consistency.py",
+      "symbol": "verify_generated_artifact",
+      "start_line": 16,
+      "end_line": 145
+    }
+  ],
+  "tasks": [
+    {
+      "id": "AU01",
+      "function_id": "F01",
+      "domain": "branch_priority",
+      "question": "A valid claim has both supporting and refuting linked evidence; there may also be other blockers. What is the final disposition?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU02",
+      "function_id": "F01",
+      "domain": "fail_closed",
+      "question": "A claim has supporting evidence and no other issues, but required_evidence_kinds is empty. What is the final disposition?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU03",
+      "function_id": "F01",
+      "domain": "conditions",
+      "question": "A claim has supporting evidence matching all required kinds, no refuting/qualifying evidence, but claim.conditions is nonempty. What assessment_status is assigned?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU04",
+      "function_id": "F02",
+      "domain": "scope_boundary",
+      "question": "Assume analyze_target_coverage completes with zero local blockers. What is its global_consumer_closed property?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU05",
+      "function_id": "F02",
+      "domain": "scope_boundary",
+      "question": "Assume other inputs are valid, but required_paths=(). Which exact local blocker is added?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU06",
+      "function_id": "F02",
+      "domain": "missing_evidence",
+      "question": "A required path is absent from the receipt files. Which exact local blocker is added?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU07",
+      "function_id": "F03",
+      "domain": "parse_semantics",
+      "question": "Does `from .helpers import x` contribute a module entry to the absolute-import `imports` dictionary? Answer Yes or No.",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU08",
+      "function_id": "F03",
+      "domain": "state_semantics",
+      "question": "The same absolute module is imported in two top-level import statements, first at line 2 and again at line 10. Which source line is retained by imports.setdefault?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU09",
+      "function_id": "F03",
+      "domain": "priority",
+      "question": "Two forbidden-edge rules both match the same source and destination package, and neither changes state. Is the FIRST or LAST matching rule used to create a finding?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU10",
+      "function_id": "F04",
+      "domain": "status_semantics",
+      "question": "For an otherwise valid COMPLETE source scope, there is one RUNTIME_OBSERVED evidence with matching source SHA, valid run metadata and matching source_ref URL. Is status VERIFIED or UNVERIFIED?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU11",
+      "function_id": "F04",
+      "domain": "provenance",
+      "question": "A non-runtime evidence source_ref cannot match any path and blob SHA in the receipt. Which exact failure prefix is added?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    },
+    {
+      "id": "AU12",
+      "function_id": "F04",
+      "domain": "scope_boundary",
+      "question": "When verify_generated_artifact returns status VERIFIED, is VerificationReceipt.semantic_compatibility_proven True or False?",
+      "response_schema": {
+        "answer": "short exact value",
+        "reason": "1-2 sentences",
+        "source_lines": "line numbers supporting the answer"
+      }
+    }
+  ]
+}
