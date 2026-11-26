@@ -1,0 +1,122 @@
+# Bounded evidence only. Never merge. No build or controller dispatch.
+name: Issue704 H3 Code6 Native A-B (CI ONLY NEVER MERGE)
+on:
+  push:
+    branches: [issue-704-h3-code6-native-evidence-only]
+    paths: [.github/workflows/issue704-h3-native-evidence-only.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SOURCE_HEAD: 19cb056d48d82c856ccf703ddd69860bc0789ac8
+      OBSERVER_HEAD: 6d7ebb46ac8bae05bf92fb5c1761944d456793ee
+      W1_SOURCE_HEAD: 1cd5cbd79137791e1acdd13ac17c15c61e55f242
+      W1_SOURCE_TREE: e45aa72b23fc57963da5db5dacb24f450ae803ba
+      W1_RUN: '45441439096'
+      OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 6d7ebb46ac8bae05bf92fb5c1761944d456793ee
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 19cb056d48d82c856ccf703ddd69860bc0789ac8
+          path: target
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 1cd5cbd79137791e1acdd13ac17c15c61e55f242
+          path: w1-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: p6-newonly-w1-45441439096-1-1cd5cbd79137791e1acdd13ac17c15c61e55f242
+          run-id: 45441439096
+          github-token: ${{ github.token }}
+          path: w1
+      - name: Verify exact input source and historical W1 custody
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess,tarfile,shutil
+          P=pathlib.Path
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          git=lambda d,ref:subprocess.check_output(['git','-C',d,'rev-parse',ref],text=True).strip()
+          rec=json.loads(P('w1/identity.json').read_text())
+          assert git('control','HEAD')==os.environ['OBSERVER_HEAD']
+          assert git('target','HEAD')==os.environ['SOURCE_HEAD']
+          assert rec['source_head']==os.environ['W1_SOURCE_HEAD']==git('w1-source','HEAD')
+          assert rec['source_tree']==os.environ['W1_SOURCE_TREE']==git('w1-source','HEAD^{tree}')
+          assert rec['run_id']==os.environ['W1_RUN'] and rec['oci']==os.environ['OCI']
+          assert rec['build_count']==1 and rec['archive_roundtrip_check']=='PASS'
+          assert rec['native_check_input']=='NOT_RUN' and rec['private_data_bundled'] is False
+          assert rec['lock_sha256']==sha(P('w1-source/physics_app/dependencies.lock'))==sha(P('target/physics_app/dependencies.lock'))
+          archive=P('w1/physics-opt-and-app-libs.tar.gz')
+          assert sha(archive)==rec['archive_sha256']=='2b09ae6b1fbb21cda625c2e47829da4ca42a46e98ec8ed353c0a658d4ebf5e5d'
+          paths={'physics-opt':P('w1-source/physics_app/physics-opt'),
+                 'lib/libphysics-opt.so.0':P('w1-source/physics_app/lib/libphysics-opt.so.0'),
+                 'lib/libphysics_test-opt.so.0':P('w1-source/physics_app/test/lib/libphysics_test-opt.so.0')}
+          entries={x['stored_path']:x for x in rec['file_records']}
+          assert set(entries)==set(paths) and len(rec['file_records'])==3
+          assert rec['binary_sha256']==entries['physics-opt']['sha256']=='57773f58e275f8c1c9d863a465044dab63f734bea04933b26a46459b5d743862'
+          for name in ('libphysics-opt.so.0','libphysics_test-opt.so.0'):
+              assert rec['app_libraries'][name]['sha256']==entries['lib/'+name]['sha256']
+          with tarfile.open(archive,'r:gz') as tar:
+              assert set(tar.getnames())==set(paths) and len(tar.getmembers())==3
+              for name,dst in paths.items():
+                  member=tar.getmember(name)
+                  assert member.isfile() and member.size==entries[name]['bytes']
+                  assert not dst.exists()
+                  dst.parent.mkdir(parents=True,exist_ok=True)
+                  with tar.extractfile(member) as source,dst.open('wb') as output:
+                      shutil.copyfileobj(source,output)
+                  assert sha(dst)==entries[name]['sha256'] and dst.open('rb').read(4)==bytes([127,69,76,70])
+                  if name=='physics-opt':dst.chmod(0o755)
+          P('evidence/w1_identity.json').write_text(json.dumps(rec,indent=2))
+          P('evidence/execution_scope.json').write_text(json.dumps({
+              'input_source':git('target','HEAD'),'observer_source':git('control','HEAD'),
+              'w1_build_source':git('w1-source','HEAD'),'w1_artifact_id':14945090867,
+              'current_main_binary_equivalence_claimed':False,'build_count':0,
+              'oci':os.environ['OCI']},indent=2))
+          PY
+          docker pull "$OCI"
+      - name: Execute four H3 pairs on historical W1
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            -v "$PWD/target:/workspace:ro" -v "$PWD/w1-source:/w1-source:ro" \
+            -v "$PWD/control/.github/scripts/issue704_h3_code6_ab.py:/observer.py:ro" \
+            -v "$PWD/evidence:/evidence" --workdir /workspace "$OCI" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export PYTHONDONTWRITEBYTECODE=1
+              export LD_LIBRARY_PATH="/w1-source/physics_app/lib:/w1-source/physics_app/test/lib:${LD_LIBRARY_PATH:-}"
+              ldd /w1-source/physics_app/physics-opt | tee /evidence/ldd.log
+              if grep -F "not found" /evidence/ldd.log; then exit 1; fi
+              /w1-source/physics_app/physics-opt --version | tee /evidence/version.log
+              python3 /observer.py --root /workspace --exe /w1-source/physics_app/physics-opt --out /evidence/h3
+            '
+      - name: Preserve bounded evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue704-h3-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            evidence/*.json
+            evidence/*.log
+            evidence/h3/h3-code6-ab.json
+            evidence/h3/logs/*.log
+            evidence/h3/cases/*/input.i
+            evidence/h3/cases/*/input_out.csv
+          retention-days: 30
+          if-no-files-found: error
