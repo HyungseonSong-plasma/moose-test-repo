@@ -9,6 +9,8 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
+from physics_harness.code.cpp_lexical import mask_cpp as _mask_cpp
+
 
 class CppSourceError(RuntimeError):
     pass
@@ -44,75 +46,7 @@ class CallArguments:
 
 def mask_cpp(text: str) -> str:
     """Mask comments and quoted literals while preserving offsets/newlines."""
-    out = list(text)
-    i = 0
-    state = "code"
-    quote = ""
-    while i < len(text):
-        c = text[i]
-        n = text[i + 1] if i + 1 < len(text) else ""
-        if state == "code":
-            if c == "/" and n == "/":
-                out[i] = out[i + 1] = " "
-                i += 2
-                state = "line_comment"
-                continue
-            if c == "/" and n == "*":
-                out[i] = out[i + 1] = " "
-                i += 2
-                state = "block_comment"
-                continue
-            if c in {'"', "'"}:
-                quote = c
-                out[i] = " "
-                i += 1
-                state = "string"
-                continue
-            if c == "R" and n == '"':
-                paren = text.find("(", i + 2, min(len(text), i + 20))
-                if paren >= 0:
-                    delim = text[i + 2:paren]
-                    if len(delim) <= 16 and not any(ch.isspace() or ch in "\\()" for ch in delim):
-                        closer = ")" + delim + '"'
-                        close = text.find(closer, paren + 1)
-                        end = len(text) if close < 0 else close + len(closer)
-                        for k in range(i, end):
-                            if text[k] != "\n":
-                                out[k] = " "
-                        i = end
-                        continue
-            i += 1
-        elif state == "line_comment":
-            if c == "\n":
-                state = "code"
-            else:
-                out[i] = " "
-            i += 1
-        elif state == "block_comment":
-            if c == "*" and n == "/":
-                out[i] = out[i + 1] = " "
-                i += 2
-                state = "code"
-            else:
-                if c != "\n":
-                    out[i] = " "
-                i += 1
-        else:
-            if c == "\\":
-                out[i] = " "
-                if i + 1 < len(text):
-                    if text[i + 1] != "\n":
-                        out[i + 1] = " "
-                    i += 2
-                else:
-                    i += 1
-                continue
-            if c != "\n":
-                out[i] = " "
-            i += 1
-            if c == quote:
-                state = "code"
-    return "".join(out)
+    return _mask_cpp(text, mask_literals=True)
 
 
 class CppSource:
