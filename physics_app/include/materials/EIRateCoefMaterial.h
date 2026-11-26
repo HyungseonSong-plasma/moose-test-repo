@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FunctorMaterial.h"
+#include "LinearInterpolation.h"
 #include "PhysicsLookupTable1D.h"
 
 #include <string>
@@ -32,5 +33,6 @@ protected:
   const FileName _rate_table_file;
   const std::string _reaction_progress_name;
   PhysicsLookupTable1D _table;
+  LinearInterpolation _rate_interpolation;
 };
 
